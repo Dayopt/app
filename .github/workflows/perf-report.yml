@@ -130,11 +130,20 @@ jobs:
             body += `📊 [View detailed report in Artifacts](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})\n`;
             body += '\n_Generated automatically by Weekly Performance Report workflow_';
 
-            // Issueを作成
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `📊 Weekly Performance Report - ${date}`,
-              body: body,
-              labels: ['performance', 'automated']
-            });
+            // Step Summaryには毎回出力
+            await core.summary.addRaw(body).write();
+
+            // 閾値未達の場合のみIssueを作成
+            const needsAction = scores.performance < 90 || scores.accessibility < 95;
+            if (needsAction) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `📊 Weekly Performance Report - ${date}`,
+                body: body,
+                labels: ['performance', 'automated']
+              });
+              console.log('⚠️ Issue created: scores below target');
+            } else {
+              console.log('✅ All scores meet targets — no issue created');
+            }
