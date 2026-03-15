@@ -14,8 +14,8 @@ import { GRID_BACKGROUND, HOUR_HEIGHT } from '../../constants/grid.constants';
 import { usePlanPosition } from '../../hooks/usePlanPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
+import { EntryCard } from '@/features/entry';
 import { filterPlansByDate, sortTimedPlans } from '../../utils/planPositioning';
-import { PlanCard } from '../PlanCard/PlanCard';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
   date,
@@ -101,7 +101,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
           // positionが見つからない場合は、デフォルト位置を使用してレンダリング
 
           return (
-            <PlanCard
+            <EntryCard
               key={plan.id}
               plan={plan}
               position={position} // undefinedでも大丈夫（PlanCard側で対応済み）

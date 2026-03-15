@@ -17,9 +17,13 @@ export { HalfHourLines, HourLines } from './grid/GridLines';
 export { CurrentTimeLine, CurrentTimeLineForColumn } from './grid/CurrentTimeLine';
 
 // ===== UIコンポーネント =====
-// PlanCard - プラン表示
-export type * from './components/PlanCard';
-export { PlanCard, PlanCardContent } from './components/PlanCard';
+// EntryCard - エントリ表示（@/features/entry から re-export）
+export {
+  EntryCard,
+  EntryCard as PlanCard,
+  EntryCardContent as PlanCardContent,
+} from '@/features/entry';
+export type { EntryCardPosition, EntryCardProps } from '@/features/entry';
 
 // DayColumn - 日列（イベント表示エリアのみ）
 export { DayColumn } from './components/DayColumn';

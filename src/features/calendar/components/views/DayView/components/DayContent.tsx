@@ -6,10 +6,11 @@ import { ChronotypeBackground } from '@/features/chronotype';
 import { useEntryInspectorStore } from '@/features/entry';
 import { cn } from '@/lib/utils';
 
+import { EntryCard } from '@/features/entry';
 import type { InteractionState } from '../../../../interaction';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
-import { CalendarDragSelection, PlanCard } from '../../shared';
+import { CalendarDragSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
@@ -172,7 +173,7 @@ export const DayContent = ({
                   });
                 }}
               >
-                <PlanCard
+                <EntryCard
                   plan={plan}
                   position={{
                     top: 0,

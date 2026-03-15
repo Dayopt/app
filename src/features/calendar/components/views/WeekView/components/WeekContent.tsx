@@ -8,10 +8,11 @@ import { cn } from '@/lib/utils';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
+import { EntryCard } from '@/features/entry';
 import type { InteractionState } from '../../../../interaction';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
-import { CalendarDragSelection, PlanCard, usePlanStyles } from '../../shared';
+import { CalendarDragSelection, usePlanStyles } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
@@ -254,7 +255,7 @@ export const WeekContent = React.memo(function WeekContent({
                   );
                 }}
               >
-                <PlanCard
+                <EntryCard
                   plan={plan}
                   position={{
                     top: 0,
