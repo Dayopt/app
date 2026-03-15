@@ -88,7 +88,8 @@
           "saved": "I've saved them",
           "sectionTitle": "Recovery Codes",
           "remaining": "{count} codes remaining",
-          "noCodesLeft": "No recovery codes remaining"
+          "noCodesLeft": "No recovery codes remaining",
+          "exhaustedWarning": "All recovery codes have been used. If you lose your device, you won't be able to access your account. Please regenerate codes now."
         }
       },
       "socialLogin": "Social Login",

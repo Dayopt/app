@@ -173,28 +173,53 @@ export function MFASection() {
               </p>
             </div>
 
-            {/* リカバリーコード状態 */}
-            <div className="bg-muted rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-normal">
-                    {t('settings.account.mfa.recoveryCodes.sectionTitle')}
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {recoveryCodeCount > 0
-                      ? t('settings.account.mfa.recoveryCodes.remaining', {
-                          count: recoveryCodeCount,
-                        })
-                      : t('settings.account.mfa.recoveryCodes.noCodesLeft')}
-                  </p>
+            {/* リカバリーコード枯渇警告 */}
+            {recoveryCodeCount === 0 && (
+              <div className="border-destructive bg-destructive/10 rounded-2xl border p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-destructive text-sm font-bold">
+                    {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
+                  </span>
                 </div>
-                <Button onClick={regenerateRecoveryCodes} disabled={isLoading}>
-                  {isLoading
-                    ? t('settings.account.mfa.generating')
-                    : t('settings.account.mfa.regenerate')}
-                </Button>
+                <p className="text-destructive text-xs">
+                  {t('settings.account.mfa.recoveryCodes.exhaustedWarning')}
+                </p>
+                <div className="mt-3">
+                  <Button
+                    variant="destructive"
+                    onClick={regenerateRecoveryCodes}
+                    disabled={isLoading}
+                  >
+                    {isLoading
+                      ? t('settings.account.mfa.generating')
+                      : t('settings.account.mfa.regenerate')}
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* リカバリーコード状態（残りがある場合） */}
+            {recoveryCodeCount > 0 && (
+              <div className="bg-muted rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-normal">
+                      {t('settings.account.mfa.recoveryCodes.sectionTitle')}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t('settings.account.mfa.recoveryCodes.remaining', {
+                        count: recoveryCodeCount,
+                      })}
+                    </p>
+                  </div>
+                  <Button onClick={regenerateRecoveryCodes} disabled={isLoading}>
+                    {isLoading
+                      ? t('settings.account.mfa.generating')
+                      : t('settings.account.mfa.regenerate')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end">
               <Button variant="destructive" onClick={disableMFA} disabled={isLoading}>
