@@ -181,6 +181,22 @@ Layer 1のデータはLayer 2のパターン検出の入力になる:
 - **Energy Map** → 充実度×時間帯のクロス集計、ルーティン検出
 - **Context Switches** の曜日パターン → 集中日/分散日の検出
 
+## Layer 3 への接続点
+
+Layer 1 の KPI データは `get_insights_data()` DB関数経由で LLM のプロンプトに渡される。
+
+| メトリクス | プロンプトでの活用 |
+|-----------|-----------------|
+| Total Time | 活動量の基本コンテキスト + 前期間比較 |
+| Avg Fulfillment | 時間の質の評価 + トレンド分析 |
+| Plan Rate | 計画実行力の評価 + 改善提案 |
+| Estimation Accuracy | 見積もり精度のフィードバック |
+| Peak Utilization | chronotype活用度の分析 |
+| Context Switches | 集中力パターンの指摘 |
+| Blank Rate | 余白の意図性に関する問いかけ |
+
+詳細: [Layer 3 Docs](?path=/docs/features-stats-layer3-docs--docs)
+
 ---
 
-**最終更新**: 2026-03-13
+**最終更新**: 2026-03-16

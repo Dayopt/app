@@ -16,7 +16,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 |-----|------|
 | **Review（振り返り）** | 期間ベースのKPIメトリクス。日/週/月/年で切り替え |
 | **Progress（進捗）** | 累積・長期トレンド。ヒートマップ + 分布チャート |
-| **Insights（インサイト）** | AI分析・提案（将来実装） |
+| **Insights（インサイト）** | LLMインサイト。Layer 1/2 データからAIが自然言語の気づきを生成 |
 
 ### タブと Layer の関係
 
@@ -45,7 +45,7 @@ Layer 3 (LLMインサイト) — 自然言語の気づき生成  ← 現在: Ins
 
 ※ 上記は現在の配置。タブとLayerは1:1ではなく、今後コンポーネントがタブ間を移動する可能性がある。
 
-詳細: [Layer 1 Docs](?path=/docs/features-stats-layer1-docs--docs) | [Layer 2 Docs](?path=/docs/features-stats-layer2-docs--docs)
+詳細: [Layer 1 Docs](?path=/docs/features-stats-layer1-docs--docs) | [Layer 2 Docs](?path=/docs/features-stats-layer2-docs--docs) | [Layer 3 Docs](?path=/docs/features-stats-layer3-docs--docs)
 
 ---
 
@@ -66,12 +66,14 @@ StatsPageContent                    タブ管理 + URL ルーティング
 │       └── HourlyDistributionChart 時間帯分布
 │
 └── Insights タブ
-    └── InsightsView               AI分析（プレースホルダー）
+    └── InsightsView               LLMインサイト表示
+        ├── InsightCard            インサイトカード（findings + suggestions + question）
+        └── InsightUserNote        ユーザーメモ
 ```
 
 ### ヘッダーコントロール
 
-Review タブ選択時のみ表示:
+Review / Insights タブ選択時に表示:
 - `DateNavigator` — 前後・今日ナビゲーション
 - `StatsGranularitySelector` — 粒度切替（日/週/月/年）
 
@@ -116,6 +118,14 @@ Review タブ選択時のみ表示:
 | `getDayOfWeekDistribution` | dateRange? | 曜日別分布 |
 | `getHourlyDistribution` | dateRange? | 時間帯分布 |
 
+#### Layer 3: インサイト
+
+| エンドポイント | Input | 説明 |
+|-------------|-------|------|
+| `insights.getInsight` | `{ periodType, periodStart }` | 特定期間のインサイト取得 |
+| `insights.listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧 |
+| `insights.updateNote` | `{ insightId, userNote }` | ユーザーメモ更新 |
+
 ---
 
 ## データフロー
@@ -130,4 +140,4 @@ PostgreSQL RPC関数
 
 ---
 
-**最終更新**: 2026-03-13
+**最終更新**: 2026-03-16
