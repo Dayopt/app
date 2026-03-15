@@ -2,6 +2,16 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -200,6 +210,76 @@ function RecoveryCodesDisplayDemo() {
   );
 }
 
+/** MFA無効化確認ダイアログ */
+function DisableDialogDemo() {
+  const [open, setOpen] = useState(true);
+  const [code, setCode] = useState('');
+
+  return (
+    <>
+      <Button variant="destructive" onClick={() => setOpen(true)}>
+        ダイアログを開く
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>2段階認証を無効にする</AlertDialogTitle>
+            <AlertDialogDescription>
+              2段階認証を無効にするには、認証アプリの6桁のコードを入力してください。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-center py-4">
+            <InputOTP maxLength={6} value={code} onChange={setCode}>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={code.length !== 6}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive-hover"
+            >
+              MFAを無効にする
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+/** リカバリーコード再生成確認ダイアログ */
+function RegenerateDialogDemo() {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>ダイアログを開く</Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>リカバリーコードを再生成</AlertDialogTitle>
+            <AlertDialogDescription>
+              新しいコードを生成すると、既存のリカバリーコードはすべて無効になります。この操作は元に戻せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction>再生成</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 // ─────────────────────────────────────────────────────────
 // Meta & Stories
 // ─────────────────────────────────────────────────────────
@@ -267,7 +347,17 @@ export const RecoveryCodesDisplay: Story = {
   ),
 };
 
-/** 全パターン一覧。 */
+/** MFA無効化確認ダイアログ。OTP入力付き。 */
+export const DisableDialog: Story = {
+  render: () => <DisableDialogDemo />,
+};
+
+/** リカバリーコード再生成確認ダイアログ。 */
+export const RegenerateDialog: Story = {
+  render: () => <RegenerateDialogDemo />,
+};
+
+/** 全パターン一覧（ダイアログ除く）。 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex max-w-2xl flex-col items-start gap-6">
