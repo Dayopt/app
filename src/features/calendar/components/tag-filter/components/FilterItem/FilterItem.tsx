@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils';
 
 import { useUpdateTag } from '@/features/tags';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
-import { useTagModalNavigation } from '../../../../../hooks/useTagModalNavigation';
-import { TagRenameDialog } from '../../../../TagRenameDialog';
+import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
+import { TagRenameDialog } from '../../../TagRenameDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';

@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TagDeleteStrategyDialog, useDeleteTag, useTagCacheStore, useTags } from '@/features/tags';
 import { api } from '@/platform/trpc';
 import { SidebarSection } from '@/shell/layout/SidebarSection';
-import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
+import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
 
 import { CreateTagButton } from './components/CreateTagButton';
 import { TagFlatList } from './components/TagFlatList';

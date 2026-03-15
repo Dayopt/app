@@ -25,10 +25,10 @@ export { MultiDayView } from './components/views/MultiDayView';
 export { WeekView } from './components/views/WeekView';
 
 // =============================================================================
-// Sidebar Components
+// Filter / View Switcher
 // =============================================================================
-export { CalendarFilterList } from './components/sidebar/tag-filter/CalendarFilterList';
-export { ViewSwitcherList } from './components/sidebar/ViewSwitcherList';
+export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
+export { ViewSwitcherList } from './components/ViewSwitcherList';
 
 // =============================================================================
 // Types

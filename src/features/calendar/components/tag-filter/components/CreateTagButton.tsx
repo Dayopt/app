@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
+import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
 

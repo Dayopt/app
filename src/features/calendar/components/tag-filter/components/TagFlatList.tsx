@@ -42,8 +42,8 @@ import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
-import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
-import { TagRenameDialog } from '../../../TagRenameDialog';
+import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
+import { TagRenameDialog } from '../../TagRenameDialog';
 
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
