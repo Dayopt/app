@@ -22,22 +22,18 @@ import { InspectorFrame } from './story-helpers';
  *
  * ## 3パターン
  *
- * | パターン | 予定行 | 記録行 | 期間 | 繰り返し/通知 | 充実度 | ボーダー |
- * |----------|--------|--------|------|--------------|--------|----------|
- * | **Upcoming + Planned** | 編集可 | placeholder | 編集可 | ○ | × (Hide) | 実線 |
- * | **Past + Planned** | 編集可 | 編集可 | 編集可 | ○ | ○ | 実線 |
- * | **Past + Unplanned** | placeholder | 編集可 | 読取専用 | × (Hide) | ○ | 点線 |
+ * - **Upcoming + Planned**: 予定行=編集可, 記録行=placeholder, 繰り返し/通知=○, 充実度=×, ボーダー=実線
+ * - **Past + Planned**: 予定行=編集可, 記録行=編集可, 繰り返し/通知=○, 充実度=○, ボーダー=実線
+ * - **Past + Unplanned**: 予定行=placeholder, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
  *
  * ## origin 自動遷移（ドラッグ移動時）
  *
  * `origin` は作成時に固定されるが、ドラッグで時間境界を跨ぐと自動遷移する。
  *
- * | 操作 | origin 変更 | フィールドクリア |
- * |------|-------------|-----------------|
- * | unplanned → 未来にドラッグ | `unplanned` → `planned` | actual_start/end, fulfillment_score |
- * | unplanned → 過去内で移動 | 変更なし | なし |
- * | planned → 過去にドラッグ | 変更なし（完了した予定） | なし |
- * | planned → 未来内で移動 | 変更なし | なし |
+ * - unplanned → 未来にドラッグ: `unplanned` → `planned` に変更、actual fields クリア
+ * - unplanned → 過去内で移動: 変更なし
+ * - planned → 過去にドラッグ: 変更なし（完了した予定）
+ * - planned → 未来内で移動: 変更なし
  *
  * 逆方向（planned → unplanned）の自動遷移は行わない。
  * 実装: `computeOriginTransition()` in `src/lib/entry-status.ts`
