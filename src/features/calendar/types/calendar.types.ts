@@ -1,50 +1,8 @@
 import type { CalendarViewType } from '@/lib/calendar-constants';
-import type { EntryOrigin, EntryState, FulfillmentScore } from '@/types/entry';
 
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  description?: string | undefined;
-  startDate: Date | null;
-  endDate: Date | null;
-  status: 'open' | 'closed';
-  color: string;
-  reminder_minutes?: number | null | undefined; // 通知タイミング（開始時刻の何分前か）
-  /** タグID。1エントリ1タグ。タグの詳細情報はtags.listキャッシュから取得する。 */
-  tagId?: string | null | undefined;
-  createdAt: Date;
-  updatedAt: Date;
-  // Display-specific properties
-  displayStartDate: Date;
-  displayEndDate: Date;
-  duration: number; // minutes
-  isMultiDay: boolean;
-  isRecurring: boolean;
-  // === Entry 統合フィールド ===
-  /** エントリの起源（planned=予定, unplanned=記録） */
-  origin?: EntryOrigin | undefined;
-  /** 時間位置ベースの状態（upcoming/active/past） */
-  entryState?: EntryState | undefined;
-  /** 充実度スコア（1-3） */
-  fulfillmentScore?: FulfillmentScore | null | undefined;
-  /** 実記録の開始時刻（actual_start_time から変換） */
-  actualStartDate?: Date | null | undefined;
-  /** 実記録の終了時刻（actual_end_time から変換） */
-  actualEndDate?: Date | null | undefined;
-  // Optional properties used in various contexts
-  userId?: string | undefined; // 所有者ID
-  location?: string | undefined; // 場所
-  url?: string | undefined; // 関連URL
-  priority?: 'urgent' | 'important' | 'necessary' | 'delegate' | 'optional' | undefined; // 優先度
-  calendarId?: string | undefined; // カレンダーID（繰り返しの場合は親エントリID）
-  // 繰り返し例外情報
-  isException?: boolean | undefined; // 例外インスタンスかどうか
-  exceptionType?: 'modified' | 'cancelled' | 'moved' | undefined; // 例外タイプ
-  originalEntryId?: string | undefined; // 繰り返しインスタンスの親エントリID
-  instanceDate?: string | undefined; // インスタンス日付（YYYY-MM-DD）
-  // ドラフト状態（未保存のプレビュー）
-  isDraft?: boolean | undefined;
-}
+// CalendarEvent は共有層（@/types）が canonical source
+// feature 間で共有するため features/ 内には定義しない
+export type { CalendarEvent } from '@/types/calendar-event';
 
 // CalendarViewType 関連は共有層（@/lib/calendar-constants）が canonical source
 // store も参照するため feature 内には置けない
