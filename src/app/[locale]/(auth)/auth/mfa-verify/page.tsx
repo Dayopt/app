@@ -10,9 +10,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+
 import { createClient } from '@/platform/supabase/client';
 import { vanillaTrpc } from '@/platform/trpc/client';
-import { useTranslations } from 'next-intl';
 
 type VerifyMode = 'totp' | 'recovery';
 
@@ -127,7 +129,8 @@ export default function MFAVerifyPage() {
     try {
       await vanillaTrpc.user.verifyRecoveryCode.mutate({ code: trimmed });
 
-      // MFA解除成功 → セッションリフレッシュしてカレンダーへ
+      // MFA解除成功 → toast通知 + セッションリフレッシュしてカレンダーへ
+      toast.success(t('auth.mfaVerify.recoverySuccess'));
       const next = searchParams?.get('next') || `/${locale}/calendar/day`;
       router.refresh();
       router.push(next);
