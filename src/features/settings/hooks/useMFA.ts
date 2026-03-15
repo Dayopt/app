@@ -22,16 +22,29 @@ interface MFAState {
   recoveryCodes: string[] | null;
   /** 残りのリカバリーコード数 */
   recoveryCodeCount: number;
+  /** MFA無効化ダイアログ表示状態 */
+  showDisableDialog: boolean;
+  /** リカバリーコード再生成確認ダイアログ表示状態 */
+  showRegenerateDialog: boolean;
 }
 
 interface UseMFAReturn extends MFAState {
   setVerificationCode: (code: string) => void;
   enrollMFA: () => Promise<void>;
   verifyMFA: () => Promise<void>;
-  disableMFA: () => Promise<void>;
+  /** MFA無効化ダイアログを開く */
+  requestDisableMFA: () => void;
+  /** MFA無効化を実行（TOTPコード必須） */
+  confirmDisableMFA: (code: string) => Promise<void>;
+  /** MFA無効化ダイアログを閉じる */
+  cancelDisableMFA: () => void;
   cancelSetup: () => void;
-  /** リカバリーコードを再生成 */
-  regenerateRecoveryCodes: () => Promise<void>;
+  /** リカバリーコード再生成確認ダイアログを開く */
+  requestRegenerateRecoveryCodes: () => void;
+  /** リカバリーコード再生成を実行 */
+  confirmRegenerateRecoveryCodes: () => Promise<void>;
+  /** リカバリーコード再生成確認ダイアログを閉じる */
+  cancelRegenerateRecoveryCodes: () => void;
   /** リカバリーコード表示を閉じる */
   dismissRecoveryCodes: () => void;
 }
@@ -54,6 +67,8 @@ export function useMFA(): UseMFAReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [recoveryCodeCount, setRecoveryCodeCount] = useState(0);
+  const [showDisableDialog, setShowDisableDialog] = useState(false);
+  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
 
   const supabase = createClient();
 
@@ -224,96 +239,122 @@ export function useMFA(): UseMFAReturn {
     }
   }, [factorId, verificationCode, supabase, checkMFAStatus, generateAndSaveRecoveryCodes, t]);
 
-  // MFA無効化
-  const disableMFA = useCallback(async () => {
-    const code = window.prompt(t('common.errors.mfa.disablePrompt'));
-    if (!code || code.length !== 6) {
-      setError(t('common.errors.mfa.enterCode'));
-      return;
-    }
-
-    setIsLoading(true);
+  // MFA無効化ダイアログ制御
+  const requestDisableMFA = useCallback(() => {
     setError(null);
-    setSuccess(null);
+    setShowDisableDialog(true);
+  }, []);
 
-    try {
-      const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+  const cancelDisableMFA = useCallback(() => {
+    setShowDisableDialog(false);
+  }, []);
 
-      if (listError) {
-        throw new Error(`${t('common.errors.mfa.factorListFailed')}: ${listError.message}`);
-      }
-
-      if (!factors || factors.totp.length === 0) {
-        setError(t('common.errors.mfa.noFactorFound'));
+  // MFA無効化実行（ダイアログからTOTPコードを受け取る）
+  const confirmDisableMFA = useCallback(
+    async (code: string) => {
+      if (!code || code.length !== 6) {
+        setError(t('common.errors.mfa.enterCode'));
         return;
       }
 
-      const verifiedFactor = factors.totp.find((f) => f.status === 'verified');
+      setIsLoading(true);
+      setError(null);
+      setSuccess(null);
 
-      if (!verifiedFactor) {
-        setError(t('common.errors.mfa.noVerifiedFactor'));
-        return;
+      try {
+        const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+
+        if (listError) {
+          throw new Error(`${t('common.errors.mfa.factorListFailed')}: ${listError.message}`);
+        }
+
+        if (!factors || factors.totp.length === 0) {
+          setError(t('common.errors.mfa.noFactorFound'));
+          return;
+        }
+
+        const verifiedFactor = factors.totp.find((f) => f.status === 'verified');
+
+        if (!verifiedFactor) {
+          setError(t('common.errors.mfa.noVerifiedFactor'));
+          return;
+        }
+
+        // MFAチャレンジを実行してAAL2に昇格
+        const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+          factorId: verifiedFactor.id,
+        });
+
+        if (challengeError) {
+          throw new Error(`${t('common.errors.mfa.challengeFailed')}: ${challengeError.message}`);
+        }
+
+        // チャレンジを検証してAAL2に昇格
+        const { error: verifyError } = await supabase.auth.mfa.verify({
+          factorId: verifiedFactor.id,
+          challengeId: challengeData.id,
+          code: code,
+        });
+
+        if (verifyError) {
+          throw new Error(t('common.errors.mfa.codeInvalid'));
+        }
+
+        // AAL2セッションでMFA無効化
+        const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+          factorId: verifiedFactor.id,
+        });
+
+        if (unenrollError) {
+          throw new Error(`${t('common.errors.mfa.disableFailed')}: ${unenrollError.message}`);
+        }
+
+        setSuccess(t('common.errors.mfa.disabled'));
+        setHasMFA(false);
+        setShowDisableDialog(false);
+
+        await checkMFAStatus();
+      } catch (err) {
+        logger.error('MFA disable error:', err);
+        const errorMessage =
+          err instanceof Error ? err.message : t('common.errors.mfa.disableGeneralFailed');
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
       }
+    },
+    [supabase, checkMFAStatus, t],
+  );
 
-      // MFAチャレンジを実行してAAL2に昇格
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId: verifiedFactor.id,
-      });
-
-      if (challengeError) {
-        throw new Error(`${t('common.errors.mfa.challengeFailed')}: ${challengeError.message}`);
+  // セットアップキャンセル（未検証factorをunenrollしてクリーンアップ）
+  const cancelSetup = useCallback(async () => {
+    if (factorId) {
+      try {
+        await supabase.auth.mfa.unenroll({ factorId });
+      } catch (err) {
+        logger.error('Failed to unenroll pending factor:', err);
       }
-
-      // チャレンジを検証してAAL2に昇格
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: verifiedFactor.id,
-        challengeId: challengeData.id,
-        code: code,
-      });
-
-      if (verifyError) {
-        throw new Error(t('common.errors.mfa.codeInvalid'));
-      }
-
-      // AAL2セッションでMFA無効化
-      const { error: unenrollError } = await supabase.auth.mfa.unenroll({
-        factorId: verifiedFactor.id,
-      });
-
-      if (unenrollError) {
-        throw new Error(`${t('common.errors.mfa.disableFailed')}: ${unenrollError.message}`);
-      }
-
-      setSuccess(t('common.errors.mfa.disabled'));
-      setHasMFA(false);
-
-      await checkMFAStatus();
-    } catch (err) {
-      logger.error('MFA disable error:', err);
-      const errorMessage =
-        err instanceof Error ? err.message : t('common.errors.mfa.disableGeneralFailed');
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
-  }, [supabase, checkMFAStatus, t]);
-
-  // セットアップキャンセル
-  const cancelSetup = useCallback(() => {
     setShowMFASetup(false);
     setQrCode(null);
     setSecret(null);
     setFactorId(null);
     setVerificationCode('');
+  }, [factorId, supabase]);
+
+  // リカバリーコード再生成ダイアログ制御
+  const requestRegenerateRecoveryCodes = useCallback(() => {
+    setError(null);
+    setShowRegenerateDialog(true);
   }, []);
 
-  // リカバリーコード再生成
-  const regenerateRecoveryCodes = useCallback(async () => {
-    const confirmRegenerate = window.confirm(
-      '新しいリカバリーコードを生成すると、既存のコードは無効になります。続行しますか？',
-    );
-    if (!confirmRegenerate) return;
+  const cancelRegenerateRecoveryCodes = useCallback(() => {
+    setShowRegenerateDialog(false);
+  }, []);
 
+  // リカバリーコード再生成実行
+  const confirmRegenerateRecoveryCodes = useCallback(async () => {
+    setShowRegenerateDialog(false);
     setIsLoading(true);
     setError(null);
 
@@ -322,17 +363,17 @@ export function useMFA(): UseMFAReturn {
       if (codes) {
         setRecoveryCodes(codes);
         setRecoveryCodeCount(codes.length);
-        setSuccess('新しいリカバリーコードが生成されました。安全な場所に保存してください。');
+        setSuccess(t('settings.account.mfa.recoveryCodes.regenerateSuccess'));
       } else {
-        setError('リカバリーコードの生成に失敗しました');
+        setError(t('settings.account.mfa.recoveryCodes.regenerateFailed'));
       }
     } catch (err) {
       logger.error('Recovery code regeneration error:', err);
-      setError('リカバリーコードの再生成に失敗しました');
+      setError(t('settings.account.mfa.recoveryCodes.regenerateFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [generateAndSaveRecoveryCodes]);
+  }, [generateAndSaveRecoveryCodes, t]);
 
   // リカバリーコード表示を閉じる
   const dismissRecoveryCodes = useCallback(() => {
@@ -351,12 +392,18 @@ export function useMFA(): UseMFAReturn {
     isLoading,
     recoveryCodes,
     recoveryCodeCount,
+    showDisableDialog,
+    showRegenerateDialog,
     setVerificationCode,
     enrollMFA,
     verifyMFA,
-    disableMFA,
+    requestDisableMFA,
+    confirmDisableMFA,
+    cancelDisableMFA,
     cancelSetup,
-    regenerateRecoveryCodes,
+    requestRegenerateRecoveryCodes,
+    confirmRegenerateRecoveryCodes,
+    cancelRegenerateRecoveryCodes,
     dismissRecoveryCodes,
   };
 }

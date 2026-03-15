@@ -89,7 +89,17 @@
           "sectionTitle": "Recovery Codes",
           "remaining": "{count} codes remaining",
           "noCodesLeft": "No recovery codes remaining",
-          "exhaustedWarning": "All recovery codes have been used. If you lose your device, you won't be able to access your account. Please regenerate codes now."
+          "exhaustedWarning": "All recovery codes have been used. If you lose your device, you won't be able to access your account. Please regenerate codes now.",
+          "regenerateSuccess": "New recovery codes generated. Please save them in a secure location.",
+          "regenerateFailed": "Failed to generate recovery codes"
+        },
+        "disableDialog": {
+          "title": "Disable Two-Factor Authentication",
+          "description": "Enter the 6-digit code from your authenticator app to disable two-factor authentication."
+        },
+        "regenerateDialog": {
+          "title": "Regenerate Recovery Codes",
+          "description": "Generating new codes will invalidate all existing recovery codes. This cannot be undone."
         }
       },
       "socialLogin": "Social Login",
