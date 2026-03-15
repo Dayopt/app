@@ -1,10 +1,13 @@
 /**
  * プラン関連の型定義
  *
- * NOTE: CalendarEvent は @/features/calendar/types/calendar.types から直接インポートすること
+ * PlanCardProps/PlanCardPosition は EntryCard (@/features/entry) に移動。
+ * 後方互換のため re-export を維持。
  */
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
+
+import type { EntryCardPosition, EntryCardProps } from '@/features/entry';
 
 // 時間指定プラン（start/endを持つプラン）
 // CalendarEventの startDate/endDate を start/end に変換した型
@@ -14,55 +17,11 @@ export type TimedPlan = CalendarEvent & {
   isReadOnly?: boolean;
 };
 
-export interface PlanCardProps {
-  plan: CalendarEvent;
-  position?: PlanCardPosition | undefined;
-  onClick?: ((plan: CalendarEvent) => void) | undefined;
-  onContextMenu?: ((plan: CalendarEvent, e: React.MouseEvent) => void) | undefined;
-  onDragStart?:
-    | ((
-        plan: CalendarEvent,
-        mouseEvent: React.MouseEvent,
-        position: { top: number; left: number; width: number; height: number },
-      ) => void)
-    | undefined;
-  /** モバイル用タッチ開始ハンドラー */
-  onTouchStart?:
-    | ((
-        plan: CalendarEvent,
-        touchEvent: React.TouchEvent,
-        position: { top: number; left: number; width: number; height: number },
-      ) => void)
-    | undefined;
-  onDragEnd?: ((plan: CalendarEvent) => void) | undefined;
-  onResizeStart?:
-    | ((
-        plan: CalendarEvent,
-        direction: 'top' | 'bottom',
-        mouseEvent: React.MouseEvent,
-        position: { top: number; left: number; width: number; height: number },
-      ) => void)
-    | undefined;
-  onResizeEnd?: ((plan: CalendarEvent) => void) | undefined;
-  isDragging?: boolean | undefined;
-  isSelected?: boolean | undefined;
-  isResizing?: boolean | undefined;
-  /** Inspectorで開いているプランかどうか */
-  isActive?: boolean | undefined;
-  className?: string | undefined;
-  style?: React.CSSProperties | undefined;
-  previewTime?: ({ start: Date; end: Date } | null) | undefined;
-  /** グリッドの1時間あたりの高さ（px）。予定vs記録の差分オーバーレイ計算に使用 */
-  hourHeight?: number | undefined;
-}
+/** @deprecated EntryCardProps を使用してください */
+export type PlanCardProps = EntryCardProps;
 
-export interface PlanCardPosition {
-  top: number; // px
-  left: number; // %
-  width: number; // %
-  height: number; // px
-  zIndex?: number;
-}
+/** @deprecated EntryCardPosition を使用してください */
+export type PlanCardPosition = EntryCardPosition;
 
 export interface PlanGroup {
   plans: CalendarEvent[];

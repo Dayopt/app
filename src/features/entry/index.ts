@@ -54,6 +54,12 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 export type { AnchorRect } from './stores/useEntryInspectorStore';
 
 // =============================================================================
+// Lib (actual-time overlay)
+// =============================================================================
+export { NO_OVERLAY, computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
+
+// =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
 export type { EntryState } from '@/types/entry';
@@ -80,6 +86,12 @@ export { configToRRule, configToReadable, ruleToConfig } from './lib/rrule';
 // =============================================================================
 export { decodeInstanceId, encodeInstanceId, getInstanceRef } from './lib/instance-id';
 export type { InstanceRefSource, RecurrenceInstanceRef } from './lib/instance-id';
+
+// =============================================================================
+// Components (EntryCard)
+// =============================================================================
+export { EntryCard, EntryCardContent } from './components/card';
+export type { EntryCardPosition, EntryCardProps } from './components/card';
 
 // =============================================================================
 // Components

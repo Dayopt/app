@@ -1,10 +1,15 @@
-export { PlanCard } from './PlanCard';
-export type * from './PlanCard.types';
-export { PlanCardContent } from './PlanCardContent';
+/**
+ * @deprecated EntryCard (@/features/entry) を使用してください。
+ * このファイルは後方互換性のための re-export です。
+ */
+
+export { EntryCard as PlanCard, EntryCardContent as PlanCardContent } from '@/features/entry';
 
 // 後方互換性のためのエイリアス
-export { PlanCard as EventBlock, PlanCard as PlanBlock, PlanCard as planCard } from './PlanCard';
 export {
-  PlanCardContent as EventContent,
-  PlanCardContent as planCardContent,
-} from './PlanCardContent';
+  EntryCard as EventBlock,
+  EntryCardContent as EventContent,
+  EntryCard as PlanBlock,
+  EntryCard as planCard,
+  EntryCardContent as planCardContent,
+} from '@/features/entry';
