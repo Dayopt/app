@@ -12,9 +12,9 @@ import {
   RecurringEditConfirmDialog,
 } from '@/features/entry/components';
 import { SettingsDialog } from '@/features/settings';
-import { TourController } from '@/features/tour';
+import { TourOrchestrator } from '@/features/tour';
 
-import type { TourStepId, TourStepValidators } from '@/features/tour';
+import type { StepValidationResult, StepValidators } from '@/features/tour';
 
 /**
  * グローバルオーバーレイ群
@@ -26,23 +26,27 @@ export function GlobalOverlays() {
   const t = useTranslations();
 
   // ツアー: 過去ドラッグステップのバリデーション
-  const stepValidators: TourStepValidators = useMemo(
+  const stepValidators: StepValidators = useMemo(
     () => ({
       'grid-drag-record': () => {
         const pending = useInlineCreateStore.getState().pendingSelection;
-        if (!pending) return false;
+        if (!pending) {
+          return { valid: false, messageKey: 'tour.pastTimeHint' } as const;
+        }
         const selEnd = new Date(pending.date);
         selEnd.setHours(pending.endHour, pending.endMinute);
-        return selEnd < new Date();
+        return selEnd < new Date()
+          ? ({ valid: true } as const)
+          : ({ valid: false, messageKey: 'tour.pastTimeHint' } as const);
       },
     }),
     [],
   );
 
   const handleValidationFail = useCallback(
-    (stepId: TourStepId) => {
-      if (stepId === 'grid-drag-record') {
-        toast.info(t('tour.pastTimeHint'));
+    (result: StepValidationResult) => {
+      if (!result.valid && result.messageKey) {
+        toast.info(t(result.messageKey));
       }
     },
     [t],
@@ -54,7 +58,7 @@ export function GlobalOverlays() {
       <EntryInspector />
       <EntryDeleteConfirmDialog />
       <RecurringEditConfirmDialog />
-      <TourController stepValidators={stepValidators} onValidationFail={handleValidationFail} />
+      <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>
   );

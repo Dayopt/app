@@ -58,6 +58,7 @@
       "description": "Start planning your day and tracking your time"
     },
     "next": "Next",
+    "back": "Back",
     "skip": "Skip tour",
     "done_button": "Get started",
     "step": "{current} of {total}"

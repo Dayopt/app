@@ -58,6 +58,7 @@
       "description": "さっそく今日の予定を立てましょう"
     },
     "next": "次へ",
+    "back": "戻る",
     "skip": "ツアーをスキップ",
     "done_button": "始める",
     "step": "{current} / {total}"
