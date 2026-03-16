@@ -70,11 +70,14 @@ function validateEnv(): ServerEnv {
 /**
  * サーバーサイド環境変数（遅延評価）
  *
- * 初回アクセス時にバリデーションを実行する。
- * テスト環境ではモジュールインポートだけでクラッシュしないようにするため。
+ * - テスト環境: バリデーションをスキップし process.env を直接返す（各テストが vi.stubEnv で制御）
+ * - その他: 初回アクセス時にZodバリデーションを実行
  */
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop: string) {
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+      return process.env[prop];
+    }
     if (!_env) {
       _env = validateEnv();
     }
