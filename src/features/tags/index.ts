@@ -19,9 +19,12 @@ export { TagRadioItem } from './components/TagRadioItem';
 export {
   tagKeys,
   useCreateTag,
+  useDeleteGroup,
   useDeleteTag,
-  useOptimisticTagUpdate,
+  useMergeTag,
+  useRenameGroup,
   useRenameTag,
+  useReorderTags,
   useTag,
   // Operations
   useTagOperations,
@@ -29,9 +32,12 @@ export {
   useTagRealtime,
   // Tags CRUD
   useTags,
+  useTagsMap,
+  useUngroupTags,
   useUpdateTag,
   useUpdateTagColor,
 } from './hooks';
+export type { ReorderTagInput, TagInfo } from './hooks';
 
 // Stores
 export { useTagCacheStore } from './stores/useTagCacheStore';
@@ -39,24 +45,8 @@ export { useTagCacheStore } from './stores/useTagCacheStore';
 // Lib
 export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-colon';
 
-// Merge mutation
-export { useMergeTag } from './hooks/useTagMergeMutation';
-
-// Tag map (lookup by ID)
-export { useTagsMap } from './hooks/useTagsMap';
-export type { TagInfo } from './hooks/useTagsMap';
-
-// Additional CRUD mutations (used by calendar sidebar)
-export {
-  useDeleteGroup,
-  useRenameGroup,
-  useReorderTags,
-  useUngroupTags,
-} from './hooks/useTagCrudMutations';
-export type { ReorderTagInput } from './hooks/useTagCrudMutations';
-
 // Constants - Colors
-export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from './constants/colors';
+export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '@/lib/tag-colors';
 
 // Types
 export type {

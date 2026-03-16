@@ -9,22 +9,11 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
-export type { CalendarControllerProps } from './components/CalendarController';
 
 // =============================================================================
 // Layout Components
 // =============================================================================
-export { CalendarLayout } from './components/layout/CalendarLayout';
-export { DateRangeDisplay } from './components/layout/Header/DateRangeDisplay';
-export { ViewSwitcher } from './components/layout/Header/ViewSwitcher';
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
-
-// =============================================================================
-// View Components
-// =============================================================================
-export { DayView } from './components/views/DayView';
-export { MultiDayView } from './components/views/MultiDayView';
-export { WeekView } from './components/views/WeekView';
 
 // =============================================================================
 // Filter
@@ -34,21 +23,11 @@ export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
 // =============================================================================
 // Types
 // =============================================================================
-export { getMultiDayCount, isMultiDayView } from './types/calendar.types';
 export type {
   CalendarEvent,
-  CalendarFilter,
-  CalendarViewProps,
-  CalendarViewState,
   CalendarViewType,
-  CreatePlanInput,
-  MultiDayCount,
   MultiDayViewType,
-  PlanInstance,
-  RecurrencePattern,
-  UpdatePlanInput,
   ViewDateRange,
-  ViewSelectorProps,
 } from './types/calendar.types';
 
 // =============================================================================
@@ -63,7 +42,6 @@ export {
 // Hooks
 // =============================================================================
 export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
-export { useWeekendNavigation } from './hooks/navigation/useWeekendNavigation';
 export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
@@ -82,18 +60,7 @@ export { useRecurringPlanDrag } from './hooks/operations/useRecurringPlanDrag';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export {
-  formatDateString,
-  localTimeToUTCISO,
-  parseDateString,
-  parseDatetimeString,
-  parseISOToUserTimezone,
-} from '@/lib/date-utils';
-export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/range';
-// Temporal: エントリ状態判定（@/features/entry からの re-export）
-export { computeOriginTransition, getEntryState, isEntryPast, isTimePast } from '@/features/entry';
-export type { EntryState } from '@/features/entry';
-export { getEventOrigin, isRecordEvent } from './lib/plan-data-adapter';
+export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
 
 // =============================================================================

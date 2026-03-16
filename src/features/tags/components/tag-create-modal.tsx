@@ -27,9 +27,9 @@ import {
   TAG_NAME_MAX_LENGTH,
   getTagColorClasses,
   resolveTagColor,
-} from '../constants/colors';
+} from '@/lib/tag-colors';
 
-import type { TagColorName } from '../constants/colors';
+import type { TagColorName } from '@/lib/tag-colors';
 
 import type { CreateTagInput, Tag } from '../types';
 

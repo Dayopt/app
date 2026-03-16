@@ -13,17 +13,26 @@ export { tagKeys } from './tagQueryKeys';
 // Tags Query Hooks
 export { useTag, useTags } from './useTagsQuery';
 
-// Tags Mutation Hooks
+// Tags Mutation Hooks (CRUD)
 export {
   useCreateTag,
+  useDeleteGroup,
   useDeleteTag,
-  useMergeTag,
+  useRenameGroup,
   useRenameTag,
   useReorderTags,
+  useUngroupTags,
   useUpdateTag,
   useUpdateTagColor,
-} from './useTagsMutations';
-export type { ReorderTagInput } from './useTagsMutations';
+} from './useTagCrudMutations';
+export type { ReorderTagInput } from './useTagCrudMutations';
+
+// Tags Mutation Hooks (Merge)
+export { useMergeTag } from './useTagMergeMutation';
+
+// Tag Map
+export { useTagsMap } from './useTagsMap';
+export type { TagInfo } from './useTagsMap';
 
 // Tags Optimistic Helpers (Legacy)
 export { useOptimisticTagUpdate } from './useTagsOptimistic';

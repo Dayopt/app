@@ -13,6 +13,7 @@ export type {
   Entry,
   EntryFilters,
   EntryOrigin,
+  EntryState,
   EntryWithTags,
   FulfillmentScore,
   RecurrenceConfig,
@@ -40,12 +41,15 @@ export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntries } from './hooks/useEntries';
-export { useEntry, usePlan, useplan } from './hooks/useEntry';
-export { useEntryCreate } from './hooks/useEntryCreate';
-export { useEntryInstanceMutations, useEntryInstances } from './hooks/useEntryInstances';
-export { useEntryMutations } from './hooks/useEntryMutations';
-export { useRecurringScopeMutations } from './hooks/useRecurringScopeMutations';
+export {
+  useEntries,
+  useEntry,
+  useEntryCreate,
+  useEntryInstanceMutations,
+  useEntryInstances,
+  useEntryMutations,
+  useRecurringScopeMutations,
+} from './hooks';
 
 // =============================================================================
 // Stores
@@ -63,7 +67,6 @@ export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 // =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
-export type { EntryState } from '@/types/entry';
 export {
   computeOriginTransition,
   getEntryState,
