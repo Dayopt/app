@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { isWeekend } from 'date-fns';
 
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
@@ -52,22 +50,15 @@ export const WeekView = ({
   // 設定ストアの値を優先、プロップでオーバーライド可能
   const weekStartsOn = weekStartsOnProp ?? weekStartsOnSetting;
 
-  // 週の開始日を計算（通常は dateRange.start を使用）
-  const weekStartDate = useMemo(() => {
-    return dateRange.start;
-  }, [dateRange.start]);
-
   // WeekView専用ロジック
   const { weekDates, eventsByDate, todayIndex } = useWeekView({
-    startDate: weekStartDate,
+    startDate: dateRange.start,
     events: plans,
     weekStartsOn,
   });
 
   // 表示する日付を計算（土日を除外するかどうか）
-  const displayDates = useMemo(() => {
-    return showWeekends ? weekDates : weekDates.filter((day) => !isWeekend(day));
-  }, [weekDates, showWeekends]);
+  const displayDates = showWeekends ? weekDates : weekDates.filter((day) => !isWeekend(day));
 
   // 初期スクロールはScrollableCalendarLayoutに委譲
 

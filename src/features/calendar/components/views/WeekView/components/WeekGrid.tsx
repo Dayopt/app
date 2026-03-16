@@ -72,9 +72,6 @@ export const WeekGrid = ({
     timezone,
   });
 
-  // CurrentTimeLine表示のための日付配列（weekDatesをそのまま使用）
-  const currentTimeDisplayDates = React.useMemo(() => weekDates, [weekDates]);
-
   // 週番号を計算（週の最初の日から）
   const weekNumber = React.useMemo(() => {
     const firstDate = weekDates[0];
@@ -113,7 +110,7 @@ export const WeekGrid = ({
 
       {/* スクロール可能コンテンツ */}
       <ScrollableCalendarLayout
-        displayDates={currentTimeDisplayDates}
+        displayDates={weekDates}
         viewMode="week"
         enableKeyboardNavigation={true}
       >
