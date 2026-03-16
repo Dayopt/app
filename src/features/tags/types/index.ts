@@ -43,27 +43,6 @@ export interface TagSortOptions {
   order: TagSortOrder;
 }
 
-// API レスポンス型
-export interface TagsResponse {
-  data: Tag[];
-  count: number;
-  has_more: boolean;
-}
-
-// エラー型
-export interface TagError {
-  code: string;
-  message: string;
-  field?: string | undefined;
-}
-
-// タグ作成/更新結果
-export interface TagMutationResult {
-  success: boolean;
-  data?: Tag | undefined;
-  error?: TagError | undefined;
-}
-
 // タグ削除戦略
 export type TagDeleteStrategy = 'delete_entries' | 'reassign';
 
