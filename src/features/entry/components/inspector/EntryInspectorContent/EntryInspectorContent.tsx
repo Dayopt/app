@@ -56,7 +56,7 @@ export function EntryInspectorContent() {
     return plan?.origin ?? 'planned';
   }, [plan]);
 
-  // 充実度スコアのハンドリング（active/past のみ表示）
+  // 充実度スコアのハンドリング
   const fulfillmentScore = useMemo<FulfillmentScore | null>(() => {
     if (!planId) return null;
     const cache = getCache(planId);

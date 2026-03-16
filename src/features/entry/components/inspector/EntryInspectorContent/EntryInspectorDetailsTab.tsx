@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Inspector の詳細タブ — 3パターン対応
+ * Inspector の詳細タブ — 2パターン対応（planned / unplanned）
  *
  * Row 0: タグ（カラードット + タグ名）+ ⋯ メニュー
  * Row 1: 予定/記録 時間比較セクション
@@ -93,6 +93,8 @@ export const EntryInspectorDetailsTab = memo(function EntryInspectorDetailsTab({
 
   // 予定エントリでは繰り返し・リマインダーを表示（記録のみは非表示）
   const showRecurrence = origin !== 'unplanned';
+  // 過去エントリで未設定のリマインダーは非表示（もう機能しないため）
+  const showReminder = showRecurrence && !(entryState === 'past' && reminderMinutes === null);
 
   return (
     <InspectorDetailsLayout
@@ -119,8 +121,8 @@ export const EntryInspectorDetailsTab = memo(function EntryInspectorDetailsTab({
           entryState={entryState}
           origin={origin}
           timeConflictError={timeConflictError}
-          fulfillmentScore={entryState !== 'upcoming' ? fulfillmentScore : undefined}
-          onFulfillmentChange={entryState !== 'upcoming' ? onFulfillmentChange : undefined}
+          fulfillmentScore={fulfillmentScore}
+          onFulfillmentChange={onFulfillmentChange}
           note={plan.description || ''}
           onNoteChange={(text) => onAutoSave('description', text)}
           notePlaceholder={t('plan.inspector.note.placeholder')}
@@ -145,7 +147,7 @@ export const EntryInspectorDetailsTab = memo(function EntryInspectorDetailsTab({
             ) : undefined
           }
           reminderRow={
-            showRecurrence ? (
+            showReminder ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="text-muted-foreground size-4 flex-shrink-0" />

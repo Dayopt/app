@@ -14,17 +14,16 @@ import { InspectorTimeSection } from './InspectorTimeSection';
 import { InspectorFrame } from './story-helpers';
 
 /**
- * Entry Inspector — 3パターンの表示確認
+ * Entry Inspector — 2パターンの表示確認
  *
  * entries統合後の Inspector 完成形。
- * `entryState`（upcoming / active / past）と `origin`（planned / unplanned）の
- * 組み合わせで UI が切り替わる。
+ * `origin`（planned / unplanned）で UI が切り替わる。
+ * `entryState` は予定行のロック（past時）と充実度の表示に影響。
  *
- * ## 3パターン
+ * ## 2パターン
  *
- * - **Upcoming + Planned**: 予定行=編集可, 記録行=placeholder, 繰り返し/通知=○, 充実度=×, ボーダー=実線
- * - **Past + Planned**: 予定行=編集可, 記録行=編集可, 繰り返し/通知=○, 充実度=○, ボーダー=実線
- * - **Past + Unplanned**: 予定行=placeholder, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
+ * - **Planned**: 予定行=編集可（past時ロック）, 記録行=編集可, 繰り返し/通知=○, 充実度=○, ボーダー=実線
+ * - **Unplanned**: 予定行=placeholder, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
  *
  * ## origin 自動遷移（ドラッグ移動時）
  *
@@ -118,6 +117,7 @@ interface InspectorContentProps {
   initialActualEnd?: string | null;
   initialNote?: string;
   initialFulfillment?: FulfillmentScore | null;
+  initialReminderMinutes?: number | null;
 }
 
 function InspectorContent({
@@ -131,6 +131,7 @@ function InspectorContent({
   initialActualEnd = null,
   initialNote = '',
   initialFulfillment = null,
+  initialReminderMinutes = null,
 }: InspectorContentProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [plannedStart, setPlannedStart] = useState(initialPlannedStart);
@@ -158,8 +159,8 @@ function InspectorContent({
           onActualEndChange={setActualEnd}
           entryState={entryState}
           origin={origin}
-          fulfillmentScore={entryState !== 'upcoming' ? fulfillment : undefined}
-          onFulfillmentChange={entryState !== 'upcoming' ? setFulfillment : undefined}
+          fulfillmentScore={fulfillment}
+          onFulfillmentChange={setFulfillment}
           note={note}
           onNoteChange={setNote}
           notePlaceholder={t('plan.inspector.note.placeholder')}
@@ -185,7 +186,8 @@ function InspectorContent({
             ) : undefined
           }
           reminderRow={
-            origin !== 'unplanned' ? (
+            origin !== 'unplanned' &&
+            !(entryState === 'past' && initialReminderMinutes === null) ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="text-muted-foreground size-4 flex-shrink-0" />
@@ -244,8 +246,8 @@ function StaticEntryInspector(props: InspectorContentProps) {
  * ## Upcoming + Planned
  *
  * 未来の予定エントリ。計画の編集がメイン操作。
- * - 予定行: 編集可能 | 記録行: placeholder
- * - 期間: テキスト表示 | 繰り返し/通知: ○ | 充実度: × (Hide) | メモ: ○
+ * - 予定行: 編集可能 | 記録行: 編集可能（予定と同じ初期値）
+ * - プログレスバー: ○ | 繰り返し/通知: ○ | 充実度: ○ | メモ: ○
  */
 export const UpcomingPlanned: Story = {
   render: () => (
@@ -296,8 +298,8 @@ export const PastPlanned: Story = {
  * ## Past + Unplanned
  *
  * 直接記録されたエントリ（予定なし）。記録のみがメイン操作。
- * - 予定行: placeholder | 記録行: 編集可
- * - 期間: テキスト表示 | 繰り返し/通知: × (Hide) | 充実度: ○ | メモ: ○
+ * - 予定行: 非表示 | 記録行: 編集可 | 日付: 編集可
+ * - プログレスバー: × | 繰り返し/通知: × | 充実度: ○ | メモ: ○
  */
 export const PastUnplanned: Story = {
   render: () => (
@@ -319,7 +321,7 @@ export const PastUnplanned: Story = {
 /**
  * ## All Patterns
  *
- * 3パターンを横並びで比較確認（静的 InspectorFrame 使用）。
+ * 全パターンを横並びで比較確認（静的 InspectorFrame 使用）。
  */
 export const AllPatterns: Story = {
   parameters: {
