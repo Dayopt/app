@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 
 import { format, isSameDay, isValid } from 'date-fns';
 
+import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
-import { applyTimezoneToDisplayDates } from '../../../../utils/planDataAdapter';
 
 import { HOUR_HEIGHT as DEFAULT_HOUR_HEIGHT } from '../constants/grid.constants';
 

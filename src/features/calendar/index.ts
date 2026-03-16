@@ -83,16 +83,16 @@ export { useWeekendToggleShortcut } from './hooks/useWeekendToggleShortcut';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { isCalendarViewPath } from './lib/route-utils';
-export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/view-helpers';
 export {
   formatDateString,
   localTimeToUTCISO,
   parseDateString,
   parseDatetimeString,
   parseISOToUserTimezone,
-} from './utils/dateUtils';
-export { getEventOrigin, isRecordEvent } from './utils/planDataAdapter';
+} from '@/lib/date-utils';
+export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './engine/range';
+export { getEventOrigin, isRecordEvent } from './lib/plan-data-adapter';
+export { isCalendarViewPath } from './lib/route-utils';
 
 // =============================================================================
 // Grid Constants (used by settings feature)
