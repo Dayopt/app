@@ -12,40 +12,51 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 独立 Feature（`@/features/stats`）として実装。3タブ構成で段階的にデータを深掘りできる。
 
-| タブ | 説明 |
-|-----|------|
-| **Review（振り返り）** | 期間ベースのKPIメトリクス。日/週/月/年で切り替え |
-| **Progress（進捗）** | 累積・長期トレンド。ヒートマップ + 分布チャート |
-| **Insights（インサイト）** | LLMインサイト。Layer 1/2 データからAIが自然言語の気づきを生成 |
-
-### タブと Layer の関係
-
-タブは**データの性質**（期間振り返り / 累積）で分類し、Layer は**計算の複雑度**で分類する。
-両者は直交しており、Layer 1/2 のコンポーネントは Review・Progress どちらにも配置しうる。
-
-```
-タブ（UIの分類）        Layer（計算の分類）
-─────────────          ──────────────────
-Review  = 期間振り返り    Layer 1 = 自動計算（KPI数値）
-Progress = 累積データ     Layer 2 = パターン検出（チャート）
-Insights = AI分析        Layer 3 = LLMインサイト
-```
+| タブ | ユーザーが得られるもの |
+|-----|----------------------|
+| **Review（振り返り）** | 「今週どうだった？」— 期間ベースの KPI 数値。日/週/月/年で切り替え |
+| **Progress（進捗）** | 「長期的にどう変わった？」— ヒートマップ + 分布チャートで傾向を可視化 |
+| **Insights（インサイト）** | 「AI はどう見ている？」— 数値の裏にある文脈を自然言語で提示 |
 
 ---
 
-## 3層アーキテクチャ
+## タブ詳細
 
-```
-Layer 1 (自動計算) — KPIメトリクス 8カード     ← 現在: Review タブ
-  ↓ データを提供
-Layer 2 (パターン検出) — チャート 4つ           ← 現在: Progress タブ
-  ↓ 構造化データを提供
-Layer 3 (LLMインサイト) — 自然言語の気づき生成  ← 現在: Insights タブ
-```
+### Review タブ
 
-※ 上記は現在の配置。タブとLayerは1:1ではなく、今後コンポーネントがタブ間を移動する可能性がある。
+8つの KPI カードを2行×4列グリッドで表示。前期間との比較トレンド付き。
 
-詳細: [L1 Metrics](?path=/docs/features-stats-layers-l1-metrics--docs) | [L2 Patterns](?path=/docs/features-stats-layers-l2-patterns--docs) | [L3 LLM Insights](?path=/docs/features-stats-layers-l3-llm-insights--docs)
+- Total Time / Avg Fulfillment / Plan Rate / Streak
+- Estimation Accuracy / Peak Utilization / Context Switches / Blank Rate
+
+将来的に **Rule Insights**（閾値ベースの自動気づき）をグリッド下に配置予定。
+
+### Progress タブ
+
+累積・長期のトレンドを4つのチャートで表示。
+
+- **年間ヒートマップ**: GitHub の contribution graph 風。1年間の活動量を俯瞰
+- **月次トレンド**: 月ごとの記録時間推移。改善/悪化が一目でわかる
+- **曜日分布**: どの曜日に活動が集中しているか
+- **時間帯分布**: どの時間帯に活動しているか。chronotype との整合確認に
+
+### Insights タブ
+
+LLM が生成した自然言語のインサイト。週1回自動生成（月曜朝）。
+
+- **findings**: 2-4個の発見（カテゴリ別、sentiment カラーコード付き）
+- **suggestions**: 1-2個の行動提案（ユーザーの価値観と紐付け）
+- **question**: 振り返りの問いかけ
+
+Dayopt の AI は「観察者」。事実を淡々と伝え、モチベーションを上げようとしない。
+
+---
+
+## ヘッダーコントロール
+
+Review / Insights タブ選択時に表示:
+- **DateNavigator** — 前後・今日ナビゲーション
+- **GranularitySelector** — 粒度切替（日/週/月/年）
 
 ---
 
@@ -55,8 +66,9 @@ Layer 3 (LLMインサイト) — 自然言語の気づき生成  ← 現在: Ins
 StatsPageContent                    タブ管理 + URL ルーティング
 ├── Review タブ
 │   └── StatsView
-│       └── StatsMetricsGrid       8カード KPI（2行×4列）
-│           └── MetricCard         単一 KPI カード
+│       ├── StatsMetricsGrid       8カード KPI（2行×4列）
+│       │   └── MetricCard         単一 KPI カード
+│       └── RuleInsightList        閾値ベースの気づき（予定）
 │
 ├── Progress タブ
 │   └── ProgressView
@@ -66,77 +78,18 @@ StatsPageContent                    タブ管理 + URL ルーティング
 │       └── HourlyDistributionChart 時間帯分布
 │
 └── Insights タブ
-    └── InsightsView               LLMインサイト表示
-        ├── InsightCard            インサイトカード（findings + suggestions + question）
-        └── InsightUserNote        ユーザーメモ
+    └── InsightsView               LLM インサイト表示
+        ├── InsightCard            インサイトカード
+        └── InsightsEmptyState     未生成・データ不足
 ```
-
-### ヘッダーコントロール
-
-Review / Insights タブ選択時に表示:
-- `DateNavigator` — 前後・今日ナビゲーション
-- `StatsGranularitySelector` — 粒度切替（日/週/月/年）
 
 ---
 
-## 状態管理
+## 技術詳細
 
-### useStatsFilterStore
-
-| State | 型 | 説明 |
-|-------|----|------|
-| `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度 |
-| `currentDate` | `Date` | ナビゲーション基準日 |
-
-タブの状態は URL がソース・オブ・トゥルース（`/stats/review`, `/stats/progress`, `/stats/insights`）。
-`pushState` によるクライアントサイド遷移で高速切り替え。
-
----
-
-## tRPC エンドポイント
-
-### entries統計ルーター（`src/features/entry/server/statistics.ts`）
-
-#### Layer 1: KPI メトリクス
-
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `getCumulativeTime` | dateRange | 期間内の記録時間合計 |
-| `getStreak` | — | 連続アクティビティ日数 |
-| `getPlanRate` | dateRange | 計画率 |
-| `getEstimationAccuracy` | dateRange | タグ別見積もり精度 |
-| `getEnergyMap` | dateRange | 時間帯×曜日エネルギー分布 |
-| `getContextSwitches` | dateRange | タスク切替回数 |
-| `getBlankRate` | dateRange + wake/sleep | 空白時間率 |
-
-#### Layer 2: チャート
-
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `getDailyHours` | `{ year }` | ヒートマップ用日次集計 |
-| `getMonthlyTrend` | `{ months? }` | 月次推移 |
-| `getDayOfWeekDistribution` | dateRange? | 曜日別分布 |
-| `getHourlyDistribution` | dateRange? | 時間帯分布 |
-
-#### Layer 3: インサイト
-
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `insights.getInsight` | `{ periodType, periodStart }` | 特定期間のインサイト取得 |
-| `insights.listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧 |
-| `insights.updateNote` | `{ insightId, userNote }` | ユーザーメモ更新 |
-
----
-
-## データフロー
-
-```
-PostgreSQL RPC関数
-  → entries統計ルーター
-    → TanStack Query (並列取得・自動キャッシュ)
-      → 純粋計算関数 (metrics.ts) or Recharts チャート
-        → MetricCard / Chart コンポーネント
-```
+- [Layer Architecture](?path=/docs/features-stats-docs-layer-architecture--docs) — 3層の技術設計
+- [Data Flow](?path=/docs/features-stats-docs-data-flow--docs) — データ取得パイプライン
+- [L1 Metrics](?path=/docs/features-stats-layers-l1-metrics--docs) | [L2 Patterns](?path=/docs/features-stats-layers-l2-patterns--docs) | [L3 LLM Insights](?path=/docs/features-stats-layers-l3-llm-insights--docs)
 
 ---
 
