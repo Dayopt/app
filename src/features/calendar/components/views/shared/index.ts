@@ -38,13 +38,9 @@ export { usePlanLayoutCalculator } from './hooks/usePlanLayoutCalculator';
 export type { PlanLayout } from './hooks/usePlanLayoutCalculator';
 export { usePlanPosition, usePositionedPlans } from './hooks/usePlanPosition';
 export { usePlanStyles } from './hooks/usePlanStyles';
-export { useBreakpoint, useResponsiveHourHeight } from './hooks/useResponsiveHourHeight';
-export { useScrollSync } from './hooks/useScrollSync';
-export { useTimeCalculation } from './hooks/useTimeCalculation';
-export type { TimeCalculationResult, UseTimeCalculationOptions } from './hooks/useTimeCalculation';
+export { useResponsiveHourHeight } from './hooks/useResponsiveHourHeight';
 export { useTimeGrid } from './hooks/useTimeGrid';
 export { useTimeSlots } from './hooks/useTimeSlots';
-export { useViewDimensions } from './hooks/useViewDimensions';
 export { useViewPlans } from './hooks/useViewPlans';
 export type { PlanPosition } from './hooks/useViewPlans';
 

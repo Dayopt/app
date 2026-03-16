@@ -47,27 +47,6 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-export interface ViewDimensions {
-  containerWidth: number;
-  containerHeight: number;
-  contentWidth: number;
-  contentHeight: number;
-  scrollTop: number;
-  scrollLeft: number;
-  visibleTimeRange: {
-    start: number; // 開始時間（0-24）
-    end: number; // 終了時間（0-24）
-  };
-}
-
-export interface ScrollSyncOptions {
-  horizontal?: boolean;
-  vertical?: boolean;
-  initialScrollTop?: number;
-  initialScrollLeft?: number;
-  onScroll?: (scrollTop: number, scrollLeft: number) => void;
-}
-
 export interface ViewNavigationProps {
   currentDate: Date;
   viewType: ViewType;
