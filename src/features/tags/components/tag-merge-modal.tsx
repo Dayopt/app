@@ -4,7 +4,7 @@
  * タグマージモーダル
  *
  * TagQuickSelector と同じデザインパターン。
- * overlayなし、モバイル: BottomSheet / PC: 中央フローティング。
+ * モバイル: Vaul Drawer（スワイプで閉じる）、PC: 中央フローティング。
  * コロン記法グルーピング対応。
  */
 
@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -166,9 +167,125 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
       })
     : null;
 
-  if (!mounted || !open) return null;
+  if (!mounted) return null;
 
   const hasResults = filteredTags.length > 0;
+  const descriptionText = selectedTarget
+    ? confirmationMessage
+    : t('calendar.filter.mergeTag.selectTarget');
+
+  const mergeContent = (
+    <>
+      {/* Search */}
+      <div className="border-border border-b px-4 py-3">
+        <div className="relative">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('calendar.filter.mergeTag.searchPlaceholder')}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Tag list */}
+      <div
+        className="overflow-y-auto px-1 py-2"
+        style={{ maxHeight: '50vh' }}
+        role="radiogroup"
+        aria-label={t('calendar.filter.mergeTag.title')}
+      >
+        {!hasResults && (
+          <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+            {t('calendar.filter.mergeTag.noResults')}
+          </p>
+        )}
+
+        {/* Grouped tags */}
+        {[...groups.entries()].map(([prefix, groupTags]) => {
+          const firstTag = groupTags[0];
+          if (!firstTag) return null;
+
+          return (
+            <div key={prefix} className="mb-1">
+              <TagRadioItem
+                tag={firstTag}
+                label={prefix}
+                isSelected={selectedTargetId === firstTag.id}
+                onSelect={() => handleSelectGroupParent(firstTag.id)}
+              />
+              {groupTags.map((tag) => {
+                const { suffix } = parseColonTag(tag.name);
+                return (
+                  <TagRadioItem
+                    key={tag.id}
+                    tag={tag}
+                    label={suffix ?? tag.name}
+                    isSelected={selectedTargetId === tag.id}
+                    onSelect={() => handleSelectTag(tag.id)}
+                    indented
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Ungrouped tags */}
+        {ungrouped.map((tag) => (
+          <TagRadioItem
+            key={tag.id}
+            tag={tag}
+            label={tag.name}
+            isSelected={selectedTargetId === tag.id}
+            onSelect={() => handleSelectTag(tag.id)}
+          />
+        ))}
+      </div>
+
+      {/* Error */}
+      {error && (
+        <p className="text-destructive px-4 text-sm" role="alert">
+          {error}
+        </p>
+      )}
+
+      {/* Footer */}
+      <ActionFooter className="border-border border-t px-4 py-3">
+        <Button variant="outline" onClick={onClose} disabled={mergeTagMutation.isPending}>
+          {t('common.actions.cancel')}
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={handleMerge}
+          disabled={!selectedTargetId || mergeTagMutation.isPending}
+        >
+          {mergeTagMutation.isPending
+            ? t('calendar.toast.saving')
+            : t('calendar.filter.mergeTag.confirm')}
+        </Button>
+      </ActionFooter>
+    </>
+  );
+
+  // モバイル: Vaul Drawer（スワイプで閉じる）
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={(o) => !o && !mergeTagMutation.isPending && onClose()}>
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle>{t('calendar.filter.mergeTag.title')}</DrawerTitle>
+            <p className="text-muted-foreground mt-1 text-sm">{descriptionText}</p>
+          </DrawerHeader>
+          {mergeContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // PC: 中央フローティング
+  if (!open) return null;
 
   const panel = (
     <div className="fixed inset-0 z-50" onClick={handleBackdropClick}>
@@ -180,143 +297,29 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         className={cn(
           'bg-card border-border absolute flex flex-col border shadow-xl',
           'animate-in fade-in duration-150',
-          isMobile
-            ? 'slide-in-from-bottom-4 inset-x-0 bottom-0 max-h-[70vh] rounded-t-2xl border-t'
-            : 'top-1/2 left-1/2 max-h-[70vh] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl',
+          'top-1/2 left-1/2 max-h-[70vh] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl',
         )}
       >
-        {/* Drag handle (mobile) / Header */}
-        {isMobile ? (
-          <>
-            <div
-              className="flex h-10 w-full shrink-0 items-center justify-center"
-              aria-hidden="true"
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">{t('calendar.filter.mergeTag.title')}</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={mergeTagMutation.isPending}
+              className={cn(
+                'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+                'hover:bg-state-hover',
+              )}
+              aria-label="Close"
             >
-              <div className="bg-border h-1.5 w-12 rounded-full" />
-            </div>
-            <div className="px-4 pb-2">
-              <h2 className="text-lg font-bold">{t('calendar.filter.mergeTag.title')}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {selectedTarget ? confirmationMessage : t('calendar.filter.mergeTag.selectTarget')}
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="px-4 pt-4 pb-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">{t('calendar.filter.mergeTag.title')}</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={mergeTagMutation.isPending}
-                className={cn(
-                  'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-                  'hover:bg-state-hover',
-                )}
-                aria-label="Close"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {selectedTarget ? confirmationMessage : t('calendar.filter.mergeTag.selectTarget')}
-            </p>
+              <X className="size-4" />
+            </button>
           </div>
-        )}
-
-        {/* Search */}
-        <div className="border-border border-b px-4 py-3">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('calendar.filter.mergeTag.searchPlaceholder')}
-              className="pl-9"
-            />
-          </div>
+          <p className="text-muted-foreground mt-1 text-sm">{descriptionText}</p>
         </div>
 
-        {/* Tag list */}
-        <div
-          className="overflow-y-auto px-1 py-2"
-          style={{ maxHeight: '50vh' }}
-          role="radiogroup"
-          aria-label={t('calendar.filter.mergeTag.title')}
-        >
-          {!hasResults && (
-            <p className="text-muted-foreground px-3 py-6 text-center text-sm">
-              {t('calendar.filter.mergeTag.noResults')}
-            </p>
-          )}
-
-          {/* Grouped tags */}
-          {[...groups.entries()].map(([prefix, groupTags]) => {
-            const firstTag = groupTags[0];
-            if (!firstTag) return null;
-
-            return (
-              <div key={prefix} className="mb-1">
-                {/* Group parent */}
-                <TagRadioItem
-                  tag={firstTag}
-                  label={prefix}
-                  isSelected={selectedTargetId === firstTag.id}
-                  onSelect={() => handleSelectGroupParent(firstTag.id)}
-                />
-
-                {/* Children */}
-                {groupTags.map((tag) => {
-                  const { suffix } = parseColonTag(tag.name);
-                  return (
-                    <TagRadioItem
-                      key={tag.id}
-                      tag={tag}
-                      label={suffix ?? tag.name}
-                      isSelected={selectedTargetId === tag.id}
-                      onSelect={() => handleSelectTag(tag.id)}
-                      indented
-                    />
-                  );
-                })}
-              </div>
-            );
-          })}
-
-          {/* Ungrouped tags */}
-          {ungrouped.map((tag) => (
-            <TagRadioItem
-              key={tag.id}
-              tag={tag}
-              label={tag.name}
-              isSelected={selectedTargetId === tag.id}
-              onSelect={() => handleSelectTag(tag.id)}
-            />
-          ))}
-        </div>
-
-        {/* Error */}
-        {error && (
-          <p className="text-destructive px-4 text-sm" role="alert">
-            {error}
-          </p>
-        )}
-
-        {/* Footer */}
-        <ActionFooter className="border-border border-t px-4 py-3">
-          <Button variant="outline" onClick={onClose} disabled={mergeTagMutation.isPending}>
-            {t('common.actions.cancel')}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleMerge}
-            disabled={!selectedTargetId || mergeTagMutation.isPending}
-          >
-            {mergeTagMutation.isPending
-              ? t('calendar.toast.saving')
-              : t('calendar.filter.mergeTag.confirm')}
-          </Button>
-        </ActionFooter>
+        {mergeContent}
       </div>
     </div>
   );

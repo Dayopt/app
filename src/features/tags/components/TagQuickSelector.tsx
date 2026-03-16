@@ -6,7 +6,7 @@
  * タグ選択用フローティングパネル。
  * ラジオボタン型の単一選択 + 検索 + 新規作成。
  * overlayなし — 背景コンテンツが見える状態を維持。
- * モバイル: BottomSheet風パネル、PC: アンカー横フローティング。
+ * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,6 +16,7 @@ import { Plus, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -300,9 +301,9 @@ export function TagQuickSelector({
     };
   }, [open, isMobile, anchorRef]);
 
-  // Escape キーで閉じる
+  // Escape キーで閉じる（PC のみ — Drawer は自前で処理）
   useEffect(() => {
-    if (!open) return;
+    if (!open || isMobile) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -312,7 +313,7 @@ export function TagQuickSelector({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onOpenChange]);
+  }, [open, isMobile, onOpenChange]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -322,54 +323,52 @@ export function TagQuickSelector({
     [onOpenChange],
   );
 
-  if (!mounted || !open) return null;
+  if (!mounted) return null;
+
+  // モバイル: Vaul Drawer（スワイプで閉じる）
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle>{t('tagSelector.title')}</DrawerTitle>
+          </DrawerHeader>
+          <TagQuickSelectorContent onSelect={onSelect} onCreateAndSelect={onCreateAndSelect} />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // PC: フローティングパネル
+  if (!open) return null;
 
   const panel = (
     <div className="z-overlay-popover fixed inset-0" onClick={handleBackdropClick}>
-      {/* Floating panel — overlayなし、背景が見える */}
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="false"
         aria-label={t('tagSelector.title')}
         className={cn(
-          'bg-card border-border absolute flex flex-col border shadow-xl',
+          'bg-card border-border absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border shadow-xl',
           'animate-in fade-in duration-150',
-          isMobile
-            ? 'slide-in-from-bottom-4 inset-x-0 bottom-0 max-h-[70vh] rounded-t-2xl border-t'
-            : 'max-h-[70vh] w-full max-w-sm rounded-2xl',
         )}
-        style={!isMobile && position ? { top: position.top, left: position.left } : undefined}
+        style={position ? { top: position.top, left: position.left } : undefined}
       >
-        {/* Drag handle (mobile) / Header */}
-        {isMobile ? (
-          <>
-            <div
-              className="flex h-10 w-full shrink-0 items-center justify-center"
-              aria-hidden="true"
-            >
-              <div className="bg-border h-1.5 w-12 rounded-full" />
-            </div>
-            <div className="px-4 pb-2">
-              <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className={cn(
-                'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-                'hover:bg-state-hover',
-              )}
-              aria-label="Close"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        )}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={cn(
+              'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+              'hover:bg-state-hover',
+            )}
+            aria-label="Close"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
 
         <TagQuickSelectorContent onSelect={onSelect} onCreateAndSelect={onCreateAndSelect} />
       </div>
