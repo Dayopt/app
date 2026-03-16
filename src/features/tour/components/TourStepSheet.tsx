@@ -11,6 +11,7 @@ interface TourStepSheetProps {
   totalSteps: number;
   isLastStep: boolean;
   onNext: () => void;
+  onPrev?: (() => void) | undefined;
   onSkip: () => void;
 }
 
@@ -22,6 +23,7 @@ export function TourStepSheet({
   totalSteps,
   isLastStep,
   onNext,
+  onPrev,
   onSkip,
 }: TourStepSheetProps) {
   return (
@@ -41,6 +43,7 @@ export function TourStepSheet({
             totalSteps={totalSteps}
             isLastStep={isLastStep}
             onNext={onNext}
+            onPrev={onPrev}
             onSkip={onSkip}
           />
         </div>

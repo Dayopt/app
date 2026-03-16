@@ -11,6 +11,7 @@ interface TourStepCardProps {
   totalSteps: number;
   isLastStep: boolean;
   onNext: () => void;
+  onPrev?: (() => void) | undefined;
   onSkip: () => void;
 }
 
@@ -22,6 +23,7 @@ export function TourStepCard({
   totalSteps,
   isLastStep,
   onNext,
+  onPrev,
   onSkip,
 }: TourStepCardProps) {
   const t = useTranslations();
@@ -36,13 +38,24 @@ export function TourStepCard({
         <p className="text-muted-foreground text-sm">{t(descriptionKey)}</p>
       </div>
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          onClick={onSkip}
-        >
-          {t('tour.skip')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+            onClick={onSkip}
+          >
+            {t('tour.skip')}
+          </button>
+          {onPrev && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+              onClick={onPrev}
+            >
+              {t('tour.back')}
+            </button>
+          )}
+        </div>
         <Button size="sm" onClick={onNext}>
           {isLastStep ? t('tour.done_button') : t('tour.next')}
         </Button>

@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { TourPlanVsRecordContent } from './TourPlanVsRecordContent';
+import { PlanVsRecordContent } from './content/PlanVsRecordContent';
 
-/** TourPlanVsRecordContent — Plan vs Record をビジュアルで比較 */
+/** PlanVsRecordContent — Plan vs Record をビジュアルで比較 */
 const meta = {
-  title: 'Features/Tour/TourPlanVsRecordContent',
-  component: TourPlanVsRecordContent,
+  title: 'Features/Tour/PlanVsRecordContent',
+  component: PlanVsRecordContent,
   parameters: {
     layout: 'centered',
   },
@@ -25,7 +25,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof TourPlanVsRecordContent>;
+} satisfies Meta<typeof PlanVsRecordContent>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

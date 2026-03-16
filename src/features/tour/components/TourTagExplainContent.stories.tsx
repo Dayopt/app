@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { TourTagExplainContent } from './TourTagExplainContent';
+import { TagExplainContent } from './content/TagExplainContent';
 
-/** TourTagExplainContent — タグの3つの役割をビジュアルで説明 */
+/** TagExplainContent — タグの3つの役割をビジュアルで説明 */
 const meta = {
-  title: 'Features/Tour/TourTagExplainContent',
-  component: TourTagExplainContent,
+  title: 'Features/Tour/TagExplainContent',
+  component: TagExplainContent,
   parameters: {
     layout: 'centered',
   },
@@ -14,6 +14,7 @@ const meta = {
   args: {
     currentStep: 4,
     totalSteps: 7,
+    isLastStep: false,
     onNext: fn(),
     onSkip: fn(),
   },
@@ -24,7 +25,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof TourTagExplainContent>;
+} satisfies Meta<typeof TagExplainContent>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

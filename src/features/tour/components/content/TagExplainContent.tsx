@@ -4,20 +4,23 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 
-interface TourTagExplainContentProps {
+interface TourContentProps {
   currentStep: number;
   totalSteps: number;
+  isLastStep: boolean;
   onNext: () => void;
+  onPrev?: (() => void) | undefined;
   onSkip: () => void;
 }
 
 /** タグの3つの役割をビジュアルで説明するリッチコンテンツ */
-export function TourTagExplainContent({
+export function TagExplainContent({
   currentStep,
   totalSteps,
   onNext,
+  onPrev,
   onSkip,
-}: TourTagExplainContentProps) {
+}: TourContentProps) {
   const t = useTranslations();
 
   const examples = [
@@ -81,13 +84,24 @@ export function TourTagExplainContent({
 
       {/* ナビゲーション */}
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
-          onClick={onSkip}
-        >
-          {t('tour.skip')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+            onClick={onSkip}
+          >
+            {t('tour.skip')}
+          </button>
+          {onPrev && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+              onClick={onPrev}
+            >
+              {t('tour.back')}
+            </button>
+          )}
+        </div>
         <Button size="sm" onClick={onNext}>
           {t('tour.next')}
         </Button>

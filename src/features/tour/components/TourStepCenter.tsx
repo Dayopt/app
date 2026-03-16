@@ -1,9 +1,10 @@
 'use client';
 
-import type { TourContentKey } from '../types';
-import { TourPlanVsRecordContent } from './TourPlanVsRecordContent';
+import { PlanVsRecordContent } from './content/PlanVsRecordContent';
+import { TagExplainContent } from './content/TagExplainContent';
 import { TourStepCard } from './TourStepCard';
-import { TourTagExplainContent } from './TourTagExplainContent';
+
+import type { TourContentKey } from '../types';
 
 interface TourStepCenterProps {
   titleKey: string;
@@ -12,6 +13,7 @@ interface TourStepCenterProps {
   totalSteps: number;
   isLastStep: boolean;
   onNext: () => void;
+  onPrev?: (() => void) | undefined;
   onSkip: () => void;
   contentKey?: TourContentKey | undefined;
 }
@@ -24,37 +26,28 @@ export function TourStepCenter({
   totalSteps,
   isLastStep,
   onNext,
+  onPrev,
   onSkip,
   contentKey,
 }: TourStepCenterProps) {
+  const contentProps = {
+    currentStep,
+    totalSteps,
+    isLastStep,
+    onNext,
+    onPrev,
+    onSkip,
+  };
+
   return (
     <div className="z-tour fixed inset-0 flex items-center justify-center">
       <div className="bg-card animate-in fade-in zoom-in-95 w-80 rounded-xl p-6 shadow-lg duration-150">
         {contentKey === 'tag-explain' ? (
-          <TourTagExplainContent
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            onNext={onNext}
-            onSkip={onSkip}
-          />
+          <TagExplainContent {...contentProps} />
         ) : contentKey === 'plan-vs-record-visual' ? (
-          <TourPlanVsRecordContent
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            isLastStep={isLastStep}
-            onNext={onNext}
-            onSkip={onSkip}
-          />
+          <PlanVsRecordContent {...contentProps} />
         ) : (
-          <TourStepCard
-            titleKey={titleKey}
-            descriptionKey={descriptionKey}
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            isLastStep={isLastStep}
-            onNext={onNext}
-            onSkip={onSkip}
-          />
+          <TourStepCard titleKey={titleKey} descriptionKey={descriptionKey} {...contentProps} />
         )}
       </div>
     </div>
