@@ -10,6 +10,3 @@ export { useWeekView } from './hooks/useWeekView';
 
 // サブコンポーネント
 export { WeekGrid } from './components/WeekGrid';
-
-// 後方互換性のためのレガシーレイアウト
-export { WeekCalendarLayout } from './WeekCalendarLayout';
