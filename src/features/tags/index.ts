@@ -56,7 +56,7 @@ export {
 export type { ReorderTagInput } from './hooks/useTagCrudMutations';
 
 // Constants - Colors
-export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from './constants/colors';
+export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '@/lib/tag-colors';
 
 // Types
 export type {

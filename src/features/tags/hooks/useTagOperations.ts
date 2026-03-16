@@ -3,8 +3,8 @@
  */
 
 import { logger } from '@/lib/logger';
+import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import { useCallback, useState } from 'react';
-import { DEFAULT_TAG_COLOR } from '../constants/colors';
 import type { CreateTagInput, Tag, UpdateTagInput } from '../types';
 import { useCreateTag, useDeleteTag, useRenameTag, useUpdateTag } from './useTagsMutations';
 import { useOptimisticTagUpdate } from './useTagsOptimistic';
