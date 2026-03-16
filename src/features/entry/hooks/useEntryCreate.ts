@@ -1,0 +1,117 @@
+'use client';
+
+/**
+ * エントリ作成フロー統合 hook
+ *
+ * EntryCreateTrigger と MobileFAB の共通ロジック:
+ * - 空きスロット検索（15分単位、最大2時間先）
+ * - エントリ作成 → Inspector を開く
+ */
+
+import { useCallback } from 'react';
+
+import { logger } from '@/lib/logger';
+import { api } from '@/platform/trpc';
+import { useEntryMutations } from './useEntryMutations';
+
+import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
+
+interface UseEntryCreateOptions {
+  /** 作成後のコールバック */
+  onSuccess?: (() => void) | undefined;
+}
+
+/** 次の15分単位の時刻を取得 */
+function getNextQuarterHour(date: Date): Date {
+  const result = new Date(date);
+  const minutes = result.getMinutes();
+  const nextQuarter = Math.ceil(minutes / 15) * 15;
+  result.setMinutes(nextQuarter, 0, 0);
+  if (nextQuarter >= 60) {
+    result.setHours(result.getHours() + 1);
+    result.setMinutes(0);
+  }
+  return result;
+}
+
+export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
+  const openInspector = useEntryInspectorStore((s) => s.openInspector);
+  const { createEntry } = useEntryMutations();
+  const utils = api.useUtils();
+
+  /** 時間重複チェック（TanStack Query キャッシュベース） */
+  const checkOverlap = useCallback(
+    (start: Date, end: Date): boolean => {
+      const entries = utils.entries.list.getData();
+      if (!entries || entries.length === 0) return false;
+
+      return entries.some((e) => {
+        if (!e.start_time || !e.end_time) return false;
+        const eStart = new Date(e.start_time);
+        const eEnd = new Date(e.end_time);
+        return eStart < end && eEnd > start;
+      });
+    },
+    [utils.entries.list],
+  );
+
+  /** 空き時間を探す（最大2時間先まで、15分刻み） */
+  const findAvailableSlot = useCallback(
+    (baseTime: Date): { start: Date; end: Date } => {
+      let start = getNextQuarterHour(baseTime);
+      let end = new Date(start.getTime() + 60 * 60 * 1000);
+
+      for (let i = 0; i < 8; i++) {
+        if (!checkOverlap(start, end)) {
+          return { start, end };
+        }
+        start = new Date(start.getTime() + 15 * 60 * 1000);
+        end = new Date(end.getTime() + 15 * 60 * 1000);
+      }
+
+      return {
+        start: getNextQuarterHour(baseTime),
+        end: new Date(getNextQuarterHour(baseTime).getTime() + 60 * 60 * 1000),
+      };
+    },
+    [checkOverlap],
+  );
+
+  /** エントリ作成（空きスロット検索 + Inspector を開く） */
+  const create = useCallback(
+    async (initialDate?: Date) => {
+      const baseDate = initialDate ?? new Date();
+      const { start, end } = findAvailableSlot(baseDate);
+
+      // カレンダーに選択範囲を表示
+      window.dispatchEvent(
+        new CustomEvent('calendar-show-selection', {
+          detail: {
+            date: start,
+            startHour: start.getHours(),
+            startMinute: start.getMinutes(),
+            endHour: end.getHours(),
+            endMinute: end.getMinutes(),
+          },
+        }),
+      );
+
+      try {
+        const result = await createEntry.mutateAsync({
+          title: '',
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        });
+        if (result?.id) {
+          openInspector(result.id);
+        }
+      } catch {
+        logger.error('Failed to create entry');
+      }
+      onSuccess?.();
+    },
+    [findAvailableSlot, createEntry, openInspector, onSuccess],
+  );
+
+  return { create };
+}

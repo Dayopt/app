@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
-import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
+import { useEntryCreate } from '@/features/entry';
 import {
   CreateActionSheet,
   useCreateActionSheet,
@@ -17,20 +17,18 @@ import {
  * モバイル用FAB（Floating Action Button）+ CreateActionSheet
  *
  * エントリ作成のトリガー。iOS Safe Area対応済み。
+ * useEntryCreate で空きスロット検索 → 作成 → Inspector を一貫して実行。
  */
 export function MobileFAB() {
   const t = useTranslations();
   const createActionSheet = useCreateActionSheet();
-  const { createEntry } = useEntryMutations();
+  const { create } = useEntryCreate();
 
   const handleCreateAction = useCallback(
     async (_type: CreateActionType) => {
-      const result = await createEntry.mutateAsync({ title: '' });
-      if (result?.id) {
-        useEntryInspectorStore.getState().openInspector(result.id);
-      }
+      await create();
     },
-    [createEntry],
+    [create],
   );
 
   return (
