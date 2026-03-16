@@ -8,13 +8,13 @@ import { MetricCard } from '../metrics/MetricCard';
 // =============================================================================
 
 /**
- * ReviewView — 振り返りタブの全体レイアウト
+ * StatsMetricsGrid — KPIメトリクスグリッド（8カード）
  *
- * Layer 1: KPIメトリクスグリッド（8カード）
- * （このStoryはtRPCなしでモックデータを直接使用）
+ * Review タブの主要コンポーネント。
+ * tRPCなしでモックデータを直接使用。
  */
 const meta = {
-  title: 'Features/Stats/Layer1/ReviewView',
+  title: 'Features/Stats/Review/StatsMetricsGrid',
   parameters: {
     layout: 'fullscreen',
   },
