@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
-import { useSettingsStore } from '../stores/useSettingsStore';
+import { useSettingsStore } from '@/shell/stores/useSettingsStore';
 
 import { SETTINGS_CATEGORIES } from '../constants';
 
