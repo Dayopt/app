@@ -4,7 +4,8 @@
  * Plan/Record の Inspector Stories で共通利用するモックデータとコンポーネント
  */
 
-import { FolderOpen, X } from 'lucide-react';
+import { Bell, ChevronDown, FolderOpen, Plus, Repeat, Trash2, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
 import type { Tag } from '@/features/tags';
@@ -50,6 +51,94 @@ export function MockPlanLinkButton({ planName }: { planName?: string | undefined
         )}
       </div>
     </HoverTooltip>
+  );
+}
+
+/** モック用タグ行（TagRow は useTagsMap 依存のためモック） */
+export function MockTagRow({
+  tagName,
+  dotClass,
+}: {
+  tagName?: string | undefined;
+  dotClass?: string | undefined;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <button
+        type="button"
+        className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-base font-semibold transition-colors"
+        aria-label={tagName ? `Tag: ${tagName}` : 'Add tag'}
+      >
+        {tagName ? (
+          <>
+            <span
+              className={cn('inline-block size-2.5 flex-shrink-0 rounded-full', dotClass)}
+              aria-hidden
+            />
+            <span className="text-foreground">{tagName}</span>
+            <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
+          </>
+        ) : (
+          <>
+            <Plus className="text-muted-foreground size-3.5 flex-shrink-0" aria-hidden />
+            <span className="text-muted-foreground">Add tag</span>
+            <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
+          </>
+        )}
+      </button>
+
+      <button
+        type="button"
+        className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-8 items-center justify-center rounded-lg transition-colors"
+        aria-label="Delete"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+/** モック用繰り返し行（RecurrenceRow は store 依存のためモック） */
+export function MockRecurrenceRow() {
+  const t = useTranslations();
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Repeat className="text-muted-foreground size-4 flex-shrink-0" />
+        <span className="text-muted-foreground text-sm">{t('common.recurrence.label')}</span>
+      </div>
+      <div className="-mr-2">
+        <button
+          type="button"
+          className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
+          aria-label="Set recurrence"
+        >
+          {t('common.recurrence.none')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** モック用リマインダー行（ReminderRow は store 依存のためモック） */
+export function MockReminderRow() {
+  const t = useTranslations();
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Bell className="text-muted-foreground size-4 flex-shrink-0" />
+        <span className="text-muted-foreground text-sm">{t('common.reminder.label')}</span>
+      </div>
+      <div className="-mr-2">
+        <button
+          type="button"
+          className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
+          aria-label="Add reminder"
+        >
+          {t('common.reminder.add')}
+        </button>
+      </div>
+    </div>
   );
 }
 

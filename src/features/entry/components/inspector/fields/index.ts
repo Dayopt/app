@@ -19,8 +19,3 @@ export { ReminderSelect } from './ReminderSelect';
 export { NoteSection } from './NoteSection';
 export { TagRow } from './TagRow';
 export { TimeConflictAlert } from './TimeConflictAlert';
-
-// 後方互換エイリアス（Phase 完了後に削除予定）
-export { DateRow as DateNavigatorRow } from './DateRow';
-export { NoteSection as InlineNoteSection } from './NoteSection';
-export { TagRow as InspectorTagRow } from './TagRow';

@@ -1,12 +1,9 @@
-// Phase 2: 新しい統一 hook
 export { useDebouncedSave } from './useDebouncedSave';
 export { useEntryForm } from './useEntryForm';
+export { useInspectorNavigation } from './useInspectorNavigation';
 export { useRecurringGuard } from './useRecurringGuard';
 export { useTagField } from './useTagField';
 export { useTimeFields } from './useTimeFields';
 
-// 既存（後方互換 — Phase 完了後に削除予定）
+// re-export from feature hooks (used by EntryInspector.tsx)
 export { useInspectorKeyboard } from '../../../hooks/useInspectorKeyboard';
-export { useInspectorAutoSave } from './useInspectorAutoSave';
-export { useInspectorNavigation } from './useInspectorNavigation';
-export { useRecurringEntryEdit } from './useRecurringEntryEdit';
