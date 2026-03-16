@@ -9,6 +9,7 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
+export type { CalendarControllerProps } from './components/CalendarController';
 
 // =============================================================================
 // Layout Components
@@ -53,12 +54,10 @@ export type {
 // =============================================================================
 // Contexts
 // =============================================================================
-export { CalendarProvider, useCalendar } from './contexts/CalendarContext';
-export type { CalendarContextValue } from './contexts/CalendarContext';
 export {
   CalendarNavigationProvider,
   useCalendarNavigation,
-} from './contexts/CalendarNavigationContext';
+} from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
 // Hooks

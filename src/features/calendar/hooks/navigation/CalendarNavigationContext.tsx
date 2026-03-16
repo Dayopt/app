@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 
 import { format } from 'date-fns';
 
-import type { CalendarViewType } from '../types/calendar.types';
-import { getMultiDayCount, isMultiDayView } from '../types/calendar.types';
+import type { CalendarViewType } from '../../types/calendar.types';
+import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 
 interface CalendarNavigationContextValue {
   currentDate: Date;
