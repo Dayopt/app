@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Stats/Layer3/Docs" />
+<Meta title="Features/Stats/Layers/L3 LLM Insights" />
 
 # Layer 3: LLM Insights
 
@@ -34,12 +34,13 @@ Layer 3 (LLMインサイト) ← 今ここ — 自然言語の気づき生成
 ## データフロー
 
 ```
-Layer 1 (数値)     Layer 2 (パターン)     ユーザー設定
-    ↓                    ↓                    ↓
-    └────────────────────┼────────────────────┘
+Layer 1 (数値)     Layer 2 (パターン)     ユーザー設定     前回インサイト
+    ↓                    ↓                    ↓                ↓
+    └────────────────────┼────────────────────┼────────────────┘
                          ↓
               get_insights_data() DB関数
               get_user_settings_for_insights() DB関数
+              前回の structured_insights を取得
                          ↓
               プロンプトビルダー（Edge Function内）
                          ↓
@@ -72,10 +73,12 @@ Edge Function `generate-reflections` が pg_cron で定期実行し、アクテ�
 
 | 期間 | 入力トークン | 出力トークン | コスト/ユーザー | 100ユーザー/月 |
 |------|-------------|-------------|----------------|---------------|
-| 週次 | ~1,300 | ~500 | ~$0.003 | ~$1.20 |
-| 月次 | ~1,500 | ~600 | ~$0.004 | ~$0.40 |
-| 年次 | ~2,000 | ~800 | ~$0.005 | ~$0.05 |
-| **合計** | | | | **~$1.65/月** |
+| 週次 | ~1,800 | ~500 | ~$0.004 | ~$1.60 |
+| 月次 | ~2,000 | ~600 | ~$0.005 | ~$0.50 |
+| 年次 | ~2,500 | ~800 | ~$0.006 | ~$0.06 |
+| **合計** | | | | **~$2.16/月** |
+
+※ 前回インサイト（+500〜1,000トークン）を含む見積もり。初回生成時はこれより少ない。
 
 インサイトはシステム側のスケジュール実行であり、プロダクトの基本機能。
 
@@ -160,23 +163,48 @@ reflections (
 
 1. **マルチ期間対応**: リクエストボディの `period_type` パラメータで週次/月次/年次を切り替え
 2. **データ収集の強化**: `get_weekly_reflection_data()` → `get_insights_data()` + `get_user_settings_for_insights()` に置換
-3. **プロンプトビルダー刷新**: `buildSimpleReflectionPrompt()` → `buildInsightsPrompt()` に置換
-4. **出力パーサー更新**: 新しい構造化スキーマ（InsightOutput）に対応
+3. **前回インサイトの取得**: 同じ `period_type` の直前レコードから `structured_insights` を取得
+4. **プロンプトビルダー刷新**: `buildSimpleReflectionPrompt()` → `buildInsightsPrompt()` に置換
+5. **出力パーサー更新**: 新しい構造化スキーマ（InsightOutput）に対応
+
+### 前回インサイトの活用
+
+生成時に同じ `period_type` の直前の `structured_insights` を取得し、プロンプトに含める。
+
+```sql
+-- Edge Function 内で取得
+SELECT structured_insights FROM reflections
+WHERE user_id = $1 AND period_type = $2
+ORDER BY period_start DESC LIMIT 1;
+```
+
+**プロンプトでの指示例**:
+```
+前回のインサイト:
+- findings: [前回の findings をサマリー]
+- suggestions: [前回の提案内容]
+
+上記を踏まえて、前回の提案が今期間でどう反映されたかにも言及してください。
+同じ指摘の繰り返しは避け、変化や進展があればポジティブに評価してください。
+```
+
+**注意**: 前回インサイトが存在しない場合（初回生成時）はこのセクションをスキップ。トークン増加は +500〜1,000 程度。
 
 ### プロンプト構造
 
 ```
-buildInsightsPrompt(insightsData, userSettings, periodType, periodStart, periodEnd)
+buildInsightsPrompt(insightsData, userSettings, previousInsight, periodType, periodStart, periodEnd)
 ├── 1. システム指示 + JSON出力フォーマット指定
 ├── 2. コミュニケーションスタイル（coach/analyst/friendly/custom）
 ├── 3. ユーザーの価値観（ranked keywords + 12カテゴリ重要度）
 ├── 4. KPI データ（8メトリクス + 前期間比較）
 ├── 5. パターンデータ（時間帯/曜日分布、タグ内訳）
-├── 6. 期間別の分析フォーカス指示
+├── 6. 前回インサイト（findings + suggestions のサマリー）
+├── 7. 期間別の分析フォーカス指示
 │   ├── 週次: 即座に行動可能な改善点
 │   ├── 月次: トレンド・傾向の特定
 │   └── 年次: 大局的な振り返り
-└── 7. 出力スキーマ仕様
+└── 8. 出力スキーマ仕様
 ```
 
 ### 異常検知
@@ -273,12 +301,46 @@ const showDateControls = activeTab === 'review' || activeTab === 'insights';
 | `month` | `monthly` | `getInsight({ periodType: 'monthly', periodStart })` |
 | `year` | `yearly` | `getInsight({ periodType: 'yearly', periodStart })` |
 
-### 状態
+### 状態とトーン
+
+Dayopt の AI は「観察者（watching AI）」。コーチでもカウンセラーでもない。事実を淡々と伝え、モチベーションを上げようとしない。
 
 - **Loading**: InsightCard のスケルトン
-- **未生成**: 「○月○日に生成予定です」+ スパークルアイコン
-- **データ不足**: 「この期間は十分なデータがありません」
 - **エラー**: リトライボタン（FeatureErrorBoundary でラップ済み）
+
+#### データ量による3段階表示
+
+**0件（記録なし）:**
+
+reflections にレコードがない → EmptyState を表示。励ましや「おかえり」は言わない。
+
+```
+この週の記録はありません。
+
+前回の記録: 3月3日（月）
+[その週のインサイトを見る →]
+```
+
+前回いつ使ったかと、そのインサイトへの導線だけ。リンクがあるだけで「また使おうかな」のきっかけになる。
+
+**1-2日分（データ不足）:**
+
+```
+この週のデータが十分ではありません。
+3日以上の記録があるとインサイトを生成できます。
+
+記録された日: 月曜（2h 30m）
+```
+
+記録した分だけは認める。あと何日で生成されるかが暗に伝わる。
+
+**3日分以上:** インサイト生成・表示。
+
+#### 未生成（データ十分だが生成前）
+
+```
+○月○日に生成予定です ✦
+```
 
 ---
 
@@ -331,17 +393,26 @@ supabase/
 
 ---
 
-## エラーハンドリングとリトライ
+## データ要件とスキップ判定
 
-### 最小データ要件
+### pg_cron での処理
 
-インサイト生成には最低限のデータが必要。不足時はスキップしてログを残す。
+Edge Function は全アクティブユーザーに対して走るが、最低要件を満たさなければ生成をスキップする。reflections にレコードを残さない = その週はデータ不足だった、と UI 側で判断できる。
 
-| 要件 | 閾値 | 理由 |
-|------|------|------|
-| 期間内のエントリ数 | >= 3 | 統計的に意味のある分析のため |
-| 記録日数 | >= 2 | 1日だけでは傾向が見えない |
-| 合計記録時間 | >= 30分 | 極端に少ないデータでは誤解を招く |
+```
+エントリ0件      → スキップ（reflections にレコードなし）
+記録日数 1-2日   → スキップ（reflections にレコードなし）
+記録日数 3日以上  → インサイト生成
+```
+
+データがないのに LLM を呼んでも意味のある出力は出ない。コストも無駄。
+
+### 最低要件
+
+| 要件 | 閾値 |
+|------|------|
+| 記録日数 | >= 3日 |
+| 合計記録時間 | >= 30分 |
 
 ### API エラー時のリトライ
 
