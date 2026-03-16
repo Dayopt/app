@@ -18,35 +18,44 @@ import { Meta } from '@storybook/addon-docs/blocks';
 | 繰り返し | RRULE ベース（daily / weekly / monthly / yearly） |
 | タグ | 多対多（`plan_tags` 経由） |
 | リマインダー | 開始N分前（5/10/15/30） |
-| 充実度 | `fulfillment_score`（1-5、active/past のみ） |
+| 充実度 | `fulfillment_score`（1-5、全 entryState で記録可能） |
 
 ---
 
 ## コンポーネント構成
 
 ```
-PlanInspector                     Inspector シェル
-├── InspectorShell                PC: Popover / Mobile: Drawer
-│   └── DraggableInspector        ドラッグ移動（PC、dnd-kit）
-├── InspectorContent              ローディング/空状態ハンドリング
-├── PlanInspectorContent          メインロジック
-│   ├── PlanInspectorDetailsTab   編集フォーム
-│   │   ├── InspectorTagRow       タグ選択 + ⋯ メニュー
-│   │   ├── InspectorTimeSection  時間セクション（下記参照）
-│   │   ├── RecurrenceIconButton  繰り返し設定（planned エントリのみ）
-│   │   └── ReminderSelect        リマインダー設定（planned エントリのみ）
-│   └── InspectorSaveBar          保存バー（pending changes 時）
-└── PlanInspectorMenu             アクションメニュー（複製/削除等）
+EntryInspector                        Inspector シェル
+├── InspectorShell                    PC: Popover / Mobile: Drawer
+│   └── DraggableInspector            ドラッグ移動（PC、dnd-kit）
+├── EntryInspectorContent             ローディング/空状態 + メインロジック
+│   └── EntryInspectorDetailsTab      編集フォーム
+│       ├── InspectorTagRow           タグ選択 + ⋯ メニュー
+│       ├── InspectorTimeSection      時間セクション（下記参照）
+│       ├── RecurrenceIconButton      繰り返し設定（planned のみ）
+│       └── ReminderSelect            リマインダー設定（planned のみ、past+未設定は非表示）
+└── InspectorSaveBar                  保存バー（pending changes 時）
 ```
 
-### InspectorTimeSection 内部構成
+### InspectorTimeSection — 2パターン
+
+| 要素 | Planned | Unplanned |
+|------|---------|-----------|
+| 日付 | 編集可（past 時ロック） | 常に編集可（past でも移動可能） |
+| 予定行 | 編集可（past 時ロック） | **非表示** |
+| 記録行 | 編集可 | 編集可 |
+| プログレスバー + 差分バッジ | ○ | × |
+| 充実度 | ○ | ○ |
+| 繰り返し | ○ | × |
+| リマインダー | ○（past + 未設定は非表示） | × |
+| メモ | ○ | ○ |
 
 ```
 InspectorTimeSection
 ├── DateNavigatorRow        日付ナビゲーション
-├── TimeRow                 予定時間 / 実績時間の表示・編集
-├── TimeConflictAlert       時間重複警告
-├── FulfillmentRow          充実度スコア（active/past のみ）
+├── TimeRow                 予定時間（planned のみ） / 実績時間
+├── TimeProgressBar         予定 vs 記録の差分バー（planned のみ）
+├── FulfillmentRow          充実度スコア
 └── InlineNoteSection       メモ入力
 ```
 
@@ -143,9 +152,10 @@ InspectorTimeSection
 ## 「Time waits for no one」原則
 
 - `status` フィールドなし — 時間位置から `getEntryState()` で自動判定
-- `upcoming`: 予定時間セクション + 繰り返し + リマインダー
-- `active`: 予定 + 実績時間 + 充実度 + 繰り返し + リマインダー
-- `past`: 予定 + 実績時間 + 充実度 + 繰り返し + リマインダー
+- **Planned** エントリ: past になると日付・予定時間がロック（disabled）、記録行は常に編集可能
+- **Unplanned** エントリ: 記録のみなのでロックなし、日付は past でも移動可能
+- 充実度は全 entryState で記録可能
+- リマインダーは past + 未設定の場合に非表示（もう機能しないため）
 
 ---
 
