@@ -41,7 +41,7 @@ function MockTagRow({ tagName }: { tagName?: string }) {
 
 interface EntryInspectorStoryProps {
   entryState: 'upcoming' | 'past';
-  origin: 'planned' | 'unplanned';
+  origin: 'planned';
   initialNote?: string;
 }
 

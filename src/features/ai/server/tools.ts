@@ -41,10 +41,7 @@ export function createAITools(supabase: AISupabaseClient, userId: string): ToolS
           .string()
           .optional()
           .describe('End of date range (ISO 8601 datetime, e.g. 2026-01-31T23:59:59)'),
-        origin: z
-          .literal('planned')
-          .optional()
-          .describe('Filter by entry origin (planned=scheduled, unplanned=logged)'),
+        origin: z.literal('planned').optional().describe('Filter by entry origin (always planned)'),
         search: z.string().optional().describe('Search text to match in title or description'),
         limit: z
           .number()

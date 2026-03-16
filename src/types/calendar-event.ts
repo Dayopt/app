@@ -21,7 +21,7 @@ export interface CalendarEvent {
   isMultiDay: boolean;
   isRecurring: boolean;
   // === Entry 統合フィールド ===
-  /** エントリの起源（planned=予定, unplanned=記録） */
+  /** エントリの起源（常に planned） */
   origin?: EntryOrigin | undefined;
   /** 時間位置ベースの状態（upcoming/active/past） */
   entryState?: EntryState | undefined;

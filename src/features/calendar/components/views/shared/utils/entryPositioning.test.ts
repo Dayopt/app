@@ -201,18 +201,6 @@ describe('entryPositioning', () => {
       expect(result.bottomKind).toBe('none');
     });
 
-    it('origin が unplanned の場合は none を返す', () => {
-      const entry = createCalendarEvent({
-        origin: 'planned',
-        actualStartDate: new Date(2025, 0, 15, 10, 0),
-        actualEndDate: new Date(2025, 0, 15, 11, 0),
-      });
-      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
-
-      expect(result.topKind).toBe('none');
-      expect(result.bottomKind).toBe('none');
-    });
-
     it('予定通りの場合は none を返す', () => {
       const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 0),
