@@ -80,6 +80,20 @@ export const passwordResetRateLimit =
     : null;
 
 /**
+ * お問い合わせ用レート制限
+ * 5リクエスト / 1時間（Sliding Window）
+ */
+export const contactRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '1 h'),
+        analytics: true,
+        prefix: 'ratelimit:contact',
+      })
+    : null;
+
+/**
  * 汎用レート制限ミドルウェア
  *
  * @example

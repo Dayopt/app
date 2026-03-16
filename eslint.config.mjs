@@ -174,6 +174,7 @@ const eslintConfig = defineConfig([
   {
     files: [
       'src/features/auth/**/*.{ts,tsx}',
+      'src/features/contact/**/*.{ts,tsx}',
       'src/features/notifications/**/*.{ts,tsx}',
       'src/features/onboarding/**/*.{ts,tsx}',
       'src/features/tour/**/*.{ts,tsx}',
