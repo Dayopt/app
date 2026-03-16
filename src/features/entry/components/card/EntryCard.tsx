@@ -318,30 +318,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           />
         )}
 
-        {/* 予定 vs 記録: 上部超過の境界線 */}
-        {overlay.topKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute right-0 left-0 border-b border-dashed border-current/25"
-            style={{ top: `${overlay.topHeight}px` }}
-          />
-        )}
-
         {/* 予定 vs 記録: 下部 — 未実行は控えめな斜線 */}
         {overlay.bottomKind === 'unexecuted' && (
           <div
             aria-hidden="true"
             className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
             style={{ height: `${overlay.bottomHeight}px` }}
-          />
-        )}
-
-        {/* 予定 vs 記録: 下部超過の境界線 */}
-        {overlay.bottomKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute right-0 left-0 border-t border-dashed border-current/25"
-            style={{ bottom: `${overlay.bottomHeight}px` }}
           />
         )}
 
