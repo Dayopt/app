@@ -4,6 +4,9 @@ import React, { useCallback } from 'react';
 
 import { ChronotypeBackground } from '@/features/chronotype';
 import { useEntryInspectorStore } from '@/features/entry';
+import { useTagsMap } from '@/features/tags';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 
 import { EntryCard } from '@/features/entry';
@@ -34,6 +37,9 @@ export const DayContent = ({
 }: DayContentProps) => {
   const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
+  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
+  const { getTagById } = useTagsMap();
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
@@ -140,7 +146,11 @@ export const DayContent = ({
                 }}
               >
                 <EntryCard
-                  plan={entry}
+                  entry={entry}
+                  tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
+                  tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+                  onAnchorRect={setAnchorRect}
+                  isMobile={isMobile}
                   position={{
                     top: 0,
                     left: 0,

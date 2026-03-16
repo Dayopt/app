@@ -14,7 +14,10 @@ import { GRID_BACKGROUND, HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
-import { EntryCard } from '@/features/entry';
+import { EntryCard, useEntryInspectorStore } from '@/features/entry';
+import { useTagsMap } from '@/features/tags';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { filterEntriesByDate, sortTimedEntries } from '../../utils/entryPositioning';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
@@ -29,6 +32,9 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   className = '',
 }) {
   const t = useTranslations('common.aria');
+  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
+  const { getTagById } = useTagsMap();
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
 
   // 今日・週末の判定（propsで上書き可能）
@@ -103,7 +109,11 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
           return (
             <EntryCard
               key={entry.id}
-              plan={entry}
+              entry={entry}
+              tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
+              tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+              onAnchorRect={setAnchorRect}
+              isMobile={isMobile}
               position={position} // undefinedでも大丈夫（EntryCard側で対応済み）
               hourHeight={hourHeight}
               onClick={onEventClick}

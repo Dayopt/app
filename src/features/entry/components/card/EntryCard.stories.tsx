@@ -62,7 +62,7 @@ export const Draft: Story = {
   render: () => (
     <Slot>
       <EntryCard
-        plan={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
+        entry={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
         position={basePosition}
       />
     </Slot>
@@ -77,7 +77,7 @@ export const Draft: Story = {
 export const PastEntry: Story = {
   render: () => (
     <Slot>
-      <EntryCard plan={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
+      <EntryCard entry={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
     </Slot>
   ),
 };
@@ -86,7 +86,7 @@ export const PastEntry: Story = {
 export const ActiveEntry: Story = {
   render: () => (
     <Slot>
-      <EntryCard plan={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
+      <EntryCard entry={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
     </Slot>
   ),
 };
@@ -99,7 +99,7 @@ export const ActiveEntry: Story = {
 export const UnplannedEntry: Story = {
   render: () => (
     <Slot>
-      <EntryCard plan={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
+      <EntryCard entry={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
     </Slot>
   ),
 };
@@ -113,7 +113,7 @@ export const OverlayUnexecuted: Story = {
   render: () => (
     <Slot height={144}>
       <EntryCard
-        plan={{
+        entry={{
           ...baseEntry,
           entryState: 'past',
           origin: 'planned',
@@ -135,7 +135,7 @@ export const OverlayOvertime: Story = {
   render: () => (
     <Slot height={180}>
       <EntryCard
-        plan={{
+        entry={{
           ...baseEntry,
           entryState: 'past',
           origin: 'planned',
@@ -160,7 +160,7 @@ export const OverlayOvertime: Story = {
 export const WithReminder: Story = {
   render: () => (
     <Slot>
-      <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
+      <EntryCard entry={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
     </Slot>
   ),
 };
@@ -174,16 +174,16 @@ export const SizeVariations: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <Slot height={18}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 18 }} />
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 18 }} />
       </Slot>
       <Slot height={36}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 36 }} />
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} />
       </Slot>
       <Slot>
-        <EntryCard plan={baseEntry} position={basePosition} />
+        <EntryCard entry={baseEntry} position={basePosition} />
       </Slot>
       <Slot height={144}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 144 }} />
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 144 }} />
       </Slot>
     </div>
   ),
@@ -204,7 +204,7 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs">Draft（未保存プレビュー）</p>
         <Slot>
           <EntryCard
-            plan={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
+            entry={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
             position={basePosition}
           />
         </Slot>
@@ -213,14 +213,14 @@ export const AllPatterns: Story = {
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Past（過去エントリ）</p>
         <Slot>
-          <EntryCard plan={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
+          <EntryCard entry={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Active（実行中）</p>
         <Slot>
-          <EntryCard plan={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
+          <EntryCard entry={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
         </Slot>
       </section>
 
@@ -228,7 +228,7 @@ export const AllPatterns: Story = {
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Unplanned（左アクセント点線）</p>
         <Slot>
-          <EntryCard plan={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
+          <EntryCard entry={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
         </Slot>
       </section>
 
@@ -236,7 +236,7 @@ export const AllPatterns: Story = {
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Reminder（ベルアイコン）</p>
         <Slot>
-          <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
+          <EntryCard entry={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
         </Slot>
       </section>
 
@@ -247,7 +247,7 @@ export const AllPatterns: Story = {
         </p>
         <Slot height={144}>
           <EntryCard
-            plan={{
+            entry={{
               ...baseEntry,
               entryState: 'past',
               origin: 'planned',
@@ -269,7 +269,7 @@ export const AllPatterns: Story = {
         </p>
         <Slot height={180}>
           <EntryCard
-            plan={{
+            entry={{
               ...baseEntry,
               entryState: 'past',
               origin: 'planned',
@@ -289,28 +289,28 @@ export const AllPatterns: Story = {
       <section>
         <p className="text-muted-foreground mb-2 text-xs">15min（最小・1行）</p>
         <Slot height={18}>
-          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 18 }} />
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 18 }} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト）</p>
         <Slot height={36}>
-          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 36 }} />
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">60min（通常）</p>
         <Slot>
-          <EntryCard plan={baseEntry} position={basePosition} />
+          <EntryCard entry={baseEntry} position={basePosition} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">120min（長時間）</p>
         <Slot height={144}>
-          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 144 }} />
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 144 }} />
         </Slot>
       </section>
     </div>

@@ -1,6 +1,9 @@
 /**
  * エントリー表示カードコンポーネント
  * タグカラーを反映した左ボーダーアクセント + 右角丸の統一デザイン
+ *
+ * Pure props コンポーネント: store / data-fetch hook なし。
+ * タグ情報・アンカー位置・モバイル判定は呼び出し元から props で渡す。
  */
 
 'use client';
@@ -9,14 +12,10 @@ import React, { memo, useCallback, useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { useTagsMap } from '@/features/tags';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { computeActualTimeDiffOverlay } from '../../lib/actual-time-overlay';
-import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -34,7 +33,9 @@ const Z_INDEX = {
 } as const;
 
 export const EntryCard = memo<EntryCardProps>(function EntryCard({
-  plan,
+  entry,
+  tagName = null,
+  tagColor = null,
   position,
   onClick,
   onContextMenu,
@@ -42,34 +43,33 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   onTouchStart,
   onDragEnd,
   onResizeStart,
+  onAnchorRect,
   isDragging = false,
   isSelected = false,
   isActive = false,
+  isMobile = false,
   className = '',
   style = {},
   previewTime = null,
   hourHeight: hourHeightProp,
 }) {
   const t = useTranslations();
-  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const { getTagById } = useTagsMap();
 
-  // タグ情報を取得（未設定時はデフォルト色）
-  const tag = plan.tagId ? getTagById(plan.tagId) : undefined;
-  const colorClasses = tag ? getTagColorClasses(tag.color) : null;
+  // タグカラー（props で解決済み）
+  const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const accentColor = colorClasses?.cssVar ?? 'var(--entry-default)';
   const accentTint =
     colorClasses?.cssVarTint ?? 'color-mix(in oklch, var(--entry-default) 12%, var(--background))';
 
   // ドラフト（未保存プレビュー）かどうか判定
-  const isDraft = plan.isDraft === true;
+  const isDraft = entry.isDraft === true;
   // 過去ブロックはドラッグ・リサイズ不可（Time waits for no one）
-  const isPast = plan.entryState === 'past';
+  const isPast = entry.entryState === 'past';
 
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
-    () => computeActualTimeDiffOverlay(plan, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
-    [plan, hourHeightProp],
+    () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
+    [entry, hourHeightProp],
   );
 
   // positionが未定義の場合のデフォルト値
@@ -108,43 +108,42 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
   // 左アクセントの点線パターン（unplanned または超過部分で使用）
   const dashedAccentGradient = `repeating-linear-gradient(to bottom, ${accentColor} 0px, ${accentColor} 5px, transparent 5px, transparent 9px)`;
-  const isUnplannedDashed = plan.origin === 'unplanned';
-
-  // アンカー位置の設定（Inspector 配置用）
-  const setAnchorRect = useEntryInspectorStore((s) => s.setAnchorRect);
+  const isUnplannedDashed = entry.origin === 'unplanned';
 
   // イベントハンドラー
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      const rect = e.currentTarget.getBoundingClientRect();
-      setAnchorRect({
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-      onClick?.(plan);
+      if (onAnchorRect) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        onAnchorRect({
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      onClick?.(entry);
     },
-    [onClick, plan, setAnchorRect],
+    [onClick, entry, onAnchorRect],
   );
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      onContextMenu?.(plan, e);
+      onContextMenu?.(entry, e);
     },
-    [onContextMenu, plan],
+    [onContextMenu, entry],
   );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (isDraft || isPast) return;
       if (e.button === 0) {
-        onDragStart?.(plan, e, {
+        onDragStart?.(entry, e, {
           top: safePosition.top,
           left: safePosition.left,
           width: safePosition.width,
@@ -152,50 +151,50 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         });
       }
     },
-    [isDraft, isPast, onDragStart, plan, safePosition],
+    [isDraft, isPast, onDragStart, entry, safePosition],
   );
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (isDraft || isPast) return;
-      onTouchStart?.(plan, e, {
+      onTouchStart?.(entry, e, {
         top: safePosition.top,
         left: safePosition.left,
         width: safePosition.width,
         height: safePosition.height,
       });
     },
-    [isDraft, isPast, onTouchStart, plan, safePosition],
+    [isDraft, isPast, onTouchStart, entry, safePosition],
   );
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
-      onDragEnd?.(plan);
+      onDragEnd?.(entry);
     }
-  }, [isDragging, onDragEnd, plan]);
+  }, [isDragging, onDragEnd, entry]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        onClick?.(plan);
+        onClick?.(entry);
       }
     },
-    [onClick, plan],
+    [onClick, entry],
   );
 
   const handleBottomResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
-      onResizeStart?.(plan, 'bottom', e, {
+      onResizeStart?.(entry, 'bottom', e, {
         top: safePosition.top,
         left: safePosition.left,
         width: safePosition.width,
         height: safePosition.height,
       });
     },
-    [onResizeStart, plan, safePosition],
+    [onResizeStart, entry, safePosition],
   );
 
   const handleResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -210,13 +209,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onDragEnd?.(plan);
+        onDragEnd?.(entry);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isDragging, onDragEnd, plan]);
+  }, [isDragging, onDragEnd, entry]);
 
   // CSSクラス（統一Entryデザイン: 左アクセント + 右角丸）
   const entryCardClasses = cn(
@@ -238,7 +237,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     className,
   );
 
-  if (!plan || !plan.id) {
+  if (!entry || !entry.id) {
     return null;
   }
 
@@ -256,9 +255,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       draggable={false}
       role="group"
       tabIndex={0}
-      aria-label={
-        isDraft ? `draft: ${tag?.name ?? plan.title}` : `entry: ${tag?.name ?? plan.title}`
-      }
+      aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
       {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
       <div
@@ -302,8 +299,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         style={{ backgroundColor: accentTint }}
       >
         <EntryCardContent
-          plan={plan}
-          tagName={tag?.name ?? null}
+          plan={entry}
+          tagName={tagName}
           isCompact={safePosition.height < 40}
           showTime={safePosition.height >= 30}
           previewTime={previewTime}

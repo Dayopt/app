@@ -171,7 +171,7 @@ export const CalendarDrag: Story = {
       </DocsNote>
       <Label>isDragging=true: opacity低下 + zIndex上昇</Label>
       <Slot>
-        <EntryCard plan={basePlan} position={basePosition} isDragging />
+        <EntryCard entry={basePlan} position={basePosition} isDragging />
       </Slot>
     </div>
   ),
@@ -186,7 +186,7 @@ export const CalendarDragSelected: Story = {
     <div className="flex flex-col gap-2">
       <Label>isSelected=true: ring-2 ring-primary ハイライト（Ctrl/Cmd+Click）</Label>
       <Slot>
-        <EntryCard plan={basePlan} position={basePosition} isSelected />
+        <EntryCard entry={basePlan} position={basePosition} isSelected />
       </Slot>
     </div>
   ),
@@ -201,7 +201,7 @@ export const CalendarDragActive: Story = {
     <div className="flex flex-col gap-2">
       <Label>isActive=true: Inspector表示中のハイライト</Label>
       <Slot>
-        <EntryCard plan={basePlan} position={basePosition} isActive />
+        <EntryCard entry={basePlan} position={basePosition} isActive />
       </Slot>
     </div>
   ),
@@ -255,7 +255,7 @@ export const ResizeHandle: Story = {
         リサイズハンドルはカード下端8pxに存在（透明）。ホバーで cursor: ns-resize に変化。
       </Label>
       <Slot height={120}>
-        <EntryCard plan={basePlan} position={{ ...basePosition, height: 120 }} />
+        <EntryCard entry={basePlan} position={{ ...basePosition, height: 120 }} />
       </Slot>
     </div>
   ),
@@ -421,28 +421,28 @@ export const AllStates: Story = {
       <section>
         <Label>1. CalendarDrag — isDragging=true</Label>
         <Slot>
-          <EntryCard plan={basePlan} position={basePosition} isDragging />
+          <EntryCard entry={basePlan} position={basePosition} isDragging />
         </Slot>
       </section>
 
       <section>
         <Label>2. CalendarDragSelected — isSelected=true</Label>
         <Slot>
-          <EntryCard plan={basePlan} position={basePosition} isSelected />
+          <EntryCard entry={basePlan} position={basePosition} isSelected />
         </Slot>
       </section>
 
       <section>
         <Label>3. CalendarDragActive — isActive=true</Label>
         <Slot>
-          <EntryCard plan={basePlan} position={basePosition} isActive />
+          <EntryCard entry={basePlan} position={basePosition} isActive />
         </Slot>
       </section>
 
       <section>
         <Label>4. ResizeHandle — カード下端8pxにリサイズハンドル</Label>
         <Slot height={120}>
-          <EntryCard plan={basePlan} position={{ ...basePosition, height: 120 }} />
+          <EntryCard entry={basePlan} position={{ ...basePosition, height: 120 }} />
         </Slot>
       </section>
 

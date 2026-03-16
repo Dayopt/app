@@ -4,14 +4,21 @@
 
 import type { CalendarEvent } from '@/types/calendar-event';
 
+import type { AnchorRect } from '../../stores/useEntryInspectorStore';
+
 export interface EntryCardProps {
-  plan: CalendarEvent;
+  /** エントリデータ */
+  entry: CalendarEvent;
+  /** 解決済みタグ名（null = タグ未設定） */
+  tagName?: string | null | undefined;
+  /** 解決済みタグカラー名（null = デフォルト色） */
+  tagColor?: string | null | undefined;
   position?: EntryCardPosition | undefined;
-  onClick?: ((plan: CalendarEvent) => void) | undefined;
-  onContextMenu?: ((plan: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onClick?: ((entry: CalendarEvent) => void) | undefined;
+  onContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
   onDragStart?:
     | ((
-        plan: CalendarEvent,
+        entry: CalendarEvent,
         mouseEvent: React.MouseEvent,
         position: { top: number; left: number; width: number; height: number },
       ) => void)
@@ -19,26 +26,30 @@ export interface EntryCardProps {
   /** モバイル用タッチ開始ハンドラー */
   onTouchStart?:
     | ((
-        plan: CalendarEvent,
+        entry: CalendarEvent,
         touchEvent: React.TouchEvent,
         position: { top: number; left: number; width: number; height: number },
       ) => void)
     | undefined;
-  onDragEnd?: ((plan: CalendarEvent) => void) | undefined;
+  onDragEnd?: ((entry: CalendarEvent) => void) | undefined;
   onResizeStart?:
     | ((
-        plan: CalendarEvent,
+        entry: CalendarEvent,
         direction: 'top' | 'bottom',
         mouseEvent: React.MouseEvent,
         position: { top: number; left: number; width: number; height: number },
       ) => void)
     | undefined;
-  onResizeEnd?: ((plan: CalendarEvent) => void) | undefined;
+  onResizeEnd?: ((entry: CalendarEvent) => void) | undefined;
+  /** Inspector のアンカー位置を設定するコールバック */
+  onAnchorRect?: ((rect: AnchorRect) => void) | undefined;
   isDragging?: boolean | undefined;
   isSelected?: boolean | undefined;
   isResizing?: boolean | undefined;
-  /** Inspectorで開いているプランかどうか */
+  /** Inspector で開いているエントリかどうか */
   isActive?: boolean | undefined;
+  /** モバイルレイアウト */
+  isMobile?: boolean | undefined;
   className?: string | undefined;
   style?: React.CSSProperties | undefined;
   previewTime?: ({ start: Date; end: Date } | null) | undefined;
@@ -61,14 +72,14 @@ export interface EntryInteractionState {
 }
 
 export interface EntryDragData {
-  planId: string;
+  entryId: string;
   startPosition: { x: number; y: number };
   originalStart: Date;
   originalEnd: Date;
 }
 
 export interface EntryResizeData {
-  planId: string;
+  entryId: string;
   resizeDirection: 'top' | 'bottom';
   originalStart: Date;
   originalEnd: Date;

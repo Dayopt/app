@@ -5,27 +5,6 @@ import type { CalendarEvent } from '@/types/calendar-event';
 
 import { EntryCard } from './EntryCard';
 
-// useTagsMap フックをモック（tRPC依存を回避）
-vi.mock('@/features/tags', () => ({
-  useTagsMap: () => ({
-    getTagById: () => undefined,
-    getTagName: () => null,
-    getTagColor: () => 'gray',
-    tagsMap: new Map(),
-  }),
-}));
-
-// useEntryInspectorStore をモック
-vi.mock('../../stores/useEntryInspectorStore', () => ({
-  useEntryInspectorStore: (selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ setAnchorRect: vi.fn(), selectedEntryId: null }),
-}));
-
-// useMediaQuery をモック
-vi.mock('@/hooks/useMediaQuery', () => ({
-  useMediaQuery: () => false,
-}));
-
 describe('EntryCard', () => {
   const mockEvent: CalendarEvent = {
     id: 'event-1',
@@ -54,20 +33,20 @@ describe('EntryCard', () => {
 
   describe('基本レンダリング', () => {
     it('イベントが正しく表示される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
       expect(screen.getByRole('group', { name: /entry: テストイベント/i })).toBeInTheDocument();
     });
 
     it('デフォルトポジションが適用される', () => {
-      render(<EntryCard plan={mockEvent} position={undefined} />);
+      render(<EntryCard entry={mockEvent} position={undefined} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock).toBeInTheDocument();
     });
 
     it('aria属性が正しく設定される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock).toHaveAttribute('aria-label', 'entry: テストイベント');
@@ -78,7 +57,7 @@ describe('EntryCard', () => {
   describe('インタラクション', () => {
     it('クリックイベントが発火する', () => {
       const onClick = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onClick={onClick} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       fireEvent.click(eventBlock);
@@ -88,7 +67,7 @@ describe('EntryCard', () => {
 
     it('右クリックでコンテキストメニューが表示される', () => {
       const onContextMenu = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onContextMenu={onContextMenu} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onContextMenu={onContextMenu} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       fireEvent.contextMenu(eventBlock);
@@ -98,7 +77,7 @@ describe('EntryCard', () => {
 
     it('キーボード操作でクリックイベントが発火する（Enter）', () => {
       const onClick = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onClick={onClick} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       fireEvent.keyDown(eventBlock, { key: 'Enter' });
@@ -108,7 +87,7 @@ describe('EntryCard', () => {
 
     it('キーボード操作でクリックイベントが発火する（Space）', () => {
       const onClick = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onClick={onClick} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       fireEvent.keyDown(eventBlock, { key: ' ' });
@@ -120,7 +99,7 @@ describe('EntryCard', () => {
   describe('ドラッグ操作', () => {
     it('マウスダウンでドラッグ開始イベントが発火する', () => {
       const onDragStart = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onDragStart={onDragStart} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onDragStart={onDragStart} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       fireEvent.mouseDown(eventBlock, { button: 0 });
@@ -138,14 +117,14 @@ describe('EntryCard', () => {
     });
 
     it('ドラッグ中の状態が正しく反映される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} isDragging={true} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} isDragging={true} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock.className).toContain('cursor-grabbing');
     });
 
     it('選択状態が正しく反映される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} isSelected={true} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} isSelected={true} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock.className).toContain('ring-2');
@@ -154,14 +133,14 @@ describe('EntryCard', () => {
 
   describe('リサイズ操作', () => {
     it('リサイズハンドルが存在する', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
       const resizeHandle = screen.getByRole('slider', { name: /Resize entry duration/i });
       expect(resizeHandle).toBeInTheDocument();
     });
 
     it('リサイズハンドルのaria属性が正しく設定される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
       const resizeHandle = screen.getByRole('slider');
       expect(resizeHandle).toHaveAttribute('aria-orientation', 'vertical');
@@ -172,7 +151,7 @@ describe('EntryCard', () => {
 
     it('リサイズハンドルのマウスダウンでリサイズ開始イベントが発火する', () => {
       const onResizeStart = vi.fn();
-      render(<EntryCard plan={mockEvent} position={mockPosition} onResizeStart={onResizeStart} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} onResizeStart={onResizeStart} />);
 
       const resizeHandle = screen.getByRole('slider');
       fireEvent.mouseDown(resizeHandle);
@@ -188,7 +167,7 @@ describe('EntryCard', () => {
 
   describe('スタイリング', () => {
     it('カスタムclassNameが適用される', () => {
-      render(<EntryCard plan={mockEvent} position={mockPosition} className="custom-class" />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} className="custom-class" />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock.className).toContain('custom-class');
@@ -196,7 +175,7 @@ describe('EntryCard', () => {
 
     it('カスタムstyleが適用される', () => {
       const customStyle = { backgroundColor: 'red' };
-      render(<EntryCard plan={mockEvent} position={mockPosition} style={customStyle} />);
+      render(<EntryCard entry={mockEvent} position={mockPosition} style={customStyle} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       expect(eventBlock).toHaveStyle({ backgroundColor: 'red' });
@@ -204,7 +183,7 @@ describe('EntryCard', () => {
 
     it('高さが30px未満の場合、コンパクトスタイルが適用される', () => {
       const smallPosition = { ...mockPosition, height: 25 };
-      render(<EntryCard plan={mockEvent} position={smallPosition} />);
+      render(<EntryCard entry={mockEvent} position={smallPosition} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       const contentDiv = eventBlock.querySelector('.text-sm');
@@ -213,7 +192,7 @@ describe('EntryCard', () => {
 
     it('最小高さが保証される', () => {
       const tinyPosition = { ...mockPosition, height: 5 };
-      render(<EntryCard plan={mockEvent} position={tinyPosition} />);
+      render(<EntryCard entry={mockEvent} position={tinyPosition} />);
 
       const eventBlock = screen.getByRole('group', { name: /entry: テストイベント/i });
       const heightMatch = eventBlock.style.height.match(/(\d+)px/);
@@ -229,7 +208,7 @@ describe('EntryCard', () => {
 
       const { container } = render(
         <div onClick={parentClick}>
-          <EntryCard plan={mockEvent} position={mockPosition} onClick={onClick} />
+          <EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />
         </div>,
       );
 
