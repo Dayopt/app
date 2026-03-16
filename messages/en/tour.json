@@ -14,20 +14,8 @@
         "description": "Choose a tag — it becomes the name and color of your plan"
       },
       "explainTags": {
-        "title": "Tags — Your Activity Categories",
-        "description": "Tags help you in three ways:",
-        "categorize": {
-          "label": "Categorize",
-          "detail": "Group your time blocks by activity type"
-        },
-        "colorCode": {
-          "label": "Color-code",
-          "detail": "Each tag has its own color on the calendar"
-        },
-        "trackStats": {
-          "label": "Track stats",
-          "detail": "See exactly how much time you spend on each category"
-        },
+        "title": "Tags are your titles",
+        "description": "Just pick a tag to create a plan or record. There's no title field — the tag is the name.",
         "examples": {
           "deepWork": "Deep Work",
           "exercise": "Exercise",

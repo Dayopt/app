@@ -13,7 +13,7 @@ interface TourContentProps {
   onSkip: () => void;
 }
 
-/** タグの3つの役割をビジュアルで説明するリッチコンテンツ */
+/** タグ＝タイトルであることをシンプルに伝えるコンテンツ */
 export function TagExplainContent({
   currentStep,
   totalSteps,
@@ -29,21 +29,6 @@ export function TagExplainContent({
     { color: 'bg-tag-amber', name: t('tour.steps.explainTags.examples.meeting') },
   ] as const;
 
-  const roles = [
-    {
-      label: t('tour.steps.explainTags.categorize.label'),
-      detail: t('tour.steps.explainTags.categorize.detail'),
-    },
-    {
-      label: t('tour.steps.explainTags.colorCode.label'),
-      detail: t('tour.steps.explainTags.colorCode.detail'),
-    },
-    {
-      label: t('tour.steps.explainTags.trackStats.label'),
-      detail: t('tour.steps.explainTags.trackStats.detail'),
-    },
-  ] as const;
-
   return (
     <div
       className="flex flex-col gap-4"
@@ -55,29 +40,17 @@ export function TagExplainContent({
           {t('tour.step', { current: currentStep, total: totalSteps })}
         </p>
         <h3 className="text-foreground font-bold">{t('tour.steps.explainTags.title')}</h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          {t('tour.steps.explainTags.description')}
+        </p>
       </div>
 
-      {/* タグ例の色ドット */}
+      {/* タグ例 */}
       <div className="flex items-center gap-3">
         {examples.map((example) => (
           <div key={example.name} className="flex items-center gap-1.5">
             <span className={`${example.color} size-2.5 rounded-full`} />
             <span className="text-foreground text-xs font-medium">{example.name}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* 3つの役割 */}
-      <div className="flex flex-col gap-2">
-        {roles.map((role, i) => (
-          <div key={role.label} className="flex items-start gap-2">
-            <span className="text-muted-foreground mt-0.5 text-xs font-medium tabular-nums">
-              {i + 1}.
-            </span>
-            <div>
-              <span className="text-foreground text-sm font-medium">{role.label}</span>
-              <span className="text-muted-foreground text-sm"> — {role.detail}</span>
-            </div>
           </div>
         ))}
       </div>

@@ -14,20 +14,8 @@
         "description": "タグを選ぶと、それが予定の名前と色になります"
       },
       "explainTags": {
-        "title": "タグ — 活動カテゴリ",
-        "description": "タグには3つの役割があります:",
-        "categorize": {
-          "label": "分類する",
-          "detail": "活動の種類ごとに時間ブロックをグループ化"
-        },
-        "colorCode": {
-          "label": "色分けする",
-          "detail": "タグごとの色でカレンダーが見やすくなる"
-        },
-        "trackStats": {
-          "label": "統計を見る",
-          "detail": "各カテゴリにどれだけ時間を使ったか一目でわかる"
-        },
+        "title": "タグがタイトルになる",
+        "description": "タグを選ぶだけで予定や記録が作れます。タイトルの入力欄はありません。タグ＝名前です。",
         "examples": {
           "deepWork": "集中作業",
           "exercise": "運動",
