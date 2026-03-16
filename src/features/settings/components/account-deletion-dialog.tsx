@@ -85,6 +85,7 @@ export function AccountDeletionDialog() {
           type="button"
           onClick={() => setIsOpen(true)}
           variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive/10"
           disabled={deleteAccountMutation.isPending}
         >
           {deleteAccountMutation.isPending

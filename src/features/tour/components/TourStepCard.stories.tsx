@@ -12,10 +12,10 @@ const meta = {
   },
   tags: ['autodocs'],
   args: {
-    titleKey: 'tour.steps.gridDrag.title',
-    descriptionKey: 'tour.steps.gridDrag.description',
+    titleKey: 'tour.steps.intro.title',
+    descriptionKey: 'tour.steps.intro.description',
     currentStep: 1,
-    totalSteps: 3,
+    totalSteps: 7,
     isLastStep: false,
     onNext: fn(),
     onSkip: fn(),
@@ -32,70 +32,33 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Step 1: ドラッグで作成 */
-export const Step1GridDrag: Story = {};
+/** Step 1: イントロ */
+export const Step1Intro: Story = {};
 
-/** Step 2: クリックで確認 */
-export const Step2ClickEntry: Story = {
+/** Step 2: ドラッグで予定作成 */
+export const Step2GridDragPlan: Story = {
   args: {
-    titleKey: 'tour.steps.clickEntry.title',
-    descriptionKey: 'tour.steps.clickEntry.description',
+    titleKey: 'tour.steps.gridDragPlan.title',
+    descriptionKey: 'tour.steps.gridDragPlan.description',
     currentStep: 2,
-    totalSteps: 3,
   },
 };
 
-/** Step 3: 予定と記録の違い（最後のステップ） */
-export const Step3PlanVsRecord: Story = {
+/** Step 5: ドラッグで記録作成 */
+export const Step5GridDragRecord: Story = {
+  args: {
+    titleKey: 'tour.steps.gridDragRecord.title',
+    descriptionKey: 'tour.steps.gridDragRecord.description',
+    currentStep: 5,
+  },
+};
+
+/** 最後のステップ */
+export const LastStep: Story = {
   args: {
     titleKey: 'tour.steps.planVsRecord.title',
     descriptionKey: 'tour.steps.planVsRecord.description',
-    currentStep: 3,
-    totalSteps: 3,
+    currentStep: 7,
     isLastStep: true,
   },
-};
-
-/** 全パターン一覧 */
-export const AllPatterns: Story = {
-  render: () => (
-    <div className="flex flex-col items-start gap-6">
-      <div style={{ width: 280 }}>
-        <p className="text-muted-foreground mb-2 text-xs">Step 1/3 — Grid Drag</p>
-        <TourStepCard
-          titleKey="tour.steps.gridDrag.title"
-          descriptionKey="tour.steps.gridDrag.description"
-          currentStep={1}
-          totalSteps={3}
-          isLastStep={false}
-          onNext={fn()}
-          onSkip={fn()}
-        />
-      </div>
-      <div style={{ width: 280 }}>
-        <p className="text-muted-foreground mb-2 text-xs">Step 2/3 — Click Entry</p>
-        <TourStepCard
-          titleKey="tour.steps.clickEntry.title"
-          descriptionKey="tour.steps.clickEntry.description"
-          currentStep={2}
-          totalSteps={3}
-          isLastStep={false}
-          onNext={fn()}
-          onSkip={fn()}
-        />
-      </div>
-      <div style={{ width: 280 }}>
-        <p className="text-muted-foreground mb-2 text-xs">Step 3/3 — Plan vs Record</p>
-        <TourStepCard
-          titleKey="tour.steps.planVsRecord.title"
-          descriptionKey="tour.steps.planVsRecord.description"
-          currentStep={3}
-          totalSteps={3}
-          isLastStep={true}
-          onNext={fn()}
-          onSkip={fn()}
-        />
-      </div>
-    </div>
-  ),
 };

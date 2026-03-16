@@ -9,6 +9,7 @@
 // Main Controller
 // =============================================================================
 export { CalendarController } from './components/CalendarController';
+export type { CalendarControllerProps } from './components/CalendarController';
 
 // =============================================================================
 // Layout Components
@@ -16,6 +17,7 @@ export { CalendarController } from './components/CalendarController';
 export { CalendarLayout } from './components/layout/CalendarLayout';
 export { DateRangeDisplay } from './components/layout/Header/DateRangeDisplay';
 export { ViewSwitcher } from './components/layout/Header/ViewSwitcher';
+export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================
 // View Components
@@ -25,10 +27,9 @@ export { MultiDayView } from './components/views/MultiDayView';
 export { WeekView } from './components/views/WeekView';
 
 // =============================================================================
-// Sidebar Components
+// Filter
 // =============================================================================
-export { CalendarFilterList } from './components/sidebar/tag-filter/CalendarFilterList';
-export { ViewSwitcherList } from './components/sidebar/ViewSwitcherList';
+export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
 
 // =============================================================================
 // Types
@@ -53,43 +54,47 @@ export type {
 // =============================================================================
 // Contexts
 // =============================================================================
-export { CalendarProvider, useCalendar } from './contexts/CalendarContext';
-export type { CalendarContextValue } from './contexts/CalendarContext';
 export {
   CalendarNavigationProvider,
   useCalendarNavigation,
-} from './contexts/CalendarNavigationContext';
+} from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
 // Hooks
 // =============================================================================
+export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
+export { useWeekendNavigation } from './hooks/navigation/useWeekendNavigation';
 export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
-export { useCalendarProviderProps } from './hooks/useCalendarProviderProps';
-export { useWeekendNavigation } from './hooks/useWeekendNavigation';
+
+// Stores: Cross-feature (used by composition layer in app/)
+export { useInlineCreateStore } from './stores/useInlineCreateStore';
 
 // Hooks: Cross-feature (used by composition layer in app/)
 export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
 export { useCalendarNavigationHandlers } from './components/controller/hooks/useCalendarNavigationHandlers';
-export { useCalendarEventKeyboard } from './hooks/useCalendarPlanKeyboard';
-export { usePlanContextActions } from './hooks/usePlanContextActions';
-export { usePlanOperations } from './hooks/usePlanOperations';
-export { useRecurringPlanDrag } from './hooks/useRecurringPlanDrag';
-export { useWeekendToggleShortcut } from './hooks/useWeekendToggleShortcut';
+export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarPlanKeyboard';
+export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
+export { usePlanContextActions } from './hooks/operations/usePlanContextActions';
+export { usePlanOperations } from './hooks/operations/usePlanOperations';
+export { useRecurringPlanDrag } from './hooks/operations/useRecurringPlanDrag';
 
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export { isCalendarViewPath } from './lib/route-utils';
-export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/view-helpers';
 export {
   formatDateString,
   localTimeToUTCISO,
   parseDateString,
   parseDatetimeString,
   parseISOToUserTimezone,
-} from './utils/dateUtils';
-export { getEventOrigin, isRecordEvent } from './utils/planDataAdapter';
+} from '@/lib/date-utils';
+export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/range';
+// Temporal: エントリ状態判定（@/features/entry からの re-export）
+export { computeOriginTransition, getEntryState, isEntryPast, isTimePast } from '@/features/entry';
+export type { EntryState } from '@/features/entry';
+export { getEventOrigin, isRecordEvent } from './lib/plan-data-adapter';
+export { isCalendarViewPath } from './lib/route-utils';
 
 // =============================================================================
 // Grid Constants (used by settings feature)

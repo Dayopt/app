@@ -9,10 +9,10 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
-import { useAutoSaveSettings } from '../hooks/useAutoSaveSettings';
 
 import type { AICommunicationStyle } from '../types/personalization';
 import { AI_COMMUNICATION_STYLES } from '../types/personalization';

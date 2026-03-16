@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { XIcon } from 'lucide-react';
 
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useSettingsStore } from '@/shell/stores/useSettingsStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { useSettingsStore } from '../stores/useSettingsStore';
 
 import { SettingsContent } from './SettingsContent';
 import { SettingsSidebar } from './SettingsSidebar';

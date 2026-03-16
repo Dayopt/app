@@ -3,64 +3,36 @@
 import React, { useCallback } from 'react';
 
 import { useEntryInspectorStore } from '@/features/entry';
+import { useTagsMap } from '@/features/tags';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-import type { InteractionState } from '../../../../interaction';
+import { EntryCard } from '@/features/entry';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
-import { CalendarDragSelection, type DateTimeSelection, PlanCard } from '../../shared';
+import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
+import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 
 interface MultiDayContentProps {
   date: Date;
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   allEventsForOverlapCheck?: CalendarEvent[] | undefined;
-  planStyles: Record<string, React.CSSProperties>;
-  onPlanClick?: ((plan: CalendarEvent) => void) | undefined;
-  onPlanContextMenu?: ((plan: CalendarEvent, e: React.MouseEvent) => void) | undefined;
-  onPlanUpdate?: ((planId: string, updates: Partial<CalendarEvent>) => void) | undefined;
+  entryStyles: Record<string, React.CSSProperties>;
+  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onEntryUpdate?: ((entryId: string, updates: Partial<CalendarEvent>) => void) | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   className?: string | undefined;
   dayIndex: number;
   displayDates?: Date[] | undefined;
-  disabledPlanId?: string | null | undefined;
-  viewMode: string;
-}
-
-// ========================================
-// Helpers
-// ========================================
-
-function getAdjustedStyle(
-  originalStyle: React.CSSProperties,
-  planId: string,
-  state: InteractionState,
-): React.CSSProperties {
-  if (state.mode === 'dragging' && state.entryId === planId) {
-    return { ...originalStyle, opacity: 0.3, zIndex: 1 };
-  }
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return {
-      ...originalStyle,
-      height: `${state.snappedHeight}px`,
-      zIndex: 1000,
-    };
-  }
-  return originalStyle;
-}
-
-function getPreviewTime(
-  planId: string,
-  state: InteractionState,
-): { start: Date; end: Date } | null {
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return state.previewTime;
-  }
-  return null;
+  disabledEntryId?: string | null | undefined;
+  viewMode: '3day' | '5day';
 }
 
 // ========================================
@@ -69,65 +41,68 @@ function getPreviewTime(
 
 export function MultiDayContent({
   date,
-  plans,
+  entries,
   allEventsForOverlapCheck,
-  planStyles,
-  onPlanClick,
-  onPlanContextMenu,
-  onPlanUpdate,
+  entryStyles,
+  onEntryClick,
+  onEntryContextMenu,
+  onEntryUpdate,
   onTimeRangeSelect,
   className,
   dayIndex,
   displayDates,
-  disabledPlanId,
+  disabledEntryId,
   viewMode,
 }: MultiDayContentProps) {
-  const inspectorPlanId = useEntryInspectorStore((state) => state.entryId);
+  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
+  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
+  const { getTagById } = useTagsMap();
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
 
   const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
-  const globalDraggedPlan = useCalendarDragStore((s) => s.draggedPlan);
+  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedPlan);
   const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
   const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
 
-  // onPlanUpdate → onEventUpdate 変換
+  // onEntryUpdate → onEventUpdate 変換
   const handleEventUpdate = useCallback(
-    async (planId: string, updates: { startTime: Date; endTime: Date }) => {
-      if (!onPlanUpdate) return;
-      return await onPlanUpdate(planId, {
+    async (entryId: string, updates: { startTime: Date; endTime: Date }) => {
+      if (!onEntryUpdate) return;
+      return await onEntryUpdate(entryId, {
         startDate: updates.startTime,
         endDate: updates.endTime,
       });
     },
-    [onPlanUpdate],
+    [onEntryUpdate],
   );
 
   // 統合インタラクション
   const { state, handlers } = useInteraction({
     date,
-    events: plans,
+    events: entries,
     ...(allEventsForOverlapCheck ? { allEventsForOverlapCheck } : {}),
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
     onEventUpdate: handleEventUpdate,
-    ...(onPlanClick ? { onEventClick: onPlanClick } : {}),
-    ...(disabledPlanId != null ? { disabledPlanId } : {}),
+    ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
+    ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
   });
 
   const isActive = state.mode !== 'idle';
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
-  const handlePlanContextMenu = useCallback(
-    (plan: CalendarEvent, mouseEvent: React.MouseEvent) => {
+  const handleEntryContextMenu = useCallback(
+    (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
       if (isDragging || isResizing) return;
-      onPlanContextMenu?.(plan, mouseEvent);
+      onEntryContextMenu?.(entry, mouseEvent);
     },
-    [onPlanContextMenu, isDragging, isResizing],
+    [onEntryContextMenu, isDragging, isResizing],
   );
 
   const timeGrid = React.useMemo(
@@ -153,7 +128,7 @@ export function MultiDayContent({
         className="absolute inset-0"
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}
-        plans={allEventsForOverlapCheck ?? plans}
+        plans={allEventsForOverlapCheck ?? entries}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
           {timeGrid}
@@ -163,39 +138,39 @@ export function MultiDayContent({
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
         <PanelDragPreview dayIndex={dayIndex} />
 
-        {plans.map((plan) => {
-          const style = planStyles[plan.id];
+        {entries.map((entry) => {
+          const style = entryStyles[entry.id];
           if (!style) return null;
 
-          const planDragging = isDragging && (state as { entryId: string }).entryId === plan.id;
+          const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
           const isMovingToOtherDate =
             isGlobalDragging &&
-            globalDraggedPlan?.id === plan.id &&
+            globalDraggedEntry?.id === entry.id &&
             globalTargetDateIndex !== globalOriginalDateIndex;
 
-          const planResizing = isResizing && (state as { entryId: string }).entryId === plan.id;
+          const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
-          const adjustedStyle = getAdjustedStyle(style, plan.id, state);
+          const adjustedStyle = getAdjustedStyle(style, entry.id, state);
           const finalStyle = isMovingToOtherDate
             ? { ...adjustedStyle, opacity: 0.3 }
             : adjustedStyle;
 
           return (
             <div
-              key={plan.id}
+              key={entry.id}
               style={finalStyle}
               className="pointer-events-none absolute"
-              data-plan-block="true"
+              data-entry-block="true"
             >
               <div
                 className="pointer-events-auto absolute inset-0 rounded"
-                data-plan-block="true"
+                data-entry-block="true"
                 onMouseDown={(e) => {
                   if (e.button === 0) {
                     handlers.handlePointerDown(
-                      plan.id,
+                      entry.id,
                       e,
                       {
                         top: currentTop,
@@ -209,7 +184,7 @@ export function MultiDayContent({
                 }}
                 onTouchStart={(e) => {
                   handlers.handleTouchStart(
-                    plan.id,
+                    entry.id,
                     e,
                     {
                       top: currentTop,
@@ -221,19 +196,23 @@ export function MultiDayContent({
                   );
                 }}
               >
-                <PlanCard
-                  plan={plan}
+                <EntryCard
+                  entry={entry}
+                  tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
+                  tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+                  onAnchorRect={setAnchorRect}
+                  isMobile={isMobile}
                   position={{
                     top: 0,
                     left: 0,
                     width: 100,
                     height:
-                      planResizing && state.mode === 'resizing'
+                      entryResizing && state.mode === 'resizing'
                         ? state.snappedHeight
                         : currentHeight,
                   }}
                   onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
-                    handlePlanContextMenu(p, e)
+                    handleEntryContextMenu(p, e)
                   }
                   onResizeStart={(
                     p: CalendarEvent,
@@ -247,12 +226,12 @@ export function MultiDayContent({
                       height: currentHeight,
                     })
                   }
-                  isDragging={planDragging}
-                  isResizing={planResizing}
-                  isActive={isInspectorOpen && inspectorPlanId === plan.id}
-                  previewTime={getPreviewTime(plan.id, state)}
+                  isDragging={entryDragging}
+                  isResizing={entryResizing}
+                  isActive={isInspectorOpen && inspectorEntryId === entry.id}
+                  previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${planDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 />
               </div>
             </div>

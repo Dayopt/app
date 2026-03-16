@@ -1,62 +1,67 @@
 'use client';
 
+/**
+ * Entry Inspector（Level 1）
+ *
+ * 3層アーキテクチャの最上位:
+ * - store 読み取り、useEntry()、loading/empty 分岐
+ * - レスポンシブ分岐（mobile=Drawer / PC=FloatingPopover）
+ * - keyboard ショートカット、URL同期
+ *
+ * content の重複なし: EntryInspectorForm を一度だけ描画。
+ */
+
+import { useState } from 'react';
+
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
-import { InspectorContent } from './InspectorContent';
-import { InspectorShell } from './InspectorShell';
-import { useInspectorKeyboard } from './hooks';
-
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { Spinner } from '@/components/ui/spinner';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useModalStore } from '@/shell/stores/useModalStore';
 import { useEntry } from '../../hooks/useEntry';
+import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../types/entry';
+import { EntryInspectorForm } from './EntryInspectorForm';
+import { FloatingPopover } from './FloatingPopover';
+import { useInspectorKeyboard, useInspectorNavigation } from './hooks';
 
-import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
-import { EntryInspectorContent } from './EntryInspectorContent';
-import { useInspectorAutoSave, useInspectorNavigation } from './hooks';
-
-/**
- * URL同期を担当する内部コンポーネント
- * useSearchParams()はSuspenseが必要なため分離
- */
+/** URL同期（useSearchParams は Suspense が必要なため分離） */
 function InspectorURLSyncHandler() {
   useInspectorURLSync();
   return null;
 }
 
-/**
- * Entry Inspector（全ページ共通）
- *
- * 共通Inspector基盤を使用
- * PC: Popover（フローティング）、モバイル: Drawer
- */
+/** モバイル Drawer のスナップポイント */
+const SNAP_POINTS = [1] as const;
+
 export function EntryInspector() {
   const t = useTranslations();
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
+
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
-  const planId = useEntryInspectorStore((state) => state.entryId);
+  const entryId = useEntryInspectorStore((state) => state.entryId);
+  const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
-  const { data: planData, isLoading } = useEntry(planId!, {
+  const { data: planData, isLoading } = useEntry(entryId!, {
     includeTags: true,
-    enabled: !!planId,
+    enabled: !!entryId,
   });
-  const plan: EntryWithTags | null = (planData ?? null) as EntryWithTags | null;
+  const entry: EntryWithTags | null = (planData ?? null) as EntryWithTags | null;
 
-  // 繰り返しダイアログが開いている間はInspectorを閉じない
-  // 全フィールドはデバウンス即時保存のため、閉じる = ただの closeInspector()
+  // 繰り返しダイアログが開いている間は Inspector を閉じない
   const handleClose = useCallback(() => {
     const modal = useModalStore.getState().modal;
     if (modal?.type === 'recurringEdit') return;
     closeInspector();
   }, [closeInspector]);
 
-  // ナビゲーション
-  const { hasPrevious, hasNext, goToPrevious, goToNext } = useInspectorNavigation(planId);
-
-  useInspectorAutoSave({ planId, plan });
-
-  // キーボードショートカット
+  // ナビゲーション + キーボード
+  const { hasPrevious, hasNext, goToPrevious, goToNext } = useInspectorNavigation(entryId);
   useInspectorKeyboard({
     isOpen,
     hasPrevious,
@@ -66,26 +71,56 @@ export function EntryInspector() {
     onNext: goToNext,
   });
 
+  // --- コンテンツ（loading / empty / form） ---
+  const title = entry?.title || t('plan.inspector.noTitle');
+  let content: React.ReactNode;
+
+  if (isLoading) {
+    content = (
+      <div className="flex h-full flex-1 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  } else if (!entry) {
+    content = (
+      <div className="flex h-full flex-1 items-center justify-center">
+        <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+      </div>
+    );
+  } else {
+    content = <EntryInspectorForm />;
+  }
+
+  if (!isOpen) return null;
+
   return (
     <>
-      {/* URL同期（Suspenseでラップ） */}
       <Suspense fallback={null}>
         <InspectorURLSyncHandler />
       </Suspense>
 
-      <InspectorShell
-        isOpen={isOpen}
-        onClose={handleClose}
-        title={plan?.title || t('plan.inspector.noTitle')}
-      >
-        <InspectorContent
-          isLoading={isLoading}
-          hasData={!!plan}
-          emptyMessage={t('plan.inspector.notFound')}
+      {isMobile ? (
+        <Drawer
+          open={isOpen}
+          onOpenChange={(open) => !open && handleClose()}
+          snapPoints={SNAP_POINTS as unknown as (number | string)[]}
+          activeSnapPoint={snap}
+          setActiveSnapPoint={setSnap}
+          fadeFromIndex={1}
         >
-          <EntryInspectorContent />
-        </InspectorContent>
-      </InspectorShell>
+          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-none p-0 [&>div:first-child]:hidden">
+            <DrawerTitle className="sr-only">{title}</DrawerTitle>
+            <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
+              <div className="bg-border h-1.5 w-12 rounded-full" />
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
+          {content}
+        </FloatingPopover>
+      )}
     </>
   );
 }

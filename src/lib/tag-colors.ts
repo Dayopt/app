@@ -44,7 +44,7 @@ export type TagColorName = (typeof TAG_COLOR_NAMES)[number];
 // カラー名 → クラス/CSS変数 マッピング
 // ========================================
 
-interface TagColorEntry {
+export interface TagColorEntry {
   /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
   border: string;
   /** dot/icon背景用 Tailwindクラス (e.g. 'bg-tag-blue') */

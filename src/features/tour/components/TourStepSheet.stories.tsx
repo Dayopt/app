@@ -13,10 +13,10 @@ const meta = {
   },
   tags: ['autodocs'],
   args: {
-    titleKey: 'tour.steps.gridDrag.title',
-    descriptionKey: 'tour.steps.gridDrag.description',
+    titleKey: 'tour.steps.intro.title',
+    descriptionKey: 'tour.steps.intro.description',
     currentStep: 1,
-    totalSteps: 3,
+    totalSteps: 7,
     isLastStep: false,
     onNext: fn(),
     onSkip: fn(),
@@ -35,7 +35,7 @@ export const LastStep: Story = {
     titleKey: 'tour.steps.planVsRecord.title',
     descriptionKey: 'tour.steps.planVsRecord.description',
     currentStep: 3,
-    totalSteps: 3,
+    totalSteps: 7,
     isLastStep: true,
   },
 };
@@ -47,8 +47,8 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-2 text-xs">First Step</p>
         <TourStepSheet
-          titleKey="tour.steps.gridDrag.title"
-          descriptionKey="tour.steps.gridDrag.description"
+          titleKey="tour.steps.intro.title"
+          descriptionKey="tour.steps.intro.description"
           currentStep={1}
           totalSteps={3}
           isLastStep={false}

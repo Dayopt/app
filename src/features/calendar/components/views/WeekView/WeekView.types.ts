@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-import type { BasePlanPosition, CalendarEvent, DateTimeSelection, GridViewProps } from '../shared';
+import type { BaseEntryPosition, CalendarEvent, DateTimeSelection, GridViewProps } from '../shared';
 
 // WeekViewの固有Props（GridViewPropsを継承して時間グリッド機能を使用）
 export interface WeekViewProps extends GridViewProps {
@@ -11,15 +11,15 @@ export interface WeekViewProps extends GridViewProps {
 export interface WeekGridProps {
   weekDates: Date[];
   events: CalendarEvent[];
-  /** 全プラン（期限切れ未完了表示用） */
-  allPlans?: CalendarEvent[] | undefined;
+  /** 全エントリ（期限切れ未完了表示用） */
+  allEntries?: CalendarEvent[] | undefined;
   eventsByDate: Record<string, CalendarEvent[]>;
   todayIndex: number;
-  /** DnDを無効化するプランID（Inspector表示中のプランなど） */
-  disabledPlanId?: string | null | undefined;
-  onEventClick?: ((plan: CalendarEvent) => void) | undefined;
-  onEventContextMenu?: ((plan: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
-  onEventUpdate?: ((plan: CalendarEvent) => void) | undefined;
+  /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
+  disabledEntryId?: string | null | undefined;
+  onEventClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEventContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
+  onEventUpdate?: ((entry: CalendarEvent) => void) | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   className?: string | undefined;
 }
@@ -29,7 +29,7 @@ export interface UseWeekViewOptions {
   startDate: Date;
   events: CalendarEvent[];
   weekStartsOn?: 0 | 1 | 6;
-  onEventUpdate?: (plan: CalendarEvent) => void;
+  onEventUpdate?: (entry: CalendarEvent) => void;
 }
 
 // useWeekViewフックの返却値
@@ -41,24 +41,24 @@ export interface UseWeekViewReturn {
   isCurrentWeek: boolean;
 }
 
-// useWeekPlansフックのオプション
-export interface UseWeekPlansOptions {
+// useWeekEntriesフックのオプション
+export interface UseWeekEntriesOptions {
   weekDates: Date[];
   events: CalendarEvent[];
   hourHeight?: number;
   timezone: string;
 }
 
-// useWeekPlansフックの返却値
-export interface UseWeekPlansReturn {
-  plansByDate: Record<string, CalendarEvent[]>;
-  planPositions: WeekPlanPosition[];
-  maxConcurrentPlans: number;
+// useWeekEntriesフックの返却値
+export interface UseWeekEntriesReturn {
+  entriesByDate: Record<string, CalendarEvent[]>;
+  entryPositions: WeekEntryPosition[];
+  maxConcurrentEntries: number;
 }
 
-// 週ビューでのプラン位置情報
-// WeekPlanPositionはBasePlanPositionにdayIndexを追加
-export interface WeekPlanPosition extends BasePlanPosition {
+// 週ビューでのエントリ位置情報
+// WeekEntryPositionはBaseEntryPositionにdayIndexを追加
+export interface WeekEntryPosition extends BaseEntryPosition {
   dayIndex: number;
 }
 

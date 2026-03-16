@@ -1,5 +1,5 @@
+import type { ChronotypeSettings, ProductivityZone } from '@/types/chronotype';
 import { describe, expect, it } from 'vitest';
-import type { ChronotypeSettings, ProductivityZone } from '../../types';
 import {
   getChronotypeProfile,
   getEnabledChronotypeProfile,

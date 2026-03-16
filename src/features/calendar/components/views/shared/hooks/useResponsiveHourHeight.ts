@@ -32,39 +32,19 @@ export function useResponsiveHourHeight(): number {
 
     updateHourHeight();
 
-    window.addEventListener('resize', updateHourHeight);
-    return () => window.removeEventListener('resize', updateHourHeight);
+    // デバウンス: リサイズ中のカスケードsetState → レイアウトスラッシングを抑制
+    let timerId: ReturnType<typeof setTimeout>;
+    const debouncedUpdate = () => {
+      clearTimeout(timerId);
+      timerId = setTimeout(updateHourHeight, 100);
+    };
+
+    window.addEventListener('resize', debouncedUpdate);
+    return () => {
+      window.removeEventListener('resize', debouncedUpdate);
+      clearTimeout(timerId);
+    };
   }, [config.mobile, config.tablet, config.desktop]);
 
   return hourHeight;
-}
-
-/**
- * ブレークポイント判定用のフック
- */
-export function useBreakpoint() {
-  const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
-
-  useEffect(() => {
-    const updateBreakpoint = () => {
-      const width = window.innerWidth;
-
-      if (width < 768) {
-        setBreakpoint('mobile');
-      } else if (width < 1024) {
-        setBreakpoint('tablet');
-      } else {
-        setBreakpoint('desktop');
-      }
-    };
-
-    updateBreakpoint();
-    window.addEventListener('resize', updateBreakpoint);
-
-    return () => {
-      window.removeEventListener('resize', updateBreakpoint);
-    };
-  }, []);
-
-  return breakpoint;
 }

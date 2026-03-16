@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { useEntries, useEntryMutations } from '@/features/entry';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-import { useHapticFeedback } from '../hooks/useHapticFeedback';
+import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 
 interface DnDProviderProps {
   children: React.ReactNode;

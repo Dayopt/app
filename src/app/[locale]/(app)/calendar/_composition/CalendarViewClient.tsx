@@ -4,7 +4,7 @@
  * CalendarViewClient - Composition Bridge
  *
  * ナビゲーション状態を管理し、useCalendarCompositionを呼び出して
- * CalendarControllerにデータとコールバックを渡すブリッジコンポーネント。
+ * CalendarControllerにデータとコールバックをpropsで渡すブリッジコンポーネント。
  *
  * CalendarController自体はpure view（@/features/* importゼロ）。
  * cross-feature依存の橋渡しはこのファイルが担当する。
@@ -18,12 +18,7 @@ import { format } from 'date-fns';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import type { CalendarViewType } from '@/features/calendar';
-import {
-  CalendarController,
-  CalendarProvider,
-  useCalendarLayout,
-  useCalendarNavigation,
-} from '@/features/calendar';
+import { CalendarController, useCalendarLayout, useCalendarNavigation } from '@/features/calendar';
 import { logger } from '@/lib/logger';
 import { PageSwitcher } from '@/shell/layout/PageSwitcher';
 
@@ -94,16 +89,6 @@ export function CalendarViewClient({ view, initialDate, translations }: Calendar
     changeView,
   });
 
-  // Context value: composition result + navigation state
-  const calendarValue = useMemo(
-    () => ({
-      viewType,
-      currentDate,
-      ...composition,
-    }),
-    [viewType, currentDate, composition],
-  );
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <FeatureErrorBoundary
@@ -128,9 +113,32 @@ export function CalendarViewClient({ view, initialDate, translations }: Calendar
           </div>
         }
       >
-        <CalendarProvider value={calendarValue}>
-          <CalendarController rightSlot={<PageSwitcher />} />
-        </CalendarProvider>
+        <CalendarController
+          viewType={viewType}
+          currentDate={currentDate}
+          viewDateRange={composition.viewDateRange}
+          filteredEntries={composition.filteredEvents}
+          allEntries={composition.allCalendarEvents}
+          showWeekends={composition.showWeekends}
+          disabledEntryId={composition.disabledPlanId}
+          onEntryClick={composition.onPlanClick}
+          onTimeRangeSelect={composition.onTimeRangeSelect}
+          onUpdateEntry={composition.onUpdatePlan}
+          onDeleteEntry={composition.onDeletePlan}
+          onRestoreEntry={composition.onRestorePlan}
+          onEditEntry={composition.onEditPlan}
+          onDeleteEntryConfirm={composition.onDeletePlanConfirm}
+          onDuplicateEntry={composition.onDuplicatePlan}
+          onCopyEntry={composition.onCopyPlan}
+          onNavigate={composition.onNavigate}
+          onViewChange={composition.onViewChange}
+          onNavigatePrev={composition.onNavigatePrev}
+          onNavigateNext={composition.onNavigateNext}
+          onNavigateToday={composition.onNavigateToday}
+          onToggleWeekends={composition.onToggleWeekends}
+          onDateSelect={composition.onDateSelect}
+          rightSlot={<PageSwitcher />}
+        />
       </FeatureErrorBoundary>
     </div>
   );

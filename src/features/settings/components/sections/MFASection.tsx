@@ -1,8 +1,21 @@
 'use client';
 
+import { useState } from 'react';
+
+import { useTranslations } from 'next-intl';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { useTranslations } from 'next-intl';
 
 import { SectionCard } from '@/components/common/SectionCard';
 import { useMFA } from '../../hooks/useMFA';
@@ -25,14 +38,33 @@ export function MFASection() {
     isLoading,
     recoveryCodes,
     recoveryCodeCount,
+    showDisableDialog,
+    showRegenerateDialog,
     setVerificationCode,
     enrollMFA,
     verifyMFA,
-    disableMFA,
+    requestDisableMFA,
+    confirmDisableMFA,
+    cancelDisableMFA,
     cancelSetup,
-    regenerateRecoveryCodes,
+    requestRegenerateRecoveryCodes,
+    confirmRegenerateRecoveryCodes,
+    cancelRegenerateRecoveryCodes,
     dismissRecoveryCodes,
   } = useMFA();
+
+  // MFA無効化ダイアログ内のTOTPコード
+  const [disableCode, setDisableCode] = useState('');
+
+  const handleConfirmDisable = () => {
+    confirmDisableMFA(disableCode);
+    setDisableCode('');
+  };
+
+  const handleCancelDisable = () => {
+    cancelDisableMFA();
+    setDisableCode('');
+  };
 
   return (
     <SectionCard title={t('settings.account.twoFactor')}>
@@ -54,7 +86,7 @@ export function MFASection() {
           <div className="border-warning space-y-4 rounded-2xl border p-4">
             <div>
               <h3 className="text-warning mb-2 text-lg font-bold">
-                ⚠️ {t('settings.account.mfa.recoveryCodes.title')}
+                {t('settings.account.mfa.recoveryCodes.title')}
               </h3>
               <p className="text-muted-foreground text-sm">
                 {t('settings.account.mfa.recoveryCodes.description')}
@@ -173,31 +205,56 @@ export function MFASection() {
               </p>
             </div>
 
-            {/* リカバリーコード状態 */}
-            <div className="bg-muted rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-normal">
-                    {t('settings.account.mfa.recoveryCodes.sectionTitle')}
-                  </div>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {recoveryCodeCount > 0
-                      ? t('settings.account.mfa.recoveryCodes.remaining', {
-                          count: recoveryCodeCount,
-                        })
-                      : t('settings.account.mfa.recoveryCodes.noCodesLeft')}
-                  </p>
+            {/* リカバリーコード枯渇警告 */}
+            {recoveryCodeCount === 0 && (
+              <div className="border-destructive bg-destructive/10 rounded-2xl border p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-destructive text-sm font-bold">
+                    {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
+                  </span>
                 </div>
-                <Button onClick={regenerateRecoveryCodes} disabled={isLoading}>
-                  {isLoading
-                    ? t('settings.account.mfa.generating')
-                    : t('settings.account.mfa.regenerate')}
-                </Button>
+                <p className="text-destructive text-xs">
+                  {t('settings.account.mfa.recoveryCodes.exhaustedWarning')}
+                </p>
+                <div className="mt-3">
+                  <Button
+                    variant="destructive"
+                    onClick={requestRegenerateRecoveryCodes}
+                    disabled={isLoading}
+                  >
+                    {isLoading
+                      ? t('settings.account.mfa.generating')
+                      : t('settings.account.mfa.regenerate')}
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* リカバリーコード状態（残りがある場合） */}
+            {recoveryCodeCount > 0 && (
+              <div className="bg-muted rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-normal">
+                      {t('settings.account.mfa.recoveryCodes.sectionTitle')}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t('settings.account.mfa.recoveryCodes.remaining', {
+                        count: recoveryCodeCount,
+                      })}
+                    </p>
+                  </div>
+                  <Button onClick={requestRegenerateRecoveryCodes} disabled={isLoading}>
+                    {isLoading
+                      ? t('settings.account.mfa.generating')
+                      : t('settings.account.mfa.regenerate')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end">
-              <Button variant="destructive" onClick={disableMFA} disabled={isLoading}>
+              <Button variant="destructive" onClick={requestDisableMFA} disabled={isLoading}>
                 {isLoading
                   ? t('settings.account.mfa.processing')
                   : t('settings.account.mfa.disableMFA')}
@@ -206,6 +263,80 @@ export function MFASection() {
           </div>
         )}
       </div>
+
+      {/* MFA無効化ダイアログ */}
+      <AlertDialog open={showDisableDialog} onOpenChange={(open) => !open && handleCancelDisable()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('settings.account.mfa.disableDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('settings.account.mfa.disableDialog.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-center py-4">
+            <InputOTP
+              maxLength={6}
+              value={disableCode}
+              onChange={setDisableCode}
+              onComplete={handleConfirmDisable}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDisable}>
+              {t('settings.account.mfa.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.preventDefault();
+                handleConfirmDisable();
+              }}
+              disabled={disableCode.length !== 6 || isLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive-hover"
+            >
+              {isLoading
+                ? t('settings.account.mfa.processing')
+                : t('settings.account.mfa.disableMFA')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* リカバリーコード再生成確認ダイアログ */}
+      <AlertDialog
+        open={showRegenerateDialog}
+        onOpenChange={(open) => !open && cancelRegenerateRecoveryCodes()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('settings.account.mfa.regenerateDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('settings.account.mfa.regenerateDialog.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelRegenerateRecoveryCodes}>
+              {t('settings.account.mfa.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                e.preventDefault();
+                confirmRegenerateRecoveryCodes();
+              }}
+            >
+              {t('settings.account.mfa.regenerate')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SectionCard>
   );
 }

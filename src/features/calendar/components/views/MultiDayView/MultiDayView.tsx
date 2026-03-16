@@ -13,8 +13,8 @@ import {
   CalendarDateHeader,
   DateDisplay,
   ScrollableCalendarLayout,
-  useMultiDayPlanPositions,
-  usePlanStyles,
+  useEntryStyles,
+  useMultiDayEntryPositions,
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
 
@@ -28,18 +28,18 @@ import type { MultiDayViewProps } from './MultiDayView.types';
 export function MultiDayView({
   dayCount,
   dateRange: _dateRange,
-  plans,
-  allPlans: _allPlans,
+  entries,
+  allEntries: _allEntries,
   currentDate,
   centerDate: _centerDate,
   showWeekends = true,
   className,
-  disabledPlanId,
-  onPlanClick,
-  onPlanContextMenu,
-  onUpdatePlan,
-  onDeletePlan: _onDeletePlan,
-  onRestorePlan: _onRestorePlan,
+  disabledEntryId,
+  onEntryClick,
+  onEntryContextMenu,
+  onUpdateEntry,
+  onDeleteEntry: _onDeleteEntry,
+  onRestoreEntry: _onRestoreEntry,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -58,24 +58,24 @@ export function MultiDayView({
   const { displayDates } = useMultiDayView({
     centerDate: displayCenterDate,
     dayCount,
-    events: plans,
+    events: entries,
     showWeekends,
   });
 
-  const { planPositions, plansByDate } = useMultiDayPlanPositions({
+  const { entryPositions, entriesByDate } = useMultiDayEntryPositions({
     displayDates,
-    plans,
+    entries,
     hourHeight: HOUR_HEIGHT,
     timezone,
   });
 
-  const planStyles = usePlanStyles(planPositions);
+  const entryStyles = useEntryStyles(entryPositions);
 
   const weekNumber = useMemo(() => {
     return getWeek(displayCenterDate, { weekStartsOn: 1 });
   }, [displayCenterDate]);
 
-  const viewMode = `${dayCount}day`;
+  const viewMode = `${dayCount}day` as '3day' | '5day';
 
   const headerComponent = (
     <div className="bg-background flex h-8">
@@ -108,7 +108,7 @@ export function MultiDayView({
         >
           {displayDates.map((date, dayIndex) => {
             const dateKey = format(date, 'yyyy-MM-dd');
-            const dayPlans = plansByDate.get(dateKey) || [];
+            const dayEntries = entriesByDate.get(dateKey) || [];
 
             return (
               <div
@@ -121,23 +121,23 @@ export function MultiDayView({
               >
                 <MultiDayContent
                   date={date}
-                  plans={dayPlans}
-                  allEventsForOverlapCheck={plans}
-                  planStyles={planStyles}
-                  onPlanClick={onPlanClick}
-                  onPlanContextMenu={onPlanContextMenu}
-                  onPlanUpdate={
-                    onUpdatePlan
-                      ? (planId, updates) => {
-                          const plan = plans.find((p) => p.id === planId);
-                          if (plan) {
-                            return onUpdatePlan({ ...plan, ...updates });
+                  entries={dayEntries}
+                  allEventsForOverlapCheck={entries}
+                  entryStyles={entryStyles}
+                  onEntryClick={onEntryClick}
+                  onEntryContextMenu={onEntryContextMenu}
+                  onEntryUpdate={
+                    onUpdateEntry
+                      ? (entryId, updates) => {
+                          const entry = entries.find((p) => p.id === entryId);
+                          if (entry) {
+                            return onUpdateEntry({ ...entry, ...updates });
                           }
                         }
                       : undefined
                   }
                   onTimeRangeSelect={onTimeRangeSelect}
-                  disabledPlanId={disabledPlanId}
+                  disabledEntryId={disabledEntryId}
                   className="h-full"
                   dayIndex={dayIndex}
                   displayDates={displayDates}

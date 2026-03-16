@@ -2,10 +2,11 @@
  * ビュー関連の型定義
  */
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
-import type { PlanInteractionHandler } from './plan.types';
+import type { CalendarEvent, CalendarViewType } from '../../../../types/calendar.types';
+import type { EntryInteractionHandler } from './entry.types';
 
-export type ViewType = 'day' | '3day' | '5day' | 'week';
+/** @deprecated CalendarViewType を使用してください */
+export type ViewType = CalendarViewType;
 
 export interface ViewProps {
   dates: Date[];
@@ -46,27 +47,6 @@ export interface EmptyStateProps {
   className?: string;
 }
 
-export interface ViewDimensions {
-  containerWidth: number;
-  containerHeight: number;
-  contentWidth: number;
-  contentHeight: number;
-  scrollTop: number;
-  scrollLeft: number;
-  visibleTimeRange: {
-    start: number; // 開始時間（0-24）
-    end: number; // 終了時間（0-24）
-  };
-}
-
-export interface ScrollSyncOptions {
-  horizontal?: boolean;
-  vertical?: boolean;
-  initialScrollTop?: number;
-  initialScrollLeft?: number;
-  onScroll?: (scrollTop: number, scrollLeft: number) => void;
-}
-
 export interface ViewNavigationProps {
   currentDate: Date;
   viewType: ViewType;
@@ -88,7 +68,7 @@ export interface ViewConfiguration {
   scrollToHour: number;
 }
 
-export interface ViewContextValue extends ViewConfiguration, PlanInteractionHandler {
+export interface ViewContextValue extends ViewConfiguration, EntryInteractionHandler {
   dates: Date[];
   events: CalendarEvent[];
   currentDate: Date;

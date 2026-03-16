@@ -6,7 +6,7 @@
 
 import { memo, useMemo } from 'react';
 
-import { timeToPixels } from '../../../../../engine/grid';
+import { timeToPixels } from '../../../../../lib/grid';
 import { HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
 import { useCurrentTime } from '../../hooks/useCurrentTime';
 import type { CurrentTimeLineProps } from '../../types/grid.types';
@@ -111,7 +111,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
       />
 
       {/* ドット（今日の場合のみ） */}
-      {showDot != null && columnInfo.isToday && (
+      {showDot && columnInfo.isToday && (
         <div
           className="border-background bg-primary absolute rounded-full border-2 shadow-sm"
           style={{
@@ -163,7 +163,7 @@ export const CurrentTimeLineForColumn = memo<{
       }}
     >
       {/* ドット（今日の場合のみ、列の左端） */}
-      {showDot != null && isToday && (
+      {showDot && isToday && (
         <div
           className="border-background bg-primary absolute rounded-full border-2 shadow-sm"
           style={{

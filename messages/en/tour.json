@@ -1,30 +1,66 @@
 {
   "tour": {
     "steps": {
-      "gridDrag": {
-        "title": "Drag to select a time slot",
-        "description": "Drag on the calendar to choose when you want to work on something"
+      "intro": {
+        "title": "Welcome to Dayopt",
+        "description": "Plan your time, track what you actually do, and see where your hours go. Let's walk through the basics."
       },
-      "selectTag": {
-        "title": "Pick a tag to create your plan",
-        "description": "Choose an existing tag, or create a new one — it becomes both the label and title of your plan"
+      "gridDragPlan": {
+        "title": "Create a plan",
+        "description": "Drag on a future time slot to schedule what you want to do"
       },
-      "clickEntry": {
-        "title": "Click to view details",
-        "description": "Click the block you just created to open the inspector — edit time, tags, and notes"
+      "selectTagPlan": {
+        "title": "Pick a tag",
+        "description": "Choose a tag — it becomes the name and color of your plan"
+      },
+      "explainTags": {
+        "title": "Tags — Your Activity Categories",
+        "description": "Tags help you in three ways:",
+        "categorize": {
+          "label": "Categorize",
+          "detail": "Group your time blocks by activity type"
+        },
+        "colorCode": {
+          "label": "Color-code",
+          "detail": "Each tag has its own color on the calendar"
+        },
+        "trackStats": {
+          "label": "Track stats",
+          "detail": "See exactly how much time you spend on each category"
+        },
+        "examples": {
+          "deepWork": "Deep Work",
+          "exercise": "Exercise",
+          "meeting": "Meeting"
+        }
+      },
+      "gridDragRecord": {
+        "title": "Record what you did",
+        "description": "Now drag on a past time slot to log time you already spent"
+      },
+      "selectTagRecord": {
+        "title": "Tag your record",
+        "description": "Pick a tag for this record too — notice the dashed border that marks it as a record"
       },
       "planVsRecord": {
         "title": "Plans vs Records",
-        "description": "A plan is what you intend to do. Once its time passes, it automatically becomes a record — what you actually did. You can always adjust the recorded time later."
+        "description": "Solid bar = plan, dashed bar = record. When a plan's time passes, it automatically becomes a record.",
+        "planLabel": "Plan",
+        "planDetail": "What you intend to do",
+        "recordLabel": "Record",
+        "recordDetail": "What actually happened",
+        "autoConvert": "Auto-converts when time passes"
       }
     },
+    "pastTimeHint": "Try dragging on a time that has already passed",
     "done": {
       "title": "You're all set!",
-      "description": "Start planning your day"
+      "description": "Start planning your day and tracking your time"
     },
     "next": "Next",
+    "back": "Back",
     "skip": "Skip tour",
-    "done_button": "Start planning",
+    "done_button": "Get started",
     "step": "{current} of {total}"
   }
 }

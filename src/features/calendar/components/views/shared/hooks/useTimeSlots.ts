@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { generateTimeSlots } from '../../../../engine/grid';
+import { generateTimeSlots } from '../../../../lib/grid';
 import type { TimeSlot } from '../types/grid.types';
 
 interface UseTimeSlotsOptions {

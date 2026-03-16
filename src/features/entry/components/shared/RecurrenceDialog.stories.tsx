@@ -8,7 +8,7 @@ import { RecurrenceDialog } from './RecurrenceDialog';
 
 /** RecurrenceDialog - カスタム繰り返し設定ダイアログ（RRULE対応） */
 const meta = {
-  title: 'Features/Entry/RecurrenceDialog',
+  title: 'Features/Entry/Recurrence/RecurrenceDialog',
   parameters: {
     layout: 'padded',
     // button-name / label: internal SelectTrigger and number inputs without explicit labels

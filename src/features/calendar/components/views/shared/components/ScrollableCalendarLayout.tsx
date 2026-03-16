@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 
 import { ChronotypeBackground } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ interface ScrollableCalendarLayoutProps {
   timeColumnWidth?: number | undefined;
   onTimeClick?: ((hour: number, minute: number) => void) | undefined;
   displayDates?: Date[] | undefined;
-  viewMode?: string | undefined;
+  viewMode?: 'day' | '3day' | '5day' | 'week' | undefined;
 
   // スクロール機能の追加
   enableKeyboardNavigation?: boolean | undefined;
@@ -111,8 +111,6 @@ export const ScrollableCalendarLayout = ({
   enableKeyboardNavigation = true,
   onScrollPositionChange,
 }: ScrollableCalendarLayoutProps) => {
-  const [_containerWidth, setContainerWidth] = useState(800);
-
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   // グリッドレイアウト計算（フック利用）
@@ -141,20 +139,6 @@ export const ScrollableCalendarLayout = ({
     minute: '2-digit',
     hour12: false,
   });
-
-  // コンテナ幅の動的取得
-  useEffect(() => {
-    const updateContainerWidth = () => {
-      if (scrollContainerRef.current) {
-        const width = scrollContainerRef.current.offsetWidth;
-        setContainerWidth(width);
-      }
-    };
-
-    updateContainerWidth();
-    window.addEventListener('resize', updateContainerWidth);
-    return () => window.removeEventListener('resize', updateContainerWidth);
-  }, [scrollContainerRef]);
 
   // グリッドクリックハンドラー
   const handleGridClick = useCallback(

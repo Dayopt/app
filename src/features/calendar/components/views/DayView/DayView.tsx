@@ -17,17 +17,17 @@ import { useDayView } from './hooks/useDayView';
 
 export const DayView = ({
   dateRange: _dateRange,
-  plans,
-  allPlans: _allPlans,
+  entries,
+  allEntries: _allEntries,
   currentDate,
   showWeekends: _showWeekends = true,
   className,
-  disabledPlanId,
-  onPlanClick,
-  onPlanContextMenu,
-  onUpdatePlan,
-  onDeletePlan: _onDeletePlan,
-  onRestorePlan: _onRestorePlan,
+  disabledEntryId,
+  onEntryClick,
+  onEntryContextMenu,
+  onUpdateEntry,
+  onDeleteEntry: _onDeleteEntry,
+  onRestoreEntry: _onRestoreEntry,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
@@ -49,27 +49,27 @@ export const DayView = ({
     throw new Error('Display date is undefined');
   }
 
-  // ドラッグイベント用のハンドラー（プラン時間更新）
+  // ドラッグイベント用のハンドラー（エントリ時間更新）
   const handleEventTimeUpdate = React.useCallback(
     async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
-      if (onUpdatePlan) {
-        // 返り値を伝播（繰り返しプラン編集時の skipToast フラグ用）
-        return await onUpdatePlan(eventId, updates);
+      if (onUpdateEntry) {
+        // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
+        return await onUpdateEntry(eventId, updates);
       }
     },
-    [onUpdatePlan],
+    [onUpdateEntry],
   );
 
-  // DayView専用ロジック（CalendarControllerから渡されたプランデータを使用）
+  // DayView専用ロジック（CalendarControllerから渡されたエントリデータを使用）
   const {
-    dayPlans: dayEvents,
-    planStyles: eventStyles,
+    dayEntries: dayEvents,
+    entryStyles: eventStyles,
     isToday,
     timeSlots: _timeSlots,
   } = useDayView({
     date,
-    plans: plans || [],
-    ...(onUpdatePlan && { onPlanUpdate: onUpdatePlan }),
+    entries: entries || [],
+    ...(onUpdateEntry && { onEntryUpdate: onUpdateEntry }),
     timezone,
   });
 
@@ -116,11 +116,11 @@ export const DayView = ({
             date={date}
             events={dayEvents}
             eventStyles={eventStyles}
-            onPlanClick={onPlanClick}
-            onPlanContextMenu={onPlanContextMenu}
+            onEntryClick={onEntryClick}
+            onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}
             onTimeRangeSelect={onTimeRangeSelect}
-            disabledPlanId={disabledPlanId}
+            disabledEntryId={disabledEntryId}
             className="absolute inset-y-0 right-0 left-0"
           />
         </ScrollableCalendarLayout>

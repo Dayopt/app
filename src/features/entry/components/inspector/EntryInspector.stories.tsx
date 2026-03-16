@@ -1,56 +1,49 @@
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { Bell, ChevronDown, Plus, Repeat, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { expect, within } from 'storybook/test';
 
-import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
+
 import type { EntryOrigin, EntryState, FulfillmentScore } from '../../types/entry';
 
-import { InspectorDetailsLayout } from './InspectorDetailsLayout';
-import { InspectorShell } from './InspectorShell';
-import { InspectorTimeSection } from './InspectorTimeSection';
-import { InspectorFrame } from './story-helpers';
+// Story 内のみ: Composition Layer 連携プレビュー用
+// eslint-disable-next-line no-restricted-imports
+import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
+
+import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
+import { InspectorFrame, MockRecurrenceRow, MockReminderRow, MockTagRow } from './story-helpers';
 
 /**
- * Entry Inspector — 3パターンの表示確認
+ * Entry Inspector — 2パターンの表示確認
  *
  * entries統合後の Inspector 完成形。
- * `entryState`（upcoming / active / past）と `origin`（planned / unplanned）の
- * 組み合わせで UI が切り替わる。
+ * `origin`（planned / unplanned）で UI が切り替わる。
+ * `entryState` は予定行のロック（past時）と充実度の表示に影響。
  *
- * ## 3パターン
+ * ## 2パターン
  *
- * | パターン | 予定行 | 記録行 | 期間 | 繰り返し/通知 | 充実度 | ボーダー |
- * |----------|--------|--------|------|--------------|--------|----------|
- * | **Upcoming + Planned** | 編集可 | placeholder | 編集可 | ○ | × (Hide) | 実線 |
- * | **Past + Planned** | 編集可 | 編集可 | 編集可 | ○ | ○ | 実線 |
- * | **Past + Unplanned** | placeholder | 編集可 | 読取専用 | × (Hide) | ○ | 点線 |
+ * - **Planned**: 予定行=編集可（past時ロック）, 記録行=編集可, 繰り返し/通知=○, 充実度=○, ボーダー=実線
+ * - **Unplanned**: 予定行=非表示, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
  *
  * ## origin 自動遷移（ドラッグ移動時）
  *
  * `origin` は作成時に固定されるが、ドラッグで時間境界を跨ぐと自動遷移する。
  *
- * | 操作 | origin 変更 | フィールドクリア |
- * |------|-------------|-----------------|
- * | unplanned → 未来にドラッグ | `unplanned` → `planned` | actual_start/end, fulfillment_score |
- * | unplanned → 過去内で移動 | 変更なし | なし |
- * | planned → 過去にドラッグ | 変更なし（完了した予定） | なし |
- * | planned → 未来内で移動 | 変更なし | なし |
+ * - unplanned → 未来にドラッグ: `unplanned` → `planned` に変更、actual fields クリア
+ * - unplanned → 過去内で移動: 変更なし
+ * - planned → 過去にドラッグ: 変更なし（完了した予定）
+ * - planned → 未来内で移動: 変更なし
  *
  * 逆方向（planned → unplanned）の自動遷移は行わない。
  * 実装: `computeOriginTransition()` in `src/lib/entry-status.ts`
- *
- * ## レスポンシブ
- *
- * 実際の `InspectorShell` を使用。viewport addon で iframe がリサイズされると
- * `useMediaQuery` が反応し、自動的に PC（DraggableInspector）/ モバイル（Drawer）が切り替わる。
  */
 const meta = {
   title: 'Features/Entry/Inspector/EntryInspector',
   parameters: {
-    layout: 'fullscreen',
+    layout: 'centered',
     // button-name / color-contrast / aria-progressbar-name: internal inspector components
     a11y: { test: 'todo' },
   },
@@ -61,54 +54,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // ─────────────────────────────────────────────────────────
-// Mock: タグ行（InspectorTagRow は useTagsMap 依存のためモック）
-// ─────────────────────────────────────────────────────────
-
-function MockTagRow({
-  tagName,
-  dotClass,
-}: {
-  tagName?: string | undefined;
-  dotClass?: string | undefined;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <button
-        type="button"
-        className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-base font-semibold transition-colors"
-        aria-label={tagName ? `Tag: ${tagName}` : 'Add tag'}
-      >
-        {tagName ? (
-          <>
-            <span
-              className={cn('inline-block size-2.5 flex-shrink-0 rounded-full', dotClass)}
-              aria-hidden
-            />
-            <span className="text-foreground">{tagName}</span>
-            <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
-          </>
-        ) : (
-          <>
-            <Plus className="text-muted-foreground size-3.5 flex-shrink-0" aria-hidden />
-            <span className="text-muted-foreground">Add tag</span>
-            <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
-          </>
-        )}
-      </button>
-
-      <button
-        type="button"
-        className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-8 items-center justify-center rounded-lg transition-colors"
-        aria-label="Delete"
-      >
-        <Trash2 className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// Shared content（InspectorShell / InspectorFrame 共用）
+// Shared content — fields/ コンポーネントでフラット描画
 // ─────────────────────────────────────────────────────────
 
 interface InspectorContentProps {
@@ -122,6 +68,16 @@ interface InspectorContentProps {
   initialActualEnd?: string | null;
   initialNote?: string;
   initialFulfillment?: FulfillmentScore | null;
+  initialReminderMinutes?: number | null;
+  /** Composition Layer から注入されるマイクロインサイト（ReactNode） */
+  microInsight?: ReactNode;
+}
+
+/** 計算ユーティリティ: HH:MM の差分を分で返す */
+function computeDuration(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  return eh! * 60 + em! - (sh! * 60 + sm!);
 }
 
 function InspectorContent({
@@ -135,6 +91,8 @@ function InspectorContent({
   initialActualEnd = null,
   initialNote = '',
   initialFulfillment = null,
+  initialReminderMinutes = null,
+  microInsight,
 }: InspectorContentProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [plannedStart, setPlannedStart] = useState(initialPlannedStart);
@@ -145,98 +103,91 @@ function InspectorContent({
   const [fulfillment, setFulfillment] = useState<FulfillmentScore | null>(initialFulfillment);
   const t = useTranslations();
 
+  const isUnplanned = origin === 'unplanned';
+  const isPast = entryState === 'past';
+  const isPlanLocked = isPast && !isUnplanned;
+
+  const effectiveActualStart = actualStart ?? plannedStart;
+  const effectiveActualEnd = actualEnd ?? plannedEnd;
+  const plannedDuration = computeDuration(plannedStart, plannedEnd);
+  const actualDuration = computeDuration(effectiveActualStart, effectiveActualEnd);
+
+  const showRecurrence = !isUnplanned;
+  const showReminder = showRecurrence && !(isPast && initialReminderMinutes === null);
+
   return (
-    <InspectorDetailsLayout
-      tagRow={<MockTagRow tagName={tagName} dotClass={tagDotClass} />}
-      schedule={
-        <InspectorTimeSection
-          selectedDate={date}
-          onDateChange={setDate}
-          plannedStart={plannedStart}
-          plannedEnd={plannedEnd}
-          onPlannedStartChange={setPlannedStart}
-          onPlannedEndChange={setPlannedEnd}
-          actualStart={actualStart}
-          actualEnd={actualEnd}
-          onActualStartChange={setActualStart}
-          onActualEndChange={setActualEnd}
-          entryState={entryState}
-          origin={origin}
-          fulfillmentScore={entryState !== 'upcoming' ? fulfillment : undefined}
-          onFulfillmentChange={entryState !== 'upcoming' ? setFulfillment : undefined}
-          note={note}
-          onNoteChange={setNote}
-          notePlaceholder={t('plan.inspector.note.placeholder')}
-          recurrenceRow={
-            origin !== 'unplanned' ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Repeat className="text-muted-foreground size-4 flex-shrink-0" />
-                  <span className="text-muted-foreground text-sm">
-                    {t('common.recurrence.label')}
-                  </span>
-                </div>
-                <div className="-mr-2">
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
-                    aria-label="Set recurrence"
-                  >
-                    {t('common.recurrence.none')}
-                  </button>
-                </div>
-              </div>
-            ) : undefined
-          }
-          reminderRow={
-            origin !== 'unplanned' ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="text-muted-foreground size-4 flex-shrink-0" />
-                  <span className="text-muted-foreground text-sm">
-                    {t('common.reminder.label')}
-                  </span>
-                </div>
-                <div className="-mr-2">
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
-                    aria-label="Add reminder"
-                  >
-                    {t('common.reminder.add')}
-                  </button>
-                </div>
-              </div>
-            ) : undefined
-          }
-        />
-      }
-      options={null}
-    />
-  );
-}
+    <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
+      {/* Tag + Delete */}
+      <MockTagRow tagName={tagName} dotClass={tagDotClass} />
 
-// ─────────────────────────────────────────────────────────
-// Interactive Wrapper（実際の InspectorShell を使用）
-// ─────────────────────────────────────────────────────────
+      {/* Micro Insight (Composition Layer 経由で注入) */}
+      {microInsight && <div className="mt-1.5 px-0.5">{microInsight}</div>}
 
-function EntryInspectorStory(props: InspectorContentProps) {
-  return (
-    <InspectorShell isOpen onClose={() => {}} title="Entry Inspector">
-      <InspectorContent {...props} />
-    </InspectorShell>
-  );
-}
+      {/* Schedule card */}
+      <div className="bg-surface-inset mt-3 rounded-xl">
+        <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
+          {/* Date */}
+          <DateRow
+            label={t('plan.inspector.time.date')}
+            icon={Calendar}
+            selectedDate={date}
+            onDateChange={setDate}
+            disabled={isPlanLocked}
+          />
 
-// ─────────────────────────────────────────────────────────
-// Static Wrapper（AllPatterns 比較用、InspectorFrame 使用）
-// ─────────────────────────────────────────────────────────
+          {/* Planned time（unplanned は非表示） */}
+          {!isUnplanned && (
+            <TimeRow
+              label={t('plan.inspector.time.planned')}
+              icon={Clock}
+              startTime={plannedStart}
+              endTime={plannedEnd}
+              onStartChange={setPlannedStart}
+              onEndChange={setPlannedEnd}
+              disabled={isPlanLocked}
+            />
+          )}
 
-function StaticEntryInspector(props: InspectorContentProps) {
-  return (
-    <InspectorFrame>
-      <InspectorContent {...props} />
-    </InspectorFrame>
+          {/* Actual time */}
+          <TimeRow
+            label={t('plan.inspector.time.actual')}
+            icon={Play}
+            startTime={effectiveActualStart}
+            endTime={effectiveActualEnd}
+            onStartChange={(time) => setActualStart(time)}
+            onEndChange={(time) => setActualEnd(time)}
+            isPrimary
+          />
+
+          {/* Progress bar + diff badge */}
+          {plannedDuration > 0 && !isUnplanned && (
+            <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
+          )}
+
+          {/* Fulfillment */}
+          <FulfillmentRow
+            label={t('plan.inspector.time.fulfillment')}
+            score={fulfillment}
+            onScoreChange={setFulfillment}
+          />
+
+          {/* Recurrence */}
+          {showRecurrence && <MockRecurrenceRow />}
+
+          {/* Reminder */}
+          {showReminder && <MockReminderRow />}
+
+          {/* Note */}
+          <NoteSection
+            label={t('plan.inspector.note.label')}
+            icon={StickyNote}
+            note={note}
+            onNoteChange={setNote}
+            placeholder={t('plan.inspector.note.placeholder')}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -248,24 +199,25 @@ function StaticEntryInspector(props: InspectorContentProps) {
  * ## Upcoming + Planned
  *
  * 未来の予定エントリ。計画の編集がメイン操作。
- * - 予定行: 編集可能 | 記録行: placeholder
- * - 期間: テキスト表示 | 繰り返し/通知: ○ | 充実度: × (Hide) | メモ: ○
+ * - 予定行: 編集可能 | 記録行: 編集可能（予定と同じ初期値）
+ * - プログレスバー: ○ | 繰り返し/通知: ○ | 充実度: ○ | メモ: ○
  */
 export const UpcomingPlanned: Story = {
   render: () => (
-    <EntryInspectorStory
-      entryState="upcoming"
-      origin="planned"
-      tagName="Work"
-      tagDotClass="bg-blue-500"
-      initialPlannedStart="14:00"
-      initialPlannedEnd="15:30"
-      initialNote="Prepare slides for the meeting"
-    />
+    <InspectorFrame>
+      <InspectorContent
+        entryState="upcoming"
+        origin="planned"
+        tagName="Work"
+        tagDotClass="bg-blue-500"
+        initialPlannedStart="14:00"
+        initialPlannedEnd="15:30"
+        initialNote="Prepare slides for the meeting"
+      />
+    </InspectorFrame>
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    // Verify the inspector renders with the note textarea (placeholder is Japanese)
     const noteTextarea = canvas.getByPlaceholderText('メモを追加...');
     await expect(noteTextarea).toBeInTheDocument();
     await expect(noteTextarea).toHaveValue('Prepare slides for the meeting');
@@ -281,18 +233,20 @@ export const UpcomingPlanned: Story = {
  */
 export const PastPlanned: Story = {
   render: () => (
-    <EntryInspectorStory
-      entryState="past"
-      origin="planned"
-      tagName="Meeting"
-      tagDotClass="bg-purple-500"
-      initialPlannedStart="10:00"
-      initialPlannedEnd="11:30"
-      initialActualStart="10:15"
-      initialActualEnd="12:00"
-      initialNote="Ran over by 30 minutes"
-      initialFulfillment={2}
-    />
+    <InspectorFrame>
+      <InspectorContent
+        entryState="past"
+        origin="planned"
+        tagName="Meeting"
+        tagDotClass="bg-purple-500"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="11:30"
+        initialActualStart="10:15"
+        initialActualEnd="12:00"
+        initialNote="Ran over by 30 minutes"
+        initialFulfillment={2}
+      />
+    </InspectorFrame>
   ),
 };
 
@@ -300,82 +254,161 @@ export const PastPlanned: Story = {
  * ## Past + Unplanned
  *
  * 直接記録されたエントリ（予定なし）。記録のみがメイン操作。
- * - 予定行: placeholder | 記録行: 編集可
- * - 期間: テキスト表示 | 繰り返し/通知: × (Hide) | 充実度: ○ | メモ: ○
+ * - 予定行: 非表示 | 記録行: 編集可 | 日付: 編集可
+ * - プログレスバー: × | 繰り返し/通知: × | 充実度: ○ | メモ: ○
  */
 export const PastUnplanned: Story = {
   render: () => (
-    <EntryInspectorStory
-      entryState="past"
-      origin="unplanned"
-      tagName="Personal"
-      tagDotClass="bg-green-500"
-      initialPlannedStart="13:00"
-      initialPlannedEnd="14:00"
-      initialActualStart="13:00"
-      initialActualEnd="14:00"
-      initialNote="Spontaneous lunch walk"
-      initialFulfillment={3}
-    />
+    <InspectorFrame>
+      <InspectorContent
+        entryState="past"
+        origin="unplanned"
+        tagName="Personal"
+        tagDotClass="bg-green-500"
+        initialPlannedStart="13:00"
+        initialPlannedEnd="14:00"
+        initialActualStart="13:00"
+        initialActualEnd="14:00"
+        initialNote="Spontaneous lunch walk"
+        initialFulfillment={3}
+      />
+    </InspectorFrame>
   ),
 };
 
+// ─────────────────────────────────────────────────────────
+// With Micro Insight（Composition Layer 連携プレビュー）
+// ─────────────────────────────────────────────────────────
+
 /**
- * ## All Patterns
+ * ## MicroInsight 付き — 見積もり超過バイアス
  *
- * 3パターンを横並びで比較確認（静的 InspectorFrame 使用）。
+ * Composition Layer が stats feature の `getEntryMicroInsight()` を呼び、
+ * 結果を ReactNode として Inspector に注入するパターン。
+ * ここでは Story 内で直接モックテキストを渡している。
  */
+export const WithMicroInsightEstimation: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="upcoming"
+        origin="planned"
+        tagName="Meeting"
+        tagDotClass="bg-purple-500"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="11:30"
+        microInsight={
+          <EntryMicroInsight
+            insight={{
+              type: 'estimation_bias',
+              message: 'このタグは平均 +25 分超過する傾向があります',
+            }}
+          />
+        }
+      />
+    </InspectorFrame>
+  ),
+};
+
+/** MicroInsight 付き — 時間帯の充実度 */
+export const WithMicroInsightFulfillment: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="past"
+        origin="planned"
+        tagName="Work"
+        tagDotClass="bg-blue-500"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="12:00"
+        initialActualStart="10:00"
+        initialActualEnd="12:15"
+        initialFulfillment={3}
+        microInsight={
+          <EntryMicroInsight
+            insight={{
+              type: 'hourly_fulfillment',
+              message: 'この時間帯の充実度は平均より高い傾向があります',
+            }}
+          />
+        }
+      />
+    </InspectorFrame>
+  ),
+};
+
+/** MicroInsight なし（null — 大半のケース）。既存と同じ見た目。 */
+export const WithoutMicroInsight: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="upcoming"
+        origin="planned"
+        tagName="Work"
+        tagDotClass="bg-blue-500"
+        initialPlannedStart="14:00"
+        initialPlannedEnd="15:30"
+        microInsight={undefined}
+      />
+    </InspectorFrame>
+  ),
+};
+
+/** 全パターンを横並びで比較確認。 */
 export const AllPatterns: Story = {
-  parameters: {
-    layout: 'centered',
-  },
   render: () => (
     <div className="flex flex-wrap items-start gap-6">
       <div>
         <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
           Upcoming + Planned
         </p>
-        <StaticEntryInspector
-          entryState="upcoming"
-          origin="planned"
-          tagName="Work"
-          tagDotClass="bg-blue-500"
-          initialPlannedStart="14:00"
-          initialPlannedEnd="15:30"
-          initialNote="Prepare slides"
-        />
+        <InspectorFrame>
+          <InspectorContent
+            entryState="upcoming"
+            origin="planned"
+            tagName="Work"
+            tagDotClass="bg-blue-500"
+            initialPlannedStart="14:00"
+            initialPlannedEnd="15:30"
+            initialNote="Prepare slides"
+          />
+        </InspectorFrame>
       </div>
       <div>
         <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Past + Planned</p>
-        <StaticEntryInspector
-          entryState="past"
-          origin="planned"
-          tagName="Meeting"
-          tagDotClass="bg-purple-500"
-          initialPlannedStart="10:00"
-          initialPlannedEnd="11:30"
-          initialActualStart="10:15"
-          initialActualEnd="12:00"
-          initialNote="Ran 30min over"
-          initialFulfillment={2}
-        />
+        <InspectorFrame>
+          <InspectorContent
+            entryState="past"
+            origin="planned"
+            tagName="Meeting"
+            tagDotClass="bg-purple-500"
+            initialPlannedStart="10:00"
+            initialPlannedEnd="11:30"
+            initialActualStart="10:15"
+            initialActualEnd="12:00"
+            initialNote="Ran 30min over"
+            initialFulfillment={2}
+          />
+        </InspectorFrame>
       </div>
       <div>
         <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
           Past + Unplanned
         </p>
-        <StaticEntryInspector
-          entryState="past"
-          origin="unplanned"
-          tagName="Personal"
-          tagDotClass="bg-green-500"
-          initialPlannedStart="13:00"
-          initialPlannedEnd="14:00"
-          initialActualStart="13:00"
-          initialActualEnd="14:00"
-          initialNote="Lunch walk"
-          initialFulfillment={3}
-        />
+        <InspectorFrame>
+          <InspectorContent
+            entryState="past"
+            origin="unplanned"
+            tagName="Personal"
+            tagDotClass="bg-green-500"
+            initialPlannedStart="13:00"
+            initialPlannedEnd="14:00"
+            initialActualStart="13:00"
+            initialActualEnd="14:00"
+            initialNote="Lunch walk"
+            initialFulfillment={3}
+          />
+        </InspectorFrame>
       </div>
     </div>
   ),

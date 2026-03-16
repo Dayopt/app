@@ -4,7 +4,9 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Calendar
 
-時間管理の中核ビュー。プラン・レコードをタイムグリッド上に表示し、ドラッグ&ドロップで直感的に操作する。
+時間管理の中核ビュー。エントリをタイムグリッド上に表示し、ドラッグ&ドロップで直感的に操作する。
+
+エントリカード（`EntryCard`）は `@/features/entry` に定義。カレンダーはそれを利用して描画する。
 
 ---
 
@@ -27,21 +29,20 @@ import { Meta } from '@storybook/addon-docs/blocks';
 CalendarController              メインエントリポイント
 ├── layout/
 │   ├── CalendarLayout          レイアウトラッパー
-│   └── Header/                 日付表示・ビュー操作
+│   └── Header/
+│       ├── ViewSwitcher        ビュー切替（PC・ドロップダウン）
+│       ├── ViewSwitcherList    ビュー切替（モバイル・リスト）
+│       └── DateRangeDisplay    日付範囲表示
 ├── views/
 │   ├── DayView/                1日ビュー
 │   ├── WeekView/               週ビュー
 │   ├── MultiDayView/           N日ビュー
 │   └── shared/
-│       ├── grid/               TimeGrid, TimeColumn, GridLines
-│       ├── PlanCard/           プランカード描画
+│       ├── grid/               TimeGrid, TimeColumn, GridLines, CurrentTimeLine
 │       ├── DayColumn/          日カラム
 │       ├── CalendarDragSelection/  ドラッグ選択レイヤー
-│       ├── PlanContextMenu     右クリックメニュー
-│       └── CurrentTimeLine     現在時刻線
-├── sidebar/
-│   ├── ViewSwitcherList        ビュー切替
-│   └── tag-filter/             タグフィルターUI
+│       └── EventContextMenu    右クリックメニュー
+├── tag-filter/                 タグフィルターUI（TagRenameDialog含む）
 ├── animations/                 ビュー遷移アニメーション
 └── controller/                 ビュー描画ディスパッチ
 ```
@@ -93,7 +94,7 @@ CalendarController              メインエントリポイント
 
 | メニュー | トリガー | アクション |
 |---------|---------|-----------|
-| `PlanContextMenu` | プランカード右クリック | 編集、複製、削除、ステータス変更 |
+| `EventContextMenu` | エントリカード右クリック | 編集、複製、削除、ステータス変更 |
 | `EmptyAreaContextMenu` | 空エリア右クリック | プラン作成、レコード作成 |
 
 ---
@@ -125,4 +126,4 @@ CalendarController              メインエントリポイント
 
 ---
 
-**最終更新**: 2026-02-17
+**最終更新**: 2026-03-16

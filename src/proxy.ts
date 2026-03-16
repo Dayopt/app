@@ -154,6 +154,17 @@ export async function proxy(request: NextRequest) {
       );
     }
 
+    // MFA AAL強制（認証済みユーザーのみ）
+    if (user && isProtectedPath && !isMFAVerifyPath) {
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+        // MFA有効だがまだ検証していない → mfa-verifyへ強制リダイレクト
+        return NextResponse.redirect(
+          new URL(getLocalizedPath('/auth/mfa-verify', currentLocale), request.url),
+        );
+      }
+    }
+
     // オンボーディングゲート（認証済みユーザーのみ）
     if (user) {
       const isOnboardingPath = pathWithoutLocale.startsWith('/onboarding');

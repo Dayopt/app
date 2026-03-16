@@ -1,4 +1,9 @@
-export { useInspectorKeyboard } from '../../../hooks/useInspectorKeyboard';
-export { useInspectorAutoSave } from './useInspectorAutoSave';
+export { useDebouncedSave } from './useDebouncedSave';
+export { useEntryForm } from './useEntryForm';
 export { useInspectorNavigation } from './useInspectorNavigation';
-export { useRecurringEntryEdit } from './useRecurringEntryEdit';
+export { useRecurringGuard } from './useRecurringGuard';
+export { useTagField } from './useTagField';
+export { useTimeFields } from './useTimeFields';
+
+// re-export from feature hooks (used by EntryInspector.tsx)
+export { useInspectorKeyboard } from '../../../hooks/useInspectorKeyboard';

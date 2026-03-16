@@ -17,7 +17,7 @@ import {
 
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
-import { calculateViewDateRange } from '../../../lib/view-helpers';
+import { calculateViewDateRange } from '../../../lib/range';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 
@@ -57,7 +57,7 @@ export function useCalendarData({
   // entries を取得（plans + records 統合、単一クエリ）
   const { data: entriesData } = useEntries(dateFilter);
 
-  // タグマスタをプリフェッチ（TagsContainerで使用するためキャッシュをwarm up）
+  // タグマスタをプリフェッチ（EntryCard等で使用するためキャッシュをwarm up）
   useTags();
 
   // tRPC utils（プリフェッチ用）

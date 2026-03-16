@@ -1,0 +1,52 @@
+'use client';
+
+import { AlertTriangle, Info } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+
+import type { RuleInsight, RuleInsightSeverity } from '../../lib/ruleInsights';
+
+interface RuleInsightListProps {
+  insights: RuleInsight[];
+  className?: string;
+}
+
+const SEVERITY_STYLES: Record<RuleInsightSeverity, { icon: typeof Info; color: string }> = {
+  critical: { icon: AlertTriangle, color: 'text-red-500' },
+  warning: { icon: AlertTriangle, color: 'text-amber-500' },
+  info: { icon: Info, color: 'text-muted-foreground' },
+};
+
+/**
+ * RuleInsightList — 閾値ベースの気づきリスト
+ *
+ * Review タブの KPI グリッド下に配置。
+ * insights が空の場合は何も表示しない（問題なし = 表示不要）。
+ */
+export function RuleInsightList({ insights, className }: RuleInsightListProps) {
+  if (insights.length === 0) return null;
+
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {insights.map((insight, i) => {
+        const style = SEVERITY_STYLES[insight.severity];
+        const Icon = style.icon;
+
+        return (
+          <div
+            key={`${insight.metricId}-${insight.type}-${i}`}
+            className="bg-card flex items-start gap-2.5 rounded-lg px-3 py-2.5"
+          >
+            <Icon className={cn('mt-0.5 size-4 shrink-0', style.color)} />
+            <div className="min-w-0 flex-1">
+              <p className="text-foreground text-sm">{insight.message}</p>
+              {insight.detail && (
+                <p className="text-muted-foreground mt-0.5 text-xs">{insight.detail}</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

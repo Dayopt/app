@@ -9,10 +9,10 @@ import { SectionCard } from '@/components/common/SectionCard';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
-import { useAutoSaveSettings } from '../hooks/useAutoSaveSettings';
 
 import type { PersonalizationCategory, PersonalizationValues } from '../types/personalization';
 import { PERSONALIZATION_CATEGORIES } from '../types/personalization';

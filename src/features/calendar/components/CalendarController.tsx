@@ -3,19 +3,18 @@
 /**
  * CalendarController - Calendar View Shell
  *
- * CalendarContext（useCalendar）からデータ・コールバックを取得し、
+ * composition layerからprops経由でデータ・コールバックを受け取り、
  * キーボードショートカット・コンテキストメニュー・DnDを設定してUIをレンダリングする。
  *
- * @see contexts/CalendarContext.tsx
  * @see _composition/useCalendarComposition.ts
  */
 
 import { useMemo } from 'react';
 
-import { useCalendar } from '../contexts/CalendarContext';
+import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { useCalendarKeyboard } from '../hooks/useCalendarKeyboard';
 import { DnDProvider } from '../providers/DnDProvider';
+import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
@@ -27,42 +26,95 @@ import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 initializePreload();
 
 // =============================================================================
+// Props
+// =============================================================================
+
+export interface CalendarControllerProps {
+  /** ビュータイプ */
+  viewType: CalendarViewType;
+  /** 現在の表示日付 */
+  currentDate: Date;
+
+  // --- Data ---
+  viewDateRange: ViewDateRange;
+  filteredEntries: CalendarEvent[];
+  allEntries: CalendarEvent[];
+
+  // --- Settings ---
+  showWeekends: boolean;
+
+  // --- Entry state ---
+  disabledEntryId: string | null;
+
+  // --- Entry click handlers ---
+  onEntryClick: (entry: CalendarEvent) => void;
+  onTimeRangeSelect: (selection: {
+    date: Date;
+    startHour: number;
+    startMinute: number;
+    endHour: number;
+    endMinute: number;
+  }) => void;
+
+  // --- Entry CRUD ---
+  onUpdateEntry: (
+    entryIdOrEntry: string | CalendarEvent,
+    updates?: { startTime: Date; endTime: Date },
+  ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
+  onDeleteEntry: (entryId: string) => void;
+  onRestoreEntry: (entry: CalendarEvent) => Promise<void>;
+
+  // --- Context menu actions ---
+  onEditEntry: (entry: CalendarEvent) => void;
+  onDeleteEntryConfirm: (entry: CalendarEvent) => void;
+  onDuplicateEntry: (entry: CalendarEvent) => void;
+  onCopyEntry: (entry: CalendarEvent) => void;
+
+  // --- Navigation handlers ---
+  onNavigate: (direction: 'prev' | 'next' | 'today') => void;
+  onViewChange: (newView: CalendarViewType) => void;
+  onNavigatePrev: () => void;
+  onNavigateNext: () => void;
+  onNavigateToday: () => void;
+  onToggleWeekends: () => void;
+  onDateSelect: (date: Date) => void;
+
+  // --- Slots ---
+  className?: string;
+  rightSlot?: React.ReactNode;
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
 export function CalendarController({
+  viewType,
+  currentDate,
+  viewDateRange,
+  filteredEntries,
+  allEntries,
+  showWeekends,
+  disabledEntryId,
+  onEntryClick,
+  onTimeRangeSelect,
+  onUpdateEntry,
+  onDeleteEntry,
+  onRestoreEntry,
+  onEditEntry,
+  onDeleteEntryConfirm,
+  onDuplicateEntry,
+  onCopyEntry,
+  onNavigate,
+  onViewChange,
+  onNavigatePrev,
+  onNavigateNext,
+  onNavigateToday,
+  onToggleWeekends,
+  onDateSelect,
   className,
   rightSlot,
-}: { className?: string; rightSlot?: React.ReactNode } = {}) {
-  // =========================================================================
-  // Context（全データ・コールバックを取得）
-  // =========================================================================
-  const {
-    viewType,
-    currentDate,
-    viewDateRange,
-    filteredEvents,
-    allCalendarEvents,
-    showWeekends,
-    disabledPlanId,
-    onPlanClick,
-    onTimeRangeSelect,
-    onUpdatePlan,
-    onDeletePlan,
-    onRestorePlan,
-    onEditPlan,
-    onDeletePlanConfirm,
-    onDuplicatePlan,
-    onCopyPlan,
-    onNavigate,
-    onViewChange,
-    onNavigatePrev,
-    onNavigateNext,
-    onNavigateToday,
-    onToggleWeekends,
-    onDateSelect,
-  } = useCalendar();
-
+}: CalendarControllerProps) {
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
@@ -85,16 +137,16 @@ export function CalendarController({
   const commonProps = useMemo(
     () => ({
       dateRange: viewDateRange,
-      plans: filteredEvents,
-      allPlans: allCalendarEvents,
+      entries: filteredEntries,
+      allEntries,
       currentDate,
       showWeekends,
-      disabledPlanId,
-      onPlanClick,
-      onPlanContextMenu: handleEventContextMenu,
-      onUpdatePlan,
-      onDeletePlan,
-      onRestorePlan,
+      disabledEntryId,
+      onEntryClick,
+      onEntryContextMenu: handleEventContextMenu,
+      onUpdateEntry,
+      onDeleteEntry,
+      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -103,16 +155,16 @@ export function CalendarController({
     }),
     [
       viewDateRange,
-      filteredEvents,
-      allCalendarEvents,
+      filteredEntries,
+      allEntries,
       currentDate,
       showWeekends,
-      disabledPlanId,
-      onPlanClick,
+      disabledEntryId,
+      onEntryClick,
       handleEventContextMenu,
-      onUpdatePlan,
-      onDeletePlan,
-      onRestorePlan,
+      onUpdateEntry,
+      onDeleteEntry,
+      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -144,13 +196,13 @@ export function CalendarController({
 
       {contextMenuEvent && contextMenuPosition ? (
         <EventContextMenu
-          plan={contextMenuEvent}
+          entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
-          onEdit={onEditPlan}
-          onDelete={onDeletePlanConfirm}
-          onDuplicate={onDuplicatePlan}
-          onCopy={onCopyPlan}
+          onEdit={onEditEntry}
+          onDelete={onDeleteEntryConfirm}
+          onDuplicate={onDuplicateEntry}
+          onCopy={onCopyEntry}
         />
       ) : null}
 

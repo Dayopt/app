@@ -10,23 +10,23 @@ export type DayViewProps = GridViewProps;
 // シンプル版のProps（後方互換性のため）
 export interface SimpleDayViewProps {
   date: Date;
-  plans?: CalendarEvent[];
+  entries?: CalendarEvent[];
   className?: string;
-  onPlanClick?: (plan: CalendarEvent) => void;
-  onPlanUpdate?: (plan: CalendarEvent) => void;
-  onPlanCreate?: (date: Date, time: string) => void;
-  onPlanDelete?: (planId: string) => void;
+  onEntryClick?: (entry: CalendarEvent) => void;
+  onEntryUpdate?: (entry: CalendarEvent) => void;
+  onEntryCreate?: (date: Date, time: string) => void;
+  onEntryDelete?: (entryId: string) => void;
 }
 
 export interface DayContentProps {
   date: Date;
-  plans?: CalendarEvent[] | undefined;
-  events?: CalendarEvent[] | undefined; // eventsはplansのエイリアス（後方互換性のため）
-  planStyles?: Record<string, CSSProperties> | undefined;
-  eventStyles?: Record<string, CSSProperties> | undefined; // eventStylesはplanStylesのエイリアス（後方互換性のため）
-  onPlanClick?: ((plan: CalendarEvent) => void) | undefined;
-  onPlanContextMenu?: ((plan: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
-  onPlanUpdate?: ((plan: CalendarEvent) => void) | undefined;
+  entries?: CalendarEvent[] | undefined;
+  events?: CalendarEvent[] | undefined; // eventsはentriesのエイリアス（後方互換性のため）
+  entryStyles?: Record<string, CSSProperties> | undefined;
+  eventStyles?: Record<string, CSSProperties> | undefined; // eventStylesはentryStylesのエイリアス（後方互換性のため）
+  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
+  onEntryUpdate?: ((entry: CalendarEvent) => void) | undefined;
   onEventUpdate?:
     | ((
         eventId: string,
@@ -35,37 +35,37 @@ export interface DayContentProps {
     | undefined; // D&D用
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   className?: string | undefined;
-  /** DnDを無効化するプランID（Inspector表示中のプランなど） */
-  disabledPlanId?: string | null | undefined;
+  /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
+  disabledEntryId?: string | null | undefined;
 }
 
 export interface UseDayViewOptions {
   date: Date;
-  plans: CalendarEvent[];
-  onPlanUpdate?: (plan: CalendarEvent) => void;
+  entries: CalendarEvent[];
+  onEntryUpdate?: (entry: CalendarEvent) => void;
   timezone: string;
 }
 
 export interface UseDayViewReturn {
-  dayPlans: CalendarEvent[];
-  planStyles: Record<string, CSSProperties>;
+  dayEntries: CalendarEvent[];
+  entryStyles: Record<string, CSSProperties>;
   isToday: boolean;
   timeSlots: TimeSlot[];
 }
 
-export interface UseDayPlansOptions {
+export interface UseDayEntriesOptions {
   date: Date;
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   timezone: string;
 }
 
-export interface UseDayPlansReturn {
-  dayPlans: CalendarEvent[];
-  planPositions: PlanPosition[];
-  maxConcurrentPlans: number;
+export interface UseDayEntriesReturn {
+  dayEntries: CalendarEvent[];
+  entryPositions: EntryPosition[];
+  maxConcurrentEntries: number;
 }
 
-export interface PlanPosition {
+export interface EntryPosition {
   plan: CalendarEvent;
   top: number;
   height: number;
@@ -82,6 +82,6 @@ export interface DayViewSettings {
   timeInterval: 15 | 30 | 60; // minutes
   showQuarterLines: boolean;
   showCurrentTime: boolean;
-  maxPlanColumns: number;
-  planMinHeight: number;
+  maxEntryColumns: number;
+  entryMinHeight: number;
 }

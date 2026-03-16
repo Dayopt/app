@@ -127,25 +127,31 @@ export function useDragSelection({
     checkOverlap,
   });
 
-  // Effect: マウスムーブ時にドロップ時刻を更新
+  // Effect: マウスムーブ時にドロップ時刻を更新（rAFスロットル）
   useEffect(() => {
     if (!containerRef.current) return;
 
+    let rafId: number | null = null;
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!containerRef.current) return;
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const y = e.clientY - rect.top;
+        const rect = containerRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
 
-      if (y >= 0 && y <= rect.height) {
-        const time = pixelsToTime(y);
-        const timeString = formatTime(time.hour, time.minute);
-        setDropTime(timeString);
-        setIsOver(true);
-      } else {
-        setDropTime(null);
-        setIsOver(false);
-      }
+        if (y >= 0 && y <= rect.height) {
+          const time = pixelsToTime(y);
+          const timeString = formatTime(time.hour, time.minute);
+          setDropTime(timeString);
+          setIsOver(true);
+        } else {
+          setDropTime(null);
+          setIsOver(false);
+        }
+      });
     };
 
     containerRef.current.addEventListener('mousemove', handleMouseMove);
@@ -153,6 +159,7 @@ export function useDragSelection({
 
     return () => {
       ref?.removeEventListener('mousemove', handleMouseMove);
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [pixelsToTime, formatTime]);
 

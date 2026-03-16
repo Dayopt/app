@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { useWeekendNavigation } from '../../../hooks/useWeekendNavigation';
+import { useWeekendNavigation } from '../../../hooks/navigation/useWeekendNavigation';
 
 import type { CalendarViewType } from '../../../types/calendar.types';
 

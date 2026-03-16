@@ -1,0 +1,350 @@
+/**
+ * エントリー表示カードコンポーネント
+ * タグカラーを反映した左ボーダーアクセント + 右角丸の統一デザイン
+ *
+ * Pure props コンポーネント: store / data-fetch hook なし。
+ * タグ情報・アンカー位置・モバイル判定は呼び出し元から props で渡す。
+ */
+
+'use client';
+
+import React, { memo, useCallback, useEffect, useMemo } from 'react';
+
+import { useTranslations } from 'next-intl';
+
+import { getTagColorClasses } from '@/lib/tag-colors';
+import { cn } from '@/lib/utils';
+
+import { computeActualTimeDiffOverlay } from '../../lib/actual-time-overlay';
+
+import type { EntryCardProps } from './EntryCard.types';
+import { EntryCardContent } from './EntryCardContent';
+
+/** SSRフォールバック用デフォルトの1時間高さ(px) */
+const DEFAULT_HOUR_HEIGHT = 72;
+
+/** イベントの最小高さ(px) */
+const MIN_EVENT_HEIGHT = 20;
+
+/** Z-index層 */
+const Z_INDEX = {
+  EVENTS: 10,
+  DRAGGING: 30,
+} as const;
+
+export const EntryCard = memo<EntryCardProps>(function EntryCard({
+  entry,
+  tagName = null,
+  tagColor = null,
+  position,
+  onClick,
+  onContextMenu,
+  onDragStart,
+  onTouchStart,
+  onDragEnd,
+  onResizeStart,
+  onAnchorRect,
+  isDragging = false,
+  isSelected = false,
+  isActive = false,
+  isMobile = false,
+  className = '',
+  style = {},
+  previewTime = null,
+  hourHeight: hourHeightProp,
+}) {
+  const t = useTranslations();
+
+  // タグカラー（props で解決済み）
+  const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
+  const accentColor = colorClasses?.cssVar ?? 'var(--entry-default)';
+  const accentTint =
+    colorClasses?.cssVarTint ?? 'color-mix(in oklch, var(--entry-default) 12%, var(--background))';
+
+  // ドラフト（未保存プレビュー）かどうか判定
+  const isDraft = entry.isDraft === true;
+  // 過去ブロックはドラッグ・リサイズ不可（Time waits for no one）
+  const isPast = entry.entryState === 'past';
+
+  // 予定 vs 記録の差分オーバーレイ
+  const overlay = useMemo(
+    () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
+    [entry, hourHeightProp],
+  );
+
+  // positionが未定義の場合のデフォルト値
+  const safePosition = useMemo(
+    () =>
+      position || {
+        top: 0,
+        left: 0,
+        width: 100,
+        height: MIN_EVENT_HEIGHT,
+      },
+    [position],
+  );
+
+  // hourHeightProp がある = DayColumn（グリッド相対配置）→ 位置調整を適用
+  // hourHeightProp がない = WeekContent等（ラッパー相対配置）→ 位置調整は不要
+  const applyPositionAdjust = hourHeightProp !== undefined;
+
+  // 左アクセントの幅（モバイル: 2px、デスクトップ: 3px）
+  const accentWidth = isMobile ? 2 : 3;
+
+  // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
+  const dynamicStyle: React.CSSProperties = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
+      left: `${safePosition.left}%`,
+      width: `calc(${safePosition.width}% - 8px)`,
+      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
+      zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
+      cursor: isDragging ? 'grabbing' : 'pointer',
+      ...style,
+    }),
+    [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style],
+  );
+
+  // 左アクセントの点線パターン（unplanned または超過部分で使用）
+  const dashedAccentGradient = `repeating-linear-gradient(to bottom, ${accentColor} 0px, ${accentColor} 5px, transparent 5px, transparent 9px)`;
+  const isUnplannedDashed = entry.origin === 'unplanned';
+
+  // イベントハンドラー
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onAnchorRect) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        onAnchorRect({
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      onClick?.(entry);
+    },
+    [onClick, entry, onAnchorRect],
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu?.(entry, e);
+    },
+    [onContextMenu, entry],
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDraft || isPast) return;
+      if (e.button === 0) {
+        onDragStart?.(entry, e, {
+          top: safePosition.top,
+          left: safePosition.left,
+          width: safePosition.width,
+          height: safePosition.height,
+        });
+      }
+    },
+    [isDraft, isPast, onDragStart, entry, safePosition],
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (isDraft || isPast) return;
+      onTouchStart?.(entry, e, {
+        top: safePosition.top,
+        left: safePosition.left,
+        width: safePosition.width,
+        height: safePosition.height,
+      });
+    },
+    [isDraft, isPast, onTouchStart, entry, safePosition],
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      onDragEnd?.(entry);
+    }
+  }, [isDragging, onDragEnd, entry]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick?.(entry);
+      }
+    },
+    [onClick, entry],
+  );
+
+  const handleBottomResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      onResizeStart?.(entry, 'bottom', e, {
+        top: safePosition.top,
+        left: safePosition.left,
+        width: safePosition.width,
+        height: safePosition.height,
+      });
+    },
+    [onResizeStart, entry, safePosition],
+  );
+
+  const handleResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+    }
+  }, []);
+
+  // Escキーでドラッグをキャンセル
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onDragEnd?.(entry);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isDragging, onDragEnd, entry]);
+
+  // CSSクラス（統一Entryデザイン: 左アクセント + 右角丸）
+  const entryCardClasses = cn(
+    'relative flex rounded-r-lg',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+    // Draft: state-selected オーバーレイ
+    isDraft &&
+      'before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:transition-colors hover:before:bg-state-hover',
+    isDraft &&
+      'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-state-selected',
+    // 選択/アクティブ状態
+    !isDraft && (isSelected || isActive) && 'brightness-110',
+    // ホバーオーバーレイ
+    !isDraft &&
+      'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:transition-colors hover:after:bg-state-hover',
+    isSelected && 'ring-2 ring-primary',
+    'text-foreground',
+    isDraft || isPast ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
+    className,
+  );
+
+  if (!entry || !entry.id) {
+    return null;
+  }
+
+  return (
+    <div
+      data-entry-card
+      className={entryCardClasses}
+      style={dynamicStyle}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onKeyDown={handleKeyDown}
+      draggable={false}
+      role="group"
+      tabIndex={0}
+      aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
+    >
+      {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
+      <div
+        className="relative shrink-0"
+        style={{
+          width: `${accentWidth}px`,
+          backgroundColor: isUnplannedDashed ? undefined : accentColor,
+          backgroundImage: isUnplannedDashed ? dashedAccentGradient : undefined,
+        }}
+      >
+        {/* 超過で上に拡張 → その区間だけ点線 */}
+        {overlay.topKind === 'overtime' && !isUnplannedDashed && (
+          <div
+            className="absolute top-0 right-0 left-0"
+            style={{
+              height: `${overlay.topHeight}px`,
+              backgroundColor: 'var(--background)',
+              backgroundImage: dashedAccentGradient,
+            }}
+          />
+        )}
+        {/* 超過で下に拡張 → その区間だけ点線 */}
+        {overlay.bottomKind === 'overtime' && !isUnplannedDashed && (
+          <div
+            className="absolute right-0 bottom-0 left-0"
+            style={{
+              height: `${overlay.bottomHeight}px`,
+              backgroundColor: 'var(--background)',
+              backgroundImage: dashedAccentGradient,
+            }}
+          />
+        )}
+      </div>
+
+      {/* カード本体（overflow-hidden でハッチング/フェードをクリップ） */}
+      <div
+        className={cn(
+          'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
+          isMobile ? 'flex items-start gap-1 px-2 pt-2 text-xs' : 'p-2 text-sm',
+        )}
+        style={{ backgroundColor: accentTint }}
+      >
+        <EntryCardContent
+          plan={entry}
+          tagName={tagName}
+          isCompact={safePosition.height < 40}
+          showTime={safePosition.height >= 30}
+          previewTime={previewTime}
+        />
+
+        {/* 予定 vs 記録: 上部 — 未実行は控えめな斜線 */}
+        {overlay.topKind === 'unexecuted' && (
+          <div
+            aria-hidden="true"
+            className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0"
+            style={{ height: `${overlay.topHeight}px` }}
+          />
+        )}
+
+        {/* 予定 vs 記録: 下部 — 未実行は控えめな斜線 */}
+        {overlay.bottomKind === 'unexecuted' && (
+          <div
+            aria-hidden="true"
+            className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
+            style={{ height: `${overlay.bottomHeight}px` }}
+          />
+        )}
+
+        {/* 下端リサイズハンドル（Draft/Past は非表示） */}
+        {!isDraft && !isPast && (
+          <div
+            className="focus:ring-ring absolute right-0 bottom-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            role="slider"
+            tabIndex={0}
+            aria-label="Resize entry duration"
+            aria-orientation="vertical"
+            aria-valuenow={safePosition.height}
+            aria-valuemin={20}
+            aria-valuemax={480}
+            onMouseDown={handleBottomResizeMouseDown}
+            onKeyDown={handleResizeKeyDown}
+            style={{
+              height: '8px',
+              zIndex: 10,
+            }}
+            title={t('calendar.event.adjustEndTime')}
+          />
+        )}
+      </div>
+    </div>
+  );
+});

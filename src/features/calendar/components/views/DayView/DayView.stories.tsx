@@ -100,7 +100,7 @@ const todayRange: ViewDateRange = {
 export const Default: Story = {
   render: () => (
     <div className="h-[700px]">
-      <DayView dateRange={todayRange} plans={mockPlans} currentDate={today} onPlanClick={fn()} />
+      <DayView dateRange={todayRange} entries={mockPlans} currentDate={today} onEntryClick={fn()} />
     </div>
   ),
 };
@@ -109,7 +109,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => (
     <div className="h-[700px]">
-      <DayView dateRange={todayRange} plans={[]} currentDate={today} onPlanClick={fn()} />
+      <DayView dateRange={todayRange} entries={[]} currentDate={today} onEntryClick={fn()} />
     </div>
   ),
 };
@@ -119,11 +119,16 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="h-[500px] w-full">
-        <DayView dateRange={todayRange} plans={mockPlans} currentDate={today} onPlanClick={fn()} />
+        <DayView
+          dateRange={todayRange}
+          entries={mockPlans}
+          currentDate={today}
+          onEntryClick={fn()}
+        />
       </div>
 
       <div className="h-[500px] w-full">
-        <DayView dateRange={todayRange} plans={[]} currentDate={today} onPlanClick={fn()} />
+        <DayView dateRange={todayRange} entries={[]} currentDate={today} onEntryClick={fn()} />
       </div>
     </div>
   ),

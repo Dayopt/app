@@ -15,6 +15,7 @@ interface TourStepPopoverProps {
   totalSteps: number;
   isLastStep: boolean;
   onNext: () => void;
+  onPrev?: (() => void) | undefined;
   onSkip: () => void;
 }
 
@@ -28,6 +29,7 @@ export function TourStepPopover({
   totalSteps,
   isLastStep,
   onNext,
+  onPrev,
   onSkip,
 }: TourStepPopoverProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -78,6 +80,7 @@ export function TourStepPopover({
           totalSteps={totalSteps}
           isLastStep={isLastStep}
           onNext={onNext}
+          onPrev={onPrev}
           onSkip={onSkip}
         />
       </PopoverContent>

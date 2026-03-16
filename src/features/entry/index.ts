@@ -42,6 +42,7 @@ export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 // =============================================================================
 export { useEntries } from './hooks/useEntries';
 export { useEntry, usePlan, useplan } from './hooks/useEntry';
+export { useEntryCreate } from './hooks/useEntryCreate';
 export { useEntryInstanceMutations, useEntryInstances } from './hooks/useEntryInstances';
 export { useEntryMutations } from './hooks/useEntryMutations';
 export { useRecurringScopeMutations } from './hooks/useRecurringScopeMutations';
@@ -52,6 +53,12 @@ export { useRecurringScopeMutations } from './hooks/useRecurringScopeMutations';
 export { useEntryCacheStore } from './stores/useEntryCacheStore';
 export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 export type { AnchorRect } from './stores/useEntryInspectorStore';
+
+// =============================================================================
+// Lib (actual-time overlay)
+// =============================================================================
+export { NO_OVERLAY, computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 
 // =============================================================================
 // Lib (entry-status utilities)
@@ -80,6 +87,12 @@ export { configToRRule, configToReadable, ruleToConfig } from './lib/rrule';
 // =============================================================================
 export { decodeInstanceId, encodeInstanceId, getInstanceRef } from './lib/instance-id';
 export type { InstanceRefSource, RecurrenceInstanceRef } from './lib/instance-id';
+
+// =============================================================================
+// Components (EntryCard)
+// =============================================================================
+export { EntryCard, EntryCardContent } from './components/card';
+export type { EntryCardPosition, EntryCardProps } from './components/card';
 
 // =============================================================================
 // Components

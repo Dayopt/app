@@ -1,0 +1,296 @@
+/**
+ * グリッド計算エンジン — React/DOM依存ゼロの純粋関数
+ *
+ * time↔pixel変換、スナップ、グリッド寸法の計算を提供。
+ * すべての関数は副作用を持たず、テスト容易性を保証する。
+ */
+
+import { MS_PER_MINUTE } from '@/lib/date';
+
+/** SSRフォールバック用デフォルトの1時間高さ(px) */
+export const DEFAULT_HOUR_HEIGHT = 72;
+
+/** イベントの最小高さ(px) */
+export const MIN_EVENT_HEIGHT = 20;
+
+/** イベントスタイルの戻り値型（React.CSSProperties互換だがReact非依存） */
+export interface EventStyle {
+  position: 'absolute';
+  top: string;
+  height: string;
+  left: string;
+  width: string;
+  zIndex: number;
+}
+
+/**
+ * 時刻をピクセル位置に変換
+ * @param time - 変換する時刻
+ * @param hourHeight - 1時間の高さ（デフォルト: 72px）
+ * @returns Y座標（px）
+ */
+export function timeToPixels(time: Date, hourHeight: number = DEFAULT_HOUR_HEIGHT): number {
+  const hours = time.getHours();
+  const minutes = time.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+  return (totalMinutes * hourHeight) / 60;
+}
+
+/**
+ * ピクセル位置を時刻に変換
+ * @param pixels - Y座標（px）
+ * @param baseDate - 基準日
+ * @param hourHeight - 1時間の高さ（デフォルト: 72px）
+ * @returns 時刻
+ */
+export function pixelsToTime(
+  pixels: number,
+  baseDate: Date,
+  hourHeight: number = DEFAULT_HOUR_HEIGHT,
+): Date {
+  const totalMinutes = (pixels * 60) / hourHeight;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.floor(totalMinutes % 60);
+
+  const result = new Date(baseDate);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}
+
+/**
+ * ピクセル位置から時間と分を取得
+ * @param pixels - Y座標（px）
+ * @param hourHeight - 1時間の高さ（デフォルト: 72px）
+ * @returns {hour, minute}
+ */
+export function pixelsToTimeValues(
+  pixels: number,
+  hourHeight: number = DEFAULT_HOUR_HEIGHT,
+): { hour: number; minute: number } {
+  const totalMinutes = (pixels * 60) / hourHeight;
+  const hour = Math.floor(totalMinutes / 60);
+  const minute = Math.floor(totalMinutes % 60);
+  return { hour, minute };
+}
+
+/**
+ * イベントの位置スタイルを計算
+ * @param start - 開始時刻
+ * @param end - 終了時刻
+ * @param column - 列番号（0ベース）
+ * @param totalColumns - 総列数
+ * @param hourHeight - 1時間の高さ
+ * @returns CSSスタイルオブジェクト
+ */
+export function getEventStyle(
+  start: Date,
+  end: Date,
+  column: number = 0,
+  totalColumns: number = 1,
+  hourHeight: number = DEFAULT_HOUR_HEIGHT,
+): EventStyle {
+  const top = timeToPixels(start, hourHeight);
+  const bottom = timeToPixels(end, hourHeight);
+  const height = Math.max(bottom - top, MIN_EVENT_HEIGHT);
+
+  const width = 100 / totalColumns;
+  const left = (100 / totalColumns) * column;
+
+  return {
+    position: 'absolute',
+    top: `${top}px`,
+    height: `${height}px`,
+    left: `${left}%`,
+    width: `${width}%`,
+    zIndex: 10,
+  };
+}
+
+/**
+ * グリッドの総高さを計算
+ * @param startHour - 開始時間（0-24）
+ * @param endHour - 終了時間（0-24）
+ * @param hourHeight - 1時間の高さ
+ * @returns 総高さ（px）
+ */
+export function calculateGridHeight(
+  startHour: number = 0,
+  endHour: number = 24,
+  hourHeight: number = DEFAULT_HOUR_HEIGHT,
+): number {
+  return (endHour - startHour) * hourHeight;
+}
+
+/**
+ * 時間範囲内かチェック
+ * @param time - チェックする時刻
+ * @param startHour - 開始時間（0-24）
+ * @param endHour - 終了時間（0-24）
+ * @returns 範囲内ならtrue
+ */
+export function isTimeInRange(time: Date, startHour: number, endHour: number): boolean {
+  const hour = time.getHours();
+  return hour >= startHour && hour < endHour;
+}
+
+/**
+ * 15分単位に丸める
+ * @param time - 丸める時刻
+ * @param direction - 'up' | 'down' | 'nearest'
+ * @returns 丸められた時刻
+ */
+export function roundToQuarterHour(
+  time: Date,
+  direction: 'up' | 'down' | 'nearest' = 'nearest',
+): Date {
+  const result = new Date(time);
+  const minutes = result.getMinutes();
+  const quarterHour = 15;
+
+  let roundedMinutes: number;
+  if (direction === 'up') {
+    roundedMinutes = Math.ceil(minutes / quarterHour) * quarterHour;
+  } else if (direction === 'down') {
+    roundedMinutes = Math.floor(minutes / quarterHour) * quarterHour;
+  } else {
+    roundedMinutes = Math.round(minutes / quarterHour) * quarterHour;
+  }
+
+  if (roundedMinutes === 60) {
+    result.setHours(result.getHours() + 1, 0, 0, 0);
+  } else {
+    result.setMinutes(roundedMinutes, 0, 0);
+  }
+
+  return result;
+}
+
+/**
+ * イベントの継続時間を分で取得
+ * @param start - 開始時刻
+ * @param end - 終了時刻
+ * @returns 継続時間（分）
+ */
+export function getDurationInMinutes(start: Date, end: Date): number {
+  return Math.max(0, (end.getTime() - start.getTime()) / MS_PER_MINUTE);
+}
+
+/**
+ * スクロール位置を計算
+ * @param targetHour - スクロール先の時間
+ * @param hourHeight - 1時間の高さ
+ * @param containerHeight - コンテナの高さ
+ * @returns スクロール位置（px）
+ */
+export function calculateScrollPosition(
+  targetHour: number,
+  hourHeight: number = DEFAULT_HOUR_HEIGHT,
+  containerHeight: number = 600,
+): number {
+  const targetPosition = targetHour * hourHeight;
+  // 画面の中央に表示するように調整
+  return Math.max(0, targetPosition - containerHeight / 3);
+}
+
+// ========================================
+// Time Slot Generation
+// ========================================
+
+/** タイムスロット — 15分単位の時間区画 */
+export interface TimeSlot {
+  time: string;
+  hour: number;
+  minute: number;
+  label: string;
+  isHour: boolean;
+  isHalfHour: boolean;
+  isQuarterHour: boolean;
+}
+
+/**
+ * タイムスロット配列を生成（純粋関数）
+ * @param startHour - 開始時間（デフォルト: 0）
+ * @param endHour - 終了時間（デフォルト: 24）
+ * @param interval - 間隔（分、デフォルト: 15）
+ */
+export function generateTimeSlots(
+  startHour: number = 0,
+  endHour: number = 24,
+  interval: number = 15,
+): TimeSlot[] {
+  const slots: TimeSlot[] = [];
+
+  for (let hour = startHour; hour < endHour; hour++) {
+    for (let minute = 0; minute < 60; minute += interval) {
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+      slots.push({
+        time: timeString,
+        hour,
+        minute,
+        label: minute === 0 ? `${hour}:00` : timeString,
+        isHour: minute === 0,
+        isHalfHour: minute === 30,
+        isQuarterHour: minute === 15 || minute === 45,
+      });
+    }
+  }
+
+  return slots;
+}
+
+// ========================================
+// Entry Style Computation
+// ========================================
+
+/** エントリ位置情報 */
+export interface EntryPositionInput {
+  id: string;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+  zIndex: number;
+  opacity?: number;
+}
+
+/** エントリ位置情報からCSSスタイルマップを生成（純粋関数） */
+export function computeEntryStyles(positions: EntryPositionInput[]): Record<
+  string,
+  {
+    position: 'absolute';
+    top: string;
+    height: string;
+    left: string;
+    width: string;
+    zIndex: number;
+    opacity: number;
+  }
+> {
+  const styles: Record<
+    string,
+    {
+      position: 'absolute';
+      top: string;
+      height: string;
+      left: string;
+      width: string;
+      zIndex: number;
+      opacity: number;
+    }
+  > = {};
+
+  for (const pos of positions) {
+    styles[pos.id] = {
+      position: 'absolute',
+      top: `${pos.top}px`,
+      height: `${pos.height}px`,
+      left: `${pos.left}%`,
+      width: `${pos.width}%`,
+      zIndex: pos.zIndex,
+      opacity: pos.opacity ?? 1.0,
+    };
+  }
+
+  return styles;
+}

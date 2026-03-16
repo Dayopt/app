@@ -5,7 +5,7 @@ import type {
   ChronotypeSettings,
   ChronotypeType,
   ProductivityZone,
-} from '../types';
+} from '@/types/chronotype';
 
 export function getChronotypeProfile(
   type: ChronotypeType,

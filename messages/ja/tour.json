@@ -1,28 +1,64 @@
 {
   "tour": {
     "steps": {
-      "gridDrag": {
-        "title": "ドラッグして時間を選択",
-        "description": "カレンダーをドラッグして、作業したい時間帯を選びましょう"
+      "intro": {
+        "title": "Dayoptへようこそ",
+        "description": "時間を計画し、実績を記録し、振り返る。基本の使い方を見ていきましょう。"
       },
-      "selectTag": {
-        "title": "タグを選んで予定を作成",
-        "description": "既存のタグを選ぶか、新しく作成しましょう — タグ名がそのまま予定のタイトルになります"
+      "gridDragPlan": {
+        "title": "予定を作成しよう",
+        "description": "未来の時間帯をドラッグして、これからやることをスケジュールしましょう"
       },
-      "clickEntry": {
-        "title": "クリックして詳細を確認",
-        "description": "作成したブロックをクリックするとインスペクタが開きます — 時間・タグ・メモを編集できます"
+      "selectTagPlan": {
+        "title": "タグを選択",
+        "description": "タグを選ぶと、それが予定の名前と色になります"
+      },
+      "explainTags": {
+        "title": "タグ — 活動カテゴリ",
+        "description": "タグには3つの役割があります:",
+        "categorize": {
+          "label": "分類する",
+          "detail": "活動の種類ごとに時間ブロックをグループ化"
+        },
+        "colorCode": {
+          "label": "色分けする",
+          "detail": "タグごとの色でカレンダーが見やすくなる"
+        },
+        "trackStats": {
+          "label": "統計を見る",
+          "detail": "各カテゴリにどれだけ時間を使ったか一目でわかる"
+        },
+        "examples": {
+          "deepWork": "集中作業",
+          "exercise": "運動",
+          "meeting": "ミーティング"
+        }
+      },
+      "gridDragRecord": {
+        "title": "記録を作成しよう",
+        "description": "今度は過去の時間帯をドラッグして、実際にやったことを記録しましょう"
+      },
+      "selectTagRecord": {
+        "title": "記録にタグを付ける",
+        "description": "記録にもタグを選びましょう — 左の破線ボーダーが記録の目印です"
       },
       "planVsRecord": {
         "title": "予定と記録のちがい",
-        "description": "予定はこれからやること。時間が過ぎると自動で記録になります — 実際にやったことの証。記録の時間はあとから調整できます。"
+        "description": "実線バーが予定、破線バーが記録。予定の時間が過ぎると、自動で記録に変わります。",
+        "planLabel": "予定",
+        "planDetail": "これからやること",
+        "recordLabel": "記録",
+        "recordDetail": "実際にやったこと",
+        "autoConvert": "時間が過ぎると自動変換"
       }
     },
+    "pastTimeHint": "過去の時間帯をドラッグしてください",
     "done": {
       "title": "準備完了！",
       "description": "さっそく今日の予定を立てましょう"
     },
     "next": "次へ",
+    "back": "戻る",
     "skip": "ツアーをスキップ",
     "done_button": "始める",
     "step": "{current} / {total}"

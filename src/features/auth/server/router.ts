@@ -7,10 +7,15 @@
  * エンドポイント:
  * - user.deleteAccount: アカウント即時削除
  * - user.exportData: ユーザーデータエクスポート
+ * - user.verifyRecoveryCode: リカバリーコードでMFA認証（MFA無効化 + ログイン許可）
  */
 
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
+import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/recovery-codes';
+import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
@@ -72,4 +77,102 @@ export const userRouter = createTRPCRouter({
       return handleServiceError(error);
     }
   }),
+
+  /**
+   * リカバリーコードでMFA認証
+   *
+   * リカバリーコード検証成功時、MFA factorをunenrollしてAAL要件を解除する。
+   * ユーザーは設定から再度MFAを有効化できる。
+   */
+  verifyRecoveryCode: protectedProcedure
+    .input(
+      z.object({
+        code: z.string().refine((val) => isValidRecoveryCodeFormat(val), {
+          message: 'Invalid recovery code format',
+        }),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.userId!;
+
+      // 未使用のリカバリーコードを取得
+      const { data: codes, error: fetchError } = await ctx.supabase
+        .from('mfa_recovery_codes')
+        .select('id, code_hash')
+        .eq('user_id', userId)
+        .is('used_at', null);
+
+      if (fetchError) {
+        logger.error('Failed to fetch recovery codes:', fetchError);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to verify recovery code',
+        });
+      }
+
+      if (!codes || codes.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'RECOVERY_EXHAUSTED',
+        });
+      }
+
+      // タイミングセーフ比較で一致するコードを検索
+      const matchedCode = codes.find((c) => verifyRecoveryCode(input.code, c.code_hash));
+
+      if (!matchedCode) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'RECOVERY_INVALID',
+        });
+      }
+
+      // コードを使用済みにマーク（RPC使用）
+      const { data: used, error: rpcError } = await ctx.supabase.rpc('use_recovery_code', {
+        p_user_id: userId,
+        p_code_hash: matchedCode.code_hash,
+      });
+
+      if (rpcError || !used) {
+        logger.error('Failed to mark recovery code as used:', rpcError);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to use recovery code',
+        });
+      }
+
+      // MFA factorをunenrollしてAAL要件を解除
+      // service roleクライアントでadmin APIを使用（AAL1セッションでも操作可能にする）
+      try {
+        const adminClient = createServiceRoleClient();
+        const { data: factors } = await adminClient.auth.admin.mfa.listFactors({ userId });
+
+        if (factors?.factors) {
+          for (const factor of factors.factors) {
+            if (factor.status === 'verified') {
+              await adminClient.auth.admin.mfa.deleteFactor({
+                userId,
+                id: factor.id,
+              });
+            }
+          }
+        }
+      } catch (err) {
+        logger.error('Failed to unenroll MFA factor:', err);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Recovery code verified but failed to disable MFA',
+        });
+      }
+
+      // 残りのコード数を取得
+      const { data: remainingCount } = await ctx.supabase.rpc('count_unused_recovery_codes', {
+        p_user_id: userId,
+      });
+
+      return {
+        success: true,
+        remainingCodes: typeof remainingCount === 'number' ? remainingCount : 0,
+      };
+    }),
 });

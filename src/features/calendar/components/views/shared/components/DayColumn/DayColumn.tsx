@@ -11,11 +11,14 @@ import React, { memo, useMemo } from 'react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { isWeekend } from '@/lib/date';
 import { GRID_BACKGROUND, HOUR_HEIGHT } from '../../constants/grid.constants';
-import { usePlanPosition } from '../../hooks/usePlanPosition';
+import { useEntryPosition } from '../../hooks/useEntryPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
-import { filterPlansByDate, sortTimedPlans } from '../../utils/planPositioning';
-import { PlanCard } from '../PlanCard/PlanCard';
+import { EntryCard, useEntryInspectorStore } from '@/features/entry';
+import { useTagsMap } from '@/features/tags';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { filterEntriesByDate, sortTimedEntries } from '../../utils/entryPositioning';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
   date,
@@ -29,25 +32,28 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   className = '',
 }) {
   const t = useTranslations('common.aria');
+  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
+  const { getTagById } = useTagsMap();
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
 
   // 今日・週末の判定（propsで上書き可能）
   const isWeekendActual = isWeekendProp ?? isWeekend(date);
 
-  // この日のプランをフィルタリング
-  const dayPlans = useMemo(() => {
-    // CalendarEventをTimedPlanに変換
-    const timedPlans = events.map((plan) => ({
-      ...plan,
-      start: plan.startDate || new Date(),
-      end: plan.endDate || new Date(),
+  // この日のエントリをフィルタリング
+  const dayEntries = useMemo(() => {
+    // CalendarEventをTimedEntryに変換
+    const timedEntries = events.map((entry) => ({
+      ...entry,
+      start: entry.startDate || new Date(),
+      end: entry.endDate || new Date(),
     }));
-    const filtered = filterPlansByDate(timedPlans, date);
-    return sortTimedPlans(filtered);
+    const filtered = filterEntriesByDate(timedEntries, date);
+    return sortTimedEntries(filtered);
   }, [events, date]);
 
-  // プランの位置を計算
-  const planPositions = usePlanPosition(dayPlans, { hourHeight });
+  // エントリの位置を計算
+  const entryPositions = useEntryPosition(dayEntries, { hourHeight });
 
   // グリッド高さ
   const columnHeight = 24 * hourHeight;
@@ -95,16 +101,20 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
       >
         {/* 現在時刻線はScrollableCalendarLayoutで統一表示 */}
 
-        {/* プラン */}
-        {dayPlans.map((plan) => {
-          const position = planPositions.get(plan.id);
+        {/* エントリ */}
+        {dayEntries.map((entry) => {
+          const position = entryPositions.get(entry.id);
           // positionが見つからない場合は、デフォルト位置を使用してレンダリング
 
           return (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              position={position} // undefinedでも大丈夫（PlanCard側で対応済み）
+            <EntryCard
+              key={entry.id}
+              entry={entry}
+              tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
+              tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
+              onAnchorRect={setAnchorRect}
+              isMobile={isMobile}
+              position={position} // undefinedでも大丈夫（EntryCard側で対応済み）
               hourHeight={hourHeight}
               onClick={onEventClick}
               onContextMenu={onEventContextMenu}
@@ -112,8 +122,8 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
           );
         })}
 
-        {/* 空状態（プランがない場合） */}
-        {dayPlans.length === 0 && (
+        {/* 空状態（エントリがない場合） */}
+        {dayEntries.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center opacity-30">
             <EmptyState title="" icon={Calendar} size="sm" />
           </div>

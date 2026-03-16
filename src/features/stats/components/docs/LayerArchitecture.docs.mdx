@@ -1,0 +1,99 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Features/Stats/Docs/Layer Architecture" />
+
+# Layer Architecture
+
+Stats feature の技術的な分層設計。計算の複雑度に応じて 3 層に分離し、段階的に実装する。
+
+---
+
+## 3 層モデル
+
+```
+Layer 1 (自動計算)      純粋な集計ロジック。SQL + クライアント計算
+  ↓ 数値データを提供
+Layer 2 (パターン検出)   集計結果をチャートで可視化。Recharts
+  ↓ 構造化データを提供
+Layer 3 (LLM インサイト)  L1 + L2 データから自然言語の気づきを生成
+```
+
+### Layer vs Tab
+
+Layer（計算の複雑度）と Tab（UIの分類）は**直交する**概念。
+
+| | Review タブ | Progress タブ | Insights タブ |
+|---|---|---|---|
+| **Layer 1** | KPI 8カード | — | — |
+| **Layer 2** | — | チャート 4つ | — |
+| **Layer 3** | — | — | LLM インサイト |
+
+現在は 1:1 だが、将来コンポーネントがタブ間を移動する可能性がある。例: Rule Insights（L1）が Review タブに配置される予定。
+
+---
+
+## Layer 1: Auto-Computed Metrics
+
+LLM を使わない純粋な集計ロジック。
+
+- **8 KPI カード**: Total Time, Avg Fulfillment, Plan Rate, Streak, Estimation Accuracy, Peak Utilization, Context Switches, Blank Rate
+- **計算場所**: PostgreSQL RPC 関数 + クライアント側純粋関数
+- **AI 依存**: なし
+- **対象**: 全ユーザー（Free 含む）
+
+詳細: [L1 Metrics](?path=/docs/features-stats-layers-l1-metrics--docs) | [Metrics Catalog](?path=/docs/features-stats-layers-l1-metrics-catalog--docs)
+
+---
+
+## Layer 2: Pattern Detection
+
+集計結果を可視化するチャート群。
+
+- **4 チャート**: YearlyHeatmap, MonthlyTrend, DayOfWeekChart, HourlyDistribution
+- **ライブラリ**: Recharts
+- **AI 依存**: なし
+- **対象**: 全ユーザー（Free 含む）
+
+詳細: [L2 Patterns](?path=/docs/features-stats-layers-l2-patterns--docs) | [Charts Catalog](?path=/docs/features-stats-layers-l2-charts-catalog--docs)
+
+---
+
+## Layer 3: LLM Insights
+
+L1 + L2 の構造化データを LLM に渡し、自然言語のインサイトを生成。
+
+- **生成**: Edge Function `generate-reflections` が pg_cron で定期実行
+- **モデル**: Anthropic Haiku 4.5
+- **AI 依存**: あり
+- **対象**: 全ユーザー（Free 含む — システム側の自動実行なのでクォータ不要）
+
+詳細: [L3 LLM Insights](?path=/docs/features-stats-layers-l3-llm-insights--docs) | [L3 Schedule](?path=/docs/features-stats-layers-l3-schedule--docs)
+
+---
+
+## Rule Insights（Layer 1 の一部）
+
+閾値ベースの自動気づき生成。LLM 不要。メトリクス数値の「解釈」をルールで自動化する。
+
+- **実装**: 純粋関数 `(currentMetrics, previousMetrics, thresholds) => RuleInsight[]`
+- **配置予定**: Review タブ
+- **AI 依存**: なし
+
+詳細: [L1 Rule Insights](?path=/docs/features-stats-layers-l1-rule-insights--docs)
+
+---
+
+## Feature Boundary
+
+```
+entry feature     → DB 集約（RPC 呼び出し）を所有
+stats feature     → 表示ロジック・UI・tRPC ルーターを所有
+settings feature  → AI 設定（communication style, values）を所有
+supabase/functions/ → Edge Function（プラットフォーム基盤）
+```
+
+Layer 間のデータ共有は DB 関数 `get_insights_data()` で一括取得。Feature 間の直接 import は禁止。
+
+---
+
+**最終更新**: 2026-03-16

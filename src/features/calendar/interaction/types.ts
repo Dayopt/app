@@ -168,7 +168,7 @@ export interface InteractionContext {
   /** All displayed dates (for week/multi-day views) */
   displayDates?: Date[];
   /** Current view mode */
-  viewMode: string;
+  viewMode: 'day' | '3day' | '5day' | 'week';
   /** Snap interval in minutes (default: 15) */
   snapIntervalMinutes?: number;
   /** Get entry duration in milliseconds by ID */

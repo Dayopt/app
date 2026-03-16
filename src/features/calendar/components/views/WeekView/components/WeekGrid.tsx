@@ -15,7 +15,7 @@ import {
   getDateKey,
 } from '../../shared';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
-import { useWeekPlans } from '../hooks/useWeekPlans';
+import { useWeekEntries } from '../hooks/useWeekEntries';
 
 import type { WeekGridProps } from '../WeekView.types';
 
@@ -34,10 +34,10 @@ import { WeekContent } from './WeekContent';
 export const WeekGrid = ({
   weekDates,
   events,
-  allPlans: _allPlans,
+  allEntries: _allEntries,
   eventsByDate: _eventsByDate,
   todayIndex: _todayIndex,
-  disabledPlanId,
+  disabledEntryId,
   onEventClick,
   onEventContextMenu,
   onEventUpdate,
@@ -50,30 +50,27 @@ export const WeekGrid = ({
   const hourHeight = useResponsiveHourHeight();
 
   // onEventUpdate を WeekContent が期待する型に変換
-  const handlePlanUpdate = React.useCallback(
+  const handleEntryUpdate = React.useCallback(
     async (
-      planId: string,
+      entryId: string,
       updates: Partial<import('@/features/calendar/types/calendar.types').CalendarEvent>,
     ) => {
       if (!onEventUpdate) return;
-      const plan = events.find((e) => e.id === planId);
-      if (!plan) return;
-      // 返り値を伝播（繰り返しプラン編集時の skipToast フラグ用）
-      return onEventUpdate({ ...plan, ...updates });
+      const entry = events.find((e) => e.id === entryId);
+      if (!entry) return;
+      // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
+      return onEventUpdate({ ...entry, ...updates });
     },
     [onEventUpdate, events],
   );
 
-  // プラン位置計算（TZ変換済みの日付グルーピングも取得）
-  const { planPositions, plansByDate: tzPlansByDate } = useWeekPlans({
+  // エントリ位置計算（TZ変換済みの日付グルーピングも取得）
+  const { entryPositions, entriesByDate: tzEntriesByDate } = useWeekEntries({
     weekDates,
     events,
     hourHeight,
     timezone,
   });
-
-  // CurrentTimeLine表示のための日付配列（weekDatesをそのまま使用）
-  const currentTimeDisplayDates = React.useMemo(() => weekDates, [weekDates]);
 
   // 週番号を計算（週の最初の日から）
   const weekNumber = React.useMemo(() => {
@@ -113,15 +110,15 @@ export const WeekGrid = ({
 
       {/* スクロール可能コンテンツ */}
       <ScrollableCalendarLayout
-        displayDates={currentTimeDisplayDates}
+        displayDates={weekDates}
         viewMode="week"
         enableKeyboardNavigation={true}
       >
         {/* 7日分のグリッド */}
         {weekDates.map((date, dayIndex) => {
           const dateKey = getDateKey(date);
-          // TZ変換済みのplansByDateを使用（eventsByDateはTZ未対応）
-          const dayEvents = tzPlansByDate[dateKey] || [];
+          // TZ変換済みのentriesByDateを使用（eventsByDateはTZ未対応）
+          const dayEvents = tzEntriesByDate[dateKey] || [];
 
           return (
             <div
@@ -134,14 +131,14 @@ export const WeekGrid = ({
             >
               <WeekContent
                 date={date}
-                plans={dayEvents}
+                entries={dayEvents}
                 allEventsForOverlapCheck={events}
-                planPositions={planPositions}
-                onPlanClick={onEventClick}
-                onPlanContextMenu={onEventContextMenu}
-                onPlanUpdate={handlePlanUpdate}
+                entryPositions={entryPositions}
+                onEntryClick={onEventClick}
+                onEntryContextMenu={onEventContextMenu}
+                onEntryUpdate={handleEntryUpdate}
                 onTimeRangeSelect={onTimeRangeSelect}
-                disabledPlanId={disabledPlanId}
+                disabledEntryId={disabledEntryId}
                 className="h-full"
                 dayIndex={dayIndex}
                 displayDates={weekDates}

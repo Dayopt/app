@@ -8,9 +8,15 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { createClient } from '@/platform/supabase/client';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+
+import { createClient } from '@/platform/supabase/client';
+import { vanillaTrpc } from '@/platform/trpc/client';
+
+type VerifyMode = 'totp' | 'recovery';
 
 export default function MFAVerifyPage() {
   const router = useRouter();
@@ -20,7 +26,9 @@ export default function MFAVerifyPage() {
   const t = useTranslations();
   const supabase = createClient();
 
+  const [mode, setMode] = useState<VerifyMode>('totp');
   const [verificationCode, setVerificationCode] = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
@@ -68,7 +76,7 @@ export default function MFAVerifyPage() {
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerifyTotp = async () => {
     if (!factorId || !challengeId || !verificationCode) {
       setError('6桁のコードを入力してください');
       return;
@@ -108,6 +116,46 @@ export default function MFAVerifyPage() {
     }
   };
 
+  const handleVerifyRecovery = async () => {
+    const trimmed = recoveryCode.trim().toUpperCase();
+    if (!trimmed) {
+      setError(t('auth.mfaVerify.recoveryInvalid'));
+      return;
+    }
+
+    setIsVerifying(true);
+    setError(null);
+
+    try {
+      await vanillaTrpc.user.verifyRecoveryCode.mutate({ code: trimmed });
+
+      // MFA解除成功 → toast通知 + セッションリフレッシュしてカレンダーへ
+      toast.success(t('auth.mfaVerify.recoverySuccess'));
+      const next = searchParams?.get('next') || `/${locale}/calendar/day`;
+      router.refresh();
+      router.push(next);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('RECOVERY_EXHAUSTED')) {
+        setError(t('auth.mfaVerify.recoveryExhausted'));
+      } else if (message.includes('RECOVERY_INVALID')) {
+        setError(t('auth.mfaVerify.recoveryInvalid'));
+      } else {
+        setError(t('auth.mfaVerify.recoveryInvalid'));
+      }
+      setRecoveryCode('');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const switchMode = (newMode: VerifyMode) => {
+    setMode(newMode);
+    setError(null);
+    setVerificationCode('');
+    setRecoveryCode('');
+  };
+
   return (
     <div className="bg-surface-container flex min-h-svh flex-col items-center justify-center p-4 md:p-8">
       <div className="w-full md:max-w-5xl">
@@ -135,7 +183,9 @@ export default function MFAVerifyPage() {
                     </div>
                     <h1 className="text-2xl font-bold">{t('auth.mfaVerify.title')}</h1>
                     <p className="text-muted-foreground text-balance">
-                      {t('auth.mfaVerify.description')}
+                      {mode === 'totp'
+                        ? t('auth.mfaVerify.description')
+                        : t('auth.mfaVerify.recoveryCodeDescription')}
                     </p>
                   </div>
 
@@ -145,45 +195,96 @@ export default function MFAVerifyPage() {
                     </div>
                   )}
 
-                  <div className="flex flex-col items-center gap-4">
-                    <FieldLabel className="text-center">
-                      {t('auth.mfaVerify.verificationCode')}
-                    </FieldLabel>
-                    <InputOTP
-                      maxLength={6}
-                      value={verificationCode}
-                      onChange={(value) => setVerificationCode(value)}
-                      onComplete={handleVerify}
-                    >
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
+                  {mode === 'totp' ? (
+                    <>
+                      <div className="flex flex-col items-center gap-4">
+                        <FieldLabel className="text-center">
+                          {t('auth.mfaVerify.verificationCode')}
+                        </FieldLabel>
+                        <InputOTP
+                          maxLength={6}
+                          value={verificationCode}
+                          onChange={(value) => setVerificationCode(value)}
+                          onComplete={handleVerifyTotp}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
 
-                  <Field>
-                    <Button
-                      onClick={handleVerify}
-                      disabled={verificationCode.length !== 6}
-                      isLoading={isVerifying}
-                      loadingText={t('auth.mfaVerify.verifying')}
-                      className="w-full"
-                    >
-                      {t('auth.mfaVerify.verifyButton')}
-                    </Button>
-                  </Field>
+                      <Field>
+                        <Button
+                          onClick={handleVerifyTotp}
+                          disabled={verificationCode.length !== 6}
+                          isLoading={isVerifying}
+                          loadingText={t('auth.mfaVerify.verifying')}
+                          className="w-full"
+                        >
+                          {t('auth.mfaVerify.verifyButton')}
+                        </Button>
+                      </Field>
 
-                  <FieldDescription className="text-center">
-                    {t('auth.mfaVerify.lostAccess')}{' '}
-                    <a href="#" className="hover:text-primary hover:underline">
-                      {t('auth.mfaVerify.useRecoveryCode')}
-                    </a>
-                  </FieldDescription>
+                      <FieldDescription className="text-center">
+                        {t('auth.mfaVerify.lostAccess')}{' '}
+                        <button
+                          type="button"
+                          onClick={() => switchMode('recovery')}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {t('auth.mfaVerify.useRecoveryCode')}
+                        </button>
+                      </FieldDescription>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex flex-col items-center gap-4">
+                        <FieldLabel className="text-center">
+                          {t('auth.mfaVerify.recoveryCodeInput')}
+                        </FieldLabel>
+                        <Input
+                          value={recoveryCode}
+                          onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                          placeholder={t('auth.mfaVerify.recoveryCodePlaceholder')}
+                          className="text-center font-mono text-lg tracking-widest"
+                          maxLength={9}
+                          autoComplete="off"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleVerifyRecovery();
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <Field>
+                        <Button
+                          onClick={handleVerifyRecovery}
+                          disabled={recoveryCode.trim().length === 0}
+                          isLoading={isVerifying}
+                          loadingText={t('auth.mfaVerify.verifying')}
+                          className="w-full"
+                        >
+                          {t('auth.mfaVerify.useRecoveryCodeButton')}
+                        </Button>
+                      </Field>
+
+                      <FieldDescription className="text-center">
+                        <button
+                          type="button"
+                          onClick={() => switchMode('totp')}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {t('auth.mfaVerify.switchToTotp')}
+                        </button>
+                      </FieldDescription>
+                    </>
+                  )}
 
                   <FieldDescription className="text-center">
                     <a

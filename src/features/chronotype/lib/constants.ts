@@ -1,6 +1,8 @@
-import type { ChronotypeProfile, PresetChronotypeType, ProductivityLevel } from '../types';
-
-export { DEFAULT_CHRONOTYPE_SETTINGS } from './defaults';
+import type {
+  ChronotypeProfile,
+  PresetChronotypeType,
+  ProductivityLevel,
+} from '@/types/chronotype';
 
 export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [
   'warmup',
@@ -108,10 +110,6 @@ export const CHRONOTYPE_LEVEL_COLORS: Record<ProductivityLevel, string> = {
   recovery: 'var(--chronotype-recovery)',
   winddown: 'var(--chronotype-winddown)',
 };
-
-export function getProductivityLevelColor(level: ProductivityLevel): string {
-  return CHRONOTYPE_LEVEL_CLASSES[level] ?? CHRONOTYPE_LEVEL_CLASSES.warmup;
-}
 
 export function getChronotypeColor(level: ProductivityLevel): string {
   return CHRONOTYPE_LEVEL_COLORS[level];

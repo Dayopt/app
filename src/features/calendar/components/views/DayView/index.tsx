@@ -5,7 +5,7 @@ export { DayView } from './DayView';
 export type * from './DayView.types';
 
 // フック
-export { useDayPlans as useDayEvents, useDayPlans } from './hooks/useDayPlans';
+export { useDayEntries, useDayEntries as useDayEvents } from './hooks/useDayEntries';
 export { useDayView } from './hooks/useDayView';
 
 // サブコンポーネント

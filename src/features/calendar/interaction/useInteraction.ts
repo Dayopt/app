@@ -11,10 +11,10 @@
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useHapticFeedback } from '../hooks/useHapticFeedback';
+import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
-import { checkClientSideOverlap } from '../engine/overlap';
+import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 import { IDLE, interactionReducer } from './machine';
@@ -41,7 +41,7 @@ export interface UseInteractionProps {
   /** Displayed dates (week/multi-day views) */
   displayDates?: Date[];
   /** View mode */
-  viewMode?: string;
+  viewMode?: 'day' | '3day' | '5day' | 'week';
   /** Plan ID to disable dragging (e.g. Inspector-open plan) */
   disabledPlanId?: string | null;
   /** Pixels per hour */

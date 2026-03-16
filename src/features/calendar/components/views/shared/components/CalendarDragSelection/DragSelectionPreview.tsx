@@ -10,6 +10,7 @@
 import { memo } from 'react';
 
 import { Ban } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
@@ -35,6 +36,8 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   isOverlapping = false,
   hourHeight = HOUR_HEIGHT,
 }: DragSelectionPreviewProps) {
+  const t = useTranslations('calendar');
+
   // 選択範囲のスタイルを計算
   const startMinutes = selection.startHour * 60 + selection.startMinute;
   const endMinutes = selection.endHour * 60 + selection.endMinute;
@@ -58,8 +61,10 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
         style={{ top, height, zIndex: 1000 }}
       >
         <div className="flex items-center gap-1 px-2 py-1">
-          <Ban className="size-3 flex-shrink-0 text-white" />
-          <span className="text-xs font-medium text-white">時間が重複しています</span>
+          <Ban className="text-destructive-foreground size-3 flex-shrink-0" />
+          <span className="text-destructive-foreground text-xs font-medium">
+            {t('toast.conflict')}
+          </span>
         </div>
       </div>
     );

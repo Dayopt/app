@@ -6,7 +6,7 @@ import { RecurrenceIconButton } from './RecurrenceIconButton';
 
 /** RecurrenceIconButton - 繰り返し設定ポップオーバー（プリセット + カスタム） */
 const meta = {
-  title: 'Features/Entry/RecurrenceIconButton',
+  title: 'Features/Entry/Recurrence/RecurrenceIconButton',
   parameters: {
     layout: 'padded',
   },
