@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
 import { useInlineCreateStore } from '@/features/calendar';
+import { ContactDialog } from '@/features/contact';
 import {
   EntryDeleteConfirmDialog,
   EntryInspector,
@@ -13,6 +14,7 @@ import {
 } from '@/features/entry/components';
 import { SettingsDialog } from '@/features/settings';
 import { TourOrchestrator } from '@/features/tour';
+import { useContactStore } from '@/shell/stores/useContactStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
 
@@ -52,8 +54,17 @@ export function GlobalOverlays() {
     [t],
   );
 
+  const contactOpen = useContactStore((s) => s.isOpen);
+  const closeContact = useContactStore((s) => s.close);
+
   return (
     <>
+      <ContactDialog
+        open={contactOpen}
+        onOpenChange={(open) => {
+          if (!open) closeContact();
+        }}
+      />
       <SettingsDialog />
       <EntryInspector />
       <EntryDeleteConfirmDialog />
