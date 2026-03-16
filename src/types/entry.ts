@@ -15,7 +15,7 @@ export type EntryState = 'upcoming' | 'active' | 'past';
  * - planned: 未来に予定として作成された
  * - unplanned: 過去に記録として直接追加された
  */
-export type EntryOrigin = 'planned' | 'unplanned';
+export type EntryOrigin = 'planned';
 
 /**
  * 充実度スコア（3段階）

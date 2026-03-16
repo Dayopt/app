@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Entry 用 Zod スキーマ（plans + records を統合）
 
-export const entryOriginSchema = z.enum(['planned', 'unplanned']);
+export const entryOriginSchema = z.literal('planned');
 
 export const recurrenceTypeSchema = z.enum([
   'none',
