@@ -10,7 +10,7 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
-import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
+import type { AnchorRect } from '../../stores/useEntryInspectorStore';
 
 const INSPECTOR_MAX_WIDTH = 480;
 const INSPECTOR_MAX_HEIGHT = 640;
@@ -20,6 +20,8 @@ interface FloatingPopoverProps {
   children: ReactNode;
   onClose: () => void;
   title: string;
+  /** クリックされた要素の位置（Inspector の配置に使用） */
+  anchorRect?: AnchorRect | null | undefined;
 }
 
 /** anchorRect に基づいて Inspector の位置を計算 */
@@ -47,9 +49,7 @@ function computePosition(anchor: { top: number; right: number; bottom: number; l
   return { x, y };
 }
 
-export function FloatingPopover({ children, onClose, title }: FloatingPopoverProps) {
-  const anchorRect = useEntryInspectorStore((s) => s.anchorRect);
-
+export function FloatingPopover({ children, onClose, title, anchorRect }: FloatingPopoverProps) {
   const position = useMemo(() => {
     if (typeof window === 'undefined') return { x: 100, y: 100 };
 

@@ -1,4 +1,4 @@
-import type { ChronotypeSettings } from '../types';
+import type { ChronotypeSettings } from '@/types/chronotype';
 
 export const DEFAULT_CHRONOTYPE_SETTINGS: ChronotypeSettings = {
   enabled: false,

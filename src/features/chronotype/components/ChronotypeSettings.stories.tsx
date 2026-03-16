@@ -25,7 +25,7 @@ import {
 } from '../lib/constants';
 import { getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
 
-import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '../types';
+import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components（tRPC/Zustandに依存しないpure版）

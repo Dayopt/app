@@ -1,3 +1,12 @@
+export type {
+  ChronotypeDisplayMode,
+  ChronotypeProfile,
+  ChronotypeSettings,
+  ChronotypeType,
+  PresetChronotypeType,
+  ProductivityLevel,
+  ProductivityZone,
+} from '@/types/chronotype';
 export { ChronotypeBackground } from './components/chronotype-background';
 export { ChronotypeQuiz } from './components/chronotype-quiz';
 export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chronotype-settings';
@@ -27,12 +36,3 @@ export {
   getProductivityZoneForHour,
   getVisibleProductivityZones,
 } from './lib/utils';
-export type {
-  ChronotypeDisplayMode,
-  ChronotypeProfile,
-  ChronotypeSettings,
-  ChronotypeType,
-  PresetChronotypeType,
-  ProductivityLevel,
-  ProductivityZone,
-} from './types';

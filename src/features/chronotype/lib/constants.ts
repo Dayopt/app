@@ -1,4 +1,8 @@
-import type { ChronotypeProfile, PresetChronotypeType, ProductivityLevel } from '../types';
+import type {
+  ChronotypeProfile,
+  PresetChronotypeType,
+  ProductivityLevel,
+} from '@/types/chronotype';
 
 export { DEFAULT_CHRONOTYPE_SETTINGS } from './defaults';
 

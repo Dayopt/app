@@ -15,7 +15,7 @@ import {
   QUIZ_QUESTION_COUNT,
 } from '../lib/quiz';
 
-import type { PresetChronotypeType } from '../types';
+import type { PresetChronotypeType } from '@/types/chronotype';
 
 interface ChronotypeQuizProps {
   onComplete: (type: PresetChronotypeType) => void;

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { CHRONOTYPE_LEVEL_TINT_CLASSES, CHRONOTYPE_PRESETS } from '../lib/constants';
 import { getVisibleProductivityZones } from '../lib/utils';
 
-import type { ChronotypeProfile, PresetChronotypeType } from '../types';
+import type { ChronotypeProfile, PresetChronotypeType } from '@/types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // Demo Component（Zustandストアに依存しないpure版）

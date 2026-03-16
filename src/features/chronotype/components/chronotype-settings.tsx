@@ -31,7 +31,7 @@ import type {
   ChronotypeType,
   PresetChronotypeType,
   ProductivityZone,
-} from '../types';
+} from '@/types/chronotype';
 
 type ViewState = 'idle' | 'quiz' | 'empty';
 

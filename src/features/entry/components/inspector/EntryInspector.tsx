@@ -44,6 +44,7 @@ export function EntryInspector() {
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
+  const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   const { data: planData, isLoading } = useEntry(entryId!, {
@@ -116,7 +117,7 @@ export function EntryInspector() {
           </DrawerContent>
         </Drawer>
       ) : (
-        <FloatingPopover onClose={handleClose} title={title}>
+        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
           {content}
         </FloatingPopover>
       )}
