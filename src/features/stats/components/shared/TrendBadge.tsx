@@ -29,7 +29,7 @@ export function TrendBadge({ trend, size = 'sm', className }: TrendBadgeProps) {
       className={cn(
         'inline-flex items-center gap-0.5 font-medium',
         size === 'sm' ? 'text-sm' : 'text-base',
-        trend.isPositive ? 'text-emerald-500' : 'text-red-500',
+        trend.isPositive ? 'text-success' : 'text-destructive',
         className,
       )}
     >
