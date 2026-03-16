@@ -14,9 +14,9 @@ import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 import { useLayoutStore } from '@/shell/stores/useLayoutStore';
-import { useCalendarNavigation } from '../contexts/CalendarNavigationContext';
-import type { CalendarViewType } from '../types/calendar.types';
-import { isMultiDayView } from '../types/calendar.types';
+import { useCalendarNavigation } from '../../../contexts/CalendarNavigationContext';
+import type { CalendarViewType } from '../../../types/calendar.types';
+import { isMultiDayView } from '../../../types/calendar.types';
 
 interface MainViewOption {
   value: CalendarViewType;

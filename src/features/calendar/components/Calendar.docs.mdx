@@ -29,19 +29,20 @@ import { Meta } from '@storybook/addon-docs/blocks';
 CalendarController              メインエントリポイント
 ├── layout/
 │   ├── CalendarLayout          レイアウトラッパー
-│   └── Header/                 日付表示・ビュー操作
+│   └── Header/
+│       ├── ViewSwitcher        ビュー切替（PC・ドロップダウン）
+│       ├── ViewSwitcherList    ビュー切替（モバイル・リスト）
+│       └── DateRangeDisplay    日付範囲表示
 ├── views/
 │   ├── DayView/                1日ビュー
 │   ├── WeekView/               週ビュー
 │   ├── MultiDayView/           N日ビュー
 │   └── shared/
-│       ├── grid/               TimeGrid, TimeColumn, GridLines
+│       ├── grid/               TimeGrid, TimeColumn, GridLines, CurrentTimeLine
 │       ├── DayColumn/          日カラム
 │       ├── CalendarDragSelection/  ドラッグ選択レイヤー
-│       ├── PlanContextMenu     右クリックメニュー
-│       └── CurrentTimeLine     現在時刻線
-├── ViewSwitcherList            ビュー切替（モバイル用）
-├── tag-filter/                 タグフィルターUI
+│       └── EventContextMenu    右クリックメニュー
+├── tag-filter/                 タグフィルターUI（TagRenameDialog含む）
 ├── animations/                 ビュー遷移アニメーション
 └── controller/                 ビュー描画ディスパッチ
 ```

@@ -16,6 +16,7 @@ export { CalendarController } from './components/CalendarController';
 export { CalendarLayout } from './components/layout/CalendarLayout';
 export { DateRangeDisplay } from './components/layout/Header/DateRangeDisplay';
 export { ViewSwitcher } from './components/layout/Header/ViewSwitcher';
+export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 
 // =============================================================================
 // View Components
@@ -25,10 +26,9 @@ export { MultiDayView } from './components/views/MultiDayView';
 export { WeekView } from './components/views/WeekView';
 
 // =============================================================================
-// Filter / View Switcher
+// Filter
 // =============================================================================
 export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
-export { ViewSwitcherList } from './components/ViewSwitcherList';
 
 // =============================================================================
 // Types
