@@ -14,7 +14,6 @@ export type { SettingsCategory } from './types';
 // Constants
 // =============================================================================
 export { SETTINGS_CATEGORIES } from './constants';
-export type { SettingsCategoryMeta } from './constants';
 
 // =============================================================================
 // Components (for Composition Layer / routing pages)
@@ -26,21 +25,4 @@ export { SettingsSidebar } from './components/SettingsSidebar';
 // =============================================================================
 // Utils
 // =============================================================================
-export {
-  SUPPORTED_TIMEZONES,
-  formatCurrentTime,
-  formatTimezoneInfo,
-  getBrowserTimezone,
-  getCalendarTimezoneLabel,
-  getCurrentTimeInUserTimezone,
-  getCurrentTimePosition,
-  getCurrentTimezone,
-  getShortTimezoneDisplay,
-  getTimezoneOffset,
-  getUserTimezone,
-  listenToTimezoneChange,
-  setUserTimezone,
-  userTimezoneToUtc,
-  utcToUserTimezone,
-} from './utils/timezone';
-export type { TimezoneValue } from './utils/timezone';
+export { getCurrentTimezone, setUserTimezone } from './utils/timezone';
