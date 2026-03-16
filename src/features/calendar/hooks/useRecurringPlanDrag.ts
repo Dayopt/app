@@ -23,6 +23,10 @@ import type { CalendarEvent } from '../types/calendar.types';
 
 interface PendingDragUpdate {
   plan: CalendarEvent;
+  /** 繰り返しインスタンスの親エントリID（ガード済み） */
+  parentEntryId: string;
+  /** 繰り返しインスタンスの日付（ガード済み） */
+  instanceDate: string;
   updates: { startTime: Date; endTime: Date };
 }
 
@@ -46,9 +50,7 @@ export function useRecurringPlanDrag({ plans }: UseRecurringPlanDragOptions) {
       const pendingDragUpdate = pendingDragUpdateRef.current;
       if (!pendingDragUpdate) return;
 
-      const { plan, updates } = pendingDragUpdate;
-      const parentEntryId = plan.originalEntryId!;
-      const instanceDate = plan.instanceDate!;
+      const { plan: _plan, parentEntryId, instanceDate, updates } = pendingDragUpdate;
       const newDate = updates.startTime.toISOString().slice(0, 10);
 
       try {
@@ -107,10 +109,13 @@ export function useRecurringPlanDrag({ plans }: UseRecurringPlanDragOptions) {
       }
 
       // 繰り返しインスタンスかどうか判定
-      const isRecurringInstance = plan.isRecurring && plan.originalEntryId && plan.instanceDate;
-
-      if (isRecurringInstance) {
-        pendingDragUpdateRef.current = { plan, updates: resolvedUpdates };
+      if (plan.isRecurring && plan.originalEntryId && plan.instanceDate) {
+        pendingDragUpdateRef.current = {
+          plan,
+          parentEntryId: plan.originalEntryId,
+          instanceDate: plan.instanceDate,
+          updates: resolvedUpdates,
+        };
         openRecurringEditConfirm(plan.title, 'edit', handleScopeConfirm);
         return { skipToast: true };
       } else {
