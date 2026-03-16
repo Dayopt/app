@@ -64,6 +64,39 @@ export function useSelectionEvents({
   const [isLongPressActive, setIsLongPressActive] = useState(false);
   const [isOverlapping, setIsOverlapping] = useState(false);
 
+  // Ref mirrors — グローバルイベントハンドラーから最新値を読み取るため
+  // （useEffect の依存配列からホットパス値を除外し、リスナー再登録を抑制）
+  // これらの ref はレンダー中に更新するがイベントハンドラーでのみ読み取るため安全。
+  // useEffect での同期は1フレーム遅延を生じドラッグの正確性に影響する。
+  /* eslint-disable react-hooks/refs -- ref mirrors: レンダー中に同期し、イベントハンドラーでのみ読み取る */
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const selectionStartRef = useRef(selectionStart);
+  selectionStartRef.current = selectionStart;
+  const isOverlappingRef = useRef(isOverlapping);
+  isOverlappingRef.current = isOverlapping;
+  const isLongPressActiveRef = useRef(isLongPressActive);
+  isLongPressActiveRef.current = isLongPressActive;
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+
+  // Callback refs — props/hookの最新参照を保持
+  const pixelsToTimeRef = useRef(pixelsToTime);
+  pixelsToTimeRef.current = pixelsToTime;
+  const onTimeRangeSelectRef = useRef(onTimeRangeSelect);
+  onTimeRangeSelectRef.current = onTimeRangeSelect;
+  const onDoubleClickPropRef = useRef(onDoubleClickProp);
+  onDoubleClickPropRef.current = onDoubleClickProp;
+  const checkOverlapRef = useRef(checkOverlap);
+  checkOverlapRef.current = checkOverlap;
+  const dateRef = useRef(date);
+  dateRef.current = date;
+  const defaultDurationRef = useRef(defaultDuration);
+  defaultDurationRef.current = defaultDuration;
+  const tapRef = useRef(tap);
+  tapRef.current = tap;
+  /* eslint-enable react-hooks/refs */
+
   // Helper: 長押しタイマーをクリア
   const clearLongPressTimer = useCallback(() => {
     if (longPressTimer.current) {
@@ -210,15 +243,17 @@ export function useSelectionEvents({
   );
 
   // Effect: グローバルマウス/タッチイベント（ドラッグ中）
+  // 依存配列は isSelecting のみ — ホットパス値は ref 経由で読み取り、
+  // ドラッグ中のリスナー再登録を排除
   useEffect(() => {
     if (!isSelecting) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current || !selectionStart) return;
+      if (!containerRef.current || !selectionStartRef.current) return;
 
       const rect = containerRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
-      const currentTime = pixelsToTime(y);
+      const currentTime = pixelsToTimeRef.current(y);
 
       // 実際のマウスダウン位置からの距離でドラッグ判定（グリッドスナップ位置ではなく）
       const rawStartY = dragStartPixelY.current ?? y;
@@ -228,7 +263,7 @@ export function useSelectionEvents({
         setShowSelectionPreview(true);
       }
 
-      const newSelection = calculateSelection(selectionStart, currentTime);
+      const newSelection = calculateSelection(selectionStartRef.current, currentTime);
 
       // ハプティックフィードバック
       const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
@@ -236,37 +271,39 @@ export function useSelectionEvents({
       if (lastSelectionRef.current) {
         const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
         if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
-          tap();
+          tapRef.current();
         }
       }
       lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
 
       setSelection(newSelection);
-      setIsOverlapping(checkOverlap(newSelection));
+      setIsOverlapping(checkOverlapRef.current(newSelection));
     };
 
     const handleGlobalMouseUp = () => {
-      if (disabled) {
+      if (disabledRef.current) {
         clearSelectionState();
         return;
       }
 
-      if (selection && selectionStart) {
-        if (isDragging.current && onTimeRangeSelect) {
-          if (isOverlapping) {
+      const sel = selectionRef.current;
+      const start = selectionStartRef.current;
+      if (sel && start) {
+        if (isDragging.current && onTimeRangeSelectRef.current) {
+          if (isOverlappingRef.current) {
             clearSelectionState();
             return;
           }
 
           const dateTimeSelection: DateTimeSelection = {
-            date,
-            startHour: selection.startHour,
-            startMinute: selection.startMinute,
-            endHour: selection.endHour,
-            endMinute: selection.endMinute,
+            date: dateRef.current,
+            startHour: sel.startHour,
+            startMinute: sel.startMinute,
+            endHour: sel.endHour,
+            endMinute: sel.endMinute,
           };
 
-          onTimeRangeSelect(dateTimeSelection);
+          onTimeRangeSelectRef.current(dateTimeSelection);
           setIsSelecting(false);
           setShowSelectionPreview(false);
           isDragging.current = false;
@@ -287,7 +324,7 @@ export function useSelectionEvents({
       const touch = e.touches[0];
       if (!touch) return;
 
-      if (touchStartPos.current && !isLongPressActive) {
+      if (touchStartPos.current && !isLongPressActiveRef.current) {
         const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
         const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
 
@@ -300,11 +337,12 @@ export function useSelectionEvents({
         }
       }
 
-      if (!containerRef.current || !selectionStart || !isLongPressActive) return;
+      if (!containerRef.current || !selectionStartRef.current || !isLongPressActiveRef.current)
+        return;
 
       const rect = containerRef.current.getBoundingClientRect();
       const y = touch.clientY - rect.top;
-      const currentTime = pixelsToTime(y);
+      const currentTime = pixelsToTimeRef.current(y);
 
       // 実際のタッチ開始位置からの距離でドラッグ判定（グリッドスナップ位置ではなく）
       const rawStartY = dragStartPixelY.current ?? y;
@@ -315,27 +353,27 @@ export function useSelectionEvents({
         e.preventDefault();
       }
 
-      const newSelection = calculateSelection(selectionStart, currentTime);
+      const newSelection = calculateSelection(selectionStartRef.current, currentTime);
 
       const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
       const newEndMinutes = newSelection.endHour * 60 + newSelection.endMinute;
       if (lastSelectionRef.current) {
         const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
         if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
-          tap();
+          tapRef.current();
         }
       }
       lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
 
       setSelection(newSelection);
-      setIsOverlapping(checkOverlap(newSelection));
+      setIsOverlapping(checkOverlapRef.current(newSelection));
     };
 
     const handleGlobalTouchEnd = (e: TouchEvent) => {
-      const handler = onDoubleClickProp || onTimeRangeSelect;
+      const handler = onDoubleClickPropRef.current || onTimeRangeSelectRef.current;
 
       // シングルタップ検出
-      if (!isLongPressActive && touchStartPos.current && touchStartTime.current) {
+      if (!isLongPressActiveRef.current && touchStartPos.current && touchStartTime.current) {
         const touchDuration = Date.now() - touchStartTime.current;
         const touch = e.changedTouches[0];
 
@@ -350,22 +388,25 @@ export function useSelectionEvents({
             if (handler && containerRef.current) {
               const rect = containerRef.current.getBoundingClientRect();
               const y = touch.clientY - rect.top;
-              const tapTime = pixelsToTime(y);
+              const tapTime = pixelsToTimeRef.current(y);
 
               const startTotalMinutes = tapTime.hour * 60 + tapTime.minute;
-              const endTotalMinutes = Math.min(startTotalMinutes + defaultDuration, 24 * 60 - 1);
+              const endTotalMinutes = Math.min(
+                startTotalMinutes + defaultDurationRef.current,
+                24 * 60 - 1,
+              );
               const endHour = Math.floor(endTotalMinutes / 60);
               const endMinute = endTotalMinutes % 60;
 
               const dateTimeSelection: DateTimeSelection = {
-                date,
+                date: dateRef.current,
                 startHour: tapTime.hour,
                 startMinute: tapTime.minute,
                 endHour,
                 endMinute,
               };
 
-              tap();
+              tapRef.current();
               handler(dateTimeSelection);
             }
           }
@@ -375,46 +416,51 @@ export function useSelectionEvents({
         return;
       }
 
-      if (!isLongPressActive) {
+      if (!isLongPressActiveRef.current) {
         clearLongPressTimer();
         return;
       }
 
-      if (disabled) {
+      if (disabledRef.current) {
         clearSelectionState();
         return;
       }
 
-      if (selection && selectionStart) {
-        if (isDragging.current && onTimeRangeSelect) {
-          if (isOverlapping) {
+      const sel = selectionRef.current;
+      const start = selectionStartRef.current;
+      if (sel && start) {
+        if (isDragging.current && onTimeRangeSelectRef.current) {
+          if (isOverlappingRef.current) {
             clearSelectionState();
             return;
           }
 
           const dateTimeSelection: DateTimeSelection = {
-            date,
-            startHour: selection.startHour,
-            startMinute: selection.startMinute,
-            endHour: selection.endHour,
-            endMinute: selection.endMinute,
+            date: dateRef.current,
+            startHour: sel.startHour,
+            startMinute: sel.startMinute,
+            endHour: sel.endHour,
+            endMinute: sel.endMinute,
           };
-          onTimeRangeSelect(dateTimeSelection);
+          onTimeRangeSelectRef.current(dateTimeSelection);
           setIsSelecting(false);
           setShowSelectionPreview(false);
           isDragging.current = false;
           clearLongPressTimer();
           return;
         } else if (handler) {
-          const startTotalMinutes = selection.startHour * 60 + selection.startMinute;
-          const endTotalMinutes = Math.min(startTotalMinutes + defaultDuration, 24 * 60 - 1);
+          const startTotalMinutes = sel.startHour * 60 + sel.startMinute;
+          const endTotalMinutes = Math.min(
+            startTotalMinutes + defaultDurationRef.current,
+            24 * 60 - 1,
+          );
           const endHour = Math.floor(endTotalMinutes / 60);
           const endMinute = endTotalMinutes % 60;
 
           const dateTimeSelection: DateTimeSelection = {
-            date,
-            startHour: selection.startHour,
-            startMinute: selection.startMinute,
+            date: dateRef.current,
+            startHour: sel.startHour,
+            startMinute: sel.startMinute,
             endHour,
             endMinute,
           };
@@ -443,24 +489,9 @@ export function useSelectionEvents({
       document.removeEventListener('touchmove', handleGlobalTouchMove);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
-  }, [
-    isSelecting,
-    selectionStart,
-    selection,
-    pixelsToTime,
-    onTimeRangeSelect,
-    onDoubleClickProp,
-    date,
-    disabled,
-    isLongPressActive,
-    clearLongPressTimer,
-    clearSelectionState,
-    defaultDuration,
-    tap,
-    checkOverlap,
-    isOverlapping,
-    containerRef,
-  ]);
+    // isSelecting のみに依存 — ドラッグ開始/終了時のみリスナー登録/解除
+    // ホットパス値（selection, selectionStart, isOverlapping等）は ref 経由で読み取り
+  }, [isSelecting, clearSelectionState, clearLongPressTimer, containerRef]);
 
   // Effect: モーダルキャンセル時のカスタムイベント
   useEffect(() => {
