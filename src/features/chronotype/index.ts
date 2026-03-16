@@ -19,7 +19,6 @@ export {
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
   getChronotypeColor,
-  getProductivityLevelColor,
 } from './lib/constants';
 export { CHRONOTYPE_QUIZ_QUESTIONS, calculateChronotypeResult } from './lib/quiz';
 export {

@@ -111,10 +111,6 @@ export const CHRONOTYPE_LEVEL_COLORS: Record<ProductivityLevel, string> = {
   winddown: 'var(--chronotype-winddown)',
 };
 
-export function getProductivityLevelColor(level: ProductivityLevel): string {
-  return CHRONOTYPE_LEVEL_CLASSES[level] ?? CHRONOTYPE_LEVEL_CLASSES.warmup;
-}
-
 export function getChronotypeColor(level: ProductivityLevel): string {
   return CHRONOTYPE_LEVEL_COLORS[level];
 }
