@@ -1,13 +1,8 @@
 /**
  * プラン関連の型定義
- *
- * PlanCardProps/PlanCardPosition は EntryCard (@/features/entry) に移動。
- * 後方互換のため re-export を維持。
  */
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
-
-import type { EntryCardPosition, EntryCardProps } from '@/features/entry';
 
 // 時間指定プラン（start/endを持つプラン）
 // CalendarEventの startDate/endDate を start/end に変換した型
@@ -16,12 +11,6 @@ export type TimedPlan = CalendarEvent & {
   end: Date; // endDateのエイリアス
   isReadOnly?: boolean;
 };
-
-/** @deprecated EntryCardProps を使用してください */
-export type PlanCardProps = EntryCardProps;
-
-/** @deprecated EntryCardPosition を使用してください */
-export type PlanCardPosition = EntryCardPosition;
 
 export interface PlanGroup {
   plans: CalendarEvent[];

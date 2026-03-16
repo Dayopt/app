@@ -4,8 +4,9 @@
 
 import { useMemo } from 'react';
 
+import type { EntryCardPosition } from '@/features/entry';
 import { HOUR_HEIGHT } from '../constants/grid.constants';
-import type { PlanCardPosition, TimedPlan } from '../types/plan.types';
+import type { TimedPlan } from '../types/plan.types';
 
 import { usePlanLayoutCalculator } from './usePlanLayoutCalculator';
 
@@ -14,7 +15,7 @@ export interface UsePlanPositionOptions {
 }
 
 export interface PositionedPlan extends TimedPlan {
-  position: PlanCardPosition;
+  position: EntryCardPosition;
 }
 
 export function usePlanPosition(plans: TimedPlan[], options: UsePlanPositionOptions = {}) {
@@ -24,7 +25,7 @@ export function usePlanPosition(plans: TimedPlan[], options: UsePlanPositionOpti
   const layouts = usePlanLayoutCalculator(plans);
 
   const planPositions = useMemo(() => {
-    const positions = new Map<string, PlanCardPosition>();
+    const positions = new Map<string, EntryCardPosition>();
 
     if (layouts.length === 0) return positions;
 
