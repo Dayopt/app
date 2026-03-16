@@ -37,8 +37,8 @@ import { useEntryForm } from './hooks/useEntryForm';
 export function EntryInspectorForm() {
   const t = useTranslations();
   const {
-    planId,
-    plan,
+    entryId,
+    entry,
     selectedTagId,
     handleTagChange,
     scheduleDate,
@@ -54,7 +54,7 @@ export function EntryInspectorForm() {
     handleActualStartChange,
     handleActualEndChange,
     autoSave,
-    updatePlan,
+    updateEntry: updateEntryMutation,
     handleDelete,
     timeConflictError,
     getCache,
@@ -63,13 +63,16 @@ export function EntryInspectorForm() {
   // --- 派生値 ---
 
   const entryState = useMemo(() => {
-    if (!plan) return 'upcoming' as const;
-    return getEntryState({ start_time: plan.start_time ?? null, end_time: plan.end_time ?? null });
-  }, [plan]);
+    if (!entry) return 'upcoming' as const;
+    return getEntryState({
+      start_time: entry.start_time ?? null,
+      end_time: entry.end_time ?? null,
+    });
+  }, [entry]);
 
   const origin = useMemo<EntryOrigin>(() => {
-    return plan?.origin ?? 'planned';
-  }, [plan]);
+    return entry?.origin ?? 'planned';
+  }, [entry]);
 
   const isUnplanned = origin === 'unplanned';
   const isPast = entryState === 'past';
@@ -77,60 +80,60 @@ export function EntryInspectorForm() {
 
   // 充実度
   const fulfillmentScore = useMemo<FulfillmentScore | null>(() => {
-    if (!planId) return null;
-    const cache = getCache(planId);
+    if (!entryId) return null;
+    const cache = getCache(entryId);
     if (cache?.fulfillment_score !== undefined) {
       return cache.fulfillment_score as FulfillmentScore | null;
     }
-    return plan?.fulfillment_score ?? null;
-  }, [planId, plan, getCache]);
+    return entry?.fulfillment_score ?? null;
+  }, [entryId, entry, getCache]);
 
   const { updateEntry } = useEntryMutations();
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
-      if (!planId) return;
-      updateEntry.mutate({ id: planId, data: { fulfillment_score: score } });
+      if (!entryId) return;
+      updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
     },
-    [planId, updateEntry],
+    [entryId, updateEntry],
   );
 
   // 繰り返し
   const recurrenceRule = useMemo(() => {
-    if (!planId) return null;
-    const cache = getCache(planId);
+    if (!entryId) return null;
+    const cache = getCache(entryId);
     return cache?.recurrence_rule !== undefined
       ? cache.recurrence_rule
-      : (plan?.recurrence_rule ?? null);
-  }, [planId, plan, getCache]);
+      : (entry?.recurrence_rule ?? null);
+  }, [entryId, entry, getCache]);
 
   const recurrenceType = useMemo<RecurrenceType | null>(() => {
-    if (!planId) return null;
-    const cache = getCache(planId);
+    if (!entryId) return null;
+    const cache = getCache(entryId);
     return cache?.recurrence_type !== undefined
       ? (cache.recurrence_type as RecurrenceType | null)
-      : (plan?.recurrence_type ?? null);
-  }, [planId, plan, getCache]);
+      : (entry?.recurrence_type ?? null);
+  }, [entryId, entry, getCache]);
 
   const handleRepeatTypeChange = useCallback(
     (type: string) => {
-      if (!planId) return;
-      updatePlan.mutate({
-        id: planId,
+      if (!entryId) return;
+      updateEntryMutation.mutate({
+        id: entryId,
         data: {
           recurrence_type: (type || 'none') as RecurrenceType,
           recurrence_rule: null,
         },
       });
     },
-    [planId, updatePlan],
+    [entryId, updateEntryMutation],
   );
 
   const handleRecurrenceRuleChange = useCallback(
     (rrule: string | null) => {
-      if (!planId) return;
-      updatePlan.mutate({ id: planId, data: { recurrence_rule: rrule } });
+      if (!entryId) return;
+      updateEntryMutation.mutate({ id: entryId, data: { recurrence_rule: rrule } });
     },
-    [planId, updatePlan],
+    [entryId, updateEntryMutation],
   );
 
   // 表示条件
@@ -168,7 +171,7 @@ export function EntryInspectorForm() {
     [effectiveActualStart, effectiveActualEnd],
   );
 
-  if (!plan) return null;
+  if (!entry) return null;
 
   return (
     <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
@@ -248,7 +251,7 @@ export function EntryInspectorForm() {
           <NoteSection
             label={t('plan.inspector.note.label')}
             icon={StickyNote}
-            note={plan.description || ''}
+            note={entry.description || ''}
             onNoteChange={(text) => autoSave('description', text)}
             placeholder={t('plan.inspector.note.placeholder')}
           />

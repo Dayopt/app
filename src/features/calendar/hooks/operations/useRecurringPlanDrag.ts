@@ -56,7 +56,7 @@ export function useRecurringPlanDrag({ plans }: UseRecurringPlanDragOptions) {
       try {
         await applyEdit({
           scope,
-          planId: parentEntryId,
+          entryId: parentEntryId,
           instanceDate,
           changes: {
             start_time: updates.startTime.toISOString(),

@@ -3,7 +3,7 @@
 /**
  * 繰り返しスコープ付きmutationフック
  *
- * 繰り返しプランの編集・削除における3スコープ（this / thisAndFuture / all）の
+ * 繰り返しエントリの編集・削除における3スコープ（this / thisAndFuture / all）の
  * 処理ロジックを一元管理する。
  *
  * 以前は useRecurringPlanEdit, useRecurringPlanDrag, usePlanContextActions,
@@ -20,7 +20,7 @@ import { useEntryMutations } from './useEntryMutations';
 
 interface ApplyEditParams {
   scope: RecurringEditScope;
-  planId: string;
+  entryId: string;
   instanceDate: string;
   changes: {
     title?: string;
@@ -34,7 +34,7 @@ interface ApplyEditParams {
 
 interface ApplyDeleteParams {
   scope: RecurringEditScope;
-  planId: string;
+  entryId: string;
   instanceDate: string;
 }
 
@@ -49,9 +49,9 @@ export function useRecurringScopeMutations() {
       await utils.entries.list.cancel();
       await utils.entries.getInstances.cancel();
 
-      const previousPlans = utils.entries.list.getData();
+      const previousEntries = utils.entries.list.getData();
 
-      // 親プランの recurrence_end_date を楽観的に更新（splitDate の前日）
+      // 親エントリの recurrence_end_date を楽観的に更新（splitDate の前日）
       const splitDate = new Date(input.splitDate);
       splitDate.setDate(splitDate.getDate() - 1);
       const endDateString = splitDate.toISOString().slice(0, 10);
@@ -66,15 +66,15 @@ export function useRecurringScopeMutations() {
         });
       });
 
-      return { previousPlans };
+      return { previousEntries };
     },
     onSuccess: () => {
       void utils.entries.list.invalidate();
       void utils.entries.getInstances.invalidate();
     },
     onError: (_err, _input, context) => {
-      if (context?.previousPlans) {
-        utils.entries.list.setData(undefined, context.previousPlans);
+      if (context?.previousEntries) {
+        utils.entries.list.setData(undefined, context.previousEntries);
       }
       void utils.entries.getInstances.invalidate();
     },
@@ -84,16 +84,16 @@ export function useRecurringScopeMutations() {
    * スコープ付き編集を実行
    *
    * - this: このインスタンスのみ変更（modified/moved 例外を作成）
-   * - thisAndFuture: この日以降を分割して新プランを作成
-   * - all: 親プランを直接更新
+   * - thisAndFuture: この日以降を分割して新エントリを作成
+   * - all: 親エントリを直接更新
    */
   const applyEdit = useCallback(
-    async ({ scope, planId, instanceDate, changes, targetDate }: ApplyEditParams) => {
+    async ({ scope, entryId, instanceDate, changes, targetDate }: ApplyEditParams) => {
       switch (scope) {
         case 'this': {
           const isSameDate = !targetDate || targetDate === instanceDate;
           await createInstance.mutateAsync({
-            entryId: planId,
+            entryId,
             instanceDate,
             exceptionType: isSameDate ? 'modified' : 'moved',
             title: changes.title,
@@ -107,7 +107,7 @@ export function useRecurringScopeMutations() {
 
         case 'thisAndFuture': {
           await splitRecurrence.mutateAsync({
-            entryId: planId,
+            entryId,
             splitDate: instanceDate,
             overrides: changes,
           });
@@ -116,7 +116,7 @@ export function useRecurringScopeMutations() {
 
         case 'all': {
           await updateEntry.mutateAsync({
-            id: planId,
+            id: entryId,
             data: changes,
           });
           break;
@@ -131,14 +131,14 @@ export function useRecurringScopeMutations() {
    *
    * - this: このインスタンスのみ削除（cancelled 例外を作成）
    * - thisAndFuture: この日以降を終了（recurrence_end_date を設定）
-   * - all: 親プランを削除
+   * - all: 親エントリを削除
    */
   const applyDelete = useCallback(
-    async ({ scope, planId, instanceDate }: ApplyDeleteParams) => {
+    async ({ scope, entryId, instanceDate }: ApplyDeleteParams) => {
       switch (scope) {
         case 'this': {
           await createInstance.mutateAsync({
-            entryId: planId,
+            entryId,
             instanceDate,
             exceptionType: 'cancelled',
           });
@@ -149,7 +149,7 @@ export function useRecurringScopeMutations() {
           const endDate = new Date(instanceDate);
           endDate.setDate(endDate.getDate() - 1);
           await updateEntry.mutateAsync({
-            id: planId,
+            id: entryId,
             data: {
               recurrence_end_date: endDate.toISOString().slice(0, 10),
             },
@@ -158,7 +158,7 @@ export function useRecurringScopeMutations() {
         }
 
         case 'all': {
-          await deleteEntry.mutateAsync({ id: planId });
+          await deleteEntry.mutateAsync({ id: entryId });
           break;
         }
       }

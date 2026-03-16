@@ -92,7 +92,7 @@ export function useRecurringGuard({ entry, entryId, instanceDate }: UseRecurring
       try {
         await applyEdit({
           scope,
-          planId: entryId,
+          entryId,
           instanceDate,
           changes: changesToApply,
         });

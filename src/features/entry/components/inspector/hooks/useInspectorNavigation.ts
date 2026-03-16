@@ -5,31 +5,31 @@ import { useCallback, useMemo } from 'react';
 import { useEntries } from '../../../hooks/useEntries';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
 
-export function useInspectorNavigation(planId: string | null) {
+export function useInspectorNavigation(entryId: string | null) {
   const openInspector = useEntryInspectorStore((state) => state.openInspector);
 
-  const { data: allPlans = [] } = useEntries();
+  const { data: allEntries = [] } = useEntries();
 
   const currentIndex = useMemo(() => {
-    return allPlans.findIndex((t) => t.id === planId);
-  }, [allPlans, planId]);
+    return allEntries.findIndex((t) => t.id === entryId);
+  }, [allEntries, entryId]);
 
   const hasPrevious = currentIndex > 0;
-  const hasNext = currentIndex >= 0 && currentIndex < allPlans.length - 1;
+  const hasNext = currentIndex >= 0 && currentIndex < allEntries.length - 1;
 
   const goToPrevious = useCallback(() => {
     if (hasPrevious) {
-      const prevPlanId = allPlans[currentIndex - 1]!.id;
-      openInspector(prevPlanId);
+      const prevEntryId = allEntries[currentIndex - 1]!.id;
+      openInspector(prevEntryId);
     }
-  }, [hasPrevious, allPlans, currentIndex, openInspector]);
+  }, [hasPrevious, allEntries, currentIndex, openInspector]);
 
   const goToNext = useCallback(() => {
     if (hasNext) {
-      const nextPlanId = allPlans[currentIndex + 1]!.id;
-      openInspector(nextPlanId);
+      const nextEntryId = allEntries[currentIndex + 1]!.id;
+      openInspector(nextEntryId);
     }
-  }, [hasNext, allPlans, currentIndex, openInspector]);
+  }, [hasNext, allEntries, currentIndex, openInspector]);
 
   return {
     hasPrevious,

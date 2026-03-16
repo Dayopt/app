@@ -57,7 +57,7 @@ export function useCalendarData({
   // entries を取得（plans + records 統合、単一クエリ）
   const { data: entriesData } = useEntries(dateFilter);
 
-  // タグマスタをプリフェッチ（TagsContainerで使用するためキャッシュをwarm up）
+  // タグマスタをプリフェッチ（EntryCard等で使用するためキャッシュをwarm up）
   useTags();
 
   // tRPC utils（プリフェッチ用）

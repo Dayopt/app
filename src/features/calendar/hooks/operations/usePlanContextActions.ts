@@ -40,7 +40,7 @@ export function usePlanContextActions() {
 
         await applyDelete({
           scope,
-          planId: ref.parentEntryId,
+          entryId: ref.parentEntryId,
           instanceDate: ref.instanceDate,
         });
       } finally {

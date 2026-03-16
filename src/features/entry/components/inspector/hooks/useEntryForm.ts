@@ -4,10 +4,7 @@
  * Inspector フォームの唯一の公開 hook
  *
  * 内部で useDebouncedSave / useTimeFields / useTagField / useRecurringGuard を合成。
- * EntryInspectorContent はこの hook の返り値だけで全フィールドを描画できる。
- *
- * Phase 2: useEntryInspectorContentLogic の内部実装をこの hook に移行。
- * 返り値は既存と互換性を保つ（Phase 3 でコンポーネント側を変更してから型を整理）。
+ * EntryInspectorForm はこの hook の返り値だけで全フィールドを描画できる。
  */
 
 import { useCallback, useEffect } from 'react';
@@ -55,12 +52,12 @@ export function useEntryForm() {
   }, [entryId]);
 
   // データ取得
-  const { data: planData } = useEntry(entryId!, {
+  const { data: entryData } = useEntry(entryId!, {
     includeTags: true,
     enabled: !!entryId,
   });
 
-  const entry: EntryWithTags | null = (planData ?? null) as EntryWithTags | null;
+  const entry: EntryWithTags | null = (entryData ?? null) as EntryWithTags | null;
 
   // --- 内部 hook 合成 ---
 
@@ -82,7 +79,7 @@ export function useEntryForm() {
   // 4. タグフィールド
   const { selectedTagId, handleTagChange } = useTagField({
     entryId,
-    entry: planData as EntryWithTags | undefined,
+    entry: entryData as EntryWithTags | undefined,
     saveTag,
   });
 
@@ -138,10 +135,10 @@ export function useEntryForm() {
       if (!entryId || !instanceDate) return;
 
       try {
-        await applyDelete({ scope, planId: entryId, instanceDate });
+        await applyDelete({ scope, entryId, instanceDate });
         closeInspector();
       } catch (err) {
-        logger.error('Failed to delete recurring plan:', err);
+        logger.error('Failed to delete recurring entry:', err);
       }
     },
     [entryId, instanceDate, applyDelete, closeInspector],
@@ -182,8 +179,8 @@ export function useEntryForm() {
 
   return {
     // Store state
-    planId: entryId,
-    plan: entry,
+    entryId,
+    entry,
     closeInspector,
     saveAndClose,
     cancelAndClose,
@@ -217,7 +214,7 @@ export function useEntryForm() {
     handleActualStartChange,
     handleActualEndChange,
     autoSave,
-    updatePlan: updateEntry,
+    updateEntry,
 
     // Menu handlers
     handleDelete,
