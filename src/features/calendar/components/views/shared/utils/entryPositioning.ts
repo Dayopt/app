@@ -1,18 +1,18 @@
 /**
- * プラン配置計算ユーティリティ
+ * エントリ配置計算ユーティリティ
  *
  * @deprecated engine/layout.ts から直接importしてください。
  * このファイルは後方互換性のための re-export です。
  */
 
 export {
-  calculatePlanPosition,
-  calculatePlanPositionWithCollapse,
+  calculateEntryPosition,
+  calculateEntryPositionWithCollapse,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
-  filterPlansByDate,
-  plansOverlap,
-  sortTimedPlans,
+  entriesOverlap,
+  filterEntriesByDate,
+  sortTimedEntries,
 } from '../../../../engine/layout';
 
 export type { ActualTimeDiffOverlay } from '../../../../engine/layout';

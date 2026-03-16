@@ -4,7 +4,7 @@ import { decodeInstanceId, useEntryInstanceMutations, useEntryMutations } from '
 import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarEvent } from '../../types/calendar.types';
 
 /**
  * プラン操作（CRUD）を提供するフック

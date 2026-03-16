@@ -1,34 +1,34 @@
 /**
- * プラン関連の型定義
+ * エントリ関連の型定義
  */
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-// 時間指定プラン（start/endを持つプラン）
+// 時間指定エントリ（start/endを持つエントリ）
 // CalendarEventの startDate/endDate を start/end に変換した型
-export type TimedPlan = CalendarEvent & {
+export type TimedEntry = CalendarEvent & {
   start: Date; // startDateのエイリアス
   end: Date; // endDateのエイリアス
   isReadOnly?: boolean;
 };
 
-export interface PlanGroup {
-  plans: CalendarEvent[];
-  columns: PlanColumn[];
+export interface EntryGroup {
+  entries: CalendarEvent[];
+  columns: EntryColumn[];
 }
 
-export interface PlanColumn {
-  plans: CalendarEvent[];
+export interface EntryColumn {
+  entries: CalendarEvent[];
   columnIndex: number;
   totalColumns: number;
 }
 
-export type PlanInteractionHandler = {
-  onClick?: (plan: CalendarEvent) => void;
-  onContextMenu?: (plan: CalendarEvent, e: React.MouseEvent) => void;
-  onDragStart?: (plan: CalendarEvent) => void;
-  onDragEnd?: (plan: CalendarEvent) => void;
-  onDragOver?: (plan: CalendarEvent, date: Date, time: Date) => void;
-  onDrop?: (plan: CalendarEvent, date: Date, time: Date) => void;
-  onResize?: (plan: CalendarEvent, newStart: Date, newEnd: Date) => void;
+export type EntryInteractionHandler = {
+  onClick?: (entry: CalendarEvent) => void;
+  onContextMenu?: (entry: CalendarEvent, e: React.MouseEvent) => void;
+  onDragStart?: (entry: CalendarEvent) => void;
+  onDragEnd?: (entry: CalendarEvent) => void;
+  onDragOver?: (entry: CalendarEvent, date: Date, time: Date) => void;
+  onDrop?: (entry: CalendarEvent, date: Date, time: Date) => void;
+  onResize?: (entry: CalendarEvent, newStart: Date, newEnd: Date) => void;
 };

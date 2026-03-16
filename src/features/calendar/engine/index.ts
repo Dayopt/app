@@ -11,7 +11,7 @@ export {
   MIN_EVENT_HEIGHT,
   calculateGridHeight,
   calculateScrollPosition,
-  computePlanStyles,
+  computeEntryStyles,
   generateTimeSlots,
   getDurationInMinutes,
   getEventStyle,
@@ -21,24 +21,24 @@ export {
   roundToQuarterHour,
   timeToPixels,
 } from './grid';
-export type { EventStyle, PlanPositionInput, TimeSlot } from './grid';
+export type { EntryPositionInput, EventStyle, TimeSlot } from './grid';
 
-// Layout: 重複検出、カラム割り当て、プランカード配置
+// Layout: 重複検出、カラム割り当て、エントリカード配置
 export {
+  calculateEntryLayouts,
+  calculateEntryPosition,
+  calculateEntryPositionWithCollapse,
   calculateGroupLayout,
   calculateMaxConcurrent,
-  calculatePlanLayouts,
-  calculatePlanPosition,
-  calculatePlanPositionWithCollapse,
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
-  filterPlansByDate,
+  entriesOverlap,
+  filterEntriesByDate,
   findOverlapGroups,
   isOverlapping,
-  plansOverlap,
-  sortTimedPlans,
+  sortTimedEntries,
 } from './layout';
-export type { ActualTimeDiffOverlay, PlanLayout } from './layout';
+export type { ActualTimeDiffOverlay, EntryLayout } from './layout';
 
 // Overlap: ドラッグ時の重複判定
 export { checkClientSideOverlap } from './overlap';

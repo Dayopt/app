@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
-import { isCalendarViewPath } from '../lib/route-utils';
-import type { CalendarViewType } from '../types/calendar.types';
+import { isCalendarViewPath } from '../../lib/route-utils';
+import type { CalendarViewType } from '../../types/calendar.types';
 
 // 有効なビュータイプかチェック
 function isValidViewType(view: string): view is CalendarViewType {

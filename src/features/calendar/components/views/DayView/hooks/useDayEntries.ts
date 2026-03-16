@@ -1,12 +1,16 @@
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
-import { useViewPlans } from '../../shared/hooks/useViewPlans';
-import type { UseDayPlansOptions, UseDayPlansReturn } from '../DayView.types';
+import { useViewEntries } from '../../shared/hooks/useViewEntries';
+import type { UseDayEntriesOptions, UseDayEntriesReturn } from '../DayView.types';
 
 /**
- * DayView用のプラン処理フック
- * 共通のuseViewPlansを使用
+ * DayView用のエントリ処理フック
+ * 共通のuseViewEntriesを使用
  */
-export function useDayPlans({ date, plans, timezone }: UseDayPlansOptions): UseDayPlansReturn {
+export function useDayEntries({
+  date,
+  entries,
+  timezone,
+}: UseDayEntriesOptions): UseDayEntriesReturn {
   const hourHeight = useResponsiveHourHeight();
-  return useViewPlans({ date, plans, hourHeight, timezone });
+  return useViewEntries({ date, entries, hourHeight, timezone });
 }

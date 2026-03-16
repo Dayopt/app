@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 import { openDeleteConfirm } from '@/shell/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { useEntryClipboardStore } from '../stores/useEntryClipboardStore';
+import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
 
 interface UseCalendarEventKeyboardOptions {
   /** ショートカットを有効にするか */

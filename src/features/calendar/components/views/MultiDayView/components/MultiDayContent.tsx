@@ -18,17 +18,17 @@ import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interaction
 
 interface MultiDayContentProps {
   date: Date;
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   allEventsForOverlapCheck?: CalendarEvent[] | undefined;
-  planStyles: Record<string, React.CSSProperties>;
-  onPlanClick?: ((plan: CalendarEvent) => void) | undefined;
-  onPlanContextMenu?: ((plan: CalendarEvent, e: React.MouseEvent) => void) | undefined;
-  onPlanUpdate?: ((planId: string, updates: Partial<CalendarEvent>) => void) | undefined;
+  entryStyles: Record<string, React.CSSProperties>;
+  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  onEntryUpdate?: ((entryId: string, updates: Partial<CalendarEvent>) => void) | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   className?: string | undefined;
   dayIndex: number;
   displayDates?: Date[] | undefined;
-  disabledPlanId?: string | null | undefined;
+  disabledEntryId?: string | null | undefined;
   viewMode: '3day' | '5day';
 }
 
@@ -38,65 +38,65 @@ interface MultiDayContentProps {
 
 export function MultiDayContent({
   date,
-  plans,
+  entries,
   allEventsForOverlapCheck,
-  planStyles,
-  onPlanClick,
-  onPlanContextMenu,
-  onPlanUpdate,
+  entryStyles,
+  onEntryClick,
+  onEntryContextMenu,
+  onEntryUpdate,
   onTimeRangeSelect,
   className,
   dayIndex,
   displayDates,
-  disabledPlanId,
+  disabledEntryId,
   viewMode,
 }: MultiDayContentProps) {
-  const inspectorPlanId = useEntryInspectorStore((state) => state.entryId);
+  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
 
   const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
-  const globalDraggedPlan = useCalendarDragStore((s) => s.draggedPlan);
+  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedPlan);
   const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
   const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
 
-  // onPlanUpdate → onEventUpdate 変換
+  // onEntryUpdate → onEventUpdate 変換
   const handleEventUpdate = useCallback(
-    async (planId: string, updates: { startTime: Date; endTime: Date }) => {
-      if (!onPlanUpdate) return;
-      return await onPlanUpdate(planId, {
+    async (entryId: string, updates: { startTime: Date; endTime: Date }) => {
+      if (!onEntryUpdate) return;
+      return await onEntryUpdate(entryId, {
         startDate: updates.startTime,
         endDate: updates.endTime,
       });
     },
-    [onPlanUpdate],
+    [onEntryUpdate],
   );
 
   // 統合インタラクション
   const { state, handlers } = useInteraction({
     date,
-    events: plans,
+    events: entries,
     ...(allEventsForOverlapCheck ? { allEventsForOverlapCheck } : {}),
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
     onEventUpdate: handleEventUpdate,
-    ...(onPlanClick ? { onEventClick: onPlanClick } : {}),
-    ...(disabledPlanId != null ? { disabledPlanId } : {}),
+    ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
+    ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
   });
 
   const isActive = state.mode !== 'idle';
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
-  const handlePlanContextMenu = useCallback(
-    (plan: CalendarEvent, mouseEvent: React.MouseEvent) => {
+  const handleEntryContextMenu = useCallback(
+    (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
       if (isDragging || isResizing) return;
-      onPlanContextMenu?.(plan, mouseEvent);
+      onEntryContextMenu?.(entry, mouseEvent);
     },
-    [onPlanContextMenu, isDragging, isResizing],
+    [onEntryContextMenu, isDragging, isResizing],
   );
 
   const timeGrid = React.useMemo(
@@ -122,7 +122,7 @@ export function MultiDayContent({
         className="absolute inset-0"
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}
-        plans={allEventsForOverlapCheck ?? plans}
+        plans={allEventsForOverlapCheck ?? entries}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
           {timeGrid}
@@ -132,39 +132,39 @@ export function MultiDayContent({
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
         <PanelDragPreview dayIndex={dayIndex} />
 
-        {plans.map((plan) => {
-          const style = planStyles[plan.id];
+        {entries.map((entry) => {
+          const style = entryStyles[entry.id];
           if (!style) return null;
 
-          const planDragging = isDragging && (state as { entryId: string }).entryId === plan.id;
+          const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
           const isMovingToOtherDate =
             isGlobalDragging &&
-            globalDraggedPlan?.id === plan.id &&
+            globalDraggedEntry?.id === entry.id &&
             globalTargetDateIndex !== globalOriginalDateIndex;
 
-          const planResizing = isResizing && (state as { entryId: string }).entryId === plan.id;
+          const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
-          const adjustedStyle = getAdjustedStyle(style, plan.id, state);
+          const adjustedStyle = getAdjustedStyle(style, entry.id, state);
           const finalStyle = isMovingToOtherDate
             ? { ...adjustedStyle, opacity: 0.3 }
             : adjustedStyle;
 
           return (
             <div
-              key={plan.id}
+              key={entry.id}
               style={finalStyle}
               className="pointer-events-none absolute"
-              data-plan-block="true"
+              data-entry-block="true"
             >
               <div
                 className="pointer-events-auto absolute inset-0 rounded"
-                data-plan-block="true"
+                data-entry-block="true"
                 onMouseDown={(e) => {
                   if (e.button === 0) {
                     handlers.handlePointerDown(
-                      plan.id,
+                      entry.id,
                       e,
                       {
                         top: currentTop,
@@ -178,7 +178,7 @@ export function MultiDayContent({
                 }}
                 onTouchStart={(e) => {
                   handlers.handleTouchStart(
-                    plan.id,
+                    entry.id,
                     e,
                     {
                       top: currentTop,
@@ -191,18 +191,18 @@ export function MultiDayContent({
                 }}
               >
                 <EntryCard
-                  plan={plan}
+                  plan={entry}
                   position={{
                     top: 0,
                     left: 0,
                     width: 100,
                     height:
-                      planResizing && state.mode === 'resizing'
+                      entryResizing && state.mode === 'resizing'
                         ? state.snappedHeight
                         : currentHeight,
                   }}
                   onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
-                    handlePlanContextMenu(p, e)
+                    handleEntryContextMenu(p, e)
                   }
                   onResizeStart={(
                     p: CalendarEvent,
@@ -216,12 +216,12 @@ export function MultiDayContent({
                       height: currentHeight,
                     })
                   }
-                  isDragging={planDragging}
-                  isResizing={planResizing}
-                  isActive={isInspectorOpen && inspectorPlanId === plan.id}
-                  previewTime={getPreviewTime(plan.id, state)}
+                  isDragging={entryDragging}
+                  isResizing={entryResizing}
+                  isActive={isInspectorOpen && inspectorEntryId === entry.id}
+                  previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${planDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 />
               </div>
             </div>

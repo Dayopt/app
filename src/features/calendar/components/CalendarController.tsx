@@ -85,16 +85,16 @@ export function CalendarController({
   const commonProps = useMemo(
     () => ({
       dateRange: viewDateRange,
-      plans: filteredEvents,
-      allPlans: allCalendarEvents,
+      entries: filteredEvents,
+      allEntries: allCalendarEvents,
       currentDate,
       showWeekends,
-      disabledPlanId,
-      onPlanClick,
-      onPlanContextMenu: handleEventContextMenu,
-      onUpdatePlan,
-      onDeletePlan,
-      onRestorePlan,
+      disabledEntryId: disabledPlanId,
+      onEntryClick: onPlanClick,
+      onEntryContextMenu: handleEventContextMenu,
+      onUpdateEntry: onUpdatePlan,
+      onDeleteEntry: onDeletePlan,
+      onRestoreEntry: onRestorePlan,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -144,7 +144,7 @@ export function CalendarController({
 
       {contextMenuEvent && contextMenuPosition ? (
         <EventContextMenu
-          plan={contextMenuEvent}
+          entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
           onEdit={onEditPlan}

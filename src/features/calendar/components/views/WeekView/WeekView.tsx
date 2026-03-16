@@ -33,15 +33,15 @@ import type { WeekViewProps } from './WeekView.types';
  */
 export const WeekView = ({
   dateRange,
-  plans,
-  allPlans,
+  entries,
+  allEntries,
   showWeekends = true,
   weekStartsOn: weekStartsOnProp,
   className,
-  disabledPlanId,
-  onPlanClick,
-  onPlanContextMenu,
-  onUpdatePlan,
+  disabledEntryId,
+  onEntryClick,
+  onEntryContextMenu,
+  onUpdateEntry,
   onTimeRangeSelect,
 }: WeekViewProps) => {
   const weekStartsOnSetting = useCalendarSettingsStore((s) => s.weekStartsOn);
@@ -51,7 +51,7 @@ export const WeekView = ({
   // WeekView専用ロジック
   const { weekDates, eventsByDate, todayIndex } = useWeekView({
     startDate: dateRange.start,
-    events: plans,
+    events: entries,
     weekStartsOn,
   });
 
@@ -64,14 +64,14 @@ export const WeekView = ({
     <CalendarViewAnimation viewType="week">
       <WeekGrid
         weekDates={displayDates}
-        events={plans}
-        allPlans={allPlans}
+        events={entries}
+        allEntries={allEntries}
         eventsByDate={eventsByDate}
         todayIndex={todayIndex}
-        disabledPlanId={disabledPlanId}
-        onEventClick={onPlanClick}
-        onEventContextMenu={onPlanContextMenu}
-        onEventUpdate={onUpdatePlan}
+        disabledEntryId={disabledEntryId}
+        onEventClick={onEntryClick}
+        onEventContextMenu={onEntryContextMenu}
+        onEventUpdate={onUpdateEntry}
         onTimeRangeSelect={onTimeRangeSelect}
         className={className}
       />

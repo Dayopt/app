@@ -16,8 +16,8 @@ import {
 } from '@/shell/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { useEntryClipboardStore } from '../stores/useEntryClipboardStore';
-import type { CalendarEvent } from '../types/calendar.types';
+import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
+import type { CalendarEvent } from '../../types/calendar.types';
 
 export function usePlanContextActions() {
   const t = useTranslations();

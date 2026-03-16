@@ -2,20 +2,24 @@ import { describe, expect, it } from 'vitest';
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-import type { TimedPlan } from '../types/plan.types';
+import type { TimedEntry } from '../types/entry.types';
 
-import { computeActualTimeDiffOverlay, detectOverlapGroups, plansOverlap } from './planPositioning';
+import {
+  computeActualTimeDiffOverlay,
+  detectOverlapGroups,
+  entriesOverlap,
+} from './entryPositioning';
 
-describe('planPositioning', () => {
-  const createTimedPlan = (
+describe('entryPositioning', () => {
+  const createTimedEntry = (
     id: string,
     startHour: number,
     startMinute: number,
     endHour: number,
     endMinute: number,
-  ): TimedPlan => ({
+  ): TimedEntry => ({
     id,
-    title: `Plan ${id}`,
+    title: `Entry ${id}`,
     start: new Date(2025, 0, 15, startHour, startMinute),
     end: new Date(2025, 0, 15, endHour, endMinute),
     startDate: new Date(2025, 0, 15, startHour, startMinute),
@@ -33,59 +37,59 @@ describe('planPositioning', () => {
     isMultiDay: false,
   });
 
-  describe('plansOverlap', () => {
-    it('完全に重複するプランを検出する', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 11, 0); // 10:00-11:00
-      const plan2 = createTimedPlan('2', 10, 30, 11, 30); // 10:30-11:30
+  describe('entriesOverlap', () => {
+    it('完全に重複するエントリを検出する', () => {
+      const entry1 = createTimedEntry('1', 10, 0, 11, 0); // 10:00-11:00
+      const entry2 = createTimedEntry('2', 10, 30, 11, 30); // 10:30-11:30
 
-      expect(plansOverlap(plan1, plan2)).toBe(true);
+      expect(entriesOverlap(entry1, entry2)).toBe(true);
     });
 
-    it('部分的に重複するプランを検出する', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 11, 0); // 10:00-11:00
-      const plan2 = createTimedPlan('2', 10, 45, 12, 0); // 10:45-12:00
+    it('部分的に重複するエントリを検出する', () => {
+      const entry1 = createTimedEntry('1', 10, 0, 11, 0); // 10:00-11:00
+      const entry2 = createTimedEntry('2', 10, 45, 12, 0); // 10:45-12:00
 
-      expect(plansOverlap(plan1, plan2)).toBe(true);
+      expect(entriesOverlap(entry1, entry2)).toBe(true);
     });
 
-    it('完全に含まれるプランを検出する', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 12, 0); // 10:00-12:00
-      const plan2 = createTimedPlan('2', 10, 30, 11, 0); // 10:30-11:00
+    it('完全に含まれるエントリを検出する', () => {
+      const entry1 = createTimedEntry('1', 10, 0, 12, 0); // 10:00-12:00
+      const entry2 = createTimedEntry('2', 10, 30, 11, 0); // 10:30-11:00
 
-      expect(plansOverlap(plan1, plan2)).toBe(true);
+      expect(entriesOverlap(entry1, entry2)).toBe(true);
     });
 
-    it('重複しないプランを判定する（連続）', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 11, 0); // 10:00-11:00
-      const plan2 = createTimedPlan('2', 11, 0, 12, 0); // 11:00-12:00
+    it('重複しないエントリを判定する（連続）', () => {
+      const entry1 = createTimedEntry('1', 10, 0, 11, 0); // 10:00-11:00
+      const entry2 = createTimedEntry('2', 11, 0, 12, 0); // 11:00-12:00
 
-      expect(plansOverlap(plan1, plan2)).toBe(false);
+      expect(entriesOverlap(entry1, entry2)).toBe(false);
     });
 
-    it('重複しないプランを判定する（離れている）', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 11, 0); // 10:00-11:00
-      const plan2 = createTimedPlan('2', 12, 0, 13, 0); // 12:00-13:00
+    it('重複しないエントリを判定する（離れている）', () => {
+      const entry1 = createTimedEntry('1', 10, 0, 11, 0); // 10:00-11:00
+      const entry2 = createTimedEntry('2', 12, 0, 13, 0); // 12:00-13:00
 
-      expect(plansOverlap(plan1, plan2)).toBe(false);
+      expect(entriesOverlap(entry1, entry2)).toBe(false);
     });
 
     it('逆順でも同じ結果が得られる', () => {
-      const plan1 = createTimedPlan('1', 10, 0, 11, 0);
-      const plan2 = createTimedPlan('2', 10, 30, 11, 30);
+      const entry1 = createTimedEntry('1', 10, 0, 11, 0);
+      const entry2 = createTimedEntry('2', 10, 30, 11, 30);
 
-      expect(plansOverlap(plan1, plan2)).toBe(plansOverlap(plan2, plan1));
+      expect(entriesOverlap(entry1, entry2)).toBe(entriesOverlap(entry2, entry1));
     });
   });
 
   describe('detectOverlapGroups', () => {
-    it('重複しないプランは別々のグループになる', () => {
-      const plans: TimedPlan[] = [
-        createTimedPlan('1', 10, 0, 11, 0), // 10:00-11:00
-        createTimedPlan('2', 11, 0, 12, 0), // 11:00-12:00
-        createTimedPlan('3', 12, 0, 13, 0), // 12:00-13:00
+    it('重複しないエントリは別々のグループになる', () => {
+      const entries: TimedEntry[] = [
+        createTimedEntry('1', 10, 0, 11, 0), // 10:00-11:00
+        createTimedEntry('2', 11, 0, 12, 0), // 11:00-12:00
+        createTimedEntry('3', 12, 0, 13, 0), // 12:00-13:00
       ];
 
-      const groups = detectOverlapGroups(plans);
+      const groups = detectOverlapGroups(entries);
 
       expect(groups).toHaveLength(3);
       expect(groups[0]).toHaveLength(1);
@@ -93,34 +97,34 @@ describe('planPositioning', () => {
       expect(groups[2]).toHaveLength(1);
     });
 
-    it('重複するプランは同じグループになる', () => {
-      const plans: TimedPlan[] = [
-        createTimedPlan('1', 10, 0, 11, 0), // 10:00-11:00
-        createTimedPlan('2', 10, 30, 11, 30), // 10:30-11:30（plan1と重複）
-        createTimedPlan('3', 11, 0, 12, 0), // 11:00-12:00（plan2と重複）
+    it('重複するエントリは同じグループになる', () => {
+      const entries: TimedEntry[] = [
+        createTimedEntry('1', 10, 0, 11, 0), // 10:00-11:00
+        createTimedEntry('2', 10, 30, 11, 30), // 10:30-11:30（entry1と重複）
+        createTimedEntry('3', 11, 0, 12, 0), // 11:00-12:00（entry2と重複）
       ];
 
-      const groups = detectOverlapGroups(plans);
+      const groups = detectOverlapGroups(entries);
 
       expect(groups).toHaveLength(1);
       expect(groups[0]).toHaveLength(3);
     });
 
     it('複数のグループが正しく検出される', () => {
-      const plans: TimedPlan[] = [
-        createTimedPlan('1', 10, 0, 11, 0), // Group 1
-        createTimedPlan('2', 10, 30, 11, 30), // Group 1
-        createTimedPlan('3', 12, 0, 13, 0), // Group 2
-        createTimedPlan('4', 12, 30, 13, 30), // Group 2
-        createTimedPlan('5', 14, 0, 15, 0), // Group 3
+      const entries: TimedEntry[] = [
+        createTimedEntry('1', 10, 0, 11, 0), // Group 1
+        createTimedEntry('2', 10, 30, 11, 30), // Group 1
+        createTimedEntry('3', 12, 0, 13, 0), // Group 2
+        createTimedEntry('4', 12, 30, 13, 30), // Group 2
+        createTimedEntry('5', 14, 0, 15, 0), // Group 3
       ];
 
-      const groups = detectOverlapGroups(plans);
+      const groups = detectOverlapGroups(entries);
 
       expect(groups).toHaveLength(3);
-      expect(groups[0]).toHaveLength(2); // plan1, plan2
-      expect(groups[1]).toHaveLength(2); // plan3, plan4
-      expect(groups[2]).toHaveLength(1); // plan5
+      expect(groups[0]).toHaveLength(2);
+      expect(groups[1]).toHaveLength(2);
+      expect(groups[2]).toHaveLength(1);
     });
 
     it('空配列の場合は空配列を返す', () => {
@@ -128,23 +132,23 @@ describe('planPositioning', () => {
       expect(groups).toHaveLength(0);
     });
 
-    it('単一プランの場合は1グループを返す', () => {
-      const plans: TimedPlan[] = [createTimedPlan('1', 10, 0, 11, 0)];
+    it('単一エントリの場合は1グループを返す', () => {
+      const entries: TimedEntry[] = [createTimedEntry('1', 10, 0, 11, 0)];
 
-      const groups = detectOverlapGroups(plans);
+      const groups = detectOverlapGroups(entries);
 
       expect(groups).toHaveLength(1);
       expect(groups[0]).toHaveLength(1);
     });
 
     it('開始時刻が異なる場合でもソートされる', () => {
-      const plans: TimedPlan[] = [
-        createTimedPlan('3', 12, 0, 13, 0),
-        createTimedPlan('1', 10, 0, 11, 0),
-        createTimedPlan('2', 11, 0, 12, 0),
+      const entries: TimedEntry[] = [
+        createTimedEntry('3', 12, 0, 13, 0),
+        createTimedEntry('1', 10, 0, 11, 0),
+        createTimedEntry('2', 11, 0, 12, 0),
       ];
 
-      const groups = detectOverlapGroups(plans);
+      const groups = detectOverlapGroups(entries);
 
       // ソートされていることを確認（グループ分けが正しいかチェック）
       expect(groups).toHaveLength(3);
@@ -176,8 +180,8 @@ describe('planPositioning', () => {
     });
 
     it('actual times がない場合は none を返す', () => {
-      const plan = createCalendarEvent();
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const entry = createCalendarEvent();
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('none');
@@ -186,35 +190,35 @@ describe('planPositioning', () => {
     });
 
     it('entryState が past でない場合は none を返す', () => {
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         entryState: 'upcoming',
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('none');
     });
 
     it('origin が unplanned の場合は none を返す', () => {
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         origin: 'unplanned',
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('none');
     });
 
     it('予定通りの場合は none を返す', () => {
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('none');
@@ -223,39 +227,36 @@ describe('planPositioning', () => {
     });
 
     it('遅刻（実績開始が遅い）→ 上部 unexecuted', () => {
-      // 予定 10:00-11:00、実績 10:15-11:00
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 15),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('unexecuted');
-      expect(result.topHeight).toBe((15 * HOUR_HEIGHT) / 60); // 15min
+      expect(result.topHeight).toBe((15 * HOUR_HEIGHT) / 60);
       expect(result.bottomKind).toBe('none');
       expect(result.topShift).toBe(0);
     });
 
     it('早く終了 → 下部 unexecuted', () => {
-      // 予定 10:00-11:00、実績 10:00-10:45
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 10, 45),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('unexecuted');
-      expect(result.bottomHeight).toBe((15 * HOUR_HEIGHT) / 60); // 15min
+      expect(result.bottomHeight).toBe((15 * HOUR_HEIGHT) / 60);
     });
 
     it('早く始めた → 上部 overtime + topShift', () => {
-      // 予定 10:00-11:00、実績 9:45-11:00
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 9, 45),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('overtime');
       expect(result.topHeight).toBe((15 * HOUR_HEIGHT) / 60);
@@ -264,12 +265,11 @@ describe('planPositioning', () => {
     });
 
     it('超過 → 下部 overtime + heightDelta', () => {
-      // 予定 10:00-11:00、実績 10:00-11:30
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 11, 30),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('overtime');
@@ -278,12 +278,11 @@ describe('planPositioning', () => {
     });
 
     it('遅刻 + 早く終了 → 上下とも unexecuted', () => {
-      // 予定 10:00-11:00、実績 10:10-10:50
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 10),
         actualEndDate: new Date(2025, 0, 15, 10, 50),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('unexecuted');
       expect(result.topHeight).toBe((10 * HOUR_HEIGHT) / 60);
@@ -294,12 +293,11 @@ describe('planPositioning', () => {
     });
 
     it('早く始めた + 超過 → 上下とも overtime', () => {
-      // 予定 10:00-11:00、実績 9:50-11:20
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 9, 50),
         actualEndDate: new Date(2025, 0, 15, 11, 20),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('overtime');
       expect(result.topHeight).toBe((10 * HOUR_HEIGHT) / 60);
@@ -310,12 +308,11 @@ describe('planPositioning', () => {
     });
 
     it('actualEndDate のみ設定（actualStartDate null）→ 下部のみ unexecuted', () => {
-      // 予定 10:00-11:00、実績 ?-10:45（開始は予定通り扱い）
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: null,
         actualEndDate: new Date(2025, 0, 15, 10, 45),
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('none');
       expect(result.bottomKind).toBe('unexecuted');
@@ -323,12 +320,11 @@ describe('planPositioning', () => {
     });
 
     it('actualStartDate のみ設定（actualEndDate null）→ 上部のみ unexecuted', () => {
-      // 予定 10:00-11:00、実績 10:15-?（終了は予定通り扱い）
-      const plan = createCalendarEvent({
+      const entry = createCalendarEvent({
         actualStartDate: new Date(2025, 0, 15, 10, 15),
         actualEndDate: null,
       });
-      const result = computeActualTimeDiffOverlay(plan, HOUR_HEIGHT);
+      const result = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
 
       expect(result.topKind).toBe('unexecuted');
       expect(result.topHeight).toBe((15 * HOUR_HEIGHT) / 60);

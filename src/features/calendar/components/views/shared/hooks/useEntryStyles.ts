@@ -1,17 +1,17 @@
 import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
 
-import { computePlanStyles } from '../../../../engine/grid';
+import { computeEntryStyles } from '../../../../engine/grid';
 
-import type { PlanPosition } from './useViewPlans';
+import type { EntryPosition } from './useViewEntries';
 
 /**
- * プラン位置情報からCSSスタイルを計算するフック
- * engine/grid.ts の computePlanStyles の React ラッパー
+ * エントリ位置情報からCSSスタイルを計算するフック
+ * engine/grid.ts の computeEntryStyles の React ラッパー
  */
-export function usePlanStyles(planPositions: PlanPosition[]): Record<string, CSSProperties> {
+export function useEntryStyles(entryPositions: EntryPosition[]): Record<string, CSSProperties> {
   return useMemo((): Record<string, CSSProperties> => {
-    const inputs = planPositions
+    const inputs = entryPositions
       .filter((p) => p.plan?.id)
       .map(({ plan, top, height, left, width, zIndex, opacity }) => ({
         id: plan.id,
@@ -23,6 +23,6 @@ export function usePlanStyles(planPositions: PlanPosition[]): Record<string, CSS
         ...(opacity != null ? { opacity } : {}),
       }));
 
-    return computePlanStyles(inputs);
-  }, [planPositions]);
+    return computeEntryStyles(inputs);
+  }, [entryPositions]);
 }

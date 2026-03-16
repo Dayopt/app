@@ -240,11 +240,11 @@ export function generateTimeSlots(
 }
 
 // ========================================
-// Plan Style Computation
+// Entry Style Computation
 // ========================================
 
-/** プラン位置情報 */
-export interface PlanPositionInput {
+/** エントリ位置情報 */
+export interface EntryPositionInput {
   id: string;
   top: number;
   height: number;
@@ -254,8 +254,8 @@ export interface PlanPositionInput {
   opacity?: number;
 }
 
-/** プラン位置情報からCSSスタイルマップを生成（純粋関数） */
-export function computePlanStyles(positions: PlanPositionInput[]): Record<
+/** エントリ位置情報からCSSスタイルマップを生成（純粋関数） */
+export function computeEntryStyles(positions: EntryPositionInput[]): Record<
   string,
   {
     position: 'absolute';

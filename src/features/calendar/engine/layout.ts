@@ -2,10 +2,10 @@
  * レイアウト計算エンジン — React/DOM依存ゼロの純粋関数
  *
  * Googleカレンダー風のsweep-lineアルゴリズムによる重複検出・カラム割り当て、
- * プランカードの位置計算、予定vs記録の差分オーバーレイ計算を提供。
+ * エントリカードの位置計算、予定vs記録の差分オーバーレイ計算を提供。
  */
 
-import type { PlanColumn, TimedPlan } from '../components/views/shared/types/plan.types';
+import type { EntryColumn, TimedEntry } from '../components/views/shared/types/entry.types';
 
 import { MIN_EVENT_HEIGHT } from './grid';
 
@@ -19,8 +19,8 @@ export type { ActualTimeDiffOverlay } from '@/features/entry';
 // ========================================
 
 /** 重複レイアウト情報 */
-export interface PlanLayout {
-  plan: TimedPlan;
+export interface EntryLayout {
+  entry: TimedEntry;
   /** 左から何番目のカラム（0始まり） */
   column: number;
   /** その時間帯の総カラム数 */
@@ -33,7 +33,7 @@ export interface PlanLayout {
 
 /** 重複グループ */
 interface OverlapGroup {
-  plans: TimedPlan[];
+  entries: TimedEntry[];
   startTime: Date;
   endTime: Date;
 }
@@ -43,30 +43,30 @@ interface OverlapGroup {
 // ========================================
 
 /**
- * プランの重複レイアウトを一括計算（メインエントリポイント）
+ * エントリの重複レイアウトを一括計算（メインエントリポイント）
  *
  * Googleカレンダー風の横並び配置:
  * 1. Planned を左側（column: 0）に配置
  * 2. Unplanned を右側に配置
  */
-export function calculatePlanLayouts(plans: TimedPlan[]): PlanLayout[] {
-  if (plans.length === 0) return [];
+export function calculateEntryLayouts(entries: TimedEntry[]): EntryLayout[] {
+  if (entries.length === 0) return [];
 
-  // Step 1: プランを開始時間でソート
-  const sortedPlans = [...plans].sort((a, b) => {
+  // Step 1: エントリを開始時間でソート
+  const sortedEntries = [...entries].sort((a, b) => {
     const aStart = new Date(a.start);
     const bStart = new Date(b.start);
     return aStart.getTime() - bStart.getTime();
   });
 
   // Step 2: 重複グループを検出
-  const overlapGroups = findOverlapGroups(sortedPlans);
+  const overlapGroups = findOverlapGroups(sortedEntries);
 
   // Step 3: 各グループ内でレイアウトを計算
-  const layouts: PlanLayout[] = [];
+  const layouts: EntryLayout[] = [];
 
   overlapGroups.forEach((group) => {
-    const groupLayouts = calculateGroupLayout(group.plans);
+    const groupLayouts = calculateGroupLayout(group.entries);
     layouts.push(...groupLayouts);
   });
 
@@ -74,38 +74,38 @@ export function calculatePlanLayouts(plans: TimedPlan[]): PlanLayout[] {
 }
 
 /**
- * 重複するプラングループを検出（sweep-line）
+ * 重複するエントリグループを検出（sweep-line）
  */
-export function findOverlapGroups(plans: TimedPlan[]): OverlapGroup[] {
+export function findOverlapGroups(entries: TimedEntry[]): OverlapGroup[] {
   const groups: OverlapGroup[] = [];
-  let currentGroup: TimedPlan[] = [];
+  let currentGroup: TimedEntry[] = [];
   let groupEndTime: Date | null = null;
 
-  plans.forEach((plan) => {
-    const planStart = new Date(plan.start);
-    const planEnd = new Date(plan.end);
+  entries.forEach((entry) => {
+    const entryStart = new Date(entry.start);
+    const entryEnd = new Date(entry.end);
 
-    if (!groupEndTime || planStart >= groupEndTime) {
+    if (!groupEndTime || entryStart >= groupEndTime) {
       if (currentGroup.length > 0) {
         groups.push({
-          plans: currentGroup,
+          entries: currentGroup,
           startTime: new Date(currentGroup[0]!.start),
           endTime: groupEndTime!,
         });
       }
-      currentGroup = [plan];
-      groupEndTime = planEnd;
+      currentGroup = [entry];
+      groupEndTime = entryEnd;
     } else {
-      currentGroup.push(plan);
-      if (planEnd > groupEndTime) {
-        groupEndTime = planEnd;
+      currentGroup.push(entry);
+      if (entryEnd > groupEndTime) {
+        groupEndTime = entryEnd;
       }
     }
   });
 
   if (currentGroup.length > 0 && groupEndTime) {
     groups.push({
-      plans: currentGroup,
+      entries: currentGroup,
       startTime: new Date(currentGroup[0]!.start),
       endTime: groupEndTime,
     });
@@ -121,40 +121,40 @@ export function findOverlapGroups(plans: TimedPlan[]): OverlapGroup[] {
  * 1. Plan（type !== 'record'）を左側（column: 0）に配置
  * 2. Record（type === 'record'）を右側に配置
  */
-export function calculateGroupLayout(plans: TimedPlan[]): PlanLayout[] {
-  const layouts: PlanLayout[] = [];
+export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
+  const layouts: EntryLayout[] = [];
 
-  // 各プランの「競合リスト」を作成
+  // 各エントリの「競合リスト」を作成
   const conflicts = new Map<string, Set<string>>();
 
-  plans.forEach((plan1) => {
+  entries.forEach((entry1) => {
     const conflictSet = new Set<string>();
-    plans.forEach((plan2) => {
-      if (plan1.id !== plan2.id && isOverlapping(plan1, plan2)) {
-        conflictSet.add(plan2.id);
+    entries.forEach((entry2) => {
+      if (entry1.id !== entry2.id && isOverlapping(entry1, entry2)) {
+        conflictSet.add(entry2.id);
       }
     });
-    conflicts.set(plan1.id, conflictSet);
+    conflicts.set(entry1.id, conflictSet);
   });
 
   // 最大同時重複数を計算
-  const maxConcurrent = calculateMaxConcurrent(plans);
+  const maxConcurrent = calculateMaxConcurrent(entries);
 
-  // 各プランにカラムを割り当て
+  // 各エントリにカラムを割り当て
   const assignments = new Map<string, number>();
 
   // Planned を先に処理してcolumn: 0を優先的に割り当て、Unplanned を後に処理
-  const sortedForAssignment = [...plans].sort((a, b) => {
+  const sortedForAssignment = [...entries].sort((a, b) => {
     const aIsUnplanned = a.origin === 'unplanned';
     const bIsUnplanned = b.origin === 'unplanned';
     if (aIsUnplanned !== bIsUnplanned) return aIsUnplanned ? 1 : -1;
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
 
-  sortedForAssignment.forEach((plan) => {
+  sortedForAssignment.forEach((entry) => {
     const usedColumns = new Set<number>();
 
-    conflicts.get(plan.id)?.forEach((conflictId) => {
+    conflicts.get(entry.id)?.forEach((conflictId) => {
       if (assignments.has(conflictId)) {
         usedColumns.add(assignments.get(conflictId)!);
       }
@@ -165,29 +165,29 @@ export function calculateGroupLayout(plans: TimedPlan[]): PlanLayout[] {
       column++;
     }
 
-    assignments.set(plan.id, column);
+    assignments.set(entry.id, column);
   });
 
   // レイアウト情報を生成
-  plans.forEach((plan) => {
-    const column = assignments.get(plan.id)!;
+  entries.forEach((entry) => {
+    const column = assignments.get(entry.id)!;
     const width = 100 / maxConcurrent;
     const left = width * column;
 
-    layouts.push({ plan, column, totalColumns: maxConcurrent, width, left });
+    layouts.push({ entry, column, totalColumns: maxConcurrent, width, left });
   });
 
   return layouts;
 }
 
 /**
- * 2つのプランが重複しているかを判定
+ * 2つのエントリが重複しているかを判定
  */
-export function isOverlapping(plan1: TimedPlan, plan2: TimedPlan): boolean {
-  const start1 = new Date(plan1.start);
-  const end1 = new Date(plan1.end);
-  const start2 = new Date(plan2.start);
-  const end2 = new Date(plan2.end);
+export function isOverlapping(entry1: TimedEntry, entry2: TimedEntry): boolean {
+  const start1 = new Date(entry1.start);
+  const end1 = new Date(entry1.end);
+  const start2 = new Date(entry2.start);
+  const end2 = new Date(entry2.end);
 
   return start1 < end2 && start2 < end1;
 }
@@ -195,14 +195,14 @@ export function isOverlapping(plan1: TimedPlan, plan2: TimedPlan): boolean {
 /**
  * 最大同時重複数を計算（sweep-line）
  */
-export function calculateMaxConcurrent(plans: TimedPlan[]): number {
-  const timePoints: { time: Date; type: 'start' | 'end'; planId: string }[] = [];
+export function calculateMaxConcurrent(entries: TimedEntry[]): number {
+  const timePoints: { time: Date; type: 'start' | 'end'; entryId: string }[] = [];
 
-  plans.forEach((plan) => {
-    const start = new Date(plan.start);
-    const end = new Date(plan.end);
-    timePoints.push({ time: start, type: 'start', planId: plan.id });
-    timePoints.push({ time: end, type: 'end', planId: plan.id });
+  entries.forEach((entry) => {
+    const start = new Date(entry.start);
+    const end = new Date(entry.end);
+    timePoints.push({ time: start, type: 'start', entryId: entry.id });
+    timePoints.push({ time: end, type: 'end', entryId: entry.id });
   });
 
   timePoints.sort((a, b) => {
@@ -227,36 +227,36 @@ export function calculateMaxConcurrent(plans: TimedPlan[]): number {
 }
 
 // ========================================
-// プランカード配置
+// エントリカード配置
 // ========================================
 
 /**
- * プランが時間的に重複しているか判定
+ * エントリが時間的に重複しているか判定
  */
-export function plansOverlap(plan1: TimedPlan, plan2: TimedPlan): boolean {
-  return !(plan1.end <= plan2.start || plan2.end <= plan1.start);
+export function entriesOverlap(entry1: TimedEntry, entry2: TimedEntry): boolean {
+  return !(entry1.end <= entry2.start || entry2.end <= entry1.start);
 }
 
 /**
- * プラングループを検出（重複するプランをグループ化）
+ * エントリグループを検出（重複するエントリをグループ化）
  */
-export function detectOverlapGroups(plans: TimedPlan[]): TimedPlan[][] {
-  if (plans.length === 0) return [];
+export function detectOverlapGroups(entries: TimedEntry[]): TimedEntry[][] {
+  if (entries.length === 0) return [];
 
-  const sortedPlans = [...plans].sort((a, b) => a.start.getTime() - b.start.getTime());
-  const groups: TimedPlan[][] = [];
+  const sortedEntries = [...entries].sort((a, b) => a.start.getTime() - b.start.getTime());
+  const groups: TimedEntry[][] = [];
 
-  for (const plan of sortedPlans) {
+  for (const entry of sortedEntries) {
     let added = false;
     for (const group of groups) {
-      if (group.some((p) => plansOverlap(p, plan))) {
-        group.push(plan);
+      if (group.some((p) => entriesOverlap(p, entry))) {
+        group.push(entry);
         added = true;
         break;
       }
     }
     if (!added) {
-      groups.push([plan]);
+      groups.push([entry]);
     }
   }
 
@@ -264,15 +264,15 @@ export function detectOverlapGroups(plans: TimedPlan[]): TimedPlan[][] {
 }
 
 /**
- * プランの表示位置を計算
+ * エントリの表示位置を計算
  */
-export function calculatePlanPosition(
-  plan: TimedPlan,
-  column: PlanColumn,
+export function calculateEntryPosition(
+  entry: TimedEntry,
+  column: EntryColumn,
   hourHeight: number = 60,
 ): { top: number; height: number; left: number; width: number } {
-  const startMinutes = plan.start.getHours() * 60 + plan.start.getMinutes();
-  const endMinutes = plan.end.getHours() * 60 + plan.end.getMinutes();
+  const startMinutes = entry.start.getHours() * 60 + entry.start.getMinutes();
+  const endMinutes = entry.end.getHours() * 60 + entry.end.getMinutes();
 
   const top = (startMinutes * hourHeight) / 60;
   const height = Math.max(((endMinutes - startMinutes) * hourHeight) / 60, MIN_EVENT_HEIGHT);
@@ -284,15 +284,15 @@ export function calculatePlanPosition(
 }
 
 /**
- * プランの表示位置を計算（折りたたみ考慮版）
+ * エントリの表示位置を計算（折りたたみ考慮版）
  */
-export function calculatePlanPositionWithCollapse(
-  plan: TimedPlan,
-  column: PlanColumn,
+export function calculateEntryPositionWithCollapse(
+  entry: TimedEntry,
+  column: EntryColumn,
   timeToPixelsFn: (time: Date) => number,
 ): { top: number; height: number; left: number; width: number } {
-  const top = timeToPixelsFn(plan.start);
-  const bottom = timeToPixelsFn(plan.end);
+  const top = timeToPixelsFn(entry.start);
+  const bottom = timeToPixelsFn(entry.end);
   const height = Math.max(bottom - top, MIN_EVENT_HEIGHT);
 
   const width = 100 / column.totalColumns;
@@ -302,10 +302,10 @@ export function calculatePlanPositionWithCollapse(
 }
 
 /**
- * 時間指定プランをソート（開始時刻順）
+ * 時間指定エントリをソート（開始時刻順）
  */
-export function sortTimedPlans(plans: TimedPlan[]): TimedPlan[] {
-  return [...plans].sort((a, b) => {
+export function sortTimedEntries(entries: TimedEntry[]): TimedEntry[] {
+  return [...entries].sort((a, b) => {
     const timeDiff = a.start.getTime() - b.start.getTime();
     if (timeDiff !== 0) return timeDiff;
     return a.end.getTime() - b.end.getTime();
@@ -313,16 +313,16 @@ export function sortTimedPlans(plans: TimedPlan[]): TimedPlan[] {
 }
 
 /**
- * 特定の日のプランをフィルタリング
+ * 特定の日のエントリをフィルタリング
  */
-export function filterPlansByDate(plans: TimedPlan[], date: Date): TimedPlan[] {
+export function filterEntriesByDate(entries: TimedEntry[], date: Date): TimedEntry[] {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
 
   const dayEnd = new Date(date);
   dayEnd.setHours(23, 59, 59, 999);
 
-  return plans.filter((plan) => {
-    return plan.start < dayEnd && plan.end > dayStart;
+  return entries.filter((entry) => {
+    return entry.start < dayEnd && entry.end > dayStart;
   });
 }

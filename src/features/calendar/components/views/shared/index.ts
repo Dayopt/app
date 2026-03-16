@@ -33,25 +33,25 @@ export { DateDisplay, DateDisplayRow, DayDisplay } from './DateDisplay';
 
 // ===== カスタムフック =====
 export { useCurrentTime } from './hooks/useCurrentTime';
+export { useEntryLayoutCalculator } from './hooks/useEntryLayoutCalculator';
+export type { EntryLayout } from './hooks/useEntryLayoutCalculator';
+export { useEntryPosition, usePositionedEntries } from './hooks/useEntryPosition';
+export { useEntryStyles } from './hooks/useEntryStyles';
 export { useIsToday } from './hooks/useIsToday';
-export { usePlanLayoutCalculator } from './hooks/usePlanLayoutCalculator';
-export type { PlanLayout } from './hooks/usePlanLayoutCalculator';
-export { usePlanPosition, usePositionedPlans } from './hooks/usePlanPosition';
-export { usePlanStyles } from './hooks/usePlanStyles';
 export { useResponsiveHourHeight } from './hooks/useResponsiveHourHeight';
 export { useTimeGrid } from './hooks/useTimeGrid';
 export { useTimeSlots } from './hooks/useTimeSlots';
-export { useViewPlans } from './hooks/useViewPlans';
-export type { PlanPosition } from './hooks/useViewPlans';
+export { useViewEntries } from './hooks/useViewEntries';
+export type { EntryPosition } from './hooks/useViewEntries';
 
 // Phase 3: 統合カスタムフック
 export { useCurrentPeriod } from './hooks/useCurrentPeriod';
 export type { UseCurrentPeriodOptions, UseCurrentPeriodReturn } from './hooks/useCurrentPeriod';
 export { useDateUtilities } from './hooks/useDateUtilities';
 export type { UseDateUtilitiesOptions, UseDateUtilitiesReturn } from './hooks/useDateUtilities';
-export { useMultiDayPlanPositions } from './hooks/useMultiDayPlanPositions';
-export { usePlansByDate } from './hooks/usePlansByDate';
-export type { UsePlansByDateOptions, UsePlansByDateReturn } from './hooks/usePlansByDate';
+export { useEntriesByDate } from './hooks/useEntriesByDate';
+export type { UseEntriesByDateOptions, UseEntriesByDateReturn } from './hooks/useEntriesByDate';
+export { useMultiDayEntryPositions } from './hooks/useMultiDayEntryPositions';
 
 // ScrollableCalendarLayout関連フック
 export { useCurrentTimeLine } from './hooks/useCurrentTimeLine';
@@ -68,7 +68,7 @@ export {
 } from './components/ScrollableCalendarLayout';
 
 // 型定義のエクスポート
-export type { PositionedPlan } from './hooks/usePlanPosition';
+export type { PositionedEntry } from './hooks/useEntryPosition';
 
 // ===== ユーティリティ関数 =====
 // @/lib/date re-exports（使用中のもののみ）
@@ -77,8 +77,8 @@ export { getDateKey } from '@/lib/date';
 // dateHelpers（カレンダー固有）
 export { formatDate, getTodayIndex, isValidEvent } from './utils/dateHelpers';
 
-// planSorting（使用中のもののみ）
-export { sortEventsByDateKeys } from './utils/planSorting';
+// entrySorting（使用中のもののみ）
+export { sortEventsByDateKeys } from './utils/entrySorting';
 
 // ===== 定数 =====
 export {
@@ -92,7 +92,7 @@ export {
 
 // ===== 型定義 =====
 export type * from './types/base.types';
+export type * from './types/entry.types';
 export type * from './types/grid.types';
 export type { TimeSlot } from './types/grid.types';
-export type * from './types/plan.types';
 export type * from './types/view.types';

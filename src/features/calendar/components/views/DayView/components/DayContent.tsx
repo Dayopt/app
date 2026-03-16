@@ -25,14 +25,14 @@ export const DayContent = ({
   date,
   events,
   eventStyles,
-  onPlanClick,
-  onPlanContextMenu,
+  onEntryClick,
+  onEntryContextMenu,
   onEventUpdate,
   onTimeRangeSelect,
-  disabledPlanId,
+  disabledEntryId,
   className,
 }: DayContentProps) => {
-  const inspectorPlanId = useEntryInspectorStore((state) => state.entryId);
+  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
 
   const HOUR_HEIGHT = useResponsiveHourHeight();
@@ -44,21 +44,21 @@ export const DayContent = ({
     events: events ?? [],
     hourHeight: HOUR_HEIGHT,
     ...(onEventUpdate ? { onEventUpdate } : {}),
-    ...(onPlanClick ? { onEventClick: onPlanClick } : {}),
-    ...(disabledPlanId != null ? { disabledPlanId } : {}),
+    ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
+    ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
   });
 
   const isActive = state.mode !== 'idle';
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
-  // プラン右クリックハンドラー
-  const handlePlanContextMenu = useCallback(
-    (plan: CalendarEvent, mouseEvent: React.MouseEvent) => {
+  // エントリ右クリックハンドラー
+  const handleEntryContextMenu = useCallback(
+    (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
       if (isDragging || isResizing) return;
-      onPlanContextMenu?.(plan, mouseEvent);
+      onEntryContextMenu?.(entry, mouseEvent);
     },
-    [onPlanContextMenu, isDragging, isResizing],
+    [onEntryContextMenu, isDragging, isResizing],
   );
 
   // 時間グリッド
@@ -95,34 +95,34 @@ export const DayContent = ({
         </div>
       </CalendarDragSelection>
 
-      {/* プラン表示エリア */}
+      {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
         <PanelDragPreview dayIndex={0} />
 
-        {events?.map((plan) => {
-          const style = eventStyles?.[plan.id];
+        {events?.map((entry) => {
+          const style = eventStyles?.[entry.id];
           if (!style) return null;
 
-          const planDragging = isDragging && (state as { entryId: string }).entryId === plan.id;
-          const planResizing = isResizing && (state as { entryId: string }).entryId === plan.id;
+          const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
+          const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
-          const adjustedStyle = getAdjustedStyle(style, plan.id, state);
+          const adjustedStyle = getAdjustedStyle(style, entry.id, state);
 
           return (
             <div
-              key={plan.id}
+              key={entry.id}
               style={adjustedStyle}
               className="pointer-events-none absolute"
-              data-plan-wrapper="true"
+              data-entry-wrapper="true"
             >
               <div
                 className="pointer-events-auto absolute inset-0 rounded"
-                data-plan-block="true"
+                data-entry-block="true"
                 onMouseDown={(e) => {
                   if (e.button === 0) {
-                    handlers.handlePointerDown(plan.id, e, {
+                    handlers.handlePointerDown(entry.id, e, {
                       top: currentTop,
                       left: 0,
                       width: 100,
@@ -131,7 +131,7 @@ export const DayContent = ({
                   }
                 }}
                 onTouchStart={(e) => {
-                  handlers.handleTouchStart(plan.id, e, {
+                  handlers.handleTouchStart(entry.id, e, {
                     top: currentTop,
                     left: 0,
                     width: 100,
@@ -140,18 +140,18 @@ export const DayContent = ({
                 }}
               >
                 <EntryCard
-                  plan={plan}
+                  plan={entry}
                   position={{
                     top: 0,
                     left: 0,
                     width: 100,
                     height:
-                      planResizing && state.mode === 'resizing'
+                      entryResizing && state.mode === 'resizing'
                         ? state.snappedHeight
                         : currentHeight,
                   }}
                   onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
-                    handlePlanContextMenu(p, e)
+                    handleEntryContextMenu(p, e)
                   }
                   onResizeStart={(
                     p: CalendarEvent,
@@ -165,12 +165,12 @@ export const DayContent = ({
                       height: currentHeight,
                     })
                   }
-                  isDragging={planDragging}
-                  isResizing={planResizing}
-                  isActive={isInspectorOpen && inspectorPlanId === plan.id}
-                  previewTime={getPreviewTime(plan.id, state)}
+                  isDragging={entryDragging}
+                  isResizing={entryResizing}
+                  isActive={isInspectorOpen && inspectorEntryId === entry.id}
+                  previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${planDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 />
               </div>
             </div>

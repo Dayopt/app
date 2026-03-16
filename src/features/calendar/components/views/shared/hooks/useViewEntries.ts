@@ -7,19 +7,19 @@ import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT } from '../constants/grid.constants';
 
-import { usePlanLayoutCalculator, type PlanLayout } from './usePlanLayoutCalculator';
+import { useEntryLayoutCalculator, type EntryLayout } from './useEntryLayoutCalculator';
 
-const PLAN_PADDING = 2; // プラン間のパディング
-const MIN_PLAN_HEIGHT = 20; // 最小プラン高さ
+const ENTRY_PADDING = 2; // エントリ間のパディング
+const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
-interface UseViewPlansOptions {
+interface UseViewEntriesOptions {
   date: Date;
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   hourHeight?: number;
   timezone: string;
 }
 
-export interface PlanPosition {
+export interface EntryPosition {
   plan: CalendarEvent;
   top: number;
   height: number;
@@ -31,61 +31,61 @@ export interface PlanPosition {
   opacity?: number;
 }
 
-interface UseViewPlansReturn {
-  dayPlans: CalendarEvent[];
-  planPositions: PlanPosition[];
-  maxConcurrentPlans: number;
-  skippedPlansCount: number;
+interface UseViewEntriesReturn {
+  dayEntries: CalendarEvent[];
+  entryPositions: EntryPosition[];
+  maxConcurrentEntries: number;
+  skippedEntriesCount: number;
 }
 
 /**
- * 汎用的なビュープラン処理フック
+ * 汎用的なビューエントリ処理フック
  * DayView, WeekView等で共通利用可能
  */
-export function useViewPlans({
+export function useViewEntries({
   date,
-  plans = [],
+  entries = [],
   hourHeight = HOUR_HEIGHT,
   timezone,
-}: UseViewPlansOptions): UseViewPlansReturn {
+}: UseViewEntriesOptions): UseViewEntriesReturn {
   // TZ変換を適用（Planのみ、Recordは変換しない）
-  const tzPlans = useMemo(
-    () => plans.map((p) => applyTimezoneToDisplayDates(p, timezone)),
-    [plans, timezone],
+  const tzEntries = useMemo(
+    () => entries.map((p) => applyTimezoneToDisplayDates(p, timezone)),
+    [entries, timezone],
   );
 
-  // 指定日のプランのみフィルター（displayStartDateで判定）
-  const dayPlans = useMemo(() => {
-    if (!tzPlans || !Array.isArray(tzPlans)) {
+  // 指定日のエントリのみフィルター（displayStartDateで判定）
+  const dayEntries = useMemo(() => {
+    if (!tzEntries || !Array.isArray(tzEntries)) {
       return [];
     }
-    return tzPlans.filter((plan) => {
-      if (!plan.displayStartDate || !isValid(new Date(plan.displayStartDate))) {
+    return tzEntries.filter((entry) => {
+      if (!entry.displayStartDate || !isValid(new Date(entry.displayStartDate))) {
         return false;
       }
 
-      return isSameDay(plan.displayStartDate, date);
+      return isSameDay(entry.displayStartDate, date);
     });
-  }, [date, tzPlans]);
+  }, [date, tzEntries]);
 
-  // CalendarEventをusePlanLayoutCalculatorで期待される形式に変換
+  // CalendarEventをuseEntryLayoutCalculatorで期待される形式に変換
   // displayStartDate/displayEndDateを使用してTZ対応の位置計算を実現
-  const convertedPlans = useMemo(() => {
-    return dayPlans.map((plan) => ({
-      ...plan,
-      start: plan.displayStartDate,
-      end: plan.displayEndDate || new Date(plan.displayStartDate.getTime() + 60 * 60 * 1000),
+  const convertedEntries = useMemo(() => {
+    return dayEntries.map((entry) => ({
+      ...entry,
+      start: entry.displayStartDate,
+      end: entry.displayEndDate || new Date(entry.displayStartDate.getTime() + 60 * 60 * 1000),
     }));
-  }, [dayPlans]);
+  }, [dayEntries]);
 
   // 新しいレイアウト計算システムを使用
-  const planLayouts = usePlanLayoutCalculator(convertedPlans);
+  const entryLayouts = useEntryLayoutCalculator(convertedEntries);
 
-  // レイアウト情報をPlanPositionに変換
-  const planPositions = useMemo((): PlanPosition[] => {
-    return planLayouts.map((layout: PlanLayout, index: number) => {
-      const startDate = new Date(layout.plan.start);
-      const endDate = new Date(layout.plan.end);
+  // レイアウト情報をEntryPositionに変換
+  const entryPositions = useMemo((): EntryPosition[] => {
+    return entryLayouts.map((layout: EntryLayout, index: number) => {
+      const startDate = new Date(layout.entry.start);
+      const endDate = new Date(layout.entry.end);
 
       const startHour = startDate.getHours() + startDate.getMinutes() / 60;
       const endHour = endDate.getHours() + endDate.getMinutes() / 60;
@@ -93,10 +93,10 @@ export function useViewPlans({
 
       // 位置計算
       const top = startHour * hourHeight;
-      const height = Math.max(duration * hourHeight - PLAN_PADDING, MIN_PLAN_HEIGHT);
+      const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
 
       return {
-        plan: layout.plan as CalendarEvent,
+        plan: layout.entry as CalendarEvent,
         top,
         height,
         left: layout.left,
@@ -107,16 +107,16 @@ export function useViewPlans({
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,
       };
     });
-  }, [planLayouts, hourHeight]);
+  }, [entryLayouts, hourHeight]);
 
-  const maxConcurrentPlans = useMemo(() => {
-    return Math.max(1, ...planLayouts.map((layout: PlanLayout) => layout.totalColumns));
-  }, [planLayouts]);
+  const maxConcurrentEntries = useMemo(() => {
+    return Math.max(1, ...entryLayouts.map((layout: EntryLayout) => layout.totalColumns));
+  }, [entryLayouts]);
 
   return {
-    dayPlans,
-    planPositions,
-    maxConcurrentPlans,
-    skippedPlansCount: 0, // 新しいシステムではスキップしない
+    dayEntries,
+    entryPositions,
+    maxConcurrentEntries,
+    skippedEntriesCount: 0, // 新しいシステムではスキップしない
   };
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { addDays, isWeekend } from 'date-fns';
 
-import type { CalendarViewType } from '../types/calendar.types';
+import type { CalendarViewType } from '../../types/calendar.types';
 
 interface UseWeekendNavigationProps {
   viewType: CalendarViewType;

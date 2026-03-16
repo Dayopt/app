@@ -7,107 +7,107 @@ import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT as DEFAULT_HOUR_HEIGHT } from '../constants/grid.constants';
 
-import { usePlanLayoutCalculator, type PlanLayout } from './usePlanLayoutCalculator';
-import type { PlanPosition } from './useViewPlans';
+import { useEntryLayoutCalculator, type EntryLayout } from './useEntryLayoutCalculator';
+import type { EntryPosition } from './useViewEntries';
 
-const PLAN_PADDING = 2; // プラン間のパディング
-const MIN_PLAN_HEIGHT = 20; // 最小プラン高さ
+const ENTRY_PADDING = 2; // エントリ間のパディング
+const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
-interface UseMultiDayPlanPositionsOptions {
+interface UseMultiDayEntryPositionsOptions {
   displayDates: Date[];
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   hourHeight?: number;
   timezone: string;
 }
 
-interface UseMultiDayPlanPositionsReturn {
-  planPositions: PlanPosition[];
-  plansByDate: Map<string, CalendarEvent[]>;
+interface UseMultiDayEntryPositionsReturn {
+  entryPositions: EntryPosition[];
+  entriesByDate: Map<string, CalendarEvent[]>;
 }
 
 /**
- * 複数日表示用のプラン位置計算フック
+ * 複数日表示用のエントリ位置計算フック
  * MultiDayView(3day/5day等)で共通利用
  *
- * usePlanLayoutCalculatorを使用して重複プランの
+ * useEntryLayoutCalculatorを使用して重複エントリの
  * カラム配置を正しく計算
  */
-export function useMultiDayPlanPositions({
+export function useMultiDayEntryPositions({
   displayDates,
-  plans,
+  entries,
   hourHeight = DEFAULT_HOUR_HEIGHT,
   timezone,
-}: UseMultiDayPlanPositionsOptions): UseMultiDayPlanPositionsReturn {
+}: UseMultiDayEntryPositionsOptions): UseMultiDayEntryPositionsReturn {
   // TZ変換を適用（Planのみ、Recordは変換しない）
-  const tzPlans = useMemo(
-    () => plans.map((p) => applyTimezoneToDisplayDates(p, timezone)),
-    [plans, timezone],
+  const tzEntries = useMemo(
+    () => entries.map((p) => applyTimezoneToDisplayDates(p, timezone)),
+    [entries, timezone],
   );
 
-  // 日付別にプランをグループ化（displayStartDateで判定）
-  const plansByDate = useMemo(() => {
+  // 日付別にエントリをグループ化（displayStartDateで判定）
+  const entriesByDate = useMemo(() => {
     const grouped = new Map<string, CalendarEvent[]>();
 
     displayDates.forEach((date) => {
       const dateKey = format(date, 'yyyy-MM-dd');
-      const dayPlans = tzPlans.filter((plan) => {
-        if (!plan.displayStartDate || !isValid(new Date(plan.displayStartDate))) {
+      const dayEntries = tzEntries.filter((entry) => {
+        if (!entry.displayStartDate || !isValid(new Date(entry.displayStartDate))) {
           return false;
         }
-        return isSameDay(plan.displayStartDate, date);
+        return isSameDay(entry.displayStartDate, date);
       });
-      grouped.set(dateKey, dayPlans);
+      grouped.set(dateKey, dayEntries);
     });
 
     return grouped;
-  }, [displayDates, tzPlans]);
+  }, [displayDates, tzEntries]);
 
-  // 全日付のプランをTimedPlan形式に変換（usePlanLayoutCalculator用）
+  // 全日付のエントリをTimedEntry形式に変換（useEntryLayoutCalculator用）
   // displayStartDate/displayEndDateを使用してTZ対応の位置計算を実現
-  const allConvertedPlans = useMemo(() => {
+  const allConvertedEntries = useMemo(() => {
     const converted: Array<{
       dateKey: string;
-      plan: CalendarEvent;
+      entry: CalendarEvent;
       start: Date;
       end: Date;
       id: string;
     }> = [];
 
-    plansByDate.forEach((dayPlans, dateKey) => {
-      dayPlans.forEach((plan) => {
+    entriesByDate.forEach((dayEntries, dateKey) => {
+      dayEntries.forEach((entry) => {
         converted.push({
           dateKey,
-          plan,
-          start: plan.displayStartDate,
-          end: plan.displayEndDate || new Date(plan.displayStartDate.getTime() + 60 * 60 * 1000),
-          id: plan.id,
+          entry,
+          start: entry.displayStartDate,
+          end: entry.displayEndDate || new Date(entry.displayStartDate.getTime() + 60 * 60 * 1000),
+          id: entry.id,
         });
       });
     });
 
     return converted;
-  }, [plansByDate]);
+  }, [entriesByDate]);
 
   // 日付ごとにレイアウト計算
-  // usePlanLayoutCalculatorはフックなので、日付ごとに呼べない
-  // 代わりに全プランを一度に渡し、後で日付ごとに分離
-  const planLayouts = usePlanLayoutCalculator(
-    allConvertedPlans.map((p) => ({
-      ...p.plan,
+  // useEntryLayoutCalculatorはフックなので、日付ごとに呼べない
+  // 代わりに全エントリを一度に渡し、後で日付ごとに分離
+  const entryLayouts = useEntryLayoutCalculator(
+    allConvertedEntries.map((p) => ({
+      ...p.entry,
       start: p.start,
       end: p.end,
       id: p.id,
     })),
   );
 
-  // レイアウト情報をPlanPositionに変換
-  const planPositions = useMemo((): PlanPosition[] => {
-    return planLayouts.map((layout: PlanLayout, index: number) => {
-      const originalPlan = allConvertedPlans.find((p) => p.id === layout.plan.id);
-      const plan = originalPlan?.plan || (layout.plan as CalendarEvent);
+  // レイアウト情報をEntryPositionに変換
+  const entryPositions = useMemo((): EntryPosition[] => {
+    return entryLayouts.map((layout: EntryLayout, index: number) => {
+      const originalEntry = allConvertedEntries.find((p) => p.id === layout.entry.id);
+      const entry = originalEntry?.entry || (layout.entry as CalendarEvent);
 
-      const startDate = new Date(layout.plan.start);
-      const endDate = new Date(layout.plan.end);
+      const startDate = new Date(layout.entry.start);
+      const endDate = new Date(layout.entry.end);
 
       const startHour = startDate.getHours() + startDate.getMinutes() / 60;
       const endHour = endDate.getHours() + endDate.getMinutes() / 60;
@@ -115,10 +115,10 @@ export function useMultiDayPlanPositions({
 
       // 位置計算
       const top = startHour * hourHeight;
-      const height = Math.max(duration * hourHeight - PLAN_PADDING, MIN_PLAN_HEIGHT);
+      const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
 
       return {
-        plan,
+        plan: entry,
         top,
         height,
         left: layout.left,
@@ -129,10 +129,10 @@ export function useMultiDayPlanPositions({
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,
       };
     });
-  }, [planLayouts, allConvertedPlans, hourHeight]);
+  }, [entryLayouts, allConvertedEntries, hourHeight]);
 
   return {
-    planPositions,
-    plansByDate,
+    entryPositions,
+    entriesByDate,
   };
 }

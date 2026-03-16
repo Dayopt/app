@@ -135,7 +135,7 @@ const weekRange: ViewDateRange = {
 export const Default: Story = {
   render: () => (
     <div className="h-[700px]">
-      <WeekView dateRange={weekRange} plans={mockPlans} currentDate={today} onPlanClick={fn()} />
+      <WeekView dateRange={weekRange} entries={mockPlans} currentDate={today} onEntryClick={fn()} />
     </div>
   ),
 };
@@ -144,7 +144,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => (
     <div className="h-[700px]">
-      <WeekView dateRange={weekRange} plans={[]} currentDate={today} onPlanClick={fn()} />
+      <WeekView dateRange={weekRange} entries={[]} currentDate={today} onEntryClick={fn()} />
     </div>
   ),
 };
@@ -155,10 +155,10 @@ export const WithoutWeekends: Story = {
     <div className="h-[700px]">
       <WeekView
         dateRange={weekRange}
-        plans={mockPlans}
+        entries={mockPlans}
         currentDate={today}
         showWeekends={false}
-        onPlanClick={fn()}
+        onEntryClick={fn()}
       />
     </div>
   ),
@@ -169,20 +169,25 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="h-[500px] w-full">
-        <WeekView dateRange={weekRange} plans={mockPlans} currentDate={today} onPlanClick={fn()} />
+        <WeekView
+          dateRange={weekRange}
+          entries={mockPlans}
+          currentDate={today}
+          onEntryClick={fn()}
+        />
       </div>
 
       <div className="h-[500px] w-full">
-        <WeekView dateRange={weekRange} plans={[]} currentDate={today} onPlanClick={fn()} />
+        <WeekView dateRange={weekRange} entries={[]} currentDate={today} onEntryClick={fn()} />
       </div>
 
       <div className="h-[500px] w-full">
         <WeekView
           dateRange={weekRange}
-          plans={mockPlans}
+          entries={mockPlans}
           currentDate={today}
           showWeekends={false}
-          onPlanClick={fn()}
+          onEntryClick={fn()}
         />
       </div>
     </div>

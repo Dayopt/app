@@ -21,15 +21,15 @@ import type {
  */
 export interface BaseViewProps {
   // Core data
-  plans: CalendarEvent[];
+  entries: CalendarEvent[];
   currentDate: Date;
 
   // Display options
   className?: string | undefined;
 
-  // Plan handlers（最小限）
-  onPlanClick?: ((plan: CalendarEvent) => void) | undefined;
-  onPlanContextMenu?: ((plan: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
+  // Entry handlers（最小限）
+  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  onEntryContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
 }
 
 /**
@@ -39,24 +39,24 @@ export interface BaseViewProps {
 export interface GridViewProps extends BaseViewProps {
   // Core data
   dateRange: ViewDateRange;
-  /** 全プラン（期限切れ未完了表示用、日付フィルタリング前） */
-  allPlans?: CalendarEvent[] | undefined;
+  /** 全エントリ（期限切れ未完了表示用、日付フィルタリング前） */
+  allEntries?: CalendarEvent[] | undefined;
 
   // Display options
   showWeekends?: boolean | undefined;
 
-  /** DnDを無効化するプランID（Inspector表示中のプランなど） */
-  disabledPlanId?: string | null | undefined;
+  /** DnDを無効化するエントリID（Inspector表示中のエントリなど） */
+  disabledEntryId?: string | null | undefined;
 
-  // Plan handlers（グリッド操作用）
-  onUpdatePlan?:
+  // Entry handlers（グリッド操作用）
+  onUpdateEntry?:
     | ((
-        planIdOrPlan: string | CalendarEvent,
+        entryIdOrEntry: string | CalendarEvent,
         updates?: { startTime: Date; endTime: Date },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
-  onDeletePlan?: ((planId: string) => void) | undefined;
-  onRestorePlan?: ((plan: CalendarEvent) => Promise<void>) | undefined;
+  onDeleteEntry?: ((entryId: string) => void) | undefined;
+  onRestoreEntry?: ((entry: CalendarEvent) => Promise<void>) | undefined;
   onTimeRangeSelect?:
     | ((selection: {
         date: Date;
@@ -75,10 +75,10 @@ export interface GridViewProps extends BaseViewProps {
 }
 
 /**
- * プラン位置情報の基本型
- * 4箇所で重複していた PlanPosition を統一
+ * エントリ位置情報の基本型
+ * 4箇所で重複していた EntryPosition を統一
  */
-export interface BasePlanPosition {
+export interface BaseEntryPosition {
   plan: CalendarEvent;
   top: number;
   height: number;
@@ -99,6 +99,6 @@ export interface BaseViewSettings {
   timeInterval: 15 | 30 | 60;
   showQuarterLines: boolean;
   showCurrentTime: boolean;
-  maxPlanColumns: number;
-  planMinHeight: number;
+  maxEntryColumns: number;
+  entryMinHeight: number;
 }

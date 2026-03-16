@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { useCurrentPeriod, useDateUtilities, usePlansByDate } from '../../shared';
+import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
 import type { UseWeekViewOptions, UseWeekViewReturn } from '../WeekView.types';
 
 /**
@@ -31,10 +31,10 @@ export function useWeekView({
     weekStartsOn,
   });
 
-  // Phase 3統合フック: プラン日付グループ化
-  const { plansByDate: eventsByDate } = usePlansByDate({
+  // Phase 3統合フック: エントリ日付グループ化
+  const { entriesByDate: eventsByDate } = useEntriesByDate({
     dates: weekDates,
-    plans: events,
+    entries: events,
     sortType: 'standard',
   });
 

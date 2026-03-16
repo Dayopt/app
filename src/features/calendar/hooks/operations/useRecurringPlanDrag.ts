@@ -19,7 +19,7 @@ import {
 import { logger } from '@/lib/logger';
 import { openRecurringEditConfirm, type RecurringEditScope } from '@/shell/stores/useModalStore';
 
-import type { CalendarEvent } from '../types/calendar.types';
+import type { CalendarEvent } from '../../types/calendar.types';
 
 interface PendingDragUpdate {
   plan: CalendarEvent;

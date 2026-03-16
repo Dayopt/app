@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import type { CalendarViewType } from '../types/calendar.types';
+import type { CalendarViewType } from '../../types/calendar.types';
 
 interface UseCalendarKeyboardProps {
   viewType: CalendarViewType;

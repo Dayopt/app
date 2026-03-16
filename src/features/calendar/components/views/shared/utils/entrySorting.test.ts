@@ -7,7 +7,7 @@ import {
   sortEventsByDateKeys,
   sortEventsByTime,
   sortEventsForAgenda,
-} from './planSorting';
+} from './entrySorting';
 
 function makePlan(id: string, startDate: Date | null): CalendarEvent {
   return {

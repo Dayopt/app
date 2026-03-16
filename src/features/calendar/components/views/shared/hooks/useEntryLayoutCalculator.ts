@@ -1,18 +1,18 @@
 import { useMemo } from 'react';
 
-import { calculatePlanLayouts } from '../../../../engine/layout';
-import type { TimedPlan } from '../types/plan.types';
+import { calculateEntryLayouts } from '../../../../engine/layout';
+import type { TimedEntry } from '../types/entry.types';
 
-// Re-export PlanLayout type for consumers
-export type { PlanLayout } from '../../../../engine/layout';
+// Re-export EntryLayout type for consumers
+export type { EntryLayout } from '../../../../engine/layout';
 
 /**
- * プランの重複レイアウト計算フック
+ * エントリの重複レイアウト計算フック
  * Googleカレンダー風の横並び配置を実現
  *
  * 純粋ロジックは engine/layout.ts に委譲。
  * このフックは useMemo ラッパーのみ。
  */
-export function usePlanLayoutCalculator(plans: TimedPlan[]) {
-  return useMemo(() => calculatePlanLayouts(plans), [plans]);
+export function useEntryLayoutCalculator(entries: TimedEntry[]) {
+  return useMemo(() => calculateEntryLayouts(entries), [entries]);
 }

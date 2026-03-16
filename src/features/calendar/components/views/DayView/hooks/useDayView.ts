@@ -1,18 +1,18 @@
+import { useEntryStyles } from '../../shared/hooks/useEntryStyles';
 import { useIsToday } from '../../shared/hooks/useIsToday';
-import { usePlanStyles } from '../../shared/hooks/usePlanStyles';
 import { useTimeSlots } from '../../shared/hooks/useTimeSlots';
 import type { UseDayViewOptions, UseDayViewReturn } from '../DayView.types';
 
-import { useDayPlans } from './useDayPlans';
+import { useDayEntries } from './useDayEntries';
 
 export function useDayView({
   date,
-  plans,
-  onPlanUpdate: _onPlanUpdate,
+  entries,
+  onEntryUpdate: _onEntryUpdate,
   timezone,
 }: UseDayViewOptions): UseDayViewReturn {
-  // プランデータ処理
-  const { dayPlans, planPositions } = useDayPlans({ date, plans, timezone });
+  // エントリデータ処理
+  const { dayEntries, entryPositions } = useDayEntries({ date, entries, timezone });
 
   // 今日かどうかの判定
   const isTodayFlag = useIsToday(date);
@@ -20,14 +20,14 @@ export function useDayView({
   // 時間スロットの生成（0:00-23:45、15分間隔）
   const timeSlots = useTimeSlots();
 
-  // プランのCSSスタイルを計算
-  const planStyles = usePlanStyles(planPositions);
+  // エントリのCSSスタイルを計算
+  const entryStyles = useEntryStyles(entryPositions);
 
   // スクロール処理はScrollableCalendarLayoutに委譲
 
   return {
-    dayPlans,
-    planStyles,
+    dayEntries,
+    entryStyles,
     isToday: isTodayFlag,
     timeSlots,
   };

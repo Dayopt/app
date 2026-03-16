@@ -3,7 +3,7 @@
  */
 
 import type { CalendarEvent, CalendarViewType } from '../../../../types/calendar.types';
-import type { PlanInteractionHandler } from './plan.types';
+import type { EntryInteractionHandler } from './entry.types';
 
 /** @deprecated CalendarViewType を使用してください */
 export type ViewType = CalendarViewType;
@@ -68,7 +68,7 @@ export interface ViewConfiguration {
   scrollToHour: number;
 }
 
-export interface ViewContextValue extends ViewConfiguration, PlanInteractionHandler {
+export interface ViewContextValue extends ViewConfiguration, EntryInteractionHandler {
   dates: Date[];
   events: CalendarEvent[];
   currentDate: Date;
