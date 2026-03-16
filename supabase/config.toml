@@ -238,8 +238,8 @@ inactivity_timeout = "8h"
 # ローカルでは無効化（Inbucket使用）。リモートは config push 時に env() で解決。
 [auth.hook.send_email]
 enabled = false
-uri = "env(AUTH_HOOK_SEND_EMAIL_URI)"
-secrets = "env(AUTH_HOOK_SEND_EMAIL_SECRETS)"
+uri = "env(SUPABASE_AUTH_HOOK_SEND_EMAIL_URI)"
+secrets = "env(SUPABASE_AUTH_HOOK_SEND_EMAIL_SECRETS)"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]

@@ -20,7 +20,11 @@ const serverSchema = z.object({
   // Resend
   RESEND_API_KEY: z.string().optional(),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
+  RESEND_FROM_EMAIL: z
+    .string()
+    .transform((v) => v.replace(/\\n/g, '').trim())
+    .transform((v) => (v === '' ? undefined : v))
+    .pipe(z.string().email().optional()),
 
   // Anthropic
   ANTHROPIC_API_KEY: z.string().optional(),
@@ -65,7 +69,12 @@ export const env = new Proxy({} as ServerEnv, {
     const isCI = process.env.CI === 'true';
 
     if (!isTest && !isBuild && !isCI && !_validated) {
-      const result = serverSchema.safeParse(process.env);
+      // Vercel env pull が空文字をセットすることがあるため、optional 変数の空文字を除去
+      const cleaned = { ...process.env };
+      for (const [key, value] of Object.entries(cleaned)) {
+        if (value === '') delete cleaned[key];
+      }
+      const result = serverSchema.safeParse(cleaned);
       if (!result.success) {
         const formatted = result.error.issues
           .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
