@@ -14,7 +14,10 @@ import { useCallback, useMemo } from 'react';
 
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
+import { useCreateTag, useTagsMap } from '@/features/tags';
+import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
@@ -36,6 +39,8 @@ import { useEntryForm } from './hooks/useEntryForm';
 
 export function EntryInspectorForm() {
   const t = useTranslations();
+  const { getTagById } = useTagsMap();
+  const createTagMutation = useCreateTag({ showToast: false });
   const {
     entryId,
     entry,
@@ -59,6 +64,31 @@ export function EntryInspectorForm() {
     timeConflictError,
     getCache,
   } = useEntryForm();
+
+  // --- タグデータ解決（TagRow に pure props で渡す） ---
+  const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
+  const selectedTagName = selectedTag?.name;
+  const selectedTagColorClasses = selectedTag ? getTagColorClasses(selectedTag.color) : undefined;
+
+  const handleCreateAndSelectTag = useCallback(
+    async (name: string, color?: string | null) => {
+      try {
+        const newTag = await createTagMutation.mutateAsync({
+          name,
+          color: resolveTagColor(color),
+        });
+        handleTagChange(newTag.id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes('duplicate') || message.includes('already exists')) {
+          toast.error(t('tags.errors.duplicateName'));
+        } else {
+          toast.error(t('tags.errors.createFailed'));
+        }
+      }
+    },
+    [createTagMutation, handleTagChange, t],
+  );
 
   // --- 派生値 ---
 
@@ -176,7 +206,14 @@ export function EntryInspectorForm() {
   return (
     <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
       {/* Row 0: タグ + 削除ボタン */}
-      <TagRow tagId={selectedTagId} onTagChange={handleTagChange} onDelete={handleDelete} />
+      <TagRow
+        tagId={selectedTagId}
+        tagName={selectedTagName}
+        tagColorClasses={selectedTagColorClasses}
+        onTagChange={handleTagChange}
+        onCreateAndSelect={handleCreateAndSelectTag}
+        onDelete={handleDelete}
+      />
 
       {/* アラート（時間重複エラー） */}
       {timeConflictError && (

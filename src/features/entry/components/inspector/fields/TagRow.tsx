@@ -1,39 +1,50 @@
 'use client';
 
 /**
- * タグ表示行
+ * タグ表示行（Pure props）
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * タグ未設定時は「タグを追加」を表示。
- * 右側に ⋯ メニューを配置。
+ * 右側に削除ボタンを配置。
+ *
+ * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
  */
 
 import { useCallback, useRef, useState } from 'react';
 
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
-import { TagQuickSelector, useCreateTag, useTagsMap } from '@/features/tags';
-import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
+import { TagQuickSelector } from '@/features/tags';
+import type { TagColorEntry } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface TagRowProps {
   tagId: string | null;
+  /** 解決済みのタグ名（tagId が null なら undefined） */
+  tagName?: string | undefined;
+  /** 解決済みのタグ色クラス（tagId が null なら undefined） */
+  tagColorClasses?: TagColorEntry | undefined;
   onTagChange: (tagId: string | null) => void;
+  /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
+  onCreateAndSelect: (name: string, color?: string | null) => void;
   /** 削除ボタンのコールバック */
   onDelete?: (() => void) | undefined;
 }
 
-export function TagRow({ tagId, onTagChange, onDelete }: TagRowProps) {
+export function TagRow({
+  tagId,
+  tagName,
+  tagColorClasses: colorClasses,
+  onTagChange,
+  onCreateAndSelect,
+  onDelete,
+}: TagRowProps) {
   const t = useTranslations();
-  const { getTagById } = useTagsMap();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const createTagMutation = useCreateTag({ showToast: false });
 
-  const tag = tagId ? getTagById(tagId) : undefined;
-  const colorClasses = tag ? getTagColorClasses(tag.color) : null;
+  const hasTag = tagId != null && tagName != null;
 
   const handleSelect = useCallback(
     (selectedTagId: string) => {
@@ -45,23 +56,10 @@ export function TagRow({ tagId, onTagChange, onDelete }: TagRowProps) {
 
   const handleCreateAndSelect = useCallback(
     async (name: string, color?: string | null) => {
-      try {
-        const newTag = await createTagMutation.mutateAsync({
-          name,
-          color: resolveTagColor(color),
-        });
-        onTagChange(newTag.id);
-        setSelectorOpen(false);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (message.includes('duplicate') || message.includes('already exists')) {
-          toast.error(t('tags.errors.duplicateName'));
-        } else {
-          toast.error(t('tags.errors.createFailed'));
-        }
-      }
+      await onCreateAndSelect(name, color);
+      setSelectorOpen(false);
     },
-    [createTagMutation, onTagChange, t],
+    [onCreateAndSelect],
   );
 
   return (
@@ -72,9 +70,9 @@ export function TagRow({ tagId, onTagChange, onDelete }: TagRowProps) {
           type="button"
           onClick={() => setSelectorOpen(true)}
           className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-base font-semibold transition-colors"
-          aria-label={tag ? `${t('common.tags.change')}: ${tag.name}` : t('common.tags.add')}
+          aria-label={hasTag ? `${t('common.tags.change')}: ${tagName}` : t('common.tags.add')}
         >
-          {tag ? (
+          {hasTag ? (
             <>
               <span
                 className={cn(
@@ -83,7 +81,7 @@ export function TagRow({ tagId, onTagChange, onDelete }: TagRowProps) {
                 )}
                 aria-hidden
               />
-              <span className="text-foreground">{tag.name}</span>
+              <span className="text-foreground">{tagName}</span>
               <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
             </>
           ) : (
