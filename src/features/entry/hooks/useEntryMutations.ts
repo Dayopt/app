@@ -52,8 +52,6 @@ export function useEntryMutations() {
   const utils = api.useUtils();
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
-  const updateCache = useEntryCacheStore((s) => s.updateCache);
-  const clearCache = useEntryCacheStore((s) => s.clearCache);
   const setIsMutating = useEntryCacheStore((s) => s.setIsMutating);
 
   // 作成（楽観的更新付き）
@@ -177,7 +175,7 @@ export function useEntryMutations() {
       });
       const previousEntry = utils.entries.getById.getData({ id });
 
-      // 3. 楽観的更新: Zustandキャッシュを即座に更新
+      // 3. 楽観的更新: TanStack Queryキャッシュを更新
       const updateData: UpdateEntryInput = {};
 
       if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type;
@@ -194,11 +192,6 @@ export function useEntryMutations() {
       if (data.actual_start_time !== undefined)
         updateData.actual_start_time = data.actual_start_time;
       if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
-
-      // Zustandキャッシュを更新
-      if (Object.keys(updateData).length > 0) {
-        updateCache(id, updateData as Parameters<typeof updateCache>[1]);
-      }
 
       // 4. TanStack Queryキャッシュを楽観的に更新
       // キャッシュ間移動対応: エントリが存在するキャッシュからフルデータを取得
@@ -322,8 +315,6 @@ export function useEntryMutations() {
         return oldData.filter((entry) => entry.id !== id);
       });
 
-      clearCache(id);
-
       // undo付きtoast
       if (previousEntry) {
         const restoreData = {
@@ -438,7 +429,6 @@ export function useEntryMutations() {
         return oldData.filter((entry) => !ids.includes(entry.id));
       });
 
-      ids.forEach((id) => clearCache(id));
       return { previousEntries };
     },
     onSuccess: (result) => {

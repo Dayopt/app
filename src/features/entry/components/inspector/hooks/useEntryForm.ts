@@ -19,7 +19,6 @@ import {
 } from '@/shell/stores/useModalStore';
 import { useEntry } from '../../../hooks/useEntry';
 import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMutations';
-import { useEntryCacheStore } from '../../../stores/useEntryCacheStore';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../../types/entry';
 
@@ -36,7 +35,6 @@ export function useEntryForm() {
   const instanceDate = useEntryInspectorStore((state) => state.instanceDate);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
-  const getCache = useEntryCacheStore((state) => state.getCache);
   const { applyDelete } = useRecurringScopeMutations();
 
   // Inspector マウント時・entryId 変更時にグローバルダイアログをリセット
@@ -193,7 +191,5 @@ export function useEntryForm() {
       updateEntry,
       handleDelete,
     },
-
-    getCache,
   };
 }

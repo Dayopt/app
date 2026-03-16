@@ -41,7 +41,7 @@ export function EntryInspectorForm() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
-  const { entryId, entry, fields, handlers, state, actions, getCache } = useEntryForm();
+  const { entryId, entry, fields, handlers, state, actions } = useEntryForm();
   const {
     selectedTagId,
     scheduleDate,
@@ -107,15 +107,8 @@ export function EntryInspectorForm() {
   const isPast = entryState === 'past';
   const isPlanLocked = isPast && !isUnplanned;
 
-  // 充実度
-  const fulfillmentScore = useMemo<FulfillmentScore | null>(() => {
-    if (!entryId) return null;
-    const cache = getCache(entryId);
-    if (cache?.fulfillment_score !== undefined) {
-      return cache.fulfillment_score as FulfillmentScore | null;
-    }
-    return entry?.fulfillment_score ?? null;
-  }, [entryId, entry, getCache]);
+  // 充実度（TanStack Query の楽観的更新で即座に反映）
+  const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
 
   const { updateEntry } = useEntryMutations();
   const handleFulfillmentChange = useCallback(
@@ -126,22 +119,10 @@ export function EntryInspectorForm() {
     [entryId, updateEntry],
   );
 
-  // 繰り返し
-  const recurrenceRule = useMemo(() => {
-    if (!entryId) return null;
-    const cache = getCache(entryId);
-    return cache?.recurrence_rule !== undefined
-      ? cache.recurrence_rule
-      : (entry?.recurrence_rule ?? null);
-  }, [entryId, entry, getCache]);
-
-  const recurrenceType = useMemo<RecurrenceType | null>(() => {
-    if (!entryId) return null;
-    const cache = getCache(entryId);
-    return cache?.recurrence_type !== undefined
-      ? (cache.recurrence_type as RecurrenceType | null)
-      : (entry?.recurrence_type ?? null);
-  }, [entryId, entry, getCache]);
+  // 繰り返し（TanStack Query の楽観的更新で即座に反映）
+  const recurrenceRule = entry?.recurrence_rule ?? null;
+  const recurrenceType: RecurrenceType | null =
+    (entry?.recurrence_type as RecurrenceType | null) ?? null;
 
   const handleRepeatTypeChange = useCallback(
     (type: string) => {
