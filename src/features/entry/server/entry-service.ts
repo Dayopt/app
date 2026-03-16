@@ -5,7 +5,6 @@
  */
 
 import { logger } from '@/lib/logger';
-import { isTimePast } from '../lib/entry-status';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-utils';
 
 import type {
@@ -180,12 +179,7 @@ export class EntryService {
     // 日時の正規化
     const normalizedInput = this.normalizeDateTimeFields(input);
 
-    // origin 自動判定: start_time が過去なら 'unplanned'
-    const origin =
-      normalizedInput.origin ??
-      (normalizedInput.start_time && isTimePast(normalizedInput.start_time as string)
-        ? 'unplanned'
-        : 'planned');
+    const origin = normalizedInput.origin ?? 'planned';
 
     // 重複チェック
     if (preventOverlappingEntries && normalizedInput.start_time && normalizedInput.end_time) {

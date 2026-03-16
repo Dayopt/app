@@ -14,7 +14,6 @@ import { api } from '@/platform/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { isTimePast } from '../lib/entry-status';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryCacheStore } from '../stores/useEntryCacheStore';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -68,9 +67,7 @@ export function useEntryMutations() {
 
       // 一時的なエントリを作成（IDは仮）
       const tempId = createTempId();
-      const origin =
-        input.origin ??
-        (input.start_time && isTimePast(input.start_time) ? 'unplanned' : 'planned');
+      const origin = input.origin ?? 'planned';
       const tempEntry: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         id: tempId,
         title: input.title,
@@ -323,7 +320,7 @@ export function useEntryMutations() {
         const restoreData = {
           title: previousEntry.title,
           description: previousEntry.description ?? undefined,
-          origin: previousEntry.origin as 'planned' | 'unplanned' | undefined,
+          origin: previousEntry.origin as 'planned' | undefined,
           start_time: normalizeDateTime(previousEntry.start_time),
           end_time: normalizeDateTime(previousEntry.end_time),
           reminder_minutes: previousEntry.reminder_minutes ?? undefined,

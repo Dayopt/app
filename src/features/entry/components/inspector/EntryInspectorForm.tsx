@@ -21,8 +21,7 @@ import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
-import { getEntryState } from '../../lib/entry-status';
-import type { EntryOrigin, FulfillmentScore, RecurrenceType } from '../../types/entry';
+import type { FulfillmentScore, RecurrenceType } from '../../types/entry';
 
 import {
   DateRow,
@@ -91,22 +90,6 @@ export function EntryInspectorForm() {
 
   // --- 派生値 ---
 
-  const entryState = useMemo(() => {
-    if (!entry) return 'upcoming' as const;
-    return getEntryState({
-      start_time: entry.start_time ?? null,
-      end_time: entry.end_time ?? null,
-    });
-  }, [entry]);
-
-  const origin = useMemo<EntryOrigin>(() => {
-    return entry?.origin ?? 'planned';
-  }, [entry]);
-
-  const isUnplanned = origin === 'unplanned';
-  const isPast = entryState === 'past';
-  const isPlanLocked = isPast && !isUnplanned;
-
   // 充実度（TanStack Query の楽観的更新で即座に反映）
   const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
 
@@ -145,14 +128,6 @@ export function EntryInspectorForm() {
     },
     [entryId, updateEntryMutation],
   );
-
-  // 表示条件
-  const showRecurrence = !isUnplanned;
-  const showReminder = showRecurrence && !(isPast && reminderMinutes === null);
-
-  // 日付制限
-  const today = useMemo(() => new Date(), []);
-  const dateMinDate = isPast ? undefined : today;
 
   // 予定行の自動調整
   const {
@@ -211,23 +186,18 @@ export function EntryInspectorForm() {
             icon={Calendar}
             selectedDate={scheduleDate}
             onDateChange={handleScheduleDateChange}
-            disabled={isPlanLocked}
-            minDate={dateMinDate}
           />
 
-          {/* 予定行（unplanned は非表示） */}
-          {!isUnplanned && (
-            <TimeRow
-              label={t('plan.inspector.time.planned')}
-              icon={Clock}
-              startTime={startTime}
-              endTime={endTime}
-              onStartChange={onPlannedStartChange}
-              onEndChange={onPlannedEndChange}
-              disabled={isPlanLocked}
-              hasError={timeConflictError}
-            />
-          )}
+          {/* 予定行 */}
+          <TimeRow
+            label={t('plan.inspector.time.planned')}
+            icon={Clock}
+            startTime={startTime}
+            endTime={endTime}
+            onStartChange={onPlannedStartChange}
+            onEndChange={onPlannedEndChange}
+            hasError={timeConflictError}
+          />
 
           {/* 記録行 */}
           <TimeRow
@@ -240,7 +210,7 @@ export function EntryInspectorForm() {
           />
 
           {/* プログレスバー + 差分バッジ */}
-          {plannedDuration > 0 && !isUnplanned && (
+          {plannedDuration > 0 && (
             <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
           )}
 
@@ -252,17 +222,15 @@ export function EntryInspectorForm() {
           />
 
           {/* 繰り返し */}
-          {showRecurrence && (
-            <RecurrenceRow
-              recurrenceRule={recurrenceRule}
-              recurrenceType={recurrenceType}
-              onRepeatTypeChange={handleRepeatTypeChange}
-              onRecurrenceRuleChange={handleRecurrenceRuleChange}
-            />
-          )}
+          <RecurrenceRow
+            recurrenceRule={recurrenceRule}
+            recurrenceType={recurrenceType}
+            onRepeatTypeChange={handleRepeatTypeChange}
+            onRecurrenceRuleChange={handleRecurrenceRuleChange}
+          />
 
           {/* リマインダー */}
-          {showReminder && <ReminderRow value={reminderMinutes} onChange={handleReminderChange} />}
+          <ReminderRow value={reminderMinutes} onChange={handleReminderChange} />
 
           {/* メモ */}
           <NoteSection
