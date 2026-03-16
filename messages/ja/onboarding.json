@@ -40,7 +40,11 @@
       "skipLink": "あとで設定する"
     },
     "error": {
-      "completeFailed": "保存に失敗しました。もう一度お試しください。"
+      "completeFailed": "保存に失敗しました。もう一度お試しください。",
+      "sessionExpired": "セッションが切れました。再ログインしてください。",
+      "networkError": "ネットワークに接続できません。接続を確認してください。",
+      "profileLoadFailed": "プロフィールの読み込みに失敗しました。",
+      "retry": "再試行"
     }
   }
 }

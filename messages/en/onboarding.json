@@ -40,7 +40,11 @@
       "skipLink": "I'll set this up later"
     },
     "error": {
-      "completeFailed": "Failed to save. Please try again."
+      "completeFailed": "Failed to save. Please try again.",
+      "sessionExpired": "Your session has expired. Please log in again.",
+      "networkError": "Unable to connect. Please check your network.",
+      "profileLoadFailed": "Failed to load profile.",
+      "retry": "Retry"
     }
   }
 }
