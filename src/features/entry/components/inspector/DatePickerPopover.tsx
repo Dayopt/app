@@ -21,7 +21,7 @@ interface DatePickerPopoverProps {
   popoverZIndex?: string;
   /** アイコンを表示するか（デフォルト: false） */
   showIcon?: boolean;
-  /** 無効化 */
+  /** 無効化（opacity低下 + pointer-events-none） */
   disabled?: boolean;
   /** 選択可能な最小日付 */
   minDate?: Date | undefined;

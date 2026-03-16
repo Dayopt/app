@@ -60,8 +60,13 @@ export function TimeSelect({
         <PopoverAnchor asChild>
           <div
             className={cn(
-              'relative flex cursor-pointer items-center rounded-lg transition-colors',
-              hasError ? 'ring-destructive ring-2' : 'hover:bg-state-hover',
+              'relative flex items-center rounded-lg transition-colors',
+              disabled
+                ? 'cursor-default'
+                : cn(
+                    'cursor-pointer',
+                    hasError ? 'ring-destructive ring-2' : 'hover:bg-state-hover',
+                  ),
               showIcon && 'w-[72px] gap-2 px-2',
             )}
             onClick={() => {
@@ -91,7 +96,7 @@ export function TimeSelect({
               size={5}
               className={cn(
                 'flex h-8 cursor-pointer rounded-lg bg-transparent text-sm tabular-nums outline-none',
-                'disabled:cursor-not-allowed disabled:opacity-50',
+                'disabled:cursor-default disabled:opacity-50',
                 showIcon ? 'w-auto' : 'px-2 text-right',
                 value ? 'text-foreground' : 'text-muted-foreground',
                 hasError && 'text-destructive',
