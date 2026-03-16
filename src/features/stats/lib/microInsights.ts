@@ -28,7 +28,7 @@ export interface EntryContext {
   startHour: number;
   /** エントリの充実度（1-5, null = 未記録） */
   fulfillment: number | null;
-  /** 予定時間（分）。null = unplanned */
+  /** 予定時間（分）。null = 未設定 */
   plannedMinutes: number | null;
   /** 実績時間（分）。null = 未記録 */
   actualMinutes: number | null;

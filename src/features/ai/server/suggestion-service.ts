@@ -59,7 +59,7 @@ export class SuggestionService {
     if (type === 'plan') {
       query = query.eq('origin', 'planned');
     } else if (type === 'record') {
-      query = query.eq('origin', 'unplanned');
+      query = query.eq('origin', 'planned');
     }
 
     if (search) {

@@ -19,8 +19,8 @@ import type { AIContext, AIContextPlan, AIContextRecord, AISupabaseClient } from
  * Promise.allで以下を並列取得:
  * - ユーザー設定（パーソナライゼーション、クロノタイプ）
  * - 今日のエントリ（origin='planned'）
- * - 最近の過去エントリ（origin='unplanned'、直近7日）
- * - 今週の planned/unplanned 時間
+ * - 最近の過去エントリ（直近7日）
+ * - 今週のエントリ時間
  * - タグ一覧
  */
 export async function buildAIContext(
@@ -55,12 +55,11 @@ export async function buildAIContext(
       .order('start_time', { ascending: true })
       .limit(20),
 
-    // 3. 最近のエントリ（unplanned = 旧records、直近7日）
+    // 3. 最近の過去エントリ（直近7日）
     supabase
       .from('entries')
       .select('title, duration_minutes, fulfillment_score, start_time')
       .eq('user_id', userId)
-      .eq('origin', 'unplanned')
       .gte('start_time', sevenDaysAgo.toISOString())
       .order('start_time', { ascending: false })
       .limit(10),
@@ -76,12 +75,11 @@ export async function buildAIContext(
       .gte('start_time', weekStart.toISOString())
       .lte('start_time', weekEnd.toISOString()),
 
-    // 5. 今週の unplanned エントリ（時間計算用）
+    // 5. 今週のエントリ（時間計算用）
     supabase
       .from('entries')
       .select('duration_minutes, start_time, end_time')
       .eq('user_id', userId)
-      .eq('origin', 'unplanned')
       .not('start_time', 'is', null)
       .gte('start_time', weekStart.toISOString())
       .lte('start_time', weekEnd.toISOString()),
@@ -143,7 +141,7 @@ export async function buildAIContext(
     }
   }
 
-  // 今週の unplanned 時間（分）
+  // 今週のエントリ時間（分）
   let recordWeeklyMinutes = 0;
   for (const entry of weeklyUnplanned) {
     if (entry.duration_minutes) {

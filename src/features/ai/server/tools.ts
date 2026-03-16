@@ -42,7 +42,7 @@ export function createAITools(supabase: AISupabaseClient, userId: string): ToolS
           .optional()
           .describe('End of date range (ISO 8601 datetime, e.g. 2026-01-31T23:59:59)'),
         origin: z
-          .enum(['planned', 'unplanned'])
+          .literal('planned')
           .optional()
           .describe('Filter by entry origin (planned=scheduled, unplanned=logged)'),
         search: z.string().optional().describe('Search text to match in title or description'),
@@ -100,7 +100,7 @@ export function createAITools(supabase: AISupabaseClient, userId: string): ToolS
           .optional()
           .describe('End of date range (ISO 8601 datetime, e.g. 2026-01-31T23:59:59)'),
         origin: z
-          .enum(['planned', 'unplanned'])
+          .literal('planned')
           .optional()
           .describe('Filter by entry origin. Omit to include all entries.'),
         fulfillmentScoreMin: z
