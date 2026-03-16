@@ -7,14 +7,7 @@ import { expect, within } from 'storybook/test';
 
 import type { EntryOrigin, EntryState, FulfillmentScore } from '../../types/entry';
 
-import {
-  DateRow,
-  FulfillmentRow,
-  NoteSection,
-  TimeDiffBar,
-  TimeRow,
-  TimeRowPlaceholder,
-} from './fields';
+import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
 import { InspectorFrame, MockRecurrenceRow, MockReminderRow, MockTagRow } from './story-helpers';
 
 /**
@@ -27,7 +20,7 @@ import { InspectorFrame, MockRecurrenceRow, MockReminderRow, MockTagRow } from '
  * ## 2パターン
  *
  * - **Planned**: 予定行=編集可（past時ロック）, 記録行=編集可, 繰り返し/通知=○, 充実度=○, ボーダー=実線
- * - **Unplanned**: 予定行=placeholder, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
+ * - **Unplanned**: 予定行=非表示, 記録行=編集可, 繰り返し/通知=×, 充実度=○, ボーダー=点線
  *
  * ## origin 自動遷移（ドラッグ移動時）
  *
@@ -130,8 +123,8 @@ function InspectorContent({
             disabled={isPlanLocked}
           />
 
-          {/* Planned time */}
-          {!isUnplanned ? (
+          {/* Planned time（unplanned は非表示） */}
+          {!isUnplanned && (
             <TimeRow
               label={t('plan.inspector.time.planned')}
               icon={Clock}
@@ -140,13 +133,6 @@ function InspectorContent({
               onStartChange={setPlannedStart}
               onEndChange={setPlannedEnd}
               disabled={isPlanLocked}
-            />
-          ) : (
-            <TimeRowPlaceholder
-              label={t('plan.inspector.time.planned')}
-              icon={Clock}
-              message="—"
-              muted
             />
           )}
 
@@ -256,7 +242,7 @@ export const PastPlanned: Story = {
  * ## Past + Unplanned
  *
  * 直接記録されたエントリ（予定なし）。記録のみがメイン操作。
- * - 予定行: placeholder | 記録行: 編集可 | 日付: 編集可
+ * - 予定行: 非表示 | 記録行: 編集可 | 日付: 編集可
  * - プログレスバー: × | 繰り返し/通知: × | 充実度: ○ | メモ: ○
  */
 export const PastUnplanned: Story = {
