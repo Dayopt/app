@@ -41,7 +41,7 @@ export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 // Hooks
 // =============================================================================
 export { useEntries } from './hooks/useEntries';
-export { useEntry, usePlan, useplan } from './hooks/useEntry';
+export { useEntry } from './hooks/useEntry';
 export { useEntryCreate } from './hooks/useEntryCreate';
 export { useEntryInstanceMutations, useEntryInstances } from './hooks/useEntryInstances';
 export { useEntryMutations } from './hooks/useEntryMutations';

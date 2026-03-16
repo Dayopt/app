@@ -45,6 +45,3 @@ export function useEntry(id: string, options?: { includeTags?: boolean; enabled?
     },
   );
 }
-
-// Backward compatibility
-export { useEntry as usePlan, useEntry as useplan };
