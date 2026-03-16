@@ -201,7 +201,7 @@ export const AllPatterns: Story = {
     <div className="flex flex-col gap-8">
       {/* --- 表示モード --- */}
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">Draft（未保存プレビュー）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Draft（未保存プレビュー）</p>
         <Slot>
           <EntryCard
             plan={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
@@ -211,14 +211,14 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">Past（過去エントリ）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Past（過去エントリ）</p>
         <Slot>
           <EntryCard plan={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
         </Slot>
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">Active（実行中）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Active（実行中）</p>
         <Slot>
           <EntryCard plan={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
         </Slot>
@@ -226,7 +226,7 @@ export const AllPatterns: Story = {
 
       {/* --- Origin --- */}
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">Unplanned（左アクセント点線）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Unplanned（左アクセント点線）</p>
         <Slot>
           <EntryCard plan={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
         </Slot>
@@ -234,7 +234,7 @@ export const AllPatterns: Story = {
 
       {/* --- 状態バリエーション --- */}
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">Reminder（ベルアイコン）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Reminder（ベルアイコン）</p>
         <Slot>
           <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
         </Slot>
@@ -242,7 +242,7 @@ export const AllPatterns: Story = {
 
       {/* --- 予定 vs 記録 差分オーバーレイ --- */}
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-xs">
           Overlay: Unexecuted（予定より実績が短い → 斜線ハッチング）
         </p>
         <Slot height={144}>
@@ -264,7 +264,7 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mb-2 text-xs">
           Overlay: Overtime（予定より実績が長い → 点線ボーダー拡張）
         </p>
         <Slot height={180}>
@@ -287,28 +287,28 @@ export const AllPatterns: Story = {
 
       {/* --- サイズバリエーション --- */}
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">15min（最小・1行）</p>
+        <p className="text-muted-foreground mb-2 text-xs">15min（最小・1行）</p>
         <Slot height={18}>
           <EntryCard plan={baseEntry} position={{ ...basePosition, height: 18 }} />
         </Slot>
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">30min（コンパクト）</p>
+        <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト）</p>
         <Slot height={36}>
           <EntryCard plan={baseEntry} position={{ ...basePosition, height: 36 }} />
         </Slot>
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">60min（通常）</p>
+        <p className="text-muted-foreground mb-2 text-xs">60min（通常）</p>
         <Slot>
           <EntryCard plan={baseEntry} position={basePosition} />
         </Slot>
       </section>
 
       <section>
-        <p className="mb-2 text-xs text-muted-foreground">120min（長時間）</p>
+        <p className="text-muted-foreground mb-2 text-xs">120min（長時間）</p>
         <Slot height={144}>
           <EntryCard plan={baseEntry} position={{ ...basePosition, height: 144 }} />
         </Slot>
