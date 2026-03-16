@@ -1,5 +1,14 @@
 npx lint-staged
 
+# Typecheck if .ts/.tsx files changed
+if git diff --cached --name-only | grep -E "\.(ts|tsx)$" > /dev/null; then
+  echo "🔍 Running typecheck..."
+  npm run typecheck || {
+    echo "❌ Typecheck failed. Fix type errors before committing."
+    exit 1
+  }
+fi
+
 # License check if package.json or package-lock.json changed
 if git diff --cached --name-only | grep -E "package(-lock)?.json" > /dev/null; then
   echo "📦 Checking licenses..."

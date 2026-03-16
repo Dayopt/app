@@ -1,33 +1,34 @@
 -- ========================================
--- BoxLog App - 開発用シードデータ
+-- Dayopt - 開発用シードデータ
 -- ========================================
--- このファイルは `supabase db reset` 実行時に自動的に読み込まれます
+-- このファイルは `supabase db reset` 実行時に自動的に読み込まれます。
 --
--- 注意: シードデータは無効化されています
--- サインアップ後、アプリケーション上でデータを作成してください
+-- 全テーブルが RLS + user_id 必須のため、認証なしでのシードは制限されます。
+-- サインアップ後、アプリケーション上でデータを作成してください。
+--
+-- Preview Supabase のリセット:
+--   npm run db:reset-preview  (Phase 3 で追加予定)
+--
+-- ========================================
+-- デフォルトのシステム設定
+-- ========================================
+
+-- notification_preferences のデフォルト値はアプリ側で作成されるため、
+-- ここでは挿入不要。
 
 -- ========================================
--- テスト用アクティビティデータ（開発用）
+-- 手動シード用テンプレート（SQL Editor で実行）
 -- ========================================
--- 既存のプランに対してアクティビティを追加する場合、
--- 以下のSQLを手動で実行してください：
+-- サインアップ済みユーザーに対して手動でテストデータを追加する場合:
 --
--- Supabase SQL Editorで実行:
--- INSERT INTO plan_activities (plan_id, user_id, action_type, field_name, old_value, new_value)
--- SELECT
---   t.id,
---   t.user_id,
---   'created',
---   NULL,
---   NULL,
---   NULL
--- FROM plans t
--- WHERE t.user_id = auth.uid()
--- LIMIT 1;
+-- -- タグ作成
+-- INSERT INTO tags (user_id, name, color)
+-- VALUES (auth.uid(), '仕事', '#3B82F6'),
+--        (auth.uid(), '個人', '#10B981'),
+--        (auth.uid(), '学習', '#F59E0B');
 --
--- その他のアクティビティ例：
--- INSERT INTO plan_activities (plan_id, user_id, action_type, field_name, old_value, new_value)
+-- -- プラン作成
+-- INSERT INTO plans (user_id, title, status, priority, scheduled_date, start_time, end_time)
 -- VALUES
---   ((SELECT id FROM plans WHERE user_id = auth.uid() LIMIT 1), auth.uid(), 'status_changed', 'status', 'backlog', 'active'),
---   ((SELECT id FROM plans WHERE user_id = auth.uid() LIMIT 1), auth.uid(), 'priority_changed', 'priority', 'normal', 'high'),
---   ((SELECT id FROM plans WHERE user_id = auth.uid() LIMIT 1), auth.uid(), 'title_changed', 'title', '旧タイトル', '新タイトル');
+--   (auth.uid(), 'サンプルタスク', 'active', 'normal', CURRENT_DATE, '09:00', '10:00'),
+--   (auth.uid(), '午後の作業', 'backlog', 'high', CURRENT_DATE, '14:00', '16:00');

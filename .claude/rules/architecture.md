@@ -39,12 +39,15 @@ Router → Service → Supabase の3層構造。詳細: `.claude/skills/trpc-rou
 
 機能単位で設置。アプリ全体を1つでラップしない。
 
-## 環境構成（3環境分離）
+## 環境構成（2環境構成）
 
-| 環境           | Supabase                    | Vercel      |
-| -------------- | --------------------------- | ----------- |
-| **Local**      | ローカル（127.0.0.1:54321） | npm run dev |
-| **Staging**    | dayopt-staging（Tokyo）     | Preview URL |
-| **Production** | t3-nico's Project（Tokyo）  | 本番URL     |
+| 環境           | Supabase                   | Vercel                    |
+| -------------- | -------------------------- | ------------------------- |
+| **Preview**    | dayopt-staging（Tokyo）    | npm run dev / Preview URL |
+| **Production** | t3-nico's Project（Tokyo） | mainマージで自動デプロイ  |
 
-各環境のDBとAuthは完全に独立。マイグレーションは各環境に個別適用が必要。
+- ローカル開発は Preview Supabase に直接接続（`vercel env pull` で自動同期）
+- オフライン開発が必要な場合は `USE_LOCAL_DB=true` でローカルDB（127.0.0.1:54321）にフォールバック
+- マイグレーションは mainマージ時に Staging へ自動適用、Production は手動 `db push`
+- 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
+- 詳細: `docs/development/migration-checklist.md`

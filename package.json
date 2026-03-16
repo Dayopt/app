@@ -9,7 +9,7 @@
     "src/styles/globals.css"
   ],
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
+    "dev": "vercel env pull .env.local --yes || echo '⚠️ env pull failed, using existing .env.local'; NODE_OPTIONS='--max-old-space-size=12288' next dev",
     "dev:safe": "./scripts/dev-server-guard.sh",
     "dev:kill": "lsof -ti:3000 | xargs kill -9 2>/dev/null || echo 'No server running'",
     "prebuild": "echo 'prebuild: no-op'",
@@ -64,6 +64,7 @@
     "test:watch": "vitest --watch",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "db:reset": "supabase db reset --local",
+    "db:reset-preview": "supabase db reset --linked",
     "db:seed": "./scripts/seed-dev-data.sh",
     "db:fresh": "npm run db:reset && npm run db:seed",
     "test:e2e": "playwright test",
