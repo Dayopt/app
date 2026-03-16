@@ -5,8 +5,6 @@
   "installCommand": "npm ci",
   "framework": "nextjs",
   "git": {
-    "deploymentEnabled": {
-      "main": false
-    }
+    "deploymentEnabled": true
   }
 }
