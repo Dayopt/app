@@ -48,6 +48,8 @@ const serverSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
+let _env: ServerEnv | undefined;
+
 function validateEnv(): ServerEnv {
   const result = serverSchema.safeParse(process.env);
 
@@ -65,4 +67,17 @@ function validateEnv(): ServerEnv {
   return result.data;
 }
 
-export const env = validateEnv();
+/**
+ * サーバーサイド環境変数（遅延評価）
+ *
+ * 初回アクセス時にバリデーションを実行する。
+ * テスト環境ではモジュールインポートだけでクラッシュしないようにするため。
+ */
+export const env = new Proxy({} as ServerEnv, {
+  get(_target, prop: string) {
+    if (!_env) {
+      _env = validateEnv();
+    }
+    return _env[prop as keyof ServerEnv];
+  },
+});

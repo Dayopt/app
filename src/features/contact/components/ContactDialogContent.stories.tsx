@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, fn, userEvent } from 'storybook/test';
+import { expect, fn, screen, userEvent, within } from 'storybook/test';
 
 import { Button } from '@/components/ui/button';
 
@@ -94,39 +94,37 @@ export const Submitting: Story = {
 
 /** メッセージ入力後に送信ボタンが有効になる。 */
 export const FilledForm: Story = {
-  play: async ({ canvas }) => {
-    const textarea = document.querySelector<HTMLTextAreaElement>('#contact-message');
-    if (textarea) {
-      await userEvent.type(textarea, 'This is a detailed bug report about the calendar feature.');
-    }
-    // 送信ボタンが有効になっていることを確認
-    const submitButton = canvas.getByRole('button', { name: /send/i });
+  play: async () => {
+    const dialog = within(screen.getByRole('dialog'));
+    const textarea = dialog.getByRole('textbox');
+    await userEvent.type(textarea, 'This is a detailed bug report about the calendar feature.');
+    const submitButton = dialog.getByRole('button', { name: /send/i });
     await expect(submitButton).toBeEnabled();
   },
 };
 
 /** 10文字未満で送信するとエラー表示。 */
 export const ValidationError: Story = {
-  play: async ({ canvas }) => {
-    const textarea = document.querySelector<HTMLTextAreaElement>('#contact-message');
-    if (textarea) {
-      await userEvent.type(textarea, 'short');
-    }
-    await userEvent.click(canvas.getByRole('button', { name: /send/i }));
-    await expect(canvas.getByText('Please enter at least 10 characters.')).toBeInTheDocument();
+  play: async () => {
+    const dialog = within(screen.getByRole('dialog'));
+    const textarea = dialog.getByRole('textbox');
+    await userEvent.type(textarea, 'short');
+    await userEvent.click(dialog.getByRole('button', { name: /send/i }));
+    await expect(dialog.getByText('Please enter at least 10 characters.')).toBeInTheDocument();
   },
 };
 
 /** カテゴリをラジオボタンで切り替えて送信。 */
 export const CategorySelection: Story = {
-  play: async ({ canvas }) => {
+  play: async () => {
+    const dialog = within(screen.getByRole('dialog'));
     // Feature Request を選択
-    const featureRadio = canvas.getByLabelText('Feature Request');
+    const featureRadio = dialog.getByRole('radio', { name: /feature request/i });
     await userEvent.click(featureRadio);
     await expect(featureRadio).toBeChecked();
 
     // Bug Report に戻す
-    const bugRadio = canvas.getByLabelText('Bug Report');
+    const bugRadio = dialog.getByRole('radio', { name: /bug report/i });
     await userEvent.click(bugRadio);
     await expect(bugRadio).toBeChecked();
     await expect(featureRadio).not.toBeChecked();
@@ -136,9 +134,10 @@ export const CategorySelection: Story = {
 /** mailto リンクが正しく設定されている。 */
 export const EmailLink: Story = {
   play: async () => {
-    const link = document.querySelector('a[href="mailto:support@dayopt.app"]');
+    const dialog = within(screen.getByRole('dialog'));
+    const link = dialog.getByRole('link', { name: /support@dayopt\.app/i });
     await expect(link).toBeInTheDocument();
-    await expect(link).toHaveTextContent('support@dayopt.app');
+    await expect(link).toHaveAttribute('href', 'mailto:support@dayopt.app');
   },
 };
 
