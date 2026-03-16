@@ -4,25 +4,57 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # 環境構成
 
-Dayoptは3環境構成（Local / Staging / Production）で運用。
+Dayoptは2環境構成（Preview / Production）で運用。
 
 ---
 
 ## 環境一覧
 
-| 環境           | Supabase          | Vercel      | URL                       |
-| -------------- | ----------------- | ----------- | ------------------------- |
-| **Local**      | ローカル          | npm run dev | localhost:3000             |
-| **Staging**    | dayopt-staging    | Preview     | *.vercel.app（main以外）  |
-| **Production** | t3-nico's Project | Production  | 本番ドメイン               |
+| 環境           | Supabase                   | Vercel                    | URL                            |
+| -------------- | -------------------------- | ------------------------- | ------------------------------ |
+| **Preview**    | dayopt-staging（Tokyo）    | npm run dev / Preview URL | localhost:3000 / *.vercel.app  |
+| **Production** | t3-nico's Project（Tokyo） | mainマージで自動デプロイ  | 本番ドメイン                   |
+
+> ローカル開発は Preview Supabase に直接接続。`npm run dev` で `vercel env pull` が自動実行され、環境変数が同期される。
 
 ## Supabase プロジェクト
 
-| プロジェクト      | Reference ID           | リージョン      | 用途         |
-| ----------------- | ---------------------- | --------------- | ------------ |
-| ローカル          | -                      | localhost:54321 | 開発         |
-| dayopt-staging    | `yvglwblxrnrenfifsnje` | Tokyo           | ステージング |
-| t3-nico's Project | `qloztwfbrbqtjijxicnd` | Tokyo           | 本番         |
+| プロジェクト      | Reference ID           | リージョン | 用途                    |
+| ----------------- | ---------------------- | ---------- | ----------------------- |
+| dayopt-staging    | `yvglwblxrnrenfifsnje` | Tokyo      | Preview（ローカル含む） |
+| t3-nico's Project | `qloztwfbrbqtjijxicnd` | Tokyo      | 本番                    |
+
+---
+
+## 環境変数の管理
+
+### 自動同期
+
+`npm run dev` を実行すると、`vercel env pull` が自動で `.env.local` を最新化する。
+Vercel ダッシュボードで環境変数を変更 → 次の `npm run dev` でローカルに反映。
+
+### Zodバリデーション
+
+サーバーサイド環境変数は `src/env.ts` で起動時にバリデーション。
+必須変数が欠けていると、具体的なエラーメッセージで即座に検知できる。
+
+```typescript
+// サーバーサイドコード
+import { env } from '@/env';
+
+const supabase = createServerClient(
+  env.NEXT_PUBLIC_SUPABASE_URL,
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  { ... }
+);
+```
+
+> **注意**: `NEXT_PUBLIC_*` はNext.jsがビルド時に文字列置換するため、
+> クライアントコード（`client.ts`等）では従来通り `process.env` を直接参照する。
+
+### `.env.example`
+
+プロジェクトルートに `.env.example` がある。手動設定が必要な場合はこちらを参照。
 
 ---
 
@@ -30,49 +62,63 @@ Dayoptは3環境構成（Local / Staging / Production）で運用。
 
 ### DB の分離
 
-- 各環境のデータベースは**完全に独立**
-- 本番データはステージングに存在しない
+- Preview と Production のデータベースは**完全に独立**
+- 本番データは Preview に存在しない
 - テストデータは自由に作成・削除可能
 
 ### Auth の分離
 
 - 各環境のユーザーアカウントは**共有されない**
-- ステージングでサインアップ → ステージングのみログイン可能
-- 本番アカウントでステージングにはログインできない
+- Preview でサインアップ → Preview のみログイン可能
+- 本番アカウントで Preview にはログインできない
 
 ### Vercel 環境変数
 
 ```
-Production  → 本番 Supabase
-Preview     → ステージング Supabase（全 Preview ブランチ共通）
-Development → ローカル Supabase
+Production     → 本番 Supabase
+Preview        → ステージング Supabase（全 Preview ブランチ共通）
+Development    → ステージング Supabase（vercel env pull で同期）
 ```
+
+---
+
+## オフライン開発（フォールバック）
+
+ネットワーク接続がない場合、ローカル Supabase を使用できる。
+
+```bash
+# ローカルDBを起動（Docker必要）
+supabase start
+
+# 環境変数でローカルDBを指定
+USE_LOCAL_DB=true npm run dev
+```
+
+> 通常の開発ではDocker不要。オフライン時のみ使用。
 
 ---
 
 ## マイグレーション
 
 マイグレーションは各環境に**個別に適用**が必要。
+詳細な手順は `docs/development/migration-checklist.md` を参照。
 
-### ローカル
+### Preview（自動）
 
-```bash
-supabase db reset        # 全マイグレーションを再適用
-supabase migration up    # 未適用分のみ適用
-```
+`main` ブランチに `supabase/migrations/**` の変更がpushされると、
+GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で Preview Supabase に適用。
 
-### ステージング
-
-```bash
-supabase link --project-ref yvglwblxrnrenfifsnje
-supabase db push
-```
-
-### 本番
+### Production（手動）
 
 ```bash
 supabase link --project-ref qloztwfbrbqtjijxicnd
 supabase db push
+```
+
+### Preview Supabase のリセット
+
+```bash
+npm run db:reset-preview
 ```
 
 ### リンク状態の確認
@@ -82,16 +128,25 @@ supabase projects list
 # LINKED列に●があるプロジェクトが現在リンク中
 ```
 
-### CI 自動マイグレーション
-
-`main` ブランチに `supabase/migrations/**` の変更がpushされると、
-GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で **Staging** に適用。
-
-**本番への適用は手動**（`supabase link` → `supabase db push`）。
-
 必要な GitHub Secrets:
 - `SUPABASE_ACCESS_TOKEN`
 - `STAGING_DB_PASSWORD`
+
+---
+
+## デプロイフロー
+
+```
+feature branch → push → Vercel Preview URL 自動生成
+                  ↓
+              PR → main マージ
+                  ├── Vercel: 自動 Production デプロイ
+                  └── GitHub Actions: Preview Supabase にマイグレーション自動適用
+
+バージョン記録（任意）:
+  git tag v0.X.0 → GitHub Actions → GitHub Release 作成
+  ※ タグはデプロイトリガーではない
+```
 
 ---
 
@@ -107,7 +162,7 @@ GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で **Sta
 3. Preview URL にモバイルでアクセス
    - 固定URL: `dayopt-git-{branch}-t3-nicos-projects.vercel.app`
 
-4. ステージングでサインアップしてテスト
+4. Preview でサインアップしてテスト
 
 ---
 
@@ -115,7 +170,9 @@ GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で **Sta
 
 | 症状 | 対処 |
 |------|------|
-| ステージングにログインできない | ステージング環境で新規サインアップが必要（本番アカウントは使えない） |
+| Preview にログインできない | Preview 環境で新規サインアップが必要（本番アカウントは使えない） |
 | マイグレーションが反映されない | 対象環境にリンクしてから `supabase db push` を実行 |
 | Preview デプロイがエラー | Vercel ダッシュボードでビルドログを確認 |
 | Production が paused | Supabase ダッシュボード → Settings → General → Resume |
+| 環境変数エラーで起動しない | `vercel env pull .env.local` を実行、または `.env.example` を参照 |
+| ローカルとPreviewで動作が違う | 同じDBを使うため通常は発生しない。`.env.local` が古い場合は `npm run dev` で自動更新 |
