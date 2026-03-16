@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
-import { getTimeZones } from '../utils/timezone-utils';
+import { getTimeZones } from '@/lib/timezone-utils';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';

@@ -16,9 +16,9 @@ import { useTheme } from '@/hooks/useTheme';
 import { usePathname, useRouter } from '@/platform/i18n/navigation';
 import { routing, type Locale } from '@/platform/i18n/routing';
 
+import { getTimeZones } from '@/lib/timezone-utils';
 import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
 import { useUserSettings } from '../hooks/useUserSettings';
-import { getTimeZones } from '../utils/timezone-utils';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';

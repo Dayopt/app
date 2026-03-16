@@ -19,11 +19,11 @@ import { usePathname, useRouter } from '@/platform/i18n/navigation';
 import { routing, type Locale } from '@/platform/i18n/routing';
 
 import { useTourStore } from '@/features/tour';
+import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/platform/trpc';
 import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
 import { useUserSettings } from '../hooks/useUserSettings';
 import { useSettingsStore } from '../stores/useSettingsStore';
-import { getTimeZones } from '../utils/timezone-utils';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
