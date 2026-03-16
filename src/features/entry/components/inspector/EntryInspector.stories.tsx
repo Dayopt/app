@@ -5,6 +5,8 @@ import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { expect, within } from 'storybook/test';
 
+import type { ReactNode } from 'react';
+
 import type { EntryOrigin, EntryState, FulfillmentScore } from '../../types/entry';
 
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
@@ -63,6 +65,8 @@ interface InspectorContentProps {
   initialNote?: string;
   initialFulfillment?: FulfillmentScore | null;
   initialReminderMinutes?: number | null;
+  /** Composition Layer から注入されるマイクロインサイト（ReactNode） */
+  microInsight?: ReactNode;
 }
 
 /** 計算ユーティリティ: HH:MM の差分を分で返す */
@@ -84,6 +88,7 @@ function InspectorContent({
   initialNote = '',
   initialFulfillment = null,
   initialReminderMinutes = null,
+  microInsight,
 }: InspectorContentProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [plannedStart, setPlannedStart] = useState(initialPlannedStart);
@@ -110,6 +115,9 @@ function InspectorContent({
     <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
       {/* Tag + Delete */}
       <MockTagRow tagName={tagName} dotClass={tagDotClass} />
+
+      {/* Micro Insight (Composition Layer 経由で注入) */}
+      {microInsight && <div className="mt-1.5 px-0.5">{microInsight}</div>}
 
       {/* Schedule card */}
       <div className="bg-surface-inset mt-3 rounded-xl">
@@ -259,6 +267,78 @@ export const PastUnplanned: Story = {
         initialActualEnd="14:00"
         initialNote="Spontaneous lunch walk"
         initialFulfillment={3}
+      />
+    </InspectorFrame>
+  ),
+};
+
+// ─────────────────────────────────────────────────────────
+// With Micro Insight（Composition Layer 連携プレビュー）
+// ─────────────────────────────────────────────────────────
+
+/**
+ * ## MicroInsight 付き — 見積もり超過バイアス
+ *
+ * Composition Layer が stats feature の `getEntryMicroInsight()` を呼び、
+ * 結果を ReactNode として Inspector に注入するパターン。
+ * ここでは Story 内で直接モックテキストを渡している。
+ */
+export const WithMicroInsightEstimation: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="upcoming"
+        origin="planned"
+        tagName="Meeting"
+        tagDotClass="bg-purple-500"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="11:30"
+        microInsight={
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            このタグは平均 +25 分超過する傾向があります
+          </p>
+        }
+      />
+    </InspectorFrame>
+  ),
+};
+
+/** MicroInsight 付き — 時間帯の充実度 */
+export const WithMicroInsightFulfillment: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="past"
+        origin="planned"
+        tagName="Work"
+        tagDotClass="bg-blue-500"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="12:00"
+        initialActualStart="10:00"
+        initialActualEnd="12:15"
+        initialFulfillment={3}
+        microInsight={
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            この時間帯の充実度は平均より高い傾向があります
+          </p>
+        }
+      />
+    </InspectorFrame>
+  ),
+};
+
+/** MicroInsight なし（null — 大半のケース）。既存と同じ見た目。 */
+export const WithoutMicroInsight: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        entryState="upcoming"
+        origin="planned"
+        tagName="Work"
+        tagDotClass="bg-blue-500"
+        initialPlannedStart="14:00"
+        initialPlannedEnd="15:30"
+        microInsight={undefined}
       />
     </InspectorFrame>
   ),
