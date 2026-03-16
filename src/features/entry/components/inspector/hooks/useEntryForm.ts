@@ -22,7 +22,6 @@ import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMuta
 import { useEntryCacheStore } from '../../../stores/useEntryCacheStore';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../../types/entry';
-import { useInspectorNavigation } from './useInspectorNavigation';
 
 import { useDebouncedSave } from './useDebouncedSave';
 import { useRecurringGuard } from './useRecurringGuard';
@@ -69,24 +68,20 @@ export function useEntryForm() {
   });
 
   // 2. 統一保存パイプライン
-  const { save, saveImmediate, saveTag, flush, updateEntry, deleteEntry } = useDebouncedSave({
+  const { save, saveImmediate, saveTag, updateEntry, deleteEntry } = useDebouncedSave({
     entryId,
   });
 
-  // 3. ナビゲーション
-  const { hasPrevious, hasNext, goToPrevious, goToNext } = useInspectorNavigation(entryId);
-
-  // 4. タグフィールド
+  // 3. タグフィールド
   const { selectedTagId, handleTagChange } = useTagField({
     entryId,
     entry: entryData as EntryWithTags | undefined,
     saveTag,
   });
 
-  // 5. 時間フィールド
+  // 4. 時間フィールド
   const {
     timeConflictError,
-    titleRef,
     scheduleDate,
     startTime,
     endTime,
@@ -165,60 +160,40 @@ export function useEntryForm() {
     closeInspector,
   ]);
 
-  // --- 閉じる ---
-  const saveAndClose = useCallback(() => {
-    if (timeConflictError) return;
-    flush();
-    closeInspector();
-  }, [timeConflictError, flush, closeInspector]);
-
-  const cancelAndClose = useCallback(() => {
-    // デバウンス中の未送信変更は破棄（flush しない）
-    closeInspector();
-  }, [closeInspector]);
-
   return {
-    // Store state
     entryId,
     entry,
-    closeInspector,
-    saveAndClose,
-    cancelAndClose,
-    hasPendingChanges: false, // 全フィールドが as-you-go 保存のため常に false
 
-    // Navigation
-    hasPrevious,
-    hasNext,
-    goToPrevious,
-    goToNext,
+    fields: {
+      selectedTagId,
+      scheduleDate,
+      startTime,
+      endTime,
+      actualStartTime,
+      actualEndTime,
+      reminderMinutes,
+    },
 
-    // Tags state
-    selectedTagId,
-    handleTagChange,
+    handlers: {
+      handleTagChange,
+      handleScheduleDateChange,
+      handleStartTimeChange,
+      handleEndTimeChange,
+      handleActualStartChange,
+      handleActualEndChange,
+      handleReminderChange,
+      autoSave,
+    },
 
-    // Form state
-    titleRef,
-    scheduleDate,
-    startTime,
-    endTime,
-    reminderMinutes,
-    actualStartTime,
-    actualEndTime,
-    handleReminderChange,
-    timeConflictError,
+    state: {
+      timeConflictError,
+    },
 
-    // Form handlers
-    handleScheduleDateChange,
-    handleStartTimeChange,
-    handleEndTimeChange,
-    handleActualStartChange,
-    handleActualEndChange,
-    autoSave,
-    updateEntry,
+    actions: {
+      updateEntry,
+      handleDelete,
+    },
 
-    // Menu handlers
-    handleDelete,
-    // Cache
     getCache,
   };
 }

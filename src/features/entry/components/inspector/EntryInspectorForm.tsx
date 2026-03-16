@@ -41,29 +41,28 @@ export function EntryInspectorForm() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
+  const { entryId, entry, fields, handlers, state, actions, getCache } = useEntryForm();
   const {
-    entryId,
-    entry,
     selectedTagId,
-    handleTagChange,
     scheduleDate,
     startTime,
     endTime,
-    reminderMinutes,
     actualStartTime,
     actualEndTime,
+    reminderMinutes,
+  } = fields;
+  const {
+    handleTagChange,
     handleScheduleDateChange,
     handleStartTimeChange,
     handleEndTimeChange,
-    handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
+    handleReminderChange,
     autoSave,
-    updateEntry: updateEntryMutation,
-    handleDelete,
-    timeConflictError,
-    getCache,
-  } = useEntryForm();
+  } = handlers;
+  const { timeConflictError } = state;
+  const { updateEntry: updateEntryMutation, handleDelete } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
