@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import { useCallback, useState } from 'react';
 import type { CreateTagInput, Tag, UpdateTagInput } from '../types';
-import { useCreateTag, useDeleteTag, useRenameTag, useUpdateTag } from './useTagsMutations';
+import { useCreateTag, useDeleteTag, useRenameTag, useUpdateTag } from './useTagCrudMutations';
 import { useOptimisticTagUpdate } from './useTagsOptimistic';
 
 export function useTagOperations(tags: Tag[]) {
