@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useHapticFeedback } from '../../../../../hooks/useHapticFeedback';
+import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 
 import type { DateTimeSelection, TimeRange } from './types';
 import { DRAG_CONSTANTS } from './types';

@@ -13,8 +13,8 @@
 import { useMemo } from 'react';
 
 import { useCalendar } from '../contexts/CalendarContext';
+import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { useCalendarKeyboard } from '../hooks/useCalendarKeyboard';
 import { DnDProvider } from '../providers/DnDProvider';
 
 import { CalendarViewRenderer } from './controller/components';

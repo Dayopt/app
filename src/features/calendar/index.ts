@@ -63,9 +63,9 @@ export {
 // =============================================================================
 // Hooks
 // =============================================================================
+export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
+export { useWeekendNavigation } from './hooks/navigation/useWeekendNavigation';
 export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
-export { useCalendarProviderProps } from './hooks/useCalendarProviderProps';
-export { useWeekendNavigation } from './hooks/useWeekendNavigation';
 
 // Stores: Cross-feature (used by composition layer in app/)
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
@@ -74,11 +74,11 @@ export { useInlineCreateStore } from './stores/useInlineCreateStore';
 export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
 export { useCalendarNavigationHandlers } from './components/controller/hooks/useCalendarNavigationHandlers';
-export { useCalendarEventKeyboard } from './hooks/useCalendarPlanKeyboard';
-export { usePlanContextActions } from './hooks/usePlanContextActions';
-export { usePlanOperations } from './hooks/usePlanOperations';
-export { useRecurringPlanDrag } from './hooks/useRecurringPlanDrag';
-export { useWeekendToggleShortcut } from './hooks/useWeekendToggleShortcut';
+export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarPlanKeyboard';
+export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
+export { usePlanContextActions } from './hooks/operations/usePlanContextActions';
+export { usePlanOperations } from './hooks/operations/usePlanOperations';
+export { useRecurringPlanDrag } from './hooks/operations/useRecurringPlanDrag';
 
 // =============================================================================
 // Lib / Utils
