@@ -54,7 +54,7 @@ export function MockPlanLinkButton({ planName }: { planName?: string | undefined
   );
 }
 
-/** モック用タグ行（TagRow は useTagsMap 依存のためモック） */
+/** モック用タグ行（Storybook用静的表示） */
 export function MockTagRow({
   tagName,
   dotClass,

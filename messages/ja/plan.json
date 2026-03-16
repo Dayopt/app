@@ -32,6 +32,7 @@
       "created": "「{title}」を作成しました",
       "createFailed": "作成に失敗しました: {error}",
       "updated": "更新しました",
+      "timeOverlap": "この時間帯には既にエントリがあります",
       "updateFailed": "更新に失敗しました",
       "deleted": "削除しました",
       "deleteFailed": "削除に失敗しました: {error}",

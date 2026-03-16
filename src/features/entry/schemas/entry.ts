@@ -115,7 +115,6 @@ export const bulkDeleteEntrySchema = z.object({
 // 型エクスポート
 export type CreateEntryInput = z.infer<typeof createEntrySchema>;
 export type UpdateEntryInput = z.infer<typeof updateEntrySchema>;
-export type EntryOrigin = z.infer<typeof entryOriginSchema>;
 export type EntryFilter = z.infer<typeof entryFilterSchema>;
 export type EntryInclude = z.infer<typeof entryIncludeSchema>;
 export type GetEntryByIdInput = z.infer<typeof getEntryByIdSchema>;

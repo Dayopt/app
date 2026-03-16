@@ -143,8 +143,9 @@ export function useEntryMutations() {
         }
       }
 
-      // TIME_OVERLAPエラー（重複防止）の場合はモーダル内でエラー表示（toastなし）
+      // TIME_OVERLAPエラー（重複防止）
       if (error.message.includes('既に予定があります') || error.message.includes('TIME_OVERLAP')) {
+        toast.error(t('plan.toast.timeOverlap'));
         return;
       }
 
@@ -275,7 +276,9 @@ export function useEntryMutations() {
       // 自動保存（title、description、日時など）はtoast非表示
     },
     onError: (err, _variables, context) => {
-      if (!err.message.includes('既に予定があります') && !err.message.includes('TIME_OVERLAP')) {
+      if (err.message.includes('既に予定があります') || err.message.includes('TIME_OVERLAP')) {
+        toast.error(t('plan.toast.timeOverlap'));
+      } else {
         toast.error(t('plan.toast.updateFailed'));
       }
 
