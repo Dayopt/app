@@ -55,15 +55,16 @@ let _validated = false;
  *
  * process.env へのアクセスをProxy経由で提供する。
  * - dev/production ランタイム: 初回アクセス時にZodバリデーションを実行（不足があればthrow）
- * - ビルド時/テスト時: バリデーションをスキップし process.env を直接返す
+ * - ビルド時/テスト時/CI: バリデーションをスキップし process.env を直接返す
  */
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop: string) {
-    // テスト環境・ビルド時はバリデーションをスキップ
+    // テスト・ビルド・CI環境ではバリデーションをスキップ
     const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
     const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+    const isCI = process.env.CI === 'true';
 
-    if (!isTest && !isBuild && !_validated) {
+    if (!isTest && !isBuild && !isCI && !_validated) {
       const result = serverSchema.safeParse(process.env);
       if (!result.success) {
         const formatted = result.error.issues
