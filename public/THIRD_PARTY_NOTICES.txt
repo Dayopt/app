@@ -1,4 +1,4 @@
-BoxLog - Third Party Notices
+Dayopt - Third Party Notices
 
 This file contains notices for third-party software components included in this project.
 

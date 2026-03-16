@@ -1,5 +1,5 @@
 {
-  "name": "boxlog-app",
+  "name": "dayopt-app",
   "version": "0.19.0",
   "private": true,
   "sideEffects": [
@@ -9,7 +9,7 @@
     "src/styles/globals.css"
   ],
   "scripts": {
-    "dev": "vercel env pull .env.local --yes || echo '⚠️ env pull failed, using existing .env.local'; NODE_OPTIONS='--max-old-space-size=12288' next dev",
+    "dev": "vercel env pull .env.local --environment=preview --yes || echo '⚠️ env pull failed, using existing .env.local'; NODE_OPTIONS='--max-old-space-size=12288' next dev",
     "dev:safe": "./scripts/dev-server-guard.sh",
     "dev:kill": "lsof -ti:3000 | xargs kill -9 2>/dev/null || echo 'No server running'",
     "prebuild": "echo 'prebuild: no-op'",
@@ -40,8 +40,8 @@
     "docs:validate:links": "node scripts/validate-doc-references.js",
     "docs:validate:rules": "node scripts/validate-claude-rules.js",
     "docs:validate": "npm run docs:validate:links && npm run docs:validate:rules",
-    "license:check": "npx license-checker --production --excludePackages \"boxlog-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
-    "license:check:force": "npx license-checker --production --excludePackages \"boxlog-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\" --failOn \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
+    "license:check": "npx license-checker --production --excludePackages \"dayopt-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
+    "license:check:force": "npx license-checker --production --excludePackages \"dayopt-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\" --failOn \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
     "license:check-risks": "tsx scripts/check-license-risks.ts",
     "license:audit": "npx license-checker --production --summary",
     "license:report": "npx license-checker --production --csv > license-report.csv",
@@ -78,7 +78,7 @@
     "sentry:test": "node scripts/sentry/connection-test.cjs",
     "sentry:verify": "node scripts/verify-sentry.mjs",
     "vercel:env": "vercel env ls",
-    "vercel:env:pull": "vercel env pull .env.local",
+    "vercel:env:pull": "vercel env pull .env.local --environment=preview",
     "deps:check": "npm audit --production && ncu --errorLevel 2",
     "deps:outdated": "ncu",
     "deps:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx src/",
