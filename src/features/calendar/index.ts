@@ -82,13 +82,6 @@ export { useRecurringPlanDrag } from './hooks/operations/useRecurringPlanDrag';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
-export {
-  formatDateString,
-  localTimeToUTCISO,
-  parseDateString,
-  parseDatetimeString,
-  parseISOToUserTimezone,
-} from '@/lib/date-utils';
 export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/range';
 // Temporal: エントリ状態判定（@/features/entry からの re-export）
 export { computeOriginTransition, getEntryState, isEntryPast, isTimePast } from '@/features/entry';
