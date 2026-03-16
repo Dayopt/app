@@ -6,7 +6,7 @@ import { TourStepCenter } from './TourStepCenter';
 import { TourStepPopover } from './TourStepPopover';
 import { TourStepSheet } from './TourStepSheet';
 
-import type { TourStepPlacement } from '../types';
+import type { TourContentKey, TourStepPlacement } from '../types';
 
 interface TourStepProps {
   targetSelector: string;
@@ -18,6 +18,7 @@ interface TourStepProps {
   isLastStep: boolean;
   onNext: () => void;
   onSkip: () => void;
+  contentKey?: TourContentKey | undefined;
 }
 
 /** Center: Dialog / PC: Popover / Mobile: Sheet の分岐 */
@@ -35,6 +36,7 @@ export function TourStep(props: TourStepProps) {
         isLastStep={props.isLastStep}
         onNext={props.onNext}
         onSkip={props.onSkip}
+        contentKey={props.contentKey}
       />
     );
   }
