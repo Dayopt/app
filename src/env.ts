@@ -48,39 +48,35 @@ const serverSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
-let _env: ServerEnv | undefined;
-
-function validateEnv(): ServerEnv {
-  const result = serverSchema.safeParse(process.env);
-
-  if (!result.success) {
-    const formatted = result.error.issues
-      .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
-      .join('\n');
-
-    throw new Error(
-      `❌ 環境変数のバリデーションに失敗しました:\n${formatted}\n\n` +
-        `vercel env pull .env.local を実行するか、.env.example を参照してください。`,
-    );
-  }
-
-  return result.data;
-}
+let _validated = false;
 
 /**
- * サーバーサイド環境変数（遅延評価）
+ * サーバーサイド環境変数
  *
- * - テスト環境: バリデーションをスキップし process.env を直接返す（各テストが vi.stubEnv で制御）
- * - その他: 初回アクセス時にZodバリデーションを実行
+ * process.env へのアクセスをProxy経由で提供する。
+ * - dev/production ランタイム: 初回アクセス時にZodバリデーションを実行（不足があればthrow）
+ * - ビルド時/テスト時: バリデーションをスキップし process.env を直接返す
  */
 export const env = new Proxy({} as ServerEnv, {
   get(_target, prop: string) {
-    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-      return process.env[prop];
+    // テスト環境・ビルド時はバリデーションをスキップ
+    const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+    const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
+
+    if (!isTest && !isBuild && !_validated) {
+      const result = serverSchema.safeParse(process.env);
+      if (!result.success) {
+        const formatted = result.error.issues
+          .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
+          .join('\n');
+        throw new Error(
+          `❌ 環境変数のバリデーションに失敗しました:\n${formatted}\n\n` +
+            `vercel env pull .env.local を実行するか、.env.example を参照してください。`,
+        );
+      }
+      _validated = true;
     }
-    if (!_env) {
-      _env = validateEnv();
-    }
-    return _env[prop as keyof ServerEnv];
+
+    return process.env[prop];
   },
 });
