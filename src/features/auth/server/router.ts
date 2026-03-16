@@ -87,11 +87,9 @@ export const userRouter = createTRPCRouter({
   verifyRecoveryCode: protectedProcedure
     .input(
       z.object({
-        code: z
-          .string()
-          .refine((val) => isValidRecoveryCodeFormat(val), {
-            message: 'Invalid recovery code format',
-          }),
+        code: z.string().refine((val) => isValidRecoveryCodeFormat(val), {
+          message: 'Invalid recovery code format',
+        }),
       }),
     )
     .mutation(async ({ ctx, input }) => {

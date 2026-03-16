@@ -280,9 +280,9 @@ describe('Entry Status Utilities', () => {
         expect(result.clearFields).toBeNull();
       });
 
-      it('should stay unplanned when entry has null times (upcoming)', () => {
-        const newStartTime = new Date('2026-03-15T13:00:00Z');
-        const newEndTime = new Date('2026-03-15T14:00:00Z');
+      it('should transition to planned when moved to future (upcoming)', () => {
+        const newStartTime = new Date('2099-03-15T13:00:00Z');
+        const newEndTime = new Date('2099-03-15T14:00:00Z');
 
         const result = computeOriginTransition('unplanned', newStartTime, newEndTime);
 
