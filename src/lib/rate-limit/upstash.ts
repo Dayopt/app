@@ -11,14 +11,15 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
+import { env } from '@/env';
 import { logger } from '@/lib/logger';
 import { extractClientIp } from '@/platform/security/ip-validation';
 
 /**
  * 環境変数チェック
  */
-const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN;
 
 /**
  * Upstash Redis有効化フラグ

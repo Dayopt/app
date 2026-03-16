@@ -6,13 +6,14 @@
  * App側は環境情報・プラン情報を自動付与
  */
 
+import { env } from '@/env';
 import { ServiceError } from '@/platform/trpc/errors';
 
 import type { ContactFormInput } from '../types';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_TOKEN = env.GITHUB_TOKEN;
 /** Web側と同じ変数名 (e.g. "Dayopt/web") */
-const GITHUB_CONTACT_REPO = process.env.GITHUB_CONTACT_REPO;
+const GITHUB_CONTACT_REPO = env.GITHUB_CONTACT_REPO;
 
 /** Web側と統一したカテゴリラベル */
 const CATEGORY_LABELS: Record<string, string> = {

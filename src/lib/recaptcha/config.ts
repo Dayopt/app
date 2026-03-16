@@ -3,14 +3,16 @@
  * @description Google reCAPTCHA v2/v3の設定と検証
  */
 
+import { env } from '@/env';
+
 export const RECAPTCHA_CONFIG = {
-  // サイトキー（クライアントサイド）
+  // サイトキー（クライアントサイド — ビルド時置換）
   SITE_KEY_V3: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY_V3 || '',
   SITE_KEY_V2: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY_V2 || '',
 
   // シークレットキー（サーバーサイド）
-  SECRET_KEY_V3: process.env.RECAPTCHA_SECRET_KEY_V3 || '',
-  SECRET_KEY_V2: process.env.RECAPTCHA_SECRET_KEY_V2 || '',
+  SECRET_KEY_V3: env.RECAPTCHA_SECRET_KEY_V3 || '',
+  SECRET_KEY_V2: env.RECAPTCHA_SECRET_KEY_V2 || '',
 
   // スコアしきい値（v3）
   SCORE_THRESHOLD: {

@@ -4,6 +4,7 @@ import { getMessages, getTranslations } from 'next-intl/server';
 import Script from 'next/script';
 
 import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner';
+import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import type { Locale } from '@/platform/i18n/routing';
 import { routing } from '@/platform/i18n/routing';
@@ -101,7 +102,7 @@ export async function generateMetadata({
       languages: alternateLanguages,
     },
     other: {
-      'google-site-verification': process.env.GOOGLE_SITE_VERIFICATION || '',
+      'google-site-verification': env.GOOGLE_SITE_VERIFICATION || '',
     },
   };
 }

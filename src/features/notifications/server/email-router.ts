@@ -20,6 +20,7 @@ import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
 import { OverdueEmail } from '@/emails/OverdueEmail';
 import { ReminderEmail } from '@/emails/ReminderEmail';
 import { WelcomeEmail } from '@/emails/WelcomeEmail';
+import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import type { Context } from '@/platform/trpc/procedures';
@@ -27,11 +28,11 @@ import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
+  return new Resend(env.RESEND_API_KEY);
 }
 
 // 送信元メールアドレス
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const APP_URL = getAppUrl();
 
 /**

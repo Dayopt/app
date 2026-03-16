@@ -27,6 +27,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 
+import { env } from '@/env';
 import type { Database } from '@/lib/database.types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -116,12 +117,8 @@ export async function verifyOAuthToken(
     resourceIndicator?: string;
   },
 ): Promise<OAuthVerificationResult> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase environment variables are not set');
-  }
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // トークン付きクライアント作成
   const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
@@ -192,12 +189,8 @@ export async function verifyOAuthToken(
  * ```
  */
 export function createServiceRoleClient(): SupabaseClient<Database> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. This is required for admin operations.');
-  }
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   return createClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
