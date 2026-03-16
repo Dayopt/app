@@ -13,6 +13,7 @@ export type {
   Entry,
   EntryFilters,
   EntryOrigin,
+  EntryState,
   EntryWithTags,
   FulfillmentScore,
   RecurrenceConfig,
@@ -63,7 +64,6 @@ export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 // =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
-export type { EntryState } from '@/types/entry';
 export {
   computeOriginTransition,
   getEntryState,
