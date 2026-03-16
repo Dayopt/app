@@ -5,58 +5,72 @@ import { devtools, persist } from 'zustand/middleware';
 
 import { createSelectors } from '@/lib/zustand/createSelectors';
 
-interface TourState {
-  /** ツアー完了済み（persist） */
-  completed: boolean;
-  /** ツアー表示中（ephemeral） */
-  isActive: boolean;
-  /** 現在のステップインデックス（ephemeral） */
-  currentStepIndex: number;
+import { TOUR_STEPS } from '../constants';
+import { createInitialState, transition } from '../machine/tourMachine';
+
+import type { TourMachineState } from '../machine/tourMachine';
+import type { TourEvent } from '../types';
+
+// ---------------------------------------------------------------------------
+// skipWhen フィルタ
+// ---------------------------------------------------------------------------
+
+/** ランタイム条件でステップをフィルタ */
+function resolveActiveSteps() {
+  return TOUR_STEPS.filter((step) => !step.skipWhen?.());
 }
 
-interface TourActions {
-  startTour: () => void;
-  nextStep: () => void;
-  skipTour: () => void;
-  completeTour: () => void;
-  /** Settings「ツアーをもう一度見る」用 */
-  reset: () => void;
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
+
+interface TourStoreState {
+  /** ステートマシンの状態 */
+  machine: TourMachineState;
+  /** イベント送信 */
+  send: (event: TourEvent) => void;
 }
 
-const useTourStoreBase = create<TourState & TourActions>()(
+const useTourStoreBase = create<TourStoreState>()(
   devtools(
     persist(
       (set, get) => ({
-        completed: false,
-        isActive: false,
-        currentStepIndex: 0,
+        machine: createInitialState([], false),
 
-        startTour: () => {
-          if (get().completed) return;
-          set({ isActive: true, currentStepIndex: 0 });
-        },
+        send: (event: TourEvent) => {
+          const current = get().machine;
 
-        nextStep: () => {
-          const { currentStepIndex } = get();
-          set({ currentStepIndex: currentStepIndex + 1 });
-        },
+          // START 時にステップを解決（skipWhen を評価）
+          if (event.type === 'START') {
+            const activeSteps = resolveActiveSteps();
+            const fresh = createInitialState(activeSteps, current.completed);
+            const next = transition(fresh, event);
+            set({ machine: next });
+            return;
+          }
 
-        skipTour: () => {
-          set({ isActive: false, completed: true, currentStepIndex: 0 });
-        },
+          // RESET 時もステップを再解決
+          if (event.type === 'RESET') {
+            const activeSteps = resolveActiveSteps();
+            const next = transition(current, event);
+            set({ machine: { ...next, steps: activeSteps } });
+            return;
+          }
 
-        completeTour: () => {
-          set({ isActive: false, completed: true, currentStepIndex: 0 });
-        },
-
-        reset: () => {
-          set({ completed: false, isActive: false, currentStepIndex: 0 });
+          const next = transition(current, event);
+          set({ machine: next });
         },
       }),
       {
         name: 'tour-storage',
         partialize: (state) => ({
-          completed: state.completed,
+          // completed のみ永続化
+          machine: {
+            status: state.machine.completed ? ('completed' as const) : ('idle' as const),
+            stepIndex: 0,
+            steps: [],
+            completed: state.machine.completed,
+          },
         }),
       },
     ),
