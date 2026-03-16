@@ -17,11 +17,9 @@ import type { WeekViewProps } from './WeekView.types';
  * @description
  * 構成:
  * 1. shared/DateDisplay で7日分の日付表示
- * 2. shared/grid/TimeColumn で時間軸
- * 3. shared/grid/TimeGrid でグリッド
- * 4. 7つの shared/components/DayColumn を横並び
- * 5. shared/components/PlanCard でプラン表示
- * 6. shared/grid/CurrentTimeLine で現在時刻
+ * 2. ScrollableCalendarLayout（時間軸 + グリッド + 現在時刻線）
+ * 3. 7つの WeekContent を横並び
+ * 4. EntryCard でエントリ表示
  *
  * レイアウト:
  * ┌────┬────┬────┬────┬────┬────┬────┬────┐

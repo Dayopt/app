@@ -3,10 +3,6 @@
  */
 
 // ===== グリッドシステム =====
-// TimeGrid - メインのタイムグリッド
-export type * from './grid/TimeGrid';
-export { TimeGrid } from './grid/TimeGrid';
-
 // TimeColumn - 時間列
 export { TimeColumn, TimeLabel } from './grid/TimeColumn';
 
@@ -18,11 +14,7 @@ export { CurrentTimeLine, CurrentTimeLineForColumn } from './grid/CurrentTimeLin
 
 // ===== UIコンポーネント =====
 // EntryCard - エントリ表示（@/features/entry から re-export）
-export {
-  EntryCard,
-  EntryCard as PlanCard,
-  EntryCardContent as PlanCardContent,
-} from '@/features/entry';
+export { EntryCard } from '@/features/entry';
 export type { EntryCardPosition, EntryCardProps } from '@/features/entry';
 
 // DayColumn - 日列（イベント表示エリアのみ）

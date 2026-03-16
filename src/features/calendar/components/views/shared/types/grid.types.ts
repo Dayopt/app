@@ -17,28 +17,6 @@ export interface GridPosition {
   height: number;
 }
 
-export interface TimeSelection {
-  startHour: number;
-  startMinute: number;
-  endHour: number;
-  endMinute: number;
-}
-
-export interface TimeGridProps {
-  startHour?: number | undefined; // 開始時間（デフォルト: 0）
-  endHour?: number | undefined; // 終了時間（デフォルト: 24）
-  hourHeight?: number | undefined; // 1時間の高さ（デフォルト: 72）
-  showHalfHourLines?: boolean | undefined; // 30分線を表示するか
-  showQuarterHourLines?: boolean | undefined; // 15分線を表示するか
-  showCurrentTime?: boolean | undefined; // 現在時刻線を表示するか
-  className?: string | undefined;
-  children?: React.ReactNode | undefined;
-  onTimeClick?: ((hour: number, minute: number) => void) | undefined;
-  onTimeRangeSelect?: ((selection: TimeSelection) => void) | undefined; // ドラッグ選択時のコールバック
-  scrollToHour?: number | undefined; // 初期スクロール位置
-  displayDates?: Date[] | undefined; // 表示日付（現在時刻線の表示判定に使用）
-}
-
 export interface TimeColumnProps {
   startHour?: number | undefined;
   endHour?: number | undefined;
