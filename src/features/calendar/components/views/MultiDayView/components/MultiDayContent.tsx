@@ -8,13 +8,13 @@ import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { EntryCard } from '@/features/entry';
-import type { InteractionState } from '../../../../interaction';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
+import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 
 interface MultiDayContentProps {
   date: Date;
@@ -30,38 +30,6 @@ interface MultiDayContentProps {
   displayDates?: Date[] | undefined;
   disabledPlanId?: string | null | undefined;
   viewMode: string;
-}
-
-// ========================================
-// Helpers
-// ========================================
-
-function getAdjustedStyle(
-  originalStyle: React.CSSProperties,
-  planId: string,
-  state: InteractionState,
-): React.CSSProperties {
-  if (state.mode === 'dragging' && state.entryId === planId) {
-    return { ...originalStyle, opacity: 0.3, zIndex: 1 };
-  }
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return {
-      ...originalStyle,
-      height: `${state.snappedHeight}px`,
-      zIndex: 1000,
-    };
-  }
-  return originalStyle;
-}
-
-function getPreviewTime(
-  planId: string,
-  state: InteractionState,
-): { start: Date; end: Date } | null {
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return state.previewTime;
-  }
-  return null;
 }
 
 // ========================================

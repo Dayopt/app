@@ -7,7 +7,6 @@ import { useEntryInspectorStore } from '@/features/entry';
 import { cn } from '@/lib/utils';
 
 import { EntryCard } from '@/features/entry';
-import type { InteractionState } from '../../../../interaction';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection } from '../../shared';
@@ -15,41 +14,8 @@ import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import type { CalendarEvent } from '../../shared/types/base.types';
+import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 import type { DayContentProps } from '../DayView.types';
-
-// ========================================
-// Helpers
-// ========================================
-
-/** Compute adjusted style for plan ghost during drag/resize */
-function getAdjustedStyle(
-  originalStyle: React.CSSProperties,
-  planId: string,
-  state: InteractionState,
-): React.CSSProperties {
-  if (state.mode === 'dragging' && state.entryId === planId) {
-    return { ...originalStyle, opacity: 0.3, zIndex: 1 };
-  }
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return {
-      ...originalStyle,
-      height: `${state.snappedHeight}px`,
-      zIndex: 1000,
-    };
-  }
-  return originalStyle;
-}
-
-/** Get preview time for resize (drag shows time on ghost, not on original) */
-function getPreviewTime(
-  planId: string,
-  state: InteractionState,
-): { start: Date; end: Date } | null {
-  if (state.mode === 'resizing' && state.entryId === planId) {
-    return state.previewTime;
-  }
-  return null;
-}
 
 // ========================================
 // Component
