@@ -132,20 +132,20 @@ describe('calculateEntryLayouts', () => {
       end: new Date('2026-01-15T11:00:00'),
       origin: 'planned',
     });
-    const unplanned = createTimedEntry({
-      id: 'unplanned',
+    const laterEntry = createTimedEntry({
+      id: 'later-entry',
       start: new Date('2026-01-15T10:00:00'),
       end: new Date('2026-01-15T11:00:00'),
-      origin: 'unplanned',
+      origin: 'planned',
     });
-    // unplannedを先に渡しても、plannedがcolumn 0になるべき
-    const layouts = calculateEntryLayouts([unplanned, planned]);
+    // 後発エントリを先に渡しても、早い方がcolumn 0になるべき
+    const layouts = calculateEntryLayouts([laterEntry, planned]);
 
     const plannedLayout = layouts.find((l) => l.entry.id === 'planned');
-    const unplannedLayout = layouts.find((l) => l.entry.id === 'unplanned');
+    const laterLayout = layouts.find((l) => l.entry.id === 'later-entry');
 
     expect(plannedLayout!.column).toBe(0);
-    expect(unplannedLayout!.column).toBe(1);
+    expect(laterLayout!.column).toBe(1);
   });
 });
 
@@ -486,12 +486,12 @@ describe('computeActualTimeDiffOverlay', () => {
     expect(overlay.heightDelta).toBe(0);
   });
 
-  it('unplannedイベントはオーバーレイなし', () => {
+  it('実績時刻なしのイベントはオーバーレイなし', () => {
     const event = createCalendarEvent({
       startDate: new Date('2026-01-15T10:00:00'),
       endDate: new Date('2026-01-15T11:00:00'),
       entryState: 'past',
-      origin: 'unplanned',
+      origin: 'planned',
     });
     const overlay = computeActualTimeDiffOverlay(event, 72);
     expect(overlay.topKind).toBe('none');

@@ -203,7 +203,7 @@ describe('entryPositioning', () => {
 
     it('origin が unplanned の場合は none を返す', () => {
       const entry = createCalendarEvent({
-        origin: 'unplanned',
+        origin: 'planned',
         actualStartDate: new Date(2025, 0, 15, 10, 0),
         actualEndDate: new Date(2025, 0, 15, 11, 0),
       });

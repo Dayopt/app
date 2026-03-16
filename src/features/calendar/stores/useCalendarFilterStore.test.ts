@@ -5,35 +5,14 @@ import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 describe('useCalendarFilterStore', () => {
   beforeEach(() => {
     useCalendarFilterStore.setState({
-      visibleTypes: { planned: true, unplanned: true },
       visibleTagIds: new Set<string>(),
       initialized: false,
     });
   });
 
   describe('初期状態', () => {
-    it('planned/unplanned両方が表示', () => {
-      const state = useCalendarFilterStore.getState();
-      expect(state.visibleTypes.planned).toBe(true);
-      expect(state.visibleTypes.unplanned).toBe(true);
-    });
-
     it('未初期化状態', () => {
       expect(useCalendarFilterStore.getState().initialized).toBe(false);
-    });
-  });
-
-  describe('toggleType', () => {
-    it('plannedを非表示にできる', () => {
-      useCalendarFilterStore.getState().toggleType('planned');
-      expect(useCalendarFilterStore.getState().visibleTypes.planned).toBe(false);
-      expect(useCalendarFilterStore.getState().visibleTypes.unplanned).toBe(true);
-    });
-
-    it('2回トグルで元に戻る', () => {
-      useCalendarFilterStore.getState().toggleType('planned');
-      useCalendarFilterStore.getState().toggleType('planned');
-      expect(useCalendarFilterStore.getState().visibleTypes.planned).toBe(true);
     });
   });
 
@@ -110,21 +89,10 @@ describe('useCalendarFilterStore', () => {
 
     it('2回目は既存タグは変更せず新しいタグを追加', () => {
       useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2']);
-      // 再初期化（tag-3が新規追加）
       useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2', 'tag-3']);
       const ids = useCalendarFilterStore.getState().visibleTagIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-2')).toBe(true);
-      expect(ids.has('tag-3')).toBe(true);
-    });
-
-    it('visibleTagIdsにないタグは新規として追加される', () => {
-      useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().toggleTag('tag-1');
-      // tag-1はvisibleTagIdsから消えているため再初期化で復活する
-      useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2', 'tag-3']);
-      const ids = useCalendarFilterStore.getState().visibleTagIds;
-      expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-3')).toBe(true);
     });
   });
@@ -178,7 +146,6 @@ describe('useCalendarFilterStore', () => {
     });
 
     it('matchesTagFilter: タグなしアイテムは常に表示', () => {
-      // タグなし（null）は常に表示される
       expect(useCalendarFilterStore.getState().matchesTagFilter(null)).toBe(true);
     });
 
@@ -188,16 +155,11 @@ describe('useCalendarFilterStore', () => {
       expect(useCalendarFilterStore.getState().matchesTagFilter('tag-99')).toBe(false);
     });
 
-    it('isEntryVisible: 起源＋タグの複合チェック', () => {
+    it('isEntryVisible: タグフィルターのチェック', () => {
       useCalendarFilterStore.getState().showAllTags(['tag-1']);
-      expect(useCalendarFilterStore.getState().isEntryVisible('planned', 'tag-1')).toBe(true);
-
-      // planned を非表示
-      useCalendarFilterStore.getState().toggleType('planned');
-      expect(useCalendarFilterStore.getState().isEntryVisible('planned', 'tag-1')).toBe(false);
-
-      // unplanned は表示のまま
-      expect(useCalendarFilterStore.getState().isEntryVisible('unplanned', 'tag-1')).toBe(true);
+      expect(useCalendarFilterStore.getState().isEntryVisible('tag-1')).toBe(true);
+      expect(useCalendarFilterStore.getState().isEntryVisible('tag-99')).toBe(false);
+      expect(useCalendarFilterStore.getState().isEntryVisible(null)).toBe(true);
     });
   });
 });

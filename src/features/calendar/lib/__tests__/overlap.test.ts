@@ -55,13 +55,13 @@ describe('checkClientSideOverlap', () => {
         id: 'a',
         startDate: new Date('2026-01-15T10:00'),
         endDate: new Date('2026-01-15T11:00'),
-        origin: 'unplanned',
+        origin: 'planned',
       }),
       createEvent({
         id: 'b',
         startDate: new Date('2026-01-15T10:30'),
         endDate: new Date('2026-01-15T11:30'),
-        origin: 'unplanned',
+        origin: 'planned',
       }),
     ];
     expect(
@@ -86,7 +86,7 @@ describe('checkClientSideOverlap', () => {
         id: 'b',
         startDate: new Date('2026-01-15T10:30'),
         endDate: new Date('2026-01-15T11:30'),
-        origin: 'unplanned',
+        origin: 'planned',
       }),
     ];
     expect(
