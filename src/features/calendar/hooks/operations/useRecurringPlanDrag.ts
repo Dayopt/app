@@ -11,11 +11,7 @@
 
 import { useCallback, useRef } from 'react';
 
-import {
-  computeOriginTransition,
-  useEntryMutations,
-  useRecurringScopeMutations,
-} from '@/features/entry';
+import { useEntryMutations, useRecurringScopeMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
 import { openRecurringEditConfirm, type RecurringEditScope } from '@/shell/stores/useModalStore';
 
@@ -119,18 +115,12 @@ export function useRecurringPlanDrag({ plans }: UseRecurringPlanDragOptions) {
         openRecurringEditConfirm(plan.title, 'edit', handleScopeConfirm);
         return { skipToast: true };
       } else {
-        // 通常エントリ: origin 遷移を計算してから更新
-        const transition = computeOriginTransition(
-          plan.origin ?? 'planned',
-          resolvedUpdates.startTime,
-          resolvedUpdates.endTime,
-        );
+        // 通常エントリ: 直接更新
         updateEntry.mutate({
           id: plan.id,
           data: {
             start_time: resolvedUpdates.startTime.toISOString(),
             end_time: resolvedUpdates.endTime.toISOString(),
-            ...(transition.clearFields && { ...transition.clearFields, origin: transition.origin }),
           },
         });
       }

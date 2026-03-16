@@ -143,11 +143,8 @@ export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
   // 各エントリにカラムを割り当て
   const assignments = new Map<string, number>();
 
-  // Planned を先に処理してcolumn: 0を優先的に割り当て、Unplanned を後に処理
+  // 開始時刻順にソートしてカラムを割り当て
   const sortedForAssignment = [...entries].sort((a, b) => {
-    const aIsUnplanned = a.origin === 'unplanned';
-    const bIsUnplanned = b.origin === 'unplanned';
-    if (aIsUnplanned !== bIsUnplanned) return aIsUnplanned ? 1 : -1;
     return new Date(a.start).getTime() - new Date(b.start).getTime();
   });
 

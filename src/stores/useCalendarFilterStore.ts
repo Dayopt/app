@@ -2,18 +2,13 @@
  * カレンダー表示フィルターストア
  *
  * Googleカレンダーの「マイカレンダー」のように、
- * 起源（planned/unplanned）やタグでカレンダー上の表示/非表示を切り替える
+ * タグでカレンダー上の表示/非表示を切り替える
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { EntryOrigin } from '@/types/entry';
-
 export interface CalendarFilterState {
-  /** 起源ごとの表示設定（デフォルト: すべて表示） */
-  visibleTypes: Record<EntryOrigin, boolean>;
-
   /** タグIDごとの表示設定（デフォルト: すべて表示） */
   visibleTagIds: Set<string>;
 
@@ -22,9 +17,6 @@ export interface CalendarFilterState {
 }
 
 export interface CalendarFilterActions {
-  /** 起源の表示切替 */
-  toggleType: (origin: EntryOrigin) => void;
-
   /** タグの表示切替 */
   toggleTag: (tagId: string) => void;
 
@@ -64,15 +56,14 @@ export interface CalendarFilterActions {
   /** タグフィルタに一致するかチェック（起源は無視） */
   matchesTagFilter: (tagId: string | null) => boolean;
 
-  /** エントリが表示対象かチェック（起源とタグの両方） */
-  isEntryVisible: (origin: EntryOrigin, tagId: string | null) => boolean;
+  /** エントリが表示対象かチェック（タグフィルター） */
+  isEntryVisible: (tagId: string | null) => boolean;
 }
 
 type CalendarFilterStore = CalendarFilterState & CalendarFilterActions;
 
 // シリアライズ済みの状態型
 interface SerializedCalendarFilterState {
-  visibleTypes: Record<EntryOrigin, boolean>;
   visibleTagIds: string[];
   initialized: boolean;
 }
@@ -93,21 +84,10 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
   persist(
     (set, get) => ({
       // 初期状態
-      visibleTypes: {
-        planned: true,
-        unplanned: true,
-      },
       visibleTagIds: new Set<string>(),
       initialized: false,
 
       // アクション
-      toggleType: (origin) =>
-        set((state) => ({
-          visibleTypes: {
-            ...state.visibleTypes,
-            [origin]: !state.visibleTypes[origin],
-          },
-        })),
 
       toggleTag: (tagId) =>
         set((state) => {
@@ -217,15 +197,8 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
         return state.visibleTagIds.has(tagId);
       },
 
-      isEntryVisible: (origin, tagId) => {
-        const state = get();
-
-        // 起源チェック
-        if (!state.visibleTypes[origin]) {
-          return false;
-        }
-
-        return state.matchesTagFilter(tagId);
+      isEntryVisible: (tagId) => {
+        return get().matchesTagFilter(tagId);
       },
     }),
     {
@@ -234,7 +207,7 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
       // v2: visibleTagIds競合問題の修正に伴いリセット
       // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
       // v4: ItemType ('plan'|'record') → EntryOrigin ('planned'|'unplanned') に変更
-      version: 4,
+      version: 5,
       storage: {
         getItem: (name) => {
           const str = localStorage.getItem(name);
@@ -256,9 +229,11 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
       },
       // バージョンマイグレーション: 古いバージョンからの移行時はリセット
       migrate: (persistedState, version) => {
-        if (version < 4) {
+        if (version < 5) {
+          // v5: visibleTypes (origin filter) を削除 — unplanned origin 廃止
+          const persisted = persistedState as Record<string, unknown>;
+          delete persisted.visibleTypes;
           return {
-            visibleTypes: { planned: true, unplanned: true },
             visibleTagIds: new Set<string>(),
             initialized: false,
           } as unknown as CalendarFilterStore;

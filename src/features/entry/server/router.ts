@@ -458,7 +458,7 @@ export const entriesCoreRouter = createTRPCRouter({
               overrides?.description !== undefined
                 ? (overrides.description ?? undefined)
                 : (parentEntry.description ?? undefined),
-            origin: parentEntry.origin as 'planned' | 'unplanned',
+            origin: 'planned',
             start_time: newStartTime,
             end_time: newEndTime,
             recurrence_type: parentEntry.recurrence_type as
