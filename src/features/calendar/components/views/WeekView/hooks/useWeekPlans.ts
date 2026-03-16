@@ -126,15 +126,15 @@ export function useWeekPlans({
     return positions;
   }, [weekDates, plansByDate, hourHeight]);
 
-  // 最大同時プラン数を計算
+  // 最大同時プラン数を計算（sweep-line O(n log n)）
   const maxConcurrentPlans = useMemo(() => {
     let maxConcurrent = 0;
 
     Object.values(plansByDate).forEach((dayPlans) => {
       if (dayPlans.length <= 1) return;
 
-      // 時間帯ごとの重なりを計算
-      const timeSlots: { start: number; end: number }[] = [];
+      // sweep-line: 開始/終了イベントを時刻順に処理
+      const timePoints: { time: number; type: 'start' | 'end' }[] = [];
 
       dayPlans.forEach((plan) => {
         if (!plan.displayStartDate) return;
@@ -144,15 +144,26 @@ export function useWeekPlans({
           ? plan.displayEndDate.getHours() + plan.displayEndDate.getMinutes() / 60
           : start + 1;
 
-        timeSlots.push({ start, end });
+        timePoints.push({ time: start, type: 'start' });
+        timePoints.push({ time: end, type: 'end' });
       });
 
-      // 各時刻での重なり数を計算
-      for (let hour = 0; hour < 24; hour += 0.25) {
-        const concurrent = timeSlots.filter((slot) => hour >= slot.start && hour < slot.end).length;
+      timePoints.sort((a, b) => {
+        const timeDiff = a.time - b.time;
+        if (timeDiff !== 0) return timeDiff;
+        // 同時刻の場合、endを先に処理
+        return a.type === 'end' ? -1 : 1;
+      });
 
-        maxConcurrent = Math.max(maxConcurrent, concurrent);
-      }
+      let current = 0;
+      timePoints.forEach((point) => {
+        if (point.type === 'start') {
+          current++;
+          maxConcurrent = Math.max(maxConcurrent, current);
+        } else {
+          current--;
+        }
+      });
     });
 
     return maxConcurrent;
