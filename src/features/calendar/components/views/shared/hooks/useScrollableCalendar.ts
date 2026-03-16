@@ -4,7 +4,7 @@
  * ScrollableCalendarLayoutから抽出したカスタムフック
  */
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import { useCalendarScrollStore } from '../../../../stores';
 
@@ -32,9 +32,7 @@ export const useScrollableCalendar = ({
   onScrollPositionChange,
 }: UseScrollableCalendarOptions): UseScrollableCalendarReturn => {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const hasRestoredScroll = useRef(false);
-  const [_isScrolling, setIsScrolling] = useState(false);
 
   // スクロール位置ストア
   const { setScrollPosition, getScrollPosition, setLastActiveView } = useCalendarScrollStore();
@@ -97,7 +95,6 @@ export const useScrollableCalendar = ({
     if (!scrollContainerRef.current) return;
 
     const { scrollTop } = scrollContainerRef.current;
-    setIsScrolling(true);
 
     if (onScrollPositionChange) {
       onScrollPositionChange(scrollTop);
@@ -105,13 +102,6 @@ export const useScrollableCalendar = ({
 
     // スクロール位置をストアに保存
     setScrollPosition(viewMode as CalendarViewModeForScroll, scrollTop);
-
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsScrolling(false);
-    }, 150);
   }, [onScrollPositionChange, viewMode, setScrollPosition]);
 
   // スクロールリスナーの設定

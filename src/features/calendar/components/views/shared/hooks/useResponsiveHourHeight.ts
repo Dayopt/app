@@ -32,8 +32,18 @@ export function useResponsiveHourHeight(): number {
 
     updateHourHeight();
 
-    window.addEventListener('resize', updateHourHeight);
-    return () => window.removeEventListener('resize', updateHourHeight);
+    // デバウンス: リサイズ中のカスケードsetState → レイアウトスラッシングを抑制
+    let timerId: ReturnType<typeof setTimeout>;
+    const debouncedUpdate = () => {
+      clearTimeout(timerId);
+      timerId = setTimeout(updateHourHeight, 100);
+    };
+
+    window.addEventListener('resize', debouncedUpdate);
+    return () => {
+      window.removeEventListener('resize', debouncedUpdate);
+      clearTimeout(timerId);
+    };
   }, [config.mobile, config.tablet, config.desktop]);
 
   return hourHeight;
