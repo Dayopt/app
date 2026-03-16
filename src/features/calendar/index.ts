@@ -89,7 +89,10 @@ export {
   parseDatetimeString,
   parseISOToUserTimezone,
 } from '@/lib/date-utils';
-export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './engine/range';
+export { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from './lib/range';
+// Temporal: エントリ状態判定（@/features/entry からの re-export）
+export { computeOriginTransition, getEntryState, isEntryPast, isTimePast } from '@/features/entry';
+export type { EntryState } from '@/features/entry';
 export { getEventOrigin, isRecordEvent } from './lib/plan-data-adapter';
 export { isCalendarViewPath } from './lib/route-utils';
 

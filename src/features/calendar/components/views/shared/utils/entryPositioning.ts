@@ -13,6 +13,6 @@ export {
   entriesOverlap,
   filterEntriesByDate,
   sortTimedEntries,
-} from '../../../../engine/layout';
+} from '../../../../lib/layout';
 
-export type { ActualTimeDiffOverlay } from '../../../../engine/layout';
+export type { ActualTimeDiffOverlay } from '../../../../lib/layout';

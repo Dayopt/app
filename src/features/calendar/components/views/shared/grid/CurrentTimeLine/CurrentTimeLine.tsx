@@ -6,7 +6,7 @@
 
 import { memo, useMemo } from 'react';
 
-import { timeToPixels } from '../../../../../engine/grid';
+import { timeToPixels } from '../../../../../lib/grid';
 import { HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
 import { useCurrentTime } from '../../hooks/useCurrentTime';
 import type { CurrentTimeLineProps } from '../../types/grid.types';

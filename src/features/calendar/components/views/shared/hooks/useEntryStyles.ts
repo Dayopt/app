@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
 
-import { computeEntryStyles } from '../../../../engine/grid';
+import { computeEntryStyles } from '../../../../lib/grid';
 
 import type { EntryPosition } from './useViewEntries';
 

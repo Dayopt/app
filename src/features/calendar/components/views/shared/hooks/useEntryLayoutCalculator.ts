@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 
-import { calculateEntryLayouts } from '../../../../engine/layout';
+import { calculateEntryLayouts } from '../../../../lib/layout';
 import type { TimedEntry } from '../types/entry.types';
 
 // Re-export EntryLayout type for consumers
-export type { EntryLayout } from '../../../../engine/layout';
+export type { EntryLayout } from '../../../../lib/layout';
 
 /**
  * エントリの重複レイアウト計算フック

@@ -17,7 +17,7 @@ import {
 
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
-import { calculateViewDateRange } from '../../../engine/range';
+import { calculateViewDateRange } from '../../../lib/range';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 

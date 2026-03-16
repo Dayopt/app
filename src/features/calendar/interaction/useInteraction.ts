@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import type { CalendarEvent } from '../types/calendar.types';
 
-import { checkClientSideOverlap } from '../engine/overlap';
+import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 import { IDLE, interactionReducer } from './machine';
