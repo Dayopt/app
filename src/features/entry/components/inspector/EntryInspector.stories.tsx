@@ -9,6 +9,10 @@ import type { ReactNode } from 'react';
 
 import type { EntryOrigin, EntryState, FulfillmentScore } from '../../types/entry';
 
+// Story 内のみ: Composition Layer 連携プレビュー用
+// eslint-disable-next-line no-restricted-imports
+import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
+
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
 import { InspectorFrame, MockRecurrenceRow, MockReminderRow, MockTagRow } from './story-helpers';
 
@@ -294,9 +298,12 @@ export const WithMicroInsightEstimation: Story = {
         initialPlannedStart="10:00"
         initialPlannedEnd="11:30"
         microInsight={
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            このタグは平均 +25 分超過する傾向があります
-          </p>
+          <EntryMicroInsight
+            insight={{
+              type: 'estimation_bias',
+              message: 'このタグは平均 +25 分超過する傾向があります',
+            }}
+          />
         }
       />
     </InspectorFrame>
@@ -318,9 +325,12 @@ export const WithMicroInsightFulfillment: Story = {
         initialActualEnd="12:15"
         initialFulfillment={3}
         microInsight={
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            この時間帯の充実度は平均より高い傾向があります
-          </p>
+          <EntryMicroInsight
+            insight={{
+              type: 'hourly_fulfillment',
+              message: 'この時間帯の充実度は平均より高い傾向があります',
+            }}
+          />
         }
       />
     </InspectorFrame>
