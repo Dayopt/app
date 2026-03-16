@@ -95,6 +95,51 @@ InspectorTimeSection
 
 ---
 
+## EntryCard（カレンダー表示カード）
+
+カレンダーグリッド上のエントリ表示ブロック。`@/features/entry/components/card/` に配置。
+
+### 3つの表示モード
+
+| モード | 条件 | ビジュアル | 操作 |
+|--------|------|-----------|------|
+| **通常** | `entryState` が `upcoming` or `active` | タグカラー背景 + 実線アクセント | ドラッグ・リサイズ・クリック可 |
+| **Past** | `entryState === 'past'` | 通常と同じ見た目 | ドラッグ・リサイズ **不可**（クリックのみ） |
+| **Draft** | `isDraft === true` | `state-selected` オーバーレイ | ドラッグ・リサイズ **不可** |
+
+### 左アクセントストリップ
+
+| origin | スタイル |
+|--------|---------|
+| `planned`（デフォルト） | タグカラーの実線（3px / モバイル 2px） |
+| `unplanned` | タグカラーの点線（5px on / 4px off） |
+
+### 予定 vs 実績の差分オーバーレイ
+
+`entryState === 'past'` かつ `origin === 'planned'` で `actualStartDate` / `actualEndDate` がある場合に表示。
+
+| 差分 | 表示 |
+|------|------|
+| 未実行（実績が予定より短い） | 斜線ハッチング（`pattern-hatch`） |
+| 超過（実績が予定より長い） | 左アクセント点線 + カード拡張 |
+
+### コンテンツ表示
+
+| 要素 | 表示条件 |
+|------|---------|
+| タグ名 or 「タグを追加」 | 常時（tagId 未設定時はフォールバック） |
+| 時間範囲 | `height >= 30px` の場合 |
+| 繰り返しアイコン | `isRecurring === true` |
+| リマインダーアイコン | `reminder_minutes` が設定済み |
+
+### サイズ対応
+
+- 最小高さ: 20px
+- `height < 40px`: コンパクトモード（1行表示）
+- `height >= 40px`: 通常モード（タグ名 + 時間）
+
+---
+
 ## 「Time waits for no one」原則
 
 - `status` フィールドなし — 時間位置から `getEntryState()` で自動判定
@@ -122,4 +167,4 @@ InspectorTimeSection
 
 ---
 
-**最終更新**: 2026-03-06
+**最終更新**: 2026-03-16
