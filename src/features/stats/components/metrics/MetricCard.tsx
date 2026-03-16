@@ -1,11 +1,12 @@
 'use client';
 
-import { TrendingDown, TrendingUp } from 'lucide-react';
+
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import type { MetricTrend, MetricValueParts } from '../../types/metrics.types';
+import { TrendBadge } from '../shared/TrendBadge';
 
 /** プログレスバーの色 */
 const PROGRESS_COLORS = {
@@ -91,21 +92,7 @@ export function MetricCard({
               )}
             </>
           )}
-          {trend && trend.direction !== 'flat' && (
-            <span
-              className={cn(
-                'ml-1 inline-flex items-center gap-0.5 text-sm font-medium',
-                trend.isPositive ? 'text-emerald-500' : 'text-red-500',
-              )}
-            >
-              {trend.direction === 'up' ? (
-                <TrendingUp className="size-3.5" />
-              ) : (
-                <TrendingDown className="size-3.5" />
-              )}
-              {Math.abs(Math.round(trend.delta * 100))}%
-            </span>
-          )}
+          {trend && <TrendBadge trend={trend} className="ml-1" />}
         </div>
 
         {/* Progress Bar */}

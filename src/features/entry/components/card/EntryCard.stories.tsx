@@ -54,27 +54,6 @@ const basePosition = {
 };
 
 // ---------------------------------------------------------------------------
-// 基本パターン
-// ---------------------------------------------------------------------------
-
-/** 通常のEntry。選択中・繰り返しのバリエーション含む。 */
-export const Default: Story = {
-  render: () => (
-    <div className="flex flex-col gap-4">
-      <Slot>
-        <EntryCard plan={baseEntry} position={basePosition} />
-      </Slot>
-      <Slot>
-        <EntryCard plan={baseEntry} position={basePosition} isSelected />
-      </Slot>
-      <Slot>
-        <EntryCard plan={{ ...baseEntry, isRecurring: true }} position={basePosition} />
-      </Slot>
-    </div>
-  ),
-};
-
-// ---------------------------------------------------------------------------
 // Draft（未保存プレビュー）
 // ---------------------------------------------------------------------------
 
@@ -136,6 +115,8 @@ export const OverlayUnexecuted: Story = {
       <EntryCard
         plan={{
           ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
           endDate: new Date('2024-01-15T12:00:00'),
           displayEndDate: new Date('2024-01-15T12:00:00'),
           duration: 120,
@@ -149,13 +130,15 @@ export const OverlayUnexecuted: Story = {
   ),
 };
 
-/** 超過オーバーレイ。予定時間を超えて実施した区間に点線ボーダー。 */
+/** 超過オーバーレイ。予定時間を超えて実施した区間に左アクセント点線 + カード拡張。 */
 export const OverlayOvertime: Story = {
   render: () => (
     <Slot height={180}>
       <EntryCard
         plan={{
           ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
           endDate: new Date('2024-01-15T11:00:00'),
           displayEndDate: new Date('2024-01-15T11:00:00'),
           duration: 60,
@@ -178,18 +161,6 @@ export const WithReminder: Story = {
   render: () => (
     <Slot>
       <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
-    </Slot>
-  ),
-};
-
-/** タグ付きのEntry。タグカラーがカード背景・左ボーダーに反映される。 */
-export const WithTags: Story = {
-  render: () => (
-    <Slot height={100}>
-      <EntryCard
-        plan={{ ...baseEntry, tagId: 'tag-1' }}
-        position={{ ...basePosition, height: 100 }}
-      />
     </Slot>
   ),
 };
@@ -227,55 +198,121 @@ export const AllPatterns: Story = {
   // color-contrast: text-foreground/60 on plan card background
   parameters: { a11y: { test: 'todo' } },
   render: () => (
-    <div className="flex flex-col items-start gap-6">
-      {/* Default */}
-      <Slot>
-        <EntryCard plan={baseEntry} position={basePosition} />
-      </Slot>
-      {/* Selected */}
-      <Slot>
-        <EntryCard plan={baseEntry} position={basePosition} isSelected />
-      </Slot>
-      {/* Recurring */}
-      <Slot>
-        <EntryCard plan={{ ...baseEntry, isRecurring: true }} position={basePosition} />
-      </Slot>
-      {/* Draft */}
-      <Slot>
-        <EntryCard
-          plan={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
-          position={basePosition}
-        />
-      </Slot>
-      {/* Past */}
-      <Slot>
-        <EntryCard plan={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
-      </Slot>
-      {/* Unplanned */}
-      <Slot>
-        <EntryCard plan={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
-      </Slot>
-      {/* Reminder */}
-      <Slot>
-        <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
-      </Slot>
-      {/* Tags */}
-      <Slot height={100}>
-        <EntryCard
-          plan={{ ...baseEntry, tagId: 'tag-1' }}
-          position={{ ...basePosition, height: 100 }}
-        />
-      </Slot>
-      {/* Size variations */}
-      <Slot height={18}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 18 }} />
-      </Slot>
-      <Slot height={36}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 36 }} />
-      </Slot>
-      <Slot height={144}>
-        <EntryCard plan={baseEntry} position={{ ...basePosition, height: 144 }} />
-      </Slot>
+    <div className="flex flex-col gap-8">
+      {/* --- 表示モード --- */}
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">Draft（未保存プレビュー）</p>
+        <Slot>
+          <EntryCard
+            plan={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
+            position={basePosition}
+          />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">Past（過去エントリ）</p>
+        <Slot>
+          <EntryCard plan={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">Active（実行中）</p>
+        <Slot>
+          <EntryCard plan={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
+        </Slot>
+      </section>
+
+      {/* --- Origin --- */}
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">Unplanned（左アクセント点線）</p>
+        <Slot>
+          <EntryCard plan={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
+        </Slot>
+      </section>
+
+      {/* --- 状態バリエーション --- */}
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">Reminder（ベルアイコン）</p>
+        <Slot>
+          <EntryCard plan={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
+        </Slot>
+      </section>
+
+      {/* --- 予定 vs 記録 差分オーバーレイ --- */}
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Overlay: Unexecuted（予定より実績が短い → 斜線ハッチング）
+        </p>
+        <Slot height={144}>
+          <EntryCard
+            plan={{
+              ...baseEntry,
+              entryState: 'past',
+              origin: 'planned',
+              endDate: new Date('2024-01-15T12:00:00'),
+              displayEndDate: new Date('2024-01-15T12:00:00'),
+              duration: 120,
+              actualStartDate: new Date('2024-01-15T10:30:00'),
+              actualEndDate: new Date('2024-01-15T11:30:00'),
+            }}
+            position={{ ...basePosition, height: 144 }}
+            hourHeight={72}
+          />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">
+          Overlay: Overtime（予定より実績が長い → 点線ボーダー拡張）
+        </p>
+        <Slot height={180}>
+          <EntryCard
+            plan={{
+              ...baseEntry,
+              entryState: 'past',
+              origin: 'planned',
+              endDate: new Date('2024-01-15T11:00:00'),
+              displayEndDate: new Date('2024-01-15T11:00:00'),
+              duration: 60,
+              actualStartDate: new Date('2024-01-15T09:30:00'),
+              actualEndDate: new Date('2024-01-15T11:30:00'),
+            }}
+            position={{ ...basePosition, height: 72 }}
+            hourHeight={72}
+          />
+        </Slot>
+      </section>
+
+      {/* --- サイズバリエーション --- */}
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">15min（最小・1行）</p>
+        <Slot height={18}>
+          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 18 }} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">30min（コンパクト）</p>
+        <Slot height={36}>
+          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 36 }} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">60min（通常）</p>
+        <Slot>
+          <EntryCard plan={baseEntry} position={basePosition} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="mb-2 text-xs text-muted-foreground">120min（長時間）</p>
+        <Slot height={144}>
+          <EntryCard plan={baseEntry} position={{ ...basePosition, height: 144 }} />
+        </Slot>
+      </section>
     </div>
   ),
 };

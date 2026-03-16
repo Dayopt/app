@@ -67,6 +67,9 @@ export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
 export { useCalendarProviderProps } from './hooks/useCalendarProviderProps';
 export { useWeekendNavigation } from './hooks/useWeekendNavigation';
 
+// Stores: Cross-feature (used by composition layer in app/)
+export { useInlineCreateStore } from './stores/useInlineCreateStore';
+
 // Hooks: Cross-feature (used by composition layer in app/)
 export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
