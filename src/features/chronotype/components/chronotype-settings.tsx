@@ -16,12 +16,12 @@ import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_LEVEL_CLASSES,
   CHRONOTYPE_LEVEL_ORDER,
-  DEFAULT_CHRONOTYPE_SETTINGS,
 } from '../lib/constants';
 import { getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import { SectionCard } from '@/components/common/SectionCard';
 import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
+import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 
 import { ChronotypeQuiz } from './chronotype-quiz';
 

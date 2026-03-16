@@ -18,7 +18,6 @@ export {
   CHRONOTYPE_LEVEL_TINT_CLASSES,
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
-  DEFAULT_CHRONOTYPE_SETTINGS,
   getChronotypeColor,
   getProductivityLevelColor,
 } from './lib/constants';

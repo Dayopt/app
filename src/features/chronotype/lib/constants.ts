@@ -4,8 +4,6 @@ import type {
   ProductivityLevel,
 } from '@/types/chronotype';
 
-export { DEFAULT_CHRONOTYPE_SETTINGS } from './defaults';
-
 export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [
   'warmup',
   'peak',
