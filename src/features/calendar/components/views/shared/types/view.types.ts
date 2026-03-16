@@ -2,10 +2,11 @@
  * ビュー関連の型定義
  */
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarEvent, CalendarViewType } from '../../../../types/calendar.types';
 import type { PlanInteractionHandler } from './plan.types';
 
-export type ViewType = 'day' | '3day' | '5day' | 'week';
+/** @deprecated CalendarViewType を使用してください */
+export type ViewType = CalendarViewType;
 
 export interface ViewProps {
   dates: Date[];

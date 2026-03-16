@@ -75,7 +75,7 @@ export function MultiDayView({
     return getWeek(displayCenterDate, { weekStartsOn: 1 });
   }, [displayCenterDate]);
 
-  const viewMode = `${dayCount}day`;
+  const viewMode = `${dayCount}day` as '3day' | '5day';
 
   const headerComponent = (
     <div className="bg-background flex h-8">

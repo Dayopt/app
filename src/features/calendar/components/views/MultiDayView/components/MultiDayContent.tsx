@@ -29,7 +29,7 @@ interface MultiDayContentProps {
   dayIndex: number;
   displayDates?: Date[] | undefined;
   disabledPlanId?: string | null | undefined;
-  viewMode: string;
+  viewMode: '3day' | '5day';
 }
 
 // ========================================

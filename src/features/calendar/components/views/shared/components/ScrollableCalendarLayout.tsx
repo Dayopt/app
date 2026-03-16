@@ -33,7 +33,7 @@ interface ScrollableCalendarLayoutProps {
   timeColumnWidth?: number | undefined;
   onTimeClick?: ((hour: number, minute: number) => void) | undefined;
   displayDates?: Date[] | undefined;
-  viewMode?: string | undefined;
+  viewMode?: 'day' | '3day' | '5day' | 'week' | undefined;
 
   // スクロール機能の追加
   enableKeyboardNavigation?: boolean | undefined;

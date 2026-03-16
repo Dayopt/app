@@ -41,7 +41,7 @@ export interface UseInteractionProps {
   /** Displayed dates (week/multi-day views) */
   displayDates?: Date[];
   /** View mode */
-  viewMode?: string;
+  viewMode?: 'day' | '3day' | '5day' | 'week';
   /** Plan ID to disable dragging (e.g. Inspector-open plan) */
   disabledPlanId?: string | null;
   /** Pixels per hour */

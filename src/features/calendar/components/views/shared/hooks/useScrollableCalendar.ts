@@ -11,7 +11,7 @@ import { useCalendarScrollStore } from '../../../../stores';
 export type CalendarViewModeForScroll = 'day' | '3day' | '5day' | 'week';
 
 interface UseScrollableCalendarOptions {
-  viewMode: string;
+  viewMode: CalendarViewModeForScroll;
   hourHeight: number;
   enableKeyboardNavigation?: boolean | undefined;
   onScrollPositionChange?: ((scrollTop: number) => void) | undefined;
@@ -52,14 +52,14 @@ export const useScrollableCalendar = ({
 
   // アクティブビューの更新
   useEffect(() => {
-    setLastActiveView(viewMode as CalendarViewModeForScroll);
+    setLastActiveView(viewMode);
   }, [viewMode, setLastActiveView]);
 
   // 初期スクロール位置の設定（保存された位置を優先、なければ現在時刻を中央に）
   useEffect(() => {
     if (!scrollContainerRef.current || hasRestoredScroll.current) return;
 
-    const savedPosition = getScrollPosition(viewMode as CalendarViewModeForScroll);
+    const savedPosition = getScrollPosition(viewMode);
 
     let targetScroll: number;
     if (savedPosition > 0) {
@@ -101,7 +101,7 @@ export const useScrollableCalendar = ({
     }
 
     // スクロール位置をストアに保存
-    setScrollPosition(viewMode as CalendarViewModeForScroll, scrollTop);
+    setScrollPosition(viewMode, scrollTop);
   }, [onScrollPositionChange, viewMode, setScrollPosition]);
 
   // スクロールリスナーの設定

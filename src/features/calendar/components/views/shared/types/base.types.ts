@@ -3,11 +3,17 @@
  * 全カレンダービューで共通するプロパティ
  */
 
-// CalendarEvent, ViewDateRange を Source of Truth から直接エクスポート
-export type { CalendarEvent, ViewDateRange } from '../../../../types/calendar.types';
-import type { CalendarEvent, ViewDateRange } from '../../../../types/calendar.types';
-
-export type CalendarViewType = 'day' | '3day' | '5day' | 'week';
+// CalendarEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
+export type {
+  CalendarEvent,
+  CalendarViewType,
+  ViewDateRange,
+} from '../../../../types/calendar.types';
+import type {
+  CalendarEvent,
+  CalendarViewType,
+  ViewDateRange,
+} from '../../../../types/calendar.types';
 
 /**
  * 全ビューで共通する最小限のプロパティ
