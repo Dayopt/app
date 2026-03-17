@@ -1,0 +1,108 @@
+/**
+ * Storybook 固有の要素に対するスタイル上書き
+ *
+ * タイポグラフィは @tailwindcss/typography の prose / prose-invert が担当。
+ * 色はプラグインデフォルト（slate系）をそのまま使用。
+ * Docs タブは開発者向けなのでアプリのトークン準拠は不要。
+ *
+ * このファイルは Storybook が生成する DOM 要素（Canvas, ArgsTable,
+ * SourceCode 等）のみを対象とする。
+ *
+ * @see DocsTemplate.tsx - prose クラスの適用
+ */
+
+/* ============================================
+ * Story Canvas: コンポーネントプレビュー領域
+ * ============================================ */
+.docs-story {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Canvas tab（個別Story表示時） */
+.sb-show-main {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  padding: var(--spacing-sm) !important;
+}
+
+/* Docs tab では外側余白を除去 */
+.sb-show-main:has(.sbdocs-wrapper) {
+  padding: 0 !important;
+}
+
+/* ============================================
+ * ストーリープレビュー枠
+ * ============================================ */
+.sbdocs-preview {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.dark .sbdocs-preview {
+  background: var(--background) !important;
+}
+
+.dark .sbdocs-preview > [class*='css-'] {
+  background: var(--background) !important;
+  border-color: var(--border) !important;
+}
+
+.dark .sbdocs-preview button[class*='css-'] {
+  color: var(--muted-foreground) !important;
+}
+
+/* ============================================
+ * Controls（ArgsTable）
+ * ============================================ */
+.docblock-argstable {
+  max-width: none !important;
+}
+
+.docblock-argstable :focus:focus {
+  outline: 2px solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+html.dark .docblock-argstable input,
+html.dark .docblock-argstable textarea,
+html.dark .docblock-argstable select {
+  color: var(--foreground) !important;
+  background-color: var(--container) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .docblock-argstable button {
+  color: var(--muted-foreground) !important;
+  background-color: var(--container) !important;
+  border-color: var(--border) !important;
+}
+
+/* ============================================
+ * ソースコード表示
+ * ============================================ */
+html.dark .docblock-source {
+  background: var(--container) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+html.dark .docblock-source button {
+  color: var(--muted-foreground) !important;
+}
+
+html.dark .docblock-code-toggle {
+  color: var(--muted-foreground) !important;
+  background-color: var(--background) !important;
+  border-color: var(--border) !important;
+}
+
+/* ============================================
+ * Docs ページ ダークモード背景
+ * ============================================ */
+html.dark .sbdocs,
+html.dark .sbdocs-wrapper,
+html.dark .sbdocs-content {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}

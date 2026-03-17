@@ -1,11 +1,6 @@
 <!--
   Storybook Manager Head
-  サイドバー・パネルのCSS調整。
-  Manager フレームには CSS変数が読み込まれないため hex 値を使用。
-  各値にトークン参照コメントを付けて同期を保つ。
-
-  @see .storybook/dayoptTheme.ts
-  @see src/styles/tokens/colors.css
+  Manager フレームでもフォントを統一するため Google Fonts を読み込み。
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,66 +8,6 @@
   href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Noto+Sans+JP:wght@100..900&display=swap"
   rel="stylesheet"
 />
-<style>
-  /* ============================================
-   * パネル間のボーダー色
-   * --border: oklch(0.75 0.01 264.54) → #b3b3b8
-   * ============================================ */
-  #root > div > div:has(nav) {
-    border-right-color: #b3b3b8;
-  }
-  #root > div > div:has(#storybook-panel-root) {
-    border-top-color: #b3b3b8;
-  }
-  [data-test-id='sb-preview-toolbar'] {
-    border-bottom: 1px solid #b3b3b8;
-    box-shadow: none !important;
-  }
-
-  /* ============================================
-   * 検索フィールド
-   * ============================================ */
-  [role='combobox']:has(#storybook-explorer-searchfield) {
-    border: 1px solid #b3b3b8;
-    box-shadow: none;
-  }
-  [role='combobox']:has(#storybook-explorer-searchfield):has(input:focus) {
-    /* --primary hex近似 */
-    outline: 2px solid #2b4acb;
-    outline-offset: 2px;
-  }
-  #storybook-explorer-searchfield:focus {
-    box-shadow: none;
-  }
-
-  /* ============================================
-   * ツリーアイコン色
-   * Documents: --primary hex近似
-   * Stories: シアン系
-   * ============================================ */
-  svg:has(use[xlink\:href='#icon--document']) {
-    color: #2b4acb;
-  }
-  svg:has(use[xlink\:href='#icon--story']) {
-    color: #0891b2; /* cyan-600 */
-  }
-
-  /* ============================================
-   * ツリー全体フォーカス
-   * ============================================ */
-  #storybook-explorer-menu:focus-visible {
-    outline: 2px solid #2b4acb;
-  }
-
-  /* ============================================
-   * カテゴリトグル フォーカス
-   * ============================================ */
-  button[data-action='collapse-root']:focus-visible {
-    outline: 2px solid #2b4acb;
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-</style>
 <script>
   document.documentElement.setAttribute('lang', 'ja');
 </script>

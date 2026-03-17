@@ -55,9 +55,9 @@ parameters: {
 
 **禁止**: `docs.theme: dayoptLightTheme` — ダークモードに追従しなくなる
 
-## CSS オーバーライド（preview-head.html）
+## CSS オーバーライド（storybook-overrides.css）
 
-emotion CSS で生成される一部の要素は DocsContainer テーマだけではカバーできない。`preview-head.html` に `html.dark` プレフィックス付きの CSS オーバーライドを配置している。
+emotion CSS で生成される一部の要素は DocsContainer テーマだけではカバーできない。`.storybook/storybook-overrides.css` に `html.dark` プレフィックス付きの CSS オーバーライドを配置している。
 
 ```css
 /* 高詳細度で emotion CSS を上書き */
