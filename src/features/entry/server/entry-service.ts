@@ -60,9 +60,10 @@ export class EntryService {
       query = query.eq('origin', origin);
     }
 
-    // 検索フィルター
+    // 検索フィルター（PostgREST演算子インジェクション対策: カンマ・ドットをエスケープ）
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      const sanitized = search.replace(/[.,()\\]/g, '');
+      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
     }
 
     // 日付範囲フィルタ（start_time基準）

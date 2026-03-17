@@ -63,7 +63,8 @@ export class SuggestionService {
     }
 
     if (search) {
-      query = query.ilike('title', `%${search}%`);
+      const sanitized = search.replace(/[%_]/g, '');
+      query = query.ilike('title', `%${sanitized}%`);
     }
 
     const { data: entriesData, error } = await query;
