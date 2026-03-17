@@ -196,131 +196,125 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 {errors.email && <FieldError id="email-error">{errors.email.message}</FieldError>}
               </Field>
 
-              <Field>
-                <Field className="grid grid-cols-2 gap-4">
-                  <Field>
-                    <FieldLabel
-                      htmlFor="password"
-                      required
-                      requiredLabel={t('common.form.required')}
+              <Field className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="password" required requiredLabel={t('common.form.required')}>
+                    {t('auth.signupForm.password')}
+                  </FieldLabel>
+                  <FieldSupportText id="password-support" className="flex-1">
+                    {t('auth.signupForm.passwordSupportText')}
+                  </FieldSupportText>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      enterKeyHint="next"
+                      aria-disabled={isSubmitting || undefined}
+                      autoComplete="new-password"
+                      aria-invalid={!!errors.password}
+                      aria-describedby={
+                        [errors.password ? 'password-error' : null, 'password-support']
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
+                      {...register('password')}
+                    />
+                    <HoverTooltip
+                      content={
+                        showPassword
+                          ? t('auth.signupForm.hidePassword')
+                          : t('auth.signupForm.showPassword')
+                      }
+                      side="top"
                     >
-                      {t('auth.signupForm.password')}
-                    </FieldLabel>
-                    <FieldSupportText id="password-support">
-                      {t('auth.signupForm.passwordSupportText')}
-                    </FieldSupportText>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        enterKeyHint="next"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        className="absolute top-0 right-0 h-full px-4"
+                        onClick={() => setShowPassword(!showPassword)}
                         aria-disabled={isSubmitting || undefined}
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.password}
-                        aria-describedby={
-                          [errors.password ? 'password-error' : null, 'password-support']
-                            .filter(Boolean)
-                            .join(' ') || undefined
-                        }
-                        {...register('password')}
-                      />
-                      <HoverTooltip
-                        content={
+                        aria-label={
                           showPassword
                             ? t('auth.signupForm.hidePassword')
                             : t('auth.signupForm.showPassword')
                         }
-                        side="top"
                       >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon
-                          className="absolute top-0 right-0 h-full px-4"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-disabled={isSubmitting || undefined}
-                          aria-label={
-                            showPassword
-                              ? t('auth.signupForm.hidePassword')
-                              : t('auth.signupForm.showPassword')
-                          }
-                        >
-                          {showPassword ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </HoverTooltip>
-                    </div>
-                    {errors.password && (
-                      <FieldError id="password-error">{errors.password.message}</FieldError>
-                    )}
-                  </Field>
-                  <Field>
-                    <FieldLabel
-                      htmlFor="confirm-password"
-                      required
-                      requiredLabel={t('common.form.required')}
+                        {showPassword ? (
+                          <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </HoverTooltip>
+                  </div>
+                  {errors.password && (
+                    <FieldError id="password-error">{errors.password.message}</FieldError>
+                  )}
+                </Field>
+                <Field>
+                  <FieldLabel
+                    htmlFor="confirm-password"
+                    required
+                    requiredLabel={t('common.form.required')}
+                  >
+                    {t('auth.signupForm.confirmPassword')}
+                  </FieldLabel>
+                  <FieldSupportText id="confirm-password-support" className="flex-1">
+                    {t('auth.signupForm.confirmPasswordSupportText')}
+                  </FieldSupportText>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      enterKeyHint="go"
+                      aria-disabled={isSubmitting || undefined}
+                      autoComplete="new-password"
+                      aria-invalid={!!errors.confirmPassword}
+                      aria-describedby={
+                        [
+                          errors.confirmPassword ? 'confirm-password-error' : null,
+                          'confirm-password-support',
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || undefined
+                      }
+                      {...register('confirmPassword')}
+                    />
+                    <HoverTooltip
+                      content={
+                        showConfirmPassword
+                          ? t('auth.signupForm.hidePassword')
+                          : t('auth.signupForm.showPassword')
+                      }
+                      side="top"
                     >
-                      {t('auth.signupForm.confirmPassword')}
-                    </FieldLabel>
-                    <FieldSupportText id="confirm-password-support">
-                      {t('auth.signupForm.confirmPasswordSupportText')}
-                    </FieldSupportText>
-                    <div className="relative">
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        enterKeyHint="go"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        icon
+                        className="absolute top-0 right-0 h-full px-4"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         aria-disabled={isSubmitting || undefined}
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.confirmPassword}
-                        aria-describedby={
-                          [
-                            errors.confirmPassword ? 'confirm-password-error' : null,
-                            'confirm-password-support',
-                          ]
-                            .filter(Boolean)
-                            .join(' ') || undefined
-                        }
-                        {...register('confirmPassword')}
-                      />
-                      <HoverTooltip
-                        content={
+                        aria-label={
                           showConfirmPassword
                             ? t('auth.signupForm.hidePassword')
                             : t('auth.signupForm.showPassword')
                         }
-                        side="top"
                       >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon
-                          className="absolute top-0 right-0 h-full px-4"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          aria-disabled={isSubmitting || undefined}
-                          aria-label={
-                            showConfirmPassword
-                              ? t('auth.signupForm.hidePassword')
-                              : t('auth.signupForm.showPassword')
-                          }
-                        >
-                          {showConfirmPassword ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </HoverTooltip>
-                    </div>
-                    {errors.confirmPassword && (
-                      <FieldError id="confirm-password-error">
-                        {errors.confirmPassword.message}
-                      </FieldError>
-                    )}
-                  </Field>
+                        {showConfirmPassword ? (
+                          <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </HoverTooltip>
+                  </div>
+                  {errors.confirmPassword && (
+                    <FieldError id="confirm-password-error">
+                      {errors.confirmPassword.message}
+                    </FieldError>
+                  )}
                 </Field>
               </Field>
 
@@ -333,6 +327,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                     render={({ field }) => (
                       <Checkbox
                         id="agree-terms"
+                        className="mt-1"
                         checked={field.value}
                         onCheckedChange={(checked) => field.onChange(checked === true)}
                         aria-disabled={isSubmitting || undefined}

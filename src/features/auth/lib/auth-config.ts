@@ -1,17 +1,17 @@
 // 認証設定の定数
 export const AUTH_CONFIG = {
-  // パスワード設定（config.toml の password_requirements = "lower_upper_letters_digits" と一致）
+  // パスワード設定（config.toml の password_requirements = "letters_digits" と一致）
   PASSWORD: {
-    MIN_LENGTH: 12,
-    REQUIRE_UPPERCASE: true,
-    REQUIRE_LOWERCASE: true,
+    MIN_LENGTH: 8,
+    REQUIRE_UPPERCASE: false,
+    REQUIRE_LOWERCASE: false,
     REQUIRE_NUMBERS: true,
     REQUIRE_SPECIAL_CHARS: false,
   },
 
-  // セッション設定
+  // セッション設定（JWTはSupabase側で1時間、Middlewareが自動リフレッシュ）
   SESSION: {
-    TIMEOUT: 3600, // 1時間（秒）
+    TIMEOUT: 30 * 24 * 3600, // 30日（秒）
     REFRESH_THRESHOLD: 300, // 5分前にリフレッシュ
   },
 

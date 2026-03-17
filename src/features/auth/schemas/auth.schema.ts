@@ -16,13 +16,13 @@ export type LoginFormData = z.infer<typeof loginSchema>;
 /**
  * パスワードスキーマ
  *
- * 要件: 12文字以上64文字以内、大文字・小文字・数字を含む。
- * config.toml の password_requirements = "lower_upper_letters_digits" と一致。
+ * 要件: 8文字以上64文字以内、英字・数字を含む。
+ * config.toml の password_requirements = "letters_digits" と一致。
  * 構成ルールのバリデーションは auth-config.ts の validatePassword() で実施。
  */
 export const passwordSchema = z
   .string()
-  .min(12, 'パスワードは12文字以上で入力してください')
+  .min(8, 'パスワードは8文字以上で入力してください')
   .max(64, 'パスワードは64文字以内で入力してください');
 
 /**

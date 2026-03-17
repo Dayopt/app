@@ -150,10 +150,10 @@ enable_signup = true
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
-# パスワード12文字: OWASP推奨の8文字を超える。個人ユーザー向けだがセキュリティ意識高めに
-minimum_password_length = 12
-# 大文字小文字+数字を必須。記号は入力しにくいモバイル考慮で不要
-password_requirements = "lower_upper_letters_digits"
+# パスワード8文字+英数字: 個人向けツールとして一般的な水準
+minimum_password_length = 8
+# 英字+数字を必須。大文字小文字の区別や記号は不要（UX優先）
+password_requirements = "letters_digits"
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.

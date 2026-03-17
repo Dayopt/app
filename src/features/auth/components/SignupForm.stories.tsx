@@ -101,7 +101,7 @@ export const ErrorMessages: Story = {
         リクエストが多すぎます。しばらく待ってから再試行してください。
       </FieldError>
       <FieldError announceImmediately className="text-center">
-        パスワードは12文字以上にしてください
+        パスワードは8文字以上にしてください
       </FieldError>
       <FieldError announceImmediately className="text-center">
         このパスワードは過去に漏洩しています。より安全なパスワードを使用してください。
