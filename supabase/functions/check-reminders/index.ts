@@ -45,15 +45,18 @@ Deno.serve(async (req) => {
     const entriesUpdated = [];
 
     for (const entry of entries) {
-      // 通知を作成
+      // 通知を作成（冪等: 同一 entry_id + type の重複は無視）
       const { data: notification, error: notificationError } = await supabase
         .from('notifications')
-        .insert({
-          user_id: entry.user_id,
-          type: 'reminder',
-          entry_id: entry.id,
-          is_read: false,
-        })
+        .upsert(
+          {
+            user_id: entry.user_id,
+            type: 'reminder',
+            entry_id: entry.id,
+            is_read: false,
+          },
+          { onConflict: 'entry_id,type', ignoreDuplicates: true },
+        )
         .select()
         .single();
 
