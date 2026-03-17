@@ -380,6 +380,7 @@ export type Database = {
           original_date: string | null;
           title: string | null;
           updated_at: string;
+          user_id: string;
         };
         Insert: {
           created_at?: string;
@@ -393,6 +394,7 @@ export type Database = {
           original_date?: string | null;
           title?: string | null;
           updated_at?: string;
+          user_id: string;
         };
         Update: {
           created_at?: string;
@@ -406,12 +408,19 @@ export type Database = {
           original_date?: string | null;
           title?: string | null;
           updated_at?: string;
+          user_id?: string;
         };
         Relationships: [
           {
             foreignKeyName: 'plan_instances_plan_id_fkey';
             columns: ['entry_id'];
             referencedRelation: 'entries';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'entry_instances_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];

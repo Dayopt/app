@@ -288,6 +288,7 @@ export const entriesCoreRouter = createTRPCRouter({
         .upsert(
           {
             entry_id: input.entryId,
+            user_id: ctx.userId,
             instance_date: input.instanceDate,
             exception_type: input.exceptionType,
             title: input.title ?? null,

@@ -6,8 +6,9 @@
 -- パターン:
 --   (select auth.uid()) でキャッシュ → auth.uid() 直呼びより 94-99% 高速
 --   service_role は通知作成、ログ記録のみ
---   entries 経由のRLS: entry_activities, entry_instances は entries テーブルの
+--   entries 経由のRLS: entry_activities は entries テーブルの
 --   user_id を EXISTS サブクエリで確認
+--   entry_instances は user_id カラム追加済みのため直接参照
 -- ============================================================
 
 -- ■ profiles: id = auth.uid()
@@ -19,9 +20,9 @@
 -- ■ chat_conversations: user_id = auth.uid()
 -- ■ reflections: user_id = (select auth.uid())
 -- ■ notification_preferences: user_id = (select auth.uid())
+-- ■ entry_instances: user_id = (select auth.uid())
 
 -- ■ entry_activities: EXISTS(entries WHERE id = entry_id AND user_id = auth.uid())
--- ■ entry_instances: EXISTS(entries WHERE id = entry_id AND user_id = auth.uid())
 
 -- ■ notifications: SELECT/UPDATE/DELETE は user_id = auth.uid()、INSERT は service_role のみ
 -- ■ login_attempts: INSERT/ALL は service_role、DELETE は自分のemailのみ

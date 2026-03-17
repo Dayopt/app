@@ -32,7 +32,7 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
       setPendingSelection: (selection) => set({ pendingSelection: selection }),
       clearPendingSelection: () => set({ pendingSelection: null }),
     }),
-    { name: 'inline-create' },
+    { name: 'inline-create', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );
 

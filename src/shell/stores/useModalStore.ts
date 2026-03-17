@@ -54,7 +54,7 @@ const useModalStoreBase = create<ModalStoreState>()(
       openModal: (modal) => set({ modal }),
       closeModal: () => set({ modal: null }),
     }),
-    { name: 'modal-store' },
+    { name: 'modal-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );
 

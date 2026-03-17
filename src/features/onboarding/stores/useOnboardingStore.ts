@@ -64,6 +64,6 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
           showQuiz: false,
         }),
     }),
-    { name: 'onboarding-store' },
+    { name: 'onboarding-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );

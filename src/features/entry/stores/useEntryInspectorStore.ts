@@ -91,6 +91,6 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
 
       setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
     }),
-    { name: 'entry-inspector-store' },
+    { name: 'entry-inspector-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );

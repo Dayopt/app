@@ -141,6 +141,7 @@ export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
     ),
     {
       name: 'calendar-settings-store',
+      enabled: process.env.NODE_ENV !== 'production',
     },
   ),
 );
