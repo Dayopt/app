@@ -17,6 +17,18 @@ import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'calendar-mobile-hint-dismissed';
+const AUTO_DISMISS_MS = 15_000;
+
+/**
+ * 長押しによるエントリ作成成功時にヒントを永続的に非表示にする
+ */
+export function dismissMobileTouchHintPermanently(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, 'true');
+  } catch {
+    // localStorage アクセスエラーは無視
+  }
+}
 
 interface MobileTouchHintProps {
   className?: string;
@@ -53,16 +65,16 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
     }
   }, []);
 
-  // 自動的に5秒後に非表示
+  // 自動的に15秒後に非表示（ただしlocalStorageには保存しない → 次回も表示）
   useEffect(() => {
     if (!isVisible) return;
 
     const timer = setTimeout(() => {
-      handleDismiss();
-    }, 5000);
+      setIsVisible(false);
+    }, AUTO_DISMISS_MS);
 
     return () => clearTimeout(timer);
-  }, [isVisible, handleDismiss]);
+  }, [isVisible]);
 
   if (!isVisible || !isMobile) return null;
 

@@ -27,13 +27,15 @@ export function TourStepRenderer({
   const isMobile = useIsMobile();
 
   const displayStep = snapshot.stepIndex + 1;
+  const effectiveDescriptionKey =
+    isMobile && step.descriptionMobileKey ? step.descriptionMobileKey : step.descriptionKey;
 
   // center 配置 — ターゲットなしの概念説明（PC/モバイル共通）
   if (step.placement === 'center') {
     return (
       <TourStepCenter
         titleKey={step.titleKey}
-        descriptionKey={step.descriptionKey}
+        descriptionKey={effectiveDescriptionKey}
         currentStep={displayStep}
         totalSteps={snapshot.totalSteps}
         isLastStep={snapshot.isLastStep}
@@ -49,7 +51,7 @@ export function TourStepRenderer({
     return (
       <TourStepSheet
         titleKey={step.titleKey}
-        descriptionKey={step.descriptionKey}
+        descriptionKey={effectiveDescriptionKey}
         currentStep={displayStep}
         totalSteps={snapshot.totalSteps}
         isLastStep={snapshot.isLastStep}
@@ -68,7 +70,7 @@ export function TourStepRenderer({
       targetSelector={step.targetSelector}
       placement={popoverPlacement}
       titleKey={step.titleKey}
-      descriptionKey={step.descriptionKey}
+      descriptionKey={effectiveDescriptionKey}
       currentStep={displayStep}
       totalSteps={snapshot.totalSteps}
       isLastStep={snapshot.isLastStep}

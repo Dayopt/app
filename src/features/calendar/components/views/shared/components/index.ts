@@ -1,3 +1,7 @@
 // Shared components for all calendar views
-export { CalendarDragSelection, MobileTouchHint } from './CalendarDragSelection';
+export {
+  CalendarDragSelection,
+  MobileTouchHint,
+  dismissMobileTouchHintPermanently,
+} from './CalendarDragSelection';
 export { EventContextMenu } from './EntryContextMenu';

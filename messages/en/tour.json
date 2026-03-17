@@ -7,7 +7,8 @@
       },
       "gridDragPlan": {
         "title": "Create a plan",
-        "description": "Drag on a future time slot to schedule what you want to do"
+        "description": "Drag on a future time slot to schedule what you want to do",
+        "descriptionMobile": "Long press on a future time slot to schedule what you want to do"
       },
       "selectTagPlan": {
         "title": "Pick a tag",

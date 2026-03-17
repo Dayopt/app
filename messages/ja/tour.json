@@ -7,7 +7,8 @@
       },
       "gridDragPlan": {
         "title": "予定を作成しよう",
-        "description": "未来の時間帯をドラッグして、これからやることをスケジュールしましょう"
+        "description": "未来の時間帯をドラッグして、これからやることをスケジュールしましょう",
+        "descriptionMobile": "未来の時間帯を長押しして、これからやることをスケジュールしましょう"
       },
       "selectTagPlan": {
         "title": "タグを選択",
