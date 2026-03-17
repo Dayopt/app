@@ -1,35 +1,27 @@
 /**
- * 認証ページ用レイアウト
+ * 認証ページ用レイアウト（Server Component）
  *
  * @description
  * 認証ページ（/auth/login, /auth/signup等）で使用。
- * 軽量なPublicProvidersのみを適用し、tRPC、Realtime購読等の
- * 重い機能は含まない。
- *
- * これにより、DB接続やAPI接続に問題があっても
- * 認証ページは正常に表示・動作する。
+ * IntlProvider で必要な翻訳のみクライアントに配信し、
+ * クライアント側UIは AuthClientLayout に委譲する。
  *
  * Provider階層:
- * 1. PublicProviders（Theme, Tooltip のみ）
- * 2. AuthLayout（認証UI用レイアウト）
- *
- * @see src/components/providers/PublicProviders.tsx - 軽量Providers定義
+ * 1. IntlProvider（common + auth + error のみ）
+ * 2. AuthClientLayout → PublicProviders（Theme, Tooltip のみ）
+ * 3. AuthLayout（認証UI用レイアウト）
  */
-'use client';
+import { IntlProvider } from '@/platform/i18n';
 
-import { Toaster } from '@/components/ui/toast';
-import { AuthLayout } from '@/features/auth';
-import { RecaptchaScript } from '@/lib/recaptcha';
-import { PublicProviders } from '@/shell/providers/PublicProviders';
+import { AuthClientLayout } from './client-layout';
 
-const AuthRootLayout = ({ children }: { children: React.ReactNode }) => {
+/** 認証ページで必要なnamespace */
+const AUTH_NAMESPACES = ['common', 'auth', 'error'];
+
+export default async function AuthRootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <PublicProviders>
-      <RecaptchaScript />
-      <AuthLayout>{children}</AuthLayout>
-      <Toaster />
-    </PublicProviders>
+    <IntlProvider namespaces={AUTH_NAMESPACES}>
+      <AuthClientLayout>{children}</AuthClientLayout>
+    </IntlProvider>
   );
-};
-
-export default AuthRootLayout;
+}

@@ -3,34 +3,50 @@
  *
  * @description
  * 認証が必要なページ（/calendar, /stats, /settings等）で使用。
+ * IntlProvider でアプリ用namespace のみクライアントに配信。
  *
  * 責務分離:
- * - このlayout: Providers（データ層）+ BaseLayout（UIシェル）
+ * - このlayout: IntlProvider（i18n）+ Providers（データ層）+ BaseLayout（UIシェル）
  * - GlobalOverlays: グローバルダイアログ群（別ファイルに分離）
  * - ClientPageRouter: クライアントサイドページ切り替え
  *
- * @see src/components/providers.tsx - フルProviders定義
+ * @see src/shell/providers.tsx - フルProviders定義
  * @see ./_overlays/GlobalOverlays.tsx - グローバルダイアログ群
  */
+import { IntlProvider } from '@/platform/i18n';
 import { BaseLayout } from '@/shell/layout/base-layout';
 import { Providers } from '@/shell/providers';
 
 import { ClientPageRouter } from './_composition/ClientPageRouter';
 import { GlobalOverlays } from './_overlays/GlobalOverlays';
 
+/** アプリページで必要なnamespace */
+const APP_NAMESPACES = [
+  'common',
+  'calendar',
+  'plan',
+  'record',
+  'tag',
+  'navigation',
+  'notification',
+  'settings',
+  'error',
+  'contact',
+];
+
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const AppLayout = async ({ children }: AppLayoutProps) => {
+export default async function AppLayout({ children }: AppLayoutProps) {
   return (
-    <Providers>
-      <BaseLayout>
-        <ClientPageRouter>{children}</ClientPageRouter>
-        <GlobalOverlays />
-      </BaseLayout>
-    </Providers>
+    <IntlProvider namespaces={APP_NAMESPACES}>
+      <Providers>
+        <BaseLayout>
+          <ClientPageRouter>{children}</ClientPageRouter>
+          <GlobalOverlays />
+        </BaseLayout>
+      </Providers>
+    </IntlProvider>
   );
-};
-
-export default AppLayout;
+}

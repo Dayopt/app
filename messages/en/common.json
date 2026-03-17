@@ -374,6 +374,16 @@
         "invalidTimeFormat": "Invalid time format",
         "timeOutOfRange": "Time is out of range"
       }
+    },
+    "cookies": {
+      "banner": {
+        "title": "About Cookies",
+        "description": "We use cookies and similar technologies to improve service quality and analyze usage.",
+        "learnMore": "Learn more",
+        "customize": "Customize",
+        "rejectAll": "Essential only",
+        "acceptAll": "Accept all"
+      }
     }
   }
 }

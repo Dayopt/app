@@ -374,6 +374,16 @@
         "invalidTimeFormat": "時刻形式が不正です",
         "timeOutOfRange": "時刻が範囲外です"
       }
+    },
+    "cookies": {
+      "banner": {
+        "title": "Cookieの使用について",
+        "description": "当サービスは、サービスの品質向上と利用状況の分析のためにCookieおよび類似技術を使用しています。",
+        "learnMore": "詳しく見る",
+        "customize": "カスタマイズ",
+        "rejectAll": "必須のみ",
+        "acceptAll": "すべて同意"
+      }
     }
   }
 }

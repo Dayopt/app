@@ -372,15 +372,5 @@
       "thirdPartyNotices": "THIRD_PARTY_NOTICES.txt",
       "githubRepository": "GitHubリポジトリ"
     }
-  },
-  "cookies": {
-    "banner": {
-      "title": "Cookieの使用について",
-      "description": "当サービスは、サービスの品質向上と利用状況の分析のためにCookieおよび類似技術を使用しています。",
-      "learnMore": "詳しく見る",
-      "customize": "カスタマイズ",
-      "rejectAll": "必須のみ",
-      "acceptAll": "すべて同意"
-    }
   }
 }
