@@ -71,13 +71,13 @@ jobs:
       - name: 🔍 Check for changes
         id: check_changes
         run: |
-          if git diff --quiet public/oss-credits.json public/THIRD_PARTY_NOTICES.txt; then
+          if git diff --quiet public/legal/oss-credits.json public/legal/THIRD_PARTY_NOTICES.txt; then
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "📋 No license changes detected"
           else
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "📝 License changes detected"
-            git diff --stat public/oss-credits.json public/THIRD_PARTY_NOTICES.txt
+            git diff --stat public/legal/oss-credits.json public/legal/THIRD_PARTY_NOTICES.txt
           fi
 
       - name: 📊 License Statistics
@@ -86,26 +86,26 @@ jobs:
           echo "## 📊 License Changes" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Files Updated:" >> $GITHUB_STEP_SUMMARY
-          echo "- public/oss-credits.json" >> $GITHUB_STEP_SUMMARY
-          echo "- public/THIRD_PARTY_NOTICES.txt" >> $GITHUB_STEP_SUMMARY
+          echo "- public/legal/oss-credits.json" >> $GITHUB_STEP_SUMMARY
+          echo "- public/legal/THIRD_PARTY_NOTICES.txt" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # パッケージ数をカウント
-          PACKAGE_COUNT=$(jq '. | length' public/oss-credits.json)
+          PACKAGE_COUNT=$(jq '. | length' public/legal/oss-credits.json)
           echo "### Statistics:" >> $GITHUB_STEP_SUMMARY
           echo "- Total Packages: ${PACKAGE_COUNT}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # ライセンス分布を表示
           echo "### License Distribution:" >> $GITHUB_STEP_SUMMARY
-          jq -r 'group_by(.license) | map({license: .[0].license, count: length}) | sort_by(-.count) | .[] | "- \(.license): \(.count)"' public/oss-credits.json >> $GITHUB_STEP_SUMMARY
+          jq -r 'group_by(.license) | map({license: .[0].license, count: length}) | sort_by(-.count) | .[] | "- \(.license): \(.count)"' public/legal/oss-credits.json >> $GITHUB_STEP_SUMMARY
 
       - name: 💾 Commit changes
         if: steps.check_changes.outputs.changed == 'true' && github.event_name != 'pull_request'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add public/oss-credits.json public/THIRD_PARTY_NOTICES.txt
+          git add public/legal/oss-credits.json public/legal/THIRD_PARTY_NOTICES.txt
           git commit -m "chore: 依存関係ライセンス情報を自動更新
 
 📄 License Information Generator により自動生成
@@ -123,7 +123,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
             const fs = require('fs');
             const { execSync } = require('child_process');
 
-            const ossCredits = JSON.parse(fs.readFileSync('public/oss-credits.json', 'utf8'));
+            const ossCredits = JSON.parse(fs.readFileSync('public/legal/oss-credits.json', 'utf8'));
             const packageCount = ossCredits.length;
 
             // ライセンス分布を計算
@@ -158,8 +158,8 @@ ${complianceStatus}
 ${topLicenses}
 
 ### 📝 Generated Files
-- \`public/oss-credits.json\` - Web display data
-- \`public/THIRD_PARTY_NOTICES.txt\` - Apache-2.0 NOTICE files
+- \`public/legal/oss-credits.json\` - Web display data
+- \`public/legal/THIRD_PARTY_NOTICES.txt\` - Apache-2.0 NOTICE files
 
 ### 🔗 View Changes
 You can view the complete OSS credits at \`/legal/oss-credits\` after merging this PR.
@@ -178,4 +178,4 @@ You can view the complete OSS credits at \`/legal/oss-credits\` after merging th
         if: steps.check_changes.outputs.changed == 'false'
         run: |
           echo "✅ License information is up to date" >> $GITHUB_STEP_SUMMARY
-          echo "No changes to public/oss-credits.json or public/THIRD_PARTY_NOTICES.txt" >> $GITHUB_STEP_SUMMARY
+          echo "No changes to public/legal/oss-credits.json or public/legal/THIRD_PARTY_NOTICES.txt" >> $GITHUB_STEP_SUMMARY

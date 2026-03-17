@@ -154,7 +154,7 @@ const nextConfig = {
       },
       // アイコン・マニフェスト等の静的アセット（1年キャッシュ）
       {
-        source: '/:path(icon-*.png|apple-touch-icon.png|manifest.json)',
+        source: '/:path(icons/icon-*.png|icons/apple-touch-icon.png|manifest.json)',
         headers: [
           {
             key: 'Cache-Control',

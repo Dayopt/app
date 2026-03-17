@@ -258,7 +258,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
           <div className="bg-container relative hidden md:block">
             {/* LCP改善: デコレーション用画像はlazy load（-500ms） */}
             <Image
-              src="/placeholder.svg"
+              src="/images/placeholder.svg"
               alt="Decorative background"
               fill
               loading="lazy"

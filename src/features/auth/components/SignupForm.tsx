@@ -9,11 +9,10 @@ import NextImage from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
 import { Link } from '@/platform/i18n/navigation';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Field,
   FieldDescription,
@@ -65,12 +64,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
@@ -79,7 +75,6 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
       email: '',
       password: '',
       confirmPassword: '',
-      agreedToTerms: false,
     },
     mode: 'onSubmit', // DADS準拠: 送信時バリデーション
   });
@@ -95,62 +90,18 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const { error, data: signUpData } = await signUp(data.email, data.password);
+      const { error } = await signUp(data.email, data.password);
       if (error) {
         const errorKey = getAuthErrorKey(error.message, 'signup');
         setServerError(t(errorKey));
-      } else if (signUpData.session) {
-        // email確認不要（即ログイン）
-        router.push(`/${locale}/calendar/day`);
       } else {
-        // email確認が必要
-        setSubmittedEmail(data.email);
-        setEmailSent(true);
+        router.push(`/${locale}/calendar/day`);
       }
     } catch (err) {
       logger.error('[SignupForm] Signup error:', err);
       setServerError(t('auth.errors.unexpectedError'));
     }
   };
-
-  if (emailSent) {
-    return (
-      <div className={cn('flex flex-col gap-6', className)} {...props}>
-        <Card className="overflow-hidden p-0">
-          <CardContent className="grid p-0 md:grid-cols-2">
-            <div className="p-6 md:p-8">
-              <FieldGroup>
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-2xl font-bold">
-                    {t('auth.success.signupSuccess').split('.')[0]}
-                  </h1>
-                  <p className="text-muted-foreground text-balance">
-                    {t('auth.passwordResetForm.sentResetLink')}{' '}
-                    <span className="font-normal">{submittedEmail}</span>
-                  </p>
-                </div>
-                <Field>
-                  <Button asChild>
-                    <Link href="/auth/login">{t('auth.passwordResetForm.backToLogin')}</Link>
-                  </Button>
-                </Field>
-              </FieldGroup>
-            </div>
-            <div className="bg-container relative hidden md:block">
-              <NextImage
-                src="/placeholder.svg"
-                alt="Decorative background"
-                fill
-                priority
-                sizes="(min-width: 768px) 50vw, 0vw"
-                className="object-cover dark:brightness-[0.2] dark:grayscale"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -318,52 +269,31 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 </Field>
               </Field>
 
-              {/* 利用規約とプライバシーポリシーへの同意 */}
-              <Field>
-                <div className="flex items-start gap-4">
-                  <Controller
-                    name="agreedToTerms"
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="agree-terms"
-                        className="mt-1"
-                        checked={field.value}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                        aria-disabled={isSubmitting || undefined}
-                        aria-label={t('auth.register.agreeTerms')}
-                      />
-                    )}
-                  />
-                  <label htmlFor="agree-terms" className="text-sm leading-relaxed">
-                    {t('auth.signupForm.byContinuing')}{' '}
-                    <a
-                      href="https://dayopt.app/legal/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground underline underline-offset-4"
-                    >
-                      {t('auth.signupForm.termsOfService')}
-                    </a>{' '}
-                    {t('auth.signupForm.and')}{' '}
-                    <a
-                      href="https://dayopt.app/legal/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground underline underline-offset-4"
-                    >
-                      {t('auth.signupForm.privacyPolicy')}
-                    </a>
-                    {t('auth.signupForm.agree')}
-                  </label>
-                </div>
-                {errors.agreedToTerms && <FieldError>{errors.agreedToTerms.message}</FieldError>}
-              </Field>
-
               <Field>
                 <Button type="submit" isLoading={isSubmitting} className="w-full">
                   {t('auth.signupForm.createAccountButton')}
                 </Button>
+                <p className="text-muted-foreground text-center text-xs leading-relaxed">
+                  {t('auth.signupForm.byContinuing')}{' '}
+                  <a
+                    href="https://dayopt.app/legal/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline underline-offset-4"
+                  >
+                    {t('auth.signupForm.termsOfService')}
+                  </a>{' '}
+                  {t('auth.signupForm.and')}{' '}
+                  <a
+                    href="https://dayopt.app/legal/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline underline-offset-4"
+                  >
+                    {t('auth.signupForm.privacyPolicy')}
+                  </a>
+                  {t('auth.signupForm.agree')}
+                </p>
               </Field>
 
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
@@ -408,7 +338,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
           </form>
           <div className="bg-container relative hidden md:block">
             <NextImage
-              src="/placeholder.svg"
+              src="/images/placeholder.svg"
               alt="Decorative background"
               fill
               priority

@@ -45,7 +45,13 @@ export function Sidebar({ children, footerActions }: SidebarProps) {
       {/* Header - Logo + Close */}
       <div className="flex h-12 shrink-0 items-center justify-between px-2">
         <div className="flex items-center gap-2 pl-2">
-          <Image src="/icon-192.png" alt="Dayopt" width={20} height={20} className="rounded" />
+          <Image
+            src="/icons/icon-192.png"
+            alt="Dayopt"
+            width={20}
+            height={20}
+            className="rounded"
+          />
           <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
         </div>
         <div className="flex items-center">

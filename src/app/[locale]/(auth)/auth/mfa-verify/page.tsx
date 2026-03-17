@@ -298,7 +298,7 @@ export default function MFAVerifyPage() {
               </div>
               <div className="bg-surface-container relative hidden md:block">
                 <Image
-                  src="/placeholder.svg"
+                  src="/images/placeholder.svg"
                   alt="Image"
                   fill
                   className="object-cover dark:brightness-[0.2] dark:grayscale"
