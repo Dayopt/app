@@ -686,6 +686,7 @@
       "updateCard": "Update",
       "managePayment": "Manage your payment method via Stripe",
       "managePlan": "Manage Subscription",
+      "adjustPlan": "Adjust Plan",
       "processing": "Processing...",
       "viewInStripe": "View billing history in Stripe",
       "openPortal": "Open Stripe Portal",

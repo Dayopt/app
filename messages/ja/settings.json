@@ -686,6 +686,7 @@
       "updateCard": "更新",
       "managePayment": "Stripe で支払い方法を管理",
       "managePlan": "サブスクリプション管理",
+      "adjustPlan": "プランを調整",
       "processing": "処理中...",
       "viewInStripe": "Stripe で請求履歴を確認",
       "openPortal": "Stripe ポータルを開く",
