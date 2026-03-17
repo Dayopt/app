@@ -214,17 +214,19 @@ export function EntryInspectorForm() {
             <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
           )}
 
-          {/* 充実度 */}
-          <FulfillmentRow
-            label={t('plan.inspector.time.fulfillment')}
-            score={fulfillmentScore ?? null}
-            onScoreChange={handleFulfillmentChange}
-            scoreLabels={{
-              low: t('plan.inspector.time.fulfillmentLow'),
-              medium: t('plan.inspector.time.fulfillmentMedium'),
-              high: t('plan.inspector.time.fulfillmentHigh'),
-            }}
-          />
+          {/* 充実度（endTimeが過去のエントリのみ表示） */}
+          {entry.end_time && new Date(entry.end_time) < new Date() && (
+            <FulfillmentRow
+              label={t('plan.inspector.time.fulfillment')}
+              score={fulfillmentScore ?? null}
+              onScoreChange={handleFulfillmentChange}
+              scoreLabels={{
+                low: t('plan.inspector.time.fulfillmentLow'),
+                medium: t('plan.inspector.time.fulfillmentMedium'),
+                high: t('plan.inspector.time.fulfillmentHigh'),
+              }}
+            />
+          )}
 
           {/* 繰り返し */}
           <RecurrenceRow
