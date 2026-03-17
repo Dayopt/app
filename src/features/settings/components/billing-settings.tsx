@@ -282,7 +282,7 @@ export function BillingSettings() {
           {invoices.data && invoices.data.length > 0 ? (
             <table className="w-full">
               <thead>
-                <tr className="border-border text-muted-foreground border-b text-left text-xs">
+                <tr className="text-muted-foreground text-left text-xs">
                   <th className="pb-2 font-medium">{t('settings.subscription.invoiceDate')}</th>
                   <th className="pb-2 font-medium">{t('settings.subscription.invoiceTotal')}</th>
                   <th className="pb-2 font-medium">{t('settings.subscription.invoiceStatus')}</th>
@@ -291,7 +291,7 @@ export function BillingSettings() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-border divide-y">
+              <tbody>
                 {invoices.data.map((invoice) => (
                   <tr key={invoice.id} className="text-sm">
                     <td className="py-3">
