@@ -126,7 +126,10 @@
         "noPlanned": "Lived, not planned",
         "duration": "Duration",
         "diff": "Diff",
-        "fulfillment": "Fulfillment"
+        "fulfillment": "Fulfillment",
+        "fulfillmentLow": "Fulfillment: Low",
+        "fulfillmentMedium": "Fulfillment: Medium",
+        "fulfillmentHigh": "Fulfillment: High"
       },
       "note": {
         "label": "Note",

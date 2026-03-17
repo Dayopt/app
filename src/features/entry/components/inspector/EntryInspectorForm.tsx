@@ -219,6 +219,11 @@ export function EntryInspectorForm() {
             label={t('plan.inspector.time.fulfillment')}
             score={fulfillmentScore ?? null}
             onScoreChange={handleFulfillmentChange}
+            scoreLabels={{
+              low: t('plan.inspector.time.fulfillmentLow'),
+              medium: t('plan.inspector.time.fulfillmentMedium'),
+              high: t('plan.inspector.time.fulfillmentHigh'),
+            }}
           />
 
           {/* 繰り返し */}

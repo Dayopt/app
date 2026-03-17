@@ -14,10 +14,14 @@ import { cn } from '@/lib/utils';
 
 import type { FulfillmentScore } from '../../../types/entry';
 
-const SCORE_OPTIONS: { score: FulfillmentScore; icon: typeof Smile }[] = [
-  { score: 1, icon: Frown },
-  { score: 2, icon: Meh },
-  { score: 3, icon: Smile },
+const SCORE_OPTIONS: {
+  score: FulfillmentScore;
+  icon: typeof Smile;
+  labelKey: 'low' | 'medium' | 'high';
+}[] = [
+  { score: 1, icon: Frown, labelKey: 'low' },
+  { score: 2, icon: Meh, labelKey: 'medium' },
+  { score: 3, icon: Smile, labelKey: 'high' },
 ];
 
 interface FulfillmentRowProps {
@@ -25,13 +29,21 @@ interface FulfillmentRowProps {
   score: FulfillmentScore | null;
   onScoreChange: (value: FulfillmentScore | null) => void;
   disabled?: boolean;
+  scoreLabels?: Record<'low' | 'medium' | 'high', string>;
 }
+
+const DEFAULT_SCORE_LABELS: Record<'low' | 'medium' | 'high', string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
 
 export function FulfillmentRow({
   label,
   score,
   onScoreChange,
   disabled = false,
+  scoreLabels = DEFAULT_SCORE_LABELS,
 }: FulfillmentRowProps) {
   const handleToggle = useCallback(
     (value: FulfillmentScore) => {
@@ -47,7 +59,7 @@ export function FulfillmentRow({
         <span className="text-muted-foreground text-sm">{label}</span>
       </div>
       <div className="flex items-center gap-1">
-        {SCORE_OPTIONS.map(({ score: value, icon: Icon }) => {
+        {SCORE_OPTIONS.map(({ score: value, icon: Icon, labelKey }) => {
           const isSelected = score === value;
           return (
             <button
@@ -55,6 +67,8 @@ export function FulfillmentRow({
               type="button"
               disabled={disabled}
               onClick={() => handleToggle(value)}
+              aria-label={scoreLabels[labelKey]}
+              aria-pressed={isSelected}
               className={cn(
                 'flex size-8 items-center justify-center rounded-lg transition-colors',
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',

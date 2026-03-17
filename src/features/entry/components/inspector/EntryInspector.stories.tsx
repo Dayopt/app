@@ -138,6 +138,11 @@ function InspectorContent({
             label={t('plan.inspector.time.fulfillment')}
             score={fulfillment}
             onScoreChange={setFulfillment}
+            scoreLabels={{
+              low: t('plan.inspector.time.fulfillmentLow'),
+              medium: t('plan.inspector.time.fulfillmentMedium'),
+              high: t('plan.inspector.time.fulfillmentHigh'),
+            }}
           />
 
           {/* Recurrence */}
