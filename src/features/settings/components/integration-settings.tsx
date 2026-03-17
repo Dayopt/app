@@ -19,6 +19,16 @@ import {
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,6 +159,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
     setSavedKeys((prev) => ({ ...prev, [providerId]: false }));
   }, []);
 
+  // TODO: syncEnabled をユーザー設定DBに永続化（現在はローカルstateのみ）
   const [syncEnabled, setSyncEnabled] = useState(true);
 
   const handleSyncChange = useCallback((checked: boolean) => {
@@ -314,6 +325,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
 const ICalFeedSection = memo(function ICalFeedSection() {
   const t = useTranslations();
   const [copied, setCopied] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const utils = api.useUtils();
 
   const { data: tokenData, isPending } = api.userSettings.getICalToken.useQuery();
@@ -342,70 +354,96 @@ const ICalFeedSection = memo(function ICalFeedSection() {
 
   const handleRegenerate = useCallback(() => {
     if (tokenData?.token) {
-      const confirmed = window.confirm(t('settings.integrations.icalFeed.regenerateConfirm'));
-      if (!confirmed) return;
+      setRegenerateDialogOpen(true);
+      return;
     }
     regenerateMutation.mutate();
-  }, [tokenData?.token, t, regenerateMutation]);
+  }, [tokenData?.token, regenerateMutation]);
+
+  const handleRegenerateConfirm = useCallback(() => {
+    setRegenerateDialogOpen(false);
+    regenerateMutation.mutate();
+  }, [regenerateMutation]);
 
   return (
-    <SectionCard title={t('settings.integrations.icalFeed.title')}>
-      <div className="space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="bg-container flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl">
-            <Rss className="text-primary h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <p className="text-muted-foreground text-sm">
-              {t('settings.integrations.icalFeed.description')}
-            </p>
-
-            {isPending ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-              </div>
-            ) : feedUrl ? (
-              <div className="space-y-2">
-                <LabeledRow label={t('settings.integrations.icalFeed.feedUrl')}>
-                  <div className="flex items-center gap-2">
-                    <Input value={feedUrl} readOnly className="font-mono text-xs" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCopy}
-                      aria-label={t('settings.integrations.icalFeed.copy')}
-                    >
-                      {copied ? (
-                        <CheckCircle2 className="text-success h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </LabeledRow>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                {t('settings.integrations.icalFeed.noToken')}
+    <>
+      <SectionCard title={t('settings.integrations.icalFeed.title')}>
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="bg-container flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl">
+              <Rss className="text-primary h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              <p className="text-muted-foreground text-sm">
+                {t('settings.integrations.icalFeed.description')}
               </p>
-            )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRegenerate}
-              disabled={regenerateMutation.isPending}
-            >
-              {regenerateMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {isPending ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                </div>
+              ) : feedUrl ? (
+                <div className="space-y-2">
+                  <LabeledRow label={t('settings.integrations.icalFeed.feedUrl')}>
+                    <div className="flex items-center gap-2">
+                      <Input value={feedUrl} readOnly className="font-mono text-xs" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopy}
+                        aria-label={t('settings.integrations.icalFeed.copy')}
+                      >
+                        {copied ? (
+                          <CheckCircle2 className="text-success h-4 w-4" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </LabeledRow>
+                </div>
               ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <p className="text-muted-foreground text-xs">
+                  {t('settings.integrations.icalFeed.noToken')}
+                </p>
               )}
-              {t('settings.integrations.icalFeed.regenerate')}
-            </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={regenerateMutation.isPending}
+              >
+                {regenerateMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {t('settings.integrations.icalFeed.regenerate')}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </SectionCard>
+      </SectionCard>
+
+      <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('settings.integrations.icalFeed.regenerateConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('settings.integrations.icalFeed.regenerateConfirmDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegenerateConfirm}>
+              {t('settings.integrations.icalFeed.regenerate')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 });

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 interface LabeledRowProps {
   label: ReactNode;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }
 

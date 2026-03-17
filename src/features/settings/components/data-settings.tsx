@@ -126,7 +126,7 @@ function ExportSection() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-36"
+                className="w-32 sm:w-36"
                 aria-label={t('startDate')}
               />
               <span className="text-muted-foreground">—</span>
@@ -134,7 +134,7 @@ function ExportSection() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-36"
+                className="w-32 sm:w-36"
                 aria-label={t('endDate')}
               />
             </div>

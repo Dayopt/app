@@ -645,7 +645,8 @@
         "copy": "Copy",
         "copied": "Copied!",
         "regenerate": "Regenerate URL",
-        "regenerateConfirm": "Regenerating the URL will invalidate the previous one. Are you sure?",
+        "regenerateConfirmTitle": "Regenerate feed URL?",
+        "regenerateConfirmDescription": "The current URL will stop working. Any calendars using it will need to be updated.",
         "regenerateSuccess": "New feed URL generated",
         "noToken": "Click \"Regenerate URL\" to generate a feed URL"
       }

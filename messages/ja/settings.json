@@ -645,7 +645,8 @@
         "copy": "コピー",
         "copied": "コピーしました",
         "regenerate": "URLを再生成",
-        "regenerateConfirm": "URLを再生成すると、以前のURLは無効になります。よろしいですか？",
+        "regenerateConfirmTitle": "フィードURLを再生成しますか？",
+        "regenerateConfirmDescription": "現在のURLは無効になります。このURLを使用しているカレンダーは更新が必要です。",
         "regenerateSuccess": "新しいフィードURLを生成しました",
         "noToken": "フィードURLを生成するには「URLを再生成」をクリックしてください"
       }

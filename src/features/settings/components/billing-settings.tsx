@@ -121,7 +121,7 @@ export function BillingSettings() {
     createPortal.mutate();
   }, [createPortal]);
 
-  // Intl フォーマッターをメモ化（P2-9）
+  // Intl フォーマッターをメモ化
   const dateFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(undefined, {
@@ -131,6 +131,13 @@ export function BillingSettings() {
       }),
     [],
   );
+
+  const formatCurrency = useCallback((amount: number, currency: string) => {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  }, []);
 
   const isStripeConfigured = STRIPE_PRICE_ID !== '';
   const isMutating = createCheckout.isPending || createPortal.isPending;
@@ -322,10 +329,7 @@ export function BillingSettings() {
                         {dateFormatter.format(new Date(invoice.date))}
                       </td>
                       <td className="py-3 whitespace-nowrap">
-                        {new Intl.NumberFormat(undefined, {
-                          style: 'currency',
-                          currency: invoice.currency,
-                        }).format(invoice.amount / 100)}
+                        {formatCurrency(invoice.amount / 100, invoice.currency)}
                       </td>
                       <td className="py-3">
                         <Badge variant="secondary">
