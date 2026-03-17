@@ -107,6 +107,10 @@ export const AllPatterns: Story = {
             <BarChart3 className="size-4" />
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="calendar" />
+        <TabsContent value="plan" />
+        <TabsContent value="record" />
+        <TabsContent value="stats" />
       </Tabs>
 
       <Tabs defaultValue="profile" className="w-full max-w-md">
@@ -120,6 +124,8 @@ export const AllPatterns: Story = {
             設定
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="profile" />
+        <TabsContent value="settings" />
       </Tabs>
 
       <Tabs defaultValue="overview" className="w-full max-w-md">
