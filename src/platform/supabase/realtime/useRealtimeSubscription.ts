@@ -29,7 +29,7 @@
 
 import { logger } from '@/lib/logger';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { createClient } from '@/platform/supabase/client';
 
@@ -41,16 +41,16 @@ export function useRealtimeSubscription<
 >(config: RealtimeSubscriptionConfig<T>) {
   const channelRef = useRef<RealtimeChannelManager | null>(null);
   const configRef = useRef(config);
-  const [channelManager, setChannelManager] = useState<RealtimeChannelManager | null>(null);
 
   // 最新のconfigを保持（クロージャ問題を回避）
   useEffect(() => {
     configRef.current = config;
   });
 
-  useEffect(() => {
-    const { channelName, enabled = true } = configRef.current;
+  // enabled / channelName の変更時に購読を再作成するため、値レベルで依存
+  const { channelName, enabled = true } = config;
 
+  useEffect(() => {
     // enabled=false の場合は購読をスキップ
     if (!enabled) {
       logger.debug(`[Realtime] Subscription disabled: ${channelName}`);
@@ -126,7 +126,6 @@ export function useRealtimeSubscription<
         },
       };
       channelRef.current = manager;
-      setChannelManager(manager);
     } catch (error) {
       const subscriptionError = new RealtimeSubscriptionError(
         `Failed to create channel: ${channelName}`,
@@ -147,10 +146,7 @@ export function useRealtimeSubscription<
         supabase.removeChannel(channel);
         logger.debug(`[Realtime] Unsubscribed from channel: ${channelName}`);
         channelRef.current = null;
-        setChannelManager(null);
       }
     };
-  }, []); // 空配列: マウント時に1回だけ実行
-
-  return channelManager;
+  }, [channelName, enabled]); // enabled/channelName変更時に購読を再作成
 }
