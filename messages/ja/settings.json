@@ -671,6 +671,7 @@
       "freePlanLabel": "Free プラン",
       "currentBadge": "現在のプラン",
       "freePlanDescription": "基本機能をご利用いただけます",
+      "proPlanDescription": "すべての機能にフルアクセス",
       "selectPlan": "プランを選択",
       "monthly": "月払い",
       "yearly": "年払い",
@@ -682,9 +683,12 @@
       "paymentMethod": "支払い方法",
       "noCard": "カードが登録されていません",
       "addCard": "カードを追加",
-      "paymentComingSoon": "※ 支払い機能は現在準備中です",
+      "managePayment": "Stripe で支払い方法を管理",
+      "managePlan": "サブスクリプション管理",
+      "processing": "処理中...",
+      "viewInStripe": "Stripe で請求履歴を確認",
+      "openPortal": "Stripe ポータルを開く",
       "billingHistory": "請求履歴",
-      "noBillingHistory": "請求履歴はありません",
       "plans": {
         "free": {
           "name": "Free",

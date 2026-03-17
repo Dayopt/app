@@ -2,12 +2,14 @@
 
 import { useCallback, useState } from 'react';
 
-import { Check, CreditCard, Crown, Receipt, Sparkles, Zap } from 'lucide-react';
+import { Check, CreditCard, ExternalLink, Receipt, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { api } from '@/platform/trpc';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
@@ -28,49 +30,89 @@ const PLANS: Plan[] = [
     price: 0,
     period: 'month',
     featureKeys: [
-      'settings.subscription.plans.free.features.basicTasks',
-      'settings.subscription.plans.free.features.maxTasks',
+      'settings.subscription.plans.free.features.timeboxing',
+      'settings.subscription.plans.free.features.basicAnalytics',
       'settings.subscription.plans.free.features.tags',
-      'settings.subscription.plans.free.features.calendar',
+      'settings.subscription.plans.free.features.ai',
     ],
   },
   {
     id: 'pro',
     nameKey: 'settings.subscription.plans.pro.name',
-    price: 980,
+    price: 5,
     period: 'month',
     featureKeys: [
-      'settings.subscription.plans.pro.features.unlimitedTasks',
+      'settings.subscription.plans.pro.features.fullAnalytics',
       'settings.subscription.plans.pro.features.unlimitedTags',
-      'settings.subscription.plans.pro.features.integrations',
-      'settings.subscription.plans.pro.features.prioritySupport',
-      'settings.subscription.plans.pro.features.advancedAnalytics',
+      'settings.subscription.plans.pro.features.api',
+      'settings.subscription.plans.pro.features.dataExport',
+      'settings.subscription.plans.pro.features.unlimitedAI',
     ],
     recommended: true,
   },
-  {
-    id: 'team',
-    nameKey: 'settings.subscription.plans.team.name',
-    price: 2980,
-    period: 'month',
-    featureKeys: [
-      'settings.subscription.plans.team.features.allPro',
-      'settings.subscription.plans.team.features.teamSharing',
-      'settings.subscription.plans.team.features.adminDashboard',
-      'settings.subscription.plans.team.features.sso',
-      'settings.subscription.plans.team.features.dedicatedSupport',
-    ],
-  },
 ];
+
+/**
+ * Stripe Price ID
+ *
+ * Stripe Dashboard で作成した Price の ID を環境変数で管理。
+ * ビルド時に埋め込まれるため NEXT_PUBLIC_ プレフィックス。
+ */
+const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? '';
 
 export function BillingSettings() {
   const t = useTranslations();
-  const [currentPlan] = useState('free');
   const [billingPeriod, setBillingPeriod] = useState<'month' | 'year'>('month');
+
+  // 課金情報の取得
+  const billingInfo = api.billing.getInfo.useQuery(undefined, {
+    retry: false,
+  });
+
+  const currentPlan =
+    billingInfo.data?.subscriptionStatus === 'active' ||
+    billingInfo.data?.subscriptionStatus === 'trialing'
+      ? 'pro'
+      : 'free';
+
+  // Checkout Session 作成
+  const createCheckout = api.billing.createCheckoutSession.useMutation({
+    onSuccess(data) {
+      window.location.href = data.url;
+    },
+    onError(error) {
+      toast.error(error.message);
+    },
+  });
+
+  // Portal Session 作成
+  const createPortal = api.billing.createPortalSession.useMutation({
+    onSuccess(data) {
+      window.location.href = data.url;
+    },
+    onError(error) {
+      toast.error(error.message);
+    },
+  });
+
+  const handleUpgrade = useCallback(() => {
+    if (!STRIPE_PRICE_ID) {
+      toast.error('Stripe is not configured yet');
+      return;
+    }
+    createCheckout.mutate({ priceId: STRIPE_PRICE_ID });
+  }, [createCheckout]);
+
+  const handleManageSubscription = useCallback(() => {
+    createPortal.mutate();
+  }, [createPortal]);
 
   const handlePeriodChange = useCallback((period: 'month' | 'year') => {
     setBillingPeriod(period);
   }, []);
+
+  const isStripeConfigured = STRIPE_PRICE_ID !== '';
+  const isLoading = createCheckout.isPending || createPortal.isPending;
 
   return (
     <div className="space-y-8">
@@ -82,11 +124,17 @@ export function BillingSettings() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="text-lg font-bold">{t('settings.subscription.freePlanLabel')}</h4>
+              <h4 className="text-lg font-bold">
+                {currentPlan === 'pro'
+                  ? t('settings.subscription.plans.pro.name')
+                  : t('settings.subscription.freePlanLabel')}
+              </h4>
               <Badge variant="secondary">{t('settings.subscription.currentBadge')}</Badge>
             </div>
             <p className="text-muted-foreground text-sm">
-              {t('settings.subscription.freePlanDescription')}
+              {currentPlan === 'pro'
+                ? t('settings.subscription.proPlanDescription')
+                : t('settings.subscription.freePlanDescription')}
             </p>
           </div>
         </div>
@@ -115,7 +163,7 @@ export function BillingSettings() {
           </div>
         }
       >
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
@@ -134,12 +182,11 @@ export function BillingSettings() {
 
               <div className="mb-4">
                 <div className="flex items-center gap-2">
-                  {plan.id === 'team' && <Crown className="text-primary h-4 w-4" />}
                   <h4 className="font-bold">{t(plan.nameKey)}</h4>
                 </div>
                 <div className="mt-2">
                   <span className="text-2xl font-bold">
-                    ¥{billingPeriod === 'year' ? Math.floor(plan.price * 0.8) : plan.price}
+                    ${billingPeriod === 'year' ? Math.floor(plan.price * 0.8) : plan.price}
                   </span>
                   <span className="text-muted-foreground text-sm">
                     {t('settings.subscription.perMonth')}
@@ -156,51 +203,71 @@ export function BillingSettings() {
                 ))}
               </ul>
 
-              <Button
-                className="w-full"
-                variant={currentPlan === plan.id ? 'ghost' : plan.recommended ? 'primary' : 'ghost'}
-                disabled
-              >
-                {currentPlan === plan.id
-                  ? t('settings.subscription.inUse')
-                  : t('settings.subscription.upgrade')}
-              </Button>
+              {plan.id === 'pro' && currentPlan !== 'pro' ? (
+                <Button
+                  className="w-full"
+                  variant="primary"
+                  disabled={!isStripeConfigured || isLoading}
+                  onClick={handleUpgrade}
+                >
+                  {isLoading
+                    ? t('settings.subscription.processing')
+                    : t('settings.subscription.upgrade')}
+                </Button>
+              ) : plan.id === 'pro' && currentPlan === 'pro' ? (
+                <Button
+                  className="w-full"
+                  variant="ghost"
+                  onClick={handleManageSubscription}
+                  disabled={isLoading}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  {t('settings.subscription.managePlan')}
+                </Button>
+              ) : (
+                <Button className="w-full" variant="ghost" disabled>
+                  {currentPlan === plan.id
+                    ? t('settings.subscription.inUse')
+                    : t('settings.subscription.upgrade')}
+                </Button>
+              )}
             </div>
           ))}
         </div>
       </SectionCard>
 
-      {/* お支払い方法 */}
-      <SectionCard title={t('settings.subscription.paymentMethod')}>
-        <LabeledRow label={t('settings.subscription.noCard')}>
-          <Button variant="outline" disabled>
-            <CreditCard className="mr-2 h-4 w-4" />
-            {t('settings.subscription.addCard')}
-          </Button>
-        </LabeledRow>
-        <p className="text-muted-foreground text-xs">
-          {t('settings.subscription.paymentComingSoon')}
-        </p>
-      </SectionCard>
+      {/* お支払い方法（Pro ユーザーのみ表示） */}
+      {currentPlan === 'pro' && (
+        <SectionCard title={t('settings.subscription.paymentMethod')}>
+          <LabeledRow label={t('settings.subscription.managePayment')}>
+            <Button variant="outline" onClick={handleManageSubscription} disabled={isLoading}>
+              <CreditCard className="mr-2 h-4 w-4" />
+              {t('settings.subscription.managePlan')}
+            </Button>
+          </LabeledRow>
+        </SectionCard>
+      )}
 
       {/* 請求履歴・領収書 */}
-      <SectionCard title={t('settings.subscription.billingHistory')}>
-        <div className="flex h-32 flex-col items-center justify-center">
-          <Receipt className="text-muted-foreground mb-2 h-8 w-8" />
-          <p className="text-muted-foreground text-sm">
-            {t('settings.subscription.noBillingHistory')}
-          </p>
-        </div>
-      </SectionCard>
-
-      {/* プランキャンセル */}
-      <SectionCard title={t('settings.billing.cancelPlan')}>
-        <LabeledRow label={t('settings.billing.cancelPlanDescription')}>
-          <Button variant="outline" disabled>
-            {t('settings.billing.cancelPlanComingSoon')}
-          </Button>
-        </LabeledRow>
-      </SectionCard>
+      {currentPlan === 'pro' && (
+        <SectionCard title={t('settings.subscription.billingHistory')}>
+          <div className="flex h-32 flex-col items-center justify-center">
+            <Receipt className="text-muted-foreground mb-2 h-8 w-8" />
+            <p className="text-muted-foreground mb-2 text-sm">
+              {t('settings.subscription.viewInStripe')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManageSubscription}
+              disabled={isLoading}
+            >
+              <ExternalLink className="mr-2 h-3 w-3" />
+              {t('settings.subscription.openPortal')}
+            </Button>
+          </div>
+        </SectionCard>
+      )}
     </div>
   );
 }

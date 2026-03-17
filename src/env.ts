@@ -39,6 +39,10 @@ const serverSchema = z.object({
   // Google
   GOOGLE_SITE_VERIFICATION: z.string().optional(),
 
+  // Stripe
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+
   // App
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   VERCEL_URL: z.string().optional(),

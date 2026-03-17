@@ -11,6 +11,7 @@ import { emailRouter } from '@/features/notifications/server/email-router';
 import { notificationPreferencesRouter } from '@/features/notifications/server/preferences-router';
 import { notificationsRouter } from '@/features/notifications/server/router';
 import { onboardingRouter } from '@/features/onboarding/server/router';
+import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { tagsRouter } from '@/features/tags/server/router';
 import { createTRPCRouter } from '@/platform/trpc/procedures';
@@ -19,6 +20,7 @@ import { createTRPCRouter } from '@/platform/trpc/procedures';
  * メインAPIルーター
  */
 export const appRouter = createTRPCRouter({
+  billing: billingRouter,
   contact: contactRouter,
   email: emailRouter,
   entries: entriesRouter,

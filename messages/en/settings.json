@@ -671,6 +671,7 @@
       "freePlanLabel": "Free Plan",
       "currentBadge": "Current Plan",
       "freePlanDescription": "Basic features are available",
+      "proPlanDescription": "Full access to all features",
       "selectPlan": "Select Plan",
       "monthly": "Monthly",
       "yearly": "Yearly",
@@ -682,9 +683,12 @@
       "paymentMethod": "Payment Method",
       "noCard": "No card registered",
       "addCard": "Add Card",
-      "paymentComingSoon": "* Payment features are currently being prepared",
+      "managePayment": "Manage your payment method via Stripe",
+      "managePlan": "Manage Subscription",
+      "processing": "Processing...",
+      "viewInStripe": "View billing history in Stripe",
+      "openPortal": "Open Stripe Portal",
       "billingHistory": "Billing History",
-      "noBillingHistory": "No billing history",
       "plans": {
         "free": {
           "name": "Free",
