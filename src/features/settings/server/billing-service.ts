@@ -119,6 +119,9 @@ export async function createCheckoutSession(
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
+    subscription_data: {
+      trial_period_days: 7,
+    },
     success_url: `${appUrl}/settings/subscription?success=true`,
     cancel_url: `${appUrl}/settings/subscription?canceled=true`,
     metadata: {
