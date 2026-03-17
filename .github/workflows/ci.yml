@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: "\U0001F50D ESLint & Prettier"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -44,7 +44,7 @@ jobs:
         run: npm run license:check
 
   typecheck:
-    name: TypeScript
+    name: "\U0001F524 TypeScript"
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -59,7 +59,7 @@ jobs:
       - run: npm run typecheck
 
   test:
-    name: Unit Tests
+    name: "\U0001F9EA Unit Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -91,7 +91,7 @@ jobs:
       - run: npx vitest --project storybook --run
 
   build:
-    name: Build
+    name: "\U0001F3D7\uFE0F Build"
     runs-on: ubuntu-latest
     needs: [lint, typecheck, test]
     timeout-minutes: 10
@@ -117,3 +117,32 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+
+  quality-gate:
+    name: "\U0001F6AA Quality Gate"
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, storybook-tests, build]
+    if: always()
+    steps:
+      - run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.typecheck.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.storybook-tests.result }}" != "success" ] || \
+             [ "${{ needs.build.result }}" != "success" ]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+
+  security-gate:
+    name: "\U0001F6AA Security Gate"
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    if: always()
+    steps:
+      - run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.typecheck.result }}" != "success" ]; then
+            echo "Security checks failed"
+            exit 1
+          fi
