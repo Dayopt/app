@@ -1,13 +1,25 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { Check, CreditCard, Sparkles, Zap } from 'lucide-react';
+import { AlertTriangle, Check, CreditCard, RefreshCw, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 
@@ -18,7 +30,6 @@ interface Plan {
   id: string;
   nameKey: string;
   price: number;
-  period: 'month' | 'year';
   featureKeys: string[];
   recommended?: boolean;
 }
@@ -28,7 +39,6 @@ const PLANS: Plan[] = [
     id: 'free',
     nameKey: 'settings.subscription.plans.free.name',
     price: 0,
-    period: 'month',
     featureKeys: [
       'settings.subscription.plans.free.features.timeboxing',
       'settings.subscription.plans.free.features.basicAnalytics',
@@ -40,7 +50,6 @@ const PLANS: Plan[] = [
     id: 'pro',
     nameKey: 'settings.subscription.plans.pro.name',
     price: 5,
-    period: 'month',
     featureKeys: [
       'settings.subscription.plans.pro.features.fullAnalytics',
       'settings.subscription.plans.pro.features.unlimitedTags',
@@ -62,30 +71,18 @@ const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? '';
 
 export function BillingSettings() {
   const t = useTranslations();
-  const [billingPeriod, setBillingPeriod] = useState<'month' | 'year'>('month');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
-  // 課金情報の取得
-  const billingInfo = api.billing.getInfo.useQuery(undefined, {
+  // 統合エンドポイントで一括取得（N+1 解消）
+  const overview = api.billing.getOverview.useQuery(undefined, {
     retry: false,
   });
 
   const currentPlan =
-    billingInfo.data?.subscriptionStatus === 'active' ||
-    billingInfo.data?.subscriptionStatus === 'trialing'
+    overview.data?.billingInfo.subscriptionStatus === 'active' ||
+    overview.data?.billingInfo.subscriptionStatus === 'trialing'
       ? 'pro'
       : 'free';
-
-  // 支払い方法（Pro ユーザーのみ取得）
-  const paymentMethod = api.billing.getPaymentMethod.useQuery(undefined, {
-    enabled: currentPlan === 'pro',
-    retry: false,
-  });
-
-  // 請求書一覧（Pro ユーザーのみ取得）
-  const invoices = api.billing.getInvoices.useQuery(undefined, {
-    enabled: currentPlan === 'pro',
-    retry: false,
-  });
 
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
@@ -119,12 +116,61 @@ export function BillingSettings() {
     createPortal.mutate();
   }, [createPortal]);
 
-  const handlePeriodChange = useCallback((period: 'month' | 'year') => {
-    setBillingPeriod(period);
-  }, []);
+  const handleCancelConfirm = useCallback(() => {
+    setCancelDialogOpen(false);
+    createPortal.mutate();
+  }, [createPortal]);
+
+  // Intl フォーマッターをメモ化（P2-9）
+  const dateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+    [],
+  );
 
   const isStripeConfigured = STRIPE_PRICE_ID !== '';
-  const isLoading = createCheckout.isPending || createPortal.isPending;
+  const isMutating = createCheckout.isPending || createPortal.isPending;
+
+  // ローディング状態（P0-2）
+  if (overview.isLoading) {
+    return (
+      <div className="space-y-8">
+        {[0, 1].map((i) => (
+          <SectionCard key={i}>
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </SectionCard>
+        ))}
+      </div>
+    );
+  }
+
+  // エラー状態（P1-6）
+  if (overview.isError) {
+    return (
+      <div className="space-y-8">
+        <SectionCard>
+          <div className="flex flex-col items-center gap-4 py-8">
+            <AlertTriangle className="text-muted-foreground h-8 w-8" />
+            <p className="text-muted-foreground text-sm">{t('settings.subscription.loadError')}</p>
+            <Button variant="outline" onClick={() => overview.refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('settings.subscription.retry')}
+            </Button>
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
+
+  const paymentMethodData = overview.data?.paymentMethod;
+  const invoicesData = overview.data?.invoices ?? [];
 
   return (
     <div className="space-y-8">
@@ -153,7 +199,7 @@ export function BillingSettings() {
             <Button
               variant="outline"
               onClick={handleManageSubscription}
-              disabled={isLoading}
+              disabled={isMutating}
               className="shrink-0"
             >
               {t('settings.subscription.adjustPlan')}
@@ -162,37 +208,16 @@ export function BillingSettings() {
         </div>
       </SectionCard>
 
-      {/* プラン変更（Free ユーザーのみ） */}
+      {/* プラン変更（Free ユーザーのみ） — 年額トグル削除（P1-7） */}
       {currentPlan === 'free' && (
-        <SectionCard
-          title={t('settings.subscription.selectPlan')}
-          actions={
-            <div className="bg-surface-inset flex gap-1 rounded-2xl p-1">
-              <Button
-                variant={billingPeriod === 'month' ? 'primary' : 'ghost'}
-                onClick={() => handlePeriodChange('month')}
-              >
-                {t('settings.subscription.monthly')}
-              </Button>
-              <Button
-                variant={billingPeriod === 'year' ? 'primary' : 'ghost'}
-                onClick={() => handlePeriodChange('year')}
-              >
-                {t('settings.subscription.yearly')}
-                <Badge variant="secondary" className="ml-2">
-                  {t('settings.subscription.yearlyDiscount')}
-                </Badge>
-              </Button>
-            </div>
-          }
-        >
+        <SectionCard title={t('settings.subscription.selectPlan')}>
           <div className="grid gap-4 md:grid-cols-2">
             {PLANS.map((plan) => (
               <div
                 key={plan.id}
                 className={cn(
                   'border-border relative rounded-2xl border p-4',
-                  plan.recommended && 'border-primary ring-primary/20 ring-2',
+                  plan.recommended && 'border-primary ring-state-active ring-2',
                   currentPlan === plan.id && 'bg-container',
                 )}
               >
@@ -208,9 +233,7 @@ export function BillingSettings() {
                     <h4 className="font-bold">{t(plan.nameKey)}</h4>
                   </div>
                   <div className="mt-2">
-                    <span className="text-2xl font-bold">
-                      ${billingPeriod === 'year' ? Math.floor(plan.price * 0.8) : plan.price}
-                    </span>
+                    <span className="text-2xl font-bold">${plan.price}</span>
                     <span className="text-muted-foreground text-sm">
                       {t('settings.subscription.perMonth')}
                     </span>
@@ -230,10 +253,10 @@ export function BillingSettings() {
                   <Button
                     className="w-full"
                     variant="primary"
-                    disabled={!isStripeConfigured || isLoading}
+                    disabled={!isStripeConfigured || isMutating}
                     onClick={handleUpgrade}
                   >
-                    {isLoading
+                    {isMutating
                       ? t('settings.subscription.processing')
                       : t('settings.subscription.upgrade')}
                   </Button>
@@ -253,15 +276,15 @@ export function BillingSettings() {
         <SectionCard title={t('settings.subscription.paymentMethod')}>
           <LabeledRow
             label={
-              paymentMethod.data ? (
+              paymentMethodData ? (
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  <span className="capitalize">{paymentMethod.data.brand}</span>
+                  <span className="capitalize">{paymentMethodData.brand}</span>
                   {' •••• '}
-                  {paymentMethod.data.last4}
+                  {paymentMethodData.last4}
                   <span className="text-muted-foreground text-xs">
-                    {String(paymentMethod.data.expMonth).padStart(2, '0')}/
-                    {paymentMethod.data.expYear}
+                    {String(paymentMethodData.expMonth).padStart(2, '0')}/
+                    {paymentMethodData.expYear}
                   </span>
                 </span>
               ) : (
@@ -269,71 +292,65 @@ export function BillingSettings() {
               )
             }
           >
-            <Button variant="outline" onClick={handleManageSubscription} disabled={isLoading}>
+            <Button variant="outline" onClick={handleManageSubscription} disabled={isMutating}>
               {t('settings.subscription.updateCard')}
             </Button>
           </LabeledRow>
         </SectionCard>
       )}
 
-      {/* 請求履歴 */}
+      {/* 請求履歴 — overflow-x-auto でモバイル対応（P1-5） */}
       {currentPlan === 'pro' && (
         <SectionCard title={t('settings.subscription.billingHistory')}>
-          {invoices.data && invoices.data.length > 0 ? (
-            <table className="w-full">
-              <thead>
-                <tr className="text-muted-foreground text-left text-xs">
-                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceDate')}</th>
-                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceTotal')}</th>
-                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceStatus')}</th>
-                  <th className="pb-2 text-right font-medium">
-                    {t('settings.subscription.invoiceAction')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.data.map((invoice) => (
-                  <tr key={invoice.id} className="text-sm">
-                    <td className="py-3">
-                      {new Intl.DateTimeFormat(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      }).format(new Date(invoice.date))}
-                    </td>
-                    <td className="py-3">
-                      {new Intl.NumberFormat(undefined, {
-                        style: 'currency',
-                        currency: invoice.currency,
-                      }).format(invoice.amount / 100)}
-                    </td>
-                    <td className="py-3">
-                      <Badge variant="secondary">
-                        {invoice.status === 'paid'
-                          ? t('settings.subscription.invoicePaid')
-                          : invoice.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-right">
-                      {invoice.hostedInvoiceUrl && (
-                        <a
-                          href={invoice.hostedInvoiceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary text-sm hover:underline"
-                        >
-                          {t('settings.subscription.invoiceView')}
-                        </a>
-                      )}
-                    </td>
+          {invoicesData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-muted-foreground text-left text-xs">
+                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceDate')}</th>
+                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceTotal')}</th>
+                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceStatus')}</th>
+                    <th className="pb-2 text-right font-medium">
+                      {t('settings.subscription.invoiceAction')}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : invoices.isLoading ? (
-            <p className="text-muted-foreground py-6 text-center text-sm">
-              {t('settings.subscription.processing')}
-            </p>
+                </thead>
+                <tbody>
+                  {invoicesData.map((invoice) => (
+                    <tr key={invoice.id} className="text-sm">
+                      <td className="py-3 whitespace-nowrap">
+                        {dateFormatter.format(new Date(invoice.date))}
+                      </td>
+                      <td className="py-3 whitespace-nowrap">
+                        {new Intl.NumberFormat(undefined, {
+                          style: 'currency',
+                          currency: invoice.currency,
+                        }).format(invoice.amount / 100)}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant="secondary">
+                          {invoice.status === 'paid'
+                            ? t('settings.subscription.invoicePaid')
+                            : invoice.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-right">
+                        {invoice.hostedInvoiceUrl && (
+                          <a
+                            href={invoice.hostedInvoiceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-sm hover:underline"
+                          >
+                            {t('settings.subscription.invoiceView')}
+                          </a>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="text-muted-foreground py-6 text-center text-sm">
               {t('settings.subscription.noInvoices')}
@@ -342,13 +359,38 @@ export function BillingSettings() {
         </SectionCard>
       )}
 
-      {/* キャンセル */}
+      {/* キャンセル — 確認ダイアログ付き（P0-1） */}
       {currentPlan === 'pro' && (
         <SectionCard title={t('settings.subscription.cancelTitle')}>
           <LabeledRow label={t('settings.subscription.cancelDescription')}>
-            <Button variant="destructive" onClick={handleManageSubscription} disabled={isLoading}>
-              {t('settings.subscription.cancelButton')}
-            </Button>
+            <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isMutating}>
+                  {t('settings.subscription.cancelButton')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {t('settings.subscription.cancelConfirmTitle')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('settings.subscription.cancelConfirmDescription')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>
+                    {t('settings.subscription.cancelConfirmCancel')}
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCancelConfirm}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {t('settings.subscription.cancelConfirmAction')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </LabeledRow>
         </SectionCard>
       )}
