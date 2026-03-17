@@ -556,7 +556,10 @@
         "startDate": "Start date",
         "endDate": "End date",
         "exporting": "Exporting...",
-        "exportButton": "Export"
+        "exportButton": "Export",
+        "exportSuccess": "Data exported successfully",
+        "exportFailed": "Export failed. Please try again.",
+        "csvComingSoon": "Coming soon"
       },
       "restore": {
         "title": "Backup & Restore",

@@ -556,7 +556,10 @@
         "startDate": "開始日",
         "endDate": "終了日",
         "exporting": "エクスポート中...",
-        "exportButton": "エクスポート"
+        "exportButton": "エクスポート",
+        "exportSuccess": "データをエクスポートしました",
+        "exportFailed": "エクスポートに失敗しました。もう一度お試しください。",
+        "csvComingSoon": "近日公開"
       },
       "restore": {
         "title": "バックアップ復元",

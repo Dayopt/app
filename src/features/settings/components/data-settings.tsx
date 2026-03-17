@@ -80,9 +80,9 @@ function ExportSection() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(t('exportButton'));
+      toast.success(t('exportSuccess'));
     } catch {
-      toast.error('Export failed');
+      toast.error(t('exportFailed'));
     }
   }, [exportDataQuery, format, t]);
 
@@ -100,7 +100,9 @@ function ExportSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="json">{t('formatJson')}</SelectItem>
-              <SelectItem value="csv">{t('formatCsv')}</SelectItem>
+              <SelectItem value="csv" disabled>
+                {t('formatCsv')} ({t('csvComingSoon')})
+              </SelectItem>
             </SelectContent>
           </Select>
         </LabeledRow>
@@ -210,7 +212,7 @@ function McpApiSection() {
     return (
       <SectionCard title={t('title')}>
         <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
-        <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-4">
+        <div className="bg-surface-inset flex items-center gap-3 rounded-lg p-4">
           <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
           <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
           <Button variant="outline" size="sm" disabled>
@@ -267,7 +269,7 @@ function McpApiSection() {
       </div>
 
       {/* Connection guide */}
-      <div className="bg-muted/50 mt-4 rounded-lg p-3">
+      <div className="bg-surface-inset mt-4 rounded-lg p-3">
         <p className="text-muted-foreground text-sm">
           {t('connectionGuide')}
           <a

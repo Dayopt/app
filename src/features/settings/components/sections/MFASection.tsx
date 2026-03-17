@@ -212,7 +212,7 @@ export function MFASection() {
 
             {/* リカバリーコード枯渇警告 */}
             {recoveryCodeCount === 0 && (
-              <div className="border-destructive bg-destructive/10 rounded-2xl border p-4">
+              <div className="border-destructive bg-destructive-state-hover rounded-2xl border p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-destructive text-sm font-bold">
                     {t('settings.account.mfa.recoveryCodes.noCodesLeft')}

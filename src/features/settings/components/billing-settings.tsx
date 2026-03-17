@@ -384,7 +384,7 @@ export function BillingSettings() {
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleCancelConfirm}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive-hover"
                   >
                     {t('settings.subscription.cancelConfirmAction')}
                   </AlertDialogAction>
