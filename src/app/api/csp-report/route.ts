@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { logger } from '@/lib/logger';
+
 /**
  * CSP（Content Security Policy）違反レポートエンドポイント
  *
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
     const cspReport = report['csp-report'];
 
     // CSP違反ログ出力
-    console.warn('[CSP Violation]', {
+    logger.warn('[CSP Violation]', {
       documentUri: cspReport['document-uri'],
       violatedDirective: cspReport['violated-directive'],
       blockedUri: cspReport['blocked-uri'],
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
-    console.error('[CSP Report Error]', error);
+    logger.error('[CSP Report Error]', error);
     return NextResponse.json({ error: 'Invalid report' }, { status: 400 });
   }
 }
