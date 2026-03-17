@@ -72,3 +72,70 @@ export const PendingGeneration: Story = {
     },
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { info: { reason: 'no_records' } },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div className="max-w-md">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          NoRecords（記録なし・前回記録あり）
+        </p>
+        <InsightsEmptyState
+          info={{
+            reason: 'no_records',
+            lastRecordDate: new Date('2026-03-03'),
+            lastInsightPath: '/stats/insights?date=2026-03-03',
+          }}
+        />
+      </div>
+      <div className="max-w-md">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          NoRecordsNewUser（記録なし・新規ユーザー）
+        </p>
+        <InsightsEmptyState
+          info={{
+            reason: 'no_records',
+          }}
+        />
+      </div>
+      <div className="max-w-md">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          InsufficientDataOneDay（データ不足・1日分）
+        </p>
+        <InsightsEmptyState
+          info={{
+            reason: 'insufficient_data',
+            recordedDays: [{ dayLabel: '月曜', duration: '2h 30m' }],
+          }}
+        />
+      </div>
+      <div className="max-w-md">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          InsufficientDataTwoDays（データ不足・2日分）
+        </p>
+        <InsightsEmptyState
+          info={{
+            reason: 'insufficient_data',
+            recordedDays: [
+              { dayLabel: '月曜', duration: '2h 30m' },
+              { dayLabel: '水曜', duration: '4h 15m' },
+            ],
+          }}
+        />
+      </div>
+      <div className="max-w-md">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          PendingGeneration（生成待ち）
+        </p>
+        <InsightsEmptyState
+          info={{
+            reason: 'pending_generation',
+            expectedDate: new Date('2026-03-23'),
+          }}
+        />
+      </div>
+    </div>
+  ),
+};

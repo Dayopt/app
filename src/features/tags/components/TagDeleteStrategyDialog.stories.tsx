@@ -186,3 +186,50 @@ export const SingleReassignTarget: Story = {
     return <Demo />;
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          エントリ数件のタグ削除（開いた状態）
+        </p>
+        <TagDeleteStrategyDialog
+          open
+          onClose={() => {}}
+          onConfirm={async () => {}}
+          tagName="Work"
+          entryCount={3}
+          availableTags={mockTags.filter((t) => t.id !== '1')}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          タグが多い場合（検索バー表示、開いた状態）
+        </p>
+        <TagDeleteStrategyDialog
+          open
+          onClose={() => {}}
+          onConfirm={async () => {}}
+          tagName="Meeting"
+          entryCount={12}
+          availableTags={mockTags.filter((t) => t.id !== '3')}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          付け替え先タグが1件のみ（開いた状態）
+        </p>
+        <TagDeleteStrategyDialog
+          open
+          onClose={() => {}}
+          onConfirm={async () => {}}
+          tagName="Personal"
+          entryCount={5}
+          availableTags={[mockTags[0]!]}
+        />
+      </div>
+    </div>
+  ),
+};

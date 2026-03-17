@@ -83,3 +83,66 @@ export const Untagged: Story = {
     </DropdownMenu>
   ),
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">
+        StandaloneTag（独立タグ用メニュー）
+      </p>
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger />
+        <FilterItemMenu
+          displayColor="green"
+          onOpenRenameDialog={fn()}
+          onColorChange={fn()}
+          onOpenMergeModal={fn()}
+          onShowOnlyTag={fn()}
+          onDeleteTag={fn()}
+        />
+      </DropdownMenu>
+      <p className="text-muted-foreground mb-3 text-xs font-medium">
+        GroupedTag（グループ内タグ用メニュー）
+      </p>
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger />
+        <FilterItemMenu
+          displayColor="green"
+          isGrouped={true}
+          currentGroup="開発"
+          groupOptions={[
+            { name: '開発', color: 'green' },
+            { name: 'デザイン', color: 'orange' },
+            { name: 'マーケティング', color: 'blue' },
+          ]}
+          onOpenRenameDialog={fn()}
+          onColorChange={fn()}
+          onOpenMergeModal={fn()}
+          onShowOnlyTag={fn()}
+          onDeleteTag={fn()}
+          onChangeGroup={fn()}
+        />
+      </DropdownMenu>
+      <p className="text-muted-foreground mb-3 text-xs font-medium">NoDeletion（削除不可タグ）</p>
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger />
+        <FilterItemMenu
+          displayColor="green"
+          onOpenRenameDialog={fn()}
+          onColorChange={fn()}
+          onOpenMergeModal={fn()}
+          onShowOnlyTag={fn()}
+          onDeleteTag={undefined}
+        />
+      </DropdownMenu>
+      <p className="text-muted-foreground mb-3 text-xs font-medium">
+        Untagged（タグなし用メニュー）
+      </p>
+      <DropdownMenu defaultOpen>
+        <DropdownMenuTrigger />
+        <UntaggedItemMenu onShowOnlyThis={fn()} />
+      </DropdownMenu>
+    </div>
+  ),
+};

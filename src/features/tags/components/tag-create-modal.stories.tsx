@@ -81,3 +81,29 @@ export const OpenState: Story = {
     await expect(body.getByText(/タグ名/i)).toBeInTheDocument();
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          ボタンクリックでモーダルを開く
+        </p>
+        <TagCreateModalStory />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          初期表示（モーダルが開いた状態）
+        </p>
+        <TagCreateModal
+          isOpen
+          onClose={fn()}
+          onSave={async () => {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }}
+        />
+      </div>
+    </div>
+  ),
+};

@@ -192,3 +192,66 @@ export const FullDay: Story = {
     hourHeight: 32,
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: {
+    chronotypeType: 'bear',
+    startHour: 5,
+    endHour: 24,
+    hourHeight: 40,
+  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Bear（標準型）- 勤務時間帯</p>
+        <ChronotypeBackgroundDemo
+          chronotypeType="bear"
+          startHour={7}
+          endHour={23}
+          hourHeight={48}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Lion（朝型）- 早朝から表示</p>
+        <ChronotypeBackgroundDemo
+          chronotypeType="lion"
+          startHour={5}
+          endHour={21}
+          hourHeight={48}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Wolf（夜型）- 午後から深夜</p>
+        <ChronotypeBackgroundDemo
+          chronotypeType="wolf"
+          startHour={10}
+          endHour={24}
+          hourHeight={48}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Dolphin（不規則型）</p>
+        <ChronotypeBackgroundDemo
+          chronotypeType="dolphin"
+          startHour={6}
+          endHour={22}
+          hourHeight={48}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">全タイプの比較</p>
+        <AllTypesComparison />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">0-24時フル表示</p>
+        <ChronotypeBackgroundDemo
+          chronotypeType="bear"
+          startHour={0}
+          endHour={24}
+          hourHeight={32}
+        />
+      </div>
+    </div>
+  ),
+};

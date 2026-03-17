@@ -67,3 +67,40 @@ export const WarningsOnly: Story = {
 export const Empty: Story = {
   args: { insights: [] },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { insights: MOCK_INSIGHTS },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Mixed（警告＋情報の混在）</p>
+        <RuleInsightList insights={MOCK_INSIGHTS} />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">WarningsOnly（警告のみ）</p>
+        <RuleInsightList
+          insights={[
+            {
+              metricId: 'contextSwitches',
+              type: 'threshold',
+              severity: 'warning',
+              message: 'タスク切替が多い期間でした',
+              detail: '類似タスクをまとめてバッチ処理してみましょう',
+            },
+            {
+              metricId: 'planRate',
+              type: 'trend',
+              severity: 'warning',
+              message: 'Plan Rate が前期間より 30% 低下しました',
+            },
+          ]}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Empty（空・問題なし）</p>
+        <RuleInsightList insights={[]} />
+      </div>
+    </div>
+  ),
+};
