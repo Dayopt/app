@@ -9,7 +9,6 @@ import { routing } from './routing';
  * messages/{locale}/{namespace}.json として配置
  */
 const NAMESPACES = [
-  'app',
   'auth',
   'calendar',
   'common',

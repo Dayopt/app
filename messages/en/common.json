@@ -1,4 +1,9 @@
 {
+  "app": {
+    "name": "Dayopt",
+    "description": "Task management application",
+    "version": "v1.0.0"
+  },
   "common": {
     "dates": {
       "format": "MM/DD/YYYY",
@@ -315,6 +320,19 @@
       },
       "limitReached": "Limit reached",
       "timeAfterStart": "Enter a time after start time ({minTime})"
+    },
+    "avatarDropzone": {
+      "avatarAlt": "Profile picture",
+      "upload": "Select image",
+      "change": "Change",
+      "remove": "Remove",
+      "uploading": "Uploading...",
+      "fileRequirements": "JPG, PNG, GIF, WebP (max {maxSize})",
+      "fileTooLarge": "File size must be less than {maxSize}",
+      "invalidFileType": "Only image files are allowed",
+      "uploadFailed": "Failed to upload",
+      "deleteFailed": "Failed to delete",
+      "deleteConfirm": "Are you sure you want to remove your profile picture?"
     },
     "errors": {
       "generic": "An error occurred",

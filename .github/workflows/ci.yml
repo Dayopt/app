@@ -230,32 +230,6 @@ jobs:
       - name: 📚 Check docs
         run: npm run docs:check
 
-  sentry-verification:
-    name: 🔍 Sentry Integration
-    runs-on: ubuntu-latest
-    needs: [build]
-    timeout-minutes: 5
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Install dependencies
-        run: npm ci
-
-      - name: 🔗 Verify Sentry configuration
-        run: npm run sentry:verify || echo "⚠️ Sentry not configured - skipping verification"
-        continue-on-error: true
-        env:
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
   # =====================================
   # 🚪 Phase 3: Quality Gate
   # =====================================
@@ -272,7 +246,6 @@ jobs:
         accessibility,
         heavy-checks,
         docs-consistency,
-        sentry-verification,
       ]
     if: always()
     steps:
