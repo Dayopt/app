@@ -118,16 +118,24 @@ export function useEntryMutations() {
           .concat(newEntryWithTagId);
       });
 
-      // Toast通知
-      const displayTitle = newEntry.title || t('entry.untitled');
-      toast.success(t('plan.toast.created', { title: displayTitle }), {
-        action: {
-          label: t('plan.open'),
-          onClick: () => {
-            openInspector(newEntry.id);
+      // 初回作成時: Inspector自動表示（toast非表示）
+      // 2個目以降: toastで通知
+      const allEntries = utils.entries.list.getData();
+      const isFirstEntry = allEntries && allEntries.length <= 1;
+
+      if (isFirstEntry) {
+        openInspector(newEntry.id);
+      } else {
+        const displayTitle = newEntry.title || t('entry.untitled');
+        toast.success(t('plan.toast.created', { title: displayTitle }), {
+          action: {
+            label: t('plan.editDetails'),
+            onClick: () => {
+              openInspector(newEntry.id);
+            },
           },
-        },
-      });
+        });
+      }
 
       // 個別エントリのキャッシュを設定
       utils.entries.getById.setData({ id: newEntry.id }, { ...newEntry, tagId: null });

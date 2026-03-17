@@ -50,6 +50,7 @@
       "deletedCount": "{count}件を削除しました"
     },
     "open": "開く",
+    "editDetails": "詳細を編集",
     "delete": {
       "confirmTitle": "プランを削除しますか？",
       "confirmTitleWithName": "{name}を削除しますか？",

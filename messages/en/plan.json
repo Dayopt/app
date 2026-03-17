@@ -50,6 +50,7 @@
       "deletedCount": "{count, plural, one {1 item} other {# items}} deleted"
     },
     "open": "Open",
+    "editDetails": "Edit details",
     "delete": {
       "confirmTitle": "Delete this plan?",
       "confirmTitleWithName": "Delete {name}?",
