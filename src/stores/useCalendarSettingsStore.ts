@@ -11,7 +11,7 @@ export type { CalendarViewType } from '@/lib/calendar-constants';
 // 日付フォーマット型
 export type DateFormatType = 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd';
 
-interface CalendarSettings {
+export interface CalendarSettings {
   // タイムゾーン設定
   timezone: string; // 例: 'Asia/Tokyo', 'America/New_York'
   showUTCOffset: boolean; // UTC表示のON/OFF

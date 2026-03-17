@@ -17,19 +17,8 @@ import {
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -312,88 +301,27 @@ function CopyButton({
 
 // ─── Deletion ────────────────────────────────────────
 
-type DeletionType = 'blocks' | 'all';
-
 function DeletionSection() {
   const t = useTranslations('settings.dataControls.deletion');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deletionType, setDeletionType] = useState<DeletionType>('blocks');
-  const [confirmInput, setConfirmInput] = useState('');
 
-  const keyword = t('confirmKeyword');
-  const isConfirmed = confirmInput === keyword;
-
-  const handleOpenDialog = useCallback((type: DeletionType) => {
-    setDeletionType(type);
-    setConfirmInput('');
-    setDialogOpen(true);
-  }, []);
-
-  const handleDelete = useCallback(() => {
-    // TODO: Implement actual deletion via tRPC
-    toast.success('Not implemented yet');
-    setDialogOpen(false);
-  }, []);
-
+  // TODO: tRPC 実装後に確認ダイアログ付きの削除フローを有効化
   return (
     <SectionCard title={t('title')}>
       <div className="space-y-0">
         <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => handleOpenDialog('blocks')}
-          >
+          <Button variant="outline" size="sm" disabled>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteBlocks')}
           </Button>
         </LabeledRow>
 
         <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => handleOpenDialog('all')}
-          >
+          <Button variant="outline" size="sm" disabled>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteAllData')}
           </Button>
         </LabeledRow>
       </div>
-
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('confirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletionType === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="space-y-2 py-2">
-            <Label className="text-sm">{t('typeToConfirm', { keyword })}</Label>
-            <Input
-              value={confirmInput}
-              onChange={(e) => setConfirmInput(e.target.value)}
-              placeholder={keyword}
-              autoComplete="off"
-            />
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={!isConfirmed}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletionType === 'blocks' ? t('deleteBlocks') : t('deleteAllData')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </SectionCard>
   );
 }
