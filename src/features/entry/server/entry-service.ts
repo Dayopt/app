@@ -60,10 +60,12 @@ export class EntryService {
       query = query.eq('origin', origin);
     }
 
-    // 検索フィルター（PostgREST演算子インジェクション対策: カンマ・ドットをエスケープ）
+    // 検索フィルター（PostgREST演算子インジェクション対策）
     if (search) {
-      const sanitized = search.replace(/[.,()\\]/g, '');
-      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      const sanitized = search.replace(/[.,()\\%*:]/g, '');
+      if (sanitized.length > 0) {
+        query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      }
     }
 
     // 日付範囲フィルタ（start_time基準）
@@ -211,6 +213,9 @@ export class EntryService {
       .single();
 
     if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+      }
       throw new EntryServiceError('CREATE_FAILED', `Failed to create entry: ${error.message}`);
     }
 
@@ -276,6 +281,9 @@ export class EntryService {
       .single();
 
     if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+      }
       throw new EntryServiceError('UPDATE_FAILED', `Failed to update entry: ${error.message}`);
     }
 
@@ -391,6 +399,13 @@ export class EntryService {
     }
 
     return updatedEntries;
+  }
+
+  /**
+   * PostgreSQL exclusion constraint violation (23P01) を判定
+   */
+  private isExclusionViolation(error: { code?: string }): boolean {
+    return error.code === '23P01';
   }
 
   private async getEntryIdsByTagId(tagId: string): Promise<string[]> {
