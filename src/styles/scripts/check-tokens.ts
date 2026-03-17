@@ -9,8 +9,14 @@
 
 import { execSync } from 'node:child_process';
 
+interface ForbiddenPattern {
+  pattern: string;
+  message: string;
+  suggestion: string;
+}
+
 // 禁止パターン（トークン化すべき任意値）
-const FORBIDDEN_PATTERNS = [
+const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   {
     pattern: 'text-\\[[0-9]+px\\]',
     message: 'フォントサイズはトークンを使用 (text-xs, text-sm 等)',
@@ -39,10 +45,9 @@ console.log('🔍 Tailwind トークン違反をチェック中...\n');
 
 for (const { pattern, message, suggestion } of FORBIDDEN_PATTERNS) {
   try {
-    const result = execSync(
-      `grep -rE "${pattern}" src --include="*.tsx" -l 2>/dev/null || true`,
-      { encoding: 'utf8' }
-    ).trim();
+    const result = execSync(`grep -rE "${pattern}" src --include="*.tsx" -l 2>/dev/null || true`, {
+      encoding: 'utf8',
+    }).trim();
 
     if (result) {
       hasViolations = true;

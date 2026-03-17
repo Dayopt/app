@@ -47,19 +47,13 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 コンポーネントの場所は？
 │
 ├── src/stories/tokens/          → Foundations  → templates/foundations.md
-├── src/components/ui/           → Primitives or Recipes（下記参照）
-├── src/core/components/         → Recipes     → templates/recipes.md
-│   src/components/common/
-├── src/features/*/components/   → Features    → templates/features.md
+├── src/components/ui/           → Components  → templates/components.md
+├── src/components/common/       → Components  → templates/components.md
+├── src/core/components/         → Components  → templates/components.md
+├── src/shell/components/        → Components  → templates/components.md
+├── src/features/*/components/   → Components  → templates/components.md
 └── src/stories/patterns/        → Patterns    → templates/patterns.md
 ```
-
-### `src/components/` 内の分類
-
-| ディレクトリ             | title prefix         | テンプレート              |
-| ------------------------ | -------------------- | ------------------------- |
-| `src/components/ui/`     | `Components/UI/`     | `templates/primitives.md` |
-| `src/components/common/` | `Components/Common/` | `templates/recipes.md`    |
 
 **迷ったら**: ドメイン知識を持たない → `Components/`。ドメイン知識がある → `Features/`。
 
@@ -224,15 +218,13 @@ Story対象のコンポーネントが依存する場合に参照:
 
 ## 詳細ドキュメント
 
-| ドキュメント               | 内容                                                             |
-| -------------------------- | ---------------------------------------------------------------- |
-| `templates/primitives.md`  | shadcn/ui コンポーネント用テンプレート                           |
-| `templates/recipes.md`     | 複合パターン用テンプレート（Interactive Wrapper, story-helpers） |
-| `templates/features.md`    | Feature コンポーネント用テンプレート                             |
-| `templates/foundations.md` | デザイントークン可視化用テンプレート                             |
-| `templates/patterns.md`    | 実装パターンドキュメント用テンプレート                           |
-| `references/dark-mode.md`  | ダークモード3層アーキテクチャ                                    |
-| `references/mcp-addon.md`  | Storybook MCP Server 連携                                        |
+| ドキュメント               | 内容                                                      |
+| -------------------------- | --------------------------------------------------------- |
+| `templates/components.md`  | UIコンポーネント用テンプレート（単体・複合・Feature統合） |
+| `templates/foundations.md` | デザイントークン可視化用テンプレート                      |
+| `templates/patterns.md`    | 実装パターンドキュメント用テンプレート                    |
+| `references/dark-mode.md`  | ダークモード3層アーキテクチャ                             |
+| `references/mcp-addon.md`  | Storybook MCP Server 連携                                 |
 
 ## 参考リンク
 

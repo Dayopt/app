@@ -4,8 +4,9 @@
  * culori を使って OKLCH カラーペアのコントラスト比を算出し、
  * PASS/FAIL を判定する。
  *
- * Usage: npx tsx scripts/contrast-audit.ts
+ * Usage: npx tsx src/styles/scripts/contrast-audit.ts
  */
+// @ts-expect-error -- culori has no type declarations
 import { converter, parse, wcagContrast } from 'culori';
 
 const toRgb = converter('rgb');
@@ -483,7 +484,7 @@ function runAudit(label: string, pairs: Pair[]) {
   return fail;
 }
 
-const currentFails = runAudit('CURRENT VALUES (Before)', CURRENT);
+runAudit('CURRENT VALUES (Before)', CURRENT);
 const proposedFails = runAudit('PROPOSED VALUES (After)', PROPOSED);
 
 console.log('\n' + '='.repeat(60));

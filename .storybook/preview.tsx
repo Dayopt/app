@@ -8,40 +8,16 @@ import { DocsTemplate } from './DocsTemplate';
 import { ThemedDocsContainer } from './ThemedDocsContainer';
 import { dayoptDarkTheme, dayoptLightTheme } from './dayoptTheme';
 import { TRPCMockProvider } from './mocks/trpc';
-import './prose.css';
+import './storybook-overrides.css';
 
-// 実際のメッセージファイルからインポート（手動管理を排除し、キー不足を防止）
-import authMessages from '../messages/ja/auth.json';
-import calendarMessages from '../messages/ja/calendar.json';
-import commonMessages from '../messages/ja/common.json';
-import contactMessages from '../messages/ja/contact.json';
-import errorMessages from '../messages/ja/error.json';
-import legalMessages from '../messages/ja/legal.json';
-import navigationMessages from '../messages/ja/navigation.json';
-import notificationMessages from '../messages/ja/notification.json';
-import onboardingMessages from '../messages/ja/onboarding.json';
-import planMessages from '../messages/ja/plan.json';
-import recordMessages from '../messages/ja/record.json';
-import settingsMessages from '../messages/ja/settings.json';
-import tagMessages from '../messages/ja/tag.json';
-import tourMessages from '../messages/ja/tour.json';
-
-const messages = {
-  ...authMessages,
-  ...calendarMessages,
-  ...commonMessages,
-  ...contactMessages,
-  ...errorMessages,
-  ...legalMessages,
-  ...navigationMessages,
-  ...notificationMessages,
-  ...onboardingMessages,
-  ...planMessages,
-  ...recordMessages,
-  ...settingsMessages,
-  ...tagMessages,
-  ...tourMessages,
-};
+// メッセージファイルを自動収集（namespace追加時に変更不要）
+const messageModules = import.meta.glob<Record<string, string>>('../messages/ja/*.json', {
+  eager: true,
+});
+const messages = Object.values(messageModules).reduce<Record<string, unknown>>(
+  (acc, mod) => ({ ...acc, ...mod }),
+  {},
+);
 
 const preview: Preview = {
   parameters: {

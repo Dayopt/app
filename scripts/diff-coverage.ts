@@ -8,15 +8,11 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 // 重要領域の定義（これらは厳格にチェック）
-const CRITICAL_PATHS = [
-  'src/features/auth/',
-  'src/server/',
-  'src/platform/supabase/',
-];
+const CRITICAL_PATHS: string[] = ['src/features/auth/', 'src/server/', 'src/platform/supabase/'];
 
 // 重要領域のカバレッジ閾値
 const CRITICAL_THRESHOLD = 80;
@@ -24,7 +20,36 @@ const CRITICAL_THRESHOLD = 80;
 // 通常領域のカバレッジ閾値（警告のみ）
 const NORMAL_THRESHOLD = 70;
 
-function getChangedFiles(baseBranch = 'origin/main') {
+interface FileCoverage {
+  covered: number;
+  total: number;
+  percentage: number;
+}
+
+interface CoverageFileData {
+  s: Record<string, number>;
+}
+
+interface CoverageResult {
+  file: string;
+  coverage: number;
+  threshold: number;
+  passed: boolean;
+  isCritical: boolean;
+}
+
+interface UncoveredResult {
+  file: string;
+  isCritical: boolean;
+}
+
+interface Results {
+  critical: CoverageResult[];
+  normal: CoverageResult[];
+  uncovered: UncoveredResult[];
+}
+
+function getChangedFiles(baseBranch = 'origin/main'): string[] {
   try {
     const output = execSync(`git diff --name-only ${baseBranch}...HEAD`, {
       encoding: 'utf-8',
@@ -40,11 +65,11 @@ function getChangedFiles(baseBranch = 'origin/main') {
   }
 }
 
-function isCriticalPath(filePath) {
+function isCriticalPath(filePath: string): boolean {
   return CRITICAL_PATHS.some((critical) => filePath.startsWith(critical));
 }
 
-function loadCoverageData() {
+function loadCoverageData(): Record<string, CoverageFileData> {
   const coveragePath = resolve(process.cwd(), 'coverage/coverage-final.json');
 
   if (!existsSync(coveragePath)) {
@@ -53,10 +78,10 @@ function loadCoverageData() {
     process.exit(1);
   }
 
-  return JSON.parse(readFileSync(coveragePath, 'utf-8'));
+  return JSON.parse(readFileSync(coveragePath, 'utf-8')) as Record<string, CoverageFileData>;
 }
 
-function calculateFileCoverage(fileData) {
+function calculateFileCoverage(fileData: CoverageFileData | undefined): FileCoverage | null {
   if (!fileData || !fileData.s) {
     return null;
   }
@@ -74,7 +99,7 @@ function calculateFileCoverage(fileData) {
   };
 }
 
-function main() {
+function main(): void {
   console.log('📊 Diff Coverage Analysis\n');
 
   const changedFiles = getChangedFiles();
@@ -88,7 +113,7 @@ function main() {
 
   const coverageData = loadCoverageData();
 
-  const results = {
+  const results: Results = {
     critical: [],
     normal: [],
     uncovered: [],
@@ -110,7 +135,7 @@ function main() {
     const threshold = isCritical ? CRITICAL_THRESHOLD : NORMAL_THRESHOLD;
     const passed = coverage.percentage >= threshold;
 
-    const result = {
+    const result: CoverageResult = {
       file,
       coverage: coverage.percentage,
       threshold,
@@ -132,9 +157,7 @@ function main() {
   } else {
     for (const r of results.critical) {
       const emoji = r.passed ? '✅' : '❌';
-      console.log(
-        `  ${emoji} ${r.file}: ${r.coverage.toFixed(1)}% (threshold: ${r.threshold}%)`
-      );
+      console.log(`  ${emoji} ${r.file}: ${r.coverage.toFixed(1)}% (threshold: ${r.threshold}%)`);
     }
     console.log('');
   }
@@ -145,9 +168,7 @@ function main() {
   } else {
     for (const r of results.normal) {
       const emoji = r.passed ? '✅' : '⚠️';
-      console.log(
-        `  ${emoji} ${r.file}: ${r.coverage.toFixed(1)}% (threshold: ${r.threshold}%)`
-      );
+      console.log(`  ${emoji} ${r.file}: ${r.coverage.toFixed(1)}% (threshold: ${r.threshold}%)`);
     }
     console.log('');
   }
@@ -171,14 +192,13 @@ function main() {
   // 重要領域の失敗があれば exit 1
   if (criticalFailed.length > 0 || criticalUncovered.length > 0) {
     console.log(
-      `❌ ${criticalFailed.length + criticalUncovered.length} critical file(s) below threshold`
+      `❌ ${criticalFailed.length + criticalUncovered.length} critical file(s) below threshold`,
     );
     console.log('   Critical files require 80%+ coverage\n');
 
     // JSON出力（CI用）
     console.log(
-      '::set-output name=critical_failed::' +
-        (criticalFailed.length + criticalUncovered.length)
+      '::set-output name=critical_failed::' + (criticalFailed.length + criticalUncovered.length),
     );
     console.log('::set-output name=normal_failed::' + normalFailed.length);
 
@@ -186,9 +206,7 @@ function main() {
   }
 
   if (normalFailed.length > 0) {
-    console.log(
-      `⚠️ ${normalFailed.length} file(s) below threshold (warning only)`
-    );
+    console.log(`⚠️ ${normalFailed.length} file(s) below threshold (warning only)`);
     console.log('::set-output name=critical_failed::0');
     console.log('::set-output name=normal_failed::' + normalFailed.length);
     process.exit(0); // 警告のみ、失敗にしない

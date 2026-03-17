@@ -7,13 +7,13 @@
  * 違反数は減らすことはできるが、増やすことはできない（ラチェット方式）。
  *
  * Usage:
- *   node scripts/check-feature-boundaries.mjs          # チェック実行
- *   node scripts/check-feature-boundaries.mjs --update  # 予算ファイルを現状で更新
+ *   npx tsx scripts/check-feature-boundaries.ts          # チェック実行
+ *   npx tsx scripts/check-feature-boundaries.ts --update  # 予算ファイルを現状で更新
  */
 
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,12 +21,34 @@ const ROOT = resolve(__dirname, '..');
 const BUDGET_FILE = resolve(ROOT, '.feature-boundary-budget.json');
 const UPDATE_MODE = process.argv.includes('--update');
 
+interface ESLintMessage {
+  ruleId: string | null;
+  message: string;
+}
+
+interface ESLintFileResult {
+  filePath: string;
+  messages: ESLintMessage[];
+}
+
+interface ViolationCounts {
+  crossImports: Record<string, number>;
+  selfImports: Record<string, number>;
+}
+
+interface BudgetFile {
+  _comment: string;
+  _updated: string;
+  crossImports: Record<string, number>;
+  selfImports: Record<string, number>;
+}
+
 // =============================================================================
 // 1. ESLint実行 → 違反数を集計
 // =============================================================================
 
-function countViolations() {
-  let jsonOutput;
+function countViolations(): ViolationCounts {
+  let jsonOutput: string;
   try {
     execSync('npx eslint src/features/ --format json --no-error-on-unmatched-pattern', {
       cwd: ROOT,
@@ -35,18 +57,22 @@ function countViolations() {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     // eslint exits 0 if no errors (warnings don't cause non-zero)
-    jsonOutput = execSync('npx eslint src/features/ --format json --no-error-on-unmatched-pattern', {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 10 * 1024 * 1024,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-  } catch (e) {
+    jsonOutput = execSync(
+      'npx eslint src/features/ --format json --no-error-on-unmatched-pattern',
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        maxBuffer: 10 * 1024 * 1024,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+  } catch (e: unknown) {
     // eslint exits 1 when there are errors or --max-warnings exceeded
-    jsonOutput = e.stdout || '';
+    const error = e as { stdout?: string };
+    jsonOutput = error.stdout || '';
   }
 
-  let data;
+  let data: ESLintFileResult[];
   try {
     data = JSON.parse(jsonOutput);
   } catch {
@@ -54,8 +80,8 @@ function countViolations() {
     process.exit(1);
   }
 
-  const crossImports = {};
-  const selfImports = {};
+  const crossImports: Record<string, number> = {};
+  const selfImports: Record<string, number> = {};
 
   for (const file of data) {
     const srcMatch = file.filePath.match(/src\/features\/([^/]+)/);
@@ -83,16 +109,19 @@ function countViolations() {
 // 2. 予算ファイルの読み書き
 // =============================================================================
 
-function readBudget() {
+function readBudget(): BudgetFile | null {
   try {
-    return JSON.parse(readFileSync(BUDGET_FILE, 'utf8'));
+    return JSON.parse(readFileSync(BUDGET_FILE, 'utf8')) as BudgetFile;
   } catch {
     return null;
   }
 }
 
-function writeBudget(crossImports, selfImports) {
-  const budget = {
+function writeBudget(
+  crossImports: Record<string, number>,
+  selfImports: Record<string, number>,
+): void {
+  const budget: BudgetFile = {
     _comment: 'Feature boundary violation budget (ratchet). Do not increase these numbers.',
     _updated: new Date().toISOString().slice(0, 10),
     crossImports,
@@ -135,17 +164,21 @@ if (budget === null) {
 // =============================================================================
 
 let hasRegression = false;
-const regressions = [];
-const improvements = [];
+const regressions: string[] = [];
+const improvements: string[] = [];
 
 // Cross-imports check
 for (const [feat, count] of Object.entries(crossImports)) {
   const budgetCount = budget.crossImports[feat] || 0;
   if (count > budgetCount) {
     hasRegression = true;
-    regressions.push(`  FAIL: ${feat} cross-imports: ${budgetCount} -> ${count} (+${count - budgetCount})`);
+    regressions.push(
+      `  FAIL: ${feat} cross-imports: ${budgetCount} -> ${count} (+${count - budgetCount})`,
+    );
   } else if (count < budgetCount) {
-    improvements.push(`  OK:   ${feat} cross-imports: ${budgetCount} -> ${count} (-${budgetCount - count})`);
+    improvements.push(
+      `  OK:   ${feat} cross-imports: ${budgetCount} -> ${count} (-${budgetCount - count})`,
+    );
   }
 }
 
@@ -162,25 +195,33 @@ for (const [feat, count] of Object.entries(selfImports)) {
   const budgetCount = budget.selfImports[feat] || 0;
   if (count > budgetCount) {
     hasRegression = true;
-    regressions.push(`  FAIL: ${feat} self-imports: ${budgetCount} -> ${count} (+${count - budgetCount})`);
+    regressions.push(
+      `  FAIL: ${feat} self-imports: ${budgetCount} -> ${count} (+${count - budgetCount})`,
+    );
   } else if (count < budgetCount) {
-    improvements.push(`  OK:   ${feat} self-imports: ${budgetCount} -> ${count} (-${budgetCount - count})`);
+    improvements.push(
+      `  OK:   ${feat} self-imports: ${budgetCount} -> ${count} (-${budgetCount - count})`,
+    );
   }
 }
 
 if (improvements.length > 0) {
   console.log('Improvements:');
-  improvements.forEach(line => console.log(line));
+  improvements.forEach((line) => console.log(line));
   console.log('');
-  console.log('Run `node scripts/check-feature-boundaries.mjs --update` to lock in improvements.');
+  console.log(
+    'Run `npx tsx scripts/check-feature-boundaries.ts --update` to lock in improvements.',
+  );
   console.log('');
 }
 
 if (regressions.length > 0) {
   console.log('REGRESSIONS DETECTED:');
-  regressions.forEach(line => console.log(line));
+  regressions.forEach((line) => console.log(line));
   console.log('');
-  console.log('Feature boundary violations increased. Fix the new imports or use relative paths for same-feature imports.');
+  console.log(
+    'Feature boundary violations increased. Fix the new imports or use relative paths for same-feature imports.',
+  );
   process.exit(1);
 }
 
