@@ -12,6 +12,7 @@ import {
   createCheckoutSession,
   createPortalSession,
   getBillingInfo,
+  getBillingOverview,
   getInvoices,
   getPaymentMethod,
 } from './billing-service';
@@ -29,12 +30,24 @@ export const billingRouter = createTRPCRouter({
   }),
 
   /**
+   * 課金情報を一括取得（N+1 解消）
+   * billingInfo + paymentMethod + invoices を1回の profiles SELECT で返す
+   */
+  getOverview: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      return await getBillingOverview(ctx.supabase, ctx.userId);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }),
+
+  /**
    * Stripe Checkout Session を作成し、URLを返す
    */
   createCheckoutSession: protectedProcedure
     .input(
       z.object({
-        priceId: z.string().min(1),
+        priceId: z.string().startsWith('price_'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
