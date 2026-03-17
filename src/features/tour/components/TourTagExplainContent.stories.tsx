@@ -13,7 +13,7 @@ const meta = {
   tags: ['autodocs'],
   args: {
     currentStep: 4,
-    totalSteps: 7,
+    totalSteps: 5,
     isLastStep: false,
     onNext: fn(),
     onSkip: fn(),

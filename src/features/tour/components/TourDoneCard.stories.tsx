@@ -19,14 +19,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** デフォルト表示 */
+/** デフォルト表示（フルスクリーンオーバーレイ） */
 export const Default: Story = {};
-
-/** 全パターン一覧 */
-export const AllPatterns: Story = {
-  render: () => (
-    <div className="flex flex-col items-start gap-6">
-      <TourDoneCard onDone={fn()} />
-    </div>
-  ),
-};
