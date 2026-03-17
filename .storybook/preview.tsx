@@ -11,11 +11,10 @@ import { TRPCMockProvider } from './mocks/trpc';
 import './prose.css';
 
 // 実際のメッセージファイルからインポート（手動管理を排除し、キー不足を防止）
-import appMessages from '../messages/ja/app.json';
 import authMessages from '../messages/ja/auth.json';
-import avatarDropzoneMessages from '../messages/ja/avatarDropzone.json';
 import calendarMessages from '../messages/ja/calendar.json';
 import commonMessages from '../messages/ja/common.json';
+import contactMessages from '../messages/ja/contact.json';
 import errorMessages from '../messages/ja/error.json';
 import legalMessages from '../messages/ja/legal.json';
 import navigationMessages from '../messages/ja/navigation.json';
@@ -28,11 +27,10 @@ import tagMessages from '../messages/ja/tag.json';
 import tourMessages from '../messages/ja/tour.json';
 
 const messages = {
-  ...appMessages,
   ...authMessages,
-  ...avatarDropzoneMessages,
   ...calendarMessages,
   ...commonMessages,
+  ...contactMessages,
   ...errorMessages,
   ...legalMessages,
   ...navigationMessages,
