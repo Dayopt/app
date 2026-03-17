@@ -28,21 +28,12 @@ export const passwordSchema = z
 /**
  * サインアップフォームのスキーマ
  */
-export const signupSchema = z
-  .object({
-    email: z
-      .string()
-      .min(1, 'メールアドレスを入力してください')
-      .email('有効なメールアドレスを入力してください'),
-    password: passwordSchema,
-    confirmPassword: z.string().min(1, 'パスワード確認を入力してください'),
-    agreedToTerms: z
-      .boolean()
-      .refine((val) => val === true, { message: '利用規約への同意が必要です' }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'パスワードが一致しません',
-    path: ['confirmPassword'],
-  });
+export const signupSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'メールアドレスを入力してください')
+    .email('有効なメールアドレスを入力してください'),
+  password: passwordSchema,
+});
 
 export type SignupFormData = z.infer<typeof signupSchema>;

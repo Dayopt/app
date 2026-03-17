@@ -56,60 +56,28 @@ describe('SignupForm', () => {
       expect(screen.getByRole('heading')).toBeInTheDocument();
       expect(screen.getByLabelText(/auth\.signupForm\.email/)).toBeInTheDocument();
       expect(screen.getByLabelText(/auth\.signupForm\.password/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/auth\.signupForm\.confirmPassword/)).toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }),
       ).toBeInTheDocument();
     });
 
-    it('メール、パスワード、確認パスワードが入力可能', async () => {
+    it('メール、パスワードが入力可能', async () => {
       const user = userEvent.setup();
       renderWithProviders(<SignupForm />);
 
       const emailInput = screen.getByLabelText(/auth\.signupForm\.email/);
       const passwordInput = screen.getByLabelText(/auth\.signupForm\.password/);
-      const confirmInput = screen.getByLabelText(/auth\.signupForm\.confirmPassword/);
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'password123');
-      await user.type(confirmInput, 'password123');
 
       expect(emailInput).toHaveValue('test@example.com');
       expect(passwordInput).toHaveValue('password123');
-      expect(confirmInput).toHaveValue('password123');
-    });
-
-    it('利用規約チェックボックスが存在する', () => {
-      renderWithProviders(<SignupForm />);
-
-      expect(screen.getByRole('checkbox')).toBeInTheDocument();
     });
   });
 
   describe('バリデーション', () => {
     // DADS準拠: バリデーションは送信時に行われる（リアルタイムインジケーターは削除）
-
-    it('パスワードが一致しない場合エラーが表示される', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<SignupForm />);
-
-      await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password2');
-      await user.click(screen.getByRole('checkbox'));
-      await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
-
-      // onSubmitバリデーション: Zodスキーマからのハードコードメッセージ（FieldErrorが「＊」prefix付与）
-      const errorElement = await screen.findByText(
-        (content) => content.includes('パスワードが一致しません'),
-        {},
-        { timeout: 3000 },
-      );
-      expect(errorElement).toBeInTheDocument();
-
-      // パスワード不一致ではサインアップは呼ばれない
-      expect(mockSignUp).not.toHaveBeenCalled();
-    });
 
     it('送信ボタンは常に有効（DADS準拠）', () => {
       renderWithProviders(<SignupForm />);
@@ -134,8 +102,7 @@ describe('SignupForm', () => {
 
       await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
       await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password1');
-      await user.click(screen.getByRole('checkbox'));
+
       await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
 
       await waitFor(() => {
@@ -155,8 +122,7 @@ describe('SignupForm', () => {
 
       await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'existing@example.com');
       await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password1');
-      await user.click(screen.getByRole('checkbox'));
+
       await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
 
       await waitFor(() => {
@@ -177,8 +143,6 @@ describe('SignupForm', () => {
 
       await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
       await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password1');
-      await user.click(screen.getByRole('checkbox'));
 
       const submitButton = screen.getByRole('button', {
         name: 'auth.signupForm.createAccountButton',
@@ -209,23 +173,6 @@ describe('SignupForm', () => {
 
       expect(passwordInput).toHaveAttribute('type', 'text');
     });
-
-    it('確認パスワードフィールドの表示切替が機能する', async () => {
-      const user = userEvent.setup();
-      renderWithProviders(<SignupForm />);
-
-      const confirmInput = screen.getByLabelText(/auth\.signupForm\.confirmPassword/);
-      expect(confirmInput).toHaveAttribute('type', 'password');
-
-      // 確認パスワード入力欄の親要素内にあるボタンを取得
-      const confirmContainer = confirmInput.closest('.relative');
-      const toggleButton = confirmContainer?.querySelector('button');
-      expect(toggleButton).toBeTruthy();
-
-      await user.click(toggleButton!);
-
-      expect(confirmInput).toHaveAttribute('type', 'text');
-    });
   });
 
   describe('グレースフルデグラデーション', () => {
@@ -245,8 +192,7 @@ describe('SignupForm', () => {
 
       await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
       await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password1');
-      await user.click(screen.getByRole('checkbox'));
+
       await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
 
       // APIエラーでもサインアップは続行される
@@ -265,8 +211,7 @@ describe('SignupForm', () => {
 
       await user.type(screen.getByLabelText(/auth\.signupForm\.email/), 'test@example.com');
       await user.type(screen.getByLabelText(/auth\.signupForm\.password/), 'password1');
-      await user.type(screen.getByLabelText(/auth\.signupForm\.confirmPassword/), 'password1');
-      await user.click(screen.getByRole('checkbox'));
+
       await user.click(screen.getByRole('button', { name: 'auth.signupForm.createAccountButton' }));
 
       await waitFor(() => {
