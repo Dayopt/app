@@ -96,6 +96,35 @@ function isValidUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 }
 
+/**
+ * per-token レート制限（メモリベース、10 req/min）
+ *
+ * Vercel Serverless では関数インスタンスが再利用される間だけ有効。
+ * 完璧ではないが、無制限よりはるかに安全。
+ */
+const TOKEN_RATE_LIMIT = 10;
+const TOKEN_RATE_WINDOW_MS = 60 * 1000;
+const tokenRequestLog = new Map<string, number[]>();
+
+function isRateLimited(token: string): boolean {
+  const now = Date.now();
+  const timestamps = tokenRequestLog.get(token) ?? [];
+  const recent = timestamps.filter((t) => now - t < TOKEN_RATE_WINDOW_MS);
+  recent.push(now);
+  tokenRequestLog.set(token, recent);
+
+  // メモリリーク防止: 古いエントリを定期的にクリーン
+  if (tokenRequestLog.size > 1000) {
+    for (const [key, ts] of tokenRequestLog) {
+      if (ts.every((t) => now - t > TOKEN_RATE_WINDOW_MS)) {
+        tokenRequestLog.delete(key);
+      }
+    }
+  }
+
+  return recent.length > TOKEN_RATE_LIMIT;
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
@@ -108,6 +137,14 @@ export async function GET(
   // UUIDバリデーション
   if (!isValidUUID(token)) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
+  }
+
+  // per-token レート制限
+  if (isRateLimited(token)) {
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
   }
 
   // トークンでユーザー特定
