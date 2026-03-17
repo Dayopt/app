@@ -88,7 +88,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             if (result?.id) {
               bulkAddTags.mutate({
                 entryIds: [result.id],
-                tagIds: [tagId],
+                tagId,
               });
             }
             clearPendingSelection();

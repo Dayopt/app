@@ -76,7 +76,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     (tagId: string | null) => {
       if (!entryId) return;
       updateTagsInCache(entryId, tagId ? [tagId] : []);
-      setEntryTags(entryId, tagId ? [tagId] : []);
+      setEntryTags(entryId, tagId);
     },
     [entryId, updateTagsInCache, setEntryTags],
   );

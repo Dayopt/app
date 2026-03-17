@@ -28,10 +28,10 @@ import { removeUndefinedFields } from '../lib/entry-utils';
 // Inline Schemas
 // =============================================================================
 
-/** 一括タグ追加のスキーマ */
-const bulkAddTagsSchema = z.object({
+/** 一括タグ設定のスキーマ（1エントリ1タグ制約） */
+const bulkSetTagSchema = z.object({
   entryIds: z.array(z.string().uuid()).min(1).max(100),
-  tagIds: z.array(z.string().uuid()).min(1).max(50),
+  tagId: z.string().uuid(),
 });
 
 /** エントリ・タグ操作の入力スキーマ */
@@ -40,10 +40,10 @@ const entryTagInputSchema = z.object({
   tagId: z.string().uuid(),
 });
 
-/** タグ一括設定の入力スキーマ */
-const setTagsInputSchema = z.object({
+/** タグ設定の入力スキーマ（1エントリ1タグ制約） */
+const setTagInputSchema = z.object({
   entryId: z.string().uuid(),
-  tagIds: z.array(z.string().uuid()).max(50),
+  tagId: z.string().uuid().nullable(),
 });
 
 // =============================================================================
@@ -164,35 +164,41 @@ export const entriesCoreRouter = createTRPCRouter({
     return { success: true, count: count ?? 0 };
   }),
 
-  /** 複数エントリに複数タグを一括追加（upsert動作） */
-  bulkAddTags: protectedProcedure.input(bulkAddTagsSchema).mutation(async ({ ctx, input }) => {
+  /** 複数エントリにタグを一括設定（1エントリ1タグ、delete+insert） */
+  bulkAddTags: protectedProcedure.input(bulkSetTagSchema).mutation(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
-    const { entryIds, tagIds } = input;
+    const { entryIds, tagId } = input;
 
-    const entryTagsToInsert = entryIds.flatMap((entryId) =>
-      tagIds.map((tagId) => ({
-        user_id: userId,
-        entry_id: entryId,
-        tag_id: tagId,
-      })),
-    );
+    // 既存タグを削除
+    const { error: deleteError } = await supabase
+      .from('entry_tags')
+      .delete()
+      .in('entry_id', entryIds)
+      .eq('user_id', userId);
 
-    if (entryTagsToInsert.length === 0) {
-      return { success: true, count: 0 };
+    if (deleteError) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to clear existing tags: ${deleteError.message}`,
+      });
     }
 
-    const { error, count } = await supabase.from('entry_tags').upsert(entryTagsToInsert, {
-      onConflict: 'user_id,entry_id,tag_id',
-      ignoreDuplicates: true,
-    });
+    // 新しいタグを設定
+    const entryTagsToInsert = entryIds.map((entryId) => ({
+      user_id: userId,
+      entry_id: entryId,
+      tag_id: tagId,
+    }));
+
+    const { error, count } = await supabase.from('entry_tags').insert(entryTagsToInsert);
 
     if (error) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to bulk add tags: ${error.message}`,
+        message: `Failed to bulk set tag: ${error.message}`,
       });
     }
-    return { success: true, count: count ?? entryTagsToInsert.length };
+    return { success: true, count: count ?? entryIds.length };
   }),
 
   // ---------------------------------------------------------------------------
@@ -352,9 +358,8 @@ export const entriesCoreRouter = createTRPCRouter({
    * 繰り返しエントリを分割
    *
    * 「この日以降」編集/削除時に使用。
-   * 1. 親エントリの recurrence_end_date を前日に設定
-   * 2. 新しい繰り返しエントリを作成（同じ繰り返しルール、splitDate から開始）
-   * 3. overrides がある場合は新エントリに適用
+   * DB側の split_recurrence RPC 関数で全操作をトランザクション内で実行し、
+   * 部分的な失敗による不整合を防止する。
    */
   splitRecurrence: protectedProcedure
     .input(
@@ -375,139 +380,36 @@ export const entriesCoreRouter = createTRPCRouter({
       const { supabase, userId } = ctx;
       const { entryId, splitDate, overrides } = input;
 
-      // 1. 親エントリを取得して所有権確認
-      const { data: parentEntry, error: fetchError } = await supabase
-        .from('entries')
-        .select('*')
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .single();
+      // split_recurrence は新規 RPC 関数のため database.types.ts に未反映
+      // 次回の型生成 (supabase gen types) で解消される
+      const { data, error } = await supabase.rpc(
+        'split_recurrence' as never,
+        {
+          p_user_id: userId,
+          p_entry_id: entryId,
+          p_split_date: splitDate,
+          p_new_start_time: overrides?.start_time ?? null,
+          p_new_end_time: overrides?.end_time ?? null,
+          p_new_title: overrides?.title ?? null,
+          p_new_description: overrides?.description ?? null,
+        } as never,
+      );
 
-      if (fetchError || !parentEntry) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Entry not found or access denied',
-        });
-      }
-
-      if (!parentEntry.recurrence_type || parentEntry.recurrence_type === 'none') {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Entry is not a recurring entry',
-        });
-      }
-
-      // 2. 親エントリの recurrence_end_date を前日に更新
-      const endDateForParent = new Date(splitDate);
-      endDateForParent.setDate(endDateForParent.getDate() - 1);
-      const endDateString = endDateForParent.toISOString().slice(0, 10);
-
-      const { error: updateError } = await supabase
-        .from('entries')
-        .update({
-          recurrence_end_date: endDateString,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', entryId)
-        .eq('user_id', userId);
-
-      if (updateError) {
+      if (error) {
+        if (error.message.includes('Entry not found')) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found or access denied' });
+        }
+        if (error.message.includes('not a recurring entry')) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Entry is not a recurring entry' });
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to update parent entry: ${updateError.message}`,
+          message: `Failed to split recurrence: ${error.message}`,
         });
       }
 
-      // 3. 新しい繰り返しエントリを作成
-      let newStartTime: string | undefined = undefined;
-      let newEndTime: string | undefined = undefined;
-
-      if (parentEntry.start_time) {
-        const originalStart = new Date(parentEntry.start_time);
-        const newStart = new Date(splitDate);
-        newStart.setHours(
-          originalStart.getHours(),
-          originalStart.getMinutes(),
-          originalStart.getSeconds(),
-          0,
-        );
-        newStartTime = overrides?.start_time ?? newStart.toISOString();
-      }
-
-      if (parentEntry.end_time) {
-        const originalEnd = new Date(parentEntry.end_time);
-        const newEnd = new Date(splitDate);
-        newEnd.setHours(
-          originalEnd.getHours(),
-          originalEnd.getMinutes(),
-          originalEnd.getSeconds(),
-          0,
-        );
-        newEndTime = overrides?.end_time ?? newEnd.toISOString();
-      }
-
-      const service = createEntryService(supabase);
-      let newEntry;
-
-      try {
-        newEntry = await service.create({
-          userId,
-          input: {
-            title: overrides?.title ?? parentEntry.title,
-            description:
-              overrides?.description !== undefined
-                ? (overrides.description ?? undefined)
-                : (parentEntry.description ?? undefined),
-            origin: 'planned',
-            start_time: newStartTime,
-            end_time: newEndTime,
-            recurrence_type: parentEntry.recurrence_type as
-              | 'none'
-              | 'daily'
-              | 'weekly'
-              | 'monthly'
-              | 'yearly'
-              | 'weekdays'
-              | undefined,
-            recurrence_rule: parentEntry.recurrence_rule ?? undefined,
-            recurrence_end_date: parentEntry.recurrence_end_date ?? undefined,
-            reminder_minutes: parentEntry.reminder_minutes ?? undefined,
-          },
-          preventOverlappingEntries: false,
-        });
-      } catch (createError) {
-        // ロールバック: 親エントリの recurrence_end_date を元に戻す
-        await supabase
-          .from('entries')
-          .update({
-            recurrence_end_date: parentEntry.recurrence_end_date,
-            updated_at: parentEntry.updated_at,
-          })
-          .eq('id', entryId)
-          .eq('user_id', userId);
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to create new entry: ${createError instanceof Error ? createError.message : 'Unknown error'}`,
-        });
-      }
-
-      // 4. 親エントリのタグを新エントリにコピー
-      const { data: parentTags } = await supabase
-        .from('entry_tags')
-        .select('tag_id')
-        .eq('entry_id', entryId);
-
-      if (parentTags && parentTags.length > 0) {
-        const tagInserts = parentTags.map((t) => ({
-          entry_id: newEntry.id,
-          tag_id: t.tag_id,
-          user_id: userId,
-        }));
-        await supabase.from('entry_tags').insert(tagInserts);
-      }
-
-      return { parentEntryId: entryId, newEntryId: newEntry.id, splitDate };
+      const result = data as { parentEntryId: string; newEntryId: string; splitDate: string };
+      return result;
     }),
 
   // ---------------------------------------------------------------------------
@@ -591,10 +493,10 @@ export const entriesCoreRouter = createTRPCRouter({
     return { success: true, removed: (count ?? 0) > 0 };
   }),
 
-  /** エントリのタグを一括設定（既存タグをすべて置換） */
-  setTags: protectedProcedure.input(setTagsInputSchema).mutation(async ({ ctx, input }) => {
+  /** エントリのタグを設定（1エントリ1タグ、null で解除） */
+  setTags: protectedProcedure.input(setTagInputSchema).mutation(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
-    const { entryId, tagIds } = input;
+    const { entryId, tagId } = input;
 
     const { data: entry, error: entryError } = await supabase
       .from('entries')
@@ -608,25 +510,20 @@ export const entriesCoreRouter = createTRPCRouter({
     }
 
     // タグの所有権チェック
-    if (tagIds.length > 0) {
-      const { data: validTags, error: tagsError } = await supabase
+    if (tagId) {
+      const { data: validTag, error: tagError } = await supabase
         .from('tags')
         .select('id')
-        .in('id', tagIds)
-        .eq('user_id', userId);
+        .eq('id', tagId)
+        .eq('user_id', userId)
+        .single();
 
-      if (tagsError) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `タグの検証に失敗しました: ${tagsError.message}`,
-        });
-      }
-      if (!validTags || validTags.length !== tagIds.length) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: '無効なタグIDが含まれています' });
+      if (tagError || !validTag) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: '無効なタグIDです' });
       }
     }
 
-    // 既存の関連を削除 → 新しい関連を追加
+    // 既存の関連を削除
     const { error: deleteError } = await supabase
       .from('entry_tags')
       .delete()
@@ -640,14 +537,13 @@ export const entriesCoreRouter = createTRPCRouter({
       });
     }
 
-    if (tagIds.length > 0) {
-      const entryTagsToInsert = tagIds.map((tagId) => ({
+    // 新しいタグを設定
+    if (tagId) {
+      const { error: insertError } = await supabase.from('entry_tags').insert({
         user_id: userId,
         entry_id: entryId,
         tag_id: tagId,
-      }));
-
-      const { error: insertError } = await supabase.from('entry_tags').insert(entryTagsToInsert);
+      });
       if (insertError) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -656,6 +552,6 @@ export const entriesCoreRouter = createTRPCRouter({
       }
     }
 
-    return { success: true, count: tagIds.length };
+    return { success: true, tagId };
   }),
 });

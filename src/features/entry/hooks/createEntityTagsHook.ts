@@ -34,7 +34,7 @@ export interface EntityTagsHook {
   error: string | null;
   addTag: (entityId: string, tagId: string) => Promise<boolean>;
   removeTag: (entityId: string, tagId: string) => Promise<boolean>;
-  setTags: (entityId: string, tagIds: string[]) => Promise<boolean>;
+  setTags: (entityId: string, tagId: string | null) => Promise<boolean>;
 }
 
 /**
@@ -213,11 +213,11 @@ export function useEntityTagsHook(
     },
   });
 
-  // setTags mutation
+  // setTags mutation（1エントリ1タグ: tagId: string | null）
   const setTagsMutation = api[entityName].setTags.useMutation({
     onMutate: async (variables) => {
       const entityId = variables.entryId;
-      const { tagIds } = variables;
+      const { tagId } = variables;
 
       await utils[entityName].list.cancel();
       await utils[entityName].getById.cancel({ id: entityId });
@@ -230,24 +230,23 @@ export function useEntityTagsHook(
       const previousTagStats = enableTagStats ? utils.entries.getTagStats.getData() : undefined;
 
       const currentTagIds = getCurrentEntityTagIds(entityId);
-      updateEntityTagIdsInCache(entityId, tagIds);
+      const newTagIds = tagId ? [tagId] : [];
+      updateEntityTagIdsInCache(entityId, newTagIds);
 
       if (enableTagStats && previousTagStats) {
-        const currentTagIdSet = new Set(currentTagIds);
-        const newTagIdSet = new Set(tagIds);
-        const addedTagIds = tagIds.filter((id: string) => !currentTagIdSet.has(id));
-        const removedTagIds = currentTagIds.filter((id: string) => !newTagIdSet.has(id));
-
+        const oldTagId = currentTagIds[0] ?? null;
         const newCounts = { ...previousTagStats.counts };
-        for (const tagId of addedTagIds) {
+        if (
+          oldTagId &&
+          oldTagId !== tagId &&
+          newCounts[oldTagId] !== undefined &&
+          newCounts[oldTagId] > 0
+        ) {
+          newCounts[oldTagId] = newCounts[oldTagId] - 1;
+        }
+        if (tagId && tagId !== oldTagId) {
           newCounts[tagId] = (newCounts[tagId] ?? 0) + 1;
         }
-        for (const tagId of removedTagIds) {
-          if (newCounts[tagId] !== undefined && newCounts[tagId] > 0) {
-            newCounts[tagId] = newCounts[tagId] - 1;
-          }
-        }
-
         utils.entries.getTagStats.setData(undefined, {
           ...previousTagStats,
           counts: newCounts,
@@ -310,9 +309,9 @@ export function useEntityTagsHook(
   );
 
   const setTags = useCallback(
-    async (entityId: string, tagIds: string[]): Promise<boolean> => {
+    async (entityId: string, tagId: string | null): Promise<boolean> => {
       try {
-        await setTagsMutation.mutateAsync({ entryId: entityId, tagIds });
+        await setTagsMutation.mutateAsync({ entryId: entityId, tagId });
         return true;
       } catch {
         return false;
