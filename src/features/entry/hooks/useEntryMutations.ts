@@ -51,11 +51,12 @@ export function useEntryMutations() {
   const utils = api.useUtils();
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
-  const setIsMutating = useEntryCacheStore((s) => s.setIsMutating);
+  const startMutating = useEntryCacheStore((s) => s.startMutating);
 
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
     onMutate: async (input) => {
+      logger.debug('[mutation:create] onMutate', { title: input.title });
       // 進行中のクエリをキャンセル
       await utils.entries.list.cancel();
 
@@ -101,6 +102,7 @@ export function useEntryMutations() {
       return { previousEntriesList, tempId };
     },
     onSuccess: (newEntry, _input, context) => {
+      logger.debug('[mutation:create] onSuccess', { id: newEntry.id });
       // 一時エントリを本来のエントリに置換（全キャッシュ対象）
       // entries.create はタグなし EntryRow を返すため、tagId を補完して EntryWithTags に昇格
       const newEntryWithTagId: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
@@ -131,7 +133,7 @@ export function useEntryMutations() {
       utils.entries.getById.setData({ id: newEntry.id }, { ...newEntry, tagId: null });
     },
     onError: (error, _input, context) => {
-      logger.error('[useEntryMutations] Create error:', error);
+      logger.error('[mutation:create] onError', error);
 
       // エラー時: 全ての entries.list キャッシュをロールバック
       if (context?.previousEntriesList) {
@@ -159,8 +161,9 @@ export function useEntryMutations() {
   // 更新
   const updateEntry = api.entries.update.useMutation({
     onMutate: async ({ id, data }) => {
-      // 0. mutation開始フラグを設定（Realtime二重更新防止）
-      setIsMutating(true);
+      logger.debug('[mutation:update] onMutate', { id, fields: Object.keys(data) });
+      // 0. mutation開始（Realtime二重更新防止、タイムアウト自動解除付き）
+      const endMutating = startMutating();
 
       // 1. 進行中のクエリをキャンセル（競合回避）
       await utils.entries.list.cancel();
@@ -231,9 +234,10 @@ export function useEntryMutations() {
         return Object.assign({}, oldData, updateData);
       });
 
-      return { id, previousEntriesList, previousEntry };
+      return { id, previousEntriesList, previousEntry, endMutating };
     },
     onSuccess: (result, variables) => {
+      logger.debug('[mutation:update] onSuccess', { id: variables.id });
       // サーバーから返ってきた最新データでキャッシュを更新
       // adjustedEntries はキャッシュ操作用（リストに含めない）
       const { adjustedEntries, ...updatedEntry } = result;
@@ -273,6 +277,7 @@ export function useEntryMutations() {
       // 自動保存（title、description、日時など）はtoast非表示
     },
     onError: (err, _variables, context) => {
+      logger.error('[mutation:update] onError', err);
       if (err.message.includes('既に予定があります') || err.message.includes('TIME_OVERLAP')) {
         toast.error(t('plan.toast.timeOverlap'));
       } else {
@@ -289,8 +294,8 @@ export function useEntryMutations() {
         utils.entries.getById.setData({ id: context.id }, context.previousEntry);
       }
     },
-    onSettled: async () => {
-      setIsMutating(false);
+    onSettled: async (_data, _error, _variables, context) => {
+      context?.endMutating();
       void utils.entries.list.invalidate();
     },
   });
@@ -298,7 +303,8 @@ export function useEntryMutations() {
   // 削除
   const deleteEntry = api.entries.delete.useMutation({
     onMutate: async ({ id }) => {
-      setIsMutating(true);
+      logger.debug('[mutation:delete] onMutate', { id });
+      const endMutating = startMutating();
 
       await utils.entries.list.cancel();
       await utils.entries.getById.cancel({ id });
@@ -352,13 +358,15 @@ export function useEntryMutations() {
 
       closeInspector();
 
-      return { id, previousEntries, previousEntry };
+      return { id, previousEntries, previousEntry, endMutating };
     },
     onSuccess: (_, { id }) => {
+      logger.debug('[mutation:delete] onSuccess', { id });
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
     },
     onError: (error, { id }, context) => {
+      logger.error('[mutation:delete] onError', error);
       toast.error(t('plan.toast.deleteFailed', { error: error.message }));
 
       if (context?.previousEntries) {
@@ -368,9 +376,10 @@ export function useEntryMutations() {
         utils.entries.getById.setData({ id }, context.previousEntry);
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, _variables, context) => {
+      // 削除は Realtime が追いつくまで少し待つ
       setTimeout(() => {
-        setIsMutating(false);
+        context?.endMutating();
       }, 500);
     },
   });
@@ -378,7 +387,8 @@ export function useEntryMutations() {
   // 一括更新
   const bulkUpdateEntries = api.entries.bulkUpdate.useMutation({
     onMutate: async ({ ids, data }) => {
-      setIsMutating(true);
+      logger.debug('[mutation:bulkUpdate] onMutate', { count: ids.length });
+      const endMutating = startMutating();
       await utils.entries.list.cancel();
       const previousEntries = utils.entries.list.getData();
 
@@ -400,7 +410,7 @@ export function useEntryMutations() {
         });
       });
 
-      return { previousEntries };
+      return { previousEntries, endMutating };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkUpdated', { count: result.count }));
@@ -412,15 +422,16 @@ export function useEntryMutations() {
         utils.entries.list.setData(undefined, context.previousEntries);
       }
     },
-    onSettled: () => {
-      setIsMutating(false);
+    onSettled: (_data, _error, _variables, context) => {
+      context?.endMutating();
     },
   });
 
   // 一括削除
   const bulkDeleteEntries = api.entries.bulkDelete.useMutation({
     onMutate: async ({ ids }) => {
-      setIsMutating(true);
+      logger.debug('[mutation:bulkDelete] onMutate', { count: ids.length });
+      const endMutating = startMutating();
       await utils.entries.list.cancel();
       const previousEntries = utils.entries.list.getData();
 
@@ -429,7 +440,7 @@ export function useEntryMutations() {
         return oldData.filter((entry) => !ids.includes(entry.id));
       });
 
-      return { previousEntries };
+      return { previousEntries, endMutating };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkDeleted', { count: result.count }));
@@ -442,27 +453,22 @@ export function useEntryMutations() {
         utils.entries.list.setData(undefined, context.previousEntries);
       }
     },
-    onSettled: () => {
-      setIsMutating(false);
+    onSettled: (_data, _error, _variables, context) => {
+      context?.endMutating();
     },
   });
 
   // 一括タグ追加（楽観的更新付き）
   const bulkAddTags = api.entries.bulkAddTags.useMutation({
-    onMutate: async ({ entryIds, tagIds }) => {
+    onMutate: async ({ entryIds, tagId }) => {
       await utils.entries.list.cancel();
       const previousEntries = utils.entries.list.getData();
 
       utils.entries.list.setData(undefined, (oldData) => {
         if (!oldData) return oldData;
-        // 1エントリ1タグ制約: tagIdsの最後のタグを設定
-        const newTagId = tagIds[tagIds.length - 1] ?? null;
         return oldData.map((entry) => {
           if (entryIds.includes(entry.id)) {
-            return {
-              ...entry,
-              tagId: newTagId,
-            };
+            return { ...entry, tagId };
           }
           return entry;
         });
