@@ -6,20 +6,25 @@ import {
   Bot,
   Calendar,
   CheckCircle2,
+  Copy,
   ExternalLink,
   Eye,
   EyeOff,
   Loader2,
   MessageSquare,
+  RefreshCw,
+  Rss,
   Trash2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { ApiKeyStorage } from '@/platform/security/encryption';
+import { api } from '@/platform/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
@@ -282,6 +287,9 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
         )}
       </SectionCard>
 
+      {/* iCalフィード */}
+      <ICalFeedSection />
+
       {/* API連携 */}
       <SectionCard title={t('settings.integrations.api.title')}>
         <div className="space-y-4">
@@ -297,5 +305,107 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
         </div>
       </SectionCard>
     </div>
+  );
+});
+
+/**
+ * iCalフィード設定セクション
+ */
+const ICalFeedSection = memo(function ICalFeedSection() {
+  const t = useTranslations();
+  const [copied, setCopied] = useState(false);
+  const utils = api.useUtils();
+
+  const { data: tokenData, isPending } = api.userSettings.getICalToken.useQuery();
+  const regenerateMutation = api.userSettings.regenerateICalToken.useMutation({
+    onSuccess: () => {
+      utils.userSettings.getICalToken.invalidate();
+      toast.success(t('settings.integrations.icalFeed.regenerateSuccess'));
+    },
+    onError: () => {
+      toast.error(t('common.error'));
+    },
+  });
+
+  const baseUrl =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000');
+  const feedUrl = tokenData?.token ? `${baseUrl}/api/v1/calendar/${tokenData.token}.ics` : null;
+
+  const handleCopy = useCallback(async () => {
+    if (!feedUrl) return;
+    await navigator.clipboard.writeText(feedUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [feedUrl]);
+
+  const handleRegenerate = useCallback(() => {
+    if (tokenData?.token) {
+      const confirmed = window.confirm(t('settings.integrations.icalFeed.regenerateConfirm'));
+      if (!confirmed) return;
+    }
+    regenerateMutation.mutate();
+  }, [tokenData?.token, t, regenerateMutation]);
+
+  return (
+    <SectionCard title={t('settings.integrations.icalFeed.title')}>
+      <div className="space-y-4">
+        <div className="flex items-start gap-4">
+          <div className="bg-container flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl">
+            <Rss className="text-primary h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <p className="text-muted-foreground text-sm">
+              {t('settings.integrations.icalFeed.description')}
+            </p>
+
+            {isPending ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              </div>
+            ) : feedUrl ? (
+              <div className="space-y-2">
+                <LabeledRow label={t('settings.integrations.icalFeed.feedUrl')}>
+                  <div className="flex items-center gap-2">
+                    <Input value={feedUrl} readOnly className="font-mono text-xs" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCopy}
+                      aria-label={t('settings.integrations.icalFeed.copy')}
+                    >
+                      {copied ? (
+                        <CheckCircle2 className="text-success h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </LabeledRow>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                {t('settings.integrations.icalFeed.noToken')}
+              </p>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={regenerateMutation.isPending}
+            >
+              {regenerateMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {t('settings.integrations.icalFeed.regenerate')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </SectionCard>
   );
 });

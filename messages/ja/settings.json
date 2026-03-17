@@ -619,6 +619,17 @@
         "title": "API連携",
         "description": "APIキーの発行やWebhookの設定は開発者ポータルから行えます。",
         "openPortal": "開発者ポータルを開く（準備中）"
+      },
+      "icalFeed": {
+        "title": "iCalフィード",
+        "description": "このURLをGoogle CalendarやApple Calendarに追加すると、Dayoptのスケジュールを読み取り専用で表示できます。",
+        "feedUrl": "フィードURL",
+        "copy": "コピー",
+        "copied": "コピーしました",
+        "regenerate": "URLを再生成",
+        "regenerateConfirm": "URLを再生成すると、以前のURLは無効になります。よろしいですか？",
+        "regenerateSuccess": "新しいフィードURLを生成しました",
+        "noToken": "フィードURLを生成するには「URLを再生成」をクリックしてください"
       }
     },
     "legal": {
@@ -678,30 +689,20 @@
         "free": {
           "name": "Free",
           "features": {
-            "basicTasks": "基本的なタスク管理",
-            "maxTasks": "最大100タスク",
-            "tags": "3つのタグ",
-            "calendar": "カレンダー表示"
+            "timeboxing": "タイムボクシング & 時間記録",
+            "basicAnalytics": "基本分析（2指標）",
+            "tags": "タグ 5個まで",
+            "ai": "AI振り返り（月10回）"
           }
         },
         "pro": {
           "name": "Pro",
           "features": {
-            "unlimitedTasks": "無制限のタスク",
+            "fullAnalytics": "全8指標 + チャートビュー",
             "unlimitedTags": "無制限のタグ",
-            "integrations": "外部サービス連携",
-            "prioritySupport": "優先サポート",
-            "advancedAnalytics": "高度な分析"
-          }
-        },
-        "team": {
-          "name": "Team",
-          "features": {
-            "allPro": "Proの全機能",
-            "teamSharing": "チーム共有",
-            "adminDashboard": "管理者ダッシュボード",
-            "sso": "SSO対応",
-            "dedicatedSupport": "専用サポート"
+            "api": "MCP / APIアクセス",
+            "dataExport": "データエクスポート（CSV/JSON）",
+            "unlimitedAI": "AI振り返り無制限 + モデル選択"
           }
         }
       }

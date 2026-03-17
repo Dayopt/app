@@ -619,6 +619,17 @@
         "title": "API Integration",
         "description": "Issue API keys and configure Webhooks from the developer portal.",
         "openPortal": "Open Developer Portal (Coming Soon)"
+      },
+      "icalFeed": {
+        "title": "iCal Feed",
+        "description": "Add this URL to Google Calendar or Apple Calendar to view your Dayopt schedule as read-only.",
+        "feedUrl": "Feed URL",
+        "copy": "Copy",
+        "copied": "Copied!",
+        "regenerate": "Regenerate URL",
+        "regenerateConfirm": "Regenerating the URL will invalidate the previous one. Are you sure?",
+        "regenerateSuccess": "New feed URL generated",
+        "noToken": "Click \"Regenerate URL\" to generate a feed URL"
       }
     },
     "legal": {
@@ -678,30 +689,20 @@
         "free": {
           "name": "Free",
           "features": {
-            "basicTasks": "Basic task management",
-            "maxTasks": "Up to 100 tasks",
-            "tags": "3 tags",
-            "calendar": "Calendar view"
+            "timeboxing": "Timeboxing & time tracking",
+            "basicAnalytics": "Basic analytics (2 metrics)",
+            "tags": "Up to 5 tags",
+            "ai": "AI reflection (10/month)"
           }
         },
         "pro": {
           "name": "Pro",
           "features": {
-            "unlimitedTasks": "Unlimited tasks",
+            "fullAnalytics": "All 8 metrics + chart views",
             "unlimitedTags": "Unlimited tags",
-            "integrations": "External service integrations",
-            "prioritySupport": "Priority support",
-            "advancedAnalytics": "Advanced analytics"
-          }
-        },
-        "team": {
-          "name": "Team",
-          "features": {
-            "allPro": "All Pro features",
-            "teamSharing": "Team sharing",
-            "adminDashboard": "Admin dashboard",
-            "sso": "SSO support",
-            "dedicatedSupport": "Dedicated support"
+            "api": "MCP / API access",
+            "dataExport": "Data export (CSV/JSON)",
+            "unlimitedAI": "Unlimited AI + model selection"
           }
         }
       }
