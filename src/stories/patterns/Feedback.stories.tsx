@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 
 const meta = {
@@ -208,8 +210,7 @@ toast('カスタムメッセージ', {
           <div className="flex gap-3">
             <Button
               onClick={() => {
-                // toast.success would be called here
-                alert('toast.success("保存しました")');
+                toast.success('保存しました');
               }}
             >
               成功Toast
@@ -217,7 +218,7 @@ toast('カスタムメッセージ', {
             <Button
               variant="destructive"
               onClick={() => {
-                alert('toast.error("エラーが発生しました")');
+                toast.error('エラーが発生しました');
               }}
             >
               エラーToast
