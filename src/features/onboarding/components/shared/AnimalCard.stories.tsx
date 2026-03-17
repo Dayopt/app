@@ -32,6 +32,7 @@ export const Default: Story = {
     name: 'Lion',
     trait: 'Early riser',
     time: 'Peak: 7 AM – 12 PM',
+    hint: 'You naturally wake up before 6 AM',
     isSelected: false,
   },
 };
@@ -44,6 +45,7 @@ export const Selected: Story = {
     name: 'Bear',
     trait: 'Steady pace',
     time: 'Peak: 10 AM – 2 PM',
+    hint: 'You follow a regular sleep schedule',
     isSelected: true,
   },
 };
@@ -56,6 +58,7 @@ export const AllPatterns: Story = {
     name: 'Lion',
     trait: 'Early riser',
     time: 'Peak: 7 AM – 12 PM',
+    hint: 'You naturally wake up before 6 AM',
     isSelected: false,
   },
   render: (args) => {
@@ -66,6 +69,7 @@ export const AllPatterns: Story = {
         name: 'Lion',
         trait: 'Early riser',
         time: 'Peak: 7 AM – 12 PM',
+        hint: 'You naturally wake up before 6 AM',
       },
       {
         type: 'bear' as const,
@@ -73,6 +77,7 @@ export const AllPatterns: Story = {
         name: 'Bear',
         trait: 'Steady pace',
         time: 'Peak: 10 AM – 2 PM',
+        hint: 'You follow a regular sleep schedule',
       },
       {
         type: 'wolf' as const,
@@ -80,6 +85,7 @@ export const AllPatterns: Story = {
         name: 'Wolf',
         trait: 'Night owl',
         time: 'Peak: 3 PM – 9 PM',
+        hint: 'You come alive in the evening',
       },
       {
         type: 'dolphin' as const,
@@ -87,6 +93,7 @@ export const AllPatterns: Story = {
         name: 'Dolphin',
         trait: 'Light sleeper',
         time: 'Peak: 8 AM – 12 PM',
+        hint: 'You sleep lightly and wake often',
       },
     ];
     return (
