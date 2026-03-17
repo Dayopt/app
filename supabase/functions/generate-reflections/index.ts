@@ -6,76 +6,22 @@
 // 冪等性: reflections テーブルの UNIQUE(user_id, period_type, period_start) で保証
 // 認証: CRON_SECRET ヘッダーで保護
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { corsHeaders } from '../_shared/cors.ts';
+import { type SupabaseClient } from '@supabase/supabase-js';
+import { verifyCronSecret } from '../_shared/auth-guard.ts';
+import { log } from '../_shared/logger.ts';
+import { corsResponse, errorResponse, jsonResponse } from '../_shared/response.ts';
+import { createServiceClient } from '../_shared/supabase-client.ts';
+import type {
+  AnomalyAlert,
+  EntryRow,
+  ParsedReflection,
+  ReflectionResult,
+  UserEntry,
+  WeeklyReflectionData,
+} from '../_shared/types.ts';
 
 const BATCH_SIZE = 10;
 const REFLECTION_THRESHOLD_DAYS = 7; // 振り返り解放条件: 7日以上のデータ
-
-// ============================================================
-// 型定義
-// ============================================================
-
-interface UserEntry {
-  user_id: string;
-  entry_count: number;
-}
-
-interface ReflectionResult {
-  userId: string;
-  status: 'generated' | 'skipped' | 'error';
-  reflectionId?: string;
-  error?: string;
-}
-
-interface EntryRow {
-  start_time: string | null;
-  end_time: string | null;
-  duration_minutes: number | null;
-  fulfillment_score: number | null;
-}
-
-interface AnomalyAlert {
-  type: 'fulfillment_drop' | 'time_surge' | 'no_record_streak';
-  severity: 'warning' | 'critical';
-  message: string;
-  baseline?: number;
-  current?: number;
-  streakDays?: number;
-}
-
-interface WeeklyReflectionData {
-  total_entries: number;
-  total_minutes: number;
-  avg_fulfillment: number;
-}
-
-interface ParsedReflection {
-  title: string;
-  insights: string;
-  question: string;
-  activities: Array<{ label: string; minutes: number; highlight: string }>;
-}
-
-// ============================================================
-// 構造化ログ（Edge Function 用）
-// ============================================================
-
-// Edge Functions は Deno 上で動作し @/lib/logger を使えないため console を直接使用
-function log(
-  level: 'info' | 'warn' | 'error',
-  message: string,
-  meta?: Record<string, unknown>,
-): void {
-  const entry = { level, message, timestamp: new Date().toISOString(), ...meta };
-  if (level === 'error') {
-    console.error(JSON.stringify(entry));
-  } else if (level === 'warn') {
-    console.warn(JSON.stringify(entry));
-  } else {
-    console.log(JSON.stringify(entry)); // eslint-disable-line no-console
-  }
-}
 
 // ============================================================
 // メインハンドラー
@@ -83,35 +29,21 @@ function log(
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return corsResponse();
   }
 
   // 認証チェック: CRON_SECRET で保護
-  const cronSecret = Deno.env.get('CRON_SECRET');
-  if (cronSecret) {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      log('warn', 'Unauthorized access attempt to generate-reflections');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
-    }
-  }
+  const authError = verifyCronSecret(req);
+  if (authError) return authError;
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
 
     if (!anthropicApiKey) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return errorResponse('ANTHROPIC_API_KEY is not configured');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createServiceClient();
 
     // 先週の期間を計算（月曜〜日曜）
     const now = new Date();
@@ -142,10 +74,7 @@ Deno.serve(async (req) => {
     const users = (activeUsers ?? []) as UserEntry[];
 
     if (users.length === 0) {
-      return new Response(JSON.stringify({ message: 'No eligible users found', count: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
+      return jsonResponse({ message: 'No eligible users found', count: 0 });
     }
 
     // 各ユーザーの振り返りを生成
@@ -323,26 +252,20 @@ Deno.serve(async (req) => {
       anomalyAlerts: totalAnomalyAlerts,
     });
 
-    return new Response(
-      JSON.stringify({
-        message: 'Reflections generation completed',
-        total: results.length,
-        generated,
-        skipped,
-        errors,
-        anomalyAlerts: totalAnomalyAlerts,
-        results,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
-    );
+    return jsonResponse({
+      message: 'Reflections generation completed',
+      total: results.length,
+      generated,
+      skipped,
+      errors,
+      anomalyAlerts: totalAnomalyAlerts,
+      results,
+    });
   } catch (error) {
     log('error', 'generate-reflections function failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 },
-    );
+    return errorResponse(error instanceof Error ? error.message : 'Unknown error');
   }
 });
 
@@ -424,10 +347,7 @@ function parseReflectionJSON(text: string): ParsedReflection {
 /**
  * 異常検知: 過去4週の平均と今週を比較
  */
-async function checkAnomalies(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<AnomalyAlert[]> {
+async function checkAnomalies(supabase: SupabaseClient, userId: string): Promise<AnomalyAlert[]> {
   const now = new Date();
   const dayOfWeek = now.getDay();
   const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;

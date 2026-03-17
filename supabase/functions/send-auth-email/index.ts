@@ -7,10 +7,12 @@
  * @see https://supabase.com/docs/guides/functions/examples/auth-send-email-hook-react-email-resend
  */
 
-import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0';
-import { renderAsync } from 'npm:@react-email/components@0.0.22';
-import React from 'npm:react@18.3.1';
-import { Resend } from 'npm:resend@4.0.0';
+import { renderAsync } from '@react-email/components';
+import React from 'react';
+import { Resend } from 'resend';
+import { Webhook } from 'standardwebhooks';
+
+import type { EmailData, WebhookPayload } from '../_shared/types.ts';
 
 import { ConfirmEmail } from './ConfirmEmail.tsx';
 import { MagicLinkEmail } from './MagicLinkEmail.tsx';
@@ -20,26 +22,6 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string).replace('v1,whsec_', '');
 const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'auth@send.dayopt.app';
 const APP_URL = Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://dayopt.app';
-
-interface EmailData {
-  token: string;
-  token_hash: string;
-  redirect_to: string;
-  email_action_type: string;
-  site_url: string;
-  token_new: string;
-  token_hash_new: string;
-}
-
-interface WebhookPayload {
-  user: {
-    email: string;
-    user_metadata: {
-      full_name?: string;
-    };
-  };
-  email_data: EmailData;
-}
 
 /**
  * Auth メールタイプに応じた確認URLを構築
