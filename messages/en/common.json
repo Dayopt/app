@@ -127,7 +127,8 @@
       "selectTime": "Select time: {time}",
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
-      "endTime": "End time"
+      "endTime": "End time",
+      "addPlan": "Tap to add"
     },
     "status": {
       "loading": "Loading...",
