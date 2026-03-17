@@ -64,7 +64,7 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 ### CSF3 + satisfies Meta
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
   title: 'Components/UI/MyComponent',
@@ -76,7 +76,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 ```
 
-**注意**: import は `@storybook/react-vite`（`@storybook/react` ではない）
+**注意**: import は `@storybook/nextjs-vite`（`@storybook/react` / `@storybook/react-vite` ではない）
 
 ### Canvas と Docs の役割分離
 
@@ -122,7 +122,7 @@ export const AllPatterns: Story = {
 ### インタラクションテスト（play関数）
 
 ```tsx
-import { expect, userEvent, within } from '@storybook/test';
+import { expect, userEvent, within } from 'storybook/test';
 
 export const ClickTest: Story = {
   play: async ({ canvasElement }) => {

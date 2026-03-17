@@ -19,7 +19,7 @@ Primitives/Recipes の「こう組み合わせる」という実装ガイドラ�
 ## 基本テンプレート
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Button } from '@/components/ui/button';
 // ... 他のコンポーネントを import

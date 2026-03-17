@@ -15,7 +15,7 @@ UIコンポーネント（単体・複合・Feature）の Story 作成用。
 ## 基本テンプレート
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { MyComponent } from './my-component';
 
 const meta = {
@@ -53,6 +53,14 @@ export const AllPatterns: Story = {
 | -------------------------------- | -------------- | ---------------------------- |
 | テーブルが必要 → MDX Docs を作成 | `[]`           | MDX と autodocs の競合を回避 |
 | テーブル不要 → JSDoc だけで十分  | `['autodocs']` | JSDoc から Docs を自動生成   |
+
+### カスタムタグ
+
+| タグ        | 用途                                  | Vitest除外 |
+| ----------- | ------------------------------------- | ---------- |
+| `critical`  | ユーザーのcritical path（優先テスト） | No         |
+| `docs-only` | ドキュメント専用（テストから除外）    | Yes        |
+| `wip`       | 作業中（テストから除外）              | Yes        |
 
 ## layout パラメータ
 
@@ -186,7 +194,7 @@ argTypes: {
 ## MDX Docs テンプレート（テーブルが必要な場合）
 
 ```mdx
-import { Canvas, Controls, Meta, Primary, Stories } from '@storybook/blocks';
+import { Canvas, Controls, Meta, Primary, Stories } from '@storybook/addon-docs/blocks';
 import * as MyComponentStories from './my-component.stories';
 
 <Meta of={MyComponentStories} />
