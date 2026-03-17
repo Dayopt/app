@@ -211,7 +211,7 @@ export const ErrorMessages: Story = {
         パスワードが一致しません
       </FieldError>
       <FieldError announceImmediately className="text-center">
-        パスワードは12文字以上である必要があります
+        パスワードは8文字以上である必要があります
       </FieldError>
       <FieldError announceImmediately className="text-center">
         問題が発生しました。時間をおいて再度お試しください。

@@ -47,19 +47,13 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 コンポーネントの場所は？
 │
 ├── src/stories/tokens/          → Foundations  → templates/foundations.md
-├── src/components/ui/           → Primitives or Recipes（下記参照）
-├── src/core/components/         → Recipes     → templates/recipes.md
-│   src/components/common/
-├── src/features/*/components/   → Features    → templates/features.md
+├── src/components/ui/           → Components  → templates/components.md
+├── src/components/common/       → Components  → templates/components.md
+├── src/core/components/         → Components  → templates/components.md
+├── src/shell/components/        → Components  → templates/components.md
+├── src/features/*/components/   → Components  → templates/components.md
 └── src/stories/patterns/        → Patterns    → templates/patterns.md
 ```
-
-### `src/components/` 内の分類
-
-| ディレクトリ             | title prefix         | テンプレート              |
-| ------------------------ | -------------------- | ------------------------- |
-| `src/components/ui/`     | `Components/UI/`     | `templates/primitives.md` |
-| `src/components/common/` | `Components/Common/` | `templates/recipes.md`    |
 
 **迷ったら**: ドメイン知識を持たない → `Components/`。ドメイン知識がある → `Features/`。
 
@@ -70,7 +64,7 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 ### CSF3 + satisfies Meta
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta = {
   title: 'Components/UI/MyComponent',
@@ -82,7 +76,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 ```
 
-**注意**: import は `@storybook/react-vite`（`@storybook/react` ではない）
+**注意**: import は `@storybook/nextjs-vite`（`@storybook/react` / `@storybook/react-vite` ではない）
 
 ### Canvas と Docs の役割分離
 
@@ -128,7 +122,7 @@ export const AllPatterns: Story = {
 ### インタラクションテスト（play関数）
 
 ```tsx
-import { expect, userEvent, within } from '@storybook/test';
+import { expect, userEvent, within } from 'storybook/test';
 
 export const ClickTest: Story = {
   play: async ({ canvasElement }) => {
@@ -224,15 +218,13 @@ Story対象のコンポーネントが依存する場合に参照:
 
 ## 詳細ドキュメント
 
-| ドキュメント               | 内容                                                             |
-| -------------------------- | ---------------------------------------------------------------- |
-| `templates/primitives.md`  | shadcn/ui コンポーネント用テンプレート                           |
-| `templates/recipes.md`     | 複合パターン用テンプレート（Interactive Wrapper, story-helpers） |
-| `templates/features.md`    | Feature コンポーネント用テンプレート                             |
-| `templates/foundations.md` | デザイントークン可視化用テンプレート                             |
-| `templates/patterns.md`    | 実装パターンドキュメント用テンプレート                           |
-| `references/dark-mode.md`  | ダークモード3層アーキテクチャ                                    |
-| `references/mcp-addon.md`  | Storybook MCP Server 連携                                        |
+| ドキュメント               | 内容                                                      |
+| -------------------------- | --------------------------------------------------------- |
+| `templates/components.md`  | UIコンポーネント用テンプレート（単体・複合・Feature統合） |
+| `templates/foundations.md` | デザイントークン可視化用テンプレート                      |
+| `templates/patterns.md`    | 実装パターンドキュメント用テンプレート                    |
+| `references/dark-mode.md`  | ダークモード3層アーキテクチャ                             |
+| `references/mcp-addon.md`  | Storybook MCP Server 連携                                 |
 
 ## 参考リンク
 

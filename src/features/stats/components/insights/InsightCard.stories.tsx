@@ -130,3 +130,86 @@ export const Minimal: Story = {
     },
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { insight: WEEKLY_INSIGHT },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div className="max-w-lg">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          Weekly（週次インサイト・フルデータ）
+        </p>
+        <InsightCard insight={WEEKLY_INSIGHT} />
+      </div>
+      <div className="max-w-lg">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          WithoutComparison（比較なし）
+        </p>
+        <InsightCard
+          insight={{
+            title: WEEKLY_INSIGHT.title,
+            findings: WEEKLY_INSIGHT.findings,
+            suggestions: WEEKLY_INSIGHT.suggestions,
+            question: WEEKLY_INSIGHT.question,
+          }}
+        />
+      </div>
+      <div className="max-w-lg">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Declining（悪化傾向）</p>
+        <InsightCard
+          insight={{
+            title: '先週より活動量が減少しています',
+            findings: [
+              {
+                category: 'time_usage',
+                headline: '記録時間が 40% 減少',
+                detail: '先週の 35 時間から今週は 21 時間に減少しました。',
+                sentiment: 'needs_attention',
+              },
+              {
+                category: 'fulfillment',
+                headline: '充実度スコアは維持',
+                detail: '活動量は減りましたが、充実度は 3.7 と先週と同水準です。',
+                sentiment: 'neutral',
+              },
+            ],
+            suggestions: [
+              {
+                action: '来週は最低でも 1 日 3 時間の記録を目標にしてみる',
+                rationale: '小さな目標から再開すると習慣が戻りやすい傾向があります',
+              },
+            ],
+            question: '今週は意図的に休息を取っていましたか？',
+            comparison: {
+              summary: '活動量が大幅に減少',
+              direction: 'declining',
+            },
+          }}
+        />
+      </div>
+      <div className="max-w-lg">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Minimal（最小構成）</p>
+        <InsightCard
+          insight={{
+            title: '安定した1週間でした',
+            findings: [
+              {
+                category: 'pattern',
+                headline: '大きな変化はありません',
+                detail: '全体的に先週と同じペースで活動が続いています。',
+                sentiment: 'neutral',
+              },
+            ],
+            suggestions: [],
+            question: '今のペースに満足していますか？',
+            comparison: {
+              summary: '先週と同水準',
+              direction: 'stable',
+            },
+          }}
+        />
+      </div>
+    </div>
+  ),
+};

@@ -11,14 +11,15 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
+import { env } from '@/env';
 import { logger } from '@/lib/logger';
 import { extractClientIp } from '@/platform/security/ip-validation';
 
 /**
  * 環境変数チェック
  */
-const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
-const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN;
 
 /**
  * Upstash Redis有効化フラグ
@@ -76,6 +77,20 @@ export const passwordResetRateLimit =
         limiter: Ratelimit.slidingWindow(3, '1 h'),
         analytics: true,
         prefix: 'ratelimit:password-reset',
+      })
+    : null;
+
+/**
+ * お問い合わせ用レート制限
+ * 5リクエスト / 1時間（Sliding Window）
+ */
+export const contactRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '1 h'),
+        analytics: true,
+        prefix: 'ratelimit:contact',
       })
     : null;
 

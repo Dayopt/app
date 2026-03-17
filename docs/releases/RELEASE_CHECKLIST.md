@@ -188,7 +188,7 @@
   npm run generate-licenses
   ```
 - [ ] **生成物をマーケティングサイト（web）に反映**
-  - `public/oss-credits.json` を web リポジトリへコピー
+  - `public/legal/oss-credits.json` を web リポジトリへコピー
 
 ### 3.4 通知・関連Issue
 

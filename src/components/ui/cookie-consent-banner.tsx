@@ -81,17 +81,17 @@ export function CookieConsentBanner() {
           {/* メッセージ */}
           <div className="flex-1">
             <h2 id="cookie-consent-title" className="text-foreground mb-1 text-base font-bold">
-              {t('legal.cookies.banner.title')}
+              {t('common.cookies.banner.title')}
             </h2>
             <p id="cookie-consent-description" className="text-muted-foreground text-sm">
-              {t('legal.cookies.banner.description')}{' '}
+              {t('common.cookies.banner.description')}{' '}
               <a
                 href={privacyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary hover:text-primary/80 underline"
               >
-                {t('legal.cookies.banner.learnMore')}
+                {t('common.cookies.banner.learnMore')}
               </a>
             </p>
           </div>
@@ -103,10 +103,10 @@ export function CookieConsentBanner() {
               variant="outline"
               className="w-full sm:w-auto"
             >
-              {t('legal.cookies.banner.rejectAll')}
+              {t('common.cookies.banner.rejectAll')}
             </Button>
             <Button onClick={handleAcceptAll} className="w-full sm:w-auto">
-              {t('legal.cookies.banner.acceptAll')}
+              {t('common.cookies.banner.acceptAll')}
             </Button>
           </div>
         </div>

@@ -4,16 +4,10 @@
  */
 
 // 設定
-export {
-  RECAPTCHA_CONFIG,
-  isDevelopment,
-  isRecaptchaV2Enabled,
-  isRecaptchaV3Enabled,
-} from './config';
+export { RECAPTCHA_CONFIG, isRecaptchaV2Enabled, isRecaptchaV3Enabled } from './config';
 
-// サーバーサイド検証
-export { isScoreAboveThreshold, verifyRecaptchaV2, verifyRecaptchaV3 } from './verify';
-export type { RecaptchaVerifyResponse } from './verify';
+// サーバーサイド検証は '@/lib/recaptcha/verify' から直接 import する
+// barrel に含めるとクライアントバンドルに env.ts が漏洩するため
 
 // クライアントサイドフック
 export { useRecaptchaV2, useRecaptchaV3 } from './hooks';

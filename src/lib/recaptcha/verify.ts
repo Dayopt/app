@@ -3,9 +3,14 @@
  * @description サーバーサイドでreCAPTCHAトークンを検証
  */
 
+import { env } from '@/env';
 import { logger } from '@/lib/logger';
 
-import { RECAPTCHA_CONFIG, isDevelopment } from './config';
+import { RECAPTCHA_CONFIG } from './config';
+
+function isDevelopment(): boolean {
+  return process.env.NODE_ENV === 'development';
+}
 
 /**
  * reCAPTCHA検証レスポンス
@@ -27,7 +32,7 @@ export async function verifyRecaptchaV3(
   expectedAction?: string,
 ): Promise<RecaptchaVerifyResponse> {
   // 開発環境ではスキップ（オプション）
-  if (isDevelopment() && !RECAPTCHA_CONFIG.SECRET_KEY_V3) {
+  if (isDevelopment() && !env.RECAPTCHA_SECRET_KEY_V3) {
     logger.warn('[reCAPTCHA] v3 secret key not configured, skipping verification in development');
     return {
       success: true,
@@ -43,7 +48,7 @@ export async function verifyRecaptchaV3(
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        secret: RECAPTCHA_CONFIG.SECRET_KEY_V3,
+        secret: env.RECAPTCHA_SECRET_KEY_V3 ?? '',
         response: token,
       }),
     });
@@ -78,7 +83,7 @@ export async function verifyRecaptchaV3(
  */
 export async function verifyRecaptchaV2(token: string): Promise<RecaptchaVerifyResponse> {
   // 開発環境ではスキップ（オプション）
-  if (isDevelopment() && !RECAPTCHA_CONFIG.SECRET_KEY_V2) {
+  if (isDevelopment() && !env.RECAPTCHA_SECRET_KEY_V2) {
     logger.warn('[reCAPTCHA] v2 secret key not configured, skipping verification in development');
     return {
       success: true,
@@ -92,7 +97,7 @@ export async function verifyRecaptchaV2(token: string): Promise<RecaptchaVerifyR
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        secret: RECAPTCHA_CONFIG.SECRET_KEY_V2,
+        secret: env.RECAPTCHA_SECRET_KEY_V2 ?? '',
         response: token,
       }),
     });

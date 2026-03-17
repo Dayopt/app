@@ -19,6 +19,8 @@ interface SidebarProps {
   children: ReactNode;
   /** フッターに配置するアクション（通知アイコン等） */
   footerActions?: ReactNode;
+  /** ランドマークのアクセシブルネーム */
+  'aria-label'?: string;
 }
 
 /**
@@ -28,7 +30,7 @@ interface SidebarProps {
  * コンテンツ: composition layerから注入
  * フッター: UserMenu + アクション
  */
-export function Sidebar({ children, footerActions }: SidebarProps) {
+export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
   const user = useAuthStore((state) => state.user);
   const closeSidebar = useLayoutStore.use.closeSidebar();
   const { open: openSearch } = useGlobalSearch();
@@ -41,11 +43,20 @@ export function Sidebar({ children, footerActions }: SidebarProps) {
   };
 
   return (
-    <aside className="border-border bg-surface-container text-foreground flex h-full w-full flex-col border-r">
+    <aside
+      className="border-border bg-surface-container text-foreground flex h-full w-full flex-col border-r"
+      aria-label={ariaLabel}
+    >
       {/* Header - Logo + Close */}
       <div className="flex h-12 shrink-0 items-center justify-between px-2">
         <div className="flex items-center gap-2 pl-2">
-          <Image src="/icon-192.png" alt="Dayopt" width={20} height={20} className="rounded" />
+          <Image
+            src="/icons/icon-192.png"
+            alt="Dayopt"
+            width={20}
+            height={20}
+            className="rounded"
+          />
           <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
         </div>
         <div className="flex items-center">

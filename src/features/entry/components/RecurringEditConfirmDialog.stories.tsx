@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
@@ -27,7 +28,7 @@ type Story = StoryObj<typeof meta>;
 function ConfirmDialogStory({ mode }: { mode: 'edit' | 'delete' }) {
   const handleOpen = () => {
     openRecurringEditConfirm('テストプラン', mode, async (scope) => {
-      window.alert(`選択: ${scope}`);
+      toast.info(`選択: ${scope}`);
     });
   };
 
@@ -57,4 +58,16 @@ export const EditMode: Story = {
 /** 削除モード（破壊的操作） */
 export const DeleteMode: Story = {
   render: () => <ConfirmDialogStory mode="delete" />,
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">EditMode（編集モード）</p>
+      <ConfirmDialogStory mode="edit" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">DeleteMode（削除モード）</p>
+      <ConfirmDialogStory mode="delete" />
+    </div>
+  ),
 };

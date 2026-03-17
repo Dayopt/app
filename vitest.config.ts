@@ -32,8 +32,7 @@ export default defineConfig({
         'compass/',
         '.storybook/',
       ],
-      // 固定閾値は使用しない（CIで「低下のみFail」方式を採用）
-      // baseline比較は .github/workflows/coverage.yml で実施
+      // CIでは npm run test:coverage -- --project unit で実行
     },
     projects: [
       // ユニットテスト（happy-dom）

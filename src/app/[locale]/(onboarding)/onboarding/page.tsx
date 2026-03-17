@@ -8,8 +8,10 @@
 
 import { useCallback, useMemo } from 'react';
 
+import { TRPCClientError } from '@trpc/client';
 import { useTranslations } from 'next-intl';
 
+import { Button } from '@/components/ui/button';
 import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_SELECTABLE_TYPES,
@@ -28,7 +30,11 @@ export default function OnboardingPage() {
   const t = useTranslations();
 
   // Fetch profile for pre-filling name
-  const { data: profile } = api.onboarding.getProfile.useQuery();
+  const {
+    data: profile,
+    isError: isProfileError,
+    refetch: refetchProfile,
+  } = api.onboarding.getProfile.useQuery();
 
   // Complete mutation
   const completeMutation = api.onboarding.complete.useMutation();
@@ -66,6 +72,21 @@ export default function OnboardingPage() {
         router.push('/calendar/day');
       } catch (error) {
         logger.error('Onboarding complete failed:', error);
+
+        if (error instanceof TRPCClientError) {
+          const code = error.data?.code;
+          if (code === 'UNAUTHORIZED') {
+            toast.error(t('onboarding.error.sessionExpired'));
+            return;
+          }
+        }
+
+        // ネットワークエラー判定
+        if (error instanceof TypeError && error.message === 'Failed to fetch') {
+          toast.error(t('onboarding.error.networkError'));
+          return;
+        }
+
         toast.error(t('onboarding.error.completeFailed'));
       }
     },
@@ -79,6 +100,17 @@ export default function OnboardingPage() {
     ),
     [handleQuizComplete, store],
   );
+
+  if (isProfileError) {
+    return (
+      <div className="w-full max-w-md space-y-4 px-4 text-center">
+        <p className="text-destructive text-sm">{t('onboarding.error.profileLoadFailed')}</p>
+        <Button variant="outline" size="sm" onClick={() => refetchProfile()}>
+          {t('onboarding.error.retry')}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <OnboardingWizard

@@ -102,7 +102,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
             </div>
             <div className="bg-container relative hidden md:block">
               <NextImage
-                src="/placeholder.svg"
+                src="/images/placeholder.svg"
                 alt="Decorative background"
                 fill
                 sizes="(min-width: 768px) 50vw, 0vw"
@@ -240,7 +240,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
           </form>
           <div className="bg-container relative hidden md:block">
             <NextImage
-              src="/placeholder.svg"
+              src="/images/placeholder.svg"
               alt="Decorative background"
               fill
               sizes="(min-width: 768px) 50vw, 0vw"

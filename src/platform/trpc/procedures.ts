@@ -11,6 +11,7 @@ import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import superjson from 'superjson';
 import { z } from 'zod';
 
+import { env } from '@/env';
 import { createAppError, ERROR_CODES } from '@/lib/errors/error-patterns';
 import { logger } from '@/lib/logger';
 import { apiRateLimit, withUpstashRateLimit } from '@/lib/rate-limit/upstash';
@@ -106,7 +107,7 @@ export async function createTRPCContext(opts: {
   else if (authMode === 'service-role') {
     try {
       const apiKey = typeof req.headers['x-api-key'] === 'string' ? req.headers['x-api-key'] : null;
-      const expectedKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const expectedKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
       if (!apiKey || !expectedKey || !safeCompare(apiKey, expectedKey)) {
         throw new TRPCError({
@@ -128,8 +129,8 @@ export async function createTRPCContext(opts: {
     const { createServerClient } = await import('@supabase/ssr');
 
     supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
           getAll() {

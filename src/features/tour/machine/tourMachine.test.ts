@@ -30,11 +30,11 @@ const step2: TourStepDef = {
 };
 
 const stepWithBeforeEnter: TourStepDef = {
-  id: 'grid-drag-record',
-  targetSelector: '[data-tour-target="grid-drag"]',
-  placement: 'bottom',
-  titleKey: 'tour.steps.gridDragRecord.title',
-  descriptionKey: 'tour.steps.gridDragRecord.description',
+  id: 'plan-vs-record',
+  targetSelector: '',
+  placement: 'center',
+  titleKey: 'tour.steps.planVsRecord.title',
+  descriptionKey: 'tour.steps.planVsRecord.description',
   beforeEnter: { type: 'scroll-to-past', paddingHours: 3 },
 };
 
@@ -117,7 +117,7 @@ describe('tourMachine', () => {
       };
       const next = transition(state, {
         type: 'BEFORE_ENTER_COMPLETE',
-        stepId: 'grid-drag-record',
+        stepId: 'plan-vs-record',
       });
       expect(next.status).toBe('active');
     });

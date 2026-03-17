@@ -89,7 +89,7 @@ type Story = StoryObj<typeof meta>;
 // インタラクティブデモ（実コンポーネント使用）
 // ---------------------------------------------------------------------------
 
-function InteractiveDemo() {
+function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
   const [isOpen, setIsOpen] = useState(true);
 
   // Zustand storeと同期
@@ -109,7 +109,10 @@ function InteractiveDemo() {
         style={{ width: isOpen ? 256 : 0 }}
       >
         <div className="h-full w-64">
-          <Sidebar footerActions={<MockFooterActions />}>
+          <Sidebar
+            footerActions={<MockFooterActions />}
+            {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}
+          >
             <MockSidebarContent />
           </Sidebar>
         </div>
@@ -190,4 +193,44 @@ export const Empty: Story = {
  */
 export const Interactive: StoryObj = {
   render: () => <InteractiveDemo />,
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: {
+    children: <MockSidebarContent />,
+    footerActions: <MockFooterActions />,
+  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          デフォルト状態（コンテンツスロットとフッターアクション付き）
+        </p>
+        <div className="h-[500px] w-64">
+          <Sidebar footerActions={<MockFooterActions />} aria-label="サイドバー（デフォルト）">
+            <MockSidebarContent />
+          </Sidebar>
+        </div>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          コンテンツなし（children スロットが空の状態）
+        </p>
+        <div className="h-[400px] w-64">
+          <Sidebar aria-label="サイドバー（空）">
+            <div className="flex flex-1 items-center justify-center p-4">
+              <span className="text-muted-foreground text-sm">No content</span>
+            </div>
+          </Sidebar>
+        </div>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          インタラクティブデモ（開閉切り替え）
+        </p>
+        <InteractiveDemo sidebarLabel="サイドバー（インタラクティブ）" />
+      </div>
+    </div>
+  ),
 };

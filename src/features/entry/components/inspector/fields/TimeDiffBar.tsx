@@ -3,7 +3,6 @@
 /**
  * 予定 vs 記録の差分表示（プログレスバー + 差分バッジ）
  *
- * planned のみ表示。unplanned では親が非表示にする。
  */
 
 import { cn } from '@/lib/utils';

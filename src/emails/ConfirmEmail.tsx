@@ -3,6 +3,7 @@
  * 新規登録時のメールアドレス確認メール
  *
  * Supabase Auth の signup フローで使用
+ * NOTE: supabase/functions/send-auth-email/ConfirmEmail.tsx と同一内容を維持
  */
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';

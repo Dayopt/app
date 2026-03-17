@@ -84,8 +84,8 @@ npm run generate-licenses
 
 **出力**:
 
-- `public/oss-credits.json` (153KB) - Web表示用データ
-- `public/THIRD_PARTY_NOTICES.txt` (3.9KB) - Apache-2.0 NOTICE集約
+- `public/legal/oss-credits.json` (153KB) - Web表示用データ
+- `public/legal/THIRD_PARTY_NOTICES.txt` (3.9KB) - Apache-2.0 NOTICE集約
 
 **実行タイミング**:
 
@@ -165,7 +165,7 @@ npm update
 npm run generate-licenses
 
 # Step 3: 差分確認
-git diff public/oss-credits.json
+git diff public/legal/oss-credits.json
 
 # Step 4: コンプライアンスチェック
 npm run license:check

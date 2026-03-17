@@ -132,7 +132,7 @@ function AvatarUpload({
   disabled = false,
   className,
 }: AvatarUploadProps) {
-  const t = useTranslations('avatarDropzone');
+  const t = useTranslations('common.avatarDropzone');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

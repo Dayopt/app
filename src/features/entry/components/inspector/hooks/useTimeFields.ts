@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-import { isEntryPast } from '../../../lib/entry-status';
 import type { EntryWithTags } from '../../../types/entry';
 
 interface UseTimeFieldsOptions {
@@ -162,8 +161,6 @@ export function useTimeFields({
 
   const handleScheduleDateChange = useCallback(
     (date: Date | undefined) => {
-      if (entry && isEntryPast(entry)) return;
-
       setScheduleDate(date);
 
       if (date && startTime && endTime) {
@@ -181,13 +178,11 @@ export function useTimeFields({
         save({ end_time: localTimeToUTCISO(date, hours ?? 0, minutes ?? 0, timezone) });
       }
     },
-    [entry, startTime, endTime, save, timezone],
+    [startTime, endTime, save, timezone],
   );
 
   const handleStartTimeChange = useCallback(
     (time: string) => {
-      if (entry && isEntryPast(entry)) return;
-
       const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
       setStartTime(time);
 
@@ -206,13 +201,11 @@ export function useTimeFields({
         save({ start_time: isoValue });
       }
     },
-    [entry, scheduleDate, recurringGuard, save, timezone, timeConflictError],
+    [scheduleDate, recurringGuard, save, timezone, timeConflictError],
   );
 
   const handleEndTimeChange = useCallback(
     (time: string) => {
-      if (entry && isEntryPast(entry)) return;
-
       const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
       setEndTime(time);
 
@@ -230,7 +223,7 @@ export function useTimeFields({
         save({ end_time: isoValue });
       }
     },
-    [entry, scheduleDate, recurringGuard, save, timezone, timeConflictError],
+    [scheduleDate, recurringGuard, save, timezone, timeConflictError],
   );
 
   // リマインダー: 即時保存

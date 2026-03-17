@@ -223,3 +223,39 @@ export const NotSelected: Story = {
 export const Loading: Story = {
   render: () => <ChronotypeSettingsLoadingDemo />,
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          Bear（標準型）を選択した状態
+        </p>
+        <ChronotypeSettingsDemo initialType="bear" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Lion（朝型）を選択した状態</p>
+        <ChronotypeSettingsDemo initialType="lion" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Wolf（夜型）を選択した状態</p>
+        <ChronotypeSettingsDemo initialType="wolf" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">
+          Dolphin（不規則型）を選択した状態
+        </p>
+        <ChronotypeSettingsDemo initialType="dolphin" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">未選択状態</p>
+        <ChronotypeSettingsDemo initialEnabled={false} />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">ローディング状態</p>
+        <ChronotypeSettingsLoadingDemo />
+      </div>
+    </div>
+  ),
+};

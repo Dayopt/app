@@ -1,3 +1,6 @@
+import { readdir } from 'fs/promises';
+import { join } from 'path';
+
 import { getRequestConfig } from 'next-intl/server';
 
 import { logger } from '@/lib/logger';
@@ -5,34 +8,32 @@ import { logger } from '@/lib/logger';
 import { routing } from './routing';
 
 /**
- * ネームスペース一覧
- * messages/{locale}/{namespace}.json として配置
+ * messages/{locale}/ 内の .json ファイルからネームスペースを自動検出
+ * 手動登録が不要なため、ファイル追加だけで新しいネームスペースが有効になる
+ * 結果はプロセス内でキャッシュ（ファイル一覧は起動中変わらない）
  */
-const NAMESPACES = [
-  'app',
-  'auth',
-  'calendar',
-  'common',
-  'error',
-  'plan',
-  'record',
-  'legal',
-  'navigation',
-  'notification',
-  'onboarding',
-  'settings',
-  'tag',
-  'tour',
-] as const;
+const namespaceCache = new Map<string, string[]>();
+
+async function discoverNamespaces(locale: string): Promise<string[]> {
+  const cached = namespaceCache.get(locale);
+  if (cached) return cached;
+
+  const dir = join(process.cwd(), 'messages', locale);
+  const files = await readdir(dir);
+  const namespaces = files.filter((f) => f.endsWith('.json')).map((f) => f.replace('.json', ''));
+  namespaceCache.set(locale, namespaces);
+  return namespaces;
+}
 
 /**
  * 全ネームスペースをロードしてマージ
  */
 async function loadMessages(locale: string): Promise<Record<string, unknown>> {
+  const namespaces = await discoverNamespaces(locale);
   const messages: Record<string, unknown> = {};
 
   const namespaceModules = await Promise.all(
-    NAMESPACES.map(async (ns) => {
+    namespaces.map(async (ns) => {
       try {
         const mod = await import(`../../../messages/${locale}/${ns}.json`);
         return { namespace: ns, data: mod.default };

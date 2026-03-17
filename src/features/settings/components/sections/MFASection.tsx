@@ -166,7 +166,12 @@ export function MFASection() {
               <div>
                 <p className="mb-2 text-sm font-normal">{t('settings.account.mfa.setup.step2')}</p>
                 <div className="flex items-center gap-4">
-                  <InputOTP maxLength={6} value={verificationCode} onChange={setVerificationCode}>
+                  <InputOTP
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={setVerificationCode}
+                    aria-label="Verification code"
+                  >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -279,6 +284,7 @@ export function MFASection() {
               value={disableCode}
               onChange={setDisableCode}
               onComplete={handleConfirmDisable}
+              aria-label="Disable MFA code"
             >
               <InputOTPGroup>
                 <InputOTPSlot index={0} />

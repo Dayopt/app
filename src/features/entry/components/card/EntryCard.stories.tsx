@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import type { CalendarEvent } from '@/types/calendar-event';
 
@@ -99,7 +99,7 @@ export const ActiveEntry: Story = {
 export const UnplannedEntry: Story = {
   render: () => (
     <Slot>
-      <EntryCard entry={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
+      <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
     </Slot>
   ),
 };
@@ -228,7 +228,7 @@ export const AllPatterns: Story = {
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Unplanned（左アクセント点線）</p>
         <Slot>
-          <EntryCard entry={{ ...baseEntry, origin: 'unplanned' }} position={basePosition} />
+          <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
         </Slot>
       </section>
 

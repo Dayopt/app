@@ -78,3 +78,25 @@ export const ErrorMessages: Story = {
     </div>
   ),
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">Default</p>
+      <LoginForm />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">ErrorMessages</p>
+      <div className="flex max-w-md flex-col gap-4 p-6">
+        <FieldError announceImmediately className="text-center">
+          メールアドレスまたはパスワードが正しくありません
+        </FieldError>
+        <FieldError announceImmediately className="text-center">
+          セキュリティのため、このアカウントは一時的にロックされています。15分後に再試行してください。
+        </FieldError>
+        <FieldError announceImmediately className="text-center">
+          問題が発生しました。時間をおいて再度お試しください。
+        </FieldError>
+      </div>
+    </div>
+  ),
+};

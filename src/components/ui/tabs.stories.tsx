@@ -73,8 +73,6 @@ export const ThreeTabs: Story = {
 };
 
 export const AllPatterns: Story = {
-  // nested-interactive: TabsTrigger containing icon buttons; Radix internal structure
-  parameters: { a11y: { test: 'todo' } },
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <Tabs defaultValue="tab1" className="w-full max-w-md">
@@ -109,6 +107,10 @@ export const AllPatterns: Story = {
             <BarChart3 className="size-4" />
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="calendar" />
+        <TabsContent value="plan" />
+        <TabsContent value="record" />
+        <TabsContent value="stats" />
       </Tabs>
 
       <Tabs defaultValue="profile" className="w-full max-w-md">
@@ -122,6 +124,8 @@ export const AllPatterns: Story = {
             設定
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="profile" />
+        <TabsContent value="settings" />
       </Tabs>
 
       <Tabs defaultValue="overview" className="w-full max-w-md">

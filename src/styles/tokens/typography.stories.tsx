@@ -399,7 +399,7 @@ export const DosDonts: Story = {
             <div className="border-destructive space-y-3 border-l-4 pl-4">
               <h3 className="text-destructive font-bold">Don&apos;t</h3>
               <div className="space-y-2">
-                <p className="text-gray-600">text-gray-600（直接色指定）</p>
+                <p className="text-muted-foreground">text-gray-600（直接色指定）</p>
                 <p className="text-foreground/50">text-foreground/50（透明度）</p>
               </div>
             </div>

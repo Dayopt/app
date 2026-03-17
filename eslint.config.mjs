@@ -21,6 +21,10 @@ const eslintConfig = defineConfig([
     'coverage/**',
     'storybook-static/**',
     'next-env.d.ts',
+    // CLI scripts (console.log is expected)
+    'scripts/**',
+    'src/platform/i18n/scripts/**',
+    'src/styles/scripts/**',
   ]),
 
   // TypeScript用カスタムルール
@@ -174,6 +178,7 @@ const eslintConfig = defineConfig([
   {
     files: [
       'src/features/auth/**/*.{ts,tsx}',
+      'src/features/contact/**/*.{ts,tsx}',
       'src/features/notifications/**/*.{ts,tsx}',
       'src/features/onboarding/**/*.{ts,tsx}',
       'src/features/tour/**/*.{ts,tsx}',

@@ -14,6 +14,8 @@
 
 import { createHmac, randomBytes } from 'crypto';
 
+import { env } from '@/env';
+
 /**
  * リカバリーコードの設定
  */
@@ -31,7 +33,7 @@ const RECOVERY_CODE_CONFIG = {
  * 環境変数から取得し、未設定の場合はフォールバック値を使用
  */
 function getHmacPepper(): string {
-  return process.env.RECOVERY_CODE_PEPPER ?? 'dayopt-recovery-code-default-pepper';
+  return env.RECOVERY_CODE_PEPPER ?? 'dayopt-recovery-code-default-pepper';
 }
 
 /**

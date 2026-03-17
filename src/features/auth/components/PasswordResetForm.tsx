@@ -75,7 +75,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
             </div>
             <div className="bg-container relative hidden md:block">
               <NextImage
-                src="/placeholder.svg"
+                src="/images/placeholder.svg"
                 alt="Decorative background"
                 fill
                 priority
@@ -144,7 +144,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
           </form>
           <div className="bg-container relative hidden md:block">
             <NextImage
-              src="/placeholder.svg"
+              src="/images/placeholder.svg"
               alt="Decorative background"
               fill
               priority

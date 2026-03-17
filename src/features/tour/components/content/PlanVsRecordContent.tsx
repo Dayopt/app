@@ -13,7 +13,7 @@ interface TourContentProps {
   onSkip: () => void;
 }
 
-/** Plan vs Record をミニ図解で視覚的に比較するリッチコンテンツ */
+/** 予定時間 vs 実績時間をミニ図解で視覚的に説明するリッチコンテンツ */
 export function PlanVsRecordContent({
   currentStep,
   totalSteps,
@@ -37,26 +37,26 @@ export function PlanVsRecordContent({
         <h3 className="text-foreground font-bold">{t('tour.steps.planVsRecord.title')}</h3>
       </div>
 
-      {/* ミニ図解: Plan vs Record */}
+      {/* ミニ図解: Planned vs Actual */}
       <div className="flex flex-col gap-3">
-        {/* Plan */}
+        {/* Planned time */}
         <div className="flex items-center gap-3">
           <div className="bg-tag-blue-tint border-tag-blue flex h-10 w-20 items-center rounded-md border-l-3 pl-2">
-            <span className="text-foreground text-xs font-medium">Plan</span>
+            <span className="text-foreground text-xs font-medium tabular-nums">
+              10:00\u201311:00
+            </span>
           </div>
           <div className="flex flex-col">
             <span className="text-foreground text-xs font-medium">
-              {t('tour.steps.planVsRecord.planLabel', { defaultMessage: '予定' })}
+              {t('tour.steps.planVsRecord.planLabel')}
             </span>
             <span className="text-muted-foreground text-xs">
-              {t('tour.steps.planVsRecord.planDetail', {
-                defaultMessage: 'これからやること',
-              })}
+              {t('tour.steps.planVsRecord.planDetail')}
             </span>
           </div>
         </div>
 
-        {/* 矢印 */}
+        {/* 差分矢印 */}
         <div className="text-muted-foreground flex items-center gap-2 pl-8">
           <svg
             className="size-4"
@@ -73,26 +73,22 @@ export function PlanVsRecordContent({
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-xs">
-            {t('tour.steps.planVsRecord.autoConvert', {
-              defaultMessage: '時間が過ぎると自動変換',
-            })}
-          </span>
+          <span className="text-xs">{t('tour.steps.planVsRecord.autoConvert')}</span>
         </div>
 
-        {/* Record */}
+        {/* Actual time */}
         <div className="flex items-center gap-3">
-          <div className="bg-tag-green-tint border-tag-green flex h-10 w-20 items-center rounded-md border-l-3 border-dashed pl-2">
-            <span className="text-foreground text-xs font-medium">Record</span>
+          <div className="bg-tag-blue-tint border-tag-blue flex h-10 w-20 items-center rounded-md border-l-3 pl-2">
+            <span className="text-foreground text-xs font-medium tabular-nums">
+              10:15\u201311:30
+            </span>
           </div>
           <div className="flex flex-col">
             <span className="text-foreground text-xs font-medium">
-              {t('tour.steps.planVsRecord.recordLabel', { defaultMessage: '記録' })}
+              {t('tour.steps.planVsRecord.recordLabel')}
             </span>
             <span className="text-muted-foreground text-xs">
-              {t('tour.steps.planVsRecord.recordDetail', {
-                defaultMessage: '実際にやったこと',
-              })}
+              {t('tour.steps.planVsRecord.recordDetail')}
             </span>
           </div>
         </div>

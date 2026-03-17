@@ -23,6 +23,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
+    NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '0.0.0',
   },
 
   // TypeScript設定
@@ -153,7 +154,7 @@ const nextConfig = {
       },
       // アイコン・マニフェスト等の静的アセット（1年キャッシュ）
       {
-        source: '/:path(icon-*.png|apple-touch-icon.png|manifest.json)',
+        source: '/:path(icons/icon-*.png|icons/apple-touch-icon.png|manifest.json)',
         headers: [
           {
             key: 'Cache-Control',

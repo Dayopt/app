@@ -46,3 +46,28 @@ export const Year: Story = {
     granularity: 'year',
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { currentDate: new Date(2026, 2, 16), granularity: 'day' },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Day（日粒度）</p>
+        <StatsDateDisplay currentDate={new Date(2026, 2, 16)} granularity="day" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Week（週粒度）</p>
+        <StatsDateDisplay currentDate={new Date(2026, 2, 16)} granularity="week" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Month（月粒度）</p>
+        <StatsDateDisplay currentDate={new Date(2026, 2, 16)} granularity="month" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Year（年粒度）</p>
+        <StatsDateDisplay currentDate={new Date(2026, 2, 16)} granularity="year" />
+      </div>
+    </div>
+  ),
+};

@@ -14,45 +14,24 @@
         "description": "タグを選ぶと、それが予定の名前と色になります"
       },
       "explainTags": {
-        "title": "タグ — 活動カテゴリ",
-        "description": "タグには3つの役割があります:",
-        "categorize": {
-          "label": "分類する",
-          "detail": "活動の種類ごとに時間ブロックをグループ化"
-        },
-        "colorCode": {
-          "label": "色分けする",
-          "detail": "タグごとの色でカレンダーが見やすくなる"
-        },
-        "trackStats": {
-          "label": "統計を見る",
-          "detail": "各カテゴリにどれだけ時間を使ったか一目でわかる"
-        },
+        "title": "タグがタイトルになる",
+        "description": "タグを選ぶだけで予定や記録が作れます。タイトルの入力欄はありません。タグ＝名前です。",
         "examples": {
           "deepWork": "集中作業",
           "exercise": "運動",
           "meeting": "ミーティング"
         }
       },
-      "gridDragRecord": {
-        "title": "記録を作成しよう",
-        "description": "今度は過去の時間帯をドラッグして、実際にやったことを記録しましょう"
-      },
-      "selectTagRecord": {
-        "title": "記録にタグを付ける",
-        "description": "記録にもタグを選びましょう — 左の破線ボーダーが記録の目印です"
-      },
       "planVsRecord": {
-        "title": "予定と記録のちがい",
-        "description": "実線バーが予定、破線バーが記録。予定の時間が過ぎると、自動で記録に変わります。",
-        "planLabel": "予定",
-        "planDetail": "これからやること",
-        "recordLabel": "記録",
-        "recordDetail": "実際にやったこと",
-        "autoConvert": "時間が過ぎると自動変換"
+        "title": "予定と実績を管理",
+        "description": "ブロックをタップすると、予定時間と実績時間の両方を管理できます。差分は自動で計算されます。",
+        "planLabel": "予定時間",
+        "planDetail": "スケジュールした時間",
+        "recordLabel": "実績時間",
+        "recordDetail": "実際にかかった時間",
+        "autoConvert": "差分を自動計算"
       }
     },
-    "pastTimeHint": "過去の時間帯をドラッグしてください",
     "done": {
       "title": "準備完了！",
       "description": "さっそく今日の予定を立てましょう"

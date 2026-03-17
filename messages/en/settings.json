@@ -42,7 +42,7 @@
       "updatingPassword": "Updating password...",
       "updatePassword": "Update Password",
       "passwordMismatch": "Passwords do not match",
-      "passwordMinLength": "Password must be at least 12 characters",
+      "passwordMinLength": "Password must be at least 8 characters",
       "passwordUpdateFailed": "Failed to update password",
       "passwordIncorrect": "Current password is incorrect",
       "passwordReused": "Cannot reuse any of your last 5 passwords. Please choose a different password.",

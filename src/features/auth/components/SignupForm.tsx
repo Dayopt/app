@@ -9,11 +9,10 @@ import NextImage from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
 import { Link } from '@/platform/i18n/navigation';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Field,
   FieldDescription,
@@ -53,7 +52,7 @@ async function safeCheckPasswordPwned(password: string): Promise<boolean> {
  * 設計原則:
  * 1. 最小依存: メール・パスワードでのサインアップは外部サービスなしで動作
  * 2. グレースフルデグラデーション: Have I Been Pwned API等が失敗してもサインアップ可能
- * 3. クライアントサイドバリデーション: パスワード長・一致確認
+ * 3. クライアントサイドバリデーション: パスワード長
  */
 export function SignupForm({ className, ...props }: React.ComponentProps<'div'>) {
   const params = useParams();
@@ -63,14 +62,10 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
   const signUp = useAuthStore((state) => state.signUp);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [emailSent, setEmailSent] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState('');
 
   const {
     register,
-    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
@@ -78,8 +73,6 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     defaultValues: {
       email: '',
       password: '',
-      confirmPassword: '',
-      agreedToTerms: false,
     },
     mode: 'onSubmit', // DADS準拠: 送信時バリデーション
   });
@@ -95,17 +88,12 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const { error, data: signUpData } = await signUp(data.email, data.password);
+      const { error } = await signUp(data.email, data.password);
       if (error) {
         const errorKey = getAuthErrorKey(error.message, 'signup');
         setServerError(t(errorKey));
-      } else if (signUpData.session) {
-        // email確認不要（即ログイン）
-        router.push(`/${locale}/calendar/day`);
       } else {
-        // email確認が必要
-        setSubmittedEmail(data.email);
-        setEmailSent(true);
+        router.push(`/${locale}/calendar/day`);
       }
     } catch (err) {
       logger.error('[SignupForm] Signup error:', err);
@@ -113,56 +101,14 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
   };
 
-  if (emailSent) {
-    return (
-      <div className={cn('flex flex-col gap-6', className)} {...props}>
-        <Card className="overflow-hidden p-0">
-          <CardContent className="grid p-0 md:grid-cols-2">
-            <div className="p-6 md:p-8">
-              <FieldGroup>
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-2xl font-bold">
-                    {t('auth.success.signupSuccess').split('.')[0]}
-                  </h1>
-                  <p className="text-muted-foreground text-balance">
-                    {t('auth.passwordResetForm.sentResetLink')}{' '}
-                    <span className="font-normal">{submittedEmail}</span>
-                  </p>
-                </div>
-                <Field>
-                  <Button asChild>
-                    <Link href="/auth/login">{t('auth.passwordResetForm.backToLogin')}</Link>
-                  </Button>
-                </Field>
-              </FieldGroup>
-            </div>
-            <div className="bg-container relative hidden md:block">
-              <NextImage
-                src="/placeholder.svg"
-                alt="Decorative background"
-                fill
-                priority
-                sizes="(min-width: 768px) 50vw, 0vw"
-                className="object-cover dark:brightness-[0.2] dark:grayscale"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
           <form className="p-6 md:p-8" onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
+              <div className="flex flex-col items-center text-center">
                 <h1 className="text-2xl font-bold">{t('auth.signupForm.createAccount')}</h1>
-                <p className="text-muted-foreground text-sm text-balance">
-                  {t('auth.signupForm.enterEmail')}
-                </p>
               </div>
 
               {serverError && (
@@ -170,210 +116,6 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                   {serverError}
                 </FieldError>
               )}
-
-              <Field>
-                <FieldLabel htmlFor="email" required requiredLabel={t('common.form.required')}>
-                  {t('auth.signupForm.email')}
-                </FieldLabel>
-                <FieldSupportText id="email-support">
-                  {t('auth.signupForm.emailSupportText')}
-                </FieldSupportText>
-                <Input
-                  id="email"
-                  type="email"
-                  inputMode="email"
-                  enterKeyHint="next"
-                  aria-disabled={isSubmitting || undefined}
-                  autoComplete="email"
-                  aria-invalid={!!errors.email}
-                  aria-describedby={
-                    [errors.email ? 'email-error' : null, 'email-support']
-                      .filter(Boolean)
-                      .join(' ') || undefined
-                  }
-                  {...register('email')}
-                />
-                {errors.email && <FieldError id="email-error">{errors.email.message}</FieldError>}
-              </Field>
-
-              <Field>
-                <Field className="grid grid-cols-2 gap-4">
-                  <Field>
-                    <FieldLabel
-                      htmlFor="password"
-                      required
-                      requiredLabel={t('common.form.required')}
-                    >
-                      {t('auth.signupForm.password')}
-                    </FieldLabel>
-                    <FieldSupportText id="password-support">
-                      {t('auth.signupForm.passwordSupportText')}
-                    </FieldSupportText>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        enterKeyHint="next"
-                        aria-disabled={isSubmitting || undefined}
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.password}
-                        aria-describedby={
-                          [errors.password ? 'password-error' : null, 'password-support']
-                            .filter(Boolean)
-                            .join(' ') || undefined
-                        }
-                        {...register('password')}
-                      />
-                      <HoverTooltip
-                        content={
-                          showPassword
-                            ? t('auth.signupForm.hidePassword')
-                            : t('auth.signupForm.showPassword')
-                        }
-                        side="top"
-                      >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon
-                          className="absolute top-0 right-0 h-full px-4"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-disabled={isSubmitting || undefined}
-                          aria-label={
-                            showPassword
-                              ? t('auth.signupForm.hidePassword')
-                              : t('auth.signupForm.showPassword')
-                          }
-                        >
-                          {showPassword ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </HoverTooltip>
-                    </div>
-                    {errors.password && (
-                      <FieldError id="password-error">{errors.password.message}</FieldError>
-                    )}
-                  </Field>
-                  <Field>
-                    <FieldLabel
-                      htmlFor="confirm-password"
-                      required
-                      requiredLabel={t('common.form.required')}
-                    >
-                      {t('auth.signupForm.confirmPassword')}
-                    </FieldLabel>
-                    <FieldSupportText id="confirm-password-support">
-                      {t('auth.signupForm.confirmPasswordSupportText')}
-                    </FieldSupportText>
-                    <div className="relative">
-                      <Input
-                        id="confirm-password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        enterKeyHint="go"
-                        aria-disabled={isSubmitting || undefined}
-                        autoComplete="new-password"
-                        aria-invalid={!!errors.confirmPassword}
-                        aria-describedby={
-                          [
-                            errors.confirmPassword ? 'confirm-password-error' : null,
-                            'confirm-password-support',
-                          ]
-                            .filter(Boolean)
-                            .join(' ') || undefined
-                        }
-                        {...register('confirmPassword')}
-                      />
-                      <HoverTooltip
-                        content={
-                          showConfirmPassword
-                            ? t('auth.signupForm.hidePassword')
-                            : t('auth.signupForm.showPassword')
-                        }
-                        side="top"
-                      >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon
-                          className="absolute top-0 right-0 h-full px-4"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          aria-disabled={isSubmitting || undefined}
-                          aria-label={
-                            showConfirmPassword
-                              ? t('auth.signupForm.hidePassword')
-                              : t('auth.signupForm.showPassword')
-                          }
-                        >
-                          {showConfirmPassword ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </HoverTooltip>
-                    </div>
-                    {errors.confirmPassword && (
-                      <FieldError id="confirm-password-error">
-                        {errors.confirmPassword.message}
-                      </FieldError>
-                    )}
-                  </Field>
-                </Field>
-              </Field>
-
-              {/* 利用規約とプライバシーポリシーへの同意 */}
-              <Field>
-                <div className="flex items-start gap-4">
-                  <Controller
-                    name="agreedToTerms"
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox
-                        id="agree-terms"
-                        checked={field.value}
-                        onCheckedChange={(checked) => field.onChange(checked === true)}
-                        aria-disabled={isSubmitting || undefined}
-                        aria-label={t('auth.register.agreeTerms')}
-                      />
-                    )}
-                  />
-                  <label htmlFor="agree-terms" className="text-sm leading-relaxed">
-                    {t('auth.signupForm.byContinuing')}{' '}
-                    <a
-                      href="https://dayopt.app/legal/terms"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground underline underline-offset-4"
-                    >
-                      {t('auth.signupForm.termsOfService')}
-                    </a>{' '}
-                    {t('auth.signupForm.and')}{' '}
-                    <a
-                      href="https://dayopt.app/legal/privacy"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground underline underline-offset-4"
-                    >
-                      {t('auth.signupForm.privacyPolicy')}
-                    </a>
-                    {t('auth.signupForm.agree')}
-                  </label>
-                </div>
-                {errors.agreedToTerms && <FieldError>{errors.agreedToTerms.message}</FieldError>}
-              </Field>
-
-              <Field>
-                <Button type="submit" isLoading={isSubmitting} className="w-full">
-                  {t('auth.signupForm.createAccountButton')}
-                </Button>
-              </Field>
-
-              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                {t('auth.signupForm.orContinueWith')}
-              </FieldSeparator>
 
               <Field className="grid grid-cols-3 gap-4">
                 <Button variant="outline" type="button" disabled={isSubmitting}>
@@ -405,6 +147,114 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 </Button>
               </Field>
 
+              <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+                {t('auth.signupForm.orContinueWith')}
+              </FieldSeparator>
+
+              <Field>
+                <FieldLabel htmlFor="email" required requiredLabel={t('common.form.required')}>
+                  {t('auth.signupForm.email')}
+                </FieldLabel>
+                <FieldSupportText id="email-support">
+                  {t('auth.signupForm.emailSupportText')}
+                </FieldSupportText>
+                <Input
+                  id="email"
+                  type="email"
+                  inputMode="email"
+                  enterKeyHint="next"
+                  aria-disabled={isSubmitting || undefined}
+                  autoComplete="email"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={
+                    [errors.email ? 'email-error' : null, 'email-support']
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                  {...register('email')}
+                />
+                {errors.email && <FieldError id="email-error">{errors.email.message}</FieldError>}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="password" required requiredLabel={t('common.form.required')}>
+                  {t('auth.signupForm.password')}
+                </FieldLabel>
+                <FieldSupportText id="password-support">
+                  {t('auth.signupForm.passwordSupportText')}
+                </FieldSupportText>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    enterKeyHint="go"
+                    aria-disabled={isSubmitting || undefined}
+                    autoComplete="new-password"
+                    aria-invalid={!!errors.password}
+                    aria-describedby={
+                      [errors.password ? 'password-error' : null, 'password-support']
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
+                    {...register('password')}
+                  />
+                  <HoverTooltip
+                    content={
+                      showPassword
+                        ? t('auth.signupForm.hidePassword')
+                        : t('auth.signupForm.showPassword')
+                    }
+                    side="top"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      icon
+                      className="absolute top-0 right-0 h-full px-4"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-disabled={isSubmitting || undefined}
+                      aria-label={
+                        showPassword
+                          ? t('auth.signupForm.hidePassword')
+                          : t('auth.signupForm.showPassword')
+                      }
+                    >
+                      {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                    </Button>
+                  </HoverTooltip>
+                </div>
+                {errors.password && (
+                  <FieldError id="password-error">{errors.password.message}</FieldError>
+                )}
+              </Field>
+
+              <Field>
+                <Button type="submit" isLoading={isSubmitting} className="w-full">
+                  {t('auth.signupForm.createAccountButton')}
+                </Button>
+                <p className="text-muted-foreground text-center text-xs leading-relaxed">
+                  {t('auth.signupForm.byContinuing')}{' '}
+                  <a
+                    href="https://dayopt.app/legal/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline underline-offset-4"
+                  >
+                    {t('auth.signupForm.termsOfService')}
+                  </a>{' '}
+                  {t('auth.signupForm.and')}{' '}
+                  <a
+                    href="https://dayopt.app/legal/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground underline underline-offset-4"
+                  >
+                    {t('auth.signupForm.privacyPolicy')}
+                  </a>
+                  {t('auth.signupForm.agree')}
+                </p>
+              </Field>
+
               <FieldDescription className="text-center">
                 {t('auth.signupForm.alreadyHaveAccount')}{' '}
                 <Link href="/auth/login">{t('auth.signupForm.login')}</Link>
@@ -413,7 +263,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
           </form>
           <div className="bg-container relative hidden md:block">
             <NextImage
-              src="/placeholder.svg"
+              src="/images/placeholder.svg"
               alt="Decorative background"
               fill
               priority

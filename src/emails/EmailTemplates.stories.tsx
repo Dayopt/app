@@ -3,6 +3,9 @@
  *
  * React Email は完全な HTML文書を生成するため、
  * render() で HTML文字列に変換し iframe の srcDoc で表示する。
+ *
+ * Auth メール: supabase/functions/send-auth-email/ (Deno用コピー)
+ * アプリメール + Storybook用コピー: src/emails/
  */
 
 import { useEffect, useState } from 'react';
@@ -72,15 +75,26 @@ export const Guidelines: Story = {
       <section>
         <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">構成</h2>
         <div className="text-muted-foreground space-y-1 font-mono text-sm">
+          <p className="text-foreground font-bold">Auth メール（Supabase Edge Function / Deno）</p>
+          <p>supabase/functions/send-auth-email/</p>
+          <p className="pl-4">index.ts — webhook検証 + renderAsync + Resend送信</p>
+          <p className="pl-4">styles.tsx — 共通スタイル（tokens/colors.css トークン → hex）</p>
+          <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth signup）</p>
+          <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth recovery）</p>
+          <p className="pl-4">MagicLinkEmail.tsx — マジックリンク（Auth magic_link）</p>
+          <p className="text-foreground mt-4 font-bold">
+            アプリメール（tRPC email router / Node.js）
+          </p>
           <p>src/emails/</p>
-          <p className="pl-4">styles.ts — 共通スタイル（tokens/colors.css トークン → hex）</p>
+          <p className="pl-4">styles.ts — 共通スタイル（Edge Function側と同一値を維持）</p>
           <p className="pl-4">WelcomeEmail.tsx — 新規登録</p>
-          <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth）</p>
-          <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth）</p>
-          <p className="pl-4">MagicLinkEmail.tsx — マジックリンク（Auth）</p>
           <p className="pl-4">ReminderEmail.tsx — プランリマインダー</p>
           <p className="pl-4">OverdueEmail.tsx — 期限超過</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
+          <p className="text-muted-foreground mt-4 text-xs">
+            ※ Auth テンプレート3つは Storybook プレビュー用に src/emails/ にもコピーが存在。
+            Deno/Node.js のランタイム差異により共有不可のため、変更時は両方を更新すること。
+          </p>
         </div>
       </section>
 
@@ -108,7 +122,7 @@ export const Guidelines: Story = {
 
       <section>
         <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">
-          テンプレートと tRPC エンドポイント
+          テンプレートと送信フロー
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -121,10 +135,10 @@ export const Guidelines: Story = {
             </thead>
             <tbody className="text-muted-foreground">
               {[
+                ['ConfirmEmail', 'メール確認', 'Auth Hook (signup)'],
+                ['PasswordResetEmail', 'PW リセット', 'Auth Hook (recovery)'],
+                ['MagicLinkEmail', 'マジックリンク', 'Auth Hook (magic_link)'],
                 ['WelcomeEmail', '新規登録', 'email.sendWelcome'],
-                ['ConfirmEmail', 'メール確認', 'Supabase Auth hook (signup)'],
-                ['PasswordResetEmail', 'PW リセット', 'Supabase Auth hook (recovery)'],
-                ['MagicLinkEmail', 'マジックリンク', 'Supabase Auth hook (magic_link)'],
                 ['ReminderEmail', 'リマインダー', 'email.sendReminder'],
                 ['OverdueEmail', '期限超過', 'email.sendOverdue'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
@@ -145,52 +159,6 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">デザインルール</h2>
-        <ul className="text-muted-foreground list-disc space-y-2 pl-6 text-sm">
-          <li>
-            全テンプレートで <code>src/emails/styles.ts</code> の共通スタイルを使用
-          </li>
-          <li>メールはライトモード固定（ダークモード未対応）</li>
-          <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
-          <li>フッターに通知設定リンクを含める（Reminder/Overdue）</li>
-          <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
-          <li>maxWidth: 580px（モバイル表示を考慮）</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">Resend インフラ構成</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border border-b">
-                <th className="py-3 text-left font-bold">項目</th>
-                <th className="py-3 text-left font-bold">設定値</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              {[
-                ['送信ドメイン', 'send.dayopt.app（Resend verified）'],
-                ['送信元アドレス', 'noreply@send.dayopt.app'],
-                ['DNS レコード', 'DKIM + SPF + MX（Vercel DNS）'],
-                ['DMARC', 'v=DMARC1; p=none（監視モード）'],
-                ['Webhook URL', '/api/webhooks/resend'],
-                ['本番 API キー', 'Sending Access（send.dayopt.app のみ）'],
-                ['開発 API キー', 'Full Access（テスト送信用）'],
-              ].map(([item, value]) => (
-                <tr key={item} className="border-border border-b">
-                  <td className="py-3">
-                    <code className="text-xs">{item}</code>
-                  </td>
-                  <td className="py-3">{value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section>
         <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">送信フロー</h2>
         <div className="text-muted-foreground space-y-4 text-sm">
           <div>
@@ -200,7 +168,7 @@ export const Guidelines: Story = {
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
               <p>Supabase Auth → send_email hook → Edge Function</p>
               <p className="pl-4">→ supabase/functions/send-auth-email/index.ts</p>
-              <p className="pl-4">→ Resend API → ユーザー</p>
+              <p className="pl-4">→ React Email renderAsync → Resend API → ユーザー</p>
             </div>
           </div>
           <div>
@@ -209,65 +177,22 @@ export const Guidelines: Story = {
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
               <p>App → tRPC email.sendXxx → React Email render</p>
-              <p className="pl-4">→ src/server/api/routers/email.ts</p>
+              <p className="pl-4">→ src/features/notifications/server/email-router.ts</p>
               <p className="pl-4">→ Resend API → ユーザー</p>
             </div>
           </div>
-          <div>
-            <h3 className="text-foreground mb-2 text-sm font-bold">Webhook（配信結果の監視）</h3>
-            <div className="bg-muted rounded-lg p-4 font-mono text-xs">
-              <p>Resend → POST /api/webhooks/resend → ログ記録</p>
-              <p className="pl-4">→ src/app/api/webhooks/resend/route.ts</p>
-              <p className="pl-4">→ bounced / complained / delivered / delayed</p>
-            </div>
-          </div>
         </div>
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">環境変数</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border border-b">
-                <th className="py-3 text-left font-bold">変数名</th>
-                <th className="py-3 text-left font-bold">用途</th>
-                <th className="py-3 text-left font-bold">設定場所</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              {[
-                ['RESEND_API_KEY', 'Resend API キー', 'Vercel + .env.local'],
-                ['RESEND_FROM_EMAIL', '送信元アドレス', 'Vercel + .env.local'],
-                ['RESEND_WEBHOOK_SECRET', 'Webhook 署名検証シークレット', 'Vercel + .env.local'],
-              ].map(([name, purpose, where]) => (
-                <tr key={name} className="border-border border-b">
-                  <td className="py-3">
-                    <code className="text-xs">{name}</code>
-                  </td>
-                  <td className="py-3">{purpose}</td>
-                  <td className="py-3">{where}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">セキュリティ</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">デザインルール</h2>
         <ul className="text-muted-foreground list-disc space-y-2 pl-6 text-sm">
-          <li>
-            本番は <strong>Sending Access</strong> キー（ドメイン管理不可、送信のみ）
-          </li>
-          <li>
-            tRPC mutation は <code>verifyEmailOwnership()</code> で送信先を自分のアドレスに制限
-          </li>
-          <li>
-            Webhook は <strong>svix 署名検証</strong>で改ざん防止
-          </li>
-          <li>テストメール endpoint は本番環境で無効化</li>
-          <li>DMARC で送信ドメインのなりすましを監視</li>
+          <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
+          <li>メールはライトモード固定（ダークモード未対応）</li>
+          <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
+          <li>フッターに通知設定リンクを含める（Reminder/Overdue）</li>
+          <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
+          <li>maxWidth: 580px（モバイル表示を考慮）</li>
         </ul>
       </section>
     </div>

@@ -16,6 +16,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { convertToModelMessages, stepCountIs, streamText } from 'ai';
 import { NextResponse } from 'next/server';
 
+import { env } from '@/env';
 import { buildAIContext, buildSystemPrompt, createAITools } from '@/features/ai/server';
 import { DEFAULT_MODELS, FREE_TIER_MODEL, SUPPORTED_MODELS } from '@/features/ai/server/types';
 import { createAIUsageService } from '@/features/ai/server/usage-service';
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
 
     if (!isBYOK) {
       // --- 無料枠パス ---
-      const serverApiKey = process.env.ANTHROPIC_API_KEY;
+      const serverApiKey = env.ANTHROPIC_API_KEY;
       if (!serverApiKey) {
         return NextResponse.json(
           {

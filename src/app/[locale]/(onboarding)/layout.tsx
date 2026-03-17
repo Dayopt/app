@@ -2,22 +2,29 @@
  * オンボーディングページ用レイアウト
  *
  * 認証済みだがオンボーディング未完了のユーザー向け。
+ * IntlProvider でオンボーディング用namespace のみクライアントに配信。
  * 軽量なOnboardingProviders（tRPC + Auth + Theme）のみ適用。
  *
  * @see src/shell/providers/OnboardingProviders.tsx
  */
+import { IntlProvider } from '@/platform/i18n';
 import { OnboardingProviders } from '@/shell/providers/OnboardingProviders';
+
+/** オンボーディングページで必要なnamespace */
+const ONBOARDING_NAMESPACES = ['common', 'onboarding', 'tour', 'error'];
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
 }
 
-export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
+export default async function OnboardingLayout({ children }: OnboardingLayoutProps) {
   return (
-    <OnboardingProviders>
-      <main className="bg-background flex min-h-screen items-center justify-center">
-        {children}
-      </main>
-    </OnboardingProviders>
+    <IntlProvider namespaces={ONBOARDING_NAMESPACES}>
+      <OnboardingProviders>
+        <main className="bg-background flex min-h-screen items-center justify-center">
+          {children}
+        </main>
+      </OnboardingProviders>
+    </IntlProvider>
   );
 }

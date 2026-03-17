@@ -5,13 +5,41 @@
 # ========================================
 # 使い方:
 #   chmod +x scripts/seed-dev-data.sh
-#   ./scripts/seed-dev-data.sh
+#   ./scripts/seed-dev-data.sh           # Preview Supabase（デフォルト）
+#   USE_LOCAL_DB=true ./scripts/seed-dev-data.sh  # ローカルDB
 # ========================================
 
 set -e
 
-SUPABASE_URL="http://127.0.0.1:54321"
-ANON_KEY="sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
+# ========================================
+# 環境変数の取得
+# ========================================
+LOCAL_URL="http://127.0.0.1:54321"
+LOCAL_ANON_KEY="sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
+
+if [ "$USE_LOCAL_DB" = "true" ]; then
+  echo "🔧 ローカルDB モード"
+  SUPABASE_URL="$LOCAL_URL"
+  ANON_KEY="$LOCAL_ANON_KEY"
+  DB_TARGET="--local"
+else
+  echo "☁️  Preview Supabase モード"
+  # .env.local から読み込み（vercel env pull で生成済み前提）
+  if [ -f .env.local ]; then
+    SUPABASE_URL=$(grep '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | cut -d'=' -f2- | tr -d '"')
+    ANON_KEY=$(grep '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' .env.local | cut -d'=' -f2- | tr -d '"')
+  fi
+
+  if [ -z "$SUPABASE_URL" ] || [ -z "$ANON_KEY" ]; then
+    echo "❌ .env.local から環境変数を読み込めませんでした"
+    echo "   vercel env pull .env.local を実行してください"
+    exit 1
+  fi
+  DB_TARGET="--linked"
+fi
+
+echo "  URL: $SUPABASE_URL"
+echo ""
 
 echo "開発用データを投入します..."
 
@@ -94,7 +122,7 @@ INSERT INTO public.tags (user_id, name, color) VALUES
   ('${USER_ID}', 'Documentation', '#8b5cf6');
 EOF
 
-supabase db execute --file /tmp/seed_entries.sql --local
+supabase db execute --file /tmp/seed_entries.sql $DB_TARGET
 
 echo "サンプルデータ投入完了"
 echo ""

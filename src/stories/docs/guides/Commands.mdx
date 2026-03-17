@@ -8,137 +8,158 @@ Dayoptプロジェクトで使用可能な全npmコマンドのリファレン�
 
 ---
 
-## 基本開発コマンド（頻出4個）
+## 基本開発コマンド（頻出）
 
 ```bash
-npm run dev                 # 開発サーバー起動
-npm run lint                # コード品質チェック
+npm run dev                 # 開発サーバー起動（env自動同期）
 npm run typecheck           # 型チェック
-npm run docs:check          # ドキュメント整合性チェック
+npm run lint                # コード品質チェック
+npm run lint:boundaries     # feature境界チェック
+npm run test:run            # ユニットテスト実行
+npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **注意**: 開発サーバー（`npm run dev`, `npm run storybook`）の起動・停止はユーザー責務です。
+> **注意**: `npm run dev` は `vercel env pull` を自動実行して `.env.local` を最新化する。
+> 開発サーバー（`npm run dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ---
 
 ## 全コマンド一覧
 
-### 基本コマンド
+### 開発サーバー
 
 ```bash
-npm run dev                 # next dev
+npm run dev                 # vercel env pull + next dev
+npm run dev:safe            # 既存プロセスを確認してから起動
+npm run dev:kill            # ポート3000のプロセスを強制終了
+npm run storybook           # Storybook（ポート6006）
+```
+
+### ビルド
+
+```bash
 npm run build               # next build
-npm run start               # next start
+npm run build-storybook     # Storybook ビルド
+npm run bundle:analyze      # バンドル解析付きビルド
+```
+
+### コード品質
+
+```bash
+npm run lint                # ESLint（--max-warnings 0）
+npm run lint:fix            # ESLint 自動修正
+npm run lint:boundaries     # feature間の直接importを検出
+npm run lint:boundaries:update  # 許可リスト更新
+npm run lint:tokens         # Tailwindセマンティックトークンチェック
 npm run typecheck           # tsc --noEmit
+npm run format              # Prettier フォーマット
+npm run format:check        # Prettier チェックのみ
 ```
 
-### コード品質管理
+### テスト
 
 ```bash
-npm run lint                # ESLint全品質チェック
-npm run lint:fix            # 自動修正可能な問題を修正
-npm run lint:a11y           # アクセシビリティ専用チェック
+npm run test                # Vitest（watchモード）
+npm run test:run            # Vitest（1回実行）
+npm run test:unit           # ユニットテスト
+npm run test:watch          # ウォッチモード
+npm run test:ui             # Vitest UI
+npm run test:coverage       # カバレッジ付き実行
+npm run test:coverage:summary  # カバレッジサマリー表示
+npm run test:diff-coverage  # 差分カバレッジ
+npm run test-storybook      # Storybook テスト
+npm run test:integration    # 統合テスト
+npm run test:e2e            # Playwright E2Eテスト
+npm run test:e2e:smoke      # E2Eスモークテスト
+npm run test:e2e:critical   # E2Eクリティカルパス
+npm run test:e2e:ui         # Playwright UIモード
+npm run test:e2e:headed     # ブラウザ表示付きE2E
 ```
 
-### デプロイ履歴管理
+### Supabase / DB
 
 ```bash
-npm run deploy:init         # デプロイ履歴ファイルの初期化
-npm run deploy:record       # デプロイの記録
-npm run deploy:stats        # デプロイ統計情報の表示
-npm run deploy:list         # デプロイ履歴の一覧表示
-npm run deploy:export       # 履歴データのエクスポート（JSON/CSV）
-npm run deploy:pre          # デプロイ前チェック（品質・環境・依存関係）
-npm run deploy:post         # デプロイ後処理（記録・通知・ヘルスチェック）
-npm run deploy:full         # 完全デプロイフロー
+npm run db:reset            # ローカルDB リセット
+npm run db:reset-preview    # Preview Supabase リセット
+npm run db:seed             # 開発データ投入
+npm run db:fresh            # リセット + シード
+npm run migration:create    # マイグレーション作成
+npm run migration:list      # マイグレーション一覧
+npm run migration:status    # DB差分確認
+npm run types:generate      # 本番から型生成
+npm run types:generate:staging  # Stagingから型生成
+npm run types:generate:local    # ローカルから型生成
 ```
 
-### アナリティクス・メトリクス管理
+### 環境変数
 
 ```bash
-npm run analytics:validate  # イベント名の検証・命名規則チェック
-npm run analytics:report    # 詳細レポート生成（JSON出力）
-npm run analytics:unused    # 未使用イベントの一覧表示
-npm run analytics:stats     # 基本統計情報（使用率・カテゴリ別）
-npm run analytics:check     # 完全検証
+npm run env:check           # env.ts の型チェック
+npm run vercel:env          # Vercel 環境変数一覧
+npm run vercel:env:pull     # 環境変数をローカルに同期
 ```
 
-### API バージョニング管理
+### i18n
 
 ```bash
-npm run api:version:test      # 包括的APIバージョニングテスト
-npm run api:version:health    # API健康チェック
-npm run api:version:versioning # バージョニング機能テスト
-npm run api:version:stats     # API統計情報確認
-npm run api:version:cors      # CORS設定テスト
-npm run api:version:full      # 完全なAPI管理テスト
+npm run i18n:check          # 翻訳キーの整合性チェック
+npm run i18n:unused         # 未使用の翻訳キーを検出
 ```
 
-### 設定ファイル管理
+### セキュリティ・ライセンス
 
 ```bash
-npm run config:validate       # 設定ファイルのバリデーション
-npm run config:compare        # 環境別設定の比較表示
-npm run config:docs           # スキーマドキュメント自動生成
-npm run config:stats          # 設定ファイルの統計情報
-npm run config:check          # 基本的な設定チェック
-npm run config:full           # 完全な設定管理
+npm run license:check       # ライセンスチェック
+npm run license:audit       # ライセンスサマリー
+npm run license:report      # ライセンスCSVレポート
+npm run security:audit      # npm audit（production）
+npm run security:check      # npm audit（moderate以上）
+npm run security:full       # audit + typecheck + lint
+npm run security:audit:actions  # GitHub Actions監査
 ```
 
-### ログシステム管理
+### パフォーマンス
 
 ```bash
-npm run logs:analyze          # ログファイルの詳細分析
-npm run logs:alert            # ログベースのアラートチェック
-npm run logs:watch            # リアルタイムログ監視
-npm run logs:report           # 分析レポート生成（JSON）
-npm run logs:csv              # 分析レポート生成（CSV）
+npm run size                # バンドルサイズチェック
+npm run size:why            # バンドルサイズ分析
+npm run perf:lighthouse     # Lighthouse CI
+npm run deps:circular       # 循環依存検出
+npm run deps:outdated       # 古いパッケージ一覧
 ```
 
-### Breaking Change管理
+### ドキュメント
 
 ```bash
-npm run breaking:detect       # Git diffから破壊的変更を自動検知
-npm run breaking:record       # 破壊的変更の手動記録
-npm run breaking:validate     # BREAKING_CHANGES.mdの妥当性検証
-npm run breaking:full         # 完全フロー（検知→分析→記録）
+npm run docs:check          # コード-ドキュメント整合性
+npm run docs:validate       # リンク + ルール検証
 ```
 
-### ビジネスルール辞書システム管理
+### Sentry
 
 ```bash
-npm run generate:business-rules       # バリデーション・型・スキーマ自動生成
-npm run business-rules:test           # 基盤・統合テスト実行
-npm run business-rules:generate-and-test # コード生成・テスト統合実行
-npm run business-rules:full           # 完全ビジネスルール管理フロー
+npm run sentry:test         # Sentry接続テスト
+npm run sentry:verify       # Sentry設定検証
 ```
 
-### ドキュメント品質管理
+### Git ログ
 
 ```bash
-npm run docs:check            # 整合性チェック
-npm run docs:fix-and-check    # 自動修正→チェック（推奨）
-```
-
-### Conventional Commits管理
-
-```bash
-npm run commit:feat          # 新機能コミット補助
-npm run commit:fix           # バグ修正コミット補助
-npm run commit:docs          # ドキュメントコミット補助
-npm run log:feat             # 機能追加ログのみ表示
-npm run log:fix              # バグ修正ログのみ表示
-npm run log:type             # 型別コミット一覧（最新20件）
-```
-
-### Issue管理
-
-```bash
-npm run issue:start "機能名: 実装内容"   # 新しい作業開始
-npm run issue:progress "作業内容の詳細"  # 進捗更新
-npm run issue:complete "完了内容とテスト結果" # 完了報告
+npm run log:feat            # feat: コミットのみ表示
+npm run log:fix             # fix: コミットのみ表示
+npm run log:type            # 型別コミット一覧（最新20件）
 ```
 
 ---
 
-**最終更新**: 2026-02-12 | **バージョン**: v1.0
+## pre-commit フック（自動実行）
+
+コミット時に以下が自動で実行される:
+
+1. **lint-staged**: ステージされた `.ts/.tsx` に prettier + eslint
+2. **typecheck**: `.ts/.tsx` ファイルが含まれる場合のみ `tsc --noEmit`
+3. **license:check**: `package.json` 変更時のみライセンスチェック
+
+---
+
+**最終更新**: 2026-03-16

@@ -30,6 +30,7 @@ import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query
 import { createServerSideHelpers } from '@trpc/react-query/server';
 import superjson from 'superjson';
 
+import { env } from '@/env';
 import type { Database } from '@/lib/database.types';
 import type { Context } from '@/platform/trpc/procedures';
 import { appRouter } from '@/platform/trpc/root';
@@ -44,8 +45,8 @@ async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {

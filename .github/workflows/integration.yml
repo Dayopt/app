@@ -1,10 +1,9 @@
-name: 🔗 Integration Tests
+name: Integration Tests
 
 on:
   pull_request:
     branches: [main]
     paths:
-      # Integration テストが必要なパスのみトリガー
       - 'src/server/**'
       - 'src/features/*/services/**'
       - 'src/platform/supabase/**'
@@ -18,7 +17,6 @@ on:
       - 'src/platform/supabase/**'
       - 'supabase/migrations/**'
       - 'src/test/integration/**'
-  workflow_dispatch:
 
 env:
   NODE_VERSION: '20'
@@ -30,103 +28,52 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   integration:
-    name: 🔗 Integration Tests
+    name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: 📦 Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: 🐳 Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: 🚀 Start Supabase
-        run: |
-          supabase start
-          echo "Supabase started successfully"
+      - name: Start Supabase
+        run: supabase start
 
-      - name: 📊 Get Supabase status
+      - name: Get Supabase status
         id: supabase
         run: |
-          # Supabase の接続情報を取得
           API_URL=$(supabase status --output json | jq -r '.API_URL')
           ANON_KEY=$(supabase status --output json | jq -r '.ANON_KEY')
           SERVICE_ROLE_KEY=$(supabase status --output json | jq -r '.SERVICE_ROLE_KEY')
           DB_URL=$(supabase status --output json | jq -r '.DB_URL')
-
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "anon_key=$ANON_KEY" >> $GITHUB_OUTPUT
           echo "service_role_key=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
           echo "db_url=$DB_URL" >> $GITHUB_OUTPUT
 
-      - name: 🧪 Run Integration Tests
+      - name: Run integration tests
         run: npm run test:integration
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
           DATABASE_URL: ${{ steps.supabase.outputs.db_url }}
-          # テスト環境フラグ
           NODE_ENV: test
           CI: true
 
-      - name: 🛑 Stop Supabase
+      - name: Stop Supabase
         if: always()
         run: supabase stop
-
-      - name: 💬 PR Comment on Failure
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        with:
-          script: |
-            const body = `## 🔗 Integration Test Failure
-
-            Integration tests failed. This may indicate issues with:
-            - Database operations
-            - API endpoints (tRPC routers)
-            - RLS policies
-            - Service layer logic
-
-            Please check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.
-
-            <sub>🤖 Dayopt Integration Bot</sub>`;
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existingComment = comments.find(c => c.body.includes('🔗 Integration Test'));
-
-            if (existingComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existingComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }

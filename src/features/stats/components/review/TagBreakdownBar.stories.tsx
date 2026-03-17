@@ -51,3 +51,33 @@ export const TwoTags: Story = {
 export const Empty: Story = {
   args: { segments: [] },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { segments: MOCK_SEGMENTS },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div className="w-full">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">WithList（バー＋凡例）</p>
+        <TagBreakdownBar segments={MOCK_SEGMENTS} mode="list" />
+      </div>
+      <div className="w-full">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">BarOnly（バーのみ）</p>
+        <TagBreakdownBar segments={MOCK_SEGMENTS} mode="bar" />
+      </div>
+      <div className="w-full">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">TwoTags（タグ2つ）</p>
+        <TagBreakdownBar
+          segments={[
+            { tagName: 'Work', tagColor: '#3b82f6', minutes: 900 },
+            { tagName: 'Personal', tagColor: '#ec4899', minutes: 300 },
+          ]}
+        />
+      </div>
+      <div className="w-full">
+        <p className="text-muted-foreground mb-3 text-xs font-medium">Empty（空）</p>
+        <TagBreakdownBar segments={[]} />
+      </div>
+    </div>
+  ),
+};

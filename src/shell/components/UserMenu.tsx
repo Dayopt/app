@@ -8,8 +8,8 @@ import {
   FileText,
   HelpCircle,
   LogOut,
-  Mail,
   Megaphone,
+  MessageSquare,
   Palette,
   Settings,
   Shield,
@@ -36,6 +36,7 @@ import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getInitials } from '@/lib/user';
 import { useRouter } from '@/platform/i18n/navigation';
 import { useLogout } from '@/shell/hooks/useLogout';
+import { useContactStore } from '@/shell/stores/useContactStore';
 import { useSettingsStore } from '@/shell/stores/useSettingsStore';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -56,6 +57,7 @@ export function UserMenu({
   const locale = useLocale();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const openSettings = useSettingsStore((s) => s.open);
+  const openContact = useContactStore((s) => s.open);
 
   const handleOpenSettings = (category: SettingsCategory) => {
     if (isMobile) {
@@ -197,11 +199,9 @@ export function UserMenu({
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="mailto:support@dayopt.app">
-                  <Mail />
-                  {t('navUser.helpSubmenu.contact')}
-                </Link>
+              <DropdownMenuItem onSelect={() => openContact()}>
+                <MessageSquare />
+                {t('navUser.helpSubmenu.contact')}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>

@@ -79,3 +79,29 @@ export const WithCount: Story = {
 export const WithUntil: Story = {
   render: () => <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231" />,
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">Default（新規作成時）</p>
+      <RecurrenceDialogStory />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">
+        WeeklyPattern（毎週 月・水・金）
+      </p>
+      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO,WE,FR" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">BiWeekly（隔週）</p>
+      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">MonthlyByDay（毎月15日）</p>
+      <RecurrenceDialogStory initialValue="FREQ=MONTHLY;BYMONTHDAY=15" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">
+        MonthlyBySetPos（毎月 第3金曜日）
+      </p>
+      <RecurrenceDialogStory initialValue="FREQ=MONTHLY;BYDAY=FR;BYSETPOS=3" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">WithCount（10回）</p>
+      <RecurrenceDialogStory initialValue="FREQ=DAILY;COUNT=10" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">WithUntil（終了日指定）</p>
+      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231" />
+    </div>
+  ),
+};

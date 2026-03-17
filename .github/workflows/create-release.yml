@@ -8,52 +8,14 @@ on:
 permissions:
   contents: write
 
-env:
-  VERCEL_ORG_ID: ${{ secrets.ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.PROJECT_ID }}
+# デプロイはmainマージ時にVercelが自動実行するため、
+# このワークフローはGitHub Releaseの作成のみを担当する。
+# タグはバージョン記録用であり、デプロイトリガーではない。
 
 jobs:
-  # 本番デプロイ（タグ作成時のみ）
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel@latest
-
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel Production
-        id: deploy
-        run: |
-          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          echo "✅ Deployed to: $DEPLOYMENT_URL"
-
-      - name: Output Deployment URL
-        run: |
-          echo "🚀 Production deployment complete!"
-          echo "URL: ${{ steps.deploy.outputs.url }}"
-
-  # GitHub Release作成
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: deploy-production
 
     steps:
       - name: Checkout code

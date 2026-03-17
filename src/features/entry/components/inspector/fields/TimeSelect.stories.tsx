@@ -64,3 +64,26 @@ export const WithError: Story = {
     hasError: true,
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  parameters: { a11y: { test: 'todo' } },
+  args: {
+    value: '10:00',
+    onChange: fn(),
+  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">Default</p>
+      <TimeSelect value="10:00" onChange={fn()} />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">WithIcon（アイコンあり）</p>
+      <TimeSelect value="09:30" onChange={fn()} showIcon={true} iconType="clock" />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">WithDuration（所要時間表示）</p>
+      <TimeSelect value="10:00" onChange={fn()} minTime="09:00" showDurationInMenu={true} />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">Disabled（無効状態）</p>
+      <TimeSelect value="10:00" onChange={fn()} disabled={true} />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">WithError（エラー状態）</p>
+      <TimeSelect value="10:00" onChange={fn()} hasError={true} />
+    </div>
+  ),
+};

@@ -1,8 +1,5 @@
 import type { TourStepDef } from './types';
 
-/** 過去ドラッグステップをスキップする閾値（時） */
-export const TOUR_MIN_PAST_HOURS = 1;
-
 /** ツアー自動開始の遅延時間（ms） */
 export const TOUR_START_DELAY = 500;
 
@@ -49,33 +46,6 @@ export const TOUR_STEPS: TourStepDef[] = [
     titleKey: 'tour.steps.explainTags.title',
     descriptionKey: 'tour.steps.explainTags.description',
     contentKey: 'tag-explain',
-  },
-  {
-    id: 'grid-drag-record',
-    targetSelector: '[data-tour-target="grid-drag"]',
-    placement: 'bottom',
-    titleKey: 'tour.steps.gridDragRecord.title',
-    descriptionKey: 'tour.steps.gridDragRecord.description',
-    autoAdvance: {
-      type: 'dom-observe',
-      targetSelector: '[data-tour-target="grid-drag"]',
-      matchSelector: '[data-tag-palette]',
-    },
-    beforeEnter: { type: 'scroll-to-past', paddingHours: 3 },
-    skipWhen: () => new Date().getHours() < TOUR_MIN_PAST_HOURS,
-  },
-  {
-    id: 'select-tag-record',
-    targetSelector: '[data-tour-target="grid-drag"]',
-    placement: 'bottom',
-    titleKey: 'tour.steps.selectTagRecord.title',
-    descriptionKey: 'tour.steps.selectTagRecord.description',
-    autoAdvance: {
-      type: 'dom-observe',
-      targetSelector: '[data-tour-target="grid-drag"]',
-      matchSelector: '[data-entry-card]',
-    },
-    skipWhen: () => new Date().getHours() < TOUR_MIN_PAST_HOURS,
   },
   {
     id: 'plan-vs-record',

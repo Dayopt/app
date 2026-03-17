@@ -15,13 +15,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+import { env } from '@/env';
 import { logger } from '@/lib/logger';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
+  return new Resend(env.RESEND_API_KEY);
 }
-const WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET;
+const WEBHOOK_SECRET = env.RESEND_WEBHOOK_SECRET;
 
 export async function POST(request: NextRequest) {
   try {

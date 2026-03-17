@@ -4,8 +4,6 @@ export type TourStepId =
   | 'grid-drag-plan'
   | 'select-tag-plan'
   | 'explain-tags'
-  | 'grid-drag-record'
-  | 'select-tag-record'
   | 'plan-vs-record';
 
 /** ツアーステップの配置方向 */

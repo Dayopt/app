@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
-import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import Script from 'next/script';
 
-import { CookieConsentBanner } from '@/components/ui/cookie-consent-banner';
+import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import type { Locale } from '@/platform/i18n/routing';
 import { routing } from '@/platform/i18n/routing';
@@ -101,7 +100,7 @@ export async function generateMetadata({
       languages: alternateLanguages,
     },
     other: {
-      'google-site-verification': process.env.GOOGLE_SITE_VERIFICATION || '',
+      'google-site-verification': env.GOOGLE_SITE_VERIFICATION || '',
     },
   };
 }
@@ -151,26 +150,22 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   const validLocale = isValidLocale(locale) ? locale : routing.defaultLocale;
   const direction = getDirection(validLocale);
 
-  // next-intl: メッセージを取得
-  const messages = await getMessages();
+  // サーバーサイドで翻訳を取得（JSON-LD用）
   const t = await getTranslations({ locale: validLocale, namespace: 'app' });
 
   // JSON-LD構造化データ
   const jsonLd = generateJsonLd(validLocale, t('name'), t('description'));
 
   return (
-    <NextIntlClientProvider messages={messages}>
-      <div data-locale={validLocale} data-direction={direction}>
-        {/* SEO: JSON-LD構造化データ */}
-        <Script
-          id="json-ld"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-          strategy="afterInteractive"
-        />
-        {children}
-        <CookieConsentBanner />
-      </div>
-    </NextIntlClientProvider>
+    <div data-locale={validLocale} data-direction={direction}>
+      {/* SEO: JSON-LD構造化データ */}
+      <Script
+        id="json-ld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        strategy="afterInteractive"
+      />
+      {children}
+    </div>
   );
 }

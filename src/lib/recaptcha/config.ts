@@ -1,16 +1,15 @@
 /**
- * reCAPTCHA設定
- * @description Google reCAPTCHA v2/v3の設定と検証
+ * reCAPTCHA設定（クライアント安全）
+ *
+ * サーバー専用の SECRET_KEY は verify.ts で env 経由で取得する。
+ * このファイルはクライアントコンポーネントからも import されるため、
+ * サーバー専用の env を import してはいけない。
  */
 
 export const RECAPTCHA_CONFIG = {
-  // サイトキー（クライアントサイド）
+  // サイトキー（クライアントサイド — ビルド時置換）
   SITE_KEY_V3: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY_V3 || '',
   SITE_KEY_V2: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY_V2 || '',
-
-  // シークレットキー（サーバーサイド）
-  SECRET_KEY_V3: process.env.RECAPTCHA_SECRET_KEY_V3 || '',
-  SECRET_KEY_V2: process.env.RECAPTCHA_SECRET_KEY_V2 || '',
 
   // スコアしきい値（v3）
   SCORE_THRESHOLD: {
@@ -25,22 +24,15 @@ export const RECAPTCHA_CONFIG = {
 } as const;
 
 /**
- * reCAPTCHA v3が有効か確認
+ * reCAPTCHA v3が有効か確認（クライアント側はサイトキーのみで判定）
  */
 export function isRecaptchaV3Enabled(): boolean {
-  return Boolean(RECAPTCHA_CONFIG.SITE_KEY_V3 && RECAPTCHA_CONFIG.SECRET_KEY_V3);
+  return Boolean(RECAPTCHA_CONFIG.SITE_KEY_V3);
 }
 
 /**
- * reCAPTCHA v2が有効か確認
+ * reCAPTCHA v2が有効か確認（クライアント側はサイトキーのみで判定）
  */
 export function isRecaptchaV2Enabled(): boolean {
-  return Boolean(RECAPTCHA_CONFIG.SITE_KEY_V2 && RECAPTCHA_CONFIG.SECRET_KEY_V2);
-}
-
-/**
- * 開発環境かどうか
- */
-export function isDevelopment(): boolean {
-  return process.env.NODE_ENV === 'development';
+  return Boolean(RECAPTCHA_CONFIG.SITE_KEY_V2);
 }

@@ -196,8 +196,7 @@ export function useCalendarData({
 
     // サイドバーのフィルター設定を適用
     const visibilityFiltered = filtered.filter((event) => {
-      const origin = event.origin ?? 'planned';
-      return isEntryVisible(origin, event.tagId ?? null);
+      return isEntryVisible(event.tagId ?? null);
     });
 
     logger.log(`[useCalendarData] entriesフィルタリング:`, {

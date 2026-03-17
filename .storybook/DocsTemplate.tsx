@@ -1,11 +1,8 @@
 /**
  * Storybook Docs カスタムテンプレート
  *
- * <Unstyled> でStorybookのデフォルトCSS を無効化し、
- * .sb-docs-prose クラスで prose.css のタイポグラフィを適用。
- *
- * @see prose.css - Dayoptセマンティックトークンベースのタイポグラフィ
- * @see https://github.com/digital-go-jp/design-system-example-components-react
+ * @tailwindcss/typography の prose クラスでタイポグラフィを適用。
+ * Storybook固有の上書きは storybook-overrides.css で対応。
  */
 import {
   Controls,
@@ -14,20 +11,17 @@ import {
   Stories,
   Subtitle,
   Title,
-  Unstyled,
 } from '@storybook/addon-docs/blocks';
 
 export function DocsTemplate() {
   return (
-    <Unstyled>
-      <div className="sb-docs-prose">
-        <Title />
-        <Subtitle />
-        <Description />
-        <Primary />
-        <Controls />
-        <Stories includePrimary={false} />
-      </div>
-    </Unstyled>
+    <div className="prose dark:prose-invert mx-auto max-w-4xl">
+      <Title />
+      <Subtitle />
+      <Description />
+      <Primary />
+      <Controls />
+      <Stories includePrimary={false} />
+    </div>
   );
 }

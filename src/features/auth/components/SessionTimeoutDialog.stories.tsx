@@ -94,3 +94,40 @@ export const TenSeconds: Story = {
     onLogout: fn(),
   },
 };
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: {
+    open: false,
+    remainingTime: 0,
+    onExtend: async () => undefined,
+    onLogout: async () => undefined,
+  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground mb-3 text-xs font-medium">Default（トリガーボタン）</p>
+      <SessionTimeoutDialogStory />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">ThreeMinutes（残り3分）</p>
+      <SessionTimeoutDialog
+        open={true}
+        remainingTime={180}
+        onExtend={async () => undefined}
+        onLogout={async () => undefined}
+      />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">OneMinute（残り1分）</p>
+      <SessionTimeoutDialog
+        open={true}
+        remainingTime={60}
+        onExtend={async () => undefined}
+        onLogout={async () => undefined}
+      />
+      <p className="text-muted-foreground mb-3 text-xs font-medium">TenSeconds（残り10秒）</p>
+      <SessionTimeoutDialog
+        open={true}
+        remainingTime={10}
+        onExtend={async () => undefined}
+        onLogout={async () => undefined}
+      />
+    </div>
+  ),
+};

@@ -55,19 +55,12 @@ test.describe('Auth: サインアップ', () => {
 
     const emailInput = page.locator('input[type="email"], input[name="email"]').first();
     const passwordInput = page.locator('input[type="password"]').first();
-    const confirmInput = page.locator('input[type="password"]').nth(1);
     const submitButton = page.locator('button[type="submit"]').first();
-    const checkbox = page.locator('[role="checkbox"]').first();
-
     await emailInput.fill('test@example.com');
     await passwordInput.fill('short');
-    await confirmInput.fill('short');
-    if (await checkbox.isVisible()) {
-      await checkbox.click();
-    }
     await submitButton.click();
 
-    // Zodバリデーションエラー（minLength=12）が表示される
+    // Zodバリデーションエラー（minLength=8）が表示される
     const errorElement = page
       .locator('[data-field-error], [role="alert"], .text-destructive')
       .first();

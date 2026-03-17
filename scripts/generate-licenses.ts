@@ -64,7 +64,7 @@ async function generateLicenses(): Promise<void> {
     // 3. JSON形式で公開用データを生成
     console.log('\n🔧 Generating oss-credits.json...');
     const credits = generateCredits(packages);
-    const outputDir = join(process.cwd(), 'public');
+    const outputDir = join(process.cwd(), 'public', 'legal');
     const jsonPath = join(outputDir, 'oss-credits.json');
 
     // ディレクトリが存在しない場合は作成

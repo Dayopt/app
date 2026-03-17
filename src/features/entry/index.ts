@@ -67,12 +67,7 @@ export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 // =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
-export {
-  computeOriginTransition,
-  getEntryState,
-  isEntryPast,
-  isTimePast,
-} from './lib/entry-status';
+export { getEntryState, isEntryPast } from './lib/entry-status';
 
 // =============================================================================
 // Lib (recurrence utilities)

@@ -3,6 +3,7 @@
  * パスワードリセットリクエスト時のメール
  *
  * Supabase Auth の recovery フローで使用
+ * NOTE: supabase/functions/send-auth-email/PasswordResetEmail.tsx と同一内容を維持
  */
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
