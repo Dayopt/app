@@ -34,8 +34,8 @@ export interface MetricTrend {
 export interface MetricDefinition {
   id: MetricId;
   format: MetricFormat;
-  /** up が良い方向か down が良い方向か */
-  trendPositive: 'up' | 'down';
+  /** up が良い方向か down が良い方向か（neutral: どちらでもない） */
+  trendPositive: 'up' | 'down' | 'neutral';
   /** 閾値ベースの色分け */
   thresholds?: { good: number; warning: number };
   /** カードに表示するアイコン */

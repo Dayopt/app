@@ -64,8 +64,7 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
   blankRate: {
     id: 'blankRate',
     format: 'percentage',
-    trendPositive: 'down',
-    thresholds: { good: 0.15, warning: 0.4 },
+    trendPositive: 'neutral',
     icon: Ratio,
   },
 };

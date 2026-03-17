@@ -134,17 +134,21 @@ export function formatMetricValueParts(value: number, type: MetricFormat): Metri
  * delta = (current - previous) / previous（変化率）
  * 差が5%未満の場合は 'flat' とする
  *
- * trendPositive: 'up' が良い方向か 'down' が良い方向か
- * → isPositive を自動計算（blankRate の down は positive）
+ * trendPositive: 'up' が良い方向か 'down' が良い方向か 'neutral' ならどちらも中立
+ * → isPositive を自動計算（neutral なら常に true）
  */
 export function getMetricTrend(
   current: number,
   previous: number,
-  trendPositive: 'up' | 'down' = 'up',
+  trendPositive: 'up' | 'down' | 'neutral' = 'up',
 ): MetricTrend {
   if (previous === 0) {
     if (current === 0) return { direction: 'flat', delta: 0, isPositive: true };
-    return { direction: 'up', delta: 1, isPositive: trendPositive === 'up' };
+    return {
+      direction: 'up',
+      delta: 1,
+      isPositive: trendPositive === 'neutral' || trendPositive === 'up',
+    };
   }
 
   const delta = (current - previous) / previous;
@@ -158,7 +162,7 @@ export function getMetricTrend(
   return {
     direction,
     delta,
-    isPositive: direction === trendPositive,
+    isPositive: trendPositive === 'neutral' ? true : direction === trendPositive,
   };
 }
 
