@@ -941,6 +941,10 @@ export type Database = {
         Args: { p_month: string; p_user_id: string };
         Returns: undefined;
       };
+      increment_tag_sort_orders: {
+        Args: { p_user_id: string };
+        Returns: undefined;
+      };
       merge_tags:
         | {
             Args: {

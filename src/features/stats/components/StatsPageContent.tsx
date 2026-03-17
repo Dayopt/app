@@ -3,6 +3,8 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
@@ -10,11 +12,18 @@ import { AppHeader } from '@/shell/components/AppHeader';
 
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import { InsightsView } from './insights/InsightsView';
 import { StatsDateDisplay } from './layout/StatsDateDisplay';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
-import { ProgressView } from './progress/ProgressView';
-import { StatsView } from './StatsView';
+
+// recharts (~200KB) を含むタブビューを遅延読み込み
+// アクティブタブのみ読み込むことでバンドルサイズを削減
+const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.StatsView })));
+const ProgressView = dynamic(() =>
+  import('./progress/ProgressView').then((m) => ({ default: m.ProgressView })),
+);
+const InsightsView = dynamic(() =>
+  import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
+);
 
 interface StatsPageContentProps {
   /** URL から決定されたアクティブタブ */

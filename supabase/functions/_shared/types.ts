@@ -15,51 +15,6 @@ export interface ReminderEntry {
 }
 
 // ============================================================
-// generate-reflections
-// ============================================================
-
-export interface UserEntry {
-  user_id: string;
-  entry_count: number;
-}
-
-export interface ReflectionResult {
-  userId: string;
-  status: 'generated' | 'skipped' | 'error';
-  reflectionId?: string;
-  error?: string;
-}
-
-export interface EntryRow {
-  start_time: string | null;
-  end_time: string | null;
-  duration_minutes: number | null;
-  fulfillment_score: number | null;
-}
-
-export interface AnomalyAlert {
-  type: 'fulfillment_drop' | 'time_surge' | 'no_record_streak';
-  severity: 'warning' | 'critical';
-  message: string;
-  baseline?: number;
-  current?: number;
-  streakDays?: number;
-}
-
-export interface WeeklyReflectionData {
-  total_entries: number;
-  total_minutes: number;
-  avg_fulfillment: number;
-}
-
-export interface ParsedReflection {
-  title: string;
-  insights: string;
-  question: string;
-  activities: Array<{ label: string; minutes: number; highlight: string }>;
-}
-
-// ============================================================
 // send-auth-email
 // ============================================================
 

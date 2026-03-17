@@ -17,8 +17,8 @@
 -- ■ user_settings: user_id = auth.uid()
 -- ■ ai_usage: user_id = auth.uid()
 -- ■ chat_conversations: user_id = auth.uid()
--- ■ reflections: user_id = auth.uid()
--- ■ notification_preferences: user_id = auth.uid()
+-- ■ reflections: user_id = (select auth.uid())
+-- ■ notification_preferences: user_id = (select auth.uid())
 
 -- ■ entry_activities: EXISTS(entries WHERE id = entry_id AND user_id = auth.uid())
 -- ■ entry_instances: EXISTS(entries WHERE id = entry_id AND user_id = auth.uid())

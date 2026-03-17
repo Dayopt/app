@@ -353,13 +353,19 @@ export class EntryService {
     const myEnd = new Date(actualEnd);
     if (isNaN(myStart.getTime()) || isNaN(myEnd.getTime())) return [];
 
-    // 同ユーザーの他エントリで時間データを持つものを取得
+    // 隣接エントリのみ取得（±24時間の範囲に限定）
+    // 全エントリを取得するとユーザーのデータ量に比例してクエリが重くなる
+    const dayBefore = new Date(myStart.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const dayAfter = new Date(myEnd.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
     const { data: entries, error } = await this.supabase
       .from('entries')
       .select('id, start_time, end_time, actual_start_time, actual_end_time')
       .eq('user_id', userId)
       .neq('id', entryId)
-      .not('start_time', 'is', null);
+      .not('start_time', 'is', null)
+      .gte('start_time', dayBefore)
+      .lte('start_time', dayAfter);
 
     if (error || !entries) return [];
 
