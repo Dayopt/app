@@ -225,7 +225,16 @@
       "title": "タグを選択",
       "searchPlaceholder": "タグを検索...",
       "noResults": "タグが見つかりません",
-      "createPlaceholder": "新しいタグ名"
+      "createPlaceholder": "例: 仕事、勉強、運動...",
+      "emptyTitle": "タグで時間を分類しよう",
+      "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
+      "sampleTags": {
+        "work": "仕事",
+        "study": "勉強",
+        "exercise": "運動",
+        "break": "休憩",
+        "meal": "食事"
+      }
     },
     "stats": {
       "progress": "進捗",

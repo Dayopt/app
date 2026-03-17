@@ -225,7 +225,16 @@
       "title": "Select a tag",
       "searchPlaceholder": "Search tags...",
       "noResults": "No tags found",
-      "createPlaceholder": "New tag name"
+      "createPlaceholder": "e.g. Work, Study, Exercise...",
+      "emptyTitle": "Tags categorize your time",
+      "emptyDescription": "Pick one to get started, or create your own below",
+      "sampleTags": {
+        "work": "Work",
+        "study": "Study",
+        "exercise": "Exercise",
+        "break": "Break",
+        "meal": "Meal"
+      }
     },
     "stats": {
       "progress": "Progress",
