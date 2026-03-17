@@ -33,9 +33,16 @@
         "autoConvert": "Difference auto-calculated"
       }
     },
+    "preChoice": {
+      "title": "Quick walkthrough",
+      "description": "Learn the basics in about 1 minute",
+      "start": "Show me around",
+      "skip": "I'll explore on my own"
+    },
     "done": {
       "title": "You're all set!",
-      "description": "Start planning your day and tracking your time"
+      "description": "Plan your time, then record what actually happened. The difference is calculated automatically.",
+      "cta": "Create your first plan"
     },
     "next": "Next",
     "back": "Back",
