@@ -280,41 +280,56 @@ export function BillingSettings() {
       {currentPlan === 'pro' && (
         <SectionCard title={t('settings.subscription.billingHistory')}>
           {invoices.data && invoices.data.length > 0 ? (
-            <div className="divide-border divide-y">
-              {invoices.data.map((invoice) => (
-                <div key={invoice.id} className="flex items-center justify-between py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
+            <table className="w-full">
+              <thead>
+                <tr className="border-border text-muted-foreground border-b text-left text-xs">
+                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceDate')}</th>
+                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceTotal')}</th>
+                  <th className="pb-2 font-medium">{t('settings.subscription.invoiceStatus')}</th>
+                  <th className="pb-2 text-right font-medium">
+                    {t('settings.subscription.invoiceAction')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-border divide-y">
+                {invoices.data.map((invoice) => (
+                  <tr key={invoice.id} className="text-sm">
+                    <td className="py-3">
                       {new Intl.DateTimeFormat(undefined, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                       }).format(new Date(invoice.date))}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
+                    </td>
+                    <td className="py-3">
                       {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: invoice.currency,
                       }).format(invoice.amount / 100)}
-                      {' · '}
-                      {invoice.status === 'paid'
-                        ? t('settings.subscription.invoicePaid')
-                        : invoice.status}
-                    </p>
-                  </div>
-                  {invoice.hostedInvoiceUrl && (
-                    <a
-                      href={invoice.hostedInvoiceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-foreground ml-4 shrink-0"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
+                    </td>
+                    <td className="py-3">
+                      <Badge variant="secondary">
+                        {invoice.status === 'paid'
+                          ? t('settings.subscription.invoicePaid')
+                          : invoice.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-right">
+                      {invoice.hostedInvoiceUrl && (
+                        <a
+                          href={invoice.hostedInvoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary text-sm hover:underline"
+                        >
+                          {t('settings.subscription.invoiceView')}
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : invoices.isLoading ? (
             <p className="text-muted-foreground py-6 text-center text-sm">
               {t('settings.subscription.processing')}
