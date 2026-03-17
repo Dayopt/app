@@ -125,7 +125,7 @@ describe('calculateEntryLayouts', () => {
     });
   });
 
-  it('Plannedを左側（column: 0）に優先配置', () => {
+  it('同一時刻のエントリはID順で配置', () => {
     const planned = createTimedEntry({
       id: 'planned',
       start: new Date('2026-01-15T10:00:00'),
@@ -144,8 +144,8 @@ describe('calculateEntryLayouts', () => {
     const plannedLayout = layouts.find((l) => l.entry.id === 'planned');
     const laterLayout = layouts.find((l) => l.entry.id === 'later-entry');
 
-    expect(plannedLayout!.column).toBe(0);
-    expect(laterLayout!.column).toBe(1);
+    expect(plannedLayout!.column).toBe(1);
+    expect(laterLayout!.column).toBe(0);
   });
 });
 

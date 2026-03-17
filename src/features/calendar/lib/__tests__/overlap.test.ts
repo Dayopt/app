@@ -74,7 +74,7 @@ describe('checkClientSideOverlap', () => {
     ).toBe(true);
   });
 
-  it('Plan↔Record の重複はfalse（共存可能）', () => {
+  it('重複するイベントはtrue（origin区別なし）', () => {
     const events = [
       createEvent({
         id: 'a',
@@ -96,7 +96,7 @@ describe('checkClientSideOverlap', () => {
         new Date('2026-01-15T10:00'),
         new Date('2026-01-15T11:00'),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('自分自身との重複は除外', () => {
@@ -143,7 +143,7 @@ describe('checkClientSideOverlap', () => {
     ).toBe(false);
   });
 
-  it('ドラッグ中のイベントが見つからない場合はfalse', () => {
+  it('ドラッグ中でないイベントとの重複はtrue', () => {
     const events = [
       createEvent({
         id: 'a',
@@ -158,6 +158,6 @@ describe('checkClientSideOverlap', () => {
         new Date('2026-01-15T10:00'),
         new Date('2026-01-15T11:00'),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
