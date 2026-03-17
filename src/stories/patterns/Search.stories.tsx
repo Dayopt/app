@@ -189,21 +189,31 @@ export const Overview: Story = {
               <div className="border-border divide-border divide-y rounded-lg border">
                 <div className="p-3">
                   <p className="font-medium">
-                    <span className="bg-yellow-200 dark:bg-yellow-800">プロジェクト</span>A -
-                    週次レビュー
+                    <span className="bg-state-active text-state-active-foreground rounded">
+                      プロジェクト
+                    </span>
+                    A - 週次レビュー
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    今週の<span className="bg-yellow-200 dark:bg-yellow-800">プロジェクト</span>
+                    今週の
+                    <span className="bg-state-active text-state-active-foreground rounded">
+                      プロジェクト
+                    </span>
                     進捗を確認
                   </p>
                 </div>
                 <div className="p-3">
                   <p className="font-medium">
-                    <span className="bg-yellow-200 dark:bg-yellow-800">プロジェクト</span>B -
-                    キックオフ
+                    <span className="bg-state-active text-state-active-foreground rounded">
+                      プロジェクト
+                    </span>
+                    B - キックオフ
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    新規<span className="bg-yellow-200 dark:bg-yellow-800">プロジェクト</span>
+                    新規
+                    <span className="bg-state-active text-state-active-foreground rounded">
+                      プロジェクト
+                    </span>
                     の立ち上げ
                   </p>
                 </div>
