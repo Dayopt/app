@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { SectionCard } from '@/components/common/SectionCard';
 import { useMFA } from '../../hooks/useMFA';
 
@@ -212,7 +213,7 @@ export function MFASection() {
 
             {/* リカバリーコード枯渇警告 */}
             {recoveryCodeCount === 0 && (
-              <div className="border-destructive bg-destructive-state-hover rounded-2xl border p-4">
+              <InfoBox variant="destructive">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-destructive text-sm font-bold">
                     {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
@@ -232,7 +233,7 @@ export function MFASection() {
                       : t('settings.account.mfa.regenerate')}
                   </Button>
                 </div>
-              </div>
+              </InfoBox>
             )}
 
             {/* リカバリーコード状態（残りがある場合） */}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -89,10 +90,10 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
 
         {success ? (
           <div className="space-y-4 py-4">
-            <div className="bg-surface-inset rounded-2xl p-4">
+            <InfoBox>
               <p className="text-sm">{t('successMessage', { email: newEmail })}</p>
               <p className="text-muted-foreground mt-2 text-xs">{t('successHint')}</p>
-            </div>
+            </InfoBox>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>

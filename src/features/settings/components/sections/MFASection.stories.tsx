@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { SectionCard } from '@/components/common/SectionCard';
 
 // ─────────────────────────────────────────────────────────
@@ -129,7 +130,7 @@ function MFAEnabledDemo({ recoveryCodeCount }: { recoveryCodeCount: number }) {
         </div>
 
         {recoveryCodeCount === 0 ? (
-          <div className="border-destructive bg-destructive-state-hover rounded-2xl border p-4">
+          <InfoBox variant="destructive">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-destructive text-sm font-bold">
                 リカバリーコードがありません
@@ -141,7 +142,7 @@ function MFAEnabledDemo({ recoveryCodeCount }: { recoveryCodeCount: number }) {
             <div className="mt-3">
               <Button variant="destructive">再生成</Button>
             </div>
-          </div>
+          </InfoBox>
         ) : (
           <div className="bg-muted rounded-2xl p-4">
             <div className="flex items-center justify-between">

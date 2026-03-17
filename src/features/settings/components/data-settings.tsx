@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/platform/trpc';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 
@@ -212,13 +213,15 @@ function McpApiSection() {
     return (
       <SectionCard title={t('title')}>
         <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
-        <div className="bg-surface-inset flex items-center gap-3 rounded-lg p-4">
-          <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
-          <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
-          <Button variant="outline" size="sm" disabled>
-            {t('upgrade')}
-          </Button>
-        </div>
+        <InfoBox>
+          <div className="flex items-center gap-3">
+            <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
+            <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
+            <Button variant="outline" size="sm" disabled>
+              {t('upgrade')}
+            </Button>
+          </div>
+        </InfoBox>
       </SectionCard>
     );
   }
@@ -269,7 +272,7 @@ function McpApiSection() {
       </div>
 
       {/* Connection guide */}
-      <div className="bg-surface-inset mt-4 rounded-lg p-3">
+      <InfoBox className="mt-4 p-3">
         <p className="text-muted-foreground text-sm">
           {t('connectionGuide')}
           <a
@@ -280,7 +283,7 @@ function McpApiSection() {
             <ExternalLink className="h-3 w-3" />
           </a>
         </p>
-      </div>
+      </InfoBox>
     </SectionCard>
   );
 }
