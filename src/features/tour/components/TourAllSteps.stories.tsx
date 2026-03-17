@@ -6,11 +6,11 @@ import { TagExplainContent } from './content/TagExplainContent';
 import { TourDoneCard } from './TourDoneCard';
 import { TourStepCard } from './TourStepCard';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 5;
 
 const noop = fn();
 
-/** 全7ステップ + 完了画面を一覧表示 */
+/** 全5ステップ + 完了画面を一覧表示 */
 const meta = {
   title: 'Features/Tour/AllSteps',
   parameters: {
@@ -79,38 +79,10 @@ export const Overview: Story = {
         />
       </StepWrapper>
 
-      {/* Step 5: 記録を作成 */}
-      <StepWrapper label="Step 5 — 記録を作成（autoAdvance / 深夜スキップ）">
-        <TourStepCard
-          titleKey="tour.steps.gridDragRecord.title"
-          descriptionKey="tour.steps.gridDragRecord.description"
-          currentStep={5}
-          totalSteps={TOTAL_STEPS}
-          isLastStep={false}
-          onNext={noop}
-          onPrev={noop}
-          onSkip={noop}
-        />
-      </StepWrapper>
-
-      {/* Step 6: タグを選択（記録） */}
-      <StepWrapper label="Step 6 — 記録にタグ（autoAdvance / 深夜スキップ）">
-        <TourStepCard
-          titleKey="tour.steps.selectTagRecord.title"
-          descriptionKey="tour.steps.selectTagRecord.description"
-          currentStep={6}
-          totalSteps={TOTAL_STEPS}
-          isLastStep={false}
-          onNext={noop}
-          onPrev={noop}
-          onSkip={noop}
-        />
-      </StepWrapper>
-
-      {/* Step 7: 予定 vs 記録（リッチコンテンツ） */}
-      <StepWrapper label="Step 7 — 予定 vs 記録（center / リッチ / 最終）">
+      {/* Step 5: 予定 vs 実績（リッチコンテンツ） */}
+      <StepWrapper label="Step 5 — 予定 vs 実績（center / リッチ / 最終）">
         <PlanVsRecordContent
-          currentStep={7}
+          currentStep={5}
           totalSteps={TOTAL_STEPS}
           isLastStep={true}
           onNext={noop}

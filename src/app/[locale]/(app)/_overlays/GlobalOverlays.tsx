@@ -5,7 +5,6 @@ import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
-import { useInlineCreateStore } from '@/features/calendar';
 import { ContactDialog } from '@/features/contact';
 import {
   EntryDeleteConfirmDialog,
@@ -27,23 +26,8 @@ import type { StepValidationResult, StepValidators } from '@/features/tour';
 export function GlobalOverlays() {
   const t = useTranslations();
 
-  // ツアー: 過去ドラッグステップのバリデーション
-  const stepValidators: StepValidators = useMemo(
-    () => ({
-      'grid-drag-record': () => {
-        const pending = useInlineCreateStore.getState().pendingSelection;
-        if (!pending) {
-          return { valid: false, messageKey: 'tour.pastTimeHint' } as const;
-        }
-        const selEnd = new Date(pending.date);
-        selEnd.setHours(pending.endHour, pending.endMinute);
-        return selEnd < new Date()
-          ? ({ valid: true } as const)
-          : ({ valid: false, messageKey: 'tour.pastTimeHint' } as const);
-      },
-    }),
-    [],
-  );
+  // ツアー: ステップバリデーション（現在は空）
+  const stepValidators: StepValidators = useMemo(() => ({}), []);
 
   const handleValidationFail = useCallback(
     (result: StepValidationResult) => {

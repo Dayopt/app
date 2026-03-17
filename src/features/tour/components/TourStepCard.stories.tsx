@@ -15,7 +15,7 @@ const meta = {
     titleKey: 'tour.steps.intro.title',
     descriptionKey: 'tour.steps.intro.description',
     currentStep: 1,
-    totalSteps: 7,
+    totalSteps: 5,
     isLastStep: false,
     onNext: fn(),
     onSkip: fn(),
@@ -44,21 +44,12 @@ export const Step2GridDragPlan: Story = {
   },
 };
 
-/** Step 5: ドラッグで記録作成 */
-export const Step5GridDragRecord: Story = {
-  args: {
-    titleKey: 'tour.steps.gridDragRecord.title',
-    descriptionKey: 'tour.steps.gridDragRecord.description',
-    currentStep: 5,
-  },
-};
-
 /** 最後のステップ */
 export const LastStep: Story = {
   args: {
     titleKey: 'tour.steps.planVsRecord.title',
     descriptionKey: 'tour.steps.planVsRecord.description',
-    currentStep: 7,
+    currentStep: 5,
     isLastStep: true,
   },
 };

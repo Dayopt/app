@@ -22,25 +22,16 @@
           "meeting": "Meeting"
         }
       },
-      "gridDragRecord": {
-        "title": "Record what you did",
-        "description": "Now drag on a past time slot to log time you already spent"
-      },
-      "selectTagRecord": {
-        "title": "Tag your record",
-        "description": "Pick a tag for this record too — notice the dashed border that marks it as a record"
-      },
       "planVsRecord": {
-        "title": "Plans vs Records",
-        "description": "Solid bar = plan, dashed bar = record. When a plan's time passes, it automatically becomes a record.",
-        "planLabel": "Plan",
-        "planDetail": "What you intend to do",
-        "recordLabel": "Record",
-        "recordDetail": "What actually happened",
-        "autoConvert": "Auto-converts when time passes"
+        "title": "Track planned vs actual",
+        "description": "Tap a block to manage both planned and actual time. The difference is calculated automatically.",
+        "planLabel": "Planned",
+        "planDetail": "Your scheduled time",
+        "recordLabel": "Actual",
+        "recordDetail": "Time you actually spent",
+        "autoConvert": "Difference auto-calculated"
       }
     },
-    "pastTimeHint": "Try dragging on a time that has already passed",
     "done": {
       "title": "You're all set!",
       "description": "Start planning your day and tracking your time"
