@@ -22,7 +22,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 280 }}>
+      <div style={{ width: '100%', maxWidth: 280 }}>
         <Story />
       </div>
     ),
@@ -60,7 +60,7 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <div>
         <p className="text-muted-foreground mb-3 text-xs font-medium">Step 1: イントロ</p>
-        <div style={{ width: 280 }}>
+        <div style={{ width: '100%', maxWidth: 280 }}>
           <TourStepCard
             titleKey="tour.steps.intro.title"
             descriptionKey="tour.steps.intro.description"
@@ -74,7 +74,7 @@ export const AllPatterns: Story = {
       </div>
       <div>
         <p className="text-muted-foreground mb-3 text-xs font-medium">Step 2: ドラッグで予定作成</p>
-        <div style={{ width: 280 }}>
+        <div style={{ width: '100%', maxWidth: 280 }}>
           <TourStepCard
             titleKey="tour.steps.gridDragPlan.title"
             descriptionKey="tour.steps.gridDragPlan.description"
@@ -88,7 +88,7 @@ export const AllPatterns: Story = {
       </div>
       <div>
         <p className="text-muted-foreground mb-3 text-xs font-medium">最後のステップ</p>
-        <div style={{ width: 280 }}>
+        <div style={{ width: '100%', maxWidth: 280 }}>
           <TourStepCard
             titleKey="tour.steps.planVsRecord.title"
             descriptionKey="tour.steps.planVsRecord.description"

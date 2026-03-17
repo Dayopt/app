@@ -97,7 +97,7 @@ export const AllPatterns: Story = {
       },
     ];
     return (
-      <div className="grid grid-cols-2 gap-3" style={{ width: 320 }}>
+      <div className="grid grid-cols-2 gap-3" style={{ width: '100%', maxWidth: 320 }}>
         {cards.map((card) => (
           <AnimalCard
             key={card.type}
