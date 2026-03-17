@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { Check, CreditCard, ExternalLink, Receipt, Sparkles, Zap } from 'lucide-react';
+import { Check, CreditCard, ExternalLink, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
@@ -74,6 +74,18 @@ export function BillingSettings() {
     billingInfo.data?.subscriptionStatus === 'trialing'
       ? 'pro'
       : 'free';
+
+  // 支払い方法（Pro ユーザーのみ取得）
+  const paymentMethod = api.billing.getPaymentMethod.useQuery(undefined, {
+    enabled: currentPlan === 'pro',
+    retry: false,
+  });
+
+  // 請求書一覧（Pro ユーザーのみ取得）
+  const invoices = api.billing.getInvoices.useQuery(undefined, {
+    enabled: currentPlan === 'pro',
+    retry: false,
+  });
 
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
@@ -239,33 +251,90 @@ export function BillingSettings() {
       {/* お支払い方法（Pro ユーザーのみ表示） */}
       {currentPlan === 'pro' && (
         <SectionCard title={t('settings.subscription.paymentMethod')}>
-          <LabeledRow label={t('settings.subscription.managePayment')}>
+          <LabeledRow
+            label={
+              paymentMethod.data ? (
+                <span className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  <span className="capitalize">{paymentMethod.data.brand}</span>
+                  {' •••• '}
+                  {paymentMethod.data.last4}
+                  <span className="text-muted-foreground text-xs">
+                    {String(paymentMethod.data.expMonth).padStart(2, '0')}/
+                    {paymentMethod.data.expYear}
+                  </span>
+                </span>
+              ) : (
+                t('settings.subscription.noCard')
+              )
+            }
+          >
             <Button variant="outline" onClick={handleManageSubscription} disabled={isLoading}>
-              <CreditCard className="mr-2 h-4 w-4" />
-              {t('settings.subscription.managePlan')}
+              {t('settings.subscription.updateCard')}
             </Button>
           </LabeledRow>
         </SectionCard>
       )}
 
-      {/* 請求履歴・領収書 */}
+      {/* 請求履歴 */}
       {currentPlan === 'pro' && (
         <SectionCard title={t('settings.subscription.billingHistory')}>
-          <div className="flex h-32 flex-col items-center justify-center">
-            <Receipt className="text-muted-foreground mb-2 h-8 w-8" />
-            <p className="text-muted-foreground mb-2 text-sm">
-              {t('settings.subscription.viewInStripe')}
+          {invoices.data && invoices.data.length > 0 ? (
+            <div className="divide-border divide-y">
+              {invoices.data.map((invoice) => (
+                <div key={invoice.id} className="flex items-center justify-between py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">
+                      {new Intl.DateTimeFormat(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(new Date(invoice.date))}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: invoice.currency,
+                      }).format(invoice.amount / 100)}
+                      {' · '}
+                      {invoice.status === 'paid'
+                        ? t('settings.subscription.invoicePaid')
+                        : invoice.status}
+                    </p>
+                  </div>
+                  {invoice.hostedInvoiceUrl && (
+                    <a
+                      href={invoice.hostedInvoiceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground ml-4 shrink-0"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : invoices.isLoading ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              {t('settings.subscription.processing')}
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManageSubscription}
-              disabled={isLoading}
-            >
-              <ExternalLink className="mr-2 h-3 w-3" />
-              {t('settings.subscription.openPortal')}
+          ) : (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              {t('settings.subscription.noInvoices')}
+            </p>
+          )}
+        </SectionCard>
+      )}
+
+      {/* キャンセル */}
+      {currentPlan === 'pro' && (
+        <SectionCard title={t('settings.subscription.cancelTitle')}>
+          <LabeledRow label={t('settings.subscription.cancelDescription')}>
+            <Button variant="destructive" onClick={handleManageSubscription} disabled={isLoading}>
+              {t('settings.subscription.cancelButton')}
             </Button>
-          </div>
+          </LabeledRow>
         </SectionCard>
       )}
     </div>

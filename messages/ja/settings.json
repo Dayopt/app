@@ -683,11 +683,17 @@
       "paymentMethod": "支払い方法",
       "noCard": "カードが登録されていません",
       "addCard": "カードを追加",
+      "updateCard": "更新",
       "managePayment": "Stripe で支払い方法を管理",
       "managePlan": "サブスクリプション管理",
       "processing": "処理中...",
       "viewInStripe": "Stripe で請求履歴を確認",
       "openPortal": "Stripe ポータルを開く",
+      "invoicePaid": "支払い済み",
+      "noInvoices": "請求書はまだありません",
+      "cancelTitle": "キャンセル",
+      "cancelDescription": "プランをキャンセル",
+      "cancelButton": "キャンセル",
       "billingHistory": "請求履歴",
       "plans": {
         "free": {

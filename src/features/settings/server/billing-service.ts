@@ -24,6 +24,22 @@ export interface BillingInfo {
   subscriptionId: string | null;
 }
 
+export interface PaymentMethod {
+  brand: string; // visa, mastercard, amex, etc.
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
+
+export interface InvoiceItem {
+  id: string;
+  date: string; // ISO 8601
+  amount: number; // cents
+  currency: string;
+  status: string;
+  hostedInvoiceUrl: string | null;
+}
+
 // ===== Error Codes =====
 
 export class BillingServiceError extends ServiceError {
@@ -159,6 +175,78 @@ export async function createPortalSession(
   });
 
   return session.url;
+}
+
+/**
+ * デフォルト支払い方法を取得
+ */
+export async function getPaymentMethod(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<PaymentMethod | null> {
+  const stripe = requireStripe();
+  const billingInfo = await getBillingInfo(supabase, userId);
+
+  if (!billingInfo.stripeCustomerId) {
+    return null;
+  }
+
+  const customer = await stripe.customers.retrieve(billingInfo.stripeCustomerId);
+
+  if (customer.deleted) {
+    return null;
+  }
+
+  const defaultPaymentMethodId =
+    typeof customer.invoice_settings?.default_payment_method === 'string'
+      ? customer.invoice_settings.default_payment_method
+      : customer.invoice_settings?.default_payment_method?.id;
+
+  if (!defaultPaymentMethodId) {
+    return null;
+  }
+
+  const pm = await stripe.paymentMethods.retrieve(defaultPaymentMethodId);
+
+  if (!pm.card) {
+    return null;
+  }
+
+  return {
+    brand: pm.card.brand,
+    last4: pm.card.last4,
+    expMonth: pm.card.exp_month,
+    expYear: pm.card.exp_year,
+  };
+}
+
+/**
+ * 請求書一覧を取得（最新10件）
+ */
+export async function getInvoices(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<InvoiceItem[]> {
+  const stripe = requireStripe();
+  const billingInfo = await getBillingInfo(supabase, userId);
+
+  if (!billingInfo.stripeCustomerId) {
+    return [];
+  }
+
+  const invoices = await stripe.invoices.list({
+    customer: billingInfo.stripeCustomerId,
+    limit: 10,
+  });
+
+  return invoices.data.map((inv) => ({
+    id: inv.id,
+    date: new Date((inv.created ?? 0) * 1000).toISOString(),
+    amount: inv.amount_paid ?? 0,
+    currency: inv.currency ?? 'usd',
+    status: inv.status ?? 'unknown',
+    hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+  }));
 }
 
 /**

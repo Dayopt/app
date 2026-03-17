@@ -8,7 +8,13 @@ import { z } from 'zod';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
-import { createCheckoutSession, createPortalSession, getBillingInfo } from './billing-service';
+import {
+  createCheckoutSession,
+  createPortalSession,
+  getBillingInfo,
+  getInvoices,
+  getPaymentMethod,
+} from './billing-service';
 
 export const billingRouter = createTRPCRouter({
   /**
@@ -54,6 +60,28 @@ export const billingRouter = createTRPCRouter({
         handleServiceError(error);
       }
     }),
+
+  /**
+   * デフォルト支払い方法を取得
+   */
+  getPaymentMethod: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      return await getPaymentMethod(ctx.supabase, ctx.userId);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }),
+
+  /**
+   * 請求書一覧を取得
+   */
+  getInvoices: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      return await getInvoices(ctx.supabase, ctx.userId);
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }),
 
   /**
    * Stripe Customer Portal Session を作成し、URLを返す
