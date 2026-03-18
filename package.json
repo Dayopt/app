@@ -26,6 +26,7 @@
     "types:generate": "supabase gen types typescript --project-id qloztwfbrbqtjijxicnd > src/lib/database.types.ts",
     "types:generate:staging": "supabase gen types typescript --project-id yvglwblxrnrenfifsnje > src/lib/database.types.ts",
     "types:generate:local": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "lint:i18n": "tsx scripts/check-i18n-integrity.ts",
     "docs:check": "tsx scripts/validate-doc-references.ts",
     "license:check": "npx license-checker --production --excludePackages \"dayopt-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
     "license:check-risks": "tsx scripts/check-license-risks.ts",
