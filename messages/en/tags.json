@@ -153,7 +153,8 @@
       "createFailed": "Failed to create tag",
       "updateFailed": "Failed to update tag",
       "deleteFailed": "Failed to delete tag",
-      "duplicateName": "A tag with this name already exists"
+      "duplicateName": "A tag with this name already exists",
+      "groupNameConflict": "This name conflicts with an existing group or tag"
     },
     "delete": {
       "confirmTitle": "Delete this tag?",

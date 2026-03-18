@@ -15,50 +15,50 @@
       "settingsDescription": "Customize app settings",
       "themeDescription": "Switch between light and dark mode",
       "logoutDescription": "Sign out of your account"
-    }
-  },
-  "sidebar": {
-    "views": "Views",
-    "quickCreate": "Create",
-    "theme": "Theme",
-    "getHelp": "Get Help",
-    "toggleSidebar": "Toggle Sidebar",
-    "closeSidebar": "Close Sidebar",
-    "openSidebar": "Open Sidebar",
-    "resize": "Resize",
-    "navigation": {
-      "calendar": "Calendar",
-      "plan": "Plan",
-      "record": "Record",
-      "tags": "Tags",
-      "stats": "Stats",
-      "settings": "Settings",
-      "search": "Search",
-      "notifications": "Notifications"
-    }
-  },
-  "navUser": {
-    "myAccount": "My Account",
-    "account": "Account",
-    "upgradePlan": "Upgrade Plan",
-    "personalize": "Personalize",
-    "notifications": "Notifications",
-    "settings": "Settings",
-    "help": "Help",
-    "helpSubmenu": {
-      "helpCenter": "Help Center",
-      "releaseNotes": "Release Notes",
-      "documentation": "Documentation",
-      "termsOfService": "Terms of Service",
-      "privacyPolicy": "Privacy Policy",
-      "tokushoho": "Commercial Disclosure",
-      "security": "Security",
-      "contact": "Contact Us"
     },
-    "accountMenuLabel": "Open account menu for {name}",
-    "logout": "Log out",
-    "loggingOut": "Logging out...",
-    "logoutSuccess": "Logged out successfully",
-    "logoutFailed": "Failed to log out"
+    "sidebar": {
+      "views": "Views",
+      "quickCreate": "Create",
+      "theme": "Theme",
+      "getHelp": "Get Help",
+      "toggleSidebar": "Toggle Sidebar",
+      "closeSidebar": "Close Sidebar",
+      "openSidebar": "Open Sidebar",
+      "resize": "Resize",
+      "navigation": {
+        "calendar": "Calendar",
+        "plan": "Plan",
+        "record": "Record",
+        "tags": "Tags",
+        "stats": "Stats",
+        "settings": "Settings",
+        "search": "Search",
+        "notifications": "Notifications"
+      }
+    },
+    "navUser": {
+      "myAccount": "My Account",
+      "account": "Account",
+      "upgradePlan": "Upgrade Plan",
+      "personalize": "Personalize",
+      "notifications": "Notifications",
+      "settings": "Settings",
+      "help": "Help",
+      "helpSubmenu": {
+        "helpCenter": "Help Center",
+        "releaseNotes": "Release Notes",
+        "documentation": "Documentation",
+        "termsOfService": "Terms of Service",
+        "privacyPolicy": "Privacy Policy",
+        "tokushoho": "Commercial Disclosure",
+        "security": "Security",
+        "contact": "Contact Us"
+      },
+      "accountMenuLabel": "Open account menu for {name}",
+      "logout": "Log out",
+      "loggingOut": "Logging out...",
+      "logoutSuccess": "Logged out successfully",
+      "logoutFailed": "Failed to log out"
+    }
   }
 }

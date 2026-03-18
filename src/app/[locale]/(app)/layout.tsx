@@ -26,7 +26,7 @@ const APP_NAMESPACES = [
   'calendar',
   'plan',
   'record',
-  'tag',
+  'tags',
   'navigation',
   'notification',
   'settings',

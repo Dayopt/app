@@ -110,15 +110,15 @@ export function UserMenu({
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => handleOpenSettings('profile')}>
             <UserCircle />
-            {t('navUser.account')}
+            {t('navigation.navUser.account')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
             <Sparkles />
-            {t('navUser.upgradePlan')}
+            {t('navigation.navUser.upgradePlan')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenSettings('display')}>
             <Palette />
-            {t('navUser.personalize')}
+            {t('navigation.navUser.personalize')}
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
@@ -128,12 +128,12 @@ export function UserMenu({
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => handleOpenSettings('profile')}>
             <Settings />
-            {t('navUser.settings')}
+            {t('navigation.navUser.settings')}
           </DropdownMenuItem>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <HelpCircle />
-              {t('navUser.help')}
+              {t('navigation.navUser.help')}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="border-input">
               <DropdownMenuItem asChild>
@@ -143,13 +143,15 @@ export function UserMenu({
                   rel="noopener noreferrer"
                 >
                   <Megaphone />
-                  {t('navUser.helpSubmenu.releaseNotes')}
+                  {t('navigation.navUser.helpSubmenu.releaseNotes')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="https://docs.dayopt.app" target="_blank" rel="noopener noreferrer">
                   <Book />
-                  <span className="flex-1">{t('navUser.helpSubmenu.documentation')}</span>
+                  <span className="flex-1">
+                    {t('navigation.navUser.helpSubmenu.documentation')}
+                  </span>
                   <ExternalLink className="text-muted-foreground size-3" />
                 </Link>
               </DropdownMenuItem>
@@ -161,7 +163,9 @@ export function UserMenu({
                   rel="noopener noreferrer"
                 >
                   <FileText />
-                  <span className="flex-1">{t('navUser.helpSubmenu.termsOfService')}</span>
+                  <span className="flex-1">
+                    {t('navigation.navUser.helpSubmenu.termsOfService')}
+                  </span>
                   <ExternalLink className="text-muted-foreground size-3" />
                 </a>
               </DropdownMenuItem>
@@ -172,7 +176,9 @@ export function UserMenu({
                   rel="noopener noreferrer"
                 >
                   <FileText />
-                  <span className="flex-1">{t('navUser.helpSubmenu.privacyPolicy')}</span>
+                  <span className="flex-1">
+                    {t('navigation.navUser.helpSubmenu.privacyPolicy')}
+                  </span>
                   <ExternalLink className="text-muted-foreground size-3" />
                 </a>
               </DropdownMenuItem>
@@ -183,7 +189,7 @@ export function UserMenu({
                   rel="noopener noreferrer"
                 >
                   <Building />
-                  <span className="flex-1">{t('navUser.helpSubmenu.tokushoho')}</span>
+                  <span className="flex-1">{t('navigation.navUser.helpSubmenu.tokushoho')}</span>
                   <ExternalLink className="text-muted-foreground size-3" />
                 </a>
               </DropdownMenuItem>
@@ -194,14 +200,14 @@ export function UserMenu({
                   rel="noopener noreferrer"
                 >
                   <Shield />
-                  <span className="flex-1">{t('navUser.helpSubmenu.security')}</span>
+                  <span className="flex-1">{t('navigation.navUser.helpSubmenu.security')}</span>
                   <ExternalLink className="text-muted-foreground size-3" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => openContact()}>
                 <MessageSquare />
-                {t('navUser.helpSubmenu.contact')}
+                {t('navigation.navUser.helpSubmenu.contact')}
               </DropdownMenuItem>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
@@ -212,7 +218,7 @@ export function UserMenu({
         {/* ログアウト */}
         <DropdownMenuItem variant="destructive" onClick={logout} disabled={isLoggingOut}>
           <LogOut />
-          {isLoggingOut ? t('navUser.loggingOut') : t('navUser.logout')}
+          {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

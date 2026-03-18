@@ -29,12 +29,12 @@ export function useLogout() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      toast.success(t('navUser.logoutSuccess'));
+      toast.success(t('navigation.navUser.logoutSuccess'));
       router.push('/auth/login');
       router.refresh();
     } catch (error) {
       logger.error('Logout error:', error);
-      toast.error(t('navUser.logoutFailed'));
+      toast.error(t('navigation.navUser.logoutFailed'));
     } finally {
       setIsLoggingOut(false);
     }

@@ -153,7 +153,8 @@
       "createFailed": "タグの作成に失敗しました",
       "updateFailed": "タグの更新に失敗しました",
       "deleteFailed": "タグの削除に失敗しました",
-      "duplicateName": "この名前のタグは既に存在します"
+      "duplicateName": "この名前のタグは既に存在します",
+      "groupNameConflict": "この名前は既存のグループまたはタグと競合しています"
     },
     "delete": {
       "confirmTitle": "タグを削除しますか？",

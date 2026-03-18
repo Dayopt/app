@@ -50,12 +50,12 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      toast.success(t('navUser.logoutSuccess'));
+      toast.success(t('navigation.navUser.logoutSuccess'));
       router.push('/auth/login');
       router.refresh();
     } catch (error) {
       logger.error('Logout error:', error);
-      toast.error(t('navUser.logoutFailed'));
+      toast.error(t('navigation.navUser.logoutFailed'));
     } finally {
       setIsLoggingOut(false);
     }
@@ -150,10 +150,10 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
 
       {/* セッション */}
       <SectionCard title={t('settings.account.session')}>
-        <LabeledRow label={t('navUser.logout')}>
+        <LabeledRow label={t('navigation.navUser.logout')}>
           <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
-            {isLoggingOut ? t('navUser.loggingOut') : t('navUser.logout')}
+            {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
           </Button>
         </LabeledRow>
       </SectionCard>

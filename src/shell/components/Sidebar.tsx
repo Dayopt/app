@@ -60,24 +60,24 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
           <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
         </div>
         <div className="flex items-center">
-          <HoverTooltip content={t('sidebar.navigation.search')} side="bottom">
+          <HoverTooltip content={t('navigation.sidebar.navigation.search')} side="bottom">
             <Button
               variant="ghost"
               icon
               className="size-8"
               onClick={() => openSearch()}
-              aria-label={t('sidebar.navigation.search')}
+              aria-label={t('navigation.sidebar.navigation.search')}
             >
               <Search className="size-4" />
             </Button>
           </HoverTooltip>
-          <HoverTooltip content={t('sidebar.closeSidebar')} side="bottom">
+          <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"
               icon
               className="size-8"
               onClick={closeSidebar}
-              aria-label={t('sidebar.closeSidebar')}
+              aria-label={t('navigation.sidebar.closeSidebar')}
             >
               <PanelLeft className="size-4" />
             </Button>
