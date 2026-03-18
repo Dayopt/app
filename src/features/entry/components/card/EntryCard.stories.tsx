@@ -174,6 +174,21 @@ export const ActiveState: Story = {
   ),
 };
 
+/** ドラッグ中状態。opacity-30 で半透明化（ドラッグゴーストの元カード）。 */
+export const DraggingState: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={baseEntry}
+        tagName="仕事"
+        tagColor="blue"
+        position={basePosition}
+        isDragging
+      />
+    </Slot>
+  ),
+};
+
 // ---------------------------------------------------------------------------
 // 予定 vs 記録の差分オーバーレイ
 // ---------------------------------------------------------------------------
@@ -328,6 +343,21 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs">ActiveState（isActive=true）</p>
         <Slot>
           <EntryCard entry={baseEntry} position={basePosition} isActive />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">
+          DraggingState（isDragging=true, opacity-30）
+        </p>
+        <Slot>
+          <EntryCard
+            entry={baseEntry}
+            tagName="仕事"
+            tagColor="blue"
+            position={basePosition}
+            isDragging
+          />
         </Slot>
       </section>
 
