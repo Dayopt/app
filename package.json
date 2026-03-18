@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
-    "build": "NODE_OPTIONS='--max-old-space-size=12288' next build",
+    "build": "NODE_OPTIONS='--max-old-space-size=12288' next build --webpack",
     "start": "next start",
     "check": "npm run typecheck && npm run lint && npm run test:run",
     "lint": "eslint . --max-warnings 0",
