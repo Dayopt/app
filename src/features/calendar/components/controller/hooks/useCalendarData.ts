@@ -10,6 +10,7 @@ import { useTags } from '@/features/tags';
 import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import * as Sentry from '@sentry/nextjs';
 import {
   expandEntriesToCalendarEvents,
   type EntryInstanceException,
@@ -137,6 +138,8 @@ export function useCalendarData({
 
     // Entries の変換（繰り返し展開含む）
     if (entriesData) {
+      const startTime = performance.now();
+
       // サーバー型 → コア型に正規化（tagId を保証）
       const normalized: EntryWithTags[] = entriesData.map((e) => ({
         ...e,
@@ -149,6 +152,20 @@ export function useCalendarData({
         exceptionsMap,
       );
       calendarPlans.push(...expandedEvents);
+
+      const duration = performance.now() - startTime;
+      if (duration > 10) {
+        Sentry.addBreadcrumb({
+          category: 'performance',
+          message: `expandEntriesToCalendarEvents took ${duration.toFixed(1)}ms`,
+          level: 'warning',
+          data: {
+            duration,
+            entryCount: entriesData.length,
+            expandedCount: expandedEvents.length,
+          },
+        });
+      }
     }
 
     return calendarPlans;

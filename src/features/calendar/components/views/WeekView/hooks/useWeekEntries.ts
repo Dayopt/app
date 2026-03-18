@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import * as Sentry from '@sentry/nextjs';
 import { isSameDay } from 'date-fns';
 
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
@@ -76,9 +77,11 @@ export function useWeekEntries({
 
   // エントリの位置情報を計算
   const entryPositions = useMemo(() => {
+    const layoutStart = performance.now();
     const positions: WeekEntryPosition[] = [];
 
     const dayColumnWidth = weekDates.length > 0 ? 100 / weekDates.length : 100;
+    let totalEntryCount = 0;
 
     weekDates.forEach((date, dayIndex) => {
       const dateKey = getDateKey(date);
@@ -86,6 +89,8 @@ export function useWeekEntries({
         (Object.prototype.hasOwnProperty.call(entriesByDate, dateKey)
           ? entriesByDate[dateKey]
           : null) || [];
+
+      totalEntryCount += dayEntries.length;
 
       // その日のエントリの重なりを検出
       const entryColumns = calculateEntryColumns(dayEntries);
@@ -126,6 +131,20 @@ export function useWeekEntries({
         });
       });
     });
+
+    const layoutDuration = performance.now() - layoutStart;
+    if (layoutDuration > 16) {
+      Sentry.addBreadcrumb({
+        category: 'performance',
+        message: `WeekView layout calculation took ${layoutDuration.toFixed(1)}ms`,
+        level: 'warning',
+        data: {
+          duration: layoutDuration,
+          totalEntryCount,
+          positionCount: positions.length,
+        },
+      });
+    }
 
     return positions;
   }, [weekDates, entriesByDate, hourHeight]);
