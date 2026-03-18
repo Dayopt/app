@@ -95,32 +95,6 @@ export const contactRateLimit =
     : null;
 
 /**
- * Chat API（無料枠）per-minute レート制限
- * 5リクエスト / 1分
- */
-export const chatFreeRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(5, '1 m'),
-        prefix: 'ratelimit:chat:free',
-      })
-    : null;
-
-/**
- * Chat API（BYOK）per-minute レート制限
- * 20リクエスト / 1分
- */
-export const chatBYOKRateLimit =
-  isUpstashEnabled && redis
-    ? new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(20, '1 m'),
-        prefix: 'ratelimit:chat:byok',
-      })
-    : null;
-
-/**
  * tRPC protectedProcedure 用レート制限
  * 100リクエスト / 1分 per user
  */

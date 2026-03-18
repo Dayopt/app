@@ -21,43 +21,12 @@ import { buildAIContext, buildSystemPrompt, createAITools } from '@/features/ai/
 import { DEFAULT_MODELS, FREE_TIER_MODEL, SUPPORTED_MODELS } from '@/features/ai/server/types';
 import { createAIUsageService } from '@/features/ai/server/usage-service';
 import { logger } from '@/lib/logger';
-import {
-  chatBYOKRateLimit,
-  chatFreeRateLimit,
-  withUpstashRateLimit,
-} from '@/lib/rate-limit/upstash';
 import { createClient } from '@/platform/supabase/server';
 
 import type { AIProviderId } from '@/features/ai/server/types';
 import type { UIMessage } from 'ai';
 
 export const maxDuration = 60;
-
-// =============================================================================
-// インメモリ rate limit フォールバック（Upstash 未設定時）
-// =============================================================================
-
-const CHAT_RATE_WINDOW_MS = 60 * 1000;
-const chatUserLog = new Map<string, number[]>();
-
-function isChatRateLimited(userId: string, limit: number): boolean {
-  const now = Date.now();
-  const timestamps = chatUserLog.get(userId) ?? [];
-  const recent = timestamps.filter((t) => now - t < CHAT_RATE_WINDOW_MS);
-  recent.push(now);
-  chatUserLog.set(userId, recent);
-
-  // メモリリーク防止
-  if (chatUserLog.size > 5000) {
-    for (const [key, ts] of chatUserLog) {
-      if (ts.every((t) => now - t > CHAT_RATE_WINDOW_MS)) {
-        chatUserLog.delete(key);
-      }
-    }
-  }
-
-  return recent.length > limit;
-}
 
 /**
  * プロバイダーIDのバリデーション
@@ -103,37 +72,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Per-minute レート制限
-    const userApiKey = req.headers.get('x-ai-api-key');
-    const isBYOK = !!userApiKey;
-    const perMinuteLimit = isBYOK ? 20 : 5;
-    const upstashLimit = isBYOK ? chatBYOKRateLimit : chatFreeRateLimit;
-
-    const upstashResult = await withUpstashRateLimit(req, upstashLimit);
-    if (upstashResult && !upstashResult.success) {
-      const retryAfter = Math.ceil((upstashResult.reset - Date.now()) / 1000);
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': Math.max(retryAfter, 1).toString(),
-            'X-RateLimit-Limit': upstashResult.limit.toString(),
-            'X-RateLimit-Remaining': upstashResult.remaining.toString(),
-          },
-        },
-      );
-    }
-
-    // Upstash 未設定時はインメモリフォールバック
-    if (!upstashResult && isChatRateLimited(user.id, perMinuteLimit)) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429, headers: { 'Retry-After': '60' } },
-      );
-    }
-
-    // 3. リクエスト解析
+    // 2. リクエスト解析
     const body = (await req.json()) as {
       messages: UIMessage[];
       providerId?: string;
@@ -145,7 +84,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Messages are required' }, { status: 400 });
     }
 
-    // 4. BYOK vs 無料枠の判定
+    // 3. BYOK vs 無料枠の判定
+    const userApiKey = req.headers.get('x-ai-api-key');
+    const isBYOK = !!userApiKey;
+
     if (!isBYOK) {
       // --- 無料枠パス ---
       const serverApiKey = env.ANTHROPIC_API_KEY;
