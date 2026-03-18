@@ -4,6 +4,8 @@
  * RRULE/recurrence_typeから指定期間内のオカレンス日付を生成
  */
 
+import { logger } from '@/lib/logger';
+
 import {
   addDays,
   addMonths,
@@ -197,9 +199,13 @@ export function expandRecurrence(
     return [];
   }
 
-  // 時刻を抽出（HH:mm形式）
-  const startTime = entry.start_time ? new Date(entry.start_time).toTimeString().slice(0, 5) : null;
-  const endTime = entry.end_time ? new Date(entry.end_time).toTimeString().slice(0, 5) : null;
+  // 時刻を抽出（HH:mm形式、UTC — SSR環境でもブラウザと同じ結果を保証）
+  const startTime = entry.start_time
+    ? `${String(new Date(entry.start_time).getUTCHours()).padStart(2, '0')}:${String(new Date(entry.start_time).getUTCMinutes()).padStart(2, '0')}`
+    : null;
+  const endTime = entry.end_time
+    ? `${String(new Date(entry.end_time).getUTCHours()).padStart(2, '0')}:${String(new Date(entry.end_time).getUTCMinutes()).padStart(2, '0')}`
+    : null;
 
   // 終了日を決定
   let recurrenceEndDate: Date | null = null;
@@ -274,6 +280,13 @@ export function expandRecurrence(
     }
     current = next;
     count++;
+  }
+
+  // 最大反復回数に到達した場合は警告（日次繰り返し≒約2.7年分で到達）
+  if (count >= maxIterations) {
+    logger.warn(
+      `[expandRecurrence] Max iterations (${maxIterations}) reached for entry ${entry.id}. Some occurrences may be truncated.`,
+    );
   }
 
   // moved例外の移動先を追加
