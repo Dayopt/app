@@ -317,13 +317,16 @@ export function useEntryMutations() {
       await utils.entries.list.cancel();
       await utils.entries.getById.cancel({ id });
 
-      // スナップショット
+      // スナップショット（全キャッシュ対象 — 日付フィルター付きビューも含む）
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
       const previousEntries = utils.entries.list.getData();
       const previousEntry =
         utils.entries.getById.getData({ id }) ?? previousEntries?.find((e) => e.id === id);
 
       // 楽観的更新: リストから即座に削除（全キャッシュ対象）
-      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
       queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
         if (!oldData) return oldData;
         return oldData.filter((entry) => entry.id !== id);
@@ -366,7 +369,7 @@ export function useEntryMutations() {
 
       closeInspector();
 
-      return { id, previousEntries, previousEntry, endMutating };
+      return { id, previousEntriesList, previousEntry, endMutating };
     },
     onSuccess: (_, { id }) => {
       logger.debug('[mutation:delete] onSuccess', { id });
@@ -377,8 +380,11 @@ export function useEntryMutations() {
       logger.error('[mutation:delete] onError', error);
       toast.error(t('plan.toast.deleteFailed', { error: error.message }));
 
-      if (context?.previousEntries) {
-        utils.entries.list.setData(undefined, context.previousEntries);
+      // エラー時: 全ての entries.list キャッシュをロールバック
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
       if (context?.previousEntry) {
         utils.entries.getById.setData({ id }, context.previousEntry);
@@ -398,9 +404,14 @@ export function useEntryMutations() {
       logger.debug('[mutation:bulkUpdate] onMutate', { count: ids.length });
       const endMutating = startMutating();
       await utils.entries.list.cancel();
-      const previousEntries = utils.entries.list.getData();
 
-      utils.entries.list.setData(undefined, (oldData) => {
+      // スナップショット（全キャッシュ対象）
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
         if (!oldData) return oldData;
         return oldData.map((entry) => {
           if (!ids.includes(entry.id)) return entry;
@@ -418,7 +429,7 @@ export function useEntryMutations() {
         });
       });
 
-      return { previousEntries, endMutating };
+      return { previousEntriesList, endMutating };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkUpdated', { count: result.count }));
@@ -426,8 +437,10 @@ export function useEntryMutations() {
     },
     onError: (error, _variables, context) => {
       toast.error(t('plan.toast.bulkUpdateFailed', { error: error.message }));
-      if (context?.previousEntries) {
-        utils.entries.list.setData(undefined, context.previousEntries);
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
     },
     onSettled: (_data, _error, _variables, context) => {
@@ -441,14 +454,19 @@ export function useEntryMutations() {
       logger.debug('[mutation:bulkDelete] onMutate', { count: ids.length });
       const endMutating = startMutating();
       await utils.entries.list.cancel();
-      const previousEntries = utils.entries.list.getData();
 
-      utils.entries.list.setData(undefined, (oldData) => {
+      // スナップショット（全キャッシュ対象）
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
         if (!oldData) return oldData;
         return oldData.filter((entry) => !ids.includes(entry.id));
       });
 
-      return { previousEntries, endMutating };
+      return { previousEntriesList, endMutating };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkDeleted', { count: result.count }));
@@ -457,8 +475,10 @@ export function useEntryMutations() {
     },
     onError: (error, _variables, context) => {
       toast.error(t('plan.toast.bulkDeleteFailed', { error: error.message }));
-      if (context?.previousEntries) {
-        utils.entries.list.setData(undefined, context.previousEntries);
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
       }
     },
     onSettled: (_data, _error, _variables, context) => {
