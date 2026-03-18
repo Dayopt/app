@@ -26,6 +26,10 @@ type Story = StoryObj<typeof meta>;
 const now = new Date();
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+// 期限切れエントリのベース日（先週）
+const lastWeek = new Date(today);
+lastWeek.setDate(today.getDate() - 7);
+
 // 月曜始まりの週を計算
 const dayOfWeek = today.getDay();
 const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -36,6 +40,26 @@ const weekDays = Array.from({ length: 7 }, (_, i) => {
   return d;
 });
 const weekEnd = weekDays[6] ?? today;
+
+// 日曜始まりの週を計算（weekStartsOn=0 用）
+const sundayOffset = dayOfWeek === 0 ? 0 : -dayOfWeek;
+const sundayWeekStart = new Date(today.getTime() + sundayOffset * 24 * 60 * 60 * 1000);
+const sundayWeekDays = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(sundayWeekStart);
+  d.setDate(sundayWeekStart.getDate() + i);
+  return d;
+});
+const sundayWeekEnd = sundayWeekDays[6] ?? today;
+
+// 土曜始まりの週を計算（weekStartsOn=6 用）
+const saturdayOffset = dayOfWeek === 6 ? 0 : dayOfWeek === 0 ? -1 : -(dayOfWeek + 1);
+const saturdayWeekStart = new Date(today.getTime() + saturdayOffset * 24 * 60 * 60 * 1000);
+const saturdayWeekDays = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(saturdayWeekStart);
+  d.setDate(saturdayWeekStart.getDate() + i);
+  return d;
+});
+const saturdayWeekEnd = saturdayWeekDays[6] ?? today;
 
 function makeDate(base: Date, hour: number, minute = 0): Date {
   const d = new Date(base);
@@ -121,10 +145,52 @@ const mockPlans: CalendarEvent[] = [
   },
 ];
 
+/** 期限切れ未完了エントリ（先週のタスク）*/
+const overdueEntry: CalendarEvent = {
+  ...basePlan,
+  id: 'overdue-1',
+  title: '期限切れタスク（先週）',
+  color: 'red',
+  startDate: makeDate(lastWeek, 14, 0),
+  endDate: makeDate(lastWeek, 15, 0),
+  displayStartDate: makeDate(lastWeek, 14, 0),
+  displayEndDate: makeDate(lastWeek, 15, 0),
+  status: 'open',
+};
+
 const weekRange: ViewDateRange = {
   start: weekStart,
   end: weekEnd,
   days: weekDays,
+};
+
+const sundayWeekRange: ViewDateRange = {
+  start: sundayWeekStart,
+  end: sundayWeekEnd,
+  days: sundayWeekDays,
+};
+
+const saturdayWeekRange: ViewDateRange = {
+  start: saturdayWeekStart,
+  end: saturdayWeekEnd,
+  days: saturdayWeekDays,
+};
+
+// ─────────────────────────────────────────────────────────
+// Default handler args (共通)
+// ─────────────────────────────────────────────────────────
+
+const defaultHandlers = {
+  onEntryClick: fn(),
+  onEntryContextMenu: fn(),
+  onUpdateEntry: fn(),
+  onDeleteEntry: fn(),
+  onRestoreEntry: fn(),
+  onTimeRangeSelect: fn(),
+  onViewChange: fn(),
+  onNavigatePrev: fn(),
+  onNavigateNext: fn(),
+  onNavigateToday: fn(),
 };
 
 // ─────────────────────────────────────────────────────────
@@ -135,7 +201,12 @@ const weekRange: ViewDateRange = {
 export const Default: Story = {
   render: () => (
     <div className="h-[700px]">
-      <WeekView dateRange={weekRange} entries={mockPlans} currentDate={today} onEntryClick={fn()} />
+      <WeekView
+        dateRange={weekRange}
+        entries={mockPlans}
+        currentDate={today}
+        {...defaultHandlers}
+      />
     </div>
   ),
 };
@@ -144,7 +215,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => (
     <div className="h-[700px]">
-      <WeekView dateRange={weekRange} entries={[]} currentDate={today} onEntryClick={fn()} />
+      <WeekView dateRange={weekRange} entries={[]} currentDate={today} {...defaultHandlers} />
     </div>
   ),
 };
@@ -158,7 +229,97 @@ export const WithoutWeekends: Story = {
         entries={mockPlans}
         currentDate={today}
         showWeekends={false}
-        onEntryClick={fn()}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 全ハンドラー接続済み
+ * ドラッグ＆ドロップ・時間範囲選択・右クリックメニューが有効
+ */
+export const WithAllHandlers: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <WeekView
+        dateRange={weekRange}
+        entries={mockPlans}
+        allEntries={[...mockPlans, overdueEntry]}
+        currentDate={today}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 月曜始まり（weekStartsOn=1）
+ * 設定ストアを上書きして月曜始まりを強制
+ */
+export const MondayStart: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <WeekView
+        dateRange={weekRange}
+        entries={mockPlans}
+        currentDate={today}
+        weekStartsOn={1}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 土曜始まり（weekStartsOn=6）
+ * 中東・一部アジア地域の週始まり設定
+ */
+export const SaturdayStart: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <WeekView
+        dateRange={saturdayWeekRange}
+        entries={mockPlans}
+        currentDate={today}
+        weekStartsOn={6}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 日曜始まり（weekStartsOn=0）
+ * 北米・一部アジア地域の週始まり設定
+ */
+export const SundayStart: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <WeekView
+        dateRange={sundayWeekRange}
+        entries={mockPlans}
+        currentDate={today}
+        weekStartsOn={0}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 期限切れエントリあり
+ * allEntries に先週の未完了タスクを含めることで期限切れ表示を確認できる
+ */
+export const WithOverdueEntry: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <WeekView
+        dateRange={weekRange}
+        entries={mockPlans}
+        allEntries={[...mockPlans, overdueEntry]}
+        currentDate={today}
+        {...defaultHandlers}
       />
     </div>
   ),
@@ -172,13 +333,14 @@ export const AllPatterns: Story = {
         <WeekView
           dateRange={weekRange}
           entries={mockPlans}
+          allEntries={[...mockPlans, overdueEntry]}
           currentDate={today}
-          onEntryClick={fn()}
+          {...defaultHandlers}
         />
       </div>
 
       <div className="h-[500px] w-full">
-        <WeekView dateRange={weekRange} entries={[]} currentDate={today} onEntryClick={fn()} />
+        <WeekView dateRange={weekRange} entries={[]} currentDate={today} {...defaultHandlers} />
       </div>
 
       <div className="h-[500px] w-full">
@@ -187,7 +349,27 @@ export const AllPatterns: Story = {
           entries={mockPlans}
           currentDate={today}
           showWeekends={false}
-          onEntryClick={fn()}
+          {...defaultHandlers}
+        />
+      </div>
+
+      <div className="h-[500px] w-full">
+        <WeekView
+          dateRange={weekRange}
+          entries={mockPlans}
+          currentDate={today}
+          weekStartsOn={1}
+          {...defaultHandlers}
+        />
+      </div>
+
+      <div className="h-[500px] w-full">
+        <WeekView
+          dateRange={saturdayWeekRange}
+          entries={mockPlans}
+          currentDate={today}
+          weekStartsOn={6}
+          {...defaultHandlers}
         />
       </div>
     </div>
