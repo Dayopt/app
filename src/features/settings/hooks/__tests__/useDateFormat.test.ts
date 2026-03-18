@@ -7,11 +7,14 @@ let mockTimeFormat: '12h' | '24h' = '24h';
 let mockTimezone = 'Asia/Tokyo';
 
 vi.mock('@/stores/useCalendarSettingsStore', () => ({
-  useCalendarSettingsStore: () => ({
-    dateFormat: mockDateFormat,
-    timeFormat: mockTimeFormat,
-    timezone: mockTimezone,
-  }),
+  useCalendarSettingsStore: (selector?: (s: Record<string, unknown>) => unknown) => {
+    const state = {
+      dateFormat: mockDateFormat,
+      timeFormat: mockTimeFormat,
+      timezone: mockTimezone,
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 import { useDateFormat } from '@/hooks/useDateFormat';
