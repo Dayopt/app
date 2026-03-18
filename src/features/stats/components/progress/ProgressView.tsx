@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 
 import type { StatsViewProps } from '../../types/stats.types';
 import { DayOfWeekChart } from '../charts/DayOfWeekChart';
+import { EnergyMapHeatmap } from '../charts/EnergyMapHeatmap';
 import { HourlyDistributionChart } from '../charts/HourlyDistributionChart';
 import { MonthlyTrendChart } from '../charts/MonthlyTrendChart';
 import { YearlyHeatmap } from '../charts/YearlyHeatmap';
@@ -27,6 +28,7 @@ export function ProgressView({ className }: StatsViewProps) {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <HourlyDistributionChart />
+            <EnergyMapHeatmap />
           </div>
         </div>
       </div>

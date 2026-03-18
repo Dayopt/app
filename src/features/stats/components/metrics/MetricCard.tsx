@@ -45,10 +45,15 @@ export function MetricCard({
   if (isLoading) {
     return (
       <Card className={cn('gap-0 border-none py-0', isHero && 'col-span-2')}>
-        <CardContent className="p-6">
+        <CardContent className="p-3 md:p-6">
           <div className="animate-pulse space-y-2">
             <div className="bg-muted h-3 w-16 rounded" />
-            <div className={cn('bg-muted rounded', isHero ? 'h-11 w-24' : 'h-11 w-16')} />
+            <div
+              className={cn(
+                'bg-muted rounded',
+                isHero ? 'h-8 w-20 md:h-11 md:w-24' : 'h-8 w-14 md:h-11 md:w-16',
+              )}
+            />
             <div className="bg-muted h-3 w-12 rounded" />
           </div>
         </CardContent>
@@ -58,7 +63,7 @@ export function MetricCard({
 
   return (
     <Card className={cn('gap-0 border-none py-0', isHero && 'col-span-2')}>
-      <CardContent className="flex h-full flex-col justify-between p-6">
+      <CardContent className="flex h-full flex-col justify-between p-3 md:p-6">
         {/* Label + Icon */}
         <div className="flex items-center gap-1.5">
           {Icon && <Icon className={cn('text-muted-foreground', isHero ? 'size-4' : 'size-3.5')} />}
@@ -67,7 +72,9 @@ export function MetricCard({
 
         {/* Value + Trend */}
         <div className="mt-auto flex items-baseline gap-1 pt-2">
-          <span className="text-foreground text-4xl font-bold">{valueParts.primary}</span>
+          <span className="text-foreground text-2xl font-bold md:text-4xl">
+            {valueParts.primary}
+          </span>
           {valueParts.unit && (
             <span
               className={cn('text-muted-foreground font-medium', isHero ? 'text-lg' : 'text-base')}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -26,6 +27,7 @@ function formatHours(hours: number): string {
 }
 
 export function YearlyHeatmap() {
+  const t = useTranslations('calendar.stats.charts');
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
@@ -55,7 +57,7 @@ export function YearlyHeatmap() {
     <Card className="border-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
-          <CardTitle>Yearly Grid</CardTitle>
+          <CardTitle>{t('yearlyGrid')}</CardTitle>
           <CardDescription>
             {year} - Total {formatHours(totalHours)}
           </CardDescription>

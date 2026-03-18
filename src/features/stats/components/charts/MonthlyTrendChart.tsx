@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { Area, AreaChart, XAxis, YAxis } from 'recharts';
@@ -25,6 +26,7 @@ function formatHours(hours: number): string {
 }
 
 export function MonthlyTrendChart() {
+  const t = useTranslations('calendar.stats.charts');
   const granularity = useStatsFilterStore((s) => s.granularity);
   const months = useMemo(() => computeMonthCount(granularity), [granularity]);
   const queryInput = months ? { months } : undefined;
@@ -34,8 +36,8 @@ export function MonthlyTrendChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Monthly Trend</CardTitle>
-          <CardDescription>Past 12 months</CardDescription>
+          <CardTitle>{t('monthlyTrend')}</CardTitle>
+          <CardDescription>{t('monthlyTrendDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
@@ -48,12 +50,12 @@ export function MonthlyTrendChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Monthly Trend</CardTitle>
-          <CardDescription>Past 12 months</CardDescription>
+          <CardTitle>{t('monthlyTrend')}</CardTitle>
+          <CardDescription>{t('monthlyTrendDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-            No data
+            {t('noData')}
           </div>
         </CardContent>
       </Card>
@@ -65,18 +67,19 @@ export function MonthlyTrendChart() {
   const lastMonth = data[data.length - 1];
   const prevMonth = data[data.length - 2];
 
-  let trend = '';
+  let trendText = '';
   if (lastMonth && prevMonth && prevMonth.hours > 0) {
     const change = ((lastMonth.hours - prevMonth.hours) / prevMonth.hours) * 100;
-    trend = change >= 0 ? `+${change.toFixed(0)}%` : `${change.toFixed(0)}%`;
+    trendText = change >= 0 ? `+${change.toFixed(0)}%` : `${change.toFixed(0)}%`;
   }
 
   return (
     <Card className="border-none">
       <CardHeader>
-        <CardTitle>Monthly Trend</CardTitle>
+        <CardTitle>{t('monthlyTrend')}</CardTitle>
         <CardDescription>
-          Avg: {formatHours(avgHours)}/mo {trend && `(MoM ${trend})`}
+          {t('monthlyAvg', { avg: formatHours(avgHours) })}{' '}
+          {trendText && t('monthlyMoM', { change: trendText })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -120,7 +123,7 @@ export function MonthlyTrendChart() {
         </ChartContainer>
 
         <div className="text-muted-foreground mt-2 text-center text-xs">
-          Annual total: {formatHours(totalHours)}
+          {t('annualTotal', { total: formatHours(totalHours) })}
         </div>
       </CardContent>
     </Card>
