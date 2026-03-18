@@ -70,6 +70,27 @@ export const TableEmpty: Story = {
   },
 };
 
+/** 大サイズ（size="lg"）。フルページの空状態に使用。 */
+export const LargeSize: Story = {
+  args: {
+    icon: CalendarDays,
+    title: '予定がありません',
+    description: '今日の予定はまだ登録されていません。新しい予定を追加して始めましょう。',
+    size: 'lg',
+  },
+};
+
+/** actionLabel / onAction パターン。内蔵ボタンで手軽にアクションを追加。 */
+export const WithActionLabel: Story = {
+  args: {
+    icon: Inbox,
+    title: 'タスクがありません',
+    description: '新しいタスクを作成して生産性を高めましょう。',
+    actionLabel: '新規作成',
+    onAction: () => undefined,
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {
@@ -77,11 +98,14 @@ export const AllPatterns: Story = {
   },
   render: () => (
     <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground text-xs">size=&quot;md&quot;（標準）</p>
       <EmptyState
         icon={CalendarDays}
         title="予定がありません"
         description="今日の予定はまだ登録されていません。"
       />
+
+      <p className="text-muted-foreground text-xs">size=&quot;sm&quot; + centered（テーブル内）</p>
       <div className="border-border h-[300px] w-[400px] rounded-xl border">
         <EmptyState
           icon={Inbox}
@@ -92,6 +116,23 @@ export const AllPatterns: Story = {
           actions={<Button size="sm">新規作成</Button>}
         />
       </div>
+
+      <p className="text-muted-foreground text-xs">size=&quot;lg&quot;（フルページ）</p>
+      <EmptyState
+        icon={CalendarDays}
+        title="予定がありません"
+        description="今日の予定はまだ登録されていません。新しい予定を追加して始めましょう。"
+        size="lg"
+      />
+
+      <p className="text-muted-foreground text-xs">actionLabel / onAction（内蔵ボタン）</p>
+      <EmptyState
+        icon={Inbox}
+        title="タスクがありません"
+        description="新しいタスクを作成して生産性を高めましょう。"
+        actionLabel="新規作成"
+        onAction={() => undefined}
+      />
     </div>
   ),
 };

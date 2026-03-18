@@ -96,14 +96,54 @@ export const PeriodSelector: Story = {
   },
 };
 
-export const AllPatterns: Story = {
-  render: function AllPatternsStory() {
+/**
+ * ghostバリアント - 背景なし、ホバー時のみ背景が出現。
+ * ツールバーやヘッダー内など、境界線なしで溶け込ませたい場合に使用。
+ */
+export const GhostVariant: Story = {
+  render: function GhostVariantStory() {
     const [value, setValue] = useState('daily');
 
     return (
-      <div className="flex flex-col items-start gap-6">
+      <div className="flex flex-col items-start gap-4">
+        <p className="text-muted-foreground text-xs">ghost（背景なし）</p>
         <Select value={value} onValueChange={setValue}>
+          <SelectTrigger variant="ghost" className="h-8 w-24" aria-label="Period">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">日</SelectItem>
+            <SelectItem value="weekly">週</SelectItem>
+            <SelectItem value="monthly">月</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  },
+};
+
+export const AllPatterns: Story = {
+  render: function AllPatternsStory() {
+    const [value1, setValue1] = useState('daily');
+    const [value2, setValue2] = useState('daily');
+
+    return (
+      <div className="flex flex-col items-start gap-6">
+        <p className="text-muted-foreground text-xs">default（ボーダー付き）</p>
+        <Select value={value1} onValueChange={setValue1}>
           <SelectTrigger className="h-8 w-24" aria-label="Period">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="daily">日</SelectItem>
+            <SelectItem value="weekly">週</SelectItem>
+            <SelectItem value="monthly">月</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <p className="text-muted-foreground text-xs">ghost（背景なし）</p>
+        <Select value={value2} onValueChange={setValue2}>
+          <SelectTrigger variant="ghost" className="h-8 w-24" aria-label="Period ghost">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
