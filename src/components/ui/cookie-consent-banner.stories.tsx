@@ -1,50 +1,77 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { expect, waitFor, within } from 'storybook/test';
 
-import { Button } from './button';
+import { CookieConsentBanner } from './cookie-consent-banner';
+
+const STORAGE_KEY = 'dayopt_cookie_consent';
 
 const meta = {
   title: 'Components/UI/CookieConsentBanner',
+  component: CookieConsentBanner,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
   },
-} satisfies Meta;
+} satisfies Meta<typeof CookieConsentBanner>;
 
 export default meta;
-type Story = StoryObj;
+type Story = StoryObj<typeof meta>;
 
-/** Cookie同意バナーのレイアウト再現。実コンポーネントは内部状態に依存するためStorybookではモックを使用。 */
+/**
+ * Cookie同意バナー（初回訪問時）
+ *
+ * localStorageから同意記録を削除した状態でレンダリングすることで、
+ * 実コンポーネントがバナーを表示するまで待機する。
+ * 内部で requestIdleCallback / setTimeout を使うため play で表示を確認。
+ */
 export const Default: Story = {
-  render: () => (
-    <div className="relative min-h-[200px]">
-      <div
-        className="border-border bg-card absolute inset-x-0 bottom-0 border-t p-4 backdrop-blur-sm sm:p-6"
-        role="dialog"
-        aria-labelledby="cookie-consent-title"
-      >
-        <div className="container mx-auto max-w-6xl">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <h2 id="cookie-consent-title" className="text-foreground mb-1 text-base font-bold">
-                About Cookies
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                We use cookies and similar technologies to improve service quality and analyze
-                usage.{' '}
-                <a href="#" className="text-primary hover:text-primary/80 underline">
-                  Learn more
-                </a>
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-              <Button variant="outline" className="w-full sm:w-auto">
-                Essential only
-              </Button>
-              <Button className="w-full sm:w-auto">Accept all</Button>
-            </div>
-          </div>
+  decorators: [
+    (Story) => {
+      // 同意記録をクリアしてバナーが表示される状態にする
+      localStorage.removeItem(STORAGE_KEY);
+      return (
+        <div className="relative min-h-[200px]">
+          <Story />
         </div>
-      </div>
-    </div>
-  ),
+      );
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // requestIdleCallback（最大2秒）後に表示されるのを待つ
+    await waitFor(
+      () => {
+        expect(canvas.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  },
+};
+
+/**
+ * 同意済みの場合はバナーを表示しない
+ */
+export const ConsentAlreadyGiven: Story = {
+  decorators: [
+    (Story) => {
+      // 同意記録を設定しておく
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          necessary: true,
+          analytics: true,
+          marketing: false,
+          timestamp: Date.now(),
+        }),
+      );
+      return (
+        <div className="relative min-h-[200px]">
+          <p className="text-muted-foreground p-4 text-sm">
+            同意済みのためバナーは非表示（このテキストのみ表示）
+          </p>
+          <Story />
+        </div>
+      );
+    },
+  ],
 };
