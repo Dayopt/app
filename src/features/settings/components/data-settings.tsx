@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -363,27 +364,90 @@ function CopyButton({
 
 // ─── Deletion ────────────────────────────────────────
 
+type DeletionTarget = 'blocks' | 'all' | null;
+
 function DeletionSection() {
   const t = useTranslations('settings.dataControls.deletion');
+  const [target, setTarget] = useState<DeletionTarget>(null);
+  const [confirmInput, setConfirmInput] = useState('');
 
-  // TODO: tRPC 実装後に確認ダイアログ付きの削除フローを有効化
+  const keyword = t('confirmKeyword');
+  const isConfirmed = confirmInput === keyword;
+
+  const deleteBlocksMutation = api.user.deleteBlocks.useMutation({
+    onSuccess: (data) => {
+      toast.success(t('deleteBlocks') + ` (${data.deletedCount})`);
+      setTarget(null);
+      setConfirmInput('');
+    },
+    onError: () => {
+      toast.error(t('deleteBlocks'));
+    },
+  });
+
+  const deleteAllDataMutation = api.user.deleteAllData.useMutation({
+    onSuccess: () => {
+      toast.success(t('deleteAllData'));
+      setTarget(null);
+      setConfirmInput('');
+    },
+    onError: () => {
+      toast.error(t('deleteAllData'));
+    },
+  });
+
+  const handleConfirm = useCallback(async () => {
+    if (!isConfirmed) return;
+    if (target === 'blocks') {
+      await deleteBlocksMutation.mutateAsync({ confirmText: 'DELETE' });
+    } else if (target === 'all') {
+      await deleteAllDataMutation.mutateAsync({ confirmText: 'DELETE' });
+    }
+  }, [target, isConfirmed, deleteBlocksMutation, deleteAllDataMutation]);
+
+  const handleClose = useCallback(() => {
+    setTarget(null);
+    setConfirmInput('');
+  }, []);
+
   return (
     <SectionCard title={t('title')}>
       <div className="space-y-0">
         <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={() => setTarget('blocks')}>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteBlocks')}
           </Button>
         </LabeledRow>
 
         <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={() => setTarget('all')}>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteAllData')}
           </Button>
         </LabeledRow>
       </div>
+
+      <ConfirmDialog
+        open={target !== null}
+        onClose={handleClose}
+        onConfirm={handleConfirm}
+        title={t('confirmTitle')}
+        description={target === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
+        variant="destructive"
+        confirmDisabled={!isConfirmed}
+        loadingLabel={t('deleting')}
+      >
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm">{t('typeToConfirm', { keyword })}</p>
+          <Input
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            placeholder={keyword}
+            autoFocus
+          />
+        </div>
+      </ConfirmDialog>
     </SectionCard>
   );
 }

@@ -6,6 +6,8 @@
  *
  * エンドポイント:
  * - user.deleteAccount: アカウント即時削除
+ * - user.deleteBlocks: 全ブロック（エントリ）を削除
+ * - user.deleteAllData: 全データを削除（アカウント保持）
  * - user.exportData: ユーザーデータエクスポート
  * - user.verifyRecoveryCode: リカバリーコードでMFA認証（MFA無効化 + ログイン許可）
  */
@@ -56,6 +58,35 @@ export const userRouter = createTRPCRouter({
         });
 
         return result;
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * 全ブロック（エントリ）を削除
+   * タグ・設定は保持
+   */
+  deleteBlocks: protectedProcedure
+    .input(z.object({ confirmText: z.literal('DELETE') }))
+    .mutation(async ({ ctx }) => {
+      try {
+        const service = createUserService(ctx.supabase);
+        return await service.deleteBlocks(ctx.userId!);
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * 全データを削除（アカウントは保持）
+   */
+  deleteAllData: protectedProcedure
+    .input(z.object({ confirmText: z.literal('DELETE') }))
+    .mutation(async ({ ctx }) => {
+      try {
+        const service = createUserService(ctx.supabase);
+        return await service.deleteAllData(ctx.userId!);
       } catch (error) {
         return handleServiceError(error);
       }
@@ -166,9 +197,17 @@ export const userRouter = createTRPCRouter({
       }
 
       // 残りのコード数を取得
-      const { data: remainingCount } = await ctx.supabase.rpc('count_unused_recovery_codes', {
-        p_user_id: userId,
-      });
+      const { data: remainingCount, error: countError } = await ctx.supabase.rpc(
+        'count_unused_recovery_codes',
+        {
+          p_user_id: userId,
+        },
+      );
+
+      if (countError) {
+        logger.error('Failed to count remaining recovery codes:', countError);
+        // リカバリーコード消費は成功しているため、カウント失敗は非致命的
+      }
 
       return {
         success: true,

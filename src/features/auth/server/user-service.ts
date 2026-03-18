@@ -18,6 +18,7 @@ export class UserServiceError extends Error {
   constructor(
     public code:
       | 'DELETE_FAILED'
+      | 'DELETE_DATA_FAILED'
       | 'EXPORT_FAILED'
       | 'UNAUTHORIZED'
       | 'INVALID_PASSWORD'
@@ -145,6 +146,137 @@ export function createUserService(supabase: SupabaseClient<Database>) {
 
       logger.info('Account deleted successfully', { userId });
 
+      return { success: true };
+    },
+
+    /**
+     * 全ブロック（entries + entry_tags + 関連activities）を削除
+     * タグ・設定・プロフィールは保持
+     */
+    async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
+      // entry_tags → entry_activities → entry_instances → entries の順で削除
+      // RLSがuser_idで制約しているため、他ユーザーのデータは影響しない
+      const { error: tagError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
+      if (tagError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_tags deletion failed: ${tagError.message}`,
+        );
+      }
+
+      const { error: actError } = await supabase
+        .from('entry_activities')
+        .delete()
+        .eq('user_id', userId);
+      if (actError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_activities deletion failed: ${actError.message}`,
+        );
+      }
+
+      const { error: instError } = await supabase
+        .from('entry_instances')
+        .delete()
+        .eq('user_id', userId);
+      if (instError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_instances deletion failed: ${instError.message}`,
+        );
+      }
+
+      const { data: deleted, error: entryError } = await supabase
+        .from('entries')
+        .delete()
+        .eq('user_id', userId)
+        .select('id');
+      if (entryError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entries deletion failed: ${entryError.message}`,
+        );
+      }
+
+      logger.info('Blocks deleted', { userId, count: deleted?.length ?? 0 });
+      return { deletedCount: deleted?.length ?? 0 };
+    },
+
+    /**
+     * 全データを削除（アカウントは保持）
+     * entries, tags, 設定, 通知設定を全削除
+     */
+    async deleteAllData(userId: string): Promise<{ success: true }> {
+      // 依存関係順に削除: entry_tags → activities → instances → entries → tags → settings
+      const { error: etError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
+      if (etError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_tags deletion failed: ${etError.message}`,
+        );
+      }
+
+      const { error: eaError } = await supabase
+        .from('entry_activities')
+        .delete()
+        .eq('user_id', userId);
+      if (eaError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_activities deletion failed: ${eaError.message}`,
+        );
+      }
+
+      const { error: eiError } = await supabase
+        .from('entry_instances')
+        .delete()
+        .eq('user_id', userId);
+      if (eiError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entry_instances deletion failed: ${eiError.message}`,
+        );
+      }
+
+      const { error: entryError } = await supabase.from('entries').delete().eq('user_id', userId);
+      if (entryError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `entries deletion failed: ${entryError.message}`,
+        );
+      }
+
+      const { error: tagError } = await supabase.from('tags').delete().eq('user_id', userId);
+      if (tagError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `tags deletion failed: ${tagError.message}`,
+        );
+      }
+
+      const { error: settingsError } = await supabase
+        .from('user_settings')
+        .delete()
+        .eq('user_id', userId);
+      if (settingsError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `user_settings deletion failed: ${settingsError.message}`,
+        );
+      }
+
+      const { error: notifError } = await supabase
+        .from('notification_preferences')
+        .delete()
+        .eq('user_id', userId);
+      if (notifError) {
+        throw new UserServiceError(
+          'DELETE_DATA_FAILED',
+          `notification_preferences deletion failed: ${notifError.message}`,
+        );
+      }
+
+      logger.info('All user data deleted (account preserved)', { userId });
       return { success: true };
     },
 
