@@ -49,24 +49,59 @@ function computePosition(anchor: { top: number; right: number; bottom: number; l
   return { x, y };
 }
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function FloatingPopover({ children, onClose, title, anchorRect }: FloatingPopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  // パネルが開いたら最初のフォーカス可能な要素にフォーカスを移動
+  // 開く前のフォーカス要素を記録し、パネルが開いたら最初のフォーカス可能な要素に移動
   useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+
     const timer = setTimeout(() => {
       const panel = panelRef.current;
       if (!panel) return;
-      const focusable = panel.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      );
+      const focusable = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
       if (focusable) {
         focusable.focus();
       } else {
         panel.focus();
       }
     }, 50);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // 閉じる時に元の要素にフォーカスを返す
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  // フォーカストラップ: Tab/Shift+Tab でパネル内にフォーカスを閉じ込める
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusableElements.length === 0) return;
+
+      const first = focusableElements[0]!;
+      const last = focusableElements[focusableElements.length - 1]!;
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    panel.addEventListener('keydown', handleKeyDown);
+    return () => panel.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const position = useMemo(() => {
@@ -114,6 +149,7 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
           'flex max-h-[40rem] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
         )}
         role="dialog"
+        aria-modal="true"
         aria-label={title}
         tabIndex={-1}
       >
