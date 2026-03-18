@@ -350,27 +350,5 @@
       },
       "lastUpdated": "Last Updated: October 15, 2025"
     }
-  },
-  "ossCredits": {
-    "title": "Open Source Licenses",
-    "description": "License information for open source software used in this project",
-    "intro": "Dayopt uses the following open source software. We would like to express our gratitude to the maintainers and contributors of each project.",
-    "totalPackages": "Total Packages",
-    "searchPlaceholder": "Search by package name...",
-    "license": "License",
-    "version": "Version",
-    "repository": "Repository",
-    "publisher": "Publisher",
-    "noRepository": "No repository information",
-    "noPublisher": "No publisher information",
-    "noResults": "No search results found",
-    "loadingError": "Failed to load license information",
-    "licenseDistribution": "License Distribution",
-    "packageList": "Package List ({count})",
-    "footer": {
-      "notice": "For complete license texts and NOTICE files, please see:",
-      "thirdPartyNotices": "THIRD_PARTY_NOTICES.txt",
-      "githubRepository": "GitHub Repository"
-    }
   }
 }

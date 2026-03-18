@@ -27,44 +27,6 @@
       "generalSettings": "General settings",
       "stats": "Stats"
     },
-    "mobile": {
-      "drawer": {
-        "menu": "Menu",
-        "calendar": "Calendar",
-        "settings": "Settings",
-        "notifications": "Notifications",
-        "theme": "Theme",
-        "export": "Export",
-        "import": "Import",
-        "closeMenu": "Close menu"
-      },
-      "header": {
-        "viewLabels": {
-          "day": "Day",
-          "3day": "3-Day",
-          "5day": "5-Day",
-          "week": "Week",
-          "2week": "2-Week",
-          "month": "Month"
-        },
-        "viewSuffix": "View",
-        "back": "Back",
-        "openMenu": "Open menu",
-        "prevPeriod": "Previous period",
-        "nextPeriod": "Next period",
-        "closeMenu": "Close menu"
-      },
-      "navigation": {
-        "calendar": "Calendar",
-        "profile": "Profile",
-        "settings": "Settings",
-        "createEvent": "Create new event"
-      },
-      "touchHint": {
-        "title": "Tip: Long press to create",
-        "description": "Press and hold on the calendar to create a new schedule"
-      }
-    },
     "event": {
       "title": "Event",
       "delete": "Delete Event",
@@ -111,10 +73,6 @@
       "moveToDate": "Change Date",
       "delete": "Delete"
     },
-    "accessibility": {
-      "standardContrast": "Standard Contrast",
-      "toggleWeekend": "Toggle Weekend Display"
-    },
     "toast": {
       "created": "Event created",
       "updated": "Event updated",
@@ -152,20 +110,6 @@
       "openCalendar": "Open calendar",
       "previousMonth": "Previous month",
       "nextMonth": "Next month"
-    },
-    "performance": {
-      "notCalculated": "Not Calculated",
-      "memoryLeakDetected": "Continuous memory increase detected",
-      "fixLayoutShift": "Identify and fix layout shift causes"
-    },
-    "resize": {
-      "tooCloseToEnd": "Too close to end time",
-      "tooCloseToStart": "Too close to start time"
-    },
-    "network": {
-      "authRequired": "Authentication required",
-      "accessDenied": "Access denied",
-      "notFound": "Resource not found"
     },
     "errors": {
       "loadFailed": "Failed to load calendar",
@@ -349,117 +293,8 @@
         "peakHour": "This is a peak hour — great for focused work"
       }
     },
-    "collapsedSection": {
-      "expandLabel": "Expand {timeRange}"
-    },
-    "sleepHours": {
-      "collapse": "Collapse sleep hours",
-      "expand": "Expand sleep hours",
-      "collapsed": "{start} - {end}",
-      "planCount": "{count, plural, one {# plan} other {# plans}}"
-    },
-    "segment": {
-      "start": "(Start)",
-      "middle": "(Cont.)",
-      "end": "(End)"
-    },
     "timeGrid": {
       "ariaLabel": "Calendar time grid - click or press Enter to create event"
-    },
-    "aside": {
-      "plan": "Plans",
-      "record": "Records",
-      "stats": "Statistics",
-      "unscheduled": "Unscheduled",
-      "search": "Search",
-      "closeSearch": "Close search",
-      "searchPlaceholder": "Search plans...",
-      "error": "Failed to load",
-      "noPlans": "No unscheduled plans",
-      "sortBy": "Sort by",
-      "groupBy": "Group by",
-      "reset": "Reset",
-      "sort": {
-        "createdAt": "Date created",
-        "updatedAt": "Date updated",
-        "title": "Title",
-        "asc": "Ascending",
-        "desc": "Descending"
-      },
-      "group": {
-        "none": "None",
-        "tags": "Tags"
-      },
-      "status": {
-        "label": "Status",
-        "all": "All",
-        "open": "Open",
-        "closed": "Closed"
-      },
-      "schedule": {
-        "label": "Date",
-        "all": "All",
-        "scheduled": "Scheduled",
-        "unscheduled": "Unscheduled"
-      },
-      "filter": {
-        "all": "All",
-        "unscheduled": "Unsched",
-        "scheduled": "Sched",
-        "open": "Open",
-        "closed": "Done"
-      },
-      "recordSearchPlaceholder": "Search records...",
-      "noRecords": "No records",
-      "createRecord": "Create record",
-      "recordThis": "Record this",
-      "noTitle": "(No title)",
-      "duration": "{minutes} min",
-      "fulfillment": "Fulfillment",
-      "recordSort": {
-        "workedAt": "Work date",
-        "durationMinutes": "Duration",
-        "fulfillmentScore": "Fulfillment",
-        "createdAt": "Date created",
-        "updatedAt": "Date updated",
-        "asc": "Ascending",
-        "desc": "Descending"
-      },
-      "recordGroup": {
-        "none": "None",
-        "workedAt": "Date",
-        "tags": "Tags",
-        "fulfillmentScore": "Fulfillment"
-      },
-      "recordDateFilter": {
-        "label": "Period",
-        "all": "All",
-        "today": "Today",
-        "thisWeek": "This week",
-        "thisMonth": "This month"
-      }
-    },
-    "reflection": {
-      "empty": {
-        "title": "No reflection yet",
-        "description": "Generate an AI reflection from today's activities",
-        "generate": "Generate Reflection"
-      },
-      "sections": {
-        "activities": "Activities",
-        "insights": "Insights",
-        "question": "Question",
-        "note": "Your Note"
-      },
-      "userNote": {
-        "placeholder": "Add your thoughts..."
-      },
-      "list": {
-        "thisWeek": "This Week",
-        "lastWeek": "Last Week",
-        "older": "Older",
-        "back": "Back to list"
-      }
     },
     "error": {
       "title": "Failed to load calendar",

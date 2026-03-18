@@ -27,44 +27,6 @@
       "generalSettings": "一般設定",
       "stats": "統計"
     },
-    "mobile": {
-      "drawer": {
-        "menu": "メニュー",
-        "calendar": "カレンダー",
-        "settings": "設定",
-        "notifications": "通知",
-        "theme": "テーマ",
-        "export": "エクスポート",
-        "import": "インポート",
-        "closeMenu": "メニューを閉じる"
-      },
-      "header": {
-        "viewLabels": {
-          "day": "日",
-          "3day": "3日",
-          "5day": "5日",
-          "week": "週",
-          "2week": "2週",
-          "month": "月"
-        },
-        "viewSuffix": "表示",
-        "back": "戻る",
-        "openMenu": "メニューを開く",
-        "prevPeriod": "前の期間",
-        "nextPeriod": "次の期間",
-        "closeMenu": "メニューを閉じる"
-      },
-      "navigation": {
-        "calendar": "カレンダー",
-        "profile": "プロフィール",
-        "settings": "設定",
-        "createEvent": "新しいイベントを作成"
-      },
-      "touchHint": {
-        "title": "ヒント: 長押しで作成",
-        "description": "カレンダーを長押しすると新しいスケジュールを作成できます"
-      }
-    },
     "event": {
       "title": "イベント",
       "delete": "予定を削除",
@@ -111,10 +73,6 @@
       "moveToDate": "日付を変更",
       "delete": "削除"
     },
-    "accessibility": {
-      "standardContrast": "標準コントラスト",
-      "toggleWeekend": "週末表示の切り替え"
-    },
     "toast": {
       "created": "予定を作成しました",
       "updated": "予定を更新しました",
@@ -152,20 +110,6 @@
       "openCalendar": "カレンダーを開く",
       "previousMonth": "前の月",
       "nextMonth": "次の月"
-    },
-    "performance": {
-      "notCalculated": "未計測",
-      "memoryLeakDetected": "継続的なメモリ増加を検出",
-      "fixLayoutShift": "レイアウトシフトの原因を特定・修正"
-    },
-    "resize": {
-      "tooCloseToEnd": "終了時間に近すぎます",
-      "tooCloseToStart": "開始時間に近すぎます"
-    },
-    "network": {
-      "authRequired": "認証が必要です",
-      "accessDenied": "アクセスが拒否されました",
-      "notFound": "リソースが見つかりません"
     },
     "errors": {
       "loadFailed": "カレンダーの読み込みに失敗しました",
@@ -349,117 +293,8 @@
         "peakHour": "ピーク時間帯です — 集中作業に向いています"
       }
     },
-    "collapsedSection": {
-      "expandLabel": "{timeRange} を展開"
-    },
-    "sleepHours": {
-      "collapse": "睡眠時間帯を折りたたむ",
-      "expand": "睡眠時間帯を展開",
-      "collapsed": "{start} - {end}",
-      "planCount": "{count}件のプラン"
-    },
-    "segment": {
-      "start": "(開始)",
-      "middle": "(継続)",
-      "end": "(終了)"
-    },
     "timeGrid": {
       "ariaLabel": "カレンダータイムグリッド - クリックまたはEnterキーでイベントを作成"
-    },
-    "aside": {
-      "plan": "プラン",
-      "record": "記録",
-      "stats": "統計",
-      "unscheduled": "未予定",
-      "search": "検索",
-      "closeSearch": "検索を閉じる",
-      "searchPlaceholder": "プランを検索...",
-      "error": "読み込みに失敗しました",
-      "noPlans": "未予定のプランはありません",
-      "sortBy": "並び替え",
-      "groupBy": "グループ",
-      "reset": "リセット",
-      "sort": {
-        "createdAt": "作成日",
-        "updatedAt": "更新日",
-        "title": "タイトル",
-        "asc": "昇順",
-        "desc": "降順"
-      },
-      "group": {
-        "none": "なし",
-        "tags": "タグ"
-      },
-      "status": {
-        "label": "ステータス",
-        "all": "すべて",
-        "open": "未完了",
-        "closed": "完了"
-      },
-      "schedule": {
-        "label": "日付",
-        "all": "すべて",
-        "scheduled": "予定済み",
-        "unscheduled": "スケジュールなし"
-      },
-      "filter": {
-        "all": "全て",
-        "unscheduled": "未配置",
-        "scheduled": "配置済",
-        "open": "未完了",
-        "closed": "完了"
-      },
-      "recordSearchPlaceholder": "記録を検索...",
-      "noRecords": "記録はありません",
-      "createRecord": "記録を作成",
-      "recordThis": "記録する",
-      "noTitle": "(タイトルなし)",
-      "duration": "{minutes}分",
-      "fulfillment": "充実度",
-      "recordSort": {
-        "workedAt": "作業日",
-        "durationMinutes": "所要時間",
-        "fulfillmentScore": "充実度",
-        "createdAt": "作成日",
-        "updatedAt": "更新日",
-        "asc": "昇順",
-        "desc": "降順"
-      },
-      "recordGroup": {
-        "none": "なし",
-        "workedAt": "日付",
-        "tags": "タグ",
-        "fulfillmentScore": "充実度"
-      },
-      "recordDateFilter": {
-        "label": "期間",
-        "all": "すべて",
-        "today": "今日",
-        "thisWeek": "今週",
-        "thisMonth": "今月"
-      }
-    },
-    "reflection": {
-      "empty": {
-        "title": "まだ振り返りがありません",
-        "description": "今日のアクティビティからAIが振り返りを生成します",
-        "generate": "振り返りを生成"
-      },
-      "sections": {
-        "activities": "アクティビティ",
-        "insights": "所感",
-        "question": "問いかけ",
-        "note": "あなたのメモ"
-      },
-      "userNote": {
-        "placeholder": "感じたことを書いてみましょう..."
-      },
-      "list": {
-        "thisWeek": "今週",
-        "lastWeek": "先週",
-        "older": "それ以前",
-        "back": "一覧に戻る"
-      }
     },
     "error": {
       "title": "カレンダーの読み込みに失敗しました",
