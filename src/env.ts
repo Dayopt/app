@@ -43,6 +43,9 @@ const serverSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  // Slack
+  SLACK_BILLING_WEBHOOK_URL: z.string().url().optional(),
+
   // App
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   VERCEL_URL: z.string().optional(),

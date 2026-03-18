@@ -22,6 +22,29 @@ import { logger } from '@/lib/logger';
 import { requireStripe } from '@/platform/stripe/client';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 
+// ─── Slack 通知 ──────────────────────────────────────
+
+/**
+ * 課金イベントをSlackに通知する（fire-and-forget）
+ *
+ * SLACK_BILLING_WEBHOOK_URL が未設定の場合は何もしない。
+ */
+async function notifySlack(text: string): Promise<void> {
+  const webhookUrl = env.SLACK_BILLING_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+  } catch (error) {
+    // Slack通知失敗はWebhook処理をブロックしない
+    logger.warn('Slack billing notification failed', { error });
+  }
+}
+
 /**
  * Stripe subscription status → Dayopt subscription status のマッピング
  */
@@ -96,6 +119,7 @@ export async function POST(request: NextRequest) {
 
           await syncSubscriptionStatus(supabase, customerId, subscriptionId, 'active');
           logger.info('Checkout completed', { customerId, subscriptionId });
+          await notifySlack(`🎉 新規サブスクリプション開始\nCustomer: ${customerId}`);
         }
         break;
       }
@@ -114,6 +138,7 @@ export async function POST(request: NextRequest) {
           subscriptionId: subscription.id,
           status,
         });
+        await notifySlack(`📝 サブスクリプション更新: ${status}\nCustomer: ${customerId}`);
         break;
       }
 
@@ -126,6 +151,7 @@ export async function POST(request: NextRequest) {
 
         await syncSubscriptionStatus(supabase, customerId, null, 'free');
         logger.info('Subscription deleted', { customerId });
+        await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
         break;
       }
 
