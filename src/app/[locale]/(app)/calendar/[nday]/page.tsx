@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 import type { MultiDayViewType } from '@/features/calendar';
 import type { Locale } from '@/platform/i18n/routing';
@@ -8,6 +9,7 @@ import { HydrationBoundary } from '@/platform/trpc/server';
 
 import { CalendarViewClient } from '../_composition/CalendarViewClient';
 import { prefetchCalendarData } from '../_server/calendar-prefetch';
+import { CalendarSkeleton } from '../_server/CalendarSkeleton';
 import { getCalendarTranslations, parseDateParam } from '../_server/page-utils';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +42,31 @@ export async function generateMetadata({
   };
 }
 
+async function MultiDayPageContent({
+  viewType,
+  locale,
+  date,
+}: {
+  viewType: MultiDayViewType;
+  locale: Locale;
+  date: string | undefined;
+}) {
+  const initialDate = parseDateParam(date);
+  const targetDate = initialDate ?? new Date();
+  const translations = await getCalendarTranslations(locale);
+  const { dehydratedState } = await prefetchCalendarData(viewType, targetDate);
+
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <CalendarViewClient
+        view={viewType}
+        initialDate={initialDate ?? null}
+        translations={translations}
+      />
+    </HydrationBoundary>
+  );
+}
+
 const MultiDayPage = async ({
   params,
   searchParams,
@@ -55,19 +82,10 @@ const MultiDayPage = async ({
     notFound();
   }
 
-  const initialDate = parseDateParam(date);
-  const targetDate = initialDate ?? new Date();
-  const translations = await getCalendarTranslations(locale);
-  const { dehydratedState } = await prefetchCalendarData(viewType, targetDate);
-
   return (
-    <HydrationBoundary state={dehydratedState}>
-      <CalendarViewClient
-        view={viewType}
-        initialDate={initialDate ?? null}
-        translations={translations}
-      />
-    </HydrationBoundary>
+    <Suspense fallback={<CalendarSkeleton />}>
+      <MultiDayPageContent viewType={viewType} locale={locale} date={date} />
+    </Suspense>
   );
 };
 

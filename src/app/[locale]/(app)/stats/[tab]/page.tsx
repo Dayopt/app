@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 import type { StatsTab } from '@/features/stats';
 import { StatsPageContent, prefetchStatsData } from '@/features/stats';
 import type { Locale } from '@/platform/i18n/routing';
 import { HydrationBoundary } from '@/platform/trpc/server';
 import { PageSwitcher } from '@/shell/layout/PageSwitcher';
+
+import StatsTabLoading from './loading';
 
 const VALID_TABS: StatsTab[] = ['review', 'progress', 'insights'];
 
@@ -28,6 +31,17 @@ export async function generateMetadata({
   };
 }
 
+/** データプリフェッチを分離し、Suspense でストリーミング（11クエリの並列取得） */
+async function StatsTabContent({ tab }: { tab: StatsTab }) {
+  const { dehydratedState } = await prefetchStatsData();
+
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <StatsPageContent tab={tab} headerSlot={<PageSwitcher />} />
+    </HydrationBoundary>
+  );
+}
+
 const StatsTabPage = async ({ params }: { params: Promise<{ tab: string }> }) => {
   const { tab } = await params;
 
@@ -35,12 +49,10 @@ const StatsTabPage = async ({ params }: { params: Promise<{ tab: string }> }) =>
     notFound();
   }
 
-  const { dehydratedState } = await prefetchStatsData();
-
   return (
-    <HydrationBoundary state={dehydratedState}>
-      <StatsPageContent tab={tab} headerSlot={<PageSwitcher />} />
-    </HydrationBoundary>
+    <Suspense fallback={<StatsTabLoading />}>
+      <StatsTabContent tab={tab} />
+    </Suspense>
   );
 };
 
