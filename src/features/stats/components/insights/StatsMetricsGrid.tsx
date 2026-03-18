@@ -10,17 +10,45 @@ import {
   calculatePeakUtilization,
   formatMetricValueParts,
   getMetricProgress,
+  getMetricTrend,
   getThresholdStatus,
 } from '../../lib/metrics';
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import type { MetricData, MetricId } from '../../types/metrics.types';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
+import type { EnergyMapRow, MetricData, MetricId, MetricTrend } from '../../types/metrics.types';
+import { computePreviousDateRange, computeStatsDateRange } from '../../utils/computeDateRange';
 import { MetricCard } from '../metrics/MetricCard';
 
+/** エネルギーマップからピーク活用率を算出するヘルパー */
+function computePeakFromEnergyMap(
+  data: EnergyMapRow[] | undefined,
+  startDate: string,
+  endDate: string,
+) {
+  if (!data || !startDate || !endDate) return null;
+  const defaultPeakZones = [{ startHour: 9, endHour: 14 }];
+  const s = new Date(startDate);
+  const e = new Date(endDate);
+  const daysInRange = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
+  return calculatePeakUtilization(data, defaultPeakZones, daysInRange);
+}
+
+/** 見積もり精度データから加重平均偏差（分）を算出するヘルパー */
+function computeAvgDeviation(
+  data: { avgDeviationMinutes: number; entryCount: number }[] | undefined,
+): number | null {
+  if (!data || data.length === 0) return null;
+  const totalDeviation = data.reduce(
+    (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
+    0,
+  );
+  const totalEntries = data.reduce((sum, item) => sum + item.entryCount, 0);
+  return totalEntries > 0 ? totalDeviation / totalEntries : 0;
+}
+
 /**
- * StatsMetricsGrid — 8つのKPIメトリクスをグリッド表示
+ * StatsMetricsGrid — KPIメトリクスをグリッド表示
  *
- * METRIC_ORDER でループ描画。新メトリクス追加は metricDefinitions.ts に1エントリ追加するだけ。
+ * METRIC_ORDER でループ描画。前期間比較の TrendBadge を自動計算。
  */
 export function StatsMetricsGrid() {
   const t = useTranslations('calendar.stats.metrics');
@@ -31,8 +59,12 @@ export function StatsMetricsGrid() {
     () => computeStatsDateRange(currentDate, granularity),
     [currentDate, granularity],
   );
+  const prevDateRange = useMemo(
+    () => computePreviousDateRange(currentDate, granularity),
+    [currentDate, granularity],
+  );
 
-  // tRPCクエリを並列取得
+  // === 現在期間のクエリ ===
   const cumulativeTime = api.entries.getCumulativeTime.useQuery(dateRange);
   const avgFulfillmentQuery = api.entries.getAvgFulfillment.useQuery(dateRange);
   const planRate = api.entries.getPlanRate.useQuery(dateRange);
@@ -40,7 +72,15 @@ export function StatsMetricsGrid() {
   const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
   const contextSwitches = api.entries.getContextSwitches.useQuery(dateRange);
   const blankRate = api.entries.getBlankRate.useQuery(dateRange);
-  // TODO: streak — getStreak エンドポイント接続後に有効化
+
+  // === 前期間のクエリ（TrendBadge 用） ===
+  const prevCumulativeTime = api.entries.getCumulativeTime.useQuery(prevDateRange);
+  const prevAvgFulfillment = api.entries.getAvgFulfillment.useQuery(prevDateRange);
+  const prevPlanRate = api.entries.getPlanRate.useQuery(prevDateRange);
+  const prevEstimationAccuracy = api.entries.getEstimationAccuracy.useQuery(prevDateRange);
+  const prevEnergyMap = api.entries.getEnergyMap.useQuery(prevDateRange);
+  const prevContextSwitches = api.entries.getContextSwitches.useQuery(prevDateRange);
+  const prevBlankRate = api.entries.getBlankRate.useQuery(prevDateRange);
 
   const isLoading =
     cumulativeTime.isPending ||
@@ -51,40 +91,46 @@ export function StatsMetricsGrid() {
     contextSwitches.isPending ||
     blankRate.isPending;
 
-  // ピーク活用率をエネルギーマップから計算
-  const peakUtilization = useMemo(() => {
-    if (!energyMap.data || !dateRange.startDate || !dateRange.endDate) return null;
-    const defaultPeakZones = [{ startHour: 9, endHour: 14 }];
-    const startDate = new Date(dateRange.startDate);
-    const endDate = new Date(dateRange.endDate);
-    const daysInRange = Math.max(
-      1,
-      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)),
-    );
-    return calculatePeakUtilization(energyMap.data, defaultPeakZones, daysInRange);
-  }, [energyMap.data, dateRange.startDate, dateRange.endDate]);
+  // ピーク活用率（現在・前期間）
+  const peakUtilization = useMemo(
+    () => computePeakFromEnergyMap(energyMap.data, dateRange.startDate, dateRange.endDate),
+    [energyMap.data, dateRange.startDate, dateRange.endDate],
+  );
+  const prevPeakUtilization = useMemo(
+    () =>
+      computePeakFromEnergyMap(prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate),
+    [prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate],
+  );
 
-  // 見積もり精度の全体平均（分）
-  const avgDeviation = useMemo(() => {
-    if (!estimationAccuracy.data || estimationAccuracy.data.length === 0) return null;
-    const totalDeviation = estimationAccuracy.data.reduce(
-      (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
-      0,
-    );
-    const totalEntries = estimationAccuracy.data.reduce((sum, item) => sum + item.entryCount, 0);
-    return totalEntries > 0 ? totalDeviation / totalEntries : 0;
-  }, [estimationAccuracy.data]);
+  // 見積もり精度（現在・前期間）
+  const avgDeviation = useMemo(
+    () => computeAvgDeviation(estimationAccuracy.data),
+    [estimationAccuracy.data],
+  );
+  const prevAvgDeviation = useMemo(
+    () => computeAvgDeviation(prevEstimationAccuracy.data),
+    [prevEstimationAccuracy.data],
+  );
+
+  // トレンド計算ヘルパー
+  const trend = (
+    current: number | null | undefined,
+    previous: number | null | undefined,
+    trendPositive: 'up' | 'down' | 'neutral',
+  ): MetricTrend | null => {
+    if (current == null || previous == null) return null;
+    return getMetricTrend(current, previous, trendPositive);
+  };
 
   // tRPCクエリ結果を Record<MetricId, MetricData> に正規化
   const metricsMap = useMemo((): Partial<Record<MetricId, MetricData>> => {
     const map: Partial<Record<MetricId, MetricData>> = {};
 
     if (cumulativeTime.data) {
-      // totalMinutes を時間（hours）に変換して duration フォーマットに渡す
       map.totalTime = {
         id: 'totalTime',
         value: cumulativeTime.data.totalMinutes,
-        trend: null,
+        trend: trend(cumulativeTime.data.totalMinutes, prevCumulativeTime.data?.totalMinutes, 'up'),
       };
     }
 
@@ -92,26 +138,38 @@ export function StatsMetricsGrid() {
       map.avgFulfillment = {
         id: 'avgFulfillment',
         value: avgFulfillmentQuery.data.avgFulfillment,
-        trend: null,
+        trend: trend(
+          avgFulfillmentQuery.data.avgFulfillment,
+          prevAvgFulfillment.data?.avgFulfillment,
+          'up',
+        ),
       };
     }
 
     if (planRate.data) {
-      map.planRate = { id: 'planRate', value: planRate.data.planRate, trend: null };
+      map.planRate = {
+        id: 'planRate',
+        value: planRate.data.planRate,
+        trend: trend(planRate.data.planRate, prevPlanRate.data?.planRate, 'up'),
+      };
     }
 
     // TODO: streak — getStreak エンドポイント接続後に有効化
     map.streak = { id: 'streak', value: null, trend: null };
 
     if (avgDeviation !== null) {
-      map.estimationAccuracy = { id: 'estimationAccuracy', value: avgDeviation, trend: null };
+      map.estimationAccuracy = {
+        id: 'estimationAccuracy',
+        value: avgDeviation,
+        trend: trend(avgDeviation, prevAvgDeviation, 'down'),
+      };
     }
 
     if (peakUtilization) {
       map.peakUtilization = {
         id: 'peakUtilization',
         value: peakUtilization.peakUtilization,
-        trend: null,
+        trend: trend(peakUtilization.peakUtilization, prevPeakUtilization?.peakUtilization, 'up'),
       };
     }
 
@@ -119,12 +177,16 @@ export function StatsMetricsGrid() {
       map.contextSwitches = {
         id: 'contextSwitches',
         value: contextSwitches.data.avgPerDay,
-        trend: null,
+        trend: trend(contextSwitches.data.avgPerDay, prevContextSwitches.data?.avgPerDay, 'down'),
       };
     }
 
     if (blankRate.data) {
-      map.blankRate = { id: 'blankRate', value: blankRate.data.blankRate, trend: null };
+      map.blankRate = {
+        id: 'blankRate',
+        value: blankRate.data.blankRate,
+        trend: trend(blankRate.data.blankRate, prevBlankRate.data?.blankRate, 'neutral'),
+      };
     }
 
     return map;
@@ -136,6 +198,13 @@ export function StatsMetricsGrid() {
     peakUtilization,
     contextSwitches.data,
     blankRate.data,
+    prevCumulativeTime.data,
+    prevAvgFulfillment.data,
+    prevPlanRate.data,
+    prevAvgDeviation,
+    prevPeakUtilization,
+    prevContextSwitches.data,
+    prevBlankRate.data,
   ]);
 
   // 値が存在するメトリクスのみ表示（未実装メトリクスのダッシュ表示を防ぐ）

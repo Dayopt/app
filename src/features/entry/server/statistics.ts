@@ -445,4 +445,59 @@ export const entriesStatisticsRouter = createTRPCRouter({
         blankRate: result?.blankRate ?? 0,
       };
     }),
+
+  /** 合計記録時間（分） */
+  getCumulativeTime: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
+    const { supabase, userId } = ctx;
+
+    const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
+      supabase.rpc(
+        'get_cumulative_time' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
+    );
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch cumulative time',
+      });
+    }
+
+    const result = data as { totalMinutes: number } | null;
+    return { totalMinutes: result?.totalMinutes ?? 0 };
+  }),
+
+  /** 平均充実度 */
+  getAvgFulfillment: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
+    const { supabase, userId } = ctx;
+
+    const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
+      supabase.rpc(
+        'get_avg_fulfillment' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
+    );
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch avg fulfillment',
+      });
+    }
+
+    const result = data as { avgFulfillment: number | null; entryCount: number } | null;
+    return {
+      avgFulfillment: result?.avgFulfillment ?? null,
+      entryCount: result?.entryCount ?? 0,
+    };
+  }),
 });
