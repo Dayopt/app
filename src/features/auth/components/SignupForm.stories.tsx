@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -110,8 +110,8 @@ export const ServerError: Story = {
     const submitButton = canvas.getByRole('button', { name: /アカウント作成/i });
     await userEvent.click(submitButton);
 
-    // エラーメッセージが表示されることを確認
-    await expect(canvas.getByRole('alert')).toBeInTheDocument();
+    // エラーメッセージが表示されることを確認（非同期のため waitFor）
+    await waitFor(() => expect(canvas.getByRole('alert')).toBeInTheDocument());
   },
 };
 
