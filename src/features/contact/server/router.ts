@@ -30,7 +30,17 @@ export const contactRouter = createTRPCRouter({
     // ユーザー情報を取得
     const {
       data: { user },
+      error: authError,
     } = await ctx.supabase.auth.getUser();
+
+    if (authError) {
+      logger.error('Failed to get user for contact form', { error: authError.message });
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `ユーザー情報の取得に失敗しました: ${authError.message}`,
+        cause: authError,
+      });
+    }
 
     const userEmail = user?.email ?? 'unknown';
     const userName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? 'Unknown';

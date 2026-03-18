@@ -41,6 +41,14 @@ export const onboardingRouter = createTRPCRouter({
       });
     }
 
+    if (userResult.error) {
+      logger.error('Onboarding getUser error:', userResult.error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `ユーザー情報の取得に失敗しました: ${userResult.error.message}`,
+      });
+    }
+
     // OAuth名がなければメールアドレスの@前をフォールバックに
     const fullName = profileResult.data.full_name;
     const email = userResult.data.user?.email;

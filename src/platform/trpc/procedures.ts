@@ -284,7 +284,27 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
  * 注: カラムが生成型に未反映のため Record 経由で取得。
  */
 export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const { data } = await ctx.supabase.from('profiles').select('*').eq('id', ctx.userId).single();
+  const { data, error } = await ctx.supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', ctx.userId)
+    .single();
+
+  if (error) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `プロフィールの取得に失敗しました: ${error.message}`,
+      cause: createAppError(
+        'Failed to fetch profile for pro check',
+        ERROR_CODES.SYSTEM_INTERNAL_ERROR,
+        {
+          source: 'trpc_middleware',
+          userId: ctx.userId,
+          supabaseError: error.message,
+        },
+      ),
+    });
+  }
 
   const status = (data as Record<string, unknown> | null)?.subscription_status as
     | string

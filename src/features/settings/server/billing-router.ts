@@ -3,8 +3,10 @@
  * Stripe サブスクリプション管理API
  */
 
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
@@ -55,10 +57,26 @@ export const billingRouter = createTRPCRouter({
         // ユーザーのメールを取得
         const {
           data: { user },
+          error: authError,
         } = await ctx.supabase.auth.getUser();
 
+        if (authError) {
+          logger.error('Billing auth.getUser failed', {
+            error: authError.message,
+            userId: ctx.userId,
+          });
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `ユーザー情報の取得に失敗しました: ${authError.message}`,
+            cause: authError,
+          });
+        }
+
         if (!user?.email) {
-          throw new Error('User email not found');
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'メールアドレスが設定されていません。プロフィール設定を確認してください。',
+          });
         }
 
         const url = await createCheckoutSession(
