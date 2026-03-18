@@ -6,8 +6,8 @@ coverage/
 # 開発ツール
 .storybook/
 
-# Supabase（Edge Functions は Vercel では不要）
-supabase/
+# Supabase（Edge Functions は Vercel では不要、ルートのsupabase/のみ除外）
+/supabase/
 
 # ドキュメント
 docs/
