@@ -22,53 +22,70 @@ export function removeUndefinedFields<T extends Record<string, unknown>>(obj: T)
  * Normalize date-time consistency for entries
  *
  * Rules:
- * 1. start_time and end_time must have the same date portion
- * 2. If end_time is before start_time, adjust to same date/time as start_time
+ * 1. Same-day entries: start_time and end_time must have the same UTC date portion
+ * 2. Midnight crossing (end_time on next day): cap end_time at 23:59:59 of start_time's date
+ * 3. If end_time is before start_time after normalization, set end_time = start_time
+ *
+ * @returns 'capped' if end_time was capped at 23:59:59 due to midnight crossing, undefined otherwise
  */
 export function normalizeDateTimeConsistency(data: {
   start_time?: string | null;
   end_time?: string | null;
-}): void {
+}): 'capped' | undefined {
   // Only process if both start_time and end_time exist
   if (!data.start_time || !data.end_time) {
-    return;
+    return undefined;
   }
 
   const startDate = new Date(data.start_time);
   const endDate = new Date(data.end_time);
 
-  // Get date parts (local timezone)
-  const startYear = startDate.getFullYear();
-  const startMonth = startDate.getMonth();
-  const startDay = startDate.getDate();
+  // Get date parts (UTC — server/SSR環境でもブラウザと同じ結果を保証)
+  const startYear = startDate.getUTCFullYear();
+  const startMonth = startDate.getUTCMonth();
+  const startDay = startDate.getUTCDate();
 
-  const endYear = endDate.getFullYear();
-  const endMonth = endDate.getMonth();
-  const endDay = endDate.getDate();
+  const endYear = endDate.getUTCFullYear();
+  const endMonth = endDate.getUTCMonth();
+  const endDay = endDate.getUTCDate();
 
   // Consistency check: skip if already consistent
   const datesMatch = startYear === endYear && startMonth === endMonth && startDay === endDay;
   const endAfterStart = endDate.getTime() >= startDate.getTime();
 
   if (datesMatch && endAfterStart) {
-    return;
+    return undefined;
   }
 
   logger.debug('[normalizeDateTimeConsistency] Inconsistency detected - normalizing');
 
-  // 1. Align end_time's date with start_time (preserve time)
+  let result: 'capped' | undefined;
+
+  // 1. Midnight crossing: end_time is on a different (later) date
+  //    Cap at 23:59:59.999 of start_time's date instead of creating a zero-duration block
+  if (!datesMatch && endAfterStart) {
+    const cappedEnd = new Date(Date.UTC(startYear, startMonth, startDay, 23, 59, 59, 999));
+    data.end_time = cappedEnd.toISOString();
+    result = 'capped';
+    logger.debug('[normalizeDateTimeConsistency] Midnight crossing - capped end_time to 23:59:59');
+    return result;
+  }
+
+  // 2. Align end_time's date with start_time (preserve time) for other mismatches
   if (!datesMatch) {
     const newEndDate = new Date(endDate);
-    newEndDate.setFullYear(startYear);
-    newEndDate.setMonth(startMonth);
-    newEndDate.setDate(startDay);
+    newEndDate.setUTCFullYear(startYear);
+    newEndDate.setUTCMonth(startMonth);
+    newEndDate.setUTCDate(startDay);
     data.end_time = newEndDate.toISOString();
   }
 
-  // 2. If end_time is before start_time, set to same time as start_time
+  // 3. If end_time is before start_time, set to same time as start_time
   const finalEndDate = new Date(data.end_time);
   if (finalEndDate.getTime() < startDate.getTime()) {
     const fixedEndDate = new Date(startDate);
     data.end_time = fixedEndDate.toISOString();
   }
+
+  return result;
 }
