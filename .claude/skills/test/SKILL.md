@@ -259,5 +259,5 @@ describe('useCalendarDrag', () => {
 
 ## 関連スキル
 
-- `/debug` - テスト失敗時のデバッグ
-- `/refactor` - テスト追加後のリファクタリング
+- `/error-handling` - エラー処理のテスト
+- `/storybook` - UIコンポーネントのビジュアルテスト

@@ -1,6 +1,7 @@
 ---
 paths:
   - 'src/**/*.{ts,tsx}'
+  - 'package.json'
 ---
 
 # コーディング規約
@@ -41,3 +42,24 @@ Server Component をデフォルト。useState / useEffect / イベントハン�
 - 認証必須エンドポイントは `protectedProcedure`
 - `ctx.userId` でデータアクセスを制限
 - `dangerouslySetInnerHTML` 禁止
+
+## セマンティックトークン補足
+
+- 透過（`/10`など）は `state-*` トークンのみ許可
+- 睡眠時間帯は `bg-chronotype-sleep` を使用
+
+## Tailwind v4 既知の落とし穴
+
+- `@theme` で `--spacing-xs/sm/md/lg/xl/2xl` を定義すると `max-w-sm/md/lg` 等が壊れる
+- Tailwind v4 は `--spacing-*` > `--container-*` の優先順で解決するため
+- **対策**: カスタムスペーシングは `:root` で定義し `@theme` に入れない
+- 同様に `--radius-*` 等のカスタム名もTailwindデフォルトと衝突する可能性あり
+
+## 依存関係の追加
+
+パッケージ追加前に確認:
+
+1. ブラウザ標準API or 言語標準で実現できないか？
+2. 既存の依存で代替できないか？
+3. GitHub Stars >= 1000、最終コミット6ヶ月以内か？
+4. 1つの機能のためだけに大きなライブラリを追加しない
