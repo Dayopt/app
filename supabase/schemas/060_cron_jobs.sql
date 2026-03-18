@@ -14,19 +14,16 @@
 -- | cleanup-notifications       | 20 3 * * * (毎日 03:20) | delete_old_notifications()      | 既読30日  |
 -- | cleanup-plan-activities     | 30 3 * * * (毎日 03:30) | cleanup_old_plan_activities()   | 365日     |
 
--- Edge Function の定期実行（pg_cron → pg_net HTTP呼び出し）:
--- ※ Edge Function URL が環境依存のため Dashboard で設定
+-- Edge Function の定期実行（pg_cron → Vault + pg_net HTTP呼び出し）:
 -- | ジョブ名                    | スケジュール            | Edge Function          |
 -- |-----------------------------|-------------------------|------------------------|
 -- | check-reminders             | * * * * * (毎分)        | check-reminders        |
 --
 -- Dashboard での設定手順:
 -- 1. Supabase Dashboard > Database > Extensions > pg_net を有効化
--- 2. SQL Editor で以下を実行（URL/キーは環境に合わせて置換）:
+-- 2. Vault シークレットが登録済みであることを確認:
+--    SELECT name FROM vault.decrypted_secrets WHERE name IN ('supabase_url', 'service_role_key');
+-- 3. SQL Editor で以下を実行（Vault からシークレットを自動取得するため URL/キーの直書き不要）:
 --    SELECT cron.schedule('check-reminders', '* * * * *', $$
---      SELECT net.http_post(
---        url := '<SUPABASE_URL>/functions/v1/check-reminders',
---        headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
---        body := '{}'::jsonb
---      );
+--      SELECT public.invoke_edge_function('check-reminders');
 --    $$);
