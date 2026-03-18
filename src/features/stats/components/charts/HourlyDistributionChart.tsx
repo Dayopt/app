@@ -12,6 +12,7 @@ import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } f
 
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { formatHours } from '../../utils/formatHours';
 
 const chartConfig = {
   hours: {
@@ -19,11 +20,6 @@ const chartConfig = {
     color: 'var(--primary)',
   },
 } satisfies ChartConfig;
-
-function formatHours(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  return `${hours.toFixed(1)}h`;
-}
 
 export function HourlyDistributionChart() {
   const t = useTranslations('calendar.stats.charts');

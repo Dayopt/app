@@ -47,9 +47,9 @@ type EstimationAccuracyData = Array<{
 type EnergyMapData = Array<{
   hour: number;
   dow: number;
-  avg_fulfillment: number | null;
-  total_minutes: number;
-  entry_count: number;
+  avgFulfillment: number | null;
+  totalMinutes: number;
+  entryCount: number;
 }>;
 
 /** getContextSwitches の戻り値 */
@@ -140,9 +140,9 @@ const MOCK_ENERGY_MAP_WITH_DATA: EnergyMapData = [
     [9, 10, 11, 12, 13].map((hour) => ({
       hour,
       dow,
-      avg_fulfillment: 3.8,
-      total_minutes: 50,
-      entry_count: 5,
+      avgFulfillment: 3.8,
+      totalMinutes: 50,
+      entryCount: 5,
     })),
   ),
   // 夕方は低め
@@ -150,9 +150,9 @@ const MOCK_ENERGY_MAP_WITH_DATA: EnergyMapData = [
     [15, 16, 17].map((hour) => ({
       hour,
       dow,
-      avg_fulfillment: 3.0,
-      total_minutes: 30,
-      entry_count: 3,
+      avgFulfillment: 3.0,
+      totalMinutes: 30,
+      entryCount: 3,
     })),
   ),
 ];
@@ -163,9 +163,9 @@ const MOCK_ENERGY_MAP_PREV: EnergyMapData = [
     [9, 10, 11, 12].map((hour) => ({
       hour,
       dow,
-      avg_fulfillment: 3.2,
-      total_minutes: 40,
-      entry_count: 4,
+      avgFulfillment: 3.2,
+      totalMinutes: 40,
+      entryCount: 4,
     })),
   ),
 ];
@@ -226,9 +226,9 @@ const MOCK_HIGH_PERFORMANCE: StatsMockData = {
       [9, 10, 11, 12, 13, 14].map((hour) => ({
         hour,
         dow,
-        avg_fulfillment: 4.5,
-        total_minutes: 55,
-        entry_count: 6,
+        avgFulfillment: 4.5,
+        totalMinutes: 55,
+        entryCount: 6,
       })),
     ),
   ],

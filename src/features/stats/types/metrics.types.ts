@@ -103,7 +103,7 @@ export interface PeakUtilizationData {
 export interface EnergyMapRow {
   hour: number;
   dow: number;
-  avg_fulfillment: number | null;
-  total_minutes: number;
-  entry_count: number;
+  avgFulfillment: number | null;
+  totalMinutes: number;
+  entryCount: number;
 }

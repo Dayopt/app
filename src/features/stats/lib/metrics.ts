@@ -35,7 +35,7 @@ export function calculatePeakUtilization(
   // ピーク時間帯に含まれるhourのセットを作成
   const peakHours = new Set<number>();
   for (const zone of peakZones) {
-    for (let h = zone.startHour; h < zone.endHour; h++) {
+    for (let h = zone.startHour; h <= zone.endHour; h++) {
       peakHours.add(h);
     }
   }
@@ -44,7 +44,7 @@ export function calculatePeakUtilization(
   let peakMinutes = 0;
   for (const row of energyMap) {
     if (peakHours.has(row.hour)) {
-      peakMinutes += row.total_minutes;
+      peakMinutes += row.totalMinutes;
     }
   }
 

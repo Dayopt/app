@@ -358,13 +358,21 @@ export const entriesStatisticsRouter = createTRPCRouter({
       });
     }
 
-    return (data ?? []) as Array<{
+    const rows = (data ?? []) as Array<{
       hour: number;
       dow: number;
       avg_fulfillment: number | null;
       total_minutes: number;
       entry_count: number;
     }>;
+
+    return rows.map((row) => ({
+      hour: row.hour,
+      dow: row.dow,
+      avgFulfillment: row.avg_fulfillment,
+      totalMinutes: row.total_minutes,
+      entryCount: row.entry_count,
+    }));
   }),
 
   /** コンテキストスイッチ: 連続エントリ間のタグ変化回数 */

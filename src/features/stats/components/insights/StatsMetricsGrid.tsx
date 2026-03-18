@@ -45,6 +45,16 @@ function computeAvgDeviation(
   return totalEntries > 0 ? totalDeviation / totalEntries : 0;
 }
 
+/** 前期間比のトレンドを算出（null安全） */
+function computeTrend(
+  current: number | null | undefined,
+  previous: number | null | undefined,
+  trendPositive: 'up' | 'down' | 'neutral',
+): MetricTrend | null {
+  if (current == null || previous == null) return null;
+  return getMetricTrend(current, previous, trendPositive);
+}
+
 /**
  * StatsMetricsGrid — KPIメトリクスをグリッド表示
  *
@@ -112,16 +122,6 @@ export function StatsMetricsGrid() {
     [prevEstimationAccuracy.data],
   );
 
-  // トレンド計算ヘルパー
-  const trend = (
-    current: number | null | undefined,
-    previous: number | null | undefined,
-    trendPositive: 'up' | 'down' | 'neutral',
-  ): MetricTrend | null => {
-    if (current == null || previous == null) return null;
-    return getMetricTrend(current, previous, trendPositive);
-  };
-
   // tRPCクエリ結果を Record<MetricId, MetricData> に正規化
   const metricsMap = useMemo((): Partial<Record<MetricId, MetricData>> => {
     const map: Partial<Record<MetricId, MetricData>> = {};
@@ -130,7 +130,11 @@ export function StatsMetricsGrid() {
       map.totalTime = {
         id: 'totalTime',
         value: cumulativeTime.data.totalMinutes,
-        trend: trend(cumulativeTime.data.totalMinutes, prevCumulativeTime.data?.totalMinutes, 'up'),
+        trend: computeTrend(
+          cumulativeTime.data.totalMinutes,
+          prevCumulativeTime.data?.totalMinutes,
+          'up',
+        ),
       };
     }
 
@@ -138,7 +142,7 @@ export function StatsMetricsGrid() {
       map.avgFulfillment = {
         id: 'avgFulfillment',
         value: avgFulfillmentQuery.data.avgFulfillment,
-        trend: trend(
+        trend: computeTrend(
           avgFulfillmentQuery.data.avgFulfillment,
           prevAvgFulfillment.data?.avgFulfillment,
           'up',
@@ -150,7 +154,7 @@ export function StatsMetricsGrid() {
       map.planRate = {
         id: 'planRate',
         value: planRate.data.planRate,
-        trend: trend(planRate.data.planRate, prevPlanRate.data?.planRate, 'up'),
+        trend: computeTrend(planRate.data.planRate, prevPlanRate.data?.planRate, 'up'),
       };
     }
 
@@ -161,7 +165,7 @@ export function StatsMetricsGrid() {
       map.estimationAccuracy = {
         id: 'estimationAccuracy',
         value: avgDeviation,
-        trend: trend(avgDeviation, prevAvgDeviation, 'down'),
+        trend: computeTrend(avgDeviation, prevAvgDeviation, 'down'),
       };
     }
 
@@ -169,7 +173,11 @@ export function StatsMetricsGrid() {
       map.peakUtilization = {
         id: 'peakUtilization',
         value: peakUtilization.peakUtilization,
-        trend: trend(peakUtilization.peakUtilization, prevPeakUtilization?.peakUtilization, 'up'),
+        trend: computeTrend(
+          peakUtilization.peakUtilization,
+          prevPeakUtilization?.peakUtilization,
+          'up',
+        ),
       };
     }
 
@@ -177,7 +185,11 @@ export function StatsMetricsGrid() {
       map.contextSwitches = {
         id: 'contextSwitches',
         value: contextSwitches.data.avgPerDay,
-        trend: trend(contextSwitches.data.avgPerDay, prevContextSwitches.data?.avgPerDay, 'down'),
+        trend: computeTrend(
+          contextSwitches.data.avgPerDay,
+          prevContextSwitches.data?.avgPerDay,
+          'down',
+        ),
       };
     }
 
@@ -185,7 +197,7 @@ export function StatsMetricsGrid() {
       map.blankRate = {
         id: 'blankRate',
         value: blankRate.data.blankRate,
-        trend: trend(blankRate.data.blankRate, prevBlankRate.data?.blankRate, 'neutral'),
+        trend: computeTrend(blankRate.data.blankRate, prevBlankRate.data?.blankRate, 'neutral'),
       };
     }
 

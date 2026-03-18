@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -145,21 +145,18 @@ export function EnergyMapHeatmap() {
 
             {/* Data rows: one per hour */}
             {HOURS.map((hour) => (
-              <>
-                <div
-                  key={`label-${hour}`}
-                  className="text-muted-foreground flex items-center justify-end pr-2 text-xs"
-                >
+              <Fragment key={hour}>
+                <div className="text-muted-foreground flex items-center justify-end pr-2 text-xs">
                   {hour}:00
                 </div>
                 {DOW_ORDER.map((dow, di) => {
                   const row = lookup.get(`${hour}-${dow}`);
                   const colorClass =
                     mode === 'minutes'
-                      ? getMinutesColorClass(row?.total_minutes ?? 0)
+                      ? getMinutesColorClass(row?.totalMinutes ?? 0)
                       : getFulfillmentColorClass(
-                          row?.avg_fulfillment ?? null,
-                          (row?.entry_count ?? 0) > 0,
+                          row?.avgFulfillment ?? null,
+                          (row?.entryCount ?? 0) > 0,
                         );
 
                   return (
@@ -168,13 +165,13 @@ export function EnergyMapHeatmap() {
                       className={cn(
                         'aspect-square rounded-sm transition-colors',
                         colorClass,
-                        (row?.entry_count ?? 0) <= 1 && row && 'opacity-60',
+                        (row?.entryCount ?? 0) <= 1 && row && 'opacity-60',
                       )}
                       title={
                         row
-                          ? `${DOW_KEYS[di]} ${hour}:00 — ${Math.round(row.total_minutes)}m${
-                              row.avg_fulfillment != null
-                                ? ` (${t('energyMapScore')}: ${row.avg_fulfillment.toFixed(1)})`
+                          ? `${DOW_KEYS[di]} ${hour}:00 — ${Math.round(row.totalMinutes)}m${
+                              row.avgFulfillment != null
+                                ? ` (${t('energyMapScore')}: ${row.avgFulfillment.toFixed(1)})`
                                 : ''
                             }`
                           : undefined
@@ -182,7 +179,7 @@ export function EnergyMapHeatmap() {
                     />
                   );
                 })}
-              </>
+              </Fragment>
             ))}
           </div>
         </div>

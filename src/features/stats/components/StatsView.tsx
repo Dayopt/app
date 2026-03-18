@@ -1,5 +1,7 @@
 'use client';
 
+import { BarChart3 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -22,6 +24,7 @@ import { TagBreakdownBar } from './review/TagBreakdownBar';
  * 「何に時間を使った → 数値 → 改善ヒント」のストーリー構成。
  */
 export function StatsView({ className }: StatsViewProps) {
+  const t = useTranslations('calendar.stats');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
 
@@ -90,6 +93,24 @@ export function StatsView({ className }: StatsViewProps) {
     dateRange.startDate,
     dateRange.endDate,
   ]);
+
+  // 全クエリがロード完了かつデータが空の場合に空状態を表示
+  const isAllLoaded = !timeByTag.isPending && !planRate.isPending;
+  const hasNoData = isAllLoaded && tagSegments.length === 0;
+
+  if (hasNoData) {
+    return (
+      <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+          <BarChart3 className="text-muted-foreground size-10" />
+          <div className="text-center">
+            <p className="text-foreground text-sm font-medium">{t('emptyTitle')}</p>
+            <p className="text-muted-foreground mt-1 text-xs">{t('emptyDescription')}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>

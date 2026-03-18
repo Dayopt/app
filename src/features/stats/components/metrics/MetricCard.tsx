@@ -8,9 +8,9 @@ import { TrendBadge } from '../shared/TrendBadge';
 
 /** プログレスバーの色 */
 const PROGRESS_COLORS = {
-  good: 'bg-emerald-500',
-  warning: 'bg-amber-500',
-  critical: 'bg-red-500',
+  good: 'bg-success',
+  warning: 'bg-warning',
+  critical: 'bg-destructive',
 } as const;
 
 type ThresholdStatus = 'good' | 'warning' | 'critical';

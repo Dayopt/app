@@ -13,8 +13,8 @@ interface RuleInsightListProps {
 }
 
 const SEVERITY_STYLES: Record<RuleInsightSeverity, { icon: typeof Info; color: string }> = {
-  critical: { icon: AlertTriangle, color: 'text-red-500' },
-  warning: { icon: AlertTriangle, color: 'text-amber-500' },
+  critical: { icon: AlertTriangle, color: 'text-destructive' },
+  warning: { icon: AlertTriangle, color: 'text-warning' },
   info: { icon: Info, color: 'text-muted-foreground' },
 };
 
