@@ -28,7 +28,7 @@ interface MFAState {
   showRegenerateDialog: boolean;
 }
 
-interface UseMFAReturn extends MFAState {
+export interface UseMFAReturn extends MFAState {
   setVerificationCode: (code: string) => void;
   enrollMFA: () => Promise<void>;
   verifyMFA: () => Promise<void>;

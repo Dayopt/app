@@ -193,6 +193,19 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     [onResizeStart, entry, safePosition],
   );
 
+  const handleBottomResizeTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.stopPropagation();
+      onResizeStart?.(entry, 'bottom', e, {
+        top: safePosition.top,
+        left: safePosition.left,
+        width: safePosition.width,
+        height: safePosition.height,
+      });
+    },
+    [onResizeStart, entry, safePosition],
+  );
+
   const handleResizeKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -338,6 +351,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             aria-valuemin={20}
             aria-valuemax={480}
             onMouseDown={handleBottomResizeMouseDown}
+            onTouchStart={handleBottomResizeTouchStart}
             onKeyDown={handleResizeKeyDown}
             style={{
               height: '32px',

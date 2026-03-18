@@ -36,7 +36,7 @@ export interface EntryCardProps {
     | ((
         entry: CalendarEvent,
         direction: 'top' | 'bottom',
-        mouseEvent: React.MouseEvent,
+        event: React.MouseEvent | React.TouchEvent,
         position: { top: number; left: number; width: number; height: number },
       ) => void)
     | undefined;
