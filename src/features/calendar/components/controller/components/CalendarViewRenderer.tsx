@@ -28,8 +28,8 @@ const MultiDayView = React.lazy(() =>
     default: module.MultiDayView,
   })),
 );
-/** モバイルでWeekViewを表示すると7列で狭すぎるため、3-dayにフォールバック */
-const MOBILE_WEEK_FALLBACK_DAYS = 3;
+/** モバイルでは列数が多すぎると狭くなるため、最大3日にフォールバック */
+const MOBILE_MAX_DAYS = 3;
 
 interface CalendarViewRendererProps {
   viewType: CalendarViewType;
@@ -53,9 +53,12 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
   // LCP改善: ビューをメモ化して不要な再生成を防止
   const viewContent = useMemo(() => {
     if (isMultiDayView(viewType)) {
+      // モバイルでは列数が多すぎる場合、自動的に3日ビューにフォールバック
+      const requestedDays = getMultiDayCount(viewType);
+      const dayCount = isMobile ? Math.min(requestedDays, MOBILE_MAX_DAYS) : requestedDays;
       return (
         <Suspense fallback={<CalendarViewSkeleton />}>
-          <MultiDayView dayCount={getMultiDayCount(viewType)} {...commonProps} />
+          <MultiDayView dayCount={dayCount} {...commonProps} />
         </Suspense>
       );
     }
@@ -72,7 +75,7 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
         if (isMobile) {
           return (
             <Suspense fallback={<CalendarViewSkeleton />}>
-              <MultiDayView dayCount={MOBILE_WEEK_FALLBACK_DAYS} {...commonProps} />
+              <MultiDayView dayCount={MOBILE_MAX_DAYS} {...commonProps} />
             </Suspense>
           );
         }

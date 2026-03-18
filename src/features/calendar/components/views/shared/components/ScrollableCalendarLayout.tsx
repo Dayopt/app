@@ -239,7 +239,7 @@ export const ScrollableCalendarLayout = ({
               <div
                 className={cn(
                   'pointer-events-none absolute z-40 h-px',
-                  !currentTimeLineColor && 'bg-primary/50',
+                  !currentTimeLineColor && 'bg-primary/70',
                 )}
                 style={{
                   top: `${currentTimePosition}px`,

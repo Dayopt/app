@@ -147,6 +147,7 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
           'bg-card text-card-foreground z-inspector',
           'surface-raised-heavy rounded-2xl',
           'flex max-h-[40rem] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
+          'animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none',
         )}
         role="dialog"
         aria-modal="true"

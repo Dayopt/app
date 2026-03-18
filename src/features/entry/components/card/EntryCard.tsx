@@ -242,6 +242,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:transition-colors hover:after:bg-state-hover',
     isSelected && 'ring-2 ring-primary',
     'text-foreground',
+    isDragging && 'opacity-30',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
     className,
   );

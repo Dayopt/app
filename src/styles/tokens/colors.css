@@ -164,8 +164,8 @@
   --primary: oklch(0.5 0.188 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active */
-  --state-active: oklch(0.3791 0.1378 265.5222);
+  /* State: Active（WCAG 1.4.11: bg上3:1+） */
+  --state-active: oklch(0.45 0.14 265.52);
   --state-active-foreground: oklch(0.8823 0.0571 254.1284);
 
   /* shadcn/ui互換エイリアス */
@@ -186,9 +186,9 @@
    * 温度グラデーション設計（同上） */
   --chronotype-warmup: oklch(0.55 0.13 145);     /* ウォームアップ - green */
   --chronotype-peak: oklch(0.65 0.16 85);        /* ピーク - amber */
-  --chronotype-dip: oklch(0.42 0.08 250);        /* ディップ - blue */
+  --chronotype-dip: oklch(0.55 0.10 250);        /* ディップ - blue（WCAG 1.4.11: bg上3:1+） */
   --chronotype-recovery: oklch(0.50 0.10 200);   /* リカバリー - cyan */
-  --chronotype-winddown: oklch(0.30 0.05 280);   /* ウインドダウン - indigo */
+  --chronotype-winddown: oklch(0.50 0.08 280);   /* ウインドダウン - indigo（WCAG 1.4.11: bg上3:1+） */
 
   /* Chronotype Tints（タイムライン背景用 - ダークモード、solid）
    * background(L=0.12)に対しL+4〜6%, C=0.025-0.045で色味を出す。
@@ -197,7 +197,7 @@
   --chronotype-tint-peak:     oklch(0.18 0.045 85);
   --chronotype-tint-dip:      oklch(0.16 0.025 250);
   --chronotype-tint-recovery: oklch(0.17 0.035 200);
-  --chronotype-tint-winddown: oklch(0.15 0.020 280);
+  --chronotype-tint-winddown: oklch(0.17 0.040 280);
 
   /* Tag Colors — Base（ダークモード: L=0.78, C=0.15） */
   --tag-red:    oklch(0.78 0.15 25);
@@ -226,7 +226,7 @@
   --tag-gray-tint:   oklch(0.28 0.02 250);
 
   /* Borders & Inputs */
-  --border: var(--neutral-37);
+  --border: oklch(0.45 0 0);  /* L=0.45: bg(L=0.12)上で~4:1コントラスト */
   --input: var(--white-08);
   --ring: oklch(0.6231 0.188 var(--hue-brand));
 
