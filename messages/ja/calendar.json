@@ -283,6 +283,9 @@
         "hourlyPeak": "ピーク: {slot} ({hours})",
         "hourlyTotal": "合計 {hours}",
         "yearlyGrid": "年間カレンダー",
+        "yearlyTotal": "合計 {hours}",
+        "yearlyLess": "少ない",
+        "yearlyMore": "多い",
         "noData": "データなし"
       },
       "energyMap": "エネルギーマップ",

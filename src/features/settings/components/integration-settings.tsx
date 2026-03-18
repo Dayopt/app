@@ -334,7 +334,7 @@ const ICalFeedSection = memo(function ICalFeedSection() {
       toast.success(t('settings.integrations.icalFeed.regenerateSuccess'));
     },
     onError: () => {
-      toast.error(t('common.error'));
+      toast.error(t('common.errors.generic'));
     },
   });
 
@@ -436,7 +436,7 @@ const ICalFeedSection = memo(function ICalFeedSection() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleRegenerateConfirm}>
               {t('settings.integrations.icalFeed.regenerate')}
             </AlertDialogAction>

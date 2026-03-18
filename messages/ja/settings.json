@@ -559,7 +559,25 @@
         "exportButton": "エクスポート",
         "exportSuccess": "データをエクスポートしました",
         "exportFailed": "エクスポートに失敗しました。もう一度お試しください。",
-        "csvComingSoon": "近日公開"
+        "csvComingSoon": "近日公開",
+        "includedDataTitle": "エクスポートに含まれるデータ",
+        "profileInfo": "プロフィール情報",
+        "tasksEvents": "予定・記録",
+        "tagSettings": "タグ設定",
+        "calendarSettings": "カレンダー設定",
+        "notificationSettings": "通知設定",
+        "otherSettings": "その他の設定"
+      },
+      "import": {
+        "title": "データインポート",
+        "dropzone": "JSONファイルをドロップ、またはクリックして選択",
+        "selectFile": "ファイルを選択",
+        "comingSoon": "インポート機能は近日公開予定です"
+      },
+      "backup": {
+        "title": "自動バックアップ",
+        "enableLabel": "自動バックアップを有効にする",
+        "lastBackup": "最終バックアップ: —"
       },
       "restore": {
         "title": "バックアップ復元",

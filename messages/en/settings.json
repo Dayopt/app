@@ -559,7 +559,25 @@
         "exportButton": "Export",
         "exportSuccess": "Data exported successfully",
         "exportFailed": "Export failed. Please try again.",
-        "csvComingSoon": "Coming soon"
+        "csvComingSoon": "Coming soon",
+        "includedDataTitle": "Data included in export",
+        "profileInfo": "Profile information",
+        "tasksEvents": "Plans & records",
+        "tagSettings": "Tag settings",
+        "calendarSettings": "Calendar settings",
+        "notificationSettings": "Notification settings",
+        "otherSettings": "Other settings"
+      },
+      "import": {
+        "title": "Data Import",
+        "dropzone": "Drop JSON file here, or click to select",
+        "selectFile": "Select File",
+        "comingSoon": "Import feature coming soon"
+      },
+      "backup": {
+        "title": "Auto Backup",
+        "enableLabel": "Enable auto backup",
+        "lastBackup": "Last backup: —"
       },
       "restore": {
         "title": "Backup & Restore",

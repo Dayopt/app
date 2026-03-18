@@ -283,6 +283,9 @@
         "hourlyPeak": "Peak: {slot} ({hours})",
         "hourlyTotal": "Total {hours}",
         "yearlyGrid": "Yearly Grid",
+        "yearlyTotal": "Total {hours}",
+        "yearlyLess": "Less",
+        "yearlyMore": "More",
         "noData": "No data"
       },
       "energyMap": "Energy Map",

@@ -188,6 +188,7 @@
       "monthly": "毎月",
       "yearly": "毎年",
       "weekdays": "平日",
+      "custom": "カスタム",
       "dialog": {
         "title": "繰り返し",
         "interval": "間隔",

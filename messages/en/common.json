@@ -188,6 +188,7 @@
       "monthly": "Monthly",
       "yearly": "Yearly",
       "weekdays": "Weekdays",
+      "custom": "Custom",
       "dialog": {
         "title": "Repeat",
         "interval": "Interval",
