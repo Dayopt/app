@@ -135,7 +135,8 @@
       "success": "Success",
       "error": "Error",
       "warning": "Warning",
-      "info": "Info"
+      "info": "Info",
+      "offline": "You are offline. Changes will sync when connection is restored."
     },
     "time": {
       "today": "Today",
