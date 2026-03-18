@@ -252,6 +252,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_suppressions: {
+        Row: {
+          id: string;
+          email: string;
+          reason: string;
+          source_event_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          reason: string;
+          source_event_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          reason?: string;
+          source_event_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       entries: {
         Row: {
           actual_end_time: string | null;

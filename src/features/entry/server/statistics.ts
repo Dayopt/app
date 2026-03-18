@@ -510,6 +510,57 @@ export const entriesStatisticsRouter = createTRPCRouter({
   }),
 
   // ---------------------------------------------------------------------------
+  // Streak
+  // ---------------------------------------------------------------------------
+
+  /** 連続アクティブ日数（streak）を計算 */
+  getStreak: protectedProcedure.query(async ({ ctx }) => {
+    const { supabase, userId } = ctx;
+
+    // 過去365日分のアクティブ日を取得
+    const since = new Date();
+    since.setDate(since.getDate() - 365);
+
+    const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
+      supabase.rpc(
+        'get_active_dates' as never,
+        {
+          p_user_id: userId,
+          p_since: since.toISOString(),
+        } as never,
+      ),
+    );
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch active dates',
+      });
+    }
+
+    const activeDates = (data as { active_date: string }[] | null) ?? [];
+    const dateSet = new Set(activeDates.map((d) => d.active_date));
+
+    // 今日から逆順にstreakをカウント
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      if (dateSet.has(dateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return { streak };
+  }),
+
+  // ---------------------------------------------------------------------------
   // Unified KPI Summary (7 RPCs → 1 round-trip)
   // ---------------------------------------------------------------------------
 

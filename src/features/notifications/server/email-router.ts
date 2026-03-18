@@ -23,6 +23,7 @@ import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
+import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import type { Context } from '@/platform/trpc/procedures';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
@@ -53,7 +54,29 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
 }
 
 /**
+ * サプレッションリストをチェックし、送信をスキップすべきか判定
+ */
+async function isEmailSuppressed(email: string): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase
+    .from('email_suppressions')
+    .select('reason')
+    .eq('email', email.toLowerCase())
+    .limit(1);
+
+  if (error) {
+    logger.error('Failed to check email suppression', { email, error });
+    // チェック失敗時は送信を許可（可用性優先）
+    return false;
+  }
+
+  return data.length > 0;
+}
+
+/**
  * Resend APIでメールを送信する共通ヘルパー
+ *
+ * サプレッションリスト（バウンス/苦情）に含まれるアドレスへの送信をスキップ
  */
 async function sendEmail({
   to,
@@ -66,6 +89,12 @@ async function sendEmail({
   react: React.ReactElement;
   context: string;
 }) {
+  // サプレッションチェック
+  if (await isEmailSuppressed(to)) {
+    logger.warn(`${context} skipped: email suppressed`, { to });
+    return { success: true as const, emailId: undefined, suppressed: true as const };
+  }
+
   const { data, error } = await getResend().emails.send({
     from: `Dayopt <${FROM_EMAIL}>`,
     to,

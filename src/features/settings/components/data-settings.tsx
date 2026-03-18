@@ -35,6 +35,41 @@ import { SectionCard } from '@/components/common/SectionCard';
 type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
 
+const CSV_COLUMNS = [
+  'id',
+  'title',
+  'description',
+  'origin',
+  'start_time',
+  'end_time',
+  'actual_start_time',
+  'actual_end_time',
+  'duration_minutes',
+  'fulfillment_score',
+  'created_at',
+] as const;
+
+/**
+ * entriesをCSV文字列に変換
+ * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
+ */
+function entriesToCsv(entries: Record<string, unknown>[]): string {
+  const escapeCsvField = (value: unknown): string => {
+    if (value == null) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const header = CSV_COLUMNS.join(',');
+  const rows = entries.map((entry) =>
+    CSV_COLUMNS.map((col) => escapeCsvField(entry[col])).join(','),
+  );
+  return [header, ...rows].join('\n');
+}
+
 /**
  * データ管理設定コンポーネント
  *
@@ -69,13 +104,37 @@ function ExportSection() {
       const result = await exportDataQuery.refetch();
       if (!result.data) throw new Error('Export failed');
 
-      // TODO: CSV format + date range filtering
-      const jsonString = JSON.stringify(result.data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      const exportData = result.data;
+
+      // 日付範囲フィルタリング
+      if (range === 'custom' && startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        exportData.data.entries = exportData.data.entries.filter((entry) => {
+          const entryDate = new Date(entry.start_time ?? entry.created_at ?? '');
+          return entryDate >= start && entryDate <= end;
+        });
+      }
+
+      let blob: Blob;
+      let mimeType: string;
+
+      if (format === 'csv') {
+        const csvContent = entriesToCsv(exportData.data.entries);
+        blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+        mimeType = 'csv';
+      } else {
+        const jsonString = JSON.stringify(exportData, null, 2);
+        blob = new Blob([jsonString], { type: 'application/json' });
+        mimeType = 'json';
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dayopt-export-${Date.now()}.${format}`;
+      a.download = `dayopt-export-${Date.now()}.${mimeType}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -85,7 +144,7 @@ function ExportSection() {
     } catch {
       toast.error(t('exportFailed'));
     }
-  }, [exportDataQuery, format, t]);
+  }, [exportDataQuery, format, range, startDate, endDate, t]);
 
   const isExporting = exportDataQuery.isLoading || exportDataQuery.isFetching;
 
@@ -101,9 +160,7 @@ function ExportSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="json">{t('formatJson')}</SelectItem>
-              <SelectItem value="csv" disabled>
-                {t('formatCsv')} ({t('csvComingSoon')})
-              </SelectItem>
+              <SelectItem value="csv">{t('formatCsv')}</SelectItem>
             </SelectContent>
           </Select>
         </LabeledRow>
