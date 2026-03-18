@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TRPCLink } from '@trpc/client';
 import { observable } from '@trpc/server/observable';
 import type { ReactNode } from 'react';
+import { userEvent, within } from 'storybook/test';
 
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
@@ -19,6 +20,34 @@ import { ValueRankingSettings } from './value-ranking-settings';
 // ─────────────────────────────────────────────────────────
 // Mock Data
 // ─────────────────────────────────────────────────────────
+
+const MOCK_USER_SETTINGS_EMPTY = {
+  timezone: 'Asia/Tokyo',
+  showUtcOffset: true,
+  timeFormat: '24h' as const,
+  dateFormat: 'yyyy/MM/dd',
+  weekStartsOn: 1 as const,
+  showWeekends: true,
+  showWeekNumbers: false,
+  defaultDuration: 60,
+  snapInterval: 15 as const,
+  defaultView: 'week',
+  hourHeightDensity: 'default',
+  planRecordMode: 'both',
+  chronotype: {
+    enabled: true,
+    type: 'moderate_morning' as const,
+    displayMode: 'background' as const,
+    opacity: 0.15,
+    customZones: null,
+  },
+  personalization: {
+    values: {},
+    rankedValues: [],
+    aiStyle: 'coach',
+    aiCustomStylePrompt: '',
+  },
+};
 
 const MOCK_USER_SETTINGS_WITH_RANKING = {
   timezone: 'Asia/Tokyo',
@@ -74,9 +103,10 @@ function createPendingLink(): TRPCLink<AppRouter> {
 interface RankingMockProviderProps {
   children: ReactNode;
   pending?: boolean;
+  settings?: typeof MOCK_USER_SETTINGS_WITH_RANKING;
 }
 
-function RankingMockProvider({ children, pending }: RankingMockProviderProps) {
+function RankingMockProvider({ children, pending, settings }: RankingMockProviderProps) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -84,9 +114,11 @@ function RankingMockProvider({ children, pending }: RankingMockProviderProps) {
     },
   });
 
+  const resolvedSettings = settings ?? MOCK_USER_SETTINGS_WITH_RANKING;
+
   const link: TRPCLink<AppRouter> = pending
     ? createPendingLink()
-    : createMockLink({ 'userSettings.get': MOCK_USER_SETTINGS_WITH_RANKING });
+    : createMockLink({ 'userSettings.get': resolvedSettings });
 
   const trpcClient = api.createClient({ links: [link] });
 
@@ -144,4 +176,37 @@ export const Loading: Story = {
       </RankingMockProvider>
     ),
   ],
+};
+
+/** 空状態（価値観キーワード未選択） — 「選択する」ボタンが表示される */
+export const Empty: Story = {
+  decorators: [
+    (Story) => (
+      <RankingMockProvider settings={MOCK_USER_SETTINGS_EMPTY}>
+        <Story />
+      </RankingMockProvider>
+    ),
+  ],
+};
+
+/**
+ * 編集状態（キーワード選択 + 並べ替えUI表示）
+ *
+ * rankedValuesに既存の選択済みキーワードを設定した状態でレンダリングする。
+ * 実際の編集モードへの遷移はユーザーが「編集」ボタンをクリックする必要があるが、
+ * Defaultストーリーの「編集」ボタンから操作可能。
+ */
+export const Editing: Story = {
+  decorators: [
+    (Story) => (
+      <RankingMockProvider>
+        <Story />
+      </RankingMockProvider>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const editButton = canvas.getByRole('button', { name: /編集|edit/i });
+    await userEvent.click(editButton);
+  },
 };

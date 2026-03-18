@@ -47,6 +47,17 @@ const MOCK_USER_SETTINGS = {
   },
 };
 
+/** カスタムスタイル選択時の設定値（テキストエリア表示確認用） */
+const MOCK_USER_SETTINGS_CUSTOM: typeof MOCK_USER_SETTINGS = {
+  ...MOCK_USER_SETTINGS,
+  personalization: {
+    ...MOCK_USER_SETTINGS.personalization,
+    aiStyle: 'custom',
+    aiCustomStylePrompt:
+      '簡潔で率直なフィードバックをお願いします。専門用語を避け、具体的なアクションを提案してください。',
+  },
+};
+
 // ─────────────────────────────────────────────────────────
 // tRPC Mock Helpers
 // ─────────────────────────────────────────────────────────
@@ -73,9 +84,10 @@ function createPendingLink(): TRPCLink<AppRouter> {
 interface AIStyleMockProviderProps {
   children: ReactNode;
   pending?: boolean;
+  settings?: typeof MOCK_USER_SETTINGS;
 }
 
-function AIStyleMockProvider({ children, pending }: AIStyleMockProviderProps) {
+function AIStyleMockProvider({ children, pending, settings }: AIStyleMockProviderProps) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -83,9 +95,11 @@ function AIStyleMockProvider({ children, pending }: AIStyleMockProviderProps) {
     },
   });
 
+  const resolvedSettings = settings ?? MOCK_USER_SETTINGS;
+
   const link: TRPCLink<AppRouter> = pending
     ? createPendingLink()
-    : createMockLink({ 'userSettings.get': MOCK_USER_SETTINGS });
+    : createMockLink({ 'userSettings.get': resolvedSettings });
 
   const trpcClient = api.createClient({ links: [link] });
 
@@ -139,6 +153,22 @@ export const Loading: Story = {
   decorators: [
     (Story) => (
       <AIStyleMockProvider pending>
+        <Story />
+      </AIStyleMockProvider>
+    ),
+  ],
+};
+
+/**
+ * カスタムスタイル選択状態
+ *
+ * aiStyle が「custom」の場合にテキストエリアが表示される。
+ * 既存のカスタムプロンプトがあらかじめ入力されている。
+ */
+export const CustomStyle: Story = {
+  decorators: [
+    (Story) => (
+      <AIStyleMockProvider settings={MOCK_USER_SETTINGS_CUSTOM}>
         <Story />
       </AIStyleMockProvider>
     ),
