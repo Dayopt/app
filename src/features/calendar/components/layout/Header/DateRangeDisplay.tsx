@@ -81,6 +81,7 @@ export const DateRangeDisplay = ({
   displayRange,
 }: DateRangeDisplayProps) => {
   const t = useTranslations('calendar.dateRange');
+  const tActions = useTranslations('calendar.actions');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
@@ -106,7 +107,7 @@ export const DateRangeDisplay = ({
         <button
           type="button"
           className={cn('flex items-center gap-1 md:hidden', className)}
-          aria-label="カレンダーを開く"
+          aria-label={tActions('openCalendar')}
         >
           {dateContent}
           <ChevronDown className="text-muted-foreground size-4" />

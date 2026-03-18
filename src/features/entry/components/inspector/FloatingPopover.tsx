@@ -7,7 +7,7 @@
  * DraggableInspector から位置計算のみを抽出した薄いラッパー。
  */
 
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import type { AnchorRect } from '../../stores/useEntryInspectorStore';
@@ -50,6 +50,25 @@ function computePosition(anchor: { top: number; right: number; bottom: number; l
 }
 
 export function FloatingPopover({ children, onClose, title, anchorRect }: FloatingPopoverProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // パネルが開いたら最初のフォーカス可能な要素にフォーカスを移動
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable) {
+        focusable.focus();
+      } else {
+        panel.focus();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const position = useMemo(() => {
     if (typeof window === 'undefined') return { x: 100, y: 100 };
 
@@ -87,6 +106,7 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
       />
 
       <div
+        ref={panelRef}
         style={style}
         className={cn(
           'bg-card text-card-foreground z-inspector',
@@ -94,8 +114,8 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
           'flex max-h-[40rem] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
         )}
         role="dialog"
-        aria-modal="false"
         aria-label={title}
+        tabIndex={-1}
       >
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>

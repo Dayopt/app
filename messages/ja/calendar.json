@@ -147,7 +147,10 @@
     },
     "actions": {
       "goToToday": "今日へ移動",
-      "close": "閉じる"
+      "close": "閉じる",
+      "openCalendar": "カレンダーを開く",
+      "previousMonth": "前の月",
+      "nextMonth": "次の月"
     },
     "performance": {
       "notCalculated": "未計測",
@@ -289,6 +292,23 @@
         "actual": "実績",
         "deviation": "差分",
         "entries": "{count}件"
+      },
+      "insights": {
+        "planRateLow": "この期間の活動の大半は計画外でした",
+        "planRateLowDetail": "翌日の計画を前夜に立ててみましょう",
+        "peakUtilizationLow": "ピーク時間帯がほとんど使われていません",
+        "contextSwitchesHigh": "タスク切替が多い期間でした",
+        "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理してみましょう",
+        "blankRateHigh": "空白時間が多めの期間でした",
+        "trendWorse": "{label} が前期間より {pct}% 低下しました",
+        "trendBetter": "{label} が前期間より {pct}% 改善しました",
+        "estimationBiasOver": "このタグは平均 +{bias} 分超過する傾向があります",
+        "estimationBiasUnder": "このタグは平均 {bias} 分早く終わる傾向があります",
+        "hourlyFulfillmentHigh": "この時間帯の充実度は平均より高い傾向があります",
+        "hourlyFulfillmentLow": "この時間帯の充実度は平均より低い傾向があります",
+        "tagFulfillmentHigh": "このタグの平均充実度は {score} — 全体より高めです",
+        "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
+        "peakHour": "ピーク時間帯です — 集中作業に向いています"
       }
     },
     "collapsedSection": {

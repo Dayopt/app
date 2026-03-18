@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, Info } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,8 @@ const SEVERITY_STYLES: Record<RuleInsightSeverity, { icon: typeof Info; color: s
  * insights が空の場合は何も表示しない（問題なし = 表示不要）。
  */
 export function RuleInsightList({ insights, className }: RuleInsightListProps) {
+  const t = useTranslations('calendar.stats.insights');
+
   if (insights.length === 0) return null;
 
   return (
@@ -39,9 +42,13 @@ export function RuleInsightList({ insights, className }: RuleInsightListProps) {
           >
             <Icon className={cn('mt-0.5 size-4 shrink-0', style.color)} />
             <div className="min-w-0 flex-1">
-              <p className="text-foreground text-sm">{insight.message}</p>
-              {insight.detail && (
-                <p className="text-muted-foreground mt-0.5 text-xs">{insight.detail}</p>
+              <p className="text-foreground text-sm">
+                {t(insight.messageKey, insight.messageParams)}
+              </p>
+              {insight.detailKey && (
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t(insight.detailKey, insight.detailParams)}
+                </p>
               )}
             </div>
           </div>

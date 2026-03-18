@@ -18,10 +18,14 @@ export interface RuleInsight {
   metricId: MetricId;
   type: RuleInsightType;
   severity: RuleInsightSeverity;
-  /** メッセージ本文（例: "Plan Rate が先週より 20% 低下しました"） */
-  message: string;
-  /** 補足・提案（例: "計画時間を2時間ブロックしてみましょう"） */
-  detail?: string;
+  /** i18n メッセージキー（calendar.stats.insights 配下） */
+  messageKey: string;
+  /** メッセージの動的パラメータ */
+  messageParams?: Record<string, string | number>;
+  /** i18n 補足キー */
+  detailKey?: string;
+  /** 補足の動的パラメータ */
+  detailParams?: Record<string, string | number>;
 }
 
 /** メトリクス値のマップ（null = データなし） */
@@ -100,8 +104,8 @@ function evaluateThresholdRules(
       metricId: 'planRate',
       type: 'threshold',
       severity: 'warning',
-      message: 'この期間の活動の大半は計画外でした',
-      detail: '翌日の計画を前夜に立ててみましょう',
+      messageKey: 'planRateLow',
+      detailKey: 'planRateLowDetail',
     });
   }
 
@@ -111,7 +115,7 @@ function evaluateThresholdRules(
       metricId: 'peakUtilization',
       type: 'threshold',
       severity: 'info',
-      message: 'ピーク時間帯がほとんど使われていません',
+      messageKey: 'peakUtilizationLow',
     });
   }
 
@@ -121,8 +125,8 @@ function evaluateThresholdRules(
       metricId: 'contextSwitches',
       type: 'threshold',
       severity: 'warning',
-      message: 'タスク切替が多い期間でした',
-      detail: '類似タスクをまとめてバッチ処理してみましょう',
+      messageKey: 'contextSwitchesHigh',
+      detailKey: 'contextSwitchesHighDetail',
     });
   }
 
@@ -132,7 +136,7 @@ function evaluateThresholdRules(
       metricId: 'blankRate',
       type: 'threshold',
       severity: 'info',
-      message: '空白時間が多めの期間でした',
+      messageKey: 'blankRateHigh',
     });
   }
 }
@@ -188,14 +192,16 @@ function evaluateTrendRules(
         metricId: id,
         type: 'trend',
         severity: 'warning',
-        message: `${label} が前期間より ${pct}% 低下しました`,
+        messageKey: 'trendWorse',
+        messageParams: { label, pct },
       });
     } else {
       insights.push({
         metricId: id,
         type: 'trend',
         severity: 'info',
-        message: `${label} が前期間より ${pct}% 改善しました`,
+        messageKey: 'trendBetter',
+        messageParams: { label, pct },
       });
     }
   }

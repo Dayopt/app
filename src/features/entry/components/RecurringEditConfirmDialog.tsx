@@ -1,14 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+
+import { useTranslations } from 'next-intl';
 
 import { ActionFooter } from '@/components/ui/action-footer';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useDialogKeyboard } from '@/hooks/useDialogKeyboard';
 import { useHasMounted } from '@/hooks/useHasMounted';
-import { useTranslations } from 'next-intl';
 
 import { closeModal, useModalStore, type RecurringEditScope } from '@/shell/stores/useModalStore';
 
@@ -18,6 +23,7 @@ export type { RecurringEditScope };
 /**
  * 繰り返しプラン編集確認ダイアログ
  *
+ * Radix AlertDialog ベース（フォーカストラップ・ESCキー処理を自動管理）
  * Googleカレンダー風のスコープ選択:
  * - このイベントのみ
  * - このイベント以降すべて
@@ -34,7 +40,6 @@ export function RecurringEditConfirmDialog() {
   const isOpen = isRecurringEdit;
   const mode = isRecurringEdit ? modal.mode : 'edit';
   const onConfirm = isRecurringEdit ? modal.onConfirm : null;
-  const closeDialog = closeModal;
 
   // ダイアログが開くたびにscopeをリセット
   useEffect(() => {
@@ -43,13 +48,6 @@ export function RecurringEditConfirmDialog() {
     }
   }, [isOpen]);
 
-  // ESCキーでダイアログを閉じる（captureフェーズでInspectorより先に処理）
-  useDialogKeyboard(isOpen, isProcessing, closeDialog, {
-    capture: true,
-    stopPropagation: true,
-    preventDefault: true,
-  });
-
   const handleConfirm = useCallback(async () => {
     if (!onConfirm) return;
     setIsProcessing(true);
@@ -57,51 +55,38 @@ export function RecurringEditConfirmDialog() {
       await onConfirm(scope);
     } finally {
       setIsProcessing(false);
-      closeDialog();
+      closeModal();
     }
-  }, [onConfirm, scope, closeDialog]);
+  }, [onConfirm, scope]);
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      // Inspectorに伝播させない
-      e.stopPropagation();
-      if (e.target === e.currentTarget && !isProcessing) {
-        closeDialog();
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && !isProcessing) {
+        closeModal();
       }
     },
-    [isProcessing, closeDialog],
+    [isProcessing],
   );
 
-  if (!mounted || !isOpen) return null;
+  if (!mounted) return null;
 
   const isEdit = mode === 'edit';
   const title = t(
     isEdit ? 'common.confirm.recurring.editTitle' : 'common.confirm.recurring.deleteTitle',
   );
 
-  const dialog = (
-    <div
-      className="animate-in fade-in bg-card z-overlay-confirm fixed inset-0 flex items-center justify-center duration-150"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="recurring-edit-dialog-title"
-    >
-      <div
-        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border rounded-2xl border p-6 shadow-lg duration-150"
-        style={{ width: 'min(calc(100vw - 32px), 360px)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
+      <AlertDialogContent className="max-w-[360px]">
         {/* Header */}
-        <h2 id="recurring-edit-dialog-title" className="mb-6 text-lg font-bold">
-          {title}
-        </h2>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+        <AlertDialogDescription className="sr-only">{title}</AlertDialogDescription>
 
         {/* スコープ選択 */}
         <RadioGroup
           value={scope}
           onValueChange={(value) => setScope(value as RecurringEditScope)}
-          className="mb-6 space-y-2"
+          className="space-y-2"
         >
           <label htmlFor="scope-this" className="flex cursor-pointer items-center gap-4">
             <RadioGroupItem value="this" id="scope-this" />
@@ -119,7 +104,7 @@ export function RecurringEditConfirmDialog() {
 
         {/* Footer */}
         <ActionFooter>
-          <Button variant="outline" onClick={closeDialog} disabled={isProcessing}>
+          <Button variant="outline" onClick={closeModal} disabled={isProcessing}>
             {t('common.actions.cancel')}
           </Button>
           <Button
@@ -134,9 +119,7 @@ export function RecurringEditConfirmDialog() {
                 : t('common.actions.delete')}
           </Button>
         </ActionFooter>
-      </div>
-    </div>
+      </AlertDialogContent>
+    </AlertDialog>
   );
-
-  return createPortal(dialog, document.body);
 }

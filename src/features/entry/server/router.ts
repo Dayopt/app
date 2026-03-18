@@ -340,7 +340,8 @@ export const entriesCoreRouter = createTRPCRouter({
         .from('entry_instances')
         .delete()
         .eq('entry_id', input.entryId)
-        .eq('instance_date', input.instanceDate);
+        .eq('instance_date', input.instanceDate)
+        .eq('user_id', userId);
 
       if (error) {
         throw new TRPCError({

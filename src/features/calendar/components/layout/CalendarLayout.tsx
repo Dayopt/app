@@ -11,6 +11,7 @@ import { DateNavigator } from '@/components/common/DateNavigator';
 import { Button } from '@/components/ui/button';
 import { AppHeader } from '@/shell/components/AppHeader';
 import { useGlobalSearch } from '@/shell/contexts/use-global-search';
+import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
@@ -40,6 +41,9 @@ export interface CalendarLayoutProps {
       }
     | undefined;
 
+  // Settings persistence callback
+  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
+
   // Header right slot (PageSwitcher など)
   rightSlot?: React.ReactNode | undefined;
 }
@@ -64,14 +68,15 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     onDateSelect,
     displayRange,
 
+    // Settings persistence
+    onSettingsChange,
+
     // Header right slot
     rightSlot,
   }) => {
     const t = useTranslations('calendar');
     const { open: openSearch } = useGlobalSearch();
-    const showWeekNumbers = useCalendarSettingsStore(
-      (s) => s.sessionOverrides.showWeekNumbers ?? s.showWeekNumbers,
-    );
+    const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
 
     // スワイプで前後の期間に移動
     const handleSwipeLeft = useCallback(() => {
@@ -98,6 +103,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
                 className="ml-4"
                 currentView={viewType}
                 onChange={(view) => onViewChange(view as CalendarViewType)}
+                onSettingsChange={onSettingsChange}
               />
             </>
           }
@@ -110,7 +116,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
                 onClick={openSearch}
-                aria-label="検索"
+                aria-label={t('aside.search')}
               >
                 <Search className="size-5" />
               </Button>
@@ -120,7 +126,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
                 size="sm"
                 className="text-muted-foreground hover:text-foreground"
                 onClick={() => onNavigate('today')}
-                aria-label="今日に戻る"
+                aria-label={t('actions.goToToday')}
               >
                 <div className="relative flex size-6 flex-col">
                   <div className="h-1.5 w-full border-b-2 border-current" />

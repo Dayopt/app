@@ -1,16 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+
+import { useTranslations } from 'next-intl';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Field, FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useTags } from '@/features/tags';
-import { useDialogKeyboard } from '@/hooks/useDialogKeyboard';
 import { TAG_NAME_MAX_LENGTH } from '@/lib/tag-colors';
-import { useTranslations } from 'next-intl';
 
 interface TagRenameDialogProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ interface TagRenameDialogProps {
 /**
  * タグ名変更ダイアログ
  *
- * Googleスタイルのシンプルなダイアログ
+ * Radix Dialog ベース（フォーカストラップ・ESCキー処理を自動管理）
  * - 入力フィールド1つ
  * - キャンセル/OKボタン
  * - Enter で保存、Esc でキャンセル
@@ -52,7 +52,7 @@ export function TagRenameDialog({
 
     setName(currentName);
     setError('');
-    // createPortalのレンダリング後にフォーカス＆全選択
+    // Radix Dialog のレンダリング後にフォーカス＆全選択
     const timer = setTimeout(() => {
       const input = inputRef.current;
       if (input) {
@@ -62,9 +62,6 @@ export function TagRenameDialog({
     }, 50);
     return () => clearTimeout(timer);
   }, [isOpen, currentName]);
-
-  // ESCキーでダイアログを閉じる
-  useDialogKeyboard(isOpen, isLoading, onClose);
 
   const handleSubmit = useCallback(async () => {
     const trimmedName = name.trim();
@@ -129,15 +126,6 @@ export function TagRenameDialog({
     }
   }, [name, currentName, existingTags, tagId, onSave, onClose, t]);
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget && !isLoading) {
-        onClose();
-      }
-    },
-    [isLoading, onClose],
-  );
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !isLoading) {
@@ -148,26 +136,24 @@ export function TagRenameDialog({
     [handleSubmit, isLoading],
   );
 
-  if (!isOpen) return null;
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && !isLoading) {
+        onClose();
+      }
+    },
+    [isLoading, onClose],
+  );
 
-  const dialog = (
-    <div
-      className="z-overlay-modal fixed inset-0 flex items-center justify-center"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('calendar.filter.rename')}
-    >
-      <div
-        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border rounded-2xl border p-6 shadow-lg duration-150"
-        style={{ width: 'min(calc(100vw - 32px), 360px)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent showCloseButton={false} className="max-w-[360px]">
         {/* Header */}
-        <h2 className="mb-4 text-base font-bold">{t('calendar.filter.rename')}</h2>
+        <DialogTitle className="text-base">{t('calendar.filter.rename')}</DialogTitle>
+        <DialogDescription className="sr-only">{t('calendar.filter.rename')}</DialogDescription>
 
         {/* Form */}
-        <Field className="mb-6">
+        <Field>
           <Input
             ref={inputRef}
             id="tag-rename-input"
@@ -207,9 +193,7 @@ export function TagRenameDialog({
             {isLoading ? '...' : 'OK'}
           </Button>
         </ActionFooter>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(dialog, document.body);
 }

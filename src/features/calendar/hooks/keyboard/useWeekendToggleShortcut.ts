@@ -1,15 +1,24 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
+import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 /**
  * 週末表示切り替えのキーボードショートカット（Cmd/Ctrl + W）を管理するフック
  */
-export function useWeekendToggleShortcut() {
-  const showWeekends = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.showWeekends ?? s.showWeekends,
+export function useWeekendToggleShortcut(
+  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined,
+) {
+  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
+  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+
+  const persistSettings = useCallback(
+    (settings: Partial<CalendarSettings>) => {
+      updateSettings(settings);
+      onSettingsChange?.(settings);
+    },
+    [updateSettings, onSettingsChange],
   );
-  const updateSessionOverride = useCalendarSettingsStore((s) => s.updateSessionOverride);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -38,7 +47,7 @@ export function useWeekendToggleShortcut() {
       if (hasOpenModal) return;
 
       // 週末表示を切り替え
-      updateSessionOverride({ showWeekends: !showWeekends });
+      persistSettings({ showWeekends: !showWeekends });
 
       // 成功フィードバック（短時間のトースト風通知）
       showToggleFeedback(!showWeekends);
@@ -49,11 +58,11 @@ export function useWeekendToggleShortcut() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showWeekends, updateSessionOverride]);
+  }, [showWeekends, persistSettings]);
 
   return {
     showWeekends,
-    toggleWeekends: () => updateSessionOverride({ showWeekends: !showWeekends }),
+    toggleWeekends: () => persistSettings({ showWeekends: !showWeekends }),
   };
 }
 

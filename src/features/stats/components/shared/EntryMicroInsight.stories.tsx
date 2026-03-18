@@ -45,7 +45,8 @@ export const EstimationBias: Story = {
   args: {
     insight: {
       type: 'estimation_bias',
-      message: 'このタグは平均 +25 分超過する傾向があります',
+      messageKey: 'estimationBiasOver',
+      messageParams: { bias: 25 },
     },
   },
 };
@@ -55,7 +56,8 @@ export const EstimationBiasUnder: Story = {
   args: {
     insight: {
       type: 'estimation_bias',
-      message: 'このタグは平均 -15 分早く終わる傾向があります',
+      messageKey: 'estimationBiasUnder',
+      messageParams: { bias: 15 },
     },
   },
 };
@@ -65,7 +67,7 @@ export const HourlyFulfillmentHigh: Story = {
   args: {
     insight: {
       type: 'hourly_fulfillment',
-      message: 'この時間帯の充実度は平均より高い傾向があります',
+      messageKey: 'hourlyFulfillmentHigh',
     },
   },
 };
@@ -75,7 +77,7 @@ export const HourlyFulfillmentLow: Story = {
   args: {
     insight: {
       type: 'hourly_fulfillment',
-      message: 'この時間帯の充実度は平均より低い傾向があります',
+      messageKey: 'hourlyFulfillmentLow',
     },
   },
 };
@@ -85,7 +87,8 @@ export const TagFulfillment: Story = {
   args: {
     insight: {
       type: 'tag_fulfillment',
-      message: 'このタグの平均充実度は 4.2 — 全体より高めです',
+      messageKey: 'tagFulfillmentHigh',
+      messageParams: { score: '4.2' },
     },
   },
 };
@@ -95,7 +98,7 @@ export const PeakHour: Story = {
   args: {
     insight: {
       type: 'peak_hour',
-      message: 'ピーク時間帯です — 集中作業に向いています',
+      messageKey: 'peakHour',
     },
   },
 };
@@ -108,7 +111,11 @@ export const NoInsight: Story = {
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {
-    insight: { type: 'estimation_bias', message: 'このタグは平均 +25 分超過する傾向があります' },
+    insight: {
+      type: 'estimation_bias',
+      messageKey: 'estimationBiasOver',
+      messageParams: { bias: 25 },
+    },
   },
   render: () => (
     <div className="flex flex-col items-start gap-6">
@@ -125,7 +132,8 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'estimation_bias',
-                message: 'このタグは平均 +25 分超過する傾向があります',
+                messageKey: 'estimationBiasOver',
+                messageParams: { bias: 25 },
               }}
             />
           </div>
@@ -147,7 +155,8 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'estimation_bias',
-                message: 'このタグは平均 -15 分早く終わる傾向があります',
+                messageKey: 'estimationBiasUnder',
+                messageParams: { bias: 15 },
               }}
             />
           </div>
@@ -169,7 +178,7 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'hourly_fulfillment',
-                message: 'この時間帯の充実度は平均より高い傾向があります',
+                messageKey: 'hourlyFulfillmentHigh',
               }}
             />
           </div>
@@ -191,7 +200,7 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'hourly_fulfillment',
-                message: 'この時間帯の充実度は平均より低い傾向があります',
+                messageKey: 'hourlyFulfillmentLow',
               }}
             />
           </div>
@@ -213,7 +222,8 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'tag_fulfillment',
-                message: 'このタグの平均充実度は 4.2 — 全体より高めです',
+                messageKey: 'tagFulfillmentHigh',
+                messageParams: { score: '4.2' },
               }}
             />
           </div>
@@ -233,7 +243,7 @@ export const AllPatterns: Story = {
             <EntryMicroInsight
               insight={{
                 type: 'peak_hour',
-                message: 'ピーク時間帯です — 集中作業に向いています',
+                messageKey: 'peakHour',
               }}
             />
           </div>

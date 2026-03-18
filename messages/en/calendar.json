@@ -147,7 +147,10 @@
     },
     "actions": {
       "goToToday": "Go to today",
-      "close": "Close"
+      "close": "Close",
+      "openCalendar": "Open calendar",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "performance": {
       "notCalculated": "Not Calculated",
@@ -289,6 +292,23 @@
         "actual": "Actual",
         "deviation": "Deviation",
         "entries": "{count} entries"
+      },
+      "insights": {
+        "planRateLow": "Most activities in this period were unplanned",
+        "planRateLowDetail": "Try planning tomorrow's schedule the night before",
+        "peakUtilizationLow": "Peak hours were mostly unused",
+        "contextSwitchesHigh": "Many context switches in this period",
+        "contextSwitchesHighDetail": "Try batching similar tasks together",
+        "blankRateHigh": "This period had a lot of free time",
+        "trendWorse": "{label} decreased by {pct}% from previous period",
+        "trendBetter": "{label} improved by {pct}% from previous period",
+        "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
+        "estimationBiasUnder": "This tag tends to finish {bias} min early",
+        "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",
+        "hourlyFulfillmentLow": "Fulfillment tends to be below average at this hour",
+        "tagFulfillmentHigh": "This tag's avg fulfillment is {score} — above overall average",
+        "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
+        "peakHour": "This is a peak hour — great for focused work"
       }
     },
     "collapsedSection": {

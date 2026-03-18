@@ -243,7 +243,8 @@ export const WithMicroInsightEstimation: Story = {
           <EntryMicroInsight
             insight={{
               type: 'estimation_bias',
-              message: 'このタグは平均 +25 分超過する傾向があります',
+              messageKey: 'estimationBiasOver',
+              messageParams: { bias: 25 },
             }}
           />
         }
@@ -268,7 +269,7 @@ export const WithMicroInsightFulfillment: Story = {
           <EntryMicroInsight
             insight={{
               type: 'hourly_fulfillment',
-              message: 'この時間帯の充実度は平均より高い傾向があります',
+              messageKey: 'hourlyFulfillmentHigh',
             }}
           />
         }
