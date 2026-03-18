@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { useTourStore } from '@/features/tour';
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
+import { ThemeProvider } from '@/shell/providers/theme-provider';
 import { useSettingsStore } from '@/shell/stores/useSettingsStore';
 
 import { DisplaySettings } from './display-settings';
@@ -88,7 +89,9 @@ function DisplayMockProvider({ children, responseMap, pending }: DisplayMockProv
 
   return (
     <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </QueryClientProvider>
     </api.Provider>
   );
 }

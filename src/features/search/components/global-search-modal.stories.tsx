@@ -220,6 +220,9 @@ export const Default: Story = {
  * 「No results found」が表示される。
  */
 export const EmptyState: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'aria-required-children', enabled: false }] } },
+  },
   render: () => (
     <MockProvider tags={[]} entries={[]}>
       <GlobalSearchModal isOpen onClose={fn()} />

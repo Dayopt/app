@@ -58,7 +58,7 @@ export const Submitting: Story = {
     const emailInput = canvas.getByLabelText(/メールアドレス/i);
     await userEvent.type(emailInput, 'forgot@example.com');
 
-    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    const submitButton = canvas.getByRole('button', { name: /リセット用リンクを送信/i });
     await userEvent.click(submitButton);
 
     // ボタンがローディング状態になっていることを確認
@@ -87,7 +87,7 @@ export const Success: Story = {
     const emailInput = canvas.getByLabelText(/メールアドレス/i);
     await userEvent.type(emailInput, 'user@example.com');
 
-    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    const submitButton = canvas.getByRole('button', { name: /リセット用リンクを送信/i });
     await userEvent.click(submitButton);
 
     // 実コンポーネントの成功画面が表示されることを確認
@@ -119,7 +119,7 @@ export const ServerError: Story = {
     const emailInput = canvas.getByLabelText(/メールアドレス/i);
     await userEvent.type(emailInput, 'forgot@example.com');
 
-    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    const submitButton = canvas.getByRole('button', { name: /リセット用リンクを送信/i });
     await userEvent.click(submitButton);
 
     // エラーメッセージが表示されることを確認

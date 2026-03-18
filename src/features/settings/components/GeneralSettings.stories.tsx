@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
+import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 import { GeneralSettings } from './general-settings';
 
@@ -90,7 +91,9 @@ function MockProvider({
   const trpcClient = api.createClient({ links: [link] });
   return (
     <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </QueryClientProvider>
     </api.Provider>
   );
 }

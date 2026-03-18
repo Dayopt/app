@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TRPCLink } from '@trpc/client';
 import { observable } from '@trpc/server/observable';
 import type { ReactNode } from 'react';
-import { userEvent, within } from 'storybook/test';
+import { userEvent, waitFor, within } from 'storybook/test';
 
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
@@ -206,7 +206,7 @@ export const Editing: Story = {
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const editButton = canvas.getByRole('button', { name: /編集|edit/i });
+    const editButton = await waitFor(() => canvas.getByRole('button', { name: /編集|edit/i }));
     await userEvent.click(editButton);
   },
 };

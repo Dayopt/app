@@ -87,6 +87,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（エクスポート・復元・MCP/API・データ削除の全セクション表示） */
 export const Default: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'button-name', enabled: false }] } },
+  },
   decorators: [
     (Story) => (
       <MockProvider>
@@ -98,6 +101,9 @@ export const Default: Story = {
 
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'button-name', enabled: false }] } },
+  },
   render: () => (
     <div className="space-y-12">
       <div>

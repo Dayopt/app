@@ -338,7 +338,7 @@ export const NotFound: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText('Plan not found')).toBeInTheDocument();
+    await expect(canvas.getByText('プランが見つかりません')).toBeInTheDocument();
   },
 };
 

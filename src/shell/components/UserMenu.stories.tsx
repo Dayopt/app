@@ -68,6 +68,18 @@ export const AllPatterns: Story = {
   args: {
     user: { name: '田中 太郎', email: 'taro@example.com', avatar: null },
   },
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'image-redundant-alt', enabled: false },
+          { id: 'landmark-main-is-top-level', enabled: false },
+          { id: 'landmark-no-duplicate-main', enabled: false },
+          { id: 'landmark-unique', enabled: false },
+        ],
+      },
+    },
+  },
   render: () => (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">

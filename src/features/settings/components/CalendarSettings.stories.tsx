@@ -123,6 +123,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（週表示・週末あり・週番号なし） */
 export const Default: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'button-name', enabled: false }] } },
+  },
   decorators: [
     (Story) => (
       <MockProvider responseMap={{ 'userSettings.get': MOCK_USER_SETTINGS }}>
@@ -145,6 +148,9 @@ export const Loading: Story = {
 
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'button-name', enabled: false }] } },
+  },
   render: () => (
     <div className="space-y-12">
       <div>

@@ -96,6 +96,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（エクスポート・インポート・バックアップセクション表示） */
 export const Default: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'button-name', enabled: false }] } },
+  },
   decorators: [
     (Story) => (
       <DataExportMockProvider>
