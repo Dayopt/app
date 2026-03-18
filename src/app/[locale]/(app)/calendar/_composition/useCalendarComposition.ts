@@ -29,8 +29,9 @@ import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
 import { useCalendarNavigationStore } from '@/shell/stores/useCalendarNavigationStore';
 
-import { getCurrentTimezone, setUserTimezone } from '@/features/settings';
+import { getCurrentTimezone, setUserTimezone, useUserSettings } from '@/features/settings';
 import { logger } from '@/lib/logger';
+import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 // =============================================================================
@@ -95,6 +96,9 @@ export interface CalendarCompositionResult {
   onNavigateToday: () => void;
   onToggleWeekends: () => void;
   onDateSelect: (date: Date) => void;
+
+  // === Settings persistence ===
+  onSettingsChange: (settings: Partial<CalendarSettings>) => void;
 }
 
 // =============================================================================
@@ -112,10 +116,9 @@ export function useCalendarComposition({
   // Settings
   // =========================================================================
   const timezone = useCalendarSettingsStore((state) => state.timezone);
-  const showWeekends = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.showWeekends ?? s.showWeekends,
-  );
+  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
   const updateSettings = useCalendarSettingsStore((state) => state.updateSettings);
+  const { saveSettings } = useUserSettings();
 
   // タイムゾーン設定の初期化（マウント時のみ）
   useEffect(() => {
@@ -205,6 +208,17 @@ export function useCalendarComposition({
   });
 
   // =========================================================================
+  // Settings persistence（ViewSwitcherからの設定変更をDBに保存）
+  // =========================================================================
+  const handleSettingsChange = useCallback(
+    (settings: Partial<CalendarSettings>) => {
+      // storeは既に更新済み（ViewSwitcher側）なのでDB保存のみ
+      saveSettings(settings);
+    },
+    [saveSettings],
+  );
+
+  // =========================================================================
   // External Navigation（検索等からの日付ナビゲーション要求を処理）
   // =========================================================================
   const pendingDate = useCalendarNavigationStore((s) => s.pendingDate);
@@ -220,7 +234,7 @@ export function useCalendarComposition({
   // =========================================================================
   // Weekend Toggle Shortcut
   // =========================================================================
-  useWeekendToggleShortcut();
+  useWeekendToggleShortcut(handleSettingsChange);
 
   // =========================================================================
   // Plan Keyboard Shortcuts
@@ -331,6 +345,7 @@ export function useCalendarComposition({
       onNavigateToday: handleNavigateToday,
       onToggleWeekends: handleToggleWeekends,
       onDateSelect: handleDateSelect,
+      onSettingsChange: handleSettingsChange,
     }),
     [
       viewDateRange,
@@ -355,6 +370,7 @@ export function useCalendarComposition({
       handleNavigateToday,
       handleToggleWeekends,
       handleDateSelect,
+      handleSettingsChange,
     ],
   );
 }

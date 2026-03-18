@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/shell/stores/useSettingsStore';
+import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
@@ -26,6 +27,7 @@ import { isMultiDayView } from '../../../types/calendar.types';
 interface ViewSwitcherProps {
   currentView: CalendarViewType;
   onChange: (view: CalendarViewType) => void;
+  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
   className?: string;
 }
 
@@ -50,18 +52,25 @@ const DAY_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
  * - 日数 > 2日間〜9日間
  * - ビューの設定 > 週末を表示
  */
-export function ViewSwitcher({ currentView, onChange, className }: ViewSwitcherProps) {
+export function ViewSwitcher({
+  currentView,
+  onChange,
+  onSettingsChange,
+  className,
+}: ViewSwitcherProps) {
   const t = useTranslations();
-  const showWeekends = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.showWeekends ?? s.showWeekends,
+  const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
+  const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+  const hourHeightDensity = useCalendarSettingsStore((s) => s.hourHeightDensity);
+  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+
+  const persistSettings = useCallback(
+    (settings: Partial<CalendarSettings>) => {
+      updateSettings(settings);
+      onSettingsChange?.(settings);
+    },
+    [updateSettings, onSettingsChange],
   );
-  const showWeekNumbers = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.showWeekNumbers ?? s.showWeekNumbers,
-  );
-  const hourHeightDensity = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.hourHeightDensity ?? s.hourHeightDensity,
-  );
-  const updateSessionOverride = useCalendarSettingsStore((s) => s.updateSessionOverride);
 
   const currentLabel = isMultiDayView(currentView)
     ? t('calendar.views.multiday', { count: parseInt(currentView) })
@@ -78,12 +87,12 @@ export function ViewSwitcher({ currentView, onChange, className }: ViewSwitcherP
   );
 
   const handleToggleWeekends = useCallback(() => {
-    updateSessionOverride({ showWeekends: !showWeekends });
-  }, [showWeekends, updateSessionOverride]);
+    persistSettings({ showWeekends: !showWeekends });
+  }, [showWeekends, persistSettings]);
 
   const handleToggleWeekNumbers = useCallback(() => {
-    updateSessionOverride({ showWeekNumbers: !showWeekNumbers });
-  }, [showWeekNumbers, updateSessionOverride]);
+    persistSettings({ showWeekNumbers: !showWeekNumbers });
+  }, [showWeekNumbers, persistSettings]);
 
   const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
 
@@ -227,7 +236,7 @@ export function ViewSwitcher({ currentView, onChange, className }: ViewSwitcherP
                   <DropdownMenuCheckboxItem
                     key={d}
                     checked={hourHeightDensity === d}
-                    onCheckedChange={() => updateSessionOverride({ hourHeightDensity: d })}
+                    onCheckedChange={() => persistSettings({ hourHeightDensity: d })}
                   >
                     {t(`calendar.views.density_${d}`)}
                   </DropdownMenuCheckboxItem>

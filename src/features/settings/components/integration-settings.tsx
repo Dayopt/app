@@ -159,7 +159,6 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
     setSavedKeys((prev) => ({ ...prev, [providerId]: false }));
   }, []);
 
-  // TODO: syncEnabled をユーザー設定DBに永続化（現在はローカルstateのみ）
   const [syncEnabled, setSyncEnabled] = useState(true);
 
   const handleSyncChange = useCallback((checked: boolean) => {
