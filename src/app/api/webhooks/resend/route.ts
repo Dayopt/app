@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+export const maxDuration = 30;
+
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
 

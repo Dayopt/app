@@ -8,6 +8,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 
 const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV || 'development';
@@ -61,6 +62,17 @@ if (SENTRY_DSN) {
         maskAllText: true,
         blockAllMedia: true,
       }),
+      // Supabase操作（auth, DB）の自動計測
+      ...(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? [
+            Sentry.supabaseIntegration({
+              supabaseClient: createBrowserClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+              ),
+            }),
+          ]
+        : []),
     ],
   });
 }

@@ -78,14 +78,6 @@ export async function generateMetadata({
       siteName: t('name'),
       title: t('name'),
       description: t('description'),
-      images: [
-        {
-          url: '/og-image.png',
-          width: 1200,
-          height: 630,
-          alt: t('name'),
-        },
-      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -93,7 +85,6 @@ export async function generateMetadata({
       creator: '@dayopt',
       title: t('name'),
       description: t('description'),
-      images: ['/og-image.png'],
     },
     alternates: {
       canonical: `${getAppUrl()}/${validLocale}`,
@@ -125,7 +116,7 @@ function generateJsonLd(locale: string, appName: string, appDescription: string)
     },
     screenshot: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/og-image.png`,
+      url: `${baseUrl}/opengraph-image`,
       width: 1200,
       height: 630,
     },

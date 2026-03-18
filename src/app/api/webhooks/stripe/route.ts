@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 
+export const maxDuration = 30;
+
 import { env } from '@/env';
 import type { SubscriptionStatus } from '@/features/settings/server/billing-service';
 import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
