@@ -9,6 +9,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import {
@@ -23,6 +24,43 @@ import {
 import { createEntryService } from './service-index';
 
 import { removeUndefinedFields } from '../lib/entry-utils';
+
+// =============================================================================
+// エントリ作成 日次レート制限（インメモリフォールバック）
+// =============================================================================
+
+const ENTRY_CREATE_DAILY_LIMIT = 500;
+const ENTRY_CREATE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const entryCreateLog = new Map<string, number[]>();
+
+async function isEntryCreateLimited(userId: string): Promise<boolean> {
+  // Upstash が有効な場合はそちらを使用
+  if (entryCreateRateLimit) {
+    try {
+      const { success } = await entryCreateRateLimit.limit(userId);
+      return !success;
+    } catch {
+      // Redis エラー時はインメモリにフォールバック
+    }
+  }
+
+  // インメモリフォールバック
+  const now = Date.now();
+  const timestamps = entryCreateLog.get(userId) ?? [];
+  const recent = timestamps.filter((t) => now - t < ENTRY_CREATE_WINDOW_MS);
+  recent.push(now);
+  entryCreateLog.set(userId, recent);
+
+  if (entryCreateLog.size > 5000) {
+    for (const [key, ts] of entryCreateLog) {
+      if (ts.every((t) => now - t > ENTRY_CREATE_WINDOW_MS)) {
+        entryCreateLog.delete(key);
+      }
+    }
+  }
+
+  return recent.length > ENTRY_CREATE_DAILY_LIMIT;
+}
 
 // =============================================================================
 // Inline Schemas
@@ -82,6 +120,14 @@ export const entriesCoreRouter = createTRPCRouter({
 
   /** エントリ作成 */
   create: protectedProcedure.input(createEntrySchema).mutation(async ({ ctx, input }) => {
+    // 日次作成上限チェック（500/day）
+    if (await isEntryCreateLimited(ctx.userId)) {
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: 'エントリの日次作成上限に達しました。しばらく待ってからお試しください。',
+      });
+    }
+
     const service = createEntryService(ctx.supabase);
     try {
       return await service.create({

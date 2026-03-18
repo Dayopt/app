@@ -19,6 +19,8 @@ import {
   passwordResetRateLimit,
   withUpstashRateLimit,
 } from '@/lib/rate-limit/upstash';
+import { RECAPTCHA_CONFIG } from '@/lib/recaptcha/config';
+import { isScoreAboveThreshold, verifyRecaptchaV3 } from '@/lib/recaptcha/verify';
 import { createClient } from '@/platform/supabase/server';
 
 const authPostSchema = z.discriminatedUnion('action', [
@@ -31,6 +33,7 @@ const authPostSchema = z.discriminatedUnion('action', [
     action: z.literal('signup'),
     email: z.string().email().max(320),
     password: z.string().min(8).max(256),
+    recaptchaToken: z.string().max(4096).optional(),
   }),
   z.object({
     action: z.literal('reset-password'),
@@ -146,6 +149,24 @@ export async function POST(request: NextRequest) {
       }
 
       case 'signup': {
+        // reCAPTCHA v3 検証（キーが設定されている場合のみ）
+        if (validated.recaptchaToken) {
+          const recaptchaResult = await verifyRecaptchaV3(validated.recaptchaToken, 'signup');
+          if (
+            !recaptchaResult.success ||
+            !isScoreAboveThreshold(recaptchaResult.score, RECAPTCHA_CONFIG.SCORE_THRESHOLD.MODERATE)
+          ) {
+            logger.warn('reCAPTCHA verification failed for signup', {
+              score: recaptchaResult.score,
+              errors: recaptchaResult['error-codes'],
+            });
+            return NextResponse.json(
+              { error: 'Bot detection failed. Please try again.' },
+              { status: 403 },
+            );
+          }
+        }
+
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: validated.email,
           password: validated.password,

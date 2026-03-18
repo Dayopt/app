@@ -95,6 +95,58 @@ export const contactRateLimit =
     : null;
 
 /**
+ * Chat API（無料枠）per-minute レート制限
+ * 5リクエスト / 1分
+ */
+export const chatFreeRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(5, '1 m'),
+        prefix: 'ratelimit:chat:free',
+      })
+    : null;
+
+/**
+ * Chat API（BYOK）per-minute レート制限
+ * 20リクエスト / 1分
+ */
+export const chatBYOKRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, '1 m'),
+        prefix: 'ratelimit:chat:byok',
+      })
+    : null;
+
+/**
+ * tRPC protectedProcedure 用レート制限
+ * 100リクエスト / 1分 per user
+ */
+export const trpcUserRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, '1 m'),
+        prefix: 'ratelimit:trpc:user',
+      })
+    : null;
+
+/**
+ * エントリ作成の日次上限
+ * 500リクエスト / 24時間 per user
+ */
+export const entryCreateRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(500, '24 h'),
+        prefix: 'ratelimit:entry:create',
+      })
+    : null;
+
+/**
  * 汎用レート制限ミドルウェア
  *
  * @example

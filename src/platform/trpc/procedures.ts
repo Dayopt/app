@@ -15,8 +15,7 @@ import { z } from 'zod';
 import { env } from '@/env';
 import { createAppError, ERROR_CODES } from '@/lib/errors/error-patterns';
 import { logger } from '@/lib/logger';
-import { apiRateLimit, withUpstashRateLimit } from '@/lib/rate-limit/upstash';
-import { extractClientIp } from '@/platform/security/ip-validation';
+import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import {
   AuthMode,
   createServiceRoleClient,
@@ -216,16 +215,16 @@ const t = initTRPC.context<Context>().create({
 export const publicProcedure = t.procedure;
 
 /**
- * per-userId レート制限（メモリベース、100 req/min）
+ * per-userId レート制限（100 req/min）
  *
- * 認証済みユーザーが全 tRPC エンドポイントに対して無制限にリクエストを
- * 送信するのを防止する。Upstash 未設定の環境でも機能する。
+ * Upstash 有効時は Redis ベース（分散環境対応）、
+ * 未設定時はインメモリフォールバック。
  */
 const USER_RATE_LIMIT = 100;
 const USER_RATE_WINDOW_MS = 60 * 1000;
 const userRequestLog = new Map<string, number[]>();
 
-function isUserRateLimited(userId: string): boolean {
+function isUserRateLimitedInMemory(userId: string): boolean {
   const now = Date.now();
   const timestamps = userRequestLog.get(userId) ?? [];
   const recent = timestamps.filter((t) => now - t < USER_RATE_WINDOW_MS);
@@ -244,6 +243,21 @@ function isUserRateLimited(userId: string): boolean {
   return recent.length > USER_RATE_LIMIT;
 }
 
+async function isUserRateLimited(userId: string): Promise<boolean> {
+  // Upstash が有効な場合は Redis ベースのレート制限を使用
+  if (trpcUserRateLimit) {
+    try {
+      const { success } = await trpcUserRateLimit.limit(userId);
+      return !success;
+    } catch {
+      // Redis エラー時はインメモリにフォールバック（可用性優先）
+      return isUserRateLimitedInMemory(userId);
+    }
+  }
+  // Upstash 未設定時はインメモリ実装
+  return isUserRateLimitedInMemory(userId);
+}
+
 /**
  * 認証が必要なプロシージャ
  */
@@ -259,7 +273,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   }
 
   // per-userId レート制限
-  if (isUserRateLimited(ctx.userId)) {
+  if (await isUserRateLimited(ctx.userId)) {
     throw new TRPCError({
       code: 'TOO_MANY_REQUESTS',
       message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
@@ -348,27 +362,6 @@ export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
- * レート制限付きプロシージャ
- */
-export const rateLimitedProcedure = publicProcedure.use(async ({ ctx, next }) => {
-  const clientIp = getClientIP(ctx.req);
-  const isAllowed = await checkRateLimit(clientIp);
-
-  if (!isAllowed) {
-    throw new TRPCError({
-      code: 'TOO_MANY_REQUESTS',
-      message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
-      cause: createAppError('レート制限に達しました', ERROR_CODES.RATE_LIMIT_EXCEEDED, {
-        source: 'trpc_middleware',
-        ip: clientIp,
-      }),
-    });
-  }
-
-  return next({ ctx });
-});
-
-/**
  * ルーター作成関数
  */
 export const createTRPCRouter = t.router;
@@ -393,40 +386,12 @@ async function checkAdminPermission(_userId: string): Promise<boolean> {
   return false; // 仮実装
 }
 
-async function checkRateLimit(ip: string): Promise<boolean> {
-  if (!apiRateLimit) {
-    // Upstash未設定の場合はレート制限をスキップ（開発環境向け）
-    return true;
-  }
-
-  // Requestオブジェクトを簡易的に作成してUpstashレート制限を利用
-  const dummyRequest = new Request('http://localhost', {
-    headers: { 'x-real-ip': ip },
-  });
-
-  const result = await withUpstashRateLimit(dummyRequest, apiRateLimit);
-  if (result === null) {
-    // Upstashエラー時はフォールバック（可用性優先）
-    return true;
-  }
-  return result.success;
-}
-
 /**
  * タイミング攻撃耐性のある文字列比較
  */
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-function getClientIP(req: TrpcRequestLike): string {
-  const forwarded =
-    typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : null;
-  const realIp = typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'] : null;
-  const remoteAddress = req.socket?.remoteAddress;
-
-  return extractClientIp(forwarded, realIp) || remoteAddress || 'unknown';
 }
 
 /**
