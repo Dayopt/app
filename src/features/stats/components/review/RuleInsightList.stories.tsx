@@ -65,6 +65,28 @@ export const WarningsOnly: Story = {
   },
 };
 
+/** クリティカルを含む（重大な警告） */
+export const WithCritical: Story = {
+  args: {
+    insights: [
+      {
+        metricId: 'blankRate',
+        type: 'threshold',
+        severity: 'critical',
+        messageKey: 'blankRateHigh',
+        detailKey: 'planRateLowDetail',
+      },
+      {
+        metricId: 'planRate',
+        type: 'threshold',
+        severity: 'warning',
+        messageKey: 'planRateLow',
+        detailKey: 'planRateLowDetail',
+      },
+    ],
+  },
+};
+
 /** 空（問題なし → 非表示） */
 export const Empty: Story = {
   args: { insights: [] },

@@ -67,6 +67,15 @@ export const WithSelection: Story = {
   },
 };
 
+/** 完了処理中（ローディング状態） */
+export const Completing: Story = {
+  args: {
+    selectedType: 'bear',
+    showQuiz: false,
+    isCompleting: true,
+  },
+};
+
 /** クイズ表示中 */
 export const QuizMode: Story = {
   args: {

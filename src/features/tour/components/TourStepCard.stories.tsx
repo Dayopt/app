@@ -54,6 +54,16 @@ export const LastStep: Story = {
   },
 };
 
+/** 戻るボタンあり（onPrev を渡した状態） */
+export const WithBackButton: Story = {
+  args: {
+    titleKey: 'tour.steps.gridDragPlan.title',
+    descriptionKey: 'tour.steps.gridDragPlan.description',
+    currentStep: 2,
+    onPrev: fn(),
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (

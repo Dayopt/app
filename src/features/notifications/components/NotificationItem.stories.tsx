@@ -73,6 +73,42 @@ export const Deleting: Story = {
   },
 };
 
+/** AI インサイト通知 */
+export const AiInsight: Story = {
+  args: {
+    type: 'ai_insight',
+    planTitle: 'AI が新しいインサイトを生成しました',
+  },
+};
+
+/** 週次レポート通知 */
+export const WeeklyReport: Story = {
+  args: {
+    type: 'weekly_report',
+    planTitle: '先週の週次レポートが届きました',
+    createdAt: yesterday,
+    isRead: false,
+  },
+};
+
+/** バーンアウト警告通知 */
+export const BurnoutWarning: Story = {
+  args: {
+    type: 'burnout_warning',
+    planTitle: '過負荷の兆候が検出されました',
+    createdAt: oneHourAgo,
+  },
+};
+
+/** エネルギーインサイト通知 */
+export const EnergyInsight: Story = {
+  args: {
+    type: 'energy_insight',
+    planTitle: 'あなたのエネルギーパターンに変化があります',
+  },
+};
+
+/** 全通知タイプ一覧 */
 export const AllTypes: Story = {
   args: {
     type: 'reminder',
@@ -91,6 +127,32 @@ export const AllTypes: Story = {
       <NotificationItem
         {...args}
         id="3"
+        type="ai_insight"
+        planTitle="AI が新しいインサイトを生成しました"
+      />
+      <NotificationItem
+        {...args}
+        id="4"
+        type="weekly_report"
+        planTitle="先週の週次レポートが届きました"
+        createdAt={yesterday}
+      />
+      <NotificationItem
+        {...args}
+        id="5"
+        type="burnout_warning"
+        planTitle="過負荷の兆候が検出されました"
+        createdAt={oneHourAgo}
+      />
+      <NotificationItem
+        {...args}
+        id="6"
+        type="energy_insight"
+        planTitle="あなたのエネルギーパターンに変化があります"
+      />
+      <NotificationItem
+        {...args}
+        id="7"
         type="reminder"
         planTitle="既読のリマインダー"
         isRead={true}

@@ -39,3 +39,10 @@ export const NotLastStep: Story = {
     isLastStep: false,
   },
 };
+
+/** 戻るボタンあり（onPrev を渡した状態） */
+export const WithBackButton: Story = {
+  args: {
+    onPrev: fn(),
+  },
+};
