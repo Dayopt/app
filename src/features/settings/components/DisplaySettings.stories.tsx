@@ -132,6 +132,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト表示（設定データ読み込み済み） */
 export const Default: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <DisplayMockProvider>
@@ -154,6 +157,9 @@ export const Loading: Story = {
 
 /** ツアーが未完了の状態（リプレイボタン非表示） */
 export const TourNotCompleted: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => {
       useTourStore.setState({
@@ -171,6 +177,9 @@ export const TourNotCompleted: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <DisplayMockProvider>

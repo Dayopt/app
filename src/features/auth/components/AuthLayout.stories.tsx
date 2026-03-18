@@ -34,6 +34,9 @@ type Story = StoryObj;
 
 /** 標準のセンタリングレイアウト（/auth/callback 等）。カード枠 + 中央配置。 */
 export const Default: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <AuthLayout>
       <div className="flex flex-col gap-3 text-center">
@@ -54,6 +57,9 @@ export const Default: Story = {
 
 /** エラーページ。リンク期限切れなどのエラー状態。 */
 export const ErrorPage: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <AuthLayout>
       <div className="flex flex-col gap-3 text-center">

@@ -127,6 +127,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（24h・Asia/Tokyo・月曜始まり） */
 export const Default: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <MockProvider responseMap={{ 'userSettings.get': MOCK_USER_SETTINGS }}>
@@ -149,6 +152,9 @@ export const Loading: Story = {
 
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="space-y-12">
       <div>

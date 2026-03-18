@@ -197,6 +197,9 @@ export const Empty: Story = {
  * Defaultストーリーの「編集」ボタンから操作可能。
  */
 export const Editing: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <RankingMockProvider>

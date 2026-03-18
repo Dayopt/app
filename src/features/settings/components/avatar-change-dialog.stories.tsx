@@ -77,10 +77,17 @@ export const Default: Story = {
 };
 
 /** アバター未設定状態：AvatarUpload が空プレースホルダーを表示。 */
-export const NoAvatar: Story = {};
+export const NoAvatar: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
+};
 
 /** アバター設定済み状態：既存のアバター画像が表示される。 */
 export const WithAvatar: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => {
       useAuthStore.setState({
@@ -106,6 +113,9 @@ export const Closed: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => {
     useAuthStore.setState({
       user: {

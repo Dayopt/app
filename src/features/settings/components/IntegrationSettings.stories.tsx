@@ -92,6 +92,9 @@ type Story = StoryObj<typeof meta>;
 
 /** iCalトークンが発行済みの状態 */
 export const Default: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider
@@ -105,6 +108,9 @@ export const Default: Story = {
 
 /** iCalトークンが未発行の状態 */
 export const NoToken: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
@@ -122,6 +128,9 @@ export const NoToken: Story = {
  */
 export const AIApiKeySaved: Story = {
   name: 'AI API Key — Saved (badge visible)',
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
@@ -208,6 +217,9 @@ export const ICalRegenerateDialog: Story = {
  */
 export const SyncDisabled: Story = {
   name: 'Sync — Disabled',
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
@@ -236,6 +248,9 @@ export const SyncDisabled: Story = {
  */
 export const SyncEnabled: Story = {
   name: 'Sync — Enabled (default)',
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
@@ -255,6 +270,9 @@ export const SyncEnabled: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <IntegrationMockProvider

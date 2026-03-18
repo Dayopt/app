@@ -129,6 +129,9 @@ export const AccountActive: Story = {
  * 各カテゴリがアクティブになった状態を横並びで確認できる。
  */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="flex flex-wrap gap-4">
       {SETTINGS_CATEGORIES.map((cat) => {

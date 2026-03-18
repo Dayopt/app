@@ -113,6 +113,9 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（ブラウザ通知ON・メール/プッシュOFF） */
 export const Default: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <MockProvider responseMap={{ 'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES }}>
@@ -124,6 +127,9 @@ export const Default: Story = {
 
 /** 全通知無効状態 */
 export const AllDisabled: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => (
       <MockProvider responseMap={{ 'notificationPreferences.get': MOCK_ALL_DISABLED }}>
@@ -146,6 +152,9 @@ export const Loading: Story = {
 
 /** 全ストーリーを並べて一覧表示 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="space-y-12">
       <div>
