@@ -209,7 +209,9 @@ export const Editing: Story = {
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const editButton = await waitFor(() => canvas.getByRole('button', { name: /編集|edit/i }));
+    const editButton = await waitFor(() =>
+      canvas.getByRole('button', { name: /選択する|編集|edit/i }),
+    );
     await userEvent.click(editButton);
   },
 };
