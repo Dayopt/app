@@ -9,7 +9,7 @@
  * @see /docs/architecture/grand-design.md
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { addHours, startOfHour } from 'date-fns';
 
@@ -136,6 +136,16 @@ export function useCalendarComposition({
   // Plan Inspector state
   // =========================================================================
   const selectedPlanId = useEntryInspectorStore((state) => state.entryId);
+  const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
+
+  // 日付ナビゲーション時にInspectorを閉じる（staleなエントリ表示を防止）
+  const prevDateRef = React.useRef(currentDate);
+  useEffect(() => {
+    if (prevDateRef.current !== currentDate) {
+      prevDateRef.current = currentDate;
+      closeInspector();
+    }
+  }, [currentDate, closeInspector]);
 
   // =========================================================================
   // Notifications（初回許可リクエスト）
