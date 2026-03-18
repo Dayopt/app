@@ -21,9 +21,10 @@ const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.
 const ProgressView = dynamic(() =>
   import('./progress/ProgressView').then((m) => ({ default: m.ProgressView })),
 );
-const InsightsView = dynamic(() =>
-  import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
-);
+// InsightsView は AI 分析実装後に復活予定
+// const InsightsView = dynamic(() =>
+//   import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
+// );
 
 interface StatsPageContentProps {
   /** URL から決定されたアクティブタブ */
@@ -55,7 +56,6 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
   const navigate = useStatsFilterStore((s) => s.navigate);
 
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
-  const isReview = activeTab === 'review';
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -71,16 +71,16 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
       {/* ヘッダー */}
       <AppHeader
         controls={
-          isReview ? (
-            <>
-              <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
+          <>
+            <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
+            {activeTab === 'review' && (
               <StatsGranularitySelector
                 className="ml-4"
                 granularity={granularity}
                 onGranularityChange={setGranularity}
               />
-            </>
-          ) : undefined
+            )}
+          </>
         }
         rightSlot={headerSlot}
       >
@@ -100,9 +100,7 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
           <UnderlineTabsTrigger value="progress" className="text-base">
             {t('calendar.stats.tabProgress')}
           </UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="insights" className="text-base">
-            {t('calendar.stats.tabInsights')}
-          </UnderlineTabsTrigger>
+          {/* Insights タブは AI 分析実装後に復活予定 */}
         </TabsList>
 
         <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
@@ -117,11 +115,7 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
           </FeatureErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="stats-insights">
-            <InsightsView />
-          </FeatureErrorBoundary>
-        </TabsContent>
+        {/* Insights タブは AI 分析実装後に復活予定 */}
       </Tabs>
     </div>
   );

@@ -33,15 +33,18 @@ export function StatsMetricsGrid() {
   );
 
   // tRPCクエリを並列取得
+  const cumulativeTime = api.entries.getCumulativeTime.useQuery(dateRange);
+  const avgFulfillmentQuery = api.entries.getAvgFulfillment.useQuery(dateRange);
   const planRate = api.entries.getPlanRate.useQuery(dateRange);
   const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
   const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
   const contextSwitches = api.entries.getContextSwitches.useQuery(dateRange);
   const blankRate = api.entries.getBlankRate.useQuery(dateRange);
-  // TODO: totalTime, avgFulfillment, streak の tRPC クエリを追加
-  // 現在は既存のエンドポイントがないため null
+  // TODO: streak — getStreak エンドポイント接続後に有効化
 
   const isLoading =
+    cumulativeTime.isPending ||
+    avgFulfillmentQuery.isPending ||
     planRate.isPending ||
     estimationAccuracy.isPending ||
     energyMap.isPending ||
@@ -76,11 +79,22 @@ export function StatsMetricsGrid() {
   const metricsMap = useMemo((): Partial<Record<MetricId, MetricData>> => {
     const map: Partial<Record<MetricId, MetricData>> = {};
 
-    // TODO: totalTime — getCumulativeTime エンドポイント接続後に有効化
-    map.totalTime = { id: 'totalTime', value: null, trend: null };
+    if (cumulativeTime.data) {
+      // totalMinutes を時間（hours）に変換して duration フォーマットに渡す
+      map.totalTime = {
+        id: 'totalTime',
+        value: cumulativeTime.data.totalMinutes,
+        trend: null,
+      };
+    }
 
-    // TODO: avgFulfillment — エンドポイント接続後に有効化
-    map.avgFulfillment = { id: 'avgFulfillment', value: null, trend: null };
+    if (avgFulfillmentQuery.data?.avgFulfillment != null) {
+      map.avgFulfillment = {
+        id: 'avgFulfillment',
+        value: avgFulfillmentQuery.data.avgFulfillment,
+        trend: null,
+      };
+    }
 
     if (planRate.data) {
       map.planRate = { id: 'planRate', value: planRate.data.planRate, trend: null };
@@ -114,26 +128,40 @@ export function StatsMetricsGrid() {
     }
 
     return map;
-  }, [planRate.data, avgDeviation, peakUtilization, contextSwitches.data, blankRate.data]);
+  }, [
+    cumulativeTime.data,
+    avgFulfillmentQuery.data,
+    planRate.data,
+    avgDeviation,
+    peakUtilization,
+    contextSwitches.data,
+    blankRate.data,
+  ]);
+
+  // 値が存在するメトリクスのみ表示（未実装メトリクスのダッシュ表示を防ぐ）
+  const activeMetrics = METRIC_ORDER.filter((id) => {
+    const data = metricsMap[id];
+    return data?.value != null;
+  });
+
+  if (activeMetrics.length === 0) return null;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {METRIC_ORDER.map((id) => {
+      {activeMetrics.map((id) => {
         const def = METRIC_DEFINITIONS[id];
-        const data = metricsMap[id];
-        const value = data?.value;
-        const progress = value != null ? getMetricProgress(value, def) : null;
-        const status = value != null ? getThresholdStatus(value, def) : null;
+        const data = metricsMap[id]!;
+        const value = data.value!;
+        const progress = getMetricProgress(value, def);
+        const status = getThresholdStatus(value, def);
 
         return (
           <MetricCard
             key={id}
             label={t(id)}
-            valueParts={
-              value != null ? formatMetricValueParts(value, def.format) : { primary: '-', unit: '' }
-            }
+            valueParts={formatMetricValueParts(value, def.format)}
             icon={def.icon}
-            trend={data?.trend || undefined}
+            trend={data.trend || undefined}
             variant={def.variant ?? 'default'}
             progress={progress ?? undefined}
             progressStatus={status ?? undefined}

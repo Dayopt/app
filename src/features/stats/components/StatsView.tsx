@@ -1,21 +1,108 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
 
+import { cn } from '@/lib/utils';
+import { api } from '@/platform/trpc';
+
+import { calculatePeakUtilization } from '../lib/metrics';
+import { evaluateRuleInsights } from '../lib/ruleInsights';
+import { useStatsFilterStore } from '../stores/useStatsFilterStore';
+import type { MetricId } from '../types/metrics.types';
 import type { StatsViewProps } from '../types/stats.types';
+import { computeStatsDateRange } from '../utils/computeDateRange';
 import { StatsMetricsGrid } from './insights/StatsMetricsGrid';
+import { RuleInsightList } from './review/RuleInsightList';
+import { TagBreakdownBar } from './review/TagBreakdownBar';
 
 /**
  * StatsView - 振り返りビュー（Review タブ）
  *
- * 期間ベースの振り返り。KPIメトリクス。
+ * 上から: タグ別内訳 → KPIメトリクス → 気づき
+ * 「何に時間を使った → 数値 → 改善ヒント」のストーリー構成。
  */
 export function StatsView({ className }: StatsViewProps) {
+  const currentDate = useStatsFilterStore((s) => s.currentDate);
+  const granularity = useStatsFilterStore((s) => s.granularity);
+
+  const dateRange = useMemo(
+    () => computeStatsDateRange(currentDate, granularity),
+    [currentDate, granularity],
+  );
+
+  // タグ別内訳
+  const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
+
+  const tagSegments = useMemo(() => {
+    if (!timeByTag.data) return [];
+    return timeByTag.data.map((tag) => ({
+      tagName: tag.name,
+      tagColor: tag.color,
+      minutes: Math.round(tag.hours * 60),
+    }));
+  }, [timeByTag.data]);
+
+  // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない
+  const planRate = api.entries.getPlanRate.useQuery(dateRange);
+  const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
+  const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
+  const contextSwitches = api.entries.getContextSwitches.useQuery(dateRange);
+  const blankRate = api.entries.getBlankRate.useQuery(dateRange);
+
+  const ruleInsights = useMemo(() => {
+    const current: Partial<Record<MetricId, number>> = {};
+
+    if (planRate.data) current.planRate = planRate.data.planRate;
+    if (contextSwitches.data) current.contextSwitches = contextSwitches.data.avgPerDay;
+    if (blankRate.data) current.blankRate = blankRate.data.blankRate;
+
+    // ピーク活用率
+    if (energyMap.data && dateRange.startDate && dateRange.endDate) {
+      const defaultPeakZones = [{ startHour: 9, endHour: 14 }];
+      const start = new Date(dateRange.startDate);
+      const end = new Date(dateRange.endDate);
+      const daysInRange = Math.max(
+        1,
+        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
+      );
+      const peak = calculatePeakUtilization(energyMap.data, defaultPeakZones, daysInRange);
+      if (peak) current.peakUtilization = peak.peakUtilization;
+    }
+
+    // 見積もり精度
+    if (estimationAccuracy.data && estimationAccuracy.data.length > 0) {
+      const totalDev = estimationAccuracy.data.reduce(
+        (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
+        0,
+      );
+      const totalEntries = estimationAccuracy.data.reduce((sum, item) => sum + item.entryCount, 0);
+      if (totalEntries > 0) current.estimationAccuracy = totalDev / totalEntries;
+    }
+
+    // 前期間比較は未実装のため null
+    return evaluateRuleInsights(current, null);
+  }, [
+    planRate.data,
+    estimationAccuracy.data,
+    energyMap.data,
+    contextSwitches.data,
+    blankRate.data,
+    dateRange.startDate,
+    dateRange.endDate,
+  ]);
+
   return (
     <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
+          {/* タグ別時間内訳 */}
+          <TagBreakdownBar segments={tagSegments} />
+
+          {/* KPI メトリクス */}
           <StatsMetricsGrid />
+
+          {/* 閾値ベースの気づき（問題がある場合のみ表示） */}
+          <RuleInsightList insights={ruleInsights} />
         </div>
       </div>
     </div>
