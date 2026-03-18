@@ -63,7 +63,16 @@ export const EventContextMenu = ({
     }
   }, [position]);
 
-  // 外部クリック時にメニューを閉じる
+  // メニューが開いたら最初の項目にフォーカス
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstItem = menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+      firstItem?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 外部クリック・Escape・Arrow keyナビゲーション
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -71,18 +80,31 @@ export const EventContextMenu = ({
       }
     };
 
-    const handleEscapeKey = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const items = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+        if (!items?.length) return;
+        const currentIndex = Array.from(items).findIndex((el) => el === document.activeElement);
+        const nextIndex =
+          e.key === 'ArrowDown'
+            ? (currentIndex + 1) % items.length
+            : (currentIndex - 1 + items.length) % items.length;
+        items[nextIndex]?.focus();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose]);
 
@@ -140,6 +162,8 @@ export const EventContextMenu = ({
   return (
     <div
       ref={menuRef}
+      role="menu"
+      aria-label={t('calendar.contextMenu.title')}
       className="bg-card text-card-foreground border-border animate-in fade-in-0 zoom-in-95 fixed z-[350] min-w-[12rem] rounded-lg border p-1 shadow-lg motion-reduce:animate-none"
       style={{
         left: adjustedPosition.x,
@@ -152,6 +176,8 @@ export const EventContextMenu = ({
         return (
           <button
             type="button"
+            role="menuitem"
+            tabIndex={-1}
             key={item.label}
             onClick={() => handleAction(item.action)}
             className={cn(

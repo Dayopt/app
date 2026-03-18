@@ -101,6 +101,7 @@
       "allDay": "終日"
     },
     "contextMenu": {
+      "title": "エントリ操作",
       "edit": "編集",
       "completeWithRecord": "完了&Recordコピー",
       "duplicate": "複製",
@@ -266,6 +267,40 @@
       "tabProgress": "進捗",
       "tabInsights": "インサイト",
       "insightsComingSoon": "AIインサイトは準備中です",
+      "charts": {
+        "monthlyTrend": "月次トレンド",
+        "monthlyTrendDesc": "過去12ヶ月",
+        "monthlyAvg": "平均: {avg}/月",
+        "monthlyMoM": "(前月比 {change})",
+        "annualTotal": "年間合計: {total}",
+        "dayOfWeek": "曜日別",
+        "dayOfWeekDesc": "曜日ごとの活動量",
+        "dayOfWeekBusiest": "最多: {day} ({hours})",
+        "weekdays": "平日: {hours}",
+        "weekends": "休日: {hours}",
+        "hourlyDist": "時間帯別",
+        "hourlyDistDesc": "活動の時間帯分布",
+        "hourlyPeak": "ピーク: {slot} ({hours})",
+        "hourlyTotal": "合計 {hours}",
+        "yearlyGrid": "年間カレンダー",
+        "noData": "データなし"
+      },
+      "energyMap": "エネルギーマップ",
+      "energyMapDesc": "時間帯×曜日別の活動量",
+      "energyMapMinutes": "活動量",
+      "energyMapFulfillment": "充実度",
+      "energyMapScore": "スコア",
+      "energyMapLess": "少",
+      "energyMapMore": "多",
+      "dow": {
+        "mon": "月",
+        "tue": "火",
+        "wed": "水",
+        "thu": "木",
+        "fri": "金",
+        "sat": "土",
+        "sun": "日"
+      },
       "metrics": {
         "totalTime": "合計時間",
         "totalTimeDesc": "記録された合計時間",

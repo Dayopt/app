@@ -101,6 +101,7 @@
       "allDay": "All day"
     },
     "contextMenu": {
+      "title": "Entry actions",
       "edit": "Edit",
       "completeWithRecord": "Complete & Copy Record",
       "duplicate": "Duplicate",
@@ -266,6 +267,40 @@
       "tabProgress": "Progress",
       "tabInsights": "Insights",
       "insightsComingSoon": "AI insights coming soon",
+      "charts": {
+        "monthlyTrend": "Monthly Trend",
+        "monthlyTrendDesc": "Past 12 months",
+        "monthlyAvg": "Avg: {avg}/mo",
+        "monthlyMoM": "(MoM {change})",
+        "annualTotal": "Annual total: {total}",
+        "dayOfWeek": "Day of Week",
+        "dayOfWeekDesc": "Activity by day",
+        "dayOfWeekBusiest": "Busiest: {day} ({hours})",
+        "weekdays": "Weekdays: {hours}",
+        "weekends": "Weekends: {hours}",
+        "hourlyDist": "Hourly Distribution",
+        "hourlyDistDesc": "When you work",
+        "hourlyPeak": "Peak: {slot} ({hours})",
+        "hourlyTotal": "Total {hours}",
+        "yearlyGrid": "Yearly Grid",
+        "noData": "No data"
+      },
+      "energyMap": "Energy Map",
+      "energyMapDesc": "Activity by hour and day of week",
+      "energyMapMinutes": "Activity",
+      "energyMapFulfillment": "Fulfillment",
+      "energyMapScore": "Score",
+      "energyMapLess": "Less",
+      "energyMapMore": "More",
+      "dow": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
       "metrics": {
         "totalTime": "Total Time",
         "totalTimeDesc": "Total tracked time",
