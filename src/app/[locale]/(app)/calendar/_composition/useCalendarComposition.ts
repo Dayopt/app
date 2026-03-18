@@ -33,6 +33,7 @@ import { getCurrentTimezone, setUserTimezone, useUserSettings } from '@/features
 import { logger } from '@/lib/logger';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { toast } from 'sonner';
 
 // =============================================================================
 // Types
@@ -154,10 +155,18 @@ export function useCalendarComposition({
   // =========================================================================
   // Data Layer（plans + records + filtering）
   // =========================================================================
-  const { viewDateRange, filteredEvents, allCalendarEvents } = useCalendarData({
+  const { viewDateRange, filteredEvents, allCalendarEvents, entriesError } = useCalendarData({
     viewType,
     currentDate,
   });
+
+  // エントリ取得エラー時にtoast通知
+  useEffect(() => {
+    if (entriesError) {
+      logger.error('[useCalendarComposition] entries fetch error', entriesError);
+      toast.error('Failed to load entries. Please try refreshing.');
+    }
+  }, [entriesError]);
 
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）

@@ -32,6 +32,10 @@ interface UseCalendarDataResult {
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
   entriesData: ReturnType<typeof useEntries>['data'];
+  /** エントリ取得エラー */
+  entriesError: ReturnType<typeof useEntries>['error'];
+  /** エントリ取得中かどうか */
+  isEntriesLoading: boolean;
 }
 
 export function useCalendarData({
@@ -56,7 +60,11 @@ export function useCalendarData({
   );
 
   // entries を取得（plans + records 統合、単一クエリ）
-  const { data: entriesData } = useEntries(dateFilter);
+  const {
+    data: entriesData,
+    error: entriesError,
+    isLoading: isEntriesLoading,
+  } = useEntries(dateFilter);
 
   // タグマスタをプリフェッチ（EntryCard等で使用するためキャッシュをwarm up）
   useTags();
@@ -241,5 +249,7 @@ export function useCalendarData({
     filteredEvents,
     allCalendarEvents,
     entriesData,
+    entriesError,
+    isEntriesLoading,
   };
 }
