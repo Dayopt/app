@@ -5,6 +5,7 @@
 
 import { timingSafeEqual } from 'crypto';
 
+import * as Sentry from '@sentry/nextjs';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
@@ -264,6 +265,9 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
       message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
     });
   }
+
+  // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
+  Sentry.setUser({ id: ctx.userId });
 
   return next({
     ctx: {

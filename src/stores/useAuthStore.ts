@@ -4,6 +4,8 @@
  *
  * @see docs/architecture/AUTH_STORE.md
  */
+import * as Sentry from '@sentry/nextjs';
+
 import { logger } from '@/lib/logger';
 import { createClient } from '@/platform/supabase/client';
 import type { AuthError, AuthResponse, OAuthResponse, Session, User } from '@supabase/supabase-js';
@@ -84,6 +86,11 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
 
+          // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
+          if (data.session?.user) {
+            Sentry.setUser({ id: data.session.user.id });
+          }
+
           // Auth state changeリスナーは非同期で設定（ブロックしない）
           try {
             const {
@@ -93,6 +100,13 @@ export const useAuthStore = create<AuthState>()(
                 session,
                 user: session?.user ?? null,
               });
+
+              // Sentryユーザーコンテキストを同期
+              if (session?.user) {
+                Sentry.setUser({ id: session.user.id });
+              } else {
+                Sentry.setUser(null);
+              }
             });
 
             // Cleanup subscription on unmount
