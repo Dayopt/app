@@ -103,8 +103,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style],
   );
 
-  // 超過部分の点線パターン
-  const dashedAccentGradient = `repeating-linear-gradient(to bottom, ${accentColor} 0px, ${accentColor} 5px, transparent 5px, transparent 9px)`;
+  // 超過部分のグラデーション（穏やかなフェード）
+  const overtimeAccentGradient = `linear-gradient(to bottom, ${accentColor}, color-mix(in oklch, ${accentColor} 40%, transparent))`;
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -268,7 +268,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             style={{
               height: `${overlay.topHeight}px`,
               backgroundColor: 'var(--background)',
-              backgroundImage: dashedAccentGradient,
+              backgroundImage: overtimeAccentGradient,
             }}
           />
         )}
@@ -279,7 +279,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             style={{
               height: `${overlay.bottomHeight}px`,
               backgroundColor: 'var(--background)',
-              backgroundImage: dashedAccentGradient,
+              backgroundImage: overtimeAccentGradient,
             }}
           />
         )}
@@ -289,7 +289,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       <div
         className={cn(
           'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
-          isMobile ? 'flex items-start gap-1 px-2 pt-2 text-xs' : 'p-2 text-sm',
+          safePosition.height < 40
+            ? isMobile
+              ? 'flex items-center px-1.5 text-xs'
+              : 'flex items-center px-2 text-xs'
+            : isMobile
+              ? 'flex items-start gap-1 px-2 pt-2 text-xs'
+              : 'p-2 text-sm',
         )}
         style={{ backgroundColor: accentTint }}
       >
@@ -319,10 +325,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           />
         )}
 
-        {/* 下端リサイズハンドル（Draft/Past は非表示） */}
+        {/* 下端リサイズハンドル（Draft/Past は非表示）
+             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保 */}
         {!isDraft && (
           <div
-            className="focus:ring-ring absolute right-0 bottom-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="focus:ring-ring absolute right-0 bottom-[-12px] left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
             tabIndex={0}
             aria-label="Resize entry duration"
@@ -333,7 +340,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             onMouseDown={handleBottomResizeMouseDown}
             onKeyDown={handleResizeKeyDown}
             style={{
-              height: '8px',
+              height: '32px',
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}
