@@ -56,7 +56,7 @@ const baseEntrySchema = z.object({
   duration_minutes: z.number().int().min(1).nullable().optional(),
   fulfillment_score: fulfillmentScoreSchema.nullable().optional(),
   recurrence_type: recurrenceTypeSchema.optional(),
-  recurrence_end_date: z.string().optional(),
+  recurrence_end_date: z.string().nullable().optional(),
   recurrence_rule: z.string().nullable().optional(),
   reminder_minutes: z.number().int().min(0).nullable().optional(),
 });

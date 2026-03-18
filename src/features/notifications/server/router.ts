@@ -29,7 +29,7 @@ export const notificationsRouter = createTRPCRouter({
 
         return await service.list(options);
       } catch (error) {
-        handleServiceError(error);
+        return handleServiceError(error);
       }
     }),
 
@@ -42,7 +42,7 @@ export const notificationsRouter = createTRPCRouter({
     try {
       return await service.getUnreadCount(ctx.userId);
     } catch (error) {
-      handleServiceError(error);
+      return handleServiceError(error);
     }
   }),
 
@@ -55,7 +55,7 @@ export const notificationsRouter = createTRPCRouter({
     try {
       return await service.getById(ctx.userId, input.id);
     } catch (error) {
-      handleServiceError(error);
+      return handleServiceError(error);
     }
   }),
 
@@ -68,7 +68,7 @@ export const notificationsRouter = createTRPCRouter({
     try {
       return await service.markAsRead(ctx.userId, input.id);
     } catch (error) {
-      handleServiceError(error);
+      return handleServiceError(error);
     }
   }),
 
@@ -88,7 +88,7 @@ export const notificationsRouter = createTRPCRouter({
 
         return await service.markAllAsRead(options);
       } catch (error) {
-        handleServiceError(error);
+        return handleServiceError(error);
       }
     }),
 
@@ -101,7 +101,7 @@ export const notificationsRouter = createTRPCRouter({
     try {
       return await service.delete(ctx.userId, input.id);
     } catch (error) {
-      handleServiceError(error);
+      return handleServiceError(error);
     }
   }),
 
@@ -114,7 +114,7 @@ export const notificationsRouter = createTRPCRouter({
     try {
       return await service.deleteAllRead(ctx.userId);
     } catch (error) {
-      handleServiceError(error);
+      return handleServiceError(error);
     }
   }),
 });

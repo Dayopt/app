@@ -12,6 +12,12 @@ import { logger } from '@/lib/logger';
 import { traceDbQuery } from '@/platform/sentry/trace';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
+// exactOptionalPropertyTypes 対応: undefined値を除外して optional params を安全に渡す
+type StripUndefinedValues<T> = { [K in keyof T]: Exclude<T[K], undefined> };
+function stripUndefined<T extends Record<string, unknown>>(obj: T): StripUndefinedValues<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as never;
+}
+
 /** 統計クエリの共通エラーハンドラー */
 function handleStatsError(operation: string, error: unknown): never {
   if (error instanceof TRPCError) throw error;
@@ -140,14 +146,11 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const endDate = new Date(year, 11, 31, 23, 59, 59);
 
         const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
-          supabase.rpc(
-            'get_daily_hours' as never,
-            {
-              p_user_id: userId,
-              p_start_date: startDate.toISOString(),
-              p_end_date: endDate.toISOString(),
-            } as never,
-          ),
+          supabase.rpc('get_daily_hours', {
+            p_user_id: userId,
+            p_start_date: startDate.toISOString(),
+            p_end_date: endDate.toISOString(),
+          }),
         );
 
         if (error) {
@@ -158,7 +161,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        return (data ?? []) as Array<{ date: string; hours: number }>;
+        return data ?? [];
       } catch (error) {
         handleStatsError('getDailyHours', error);
       }
@@ -173,12 +176,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_hourly_distribution', async () =>
           supabase.rpc(
-            'get_hourly_distribution' as never,
-            {
+            'get_hourly_distribution',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate ?? null,
-              p_end_date: input?.endDate ?? null,
-            } as never,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
+            }),
           ),
         );
 
@@ -190,7 +193,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{ hour: number; hours: number }>;
+        const rows = data ?? [];
         const hourlyHours: number[] = new Array(24).fill(0);
         for (const row of rows) {
           if (row.hour >= 0 && row.hour < 24) hourlyHours[row.hour] = row.hours;
@@ -220,12 +223,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_dow_distribution', async () =>
           supabase.rpc(
-            'get_dow_distribution' as never,
-            {
+            'get_dow_distribution',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate ?? null,
-              p_end_date: input?.endDate ?? null,
-            } as never,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
+            }),
           ),
         );
 
@@ -237,7 +240,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{ dow: number; hours: number }>;
+        const rows = data ?? [];
         const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
         const dayHours: number[] = new Array(7).fill(0);
         for (const row of rows) {
@@ -265,13 +268,10 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const startDate = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1);
 
         const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
-          supabase.rpc(
-            'get_monthly_hours' as never,
-            {
-              p_user_id: userId,
-              p_start_date: startDate.toISOString(),
-            } as never,
-          ),
+          supabase.rpc('get_monthly_hours', {
+            p_user_id: userId,
+            p_start_date: startDate.toISOString(),
+          }),
         );
 
         if (error) {
@@ -282,7 +282,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{ month: string; hours: number }>;
+        const rows = data ?? [];
         const monthlyHours: Record<string, number> = {};
         for (let i = 0; i < monthCount; i++) {
           const date = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1) + i, 1);
@@ -608,13 +608,10 @@ export const entriesStatisticsRouter = createTRPCRouter({
       since.setDate(since.getDate() - 365);
 
       const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
-        supabase.rpc(
-          'get_active_dates' as never,
-          {
-            p_user_id: userId,
-            p_since: since.toISOString(),
-          } as never,
-        ),
+        supabase.rpc('get_active_dates', {
+          p_user_id: userId,
+          p_since: since.toISOString(),
+        }),
       );
 
       if (error) {
@@ -625,7 +622,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         });
       }
 
-      const activeDates = (data as { active_date: string }[] | null) ?? [];
+      const activeDates = data ?? [];
       const dateSet = new Set(activeDates.map((d) => d.active_date));
 
       // 今日から逆順にstreakをカウント
