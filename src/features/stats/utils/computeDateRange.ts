@@ -1,4 +1,7 @@
 import {
+  addDays,
+  addMonths,
+  addWeeks,
   endOfDay,
   endOfMonth,
   endOfWeek,
@@ -40,6 +43,52 @@ export function computeStatsDateRange(
     }
     case 'year': {
       const year = currentDate.getFullYear();
+      const start = new Date(year, 0, 1, 0, 0, 0, 0);
+      const end = new Date(year, 11, 31, 23, 59, 59, 999);
+      return {
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+      };
+    }
+  }
+}
+
+/**
+ * 現在の日付範囲から前期間の日付範囲を算出
+ *
+ * day → 前日、week → 前週、month → 前月、year → 前年
+ */
+export function computePreviousDateRange(
+  currentDate: Date,
+  granularity: StatsGranularity,
+): {
+  startDate: string;
+  endDate: string;
+} {
+  switch (granularity) {
+    case 'day': {
+      const prev = addDays(currentDate, -1);
+      return {
+        startDate: startOfDay(prev).toISOString(),
+        endDate: endOfDay(prev).toISOString(),
+      };
+    }
+    case 'week': {
+      const prev = addWeeks(currentDate, -1);
+      return {
+        startDate: startOfWeek(prev).toISOString(),
+        endDate: endOfWeek(prev).toISOString(),
+      };
+    }
+    case 'month': {
+      const prev = addMonths(currentDate, -1);
+      return {
+        startDate: startOfMonth(prev).toISOString(),
+        endDate: endOfMonth(prev).toISOString(),
+      };
+    }
+    case 'year': {
+      const year = currentDate.getFullYear() - 1;
       const start = new Date(year, 0, 1, 0, 0, 0, 0);
       const end = new Date(year, 11, 31, 23, 59, 59, 999);
       return {

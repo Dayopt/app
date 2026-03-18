@@ -17,19 +17,8 @@ import {
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -39,6 +28,7 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/platform/trpc';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 
@@ -91,9 +81,9 @@ function ExportSection() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(t('exportButton'));
+      toast.success(t('exportSuccess'));
     } catch {
-      toast.error('Export failed');
+      toast.error(t('exportFailed'));
     }
   }, [exportDataQuery, format, t]);
 
@@ -111,7 +101,9 @@ function ExportSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="json">{t('formatJson')}</SelectItem>
-              <SelectItem value="csv">{t('formatCsv')}</SelectItem>
+              <SelectItem value="csv" disabled>
+                {t('formatCsv')} ({t('csvComingSoon')})
+              </SelectItem>
             </SelectContent>
           </Select>
         </LabeledRow>
@@ -135,7 +127,7 @@ function ExportSection() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-36"
+                className="w-32 sm:w-36"
                 aria-label={t('startDate')}
               />
               <span className="text-muted-foreground">—</span>
@@ -143,7 +135,7 @@ function ExportSection() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-36"
+                className="w-32 sm:w-36"
                 aria-label={t('endDate')}
               />
             </div>
@@ -221,13 +213,15 @@ function McpApiSection() {
     return (
       <SectionCard title={t('title')}>
         <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
-        <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-4">
-          <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
-          <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
-          <Button variant="outline" size="sm" disabled>
-            {t('upgrade')}
-          </Button>
-        </div>
+        <InfoBox>
+          <div className="flex items-center gap-3">
+            <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
+            <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
+            <Button variant="outline" size="sm" disabled>
+              {t('upgrade')}
+            </Button>
+          </div>
+        </InfoBox>
       </SectionCard>
     );
   }
@@ -278,7 +272,7 @@ function McpApiSection() {
       </div>
 
       {/* Connection guide */}
-      <div className="bg-muted/50 mt-4 rounded-lg p-3">
+      <InfoBox className="mt-4 p-3">
         <p className="text-muted-foreground text-sm">
           {t('connectionGuide')}
           <a
@@ -289,7 +283,7 @@ function McpApiSection() {
             <ExternalLink className="h-3 w-3" />
           </a>
         </p>
-      </div>
+      </InfoBox>
     </SectionCard>
   );
 }
@@ -312,88 +306,27 @@ function CopyButton({
 
 // ─── Deletion ────────────────────────────────────────
 
-type DeletionType = 'blocks' | 'all';
-
 function DeletionSection() {
   const t = useTranslations('settings.dataControls.deletion');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deletionType, setDeletionType] = useState<DeletionType>('blocks');
-  const [confirmInput, setConfirmInput] = useState('');
 
-  const keyword = t('confirmKeyword');
-  const isConfirmed = confirmInput === keyword;
-
-  const handleOpenDialog = useCallback((type: DeletionType) => {
-    setDeletionType(type);
-    setConfirmInput('');
-    setDialogOpen(true);
-  }, []);
-
-  const handleDelete = useCallback(() => {
-    // TODO: Implement actual deletion via tRPC
-    toast.success('Not implemented yet');
-    setDialogOpen(false);
-  }, []);
-
+  // TODO: tRPC 実装後に確認ダイアログ付きの削除フローを有効化
   return (
     <SectionCard title={t('title')}>
       <div className="space-y-0">
         <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => handleOpenDialog('blocks')}
-          >
+          <Button variant="outline" size="sm" disabled>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteBlocks')}
           </Button>
         </LabeledRow>
 
         <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => handleOpenDialog('all')}
-          >
+          <Button variant="outline" size="sm" disabled>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteAllData')}
           </Button>
         </LabeledRow>
       </div>
-
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('confirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletionType === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          <div className="space-y-2 py-2">
-            <Label className="text-sm">{t('typeToConfirm', { keyword })}</Label>
-            <Input
-              value={confirmInput}
-              onChange={(e) => setConfirmInput(e.target.value)}
-              placeholder={keyword}
-              autoComplete="off"
-            />
-          </div>
-
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('cancel', { ns: 'common' })}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={!isConfirmed}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deletionType === 'blocks' ? t('deleteBlocks') : t('deleteAllData')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </SectionCard>
   );
 }

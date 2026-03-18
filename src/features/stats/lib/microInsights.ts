@@ -18,7 +18,10 @@ export type MicroInsightType =
 
 export interface MicroInsight {
   type: MicroInsightType;
-  message: string;
+  /** i18n メッセージキー（calendar.stats.insights 配下） */
+  messageKey: string;
+  /** メッセージの動的パラメータ */
+  messageParams?: Record<string, string | number>;
 }
 
 /** Inspector で開いているエントリの情報 */
@@ -90,12 +93,14 @@ function checkEstimationBias(entry: EntryContext, stats: EntryStats): MicroInsig
   if (bias > 0) {
     return {
       type: 'estimation_bias',
-      message: `このタグは平均 +${Math.round(bias)} 分超過する傾向があります`,
+      messageKey: 'estimationBiasOver',
+      messageParams: { bias: Math.round(bias) },
     };
   }
   return {
     type: 'estimation_bias',
-    message: `このタグは平均 ${Math.round(bias)} 分早く終わる傾向があります`,
+    messageKey: 'estimationBiasUnder',
+    messageParams: { bias: Math.round(Math.abs(bias)) },
   };
 }
 
@@ -112,12 +117,12 @@ function checkHourlyFulfillment(entry: EntryContext, stats: EntryStats): MicroIn
   if (diff > 0) {
     return {
       type: 'hourly_fulfillment',
-      message: `この時間帯の充実度は平均より高い傾向があります`,
+      messageKey: 'hourlyFulfillmentHigh',
     };
   }
   return {
     type: 'hourly_fulfillment',
-    message: `この時間帯の充実度は平均より低い傾向があります`,
+    messageKey: 'hourlyFulfillmentLow',
   };
 }
 
@@ -134,12 +139,14 @@ function checkTagFulfillment(entry: EntryContext, stats: EntryStats): MicroInsig
   if (diff > 0) {
     return {
       type: 'tag_fulfillment',
-      message: `このタグの平均充実度は ${tagScore} — 全体より高めです`,
+      messageKey: 'tagFulfillmentHigh',
+      messageParams: { score: tagScore },
     };
   }
   return {
     type: 'tag_fulfillment',
-    message: `このタグの平均充実度は ${tagScore} — 全体より低めです`,
+    messageKey: 'tagFulfillmentLow',
+    messageParams: { score: tagScore },
   };
 }
 
@@ -150,6 +157,6 @@ function checkPeakHour(entry: EntryContext, stats: EntryStats): MicroInsight | n
 
   return {
     type: 'peak_hour',
-    message: 'ピーク時間帯です — 集中作業に向いています',
+    messageKey: 'peakHour',
   };
 }

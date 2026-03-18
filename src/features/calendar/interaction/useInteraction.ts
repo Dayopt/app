@@ -88,7 +88,7 @@ export interface InteractionHandlers {
   handleResizeStart: (
     entryId: string,
     direction: 'top' | 'bottom',
-    e: React.MouseEvent,
+    e: React.MouseEvent | React.TouchEvent,
     position: EntryRect,
   ) => void;
 }
@@ -416,8 +416,14 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   );
 
   const handleResizeStart = useCallback(
-    (entryId: string, direction: 'top' | 'bottom', e: React.MouseEvent, position: EntryRect) => {
-      if (e.button !== 0) return;
+    (
+      entryId: string,
+      direction: 'top' | 'bottom',
+      e: React.MouseEvent | React.TouchEvent,
+      position: EntryRect,
+    ) => {
+      // マウスイベントの場合は左クリックのみ許可
+      if ('button' in e && e.button !== 0) return;
       const r = latestRef.current;
       if (r.disabledPlanId && entryId === r.disabledPlanId) return;
       e.preventDefault();

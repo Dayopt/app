@@ -50,7 +50,11 @@ export const AllPatterns: Story = {
         <div className="flex items-end gap-6">
           {[
             { size: 'xs' as const, label: '20px', desc: 'サイドバー' },
+            { size: 'sm' as const, label: '32px', desc: 'コメント・通知' },
+            { size: 'default' as const, label: '40px', desc: '標準UI' },
+            { size: 'lg' as const, label: '48px', desc: 'プロフィールカード' },
             { size: 'xl' as const, label: '64px', desc: 'アカウント設定' },
+            { size: '2xl' as const, label: '96px', desc: 'プロフィール編集' },
             { size: '3xl' as const, label: '120px', desc: 'アバター変更' },
           ].map(({ size, label, desc }) => (
             <div key={size} className="flex flex-col items-center gap-1">

@@ -26,6 +26,10 @@ type Story = StoryObj<typeof meta>;
 const now = new Date();
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+// 期限切れエントリのベース日（昨日）
+const yesterday = new Date(today);
+yesterday.setDate(today.getDate() - 1);
+
 function makeDate(base: Date, hour: number, minute = 0): Date {
   const d = new Date(base);
   d.setHours(hour, minute, 0, 0);
@@ -86,10 +90,40 @@ const mockPlans: CalendarEvent[] = [
   },
 ];
 
+/** 期限切れ未完了エントリ（昨日のタスク）*/
+const overdueEntry: CalendarEvent = {
+  ...basePlan,
+  id: 'overdue-1',
+  title: '期限切れタスク（昨日）',
+  color: 'red',
+  startDate: makeDate(yesterday, 14, 0),
+  endDate: makeDate(yesterday, 15, 0),
+  displayStartDate: makeDate(yesterday, 14, 0),
+  displayEndDate: makeDate(yesterday, 15, 0),
+  status: 'open',
+};
+
 const todayRange: ViewDateRange = {
   start: today,
   end: today,
   days: [today],
+};
+
+// ─────────────────────────────────────────────────────────
+// Default handler args (共通)
+// ─────────────────────────────────────────────────────────
+
+const defaultHandlers = {
+  onEntryClick: fn(),
+  onEntryContextMenu: fn(),
+  onUpdateEntry: fn(),
+  onDeleteEntry: fn(),
+  onRestoreEntry: fn(),
+  onTimeRangeSelect: fn(),
+  onViewChange: fn(),
+  onNavigatePrev: fn(),
+  onNavigateNext: fn(),
+  onNavigateToday: fn(),
 };
 
 // ─────────────────────────────────────────────────────────
@@ -100,7 +134,12 @@ const todayRange: ViewDateRange = {
 export const Default: Story = {
   render: () => (
     <div className="h-[700px]">
-      <DayView dateRange={todayRange} entries={mockPlans} currentDate={today} onEntryClick={fn()} />
+      <DayView
+        dateRange={todayRange}
+        entries={mockPlans}
+        currentDate={today}
+        {...defaultHandlers}
+      />
     </div>
   ),
 };
@@ -109,7 +148,43 @@ export const Default: Story = {
 export const Empty: Story = {
   render: () => (
     <div className="h-[700px]">
-      <DayView dateRange={todayRange} entries={[]} currentDate={today} onEntryClick={fn()} />
+      <DayView dateRange={todayRange} entries={[]} currentDate={today} {...defaultHandlers} />
+    </div>
+  ),
+};
+
+/**
+ * 全ハンドラー接続済み
+ * ドラッグ＆ドロップ・時間範囲選択・右クリックメニューが有効
+ */
+export const WithAllHandlers: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <DayView
+        dateRange={todayRange}
+        entries={mockPlans}
+        allEntries={[...mockPlans, overdueEntry]}
+        currentDate={today}
+        {...defaultHandlers}
+      />
+    </div>
+  ),
+};
+
+/**
+ * 期限切れエントリあり
+ * allEntries に昨日の未完了タスクを含めることで期限切れ表示を確認できる
+ */
+export const WithOverdueEntry: Story = {
+  render: () => (
+    <div className="h-[700px]">
+      <DayView
+        dateRange={todayRange}
+        entries={mockPlans}
+        allEntries={[...mockPlans, overdueEntry]}
+        currentDate={today}
+        {...defaultHandlers}
+      />
     </div>
   ),
 };
@@ -122,13 +197,14 @@ export const AllPatterns: Story = {
         <DayView
           dateRange={todayRange}
           entries={mockPlans}
+          allEntries={[...mockPlans, overdueEntry]}
           currentDate={today}
-          onEntryClick={fn()}
+          {...defaultHandlers}
         />
       </div>
 
       <div className="h-[500px] w-full">
-        <DayView dateRange={todayRange} entries={[]} currentDate={today} onEntryClick={fn()} />
+        <DayView dateRange={todayRange} entries={[]} currentDate={today} {...defaultHandlers} />
       </div>
     </div>
   ),

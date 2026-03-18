@@ -81,6 +81,7 @@ export const DateRangeDisplay = ({
   displayRange,
 }: DateRangeDisplayProps) => {
   const t = useTranslations('calendar.dateRange');
+  const tActions = useTranslations('calendar.actions');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
@@ -96,7 +97,7 @@ export const DateRangeDisplay = ({
       : format(date, localizedFormatPattern, { locale: dateFnsLocale });
 
   // 日付コンテンツ
-  const dateContent = <h2 className="text-2xl">{displayText}</h2>;
+  const dateContent = <h2 className="text-2xl font-normal">{displayText}</h2>;
 
   // モバイル用: MiniCalendarポップアップ付き（週番号はカレンダーグリッドに表示するため非表示）
   const mobileContent = clickable && onDateSelect && (
@@ -106,7 +107,7 @@ export const DateRangeDisplay = ({
         <button
           type="button"
           className={cn('flex items-center gap-1 md:hidden', className)}
-          aria-label="カレンダーを開く"
+          aria-label={tActions('openCalendar')}
         >
           {dateContent}
           <ChevronDown className="text-muted-foreground size-4" />

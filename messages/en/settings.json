@@ -21,6 +21,21 @@
       "email": "Email Address",
       "emailDesc": "Email address associated with your account",
       "emailPlaceholder": "Enter email address",
+      "emailChange": {
+        "title": "Change Email Address",
+        "description": "Enter your new email address and password",
+        "currentEmail": "Current Email Address",
+        "newEmail": "New Email Address",
+        "passwordConfirm": "Confirm Password",
+        "passwordPlaceholder": "Enter your current password",
+        "cancel": "Cancel",
+        "submitting": "Verifying...",
+        "submit": "Send Confirmation Email",
+        "close": "Close",
+        "successTitle": "Confirmation email sent",
+        "successMessage": "We sent a confirmation email to {email}.",
+        "successHint": "Click the link in the email to complete your email change."
+      },
       "profilePicture": "Profile Picture",
       "avatar": "Avatar",
       "profilePictureDesc": "JPG, PNG, GIF max 2MB",
@@ -541,7 +556,28 @@
         "startDate": "Start date",
         "endDate": "End date",
         "exporting": "Exporting...",
-        "exportButton": "Export"
+        "exportButton": "Export",
+        "exportSuccess": "Data exported successfully",
+        "exportFailed": "Export failed. Please try again.",
+        "csvComingSoon": "Coming soon",
+        "includedDataTitle": "Data included in export",
+        "profileInfo": "Profile information",
+        "tasksEvents": "Plans & records",
+        "tagSettings": "Tag settings",
+        "calendarSettings": "Calendar settings",
+        "notificationSettings": "Notification settings",
+        "otherSettings": "Other settings"
+      },
+      "import": {
+        "title": "Data Import",
+        "dropzone": "Drop JSON file here, or click to select",
+        "selectFile": "Select File",
+        "comingSoon": "Import feature coming soon"
+      },
+      "backup": {
+        "title": "Auto Backup",
+        "enableLabel": "Enable auto backup",
+        "lastBackup": "Last backup: —"
       },
       "restore": {
         "title": "Backup & Restore",
@@ -619,6 +655,18 @@
         "title": "API Integration",
         "description": "Issue API keys and configure Webhooks from the developer portal.",
         "openPortal": "Open Developer Portal (Coming Soon)"
+      },
+      "icalFeed": {
+        "title": "iCal Feed",
+        "description": "Add this URL to Google Calendar or Apple Calendar to view your Dayopt schedule as read-only.",
+        "feedUrl": "Feed URL",
+        "copy": "Copy",
+        "copied": "Copied!",
+        "regenerate": "Regenerate URL",
+        "regenerateConfirmTitle": "Regenerate feed URL?",
+        "regenerateConfirmDescription": "The current URL will stop working. Any calendars using it will need to be updated.",
+        "regenerateSuccess": "New feed URL generated",
+        "noToken": "Click \"Regenerate URL\" to generate a feed URL"
       }
     },
     "legal": {
@@ -660,6 +708,7 @@
       "freePlanLabel": "Free Plan",
       "currentBadge": "Current Plan",
       "freePlanDescription": "Basic features are available",
+      "proPlanDescription": "Full access to all features",
       "selectPlan": "Select Plan",
       "monthly": "Monthly",
       "yearly": "Yearly",
@@ -671,37 +720,48 @@
       "paymentMethod": "Payment Method",
       "noCard": "No card registered",
       "addCard": "Add Card",
-      "paymentComingSoon": "* Payment features are currently being prepared",
+      "updateCard": "Update",
+      "managePayment": "Manage your payment method via Stripe",
+      "managePlan": "Manage Subscription",
+      "adjustPlan": "Adjust Plan",
+      "processing": "Processing...",
+      "viewInStripe": "View billing history in Stripe",
+      "openPortal": "Open Stripe Portal",
+      "invoicePaid": "Paid",
+      "noInvoices": "No invoices yet",
+      "invoiceDate": "Date",
+      "invoiceTotal": "Total",
+      "invoiceStatus": "Status",
+      "invoiceAction": "Action",
+      "invoiceView": "View",
+      "cancelTitle": "Cancel Subscription",
+      "cancelDescription": "Your subscription will remain active until the end of the current billing period.",
+      "cancelButton": "Cancel Subscription",
+      "cancelConfirmTitle": "Cancel your subscription?",
+      "cancelConfirmDescription": "You will continue to have access to Pro features until the end of your current billing period. After that, your account will be downgraded to the Free plan.",
+      "cancelConfirmAction": "Yes, cancel subscription",
+      "cancelConfirmCancel": "Keep subscription",
       "billingHistory": "Billing History",
-      "noBillingHistory": "No billing history",
+      "loadError": "Failed to load billing information",
+      "retry": "Retry",
       "plans": {
         "free": {
           "name": "Free",
           "features": {
-            "basicTasks": "Basic task management",
-            "maxTasks": "Up to 100 tasks",
-            "tags": "3 tags",
-            "calendar": "Calendar view"
+            "timeboxing": "Timeboxing & time tracking",
+            "basicAnalytics": "Basic analytics (2 metrics)",
+            "tags": "Up to 5 tags",
+            "ai": "AI reflection (10/month)"
           }
         },
         "pro": {
           "name": "Pro",
           "features": {
-            "unlimitedTasks": "Unlimited tasks",
+            "fullAnalytics": "All 8 metrics + chart views",
             "unlimitedTags": "Unlimited tags",
-            "integrations": "External service integrations",
-            "prioritySupport": "Priority support",
-            "advancedAnalytics": "Advanced analytics"
-          }
-        },
-        "team": {
-          "name": "Team",
-          "features": {
-            "allPro": "All Pro features",
-            "teamSharing": "Team sharing",
-            "adminDashboard": "Admin dashboard",
-            "sso": "SSO support",
-            "dedicatedSupport": "Dedicated support"
+            "api": "MCP / API access",
+            "dataExport": "Data export (CSV/JSON)",
+            "unlimitedAI": "Unlimited AI + model selection"
           }
         }
       }

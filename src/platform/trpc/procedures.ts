@@ -5,6 +5,7 @@
 
 import { timingSafeEqual } from 'crypto';
 
+import * as Sentry from '@sentry/nextjs';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { initTRPC, TRPCError } from '@trpc/server';
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
@@ -215,6 +216,35 @@ const t = initTRPC.context<Context>().create({
 export const publicProcedure = t.procedure;
 
 /**
+ * per-userId レート制限（メモリベース、100 req/min）
+ *
+ * 認証済みユーザーが全 tRPC エンドポイントに対して無制限にリクエストを
+ * 送信するのを防止する。Upstash 未設定の環境でも機能する。
+ */
+const USER_RATE_LIMIT = 100;
+const USER_RATE_WINDOW_MS = 60 * 1000;
+const userRequestLog = new Map<string, number[]>();
+
+function isUserRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = userRequestLog.get(userId) ?? [];
+  const recent = timestamps.filter((t) => now - t < USER_RATE_WINDOW_MS);
+  recent.push(now);
+  userRequestLog.set(userId, recent);
+
+  // メモリリーク防止
+  if (userRequestLog.size > 10000) {
+    for (const [key, ts] of userRequestLog) {
+      if (ts.every((t) => now - t > USER_RATE_WINDOW_MS)) {
+        userRequestLog.delete(key);
+      }
+    }
+  }
+
+  return recent.length > USER_RATE_LIMIT;
+}
+
+/**
  * 認証が必要なプロシージャ
  */
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
@@ -228,12 +258,51 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     });
   }
 
+  // per-userId レート制限
+  if (isUserRateLimited(ctx.userId)) {
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
+    });
+  }
+
+  // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
+  Sentry.setUser({ id: ctx.userId });
+
   return next({
     ctx: {
       ...ctx,
       userId: ctx.userId, // TypeScriptの型保証のため
     },
   });
+});
+
+/**
+ * Pro プラン以上が必要なプロシージャ
+ *
+ * profiles.subscription_status が 'active' | 'trialing' の場合に許可。
+ * 注: カラムが生成型に未反映のため Record 経由で取得。
+ */
+export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const { data } = await ctx.supabase.from('profiles').select('*').eq('id', ctx.userId).single();
+
+  const status = (data as Record<string, unknown> | null)?.subscription_status as
+    | string
+    | undefined;
+  const isProActive = status === 'active' || status === 'trialing';
+
+  if (!isProActive) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Pro プランが必要です',
+      cause: createAppError('Pro subscription required', ERROR_CODES.NO_PERMISSION, {
+        source: 'trpc_middleware',
+        userId: ctx.userId,
+      }),
+    });
+  }
+
+  return next({ ctx });
 });
 
 /**

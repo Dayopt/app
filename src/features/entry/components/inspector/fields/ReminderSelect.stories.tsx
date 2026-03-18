@@ -39,6 +39,16 @@ export const Compact: StoryObj = {
   render: () => <ReminderSelectDemo variant="compact" />,
 };
 
+/** 無効化状態。pointer-events-none + opacity-50 が適用される。 */
+export const Disabled: StoryObj = {
+  render: () => <ReminderSelect value={null} onChange={() => undefined} disabled />,
+};
+
+/** 15分前が選択済みの状態。 */
+export const PreSelected: StoryObj = {
+  render: () => <ReminderSelect value={15} onChange={() => undefined} />,
+};
+
 /** 全バリアント一覧。 */
 export const AllPatterns: StoryObj = {
   render: () => (
@@ -49,6 +59,14 @@ export const AllPatterns: StoryObj = {
           <ReminderSelectDemo variant={variant} />
         </div>
       ))}
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs font-medium">disabled</p>
+        <ReminderSelect value={null} onChange={() => undefined} disabled />
+      </div>
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs font-medium">pre-selected（15分前）</p>
+        <ReminderSelect value={15} onChange={() => undefined} />
+      </div>
     </div>
   ),
 };

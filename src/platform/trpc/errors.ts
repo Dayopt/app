@@ -4,6 +4,7 @@
  * すべてのサービスエラーをTRPCエラーに変換するための統一ヘルパー
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
 
 /**
@@ -96,6 +97,12 @@ const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
 
   // ===== Contact関連 =====
   GITHUB_API_FAILED: 'INTERNAL_SERVER_ERROR',
+
+  // ===== Billing関連 =====
+  STRIPE_NOT_CONFIGURED: 'INTERNAL_SERVER_ERROR',
+  CHECKOUT_FAILED: 'INTERNAL_SERVER_ERROR',
+  PORTAL_FAILED: 'INTERNAL_SERVER_ERROR',
+  SUBSCRIPTION_NOT_FOUND: 'NOT_FOUND',
 };
 
 /**
@@ -126,6 +133,13 @@ export function handleServiceError(error: unknown): never {
   if (hasErrorCode(error)) {
     const trpcCode = ERROR_CODE_MAP[error.code] ?? 'INTERNAL_SERVER_ERROR';
 
+    // サーバー側の異常（INTERNAL_SERVER_ERROR）のみSentryに報告
+    if (trpcCode === 'INTERNAL_SERVER_ERROR') {
+      Sentry.captureException(error, {
+        tags: { serviceErrorCode: error.code, source: 'trpc_service' },
+      });
+    }
+
     throw new TRPCError({
       code: trpcCode,
       message: error.message,
@@ -133,7 +147,11 @@ export function handleServiceError(error: unknown): never {
     });
   }
 
-  // その他のエラー
+  // 未知のエラーは常にSentryに報告
+  Sentry.captureException(error, {
+    tags: { source: 'trpc_service', errorType: 'unknown' },
+  });
+
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
     message: error instanceof Error ? error.message : 'Unknown error occurred',

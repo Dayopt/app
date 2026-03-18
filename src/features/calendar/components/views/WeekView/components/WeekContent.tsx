@@ -250,7 +250,7 @@ export const WeekContent = React.memo(function WeekContent({
                   onResizeStart={(
                     p: CalendarEvent,
                     direction: 'top' | 'bottom',
-                    e: React.MouseEvent,
+                    e: React.MouseEvent | React.TouchEvent,
                   ) =>
                     handlers.handleResizeStart(p.id, direction, e, {
                       top: currentTop,

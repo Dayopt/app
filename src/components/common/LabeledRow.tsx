@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 interface LabeledRowProps {
   label: ReactNode;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }
 
@@ -14,8 +14,8 @@ interface LabeledRowProps {
  */
 export function LabeledRow({ label, description, children }: LabeledRowProps) {
   return (
-    <div className="flex min-w-[400px] items-center justify-between gap-4 py-2">
-      <div className="min-w-[120px] flex-1">
+    <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="min-w-0 flex-1">
         <div className="text-foreground text-base">{label}</div>
         {description ? <div className="text-muted-foreground text-sm">{description}</div> : null}
       </div>

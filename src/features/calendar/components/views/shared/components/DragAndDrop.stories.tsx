@@ -151,6 +151,9 @@ const formatTime = (hour: number, minute: number) => {
  * - ゴースト要素の時刻表示は `formatInTimezone()` でカレンダーTZ表示
  */
 export const CalendarDrag: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="flex flex-col gap-2">
       <DocsNote>

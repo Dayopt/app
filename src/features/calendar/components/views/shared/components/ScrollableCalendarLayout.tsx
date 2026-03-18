@@ -59,9 +59,7 @@ export const CalendarDateHeader = ({
   timeColumnWidth = TIME_COLUMN_WIDTH,
   weekNumber,
 }: CalendarDateHeaderProps) => {
-  const showWeekNumbers = useCalendarSettingsStore(
-    (s) => s.sessionOverrides.showWeekNumbers ?? s.showWeekNumbers,
-  );
+  const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
 
   // 設定がオンで週番号が渡されている場合のみ表示
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
@@ -221,7 +219,7 @@ export const ScrollableCalendarLayout = ({
 
           {/* 縦の区切り線 */}
           {displayDates && displayDates.length > 1 && (
-            <div className="pointer-events-none absolute inset-0 z-[6] flex">
+            <div className="pointer-events-none absolute inset-0 z-5 flex">
               {displayDates.map((_, index) => (
                 <div
                   key={index}
@@ -241,7 +239,7 @@ export const ScrollableCalendarLayout = ({
               <div
                 className={cn(
                   'pointer-events-none absolute z-40 h-px',
-                  !currentTimeLineColor && 'bg-primary/50',
+                  !currentTimeLineColor && 'bg-primary/70',
                 )}
                 style={{
                   top: `${currentTimePosition}px`,

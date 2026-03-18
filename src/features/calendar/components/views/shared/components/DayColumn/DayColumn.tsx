@@ -4,11 +4,10 @@
 
 'use client';
 
-import { Calendar } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import React, { memo, useMemo } from 'react';
 
-import { EmptyState } from '@/components/ui/empty-state';
 import { isWeekend } from '@/lib/date';
 import { GRID_BACKGROUND, HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
@@ -122,10 +121,29 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
           );
         })}
 
-        {/* 空状態（エントリがない場合） */}
+        {/* 空状態CTA（エントリがない場合） */}
         {dayEntries.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center opacity-30">
-            <EmptyState title="" icon={Calendar} size="sm" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button
+              type="button"
+              className="text-muted-foreground/50 hover:text-muted-foreground flex flex-col items-center gap-1 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onTimeClick) {
+                  // 現在時刻 or 9:00 付近にクリックイベントを発火
+                  const now = new Date();
+                  const isDateToday =
+                    date.getFullYear() === now.getFullYear() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getDate() === now.getDate();
+                  const hour = isDateToday ? Math.max(now.getHours(), 9) : 9;
+                  onTimeClick(date, hour, 0);
+                }
+              }}
+            >
+              <Plus className="size-6" />
+              <span className="text-xs">{t('addPlan')}</span>
+            </button>
           </div>
         )}
       </div>

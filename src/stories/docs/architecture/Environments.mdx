@@ -128,9 +128,29 @@ supabase projects list
 # LINKED列に●があるプロジェクトが現在リンク中
 ```
 
-必要な GitHub Secrets:
-- `SUPABASE_ACCESS_TOKEN`
-- `STAGING_DB_PASSWORD`
+---
+
+## GitHub Actions Secrets
+
+CI/CD ワークフローで使用するシークレット一覧。GitHub の Settings > Secrets and variables > Actions で管理。
+
+| シークレット名 | 用途 | 使用ワークフロー |
+|----------------|------|-----------------|
+| `SUPABASE_ACCESS_TOKEN` | Supabase CLI 認証 | migration, integration |
+| `STAGING_DB_PASSWORD` | Staging DB パスワード | migration (staging) |
+| `PRODUCTION_DB_PASSWORD` | Production DB パスワード | migration (production) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL（ビルド時） | ci, e2e |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー（ビルド時） | ci, e2e |
+| `NEXT_PUBLIC_APP_URL` | アプリ URL（ビルド時） | ci, e2e |
+
+### GitHub Environments
+
+| 環境名 | 用途 | 保護ルール |
+|--------|------|-----------|
+| `development` | E2E / Integration テスト | なし |
+| `production` | Production マイグレーション | 手動承認が必要 |
+
+> **production environment の設定**: GitHub > Settings > Environments > production > Required reviewers を有効化し、自分を追加する。これにより `migrate-production` ジョブが自動実行されず、承認を待つ。
 
 ---
 

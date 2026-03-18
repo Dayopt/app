@@ -35,7 +35,7 @@ export function calculatePeakUtilization(
   // ピーク時間帯に含まれるhourのセットを作成
   const peakHours = new Set<number>();
   for (const zone of peakZones) {
-    for (let h = zone.startHour; h < zone.endHour; h++) {
+    for (let h = zone.startHour; h <= zone.endHour; h++) {
       peakHours.add(h);
     }
   }
@@ -44,7 +44,7 @@ export function calculatePeakUtilization(
   let peakMinutes = 0;
   for (const row of energyMap) {
     if (peakHours.has(row.hour)) {
-      peakMinutes += row.total_minutes;
+      peakMinutes += row.totalMinutes;
     }
   }
 
@@ -134,17 +134,21 @@ export function formatMetricValueParts(value: number, type: MetricFormat): Metri
  * delta = (current - previous) / previous（変化率）
  * 差が5%未満の場合は 'flat' とする
  *
- * trendPositive: 'up' が良い方向か 'down' が良い方向か
- * → isPositive を自動計算（blankRate の down は positive）
+ * trendPositive: 'up' が良い方向か 'down' が良い方向か 'neutral' ならどちらも中立
+ * → isPositive を自動計算（neutral なら常に true）
  */
 export function getMetricTrend(
   current: number,
   previous: number,
-  trendPositive: 'up' | 'down' = 'up',
+  trendPositive: 'up' | 'down' | 'neutral' = 'up',
 ): MetricTrend {
   if (previous === 0) {
     if (current === 0) return { direction: 'flat', delta: 0, isPositive: true };
-    return { direction: 'up', delta: 1, isPositive: trendPositive === 'up' };
+    return {
+      direction: 'up',
+      delta: 1,
+      isPositive: trendPositive === 'neutral' || trendPositive === 'up',
+    };
   }
 
   const delta = (current - previous) / previous;
@@ -158,7 +162,7 @@ export function getMetricTrend(
   return {
     direction,
     delta,
-    isPositive: direction === trendPositive,
+    isPositive: trendPositive === 'neutral' ? true : direction === trendPositive,
   };
 }
 

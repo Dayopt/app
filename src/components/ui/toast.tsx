@@ -4,6 +4,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Toaster as Sonner } from 'sonner';
 
 import { buttonVariants } from './button';
@@ -39,6 +40,7 @@ const LoadingIcon = () => <Loader2 className="size-5 animate-spin" />;
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const t = useTranslations('notification');
 
   return (
     <Sonner
@@ -46,7 +48,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       expand
       duration={6000}
       closeButton
-      containerAriaLabel="通知"
+      containerAriaLabel={t('title')}
       icons={{ loading: <LoadingIcon /> }}
       // Sonner内部の--width CSS変数を上書き（デフォルト356px → 420px）
       className="[--width:420px]"

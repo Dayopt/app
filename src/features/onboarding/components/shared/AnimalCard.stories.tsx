@@ -32,30 +32,39 @@ export const Default: Story = {
     name: 'Lion',
     trait: 'Early riser',
     time: 'Peak: 7 AM – 12 PM',
+    hint: 'You naturally wake up before 6 AM',
     isSelected: false,
   },
 };
 
 /** 選択状態 */
 export const Selected: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     type: 'bear',
     emoji: '🐻',
     name: 'Bear',
     trait: 'Steady pace',
     time: 'Peak: 10 AM – 2 PM',
+    hint: 'You follow a regular sleep schedule',
     isSelected: true,
   },
 };
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     type: 'lion',
     emoji: '🦁',
     name: 'Lion',
     trait: 'Early riser',
     time: 'Peak: 7 AM – 12 PM',
+    hint: 'You naturally wake up before 6 AM',
     isSelected: false,
   },
   render: (args) => {
@@ -66,6 +75,7 @@ export const AllPatterns: Story = {
         name: 'Lion',
         trait: 'Early riser',
         time: 'Peak: 7 AM – 12 PM',
+        hint: 'You naturally wake up before 6 AM',
       },
       {
         type: 'bear' as const,
@@ -73,6 +83,7 @@ export const AllPatterns: Story = {
         name: 'Bear',
         trait: 'Steady pace',
         time: 'Peak: 10 AM – 2 PM',
+        hint: 'You follow a regular sleep schedule',
       },
       {
         type: 'wolf' as const,
@@ -80,6 +91,7 @@ export const AllPatterns: Story = {
         name: 'Wolf',
         trait: 'Night owl',
         time: 'Peak: 3 PM – 9 PM',
+        hint: 'You come alive in the evening',
       },
       {
         type: 'dolphin' as const,
@@ -87,10 +99,11 @@ export const AllPatterns: Story = {
         name: 'Dolphin',
         trait: 'Light sleeper',
         time: 'Peak: 8 AM – 12 PM',
+        hint: 'You sleep lightly and wake often',
       },
     ];
     return (
-      <div className="grid grid-cols-2 gap-3" style={{ width: 320 }}>
+      <div className="grid grid-cols-2 gap-3" style={{ width: '100%', maxWidth: 320 }}>
         {cards.map((card) => (
           <AnimalCard
             key={card.type}

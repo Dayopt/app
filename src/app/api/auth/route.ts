@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
@@ -19,6 +20,26 @@ import {
   withUpstashRateLimit,
 } from '@/lib/rate-limit/upstash';
 import { createClient } from '@/platform/supabase/server';
+
+const authPostSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('signin'),
+    email: z.string().email().max(320),
+    password: z.string().min(1).max(256),
+  }),
+  z.object({
+    action: z.literal('signup'),
+    email: z.string().email().max(320),
+    password: z.string().min(8).max(256),
+  }),
+  z.object({
+    action: z.literal('reset-password'),
+    email: z.string().email().max(320),
+  }),
+  z.object({
+    action: z.literal('signout'),
+  }),
+]);
 
 /**
  * レート制限チェック用ヘルパー
@@ -78,12 +99,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, email, password } = body;
+    const parsed = authPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const validated = parsed.data;
 
     // アクション別のレート制限適用
     let rateLimitResponse: NextResponse | null = null;
 
-    switch (action) {
+    switch (validated.action) {
       case 'signin':
       case 'signup':
         // ログイン/サインアップ: 5回/15分（厳格）
@@ -107,34 +135,38 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    switch (action) {
-      case 'signin':
+    switch (validated.action) {
+      case 'signin': {
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: validated.email,
+          password: validated.password,
         });
         if (signInError) throw signInError;
         return NextResponse.json({ user: signInData.user, session: signInData.session });
+      }
 
-      case 'signup':
+      case 'signup': {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
+          email: validated.email,
+          password: validated.password,
         });
         if (signUpError) throw signUpError;
         return NextResponse.json({ user: signUpData.user, session: signUpData.session });
+      }
 
-      case 'signout':
+      case 'signout': {
         const { error: signOutError } = await supabase.auth.signOut();
         if (signOutError) throw signOutError;
         return NextResponse.json({ success: true });
+      }
 
-      case 'reset-password':
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      case 'reset-password': {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(validated.email, {
           redirectTo: `${getAppUrl()}/auth/reset-password`,
         });
         if (resetError) throw resetError;
         return NextResponse.json({ success: true });
+      }
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

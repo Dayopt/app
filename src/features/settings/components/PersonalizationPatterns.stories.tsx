@@ -461,7 +461,7 @@ function AIStyleDemo() {
             htmlFor={`ai-style-${s.value}`}
             className={cn(
               'border-border flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
-              style === s.value && 'border-primary bg-primary/5',
+              style === s.value && 'border-primary bg-state-active',
             )}
           >
             <RadioGroupItem value={s.value} id={`ai-style-${s.value}`} className="mt-0.5" />

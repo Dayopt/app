@@ -23,6 +23,11 @@ export { SettingsDialog } from './components/SettingsDialog';
 export { SettingsSidebar } from './components/SettingsSidebar';
 
 // =============================================================================
+// Hooks
+// =============================================================================
+export { useUserSettings } from './hooks/useUserSettings';
+
+// =============================================================================
 // Utils
 // =============================================================================
 export { getCurrentTimezone, setUserTimezone } from './utils/timezone';

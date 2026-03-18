@@ -21,6 +21,7 @@ export const TOUR_STEPS: TourStepDef[] = [
     placement: 'bottom',
     titleKey: 'tour.steps.gridDragPlan.title',
     descriptionKey: 'tour.steps.gridDragPlan.description',
+    descriptionMobileKey: 'tour.steps.gridDragPlan.descriptionMobile',
     autoAdvance: {
       type: 'dom-observe',
       targetSelector: '[data-tour-target="grid-drag"]',

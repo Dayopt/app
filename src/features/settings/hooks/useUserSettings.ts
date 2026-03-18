@@ -5,6 +5,9 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+
 import type {
   ChronotypeSettings as ChronotypeSettingsState,
   ProductivityZone,
@@ -12,7 +15,7 @@ import type {
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/platform/trpc';
 
-import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
+import type { CalendarSettings, DateFormatType } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 /**
@@ -21,8 +24,9 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
  * - 設定変更時: DBに保存（debounce済み）
  */
 export function useUserSettings() {
-  const store = useCalendarSettingsStore();
+  // セレクタで関数のみ購読（saveSettings の deps を安定化）
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+  const t = useTranslations();
   const utils = api.useUtils();
 
   // DBから設定を取得
@@ -33,14 +37,17 @@ export function useUserSettings() {
   } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
     refetchOnWindowFocus: false,
-    refetchOnMount: false, // ページ遷移時の再取得を無効化
-    refetchOnReconnect: false, // 再接続時の再取得を無効化
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
     onSuccess: () => {
       utils.userSettings.get.invalidate();
+    },
+    onError: () => {
+      toast.error(t('settings.common.saveFailed'));
     },
   });
 
@@ -54,10 +61,9 @@ export function useUserSettings() {
         opacity: dbSettings.chronotype.opacity,
       };
 
-      // customZonesがある場合のみ追加
       if (dbSettings.chronotype.customZones) {
         chronotypeSettings.customZones = dbSettings.chronotype
-          .customZones as unknown as ProductivityZone[];
+          .customZones as never as ProductivityZone[];
       }
 
       updateSettings({
@@ -80,11 +86,11 @@ export function useUserSettings() {
 
   // 設定をDBに保存する関数
   const saveSettings = useCallback(
-    (settings: Parameters<typeof store.updateSettings>[0]) => {
+    (settings: Partial<CalendarSettings>) => {
       // Storeを即座に更新（楽観的更新）
-      store.updateSettings(settings);
+      updateSettings(settings);
 
-      // DBに保存（非同期）
+      // DBに保存用のマッピング
       const dbInput: Record<string, unknown> = {};
 
       if (settings.timezone !== undefined) dbInput.timezone = settings.timezone;
@@ -110,16 +116,18 @@ export function useUserSettings() {
         dbInput.hourHeightDensity = settings.hourHeightDensity;
       if (settings.planRecordMode !== undefined) dbInput.planRecordMode = settings.planRecordMode;
 
-      // DB保存対象のフィールドがある場合のみmutationを実行
       if (Object.keys(dbInput).length > 0) {
         updateMutation.mutate(dbInput);
       }
     },
-    [store, updateMutation],
+    [updateSettings, updateMutation],
   );
 
+  // UI表示用にストア全体を返す（呼び出し元との互換性維持）
+  const settings = useCalendarSettingsStore();
+
   return {
-    settings: store,
+    settings,
     saveSettings,
     isPending,
     isSaving: updateMutation.isPending,

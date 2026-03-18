@@ -11,23 +11,6 @@
         }
       }
     },
-    "emptyState": {
-      "noResults": {
-        "title": "No results",
-        "description": "Try a different search",
-        "action": "Clear search"
-      },
-      "noMatching": {
-        "title": "No matching items",
-        "description": "Adjust or clear filters",
-        "action": "Clear filters"
-      },
-      "empty": {
-        "title": "No plans yet",
-        "description": "Create your first plan",
-        "action": "Create plan"
-      }
-    },
     "toast": {
       "created": "\"{title}\" created",
       "createFailed": "Failed to create: {error}",
@@ -50,6 +33,7 @@
       "deletedCount": "{count, plural, one {1 item} other {# items}} deleted"
     },
     "open": "Open",
+    "editDetails": "Edit details",
     "delete": {
       "confirmTitle": "Delete this plan?",
       "confirmTitleWithName": "Delete {name}?",
@@ -60,24 +44,6 @@
       "willBeRemovedFromCalendar": "It will be removed from calendar",
       "confirm": "Delete",
       "deleting": "Deleting..."
-    },
-    "bulk": {
-      "createNew": "Create New",
-      "selected": "{count} selected",
-      "clear": "Clear",
-      "changeStatus": "Change Status",
-      "archive": "Archive",
-      "deleteLabel": "Delete",
-      "deleteConfirmTitle": "Delete {count} plans?",
-      "deleteConfirmDescription": "This will permanently delete the selected {count} plans. This action cannot be undone.",
-      "cancel": "Cancel",
-      "processing": "Processing...",
-      "bulkAddTags": "Add Tags",
-      "bulkAddTagsDescription": "Add tags to {count} plans",
-      "searchTags": "Search tags...",
-      "noTagsFound": "No tags found",
-      "noTags": "No tags available",
-      "addTags": "Add Tags"
     },
     "status": {
       "label": "Status",
@@ -126,7 +92,10 @@
         "noPlanned": "Lived, not planned",
         "duration": "Duration",
         "diff": "Diff",
-        "fulfillment": "Fulfillment"
+        "fulfillment": "Fulfillment",
+        "fulfillmentLow": "Fulfillment: Low",
+        "fulfillmentMedium": "Fulfillment: Medium",
+        "fulfillmentHigh": "Fulfillment: High"
       },
       "note": {
         "label": "Note",
@@ -172,20 +141,6 @@
         "fulfillmentLabel": "Fulfillment: {score}/5",
         "addNewPlan": "Add new plan"
       }
-    },
-    "activity": {
-      "created": "Created plan",
-      "updated": "Updated plan",
-      "statusChanged": "Changed status",
-      "titleChanged": "Changed title",
-      "descriptionChanged": "Updated description",
-      "timeChanged": "Changed time",
-      "tagAdded": "Added tag",
-      "tagRemoved": "Removed tag",
-      "recurrenceChanged": "Changed recurrence",
-      "reminderChanged": "Changed reminder",
-      "deleted": "Deleted plan",
-      "changed": "Changed"
     },
     "view": {
       "edit": "Edit",

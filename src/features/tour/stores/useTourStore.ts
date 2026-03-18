@@ -74,7 +74,7 @@ const useTourStoreBase = create<TourStoreState>()(
         }),
       },
     ),
-    { name: 'tour-store' },
+    { name: 'tour-store', enabled: process.env.NODE_ENV !== 'production' },
   ),
 );
 

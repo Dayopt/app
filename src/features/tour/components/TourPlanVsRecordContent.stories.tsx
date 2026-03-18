@@ -12,8 +12,8 @@ const meta = {
   },
   tags: ['autodocs'],
   args: {
-    currentStep: 7,
-    totalSteps: 7,
+    currentStep: 5,
+    totalSteps: 5,
     isLastStep: true,
     onNext: fn(),
     onSkip: fn(),
@@ -37,5 +37,12 @@ export const Default: Story = {};
 export const NotLastStep: Story = {
   args: {
     isLastStep: false,
+  },
+};
+
+/** 戻るボタンあり（onPrev を渡した状態） */
+export const WithBackButton: Story = {
+  args: {
+    onPrev: fn(),
   },
 };

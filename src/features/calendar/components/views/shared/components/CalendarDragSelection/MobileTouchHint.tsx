@@ -17,6 +17,18 @@ import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'calendar-mobile-hint-dismissed';
+const AUTO_DISMISS_MS = 15_000;
+
+/**
+ * 長押しによるエントリ作成成功時にヒントを永続的に非表示にする
+ */
+export function dismissMobileTouchHintPermanently(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, 'true');
+  } catch {
+    // localStorage アクセスエラーは無視
+  }
+}
 
 interface MobileTouchHintProps {
   className?: string;
@@ -53,16 +65,16 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
     }
   }, []);
 
-  // 自動的に5秒後に非表示
+  // 自動的に15秒後に非表示（ただしlocalStorageには保存しない → 次回も表示）
   useEffect(() => {
     if (!isVisible) return;
 
     const timer = setTimeout(() => {
-      handleDismiss();
-    }, 5000);
+      setIsVisible(false);
+    }, AUTO_DISMISS_MS);
 
     return () => clearTimeout(timer);
-  }, [isVisible, handleDismiss]);
+  }, [isVisible]);
 
   if (!isVisible || !isMobile) return null;
 
@@ -72,7 +84,7 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
         'fixed right-4 bottom-20 left-4 z-50',
         'bg-primary text-primary-foreground',
         'rounded-2xl px-4 py-4 shadow-lg',
-        'animate-in slide-in-from-bottom-4 fade-in duration-300',
+        'animate-in slide-in-from-bottom-4 fade-in duration-150',
         className,
       )}
       role="alert"
@@ -86,7 +98,7 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
         <button
           type="button"
           onClick={handleDismiss}
-          className="rounded-full p-1 transition-colors hover:bg-white/20"
+          className="hover:bg-primary-foreground/20 rounded-full p-1 transition-colors"
           aria-label={t('actions.close')}
         >
           <X className="size-4" />

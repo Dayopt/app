@@ -10,16 +10,6 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
   },
-  argTypes: {
-    showIcon: {
-      control: 'boolean',
-      description: 'アイコンを表示するか',
-    },
-    placeholder: {
-      control: 'text',
-      description: 'プレースホルダー',
-    },
-  },
   decorators: [
     (Story) => (
       <div className="w-64">
@@ -68,6 +58,19 @@ export const WithSelectedDate: Story = {
   },
 };
 
+/** 無効化状態。opacity-50 + pointer-events-none が適用される。 */
+export const Disabled: Story = {
+  render: () => (
+    <DatePickerPopover
+      selectedDate={undefined}
+      onDateChange={() => undefined}
+      showIcon
+      placeholder="日付..."
+      disabled
+    />
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => {
@@ -77,18 +80,36 @@ export const AllPatterns: Story = {
 
       return (
         <div className="flex flex-col items-start gap-6">
-          <DatePickerPopover
-            selectedDate={date1}
-            onDateChange={setDate1}
-            showIcon
-            placeholder="日付..."
-          />
-          <DatePickerPopover
-            selectedDate={date2}
-            onDateChange={setDate2}
-            showIcon
-            placeholder="日付..."
-          />
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-xs font-medium">Default（未選択）</p>
+            <DatePickerPopover
+              selectedDate={date1}
+              onDateChange={setDate1}
+              showIcon
+              placeholder="日付..."
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-xs font-medium">
+              WithSelectedDate（日付選択済み）
+            </p>
+            <DatePickerPopover
+              selectedDate={date2}
+              onDateChange={setDate2}
+              showIcon
+              placeholder="日付..."
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-xs font-medium">Disabled（無効化）</p>
+            <DatePickerPopover
+              selectedDate={undefined}
+              onDateChange={() => undefined}
+              showIcon
+              placeholder="日付..."
+              disabled
+            />
+          </div>
         </div>
       );
     }

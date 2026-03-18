@@ -82,7 +82,7 @@ function SidebarUtilities() {
           icon
           className="size-8"
           onClick={handleThemeToggle}
-          aria-label={t('sidebar.theme')}
+          aria-label={t('navigation.sidebar.theme')}
         >
           {resolvedTheme === 'light' ? (
             <Moon className="size-4" aria-hidden="true" />

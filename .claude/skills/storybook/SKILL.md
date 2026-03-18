@@ -206,13 +206,13 @@ Story作成時、以下のFoundations Storiesを参照してデザイン一貫�
 
 Story対象のコンポーネントが依存する場合に参照:
 
-| コンポーネントの依存 | 参照スキル              |
-| -------------------- | ----------------------- |
-| Zustand store        | `/store-creating`       |
-| tRPC API             | `/trpc-router-creating` |
-| i18n（翻訳キー）     | `/i18n`                 |
-| エラーハンドリング   | `/error-handling`       |
-| a11y要件             | `/a11y`                 |
+| コンポーネントの依存 | 参照スキル                       |
+| -------------------- | -------------------------------- |
+| Zustand store        | `/store-creating`                |
+| tRPC API             | `/trpc-router-creating`          |
+| i18n（翻訳キー）     | `/i18n`                          |
+| エラーハンドリング   | `/error-handling`                |
+| a11y要件             | （Storybook a11yアドオンで確認） |
 
 ---
 

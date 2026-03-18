@@ -80,28 +80,43 @@ export const WithUntil: Story = {
   render: () => <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231" />,
 };
 
-/** 全パターン一覧。 */
+/**
+ * 全パターン一覧。
+ *
+ * RecurrenceDialog は Portal でマウントされるため、複数のインスタンスを
+ * 同時にレンダリングするとダイアログが重なって表示される。
+ * AllPatterns では RRULE プリセットを静的な説明カードで一覧し、
+ * 動作確認は各個別ストーリーで行う設計とする。
+ */
 export const AllPatterns: Story = {
   render: () => (
-    <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground mb-3 text-xs font-medium">Default（新規作成時）</p>
-      <RecurrenceDialogStory />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">
-        WeeklyPattern（毎週 月・水・金）
+    <div className="flex flex-col gap-3">
+      {(
+        [
+          { label: 'Default（新規作成時）', value: null },
+          { label: 'WeeklyPattern（毎週 月・水・金）', value: 'FREQ=WEEKLY;BYDAY=MO,WE,FR' },
+          {
+            label: 'BiWeekly（隔週 月・水・金）',
+            value: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR',
+          },
+          { label: 'MonthlyByDay（毎月15日）', value: 'FREQ=MONTHLY;BYMONTHDAY=15' },
+          {
+            label: 'MonthlyBySetPos（毎月 第3金曜日）',
+            value: 'FREQ=MONTHLY;BYDAY=FR;BYSETPOS=3',
+          },
+          { label: 'WithCount（10回）', value: 'FREQ=DAILY;COUNT=10' },
+          { label: 'WithUntil（終了日指定）', value: 'FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231' },
+        ] as { label: string; value: string | null }[]
+      ).map(({ label, value }) => (
+        <div key={label} className="border-border rounded-lg border p-3">
+          <p className="text-foreground mb-1 text-sm font-medium">{label}</p>
+          <code className="text-muted-foreground text-xs">{value ?? '(未設定)'}</code>
+        </div>
+      ))}
+      <p className="text-muted-foreground mt-2 text-xs">
+        ※ Dialog は Portal でマウントされるため同時展開すると重なる。
+        動作確認は各個別ストーリーを使用すること。
       </p>
-      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO,WE,FR" />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">BiWeekly（隔週）</p>
-      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR" />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">MonthlyByDay（毎月15日）</p>
-      <RecurrenceDialogStory initialValue="FREQ=MONTHLY;BYMONTHDAY=15" />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">
-        MonthlyBySetPos（毎月 第3金曜日）
-      </p>
-      <RecurrenceDialogStory initialValue="FREQ=MONTHLY;BYDAY=FR;BYSETPOS=3" />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">WithCount（10回）</p>
-      <RecurrenceDialogStory initialValue="FREQ=DAILY;COUNT=10" />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">WithUntil（終了日指定）</p>
-      <RecurrenceDialogStory initialValue="FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231" />
     </div>
   ),
 };

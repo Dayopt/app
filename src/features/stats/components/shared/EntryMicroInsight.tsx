@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { cn } from '@/lib/utils';
 
 import type { MicroInsight } from '../../lib/microInsights';
@@ -16,11 +18,13 @@ interface EntryMicroInsightProps {
  * insight が null なら何も表示しない。
  */
 export function EntryMicroInsight({ insight, className }: EntryMicroInsightProps) {
+  const t = useTranslations('calendar.stats.insights');
+
   if (!insight) return null;
 
   return (
     <p className={cn('text-muted-foreground text-xs leading-relaxed', className)}>
-      {insight.message}
+      {t(insight.messageKey, insight.messageParams)}
     </p>
   );
 }

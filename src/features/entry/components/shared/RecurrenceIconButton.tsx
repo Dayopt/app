@@ -95,7 +95,7 @@ export function RecurrenceIconButton({
               role="menuitem"
             >
               {t('common.recurrence.none')}
-              {!hasRecurrence && <Check className="text-primary h-4 w-4" />}
+              {!hasRecurrence && <Check className="text-primary size-4" />}
             </button>
             <div className="border-border my-1 border-t" />
             {RECURRENCE_OPTIONS.slice(1).map((option) => (
@@ -112,7 +112,7 @@ export function RecurrenceIconButton({
               >
                 {t(option.labelKey)}
                 {recurrenceType === option.value && !recurrenceRule && (
-                  <Check className="text-primary h-4 w-4" />
+                  <Check className="text-primary size-4" />
                 )}
               </button>
             ))}

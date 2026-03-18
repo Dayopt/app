@@ -26,6 +26,7 @@ export function createMockEntry(overrides: Partial<EntryRow> = {}): EntryRow {
     reminder_at: null,
     reminder_sent: false,
     reviewed_at: null,
+    deleted_at: null,
     created_at: now,
     updated_at: now,
     ...overrides,

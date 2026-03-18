@@ -24,9 +24,20 @@ import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
 import { parseColonTag } from '../lib/tag-colon';
 
+import type { TagColorName } from '@/lib/tag-colors';
+
 import type { Tag } from '../types';
 
 import { TagRadioItem } from './TagRadioItem';
+
+/** タグゼロ時に表示するサンプルタグ候補 */
+const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName }> = [
+  { nameKey: 'work', color: 'blue' },
+  { nameKey: 'study', color: 'indigo' },
+  { nameKey: 'exercise', color: 'green' },
+  { nameKey: 'break', color: 'amber' },
+  { nameKey: 'meal', color: 'orange' },
+];
 
 interface TagQuickSelectorProps {
   open: boolean;
@@ -123,21 +134,24 @@ function TagQuickSelectorContent({
   );
 
   const hasResults = filteredTags.length > 0;
+  const isTagZero = sortedTags.length === 0;
 
   return (
     <>
-      {/* Search */}
-      <div className="border-border border-b px-4 py-3">
-        <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('tagSelector.searchPlaceholder')}
-            className="pl-9"
-          />
+      {/* Search — タグゼロ時は非表示 */}
+      {!isTagZero && (
+        <div className="border-border border-b px-4 py-3">
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('tagSelector.searchPlaceholder')}
+              className="pl-9"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tag list */}
       <div
@@ -146,7 +160,39 @@ function TagQuickSelectorContent({
         role="radiogroup"
         aria-label={t('tagSelector.title')}
       >
-        {!hasResults && (
+        {/* タグゼロ時: サンプルタグ候補チップ */}
+        {isTagZero && (
+          <div className="space-y-3 px-3 py-4">
+            <div className="text-center">
+              <p className="text-foreground text-sm font-medium">{t('tagSelector.emptyTitle')}</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t('tagSelector.emptyDescription')}
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {SAMPLE_TAG_CHIPS.map(({ nameKey, color }) => {
+                const name = t(`tagSelector.sampleTags.${nameKey}`);
+                return (
+                  <button
+                    key={nameKey}
+                    type="button"
+                    onClick={() => onCreateAndSelect(name, color)}
+                    className="border-border hover:bg-state-hover flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
+                  >
+                    <span
+                      className="size-2.5 rounded-full"
+                      style={{ backgroundColor: `var(--tag-${color})` }}
+                    />
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 検索結果なし（タグはあるが検索にマッチしない） */}
+        {!isTagZero && !hasResults && (
           <p className="text-muted-foreground px-3 py-6 text-center text-sm">
             {t('tagSelector.noResults')}
           </p>

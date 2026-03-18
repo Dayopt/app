@@ -35,6 +35,7 @@ const usePageTitleStoreBase = create<PageTitleState>()(
     }),
     {
       name: 'page-title-store',
+      enabled: process.env.NODE_ENV !== 'production',
     },
   ),
 );

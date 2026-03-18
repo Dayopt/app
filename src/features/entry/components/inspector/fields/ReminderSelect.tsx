@@ -65,7 +65,7 @@ export function ReminderSelect({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-4 w-4 opacity-50"
+            className="size-4 opacity-50"
           >
             <path d="m6 9 6 6 6-6" />
           </svg>
@@ -122,7 +122,7 @@ export function ReminderSelect({
         disabled={disabled}
         aria-label={t('common.reminder.label')}
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="size-4" />
       </Button>
     );
   })();
@@ -158,7 +158,7 @@ export function ReminderSelect({
               type="button"
             >
               {t(option.i18nKey)}
-              {value === option.minutes && <Check className="text-primary h-4 w-4" />}
+              {value === option.minutes && <Check className="text-primary size-4" />}
             </button>
           </div>
         ))}

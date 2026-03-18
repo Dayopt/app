@@ -257,6 +257,7 @@ export type Database = {
           actual_end_time: string | null;
           actual_start_time: string | null;
           created_at: string | null;
+          deleted_at: string | null;
           description: string | null;
           duration_minutes: number | null;
           end_time: string | null;
@@ -279,6 +280,7 @@ export type Database = {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           description?: string | null;
           duration_minutes?: number | null;
           end_time?: string | null;
@@ -301,6 +303,7 @@ export type Database = {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           description?: string | null;
           duration_minutes?: number | null;
           end_time?: string | null;
@@ -380,6 +383,7 @@ export type Database = {
           original_date: string | null;
           title: string | null;
           updated_at: string;
+          user_id: string;
         };
         Insert: {
           created_at?: string;
@@ -393,6 +397,7 @@ export type Database = {
           original_date?: string | null;
           title?: string | null;
           updated_at?: string;
+          user_id: string;
         };
         Update: {
           created_at?: string;
@@ -406,12 +411,19 @@ export type Database = {
           original_date?: string | null;
           title?: string | null;
           updated_at?: string;
+          user_id?: string;
         };
         Relationships: [
           {
             foreignKeyName: 'plan_instances_plan_id_fkey';
             columns: ['entry_id'];
             referencedRelation: 'entries';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'entry_instances_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
@@ -939,6 +951,10 @@ export type Database = {
       };
       increment_ai_usage: {
         Args: { p_month: string; p_user_id: string };
+        Returns: undefined;
+      };
+      increment_tag_sort_orders: {
+        Args: { p_user_id: string };
         Returns: undefined;
       };
       merge_tags:

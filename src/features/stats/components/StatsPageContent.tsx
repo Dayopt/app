@@ -3,18 +3,29 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useState } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/shell/components/AppHeader';
 
+import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import { InsightsView } from './insights/InsightsView';
 import { StatsDateDisplay } from './layout/StatsDateDisplay';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
-import { ProgressView } from './progress/ProgressView';
-import { StatsView } from './StatsView';
+
+// recharts (~200KB) を含むタブビューを遅延読み込み
+// アクティブタブのみ読み込むことでバンドルサイズを削減
+const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.StatsView })));
+const ProgressView = dynamic(() =>
+  import('./progress/ProgressView').then((m) => ({ default: m.ProgressView })),
+);
+// InsightsView は AI 分析実装後に復活予定
+// const InsightsView = dynamic(() =>
+//   import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
+// );
 
 interface StatsPageContentProps {
   /** URL から決定されたアクティブタブ */
@@ -40,13 +51,15 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<StatsTab>(tab);
 
+  // URL searchParams ↔ Zustand store の双方向同期
+  useStatsFilterSync();
+
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const setGranularity = useStatsFilterStore((s) => s.setGranularity);
   const navigate = useStatsFilterStore((s) => s.navigate);
 
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
-  const isReview = activeTab === 'review';
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -62,16 +75,16 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
       {/* ヘッダー */}
       <AppHeader
         controls={
-          isReview ? (
-            <>
-              <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
+          <>
+            <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
+            {activeTab === 'review' && (
               <StatsGranularitySelector
                 className="ml-4"
                 granularity={granularity}
                 onGranularityChange={setGranularity}
               />
-            </>
-          ) : undefined
+            )}
+          </>
         }
         rightSlot={headerSlot}
       >
@@ -91,9 +104,7 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
           <UnderlineTabsTrigger value="progress" className="text-base">
             {t('calendar.stats.tabProgress')}
           </UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="insights" className="text-base">
-            {t('calendar.stats.tabInsights')}
-          </UnderlineTabsTrigger>
+          {/* Insights タブは AI 分析実装後に復活予定 */}
         </TabsList>
 
         <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
@@ -108,11 +119,7 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
           </FeatureErrorBoundary>
         </TabsContent>
 
-        <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="stats-insights">
-            <InsightsView />
-          </FeatureErrorBoundary>
-        </TabsContent>
+        {/* Insights タブは AI 分析実装後に復活予定 */}
       </Tabs>
     </div>
   );

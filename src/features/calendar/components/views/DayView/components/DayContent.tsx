@@ -166,7 +166,7 @@ export const DayContent = ({
                   onResizeStart={(
                     p: CalendarEvent,
                     direction: 'top' | 'bottom',
-                    e: React.MouseEvent,
+                    e: React.MouseEvent | React.TouchEvent,
                   ) =>
                     handlers.handleResizeStart(p.id, direction, e, {
                       top: currentTop,

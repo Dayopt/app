@@ -9,6 +9,8 @@ import { CalendarNavigationProvider, useCalendarProviderProps } from '@/features
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 
+import { OfflineIndicator } from '@/shell/providers/OfflineIndicator';
+
 import { DesktopLayout } from './desktop-layout';
 import { MobileLayout } from './mobile-layout';
 import { MobileFAB } from './MobileFAB';
@@ -46,6 +48,9 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
     // Sidebar が静止したままメインコンテンツだけが変わる体験を実現する。
     <CalendarNavigationProvider {...(calendarProviderProps ?? {})}>
       <div className="flex h-screen flex-col">
+        {/* オフラインインジケーター */}
+        <OfflineIndicator />
+
         {/* アクセシビリティ: スキップリンク */}
         <a
           href="#main-content"

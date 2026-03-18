@@ -109,8 +109,17 @@ function getEnvironment(): string {
 }
 
 /**
+ * 本番環境かどうかを判定
+ */
+function isProduction(): boolean {
+  return process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+}
+
+/**
  * GET /api/health
  * ヘルスチェック実行
+ *
+ * 本番環境ではステータスのみ返す（情報露出防止）
  */
 export async function GET() {
   try {
@@ -130,6 +139,21 @@ export async function GET() {
       : hasWarning
         ? 'degraded'
         : 'healthy';
+
+    const httpStatus = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
+
+    // 本番環境ではステータスのみ返す（内部情報の露出を防止）
+    if (isProduction()) {
+      return NextResponse.json(
+        { status: overallStatus },
+        {
+          status: httpStatus,
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+          },
+        },
+      );
+    }
 
     const healthStatus: HealthStatus = {
       status: overallStatus,
@@ -157,9 +181,7 @@ export async function GET() {
     const responseTime = Date.now() - startTime;
 
     // レスポンス時間をヘッダーに追加
-    const response = NextResponse.json(healthStatus, {
-      status: overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503,
-    });
+    const response = NextResponse.json(healthStatus, { status: httpStatus });
 
     response.headers.set('X-Response-Time', `${responseTime}ms`);
     response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -167,6 +189,11 @@ export async function GET() {
 
     return response;
   } catch (error) {
+    // 本番環境ではエラー詳細を隠す
+    if (isProduction()) {
+      return NextResponse.json({ status: 'unhealthy' }, { status: 503 });
+    }
+
     // ヘルスチェック自体でエラーが発生した場合
     const errorStatus: HealthStatus = {
       status: 'unhealthy',

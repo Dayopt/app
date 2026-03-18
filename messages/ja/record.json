@@ -10,18 +10,6 @@
         "saveFailed": "保存に失敗しました",
         "tagsSaveFailed": "タグの保存に失敗しました"
       }
-    },
-    "activity": {
-      "created": "レコードを作成",
-      "updated": "レコードを更新",
-      "timeChanged": "時間を変更",
-      "titleChanged": "タイトルを変更",
-      "descriptionChanged": "説明を更新",
-      "fulfillmentChanged": "充実度を変更",
-      "tagAdded": "タグを追加",
-      "tagRemoved": "タグを削除",
-      "deleted": "レコードを削除",
-      "changed": "変更"
     }
   }
 }

@@ -5,6 +5,7 @@ import { expect, fn, userEvent, within } from 'storybook/test';
 
 import { Button } from '@/components/ui/button';
 
+import type { Tag } from '../types';
 import { TagCreateModal } from './tag-create-modal';
 
 /** TagCreateModal - タグ作成モーダル */
@@ -80,6 +81,82 @@ export const OpenState: Story = {
     // モーダルが表示されていてフィールドが確認できる
     await expect(body.getByText(/タグ名/i)).toBeInTheDocument();
   },
+};
+
+// ─────────────────────────────────────────────────────────
+// Mock Data
+// ─────────────────────────────────────────────────────────
+
+const EXISTING_TAGS: Tag[] = [
+  {
+    id: 'tag-1',
+    name: '仕事',
+    user_id: 'user-1',
+    color: 'blue',
+    is_active: true,
+    sort_order: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'tag-2',
+    name: '仕事:会議',
+    user_id: 'user-1',
+    color: 'blue',
+    is_active: true,
+    sort_order: 1,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'tag-3',
+    name: '勉強',
+    user_id: 'user-1',
+    color: 'green',
+    is_active: true,
+    sort_order: 2,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+/**
+ * 既存タグあり状態
+ *
+ * existingTags を渡すとグループ候補ドロップダウンが表示される。
+ * コロン記法のタグ（「仕事:会議」）から「仕事」がグループ候補として現れる。
+ */
+export const WithExistingTags: Story = {
+  render: () => (
+    <TagCreateModal
+      isOpen
+      onClose={fn()}
+      onSave={async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }}
+      existingTags={EXISTING_TAGS}
+    />
+  ),
+};
+
+/**
+ * デフォルトグループあり状態
+ *
+ * defaultGroup を渡すとグループが事前選択された状態でモーダルが開く。
+ * 選択グループの色が自動継承されるため、カラーピッカーは非表示になる。
+ */
+export const WithDefaultGroup: Story = {
+  render: () => (
+    <TagCreateModal
+      isOpen
+      onClose={fn()}
+      onSave={async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }}
+      existingTags={EXISTING_TAGS}
+      defaultGroup="仕事"
+    />
+  ),
 };
 
 /** 全パターン一覧。 */

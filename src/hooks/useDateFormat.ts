@@ -26,7 +26,9 @@ interface UseDateFormatReturn {
  * ユーザー設定に基づいて日付をフォーマットするフック
  */
 export function useDateFormat(): UseDateFormatReturn {
-  const { dateFormat, timeFormat, timezone } = useCalendarSettingsStore();
+  const dateFormat = useCalendarSettingsStore((s) => s.dateFormat);
+  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
 
   const formatDate = useCallback(
     (date: Date): string => {

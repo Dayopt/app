@@ -680,6 +680,40 @@ export const Tags: Story = {
         ))}
       </div>
 
+      <h2 className="border-border mt-8 mb-4 border-b pb-2 text-lg font-bold">
+        Tag Tint（EntryCard背景色）
+      </h2>
+      <p className="text-muted-foreground mb-4 text-sm">
+        EntryCardの背景に使用される薄いティント。ダークモードではL=0.28 C=0.06で色味を維持。
+      </p>
+      <div className="space-y-4">
+        {[
+          { token: 'tag-blue-tint', name: 'Blue Tint' },
+          { token: 'tag-green-tint', name: 'Green Tint' },
+          { token: 'tag-red-tint', name: 'Red Tint' },
+          { token: 'tag-amber-tint', name: 'Amber Tint' },
+          { token: 'tag-violet-tint', name: 'Violet Tint' },
+          { token: 'tag-pink-tint', name: 'Pink Tint' },
+          { token: 'tag-teal-tint', name: 'Teal Tint' },
+          { token: 'tag-orange-tint', name: 'Orange Tint' },
+          { token: 'tag-gray-tint', name: 'Gray Tint' },
+          { token: 'tag-indigo-tint', name: 'Indigo Tint' },
+        ].map(({ token, name }) => (
+          <div key={token} className="border-border flex items-center gap-4 border-b pb-4">
+            <div
+              className="border-border size-10 shrink-0 rounded-lg border"
+              style={{ backgroundColor: `var(--${token})` }}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <code className="bg-container rounded px-2 py-1 text-xs">{token}</code>
+                <span className="font-bold">{name}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="bg-card border-border mt-8 rounded-lg border p-6">
         <h2 className="mb-4 font-bold">使用例</h2>
         <div className="flex flex-wrap gap-2">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
@@ -11,6 +12,7 @@ import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } f
 
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { formatHours } from '../../utils/formatHours';
 
 const chartConfig = {
   hours: {
@@ -19,12 +21,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function formatHours(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  return `${hours.toFixed(1)}h`;
-}
-
 export function DayOfWeekChart() {
+  const t = useTranslations('calendar.stats.charts');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const dateRange = useMemo(
@@ -38,8 +36,8 @@ export function DayOfWeekChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Day of Week</CardTitle>
-          <CardDescription>Activity by day</CardDescription>
+          <CardTitle>{t('dayOfWeek')}</CardTitle>
+          <CardDescription>{t('dayOfWeekDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
@@ -52,12 +50,12 @@ export function DayOfWeekChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Day of Week</CardTitle>
-          <CardDescription>Activity by day</CardDescription>
+          <CardTitle>{t('dayOfWeek')}</CardTitle>
+          <CardDescription>{t('dayOfWeekDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-            No data
+            {t('noData')}
           </div>
         </CardContent>
       </Card>
@@ -75,9 +73,12 @@ export function DayOfWeekChart() {
   return (
     <Card className="border-none">
       <CardHeader>
-        <CardTitle>Day of Week</CardTitle>
+        <CardTitle>{t('dayOfWeek')}</CardTitle>
         <CardDescription>
-          Busiest: {maxDay?.day} ({formatHours(maxDay?.hours ?? 0)})
+          {t('dayOfWeekBusiest', {
+            day: maxDay?.day ?? '',
+            hours: formatHours(maxDay?.hours ?? 0),
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,8 +97,8 @@ export function DayOfWeekChart() {
         </ChartContainer>
 
         <div className="text-muted-foreground mt-2 flex justify-center gap-4 text-xs">
-          <span>Weekdays: {formatHours(weekdayHours)}</span>
-          <span>Weekends: {formatHours(weekendHours)}</span>
+          <span>{t('weekdays', { hours: formatHours(weekdayHours) })}</span>
+          <span>{t('weekends', { hours: formatHours(weekendHours) })}</span>
         </div>
       </CardContent>
     </Card>

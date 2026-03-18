@@ -46,11 +46,9 @@ try {
 }
 
 // 自動復旧付き
-const result = await handleWithRecovery(
-  () => fetchData(),
-  ERROR_CODES.API_TIMEOUT,
-  { retryEnabled: true }
-);
+const result = await handleWithRecovery(() => fetchData(), ERROR_CODES.API_TIMEOUT, {
+  retryEnabled: true,
+});
 
 if (result.success) {
   // 成功（復旧含む）
@@ -65,12 +63,12 @@ if (result.success) {
 
 主要なエラーコードは `@/config/error-patterns` で定義：
 
-| カテゴリ | コード例 | 用途 |
-|----------|----------|------|
-| AUTH | `INVALID_TOKEN`, `SESSION_EXPIRED` | 認証エラー |
-| API | `API_TIMEOUT`, `RATE_LIMIT_EXCEEDED` | APIエラー |
-| DATABASE | `CONNECTION_FAILED`, `DUPLICATE_KEY` | DBエラー |
-| VALIDATION | `REQUIRED_FIELD`, `INVALID_FORMAT` | 入力エラー |
+| カテゴリ   | コード例                             | 用途       |
+| ---------- | ------------------------------------ | ---------- |
+| AUTH       | `INVALID_TOKEN`, `SESSION_EXPIRED`   | 認証エラー |
+| API        | `API_TIMEOUT`, `RATE_LIMIT_EXCEEDED` | APIエラー  |
+| DATABASE   | `CONNECTION_FAILED`, `DUPLICATE_KEY` | DBエラー   |
+| VALIDATION | `REQUIRED_FIELD`, `INVALID_FORMAT`   | 入力エラー |
 
 ## ErrorBoundary配置
 
@@ -138,9 +136,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
 ```tsx
 // 使用例
-<ErrorBoundary
-  fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
->
+<ErrorBoundary fallback={<ErrorFallback onRetry={() => window.location.reload()} />}>
   <TagList />
 </ErrorBoundary>
 ```
@@ -155,13 +151,13 @@ interface ErrorFallbackProps {
 }
 
 export function ErrorFallback({
-  title = '問題が発生しました',
-  description = 'ページを再読み込みしてください',
+  title = t('error.fallback.title'),
+  description = t('error.fallback.description'),
   onRetry,
 }: ErrorFallbackProps) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
-      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+      <AlertCircle className="text-destructive mb-4 h-12 w-12" />
       <h2 className="text-lg font-semibold">{title}</h2>
       <p className="text-muted-foreground mt-2">{description}</p>
       {onRetry && (
@@ -188,22 +184,22 @@ export function useErrorToast() {
 
       switch (code) {
         case 'UNAUTHORIZED':
-          toast.error('ログインが必要です');
+          toast.error(t('error.unauthorized'));
           break;
         case 'FORBIDDEN':
-          toast.error('権限がありません');
+          toast.error(t('error.forbidden'));
           break;
         case 'NOT_FOUND':
-          toast.error('データが見つかりません');
+          toast.error(t('error.notFound'));
           break;
         case 'BAD_REQUEST':
-          toast.error(error.message || '入力内容を確認してください');
+          toast.error(error.message || t('error.badRequest'));
           break;
         default:
-          toast.error('エラーが発生しました');
+          toast.error(t('error.generic'));
       }
     } else {
-      toast.error('予期しないエラーが発生しました');
+      toast.error(t('error.unexpected'));
     }
   };
 }
@@ -236,9 +232,7 @@ export function captureAppError(error: AppError) {
       userMessage: error.userMessage,
       context: error.metadata?.context,
     },
-    user: error.metadata?.userId
-      ? { id: error.metadata.userId }
-      : undefined,
+    user: error.metadata?.userId ? { id: error.metadata.userId } : undefined,
   });
 }
 
@@ -290,12 +284,14 @@ showErrorModal({
 ## チェックリスト
 
 エラー処理実装時：
+
 - [ ] 適切なエラーコードを使用したか
 - [ ] ユーザー向けメッセージを設定したか
 - [ ] Sentry連携を確認したか
 - [ ] 復旧可能なエラーは自動復旧を検討したか
 
 ErrorBoundary配置時：
+
 - [ ] 機能単位で分離したか
 - [ ] 適切なfallbackを設定したか
 - [ ] 再試行ボタンを提供したか
@@ -313,4 +309,3 @@ src/lib/tanstack-query/error-handler.ts  # TanStack Query用
 
 - `/trpc-router-creating` - tRPCエラーコード
 - `/security` - 認証エラー処理
-- `/debug` - エラーデバッグ

@@ -19,7 +19,7 @@ import {
 describe('calculatePeakUtilization', () => {
   it('returns zero when no peak zones are defined', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avg_fulfillment: 2.5, total_minutes: 60, entry_count: 2 },
+      { hour: 9, dow: 1, avgFulfillment: 2.5, totalMinutes: 60, entryCount: 2 },
     ];
 
     const result = calculatePeakUtilization(energyMap, [], 7);
@@ -33,46 +33,47 @@ describe('calculatePeakUtilization', () => {
 
   it('calculates peak utilization correctly', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avg_fulfillment: 3, total_minutes: 45, entry_count: 1 },
-      { hour: 10, dow: 1, avg_fulfillment: 2, total_minutes: 30, entry_count: 1 },
-      { hour: 14, dow: 1, avg_fulfillment: 1, total_minutes: 60, entry_count: 1 }, // non-peak
+      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
+      { hour: 10, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
+      { hour: 14, dow: 1, avgFulfillment: 1, totalMinutes: 60, entryCount: 1 }, // non-peak
     ];
 
-    // Peak: 9:00-11:00 (2 hours)
+    // Peak: 9:00-11:00 inclusive (3 hours: 9, 10, 11)
     const result = calculatePeakUtilization(energyMap, [{ startHour: 9, endHour: 11 }], 1);
 
-    expect(result.peakMinutes).toBe(75); // 45 + 30
-    expect(result.totalPeakAvailable).toBe(120); // 2 hours * 60 min * 1 day
-    expect(result.peakUtilization).toBeCloseTo(0.625); // 75/120
+    expect(result.peakMinutes).toBe(75); // 45 + 30 (hour 11 has no data)
+    expect(result.totalPeakAvailable).toBe(180); // 3 hours * 60 min * 1 day
+    expect(result.peakUtilization).toBeCloseTo(75 / 180); // ~0.4167
   });
 
   it('handles multiple peak zones', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 9, dow: 1, avg_fulfillment: 3, total_minutes: 60, entry_count: 1 },
-      { hour: 15, dow: 1, avg_fulfillment: 2, total_minutes: 30, entry_count: 1 },
+      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 60, entryCount: 1 },
+      { hour: 15, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
     ];
 
     const peakZones = [
-      { startHour: 9, endHour: 10 },
-      { startHour: 15, endHour: 16 },
+      { startHour: 9, endHour: 10 }, // inclusive: 9, 10 = 2 hours
+      { startHour: 15, endHour: 16 }, // inclusive: 15, 16 = 2 hours
     ];
 
     const result = calculatePeakUtilization(energyMap, peakZones, 7);
 
     expect(result.peakMinutes).toBe(90); // 60 + 30
-    expect(result.totalPeakAvailable).toBe(840); // 2 hours * 60 * 7 days
+    expect(result.totalPeakAvailable).toBe(1680); // 4 hours * 60 * 7 days
   });
 
   it('ignores non-peak hours in energy map', () => {
     const energyMap: EnergyMapRow[] = [
-      { hour: 8, dow: 1, avg_fulfillment: 2, total_minutes: 60, entry_count: 1 },
-      { hour: 9, dow: 1, avg_fulfillment: 3, total_minutes: 45, entry_count: 1 },
-      { hour: 12, dow: 1, avg_fulfillment: 1, total_minutes: 30, entry_count: 1 },
+      { hour: 8, dow: 1, avgFulfillment: 2, totalMinutes: 60, entryCount: 1 },
+      { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
+      { hour: 13, dow: 1, avgFulfillment: 1, totalMinutes: 30, entryCount: 1 }, // outside peak
     ];
 
+    // Peak: 9-12 inclusive (hours 9, 10, 11, 12)
     const result = calculatePeakUtilization(energyMap, [{ startHour: 9, endHour: 12 }], 1);
 
-    expect(result.peakMinutes).toBe(45); // only hour 9 (10,11 have no data)
+    expect(result.peakMinutes).toBe(45); // only hour 9 (10,11,12 have no data)
   });
 });
 

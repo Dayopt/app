@@ -2,6 +2,9 @@
 
 import React, { Suspense, useMemo } from 'react';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
 import type { GridViewProps } from '../../views/shared/types/base.types';
@@ -25,6 +28,9 @@ const MultiDayView = React.lazy(() =>
     default: module.MultiDayView,
   })),
 );
+/** モバイルでは列数が多すぎると狭くなるため、最大3日にフォールバック */
+const MOBILE_MAX_DAYS = 3;
+
 interface CalendarViewRendererProps {
   viewType: CalendarViewType;
   /** GridViewPropsを渡す（showWeekendsは含まれる） */
@@ -42,12 +48,17 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
   viewType,
   commonProps,
 }: CalendarViewRendererProps) {
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+
   // LCP改善: ビューをメモ化して不要な再生成を防止
   const viewContent = useMemo(() => {
     if (isMultiDayView(viewType)) {
+      // モバイルでは列数が多すぎる場合、自動的に3日ビューにフォールバック
+      const requestedDays = getMultiDayCount(viewType);
+      const dayCount = isMobile ? Math.min(requestedDays, MOBILE_MAX_DAYS) : requestedDays;
       return (
         <Suspense fallback={<CalendarViewSkeleton />}>
-          <MultiDayView dayCount={getMultiDayCount(viewType)} {...commonProps} />
+          <MultiDayView dayCount={dayCount} {...commonProps} />
         </Suspense>
       );
     }
@@ -60,6 +71,14 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
       case 'week':
+        // モバイル（< 640px）では7列が狭すぎるため3-dayビューにフォールバック
+        if (isMobile) {
+          return (
+            <Suspense fallback={<CalendarViewSkeleton />}>
+              <MultiDayView dayCount={MOBILE_MAX_DAYS} {...commonProps} />
+            </Suspense>
+          );
+        }
         return (
           <Suspense fallback={<CalendarViewSkeleton />}>
             <WeekView {...commonProps} />
@@ -72,7 +91,7 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
     }
-  }, [viewType, commonProps]);
+  }, [viewType, commonProps, isMobile]);
 
   // 各ビューが個別にSuspenseでラップ済みのため、外側の二重Suspenseは不要（CLS回避）
   return viewContent;

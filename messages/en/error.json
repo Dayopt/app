@@ -20,46 +20,6 @@
       "unknown": "Unknown",
       "checkConsole": "Check the browser console for details.",
       "featureError": "An error occurred in the {{feature}} feature"
-    },
-    "globalBoundary": {
-      "title": "A system error has occurred",
-      "errorId": "Error ID",
-      "severity": "Severity",
-      "autoRecovering": "Auto-recovering...",
-      "pleaseWait": "Please wait",
-      "retryCount": "Retry count",
-      "problemAndSolution": "Problem and Solution",
-      "category": "Category",
-      "system": "system",
-      "autoRecovery": "Auto Recovery",
-      "possible": "Possible",
-      "manualRequired": "Manual action required",
-      "recommendedActions": "Recommended Actions",
-      "autoRecoverySystem": "Auto Recovery System",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "manualRetry": "Manual Retry",
-      "retriesLeft": "{{count}} attempts left",
-      "reloadPage": "Reload Page",
-      "goHome": "Go Home",
-      "technicalDetails": "Technical Details (Developer)",
-      "error": "Error",
-      "analysisCode": "Analysis Code",
-      "categoryLabel": "Category",
-      "recoverable": "Recoverable",
-      "yes": "Yes",
-      "no": "No",
-      "stackTrace": "Stack Trace"
-    },
-    "loading": {
-      "default": "Loading...",
-      "title": "Loading",
-      "loadingData": "Loading data...",
-      "loadFailed": "Failed to load data",
-      "retry": "Retry",
-      "noData": "No data available",
-      "loadingPage": "Loading page",
-      "pleaseWait": "Please wait..."
     }
   }
 }

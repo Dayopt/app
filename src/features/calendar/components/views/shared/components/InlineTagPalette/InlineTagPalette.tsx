@@ -88,7 +88,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             if (result?.id) {
               bulkAddTags.mutate({
                 entryIds: [result.id],
-                tagIds: [tagId],
+                tagId,
               });
             }
             clearPendingSelection();
@@ -173,7 +173,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="absolute right-0 left-0 rounded-r-lg border-l-[3px]"
+          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 rounded-r-lg border-l-[3px] duration-100 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,
@@ -183,7 +183,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         >
           <div className="flex h-full flex-col justify-between p-2">
             <span className="text-foreground text-sm font-semibold tabular-nums">{timeLabel}</span>
-            <span className="text-foreground/60 text-sm font-medium tabular-nums">
+            <span className="text-muted-foreground text-sm font-medium tabular-nums">
               {durationText}
             </span>
           </div>

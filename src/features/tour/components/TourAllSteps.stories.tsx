@@ -1,16 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { useTranslations } from 'next-intl';
 import { fn } from 'storybook/test';
+
+import { Button } from '@/components/ui/button';
 
 import { PlanVsRecordContent } from './content/PlanVsRecordContent';
 import { TagExplainContent } from './content/TagExplainContent';
-import { TourDoneCard } from './TourDoneCard';
 import { TourStepCard } from './TourStepCard';
 
 const TOTAL_STEPS = 5;
 
 const noop = fn();
 
-/** 全5ステップ + 完了画面を一覧表示 */
+/** 全5ステップ + プレチョイス + 完了画面を一覧表示 */
 const meta = {
   title: 'Features/Tour/AllSteps',
   parameters: {
@@ -26,6 +28,11 @@ type Story = StoryObj<typeof meta>;
 export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
+      {/* プレチョイス画面 */}
+      <StepWrapper label="プレチョイス — 体験する / 自分で探索する">
+        <PreChoiceInline onStart={noop} onSkip={noop} />
+      </StepWrapper>
+
       {/* Step 1: イントロ */}
       <StepWrapper label="Step 1 — イントロ">
         <TourStepCard
@@ -93,7 +100,7 @@ export const Overview: Story = {
 
       {/* 完了画面 */}
       <StepWrapper label="完了 — Done">
-        <TourDoneCard onDone={noop} />
+        <DoneCardInline onDone={noop} />
       </StepWrapper>
     </div>
   ),
@@ -104,6 +111,39 @@ function StepWrapper({ label, children }: { label: string; children: React.React
     <div>
       <p className="text-muted-foreground mb-2 text-xs font-medium">{label}</p>
       <div className="bg-card w-80 rounded-xl p-6 shadow-lg">{children}</div>
+    </div>
+  );
+}
+
+/** TourDoneCard の inline 版（fixed positioning を除去） */
+function DoneCardInline({ onDone }: { onDone: () => void }) {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <h2 className="text-foreground text-xl font-bold">{t('tour.done.title')}</h2>
+      <p className="text-muted-foreground text-sm">{t('tour.done.description')}</p>
+      <Button onClick={onDone} className="w-full">
+        {t('tour.done_button')}
+      </Button>
+    </div>
+  );
+}
+
+/** TourPreChoice の inline 版（fixed positioning を除去） */
+function PreChoiceInline({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  const t = useTranslations();
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <h2 className="text-foreground text-xl font-bold">{t('tour.preChoice.title')}</h2>
+      <p className="text-muted-foreground text-sm">{t('tour.preChoice.description')}</p>
+      <div className="flex w-full flex-col gap-2">
+        <Button onClick={onStart} className="w-full">
+          {t('tour.preChoice.start')}
+        </Button>
+        <Button variant="ghost" onClick={onSkip} className="text-muted-foreground w-full">
+          {t('tour.preChoice.skip')}
+        </Button>
+      </div>
     </div>
   );
 }

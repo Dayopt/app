@@ -27,44 +27,6 @@
       "generalSettings": "General settings",
       "stats": "Stats"
     },
-    "mobile": {
-      "drawer": {
-        "menu": "Menu",
-        "calendar": "Calendar",
-        "settings": "Settings",
-        "notifications": "Notifications",
-        "theme": "Theme",
-        "export": "Export",
-        "import": "Import",
-        "closeMenu": "Close menu"
-      },
-      "header": {
-        "viewLabels": {
-          "day": "Day",
-          "3day": "3-Day",
-          "5day": "5-Day",
-          "week": "Week",
-          "2week": "2-Week",
-          "month": "Month"
-        },
-        "viewSuffix": "View",
-        "back": "Back",
-        "openMenu": "Open menu",
-        "prevPeriod": "Previous period",
-        "nextPeriod": "Next period",
-        "closeMenu": "Close menu"
-      },
-      "navigation": {
-        "calendar": "Calendar",
-        "profile": "Profile",
-        "settings": "Settings",
-        "createEvent": "Create new event"
-      },
-      "touchHint": {
-        "title": "Tip: Long press to create",
-        "description": "Press and hold on the calendar to create a new schedule"
-      }
-    },
     "event": {
       "title": "Event",
       "delete": "Delete Event",
@@ -101,6 +63,7 @@
       "allDay": "All day"
     },
     "contextMenu": {
+      "title": "Entry actions",
       "edit": "Edit",
       "completeWithRecord": "Complete & Copy Record",
       "duplicate": "Duplicate",
@@ -109,10 +72,6 @@
       "addTag": "Add Tag",
       "moveToDate": "Change Date",
       "delete": "Delete"
-    },
-    "accessibility": {
-      "standardContrast": "Standard Contrast",
-      "toggleWeekend": "Toggle Weekend Display"
     },
     "toast": {
       "created": "Event created",
@@ -147,21 +106,10 @@
     },
     "actions": {
       "goToToday": "Go to today",
-      "close": "Close"
-    },
-    "performance": {
-      "notCalculated": "Not Calculated",
-      "memoryLeakDetected": "Continuous memory increase detected",
-      "fixLayoutShift": "Identify and fix layout shift causes"
-    },
-    "resize": {
-      "tooCloseToEnd": "Too close to end time",
-      "tooCloseToStart": "Too close to start time"
-    },
-    "network": {
-      "authRequired": "Authentication required",
-      "accessDenied": "Access denied",
-      "notFound": "Resource not found"
+      "close": "Close",
+      "openCalendar": "Open calendar",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "errors": {
       "loadFailed": "Failed to load calendar",
@@ -225,7 +173,16 @@
       "title": "Select a tag",
       "searchPlaceholder": "Search tags...",
       "noResults": "No tags found",
-      "createPlaceholder": "New tag name"
+      "createPlaceholder": "e.g. Work, Study, Exercise...",
+      "emptyTitle": "Tags categorize your time",
+      "emptyDescription": "Pick one to get started, or create your own below",
+      "sampleTags": {
+        "work": "Work",
+        "study": "Study",
+        "exercise": "Exercise",
+        "break": "Break",
+        "meal": "Meal"
+      }
     },
     "stats": {
       "progress": "Progress",
@@ -254,6 +211,43 @@
       "tabProgress": "Progress",
       "tabInsights": "Insights",
       "insightsComingSoon": "AI insights coming soon",
+      "charts": {
+        "monthlyTrend": "Monthly Trend",
+        "monthlyTrendDesc": "Past 12 months",
+        "monthlyAvg": "Avg: {avg}/mo",
+        "monthlyMoM": "(MoM {change})",
+        "annualTotal": "Annual total: {total}",
+        "dayOfWeek": "Day of Week",
+        "dayOfWeekDesc": "Activity by day",
+        "dayOfWeekBusiest": "Busiest: {day} ({hours})",
+        "weekdays": "Weekdays: {hours}",
+        "weekends": "Weekends: {hours}",
+        "hourlyDist": "Hourly Distribution",
+        "hourlyDistDesc": "When you work",
+        "hourlyPeak": "Peak: {slot} ({hours})",
+        "hourlyTotal": "Total {hours}",
+        "yearlyGrid": "Yearly Grid",
+        "yearlyTotal": "Total {hours}",
+        "yearlyLess": "Less",
+        "yearlyMore": "More",
+        "noData": "No data"
+      },
+      "energyMap": "Energy Map",
+      "energyMapDesc": "Activity by hour and day of week",
+      "energyMapMinutes": "Activity",
+      "energyMapFulfillment": "Fulfillment",
+      "energyMapScore": "Score",
+      "energyMapLess": "Less",
+      "energyMapMore": "More",
+      "dow": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
       "metrics": {
         "totalTime": "Total Time",
         "totalTimeDesc": "Total tracked time",
@@ -269,8 +263,8 @@
         "peakUtilizationDesc": "Activity during peak hours",
         "contextSwitches": "Context Switches",
         "contextSwitchesDesc": "Tag changes per day",
-        "blankRate": "Blank Rate",
-        "blankRateDesc": "Unscheduled time ratio",
+        "blankRate": "Free Time",
+        "blankRateDesc": "Ratio of unscheduled time",
         "noData": "No data",
         "tagTimeChart": "Tag Time",
         "tagTimeChartDesc": "Hours by tag",
@@ -280,119 +274,27 @@
         "actual": "Actual",
         "deviation": "Deviation",
         "entries": "{count} entries"
+      },
+      "insights": {
+        "planRateLow": "Most activities in this period were unplanned",
+        "planRateLowDetail": "Try planning tomorrow's schedule the night before",
+        "peakUtilizationLow": "Peak hours were mostly unused",
+        "contextSwitchesHigh": "Many context switches in this period",
+        "contextSwitchesHighDetail": "Try batching similar tasks together",
+        "blankRateHigh": "This period had a lot of free time",
+        "trendWorse": "{label} decreased by {pct}% from previous period",
+        "trendBetter": "{label} improved by {pct}% from previous period",
+        "estimationBiasOver": "This tag tends to run +{bias} min over estimate",
+        "estimationBiasUnder": "This tag tends to finish {bias} min early",
+        "hourlyFulfillmentHigh": "Fulfillment tends to be above average at this hour",
+        "hourlyFulfillmentLow": "Fulfillment tends to be below average at this hour",
+        "tagFulfillmentHigh": "This tag's avg fulfillment is {score} — above overall average",
+        "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
+        "peakHour": "This is a peak hour — great for focused work"
       }
-    },
-    "collapsedSection": {
-      "expandLabel": "Expand {timeRange}"
-    },
-    "sleepHours": {
-      "collapse": "Collapse sleep hours",
-      "expand": "Expand sleep hours",
-      "collapsed": "{start} - {end}",
-      "planCount": "{count, plural, one {# plan} other {# plans}}"
-    },
-    "segment": {
-      "start": "(Start)",
-      "middle": "(Cont.)",
-      "end": "(End)"
     },
     "timeGrid": {
       "ariaLabel": "Calendar time grid - click or press Enter to create event"
-    },
-    "aside": {
-      "plan": "Plans",
-      "record": "Records",
-      "stats": "Statistics",
-      "unscheduled": "Unscheduled",
-      "search": "Search",
-      "closeSearch": "Close search",
-      "searchPlaceholder": "Search plans...",
-      "error": "Failed to load",
-      "noPlans": "No unscheduled plans",
-      "sortBy": "Sort by",
-      "groupBy": "Group by",
-      "reset": "Reset",
-      "sort": {
-        "createdAt": "Date created",
-        "updatedAt": "Date updated",
-        "title": "Title",
-        "asc": "Ascending",
-        "desc": "Descending"
-      },
-      "group": {
-        "none": "None",
-        "tags": "Tags"
-      },
-      "status": {
-        "label": "Status",
-        "all": "All",
-        "open": "Open",
-        "closed": "Closed"
-      },
-      "schedule": {
-        "label": "Date",
-        "all": "All",
-        "scheduled": "Scheduled",
-        "unscheduled": "Unscheduled"
-      },
-      "filter": {
-        "all": "All",
-        "unscheduled": "Unsched",
-        "scheduled": "Sched",
-        "open": "Open",
-        "closed": "Done"
-      },
-      "recordSearchPlaceholder": "Search records...",
-      "noRecords": "No records",
-      "createRecord": "Create record",
-      "recordThis": "Record this",
-      "noTitle": "(No title)",
-      "duration": "{minutes} min",
-      "fulfillment": "Fulfillment",
-      "recordSort": {
-        "workedAt": "Work date",
-        "durationMinutes": "Duration",
-        "fulfillmentScore": "Fulfillment",
-        "createdAt": "Date created",
-        "updatedAt": "Date updated",
-        "asc": "Ascending",
-        "desc": "Descending"
-      },
-      "recordGroup": {
-        "none": "None",
-        "workedAt": "Date",
-        "tags": "Tags",
-        "fulfillmentScore": "Fulfillment"
-      },
-      "recordDateFilter": {
-        "label": "Period",
-        "all": "All",
-        "today": "Today",
-        "thisWeek": "This week",
-        "thisMonth": "This month"
-      }
-    },
-    "reflection": {
-      "empty": {
-        "title": "No reflection yet",
-        "description": "Generate an AI reflection from today's activities",
-        "generate": "Generate Reflection"
-      },
-      "sections": {
-        "activities": "Activities",
-        "insights": "Insights",
-        "question": "Question",
-        "note": "Your Note"
-      },
-      "userNote": {
-        "placeholder": "Add your thoughts..."
-      },
-      "list": {
-        "thisWeek": "This Week",
-        "lastWeek": "Last Week",
-        "older": "Older",
-        "back": "Back to list"
-      }
     },
     "error": {
       "title": "Failed to load calendar",

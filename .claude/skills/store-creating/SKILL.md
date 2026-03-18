@@ -78,7 +78,7 @@ export const useEntityStore = create<EntityState>()(
             }));
             return true;
           } catch (error) {
-            console.error('Failed to update:', error);
+            logger.error('Failed to update:', error);
             return false;
           }
         },

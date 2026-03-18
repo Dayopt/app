@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
+import { CHRONOTYPE_EMOJI, CHRONOTYPE_PRESETS } from '../lib/constants';
 import {
   calculateChronotypeResult,
   CHRONOTYPE_QUIZ_QUESTIONS,
@@ -22,10 +23,15 @@ interface ChronotypeQuizProps {
   onCancel: () => void;
 }
 
+/** クイズの状態: 回答中 or 結果表示 */
+type QuizPhase = 'answering' | 'result';
+
 export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
   const t = useTranslations();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [phase, setPhase] = useState<QuizPhase>('answering');
+  const [resultType, setResultType] = useState<PresetChronotypeType | null>(null);
 
   // currentStep is always within bounds (0..QUIZ_QUESTION_COUNT-1)
   const question = CHRONOTYPE_QUIZ_QUESTIONS[currentStep] as (typeof CHRONOTYPE_QUIZ_QUESTIONS)[0];
@@ -46,11 +52,12 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
 
     if (isLastStep) {
       const result = calculateChronotypeResult(answers);
-      onComplete(result);
+      setResultType(result);
+      setPhase('result');
     } else {
       setCurrentStep((prev) => prev + 1);
     }
-  }, [selectedOption, isLastStep, answers, onComplete]);
+  }, [selectedOption, isLastStep, answers]);
 
   const handleBack = useCallback(() => {
     if (isFirstStep) {
@@ -60,6 +67,39 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
     }
   }, [isFirstStep, onCancel]);
 
+  const handleConfirmResult = useCallback(() => {
+    if (resultType) {
+      onComplete(resultType);
+    }
+  }, [resultType, onComplete]);
+
+  // --- 結果サマリー画面 ---
+  if (phase === 'result' && resultType) {
+    const preset = CHRONOTYPE_PRESETS[resultType];
+    const peakZone = preset.productivityZones.find((z) => z.level === 'peak');
+    const peakTimeStr = peakZone ? `${peakZone.startHour}:00 – ${peakZone.endHour}:00` : '';
+
+    return (
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <span className="text-5xl">{CHRONOTYPE_EMOJI[resultType]}</span>
+        <h3 className="text-foreground text-xl font-bold">
+          {t('onboarding.chronotype.quizResult.title', {
+            type: t(`onboarding.chronotype.${resultType}.name`),
+          })}
+        </h3>
+        <p className="text-muted-foreground text-sm">
+          {t('onboarding.chronotype.quizResult.description', {
+            peakTime: peakTimeStr,
+          })}
+        </p>
+        <Button variant="primary" onClick={handleConfirmResult} className="mt-2 w-full">
+          {t('onboarding.chronotype.quizResult.confirm')}
+        </Button>
+      </div>
+    );
+  }
+
+  // --- クイズ回答画面 ---
   return (
     <div className="space-y-6">
       {/* Progress */}

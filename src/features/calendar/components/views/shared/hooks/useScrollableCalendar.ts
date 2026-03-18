@@ -56,7 +56,15 @@ export const useScrollableCalendar = ({
   }, [viewMode, setLastActiveView]);
 
   // 初期スクロール位置の設定（保存された位置を優先、なければ現在時刻を中央に）
+  // viewMode変更時のhasRestoredScrollリセットも統合（effect順序のrace回避）
+  const prevViewMode = useRef(viewMode);
   useEffect(() => {
+    // viewMode変更時にフラグをリセット
+    if (prevViewMode.current !== viewMode) {
+      prevViewMode.current = viewMode;
+      hasRestoredScroll.current = false;
+    }
+
     if (!scrollContainerRef.current || hasRestoredScroll.current) return;
 
     const savedPosition = getScrollPosition(viewMode);
@@ -76,19 +84,15 @@ export const useScrollableCalendar = ({
     }
 
     hasRestoredScroll.current = true;
+    const useSmoothScroll = savedPosition <= 0;
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       scrollContainerRef.current?.scrollTo({
         top: targetScroll,
-        behavior: savedPosition > 0 ? 'instant' : 'smooth',
+        behavior: useSmoothScroll ? 'smooth' : 'instant',
       });
-    }, 50);
+    });
   }, [viewMode, getScrollPosition, hourHeight]);
-
-  // viewMode変更時にhasRestoredScrollをリセット
-  useEffect(() => {
-    hasRestoredScroll.current = false;
-  }, [viewMode]);
 
   // スクロールイベントの処理
   const handleScroll = useCallback(() => {

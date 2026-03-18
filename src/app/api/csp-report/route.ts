@@ -1,4 +1,10 @@
+import * as Sentry from '@sentry/nextjs';
 import { NextRequest, NextResponse } from 'next/server';
+
+import { logger } from '@/lib/logger';
+
+/** ブラウザ拡張機能由来のCSP違反はSentryに送信しない（クォータ節約） */
+const IGNORED_URI_PREFIXES = ['chrome-extension://', 'moz-extension://', 'safari-extension://'];
 
 /**
  * CSP（Content Security Policy）違反レポートエンドポイント
@@ -27,7 +33,7 @@ export async function POST(request: NextRequest) {
     const cspReport = report['csp-report'];
 
     // CSP違反ログ出力
-    console.warn('[CSP Violation]', {
+    logger.warn('[CSP Violation]', {
       documentUri: cspReport['document-uri'],
       violatedDirective: cspReport['violated-directive'],
       blockedUri: cspReport['blocked-uri'],
@@ -36,12 +42,34 @@ export async function POST(request: NextRequest) {
       columnNumber: cspReport['column-number'],
     });
 
-    // 本番環境ではSentryやログサービスに送信
-    // @see Issue #487 - Sentry統合は別途実装予定
+    // ブラウザ拡張機能由来の違反はSentryに送信しない
+    const blockedUri = cspReport['blocked-uri'];
+    const isExtensionViolation = IGNORED_URI_PREFIXES.some((prefix) =>
+      blockedUri.startsWith(prefix),
+    );
+
+    if (!isExtensionViolation) {
+      Sentry.captureMessage(`CSP Violation: ${cspReport['violated-directive']}`, {
+        level: 'warning',
+        tags: {
+          type: 'csp-violation',
+          directive: cspReport['violated-directive'],
+          blockedUri,
+        },
+        contexts: {
+          csp: {
+            documentUri: cspReport['document-uri'],
+            effectiveDirective: cspReport['effective-directive'],
+            sourceFile: cspReport['source-file'],
+            lineNumber: cspReport['line-number'],
+          },
+        },
+      });
+    }
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
-    console.error('[CSP Report Error]', error);
+    logger.error('[CSP Report Error]', error);
     return NextResponse.json({ error: 'Invalid report' }, { status: 400 });
   }
 }

@@ -16,7 +16,7 @@ const meta = {
     titleKey: 'tour.steps.intro.title',
     descriptionKey: 'tour.steps.intro.description',
     currentStep: 1,
-    totalSteps: 7,
+    totalSteps: 5,
     isLastStep: false,
     onNext: fn(),
     onSkip: fn(),
@@ -35,8 +35,18 @@ export const LastStep: Story = {
     titleKey: 'tour.steps.planVsRecord.title',
     descriptionKey: 'tour.steps.planVsRecord.description',
     currentStep: 3,
-    totalSteps: 7,
+    totalSteps: 5,
     isLastStep: true,
+  },
+};
+
+/** 戻るボタンあり（onPrev を渡した状態） */
+export const WithBackButton: Story = {
+  args: {
+    titleKey: 'tour.steps.gridDragPlan.title',
+    descriptionKey: 'tour.steps.gridDragPlan.description',
+    currentStep: 2,
+    onPrev: fn(),
   },
 };
 

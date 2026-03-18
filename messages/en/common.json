@@ -127,14 +127,16 @@
       "selectTime": "Select time: {time}",
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
-      "endTime": "End time"
+      "endTime": "End time",
+      "addPlan": "Tap to add"
     },
     "status": {
       "loading": "Loading...",
       "success": "Success",
       "error": "Error",
       "warning": "Warning",
-      "info": "Info"
+      "info": "Info",
+      "offline": "You are offline. Changes will sync when connection is restored."
     },
     "time": {
       "today": "Today",
@@ -186,6 +188,7 @@
       "monthly": "Monthly",
       "yearly": "Yearly",
       "weekdays": "Weekdays",
+      "custom": "Custom",
       "dialog": {
         "title": "Repeat",
         "interval": "Interval",

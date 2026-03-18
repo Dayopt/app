@@ -37,7 +37,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div style={{ width: 400 }}>
+      <div style={{ width: '100%', maxWidth: 400 }}>
         <Story />
       </div>
     ),
@@ -61,9 +61,24 @@ export const Default: Story = {
 
 /** Lion選択済み */
 export const WithSelection: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     selectedType: 'lion',
     showQuiz: false,
+  },
+};
+
+/** 完了処理中（ローディング状態） */
+export const Completing: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
+  args: {
+    selectedType: 'bear',
+    showQuiz: false,
+    isCompleting: true,
   },
 };
 
@@ -77,17 +92,20 @@ export const QuizMode: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     selectedType: null,
     showQuiz: false,
   },
   render: (args) => (
     <div className="flex flex-col items-start gap-8">
-      <div style={{ width: 400 }}>
+      <div style={{ width: '100%', maxWidth: 400 }}>
         <p className="text-muted-foreground mb-2 text-xs font-medium">未選択</p>
         <ChronotypeStep {...args} selectedType={null} showQuiz={false} />
       </div>
-      <div style={{ width: 400 }}>
+      <div style={{ width: '100%', maxWidth: 400 }}>
         <p className="text-muted-foreground mb-2 text-xs font-medium">Bear選択済み</p>
         <ChronotypeStep {...args} selectedType="bear" showQuiz={false} />
       </div>

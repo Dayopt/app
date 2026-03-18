@@ -60,10 +60,12 @@ export class EntryService {
       query = query.eq('origin', origin);
     }
 
-    // 検索フィルター（PostgREST演算子インジェクション対策: カンマ・ドットをエスケープ）
+    // 検索フィルター（PostgREST演算子インジェクション対策）
     if (search) {
-      const sanitized = search.replace(/[.,()\\]/g, '');
-      query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      const sanitized = search.replace(/[.,()\\%*:]/g, '');
+      if (sanitized.length > 0) {
+        query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+      }
     }
 
     // 日付範囲フィルタ（start_time基準）
@@ -211,6 +213,9 @@ export class EntryService {
       .single();
 
     if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+      }
       throw new EntryServiceError('CREATE_FAILED', `Failed to create entry: ${error.message}`);
     }
 
@@ -276,6 +281,9 @@ export class EntryService {
       .single();
 
     if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+      }
       throw new EntryServiceError('UPDATE_FAILED', `Failed to update entry: ${error.message}`);
     }
 
@@ -301,19 +309,45 @@ export class EntryService {
   }
 
   /**
-   * エントリを削除
+   * エントリをソフト削除（deleted_at を設定）
+   *
+   * RLS の SELECT ポリシーが deleted_at IS NULL でフィルタするため、
+   * ソフト削除後はクエリ結果から自動的に除外される。
+   * UPDATE ポリシーは deleted_at をチェックしないため、restore() で復元可能。
    */
   async delete(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
     const { error } = await this.supabase
       .from('entries')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', entryId)
       .eq('user_id', userId);
 
     if (error) {
       throw new EntryServiceError('DELETE_FAILED', `Failed to delete entry: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * ソフト削除されたエントリを復元（Undo用）
+   *
+   * UPDATE RLS ポリシーは user_id のみチェックするため、
+   * deleted_at が設定されたエントリにもアクセス可能。
+   */
+  async restore(options: DeleteEntryOptions): Promise<{ success: boolean }> {
+    const { userId, entryId } = options;
+
+    const { error } = await this.supabase
+      .from('entries')
+      .update({ deleted_at: null })
+      .eq('id', entryId)
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new EntryServiceError('RESTORE_FAILED', `Failed to restore entry: ${error.message}`);
     }
 
     return { success: true };
@@ -345,13 +379,19 @@ export class EntryService {
     const myEnd = new Date(actualEnd);
     if (isNaN(myStart.getTime()) || isNaN(myEnd.getTime())) return [];
 
-    // 同ユーザーの他エントリで時間データを持つものを取得
+    // 隣接エントリのみ取得（±24時間の範囲に限定）
+    // 全エントリを取得するとユーザーのデータ量に比例してクエリが重くなる
+    const dayBefore = new Date(myStart.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const dayAfter = new Date(myEnd.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
     const { data: entries, error } = await this.supabase
       .from('entries')
       .select('id, start_time, end_time, actual_start_time, actual_end_time')
       .eq('user_id', userId)
       .neq('id', entryId)
-      .not('start_time', 'is', null);
+      .not('start_time', 'is', null)
+      .gte('start_time', dayBefore)
+      .lte('start_time', dayAfter);
 
     if (error || !entries) return [];
 
@@ -391,6 +431,13 @@ export class EntryService {
     }
 
     return updatedEntries;
+  }
+
+  /**
+   * PostgreSQL exclusion constraint violation (23P01) を判定
+   */
+  private isExclusionViolation(error: { code?: string }): boolean {
+    return error.code === '23P01';
   }
 
   private async getEntryIdsByTagId(tagId: string): Promise<string[]> {

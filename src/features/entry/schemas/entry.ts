@@ -75,7 +75,7 @@ export const entryIdSchema = z.object({
 // Entry フィルタスキーマ
 export const entryFilterSchema = z.object({
   origin: entryOriginSchema.optional(),
-  search: z.string().optional(),
+  search: z.string().max(200).optional(),
   tagId: z.string().uuid().optional(),
   // 日付範囲フィルタ（start_time基準）
   startDate: z.string().datetime().optional(),

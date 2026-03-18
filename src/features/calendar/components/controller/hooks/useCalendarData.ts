@@ -10,6 +10,7 @@ import { useTags } from '@/features/tags';
 import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import * as Sentry from '@sentry/nextjs';
 import {
   expandEntriesToCalendarEvents,
   type EntryInstanceException,
@@ -31,6 +32,10 @@ interface UseCalendarDataResult {
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
   entriesData: ReturnType<typeof useEntries>['data'];
+  /** エントリ取得エラー */
+  entriesError: ReturnType<typeof useEntries>['error'];
+  /** エントリ取得中かどうか */
+  isEntriesLoading: boolean;
 }
 
 export function useCalendarData({
@@ -55,7 +60,11 @@ export function useCalendarData({
   );
 
   // entries を取得（plans + records 統合、単一クエリ）
-  const { data: entriesData } = useEntries(dateFilter);
+  const {
+    data: entriesData,
+    error: entriesError,
+    isLoading: isEntriesLoading,
+  } = useEntries(dateFilter);
 
   // タグマスタをプリフェッチ（EntryCard等で使用するためキャッシュをwarm up）
   useTags();
@@ -137,6 +146,8 @@ export function useCalendarData({
 
     // Entries の変換（繰り返し展開含む）
     if (entriesData) {
+      const startTime = performance.now();
+
       // サーバー型 → コア型に正規化（tagId を保証）
       const normalized: EntryWithTags[] = entriesData.map((e) => ({
         ...e,
@@ -149,6 +160,20 @@ export function useCalendarData({
         exceptionsMap,
       );
       calendarPlans.push(...expandedEvents);
+
+      const duration = performance.now() - startTime;
+      if (duration > 10) {
+        Sentry.addBreadcrumb({
+          category: 'performance',
+          message: `expandEntriesToCalendarEvents took ${duration.toFixed(1)}ms`,
+          level: 'warning',
+          data: {
+            duration,
+            entryCount: entriesData.length,
+            expandedCount: expandedEvents.length,
+          },
+        });
+      }
     }
 
     return calendarPlans;
@@ -224,5 +249,7 @@ export function useCalendarData({
     filteredEvents,
     allCalendarEvents,
     entriesData,
+    entriesError,
+    isEntriesLoading,
   };
 }

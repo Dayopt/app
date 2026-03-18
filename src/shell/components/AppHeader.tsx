@@ -44,13 +44,13 @@ export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: Ap
         <div className="flex items-center gap-2">
           {/* サイドバー開くボタン（PCのみ、サイドバーが閉じている時のみ表示） */}
           {!isSidebarOpen && (
-            <HoverTooltip content={t('sidebar.openSidebar')} side="bottom">
+            <HoverTooltip content={t('navigation.sidebar.openSidebar')} side="bottom">
               <Button
                 variant="ghost"
                 icon
                 className="hidden size-8 md:flex"
                 onClick={openSidebar}
-                aria-label={t('sidebar.openSidebar')}
+                aria-label={t('navigation.sidebar.openSidebar')}
               >
                 <PanelLeft className="size-4" />
               </Button>

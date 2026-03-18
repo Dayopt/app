@@ -17,16 +17,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { SectionCard } from '@/components/common/SectionCard';
-import { useMFA } from '../../hooks/useMFA';
+import { type UseMFAReturn, useMFA } from '../../hooks/useMFA';
+
+/** MFASection のプロップス定義 */
+export interface MFASectionProps {
+  /**
+   * テスト・Storybook用フック差し替え。
+   * 省略時は本物の useMFA を使用。
+   * 本番コードでは渡さない。
+   */
+  _useMFAHook?: () => UseMFAReturn;
+}
 
 /**
  * MFA（二段階認証）セクション
  *
  * TOTP認証の登録・管理UIを提供
  */
-export function MFASection() {
+export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
   const t = useTranslations();
+  // テスト用に差し替え可能。本番では常に useMFA を使う。
+  const hookToUse = _useMFAHook ?? useMFA;
   const {
     hasMFA,
     showMFASetup,
@@ -51,7 +64,7 @@ export function MFASection() {
     confirmRegenerateRecoveryCodes,
     cancelRegenerateRecoveryCodes,
     dismissRecoveryCodes,
-  } = useMFA();
+  } = hookToUse();
 
   // MFA無効化ダイアログ内のTOTPコード
   const [disableCode, setDisableCode] = useState('');
@@ -212,7 +225,7 @@ export function MFASection() {
 
             {/* リカバリーコード枯渇警告 */}
             {recoveryCodeCount === 0 && (
-              <div className="border-destructive bg-destructive/10 rounded-2xl border p-4">
+              <InfoBox variant="destructive">
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-destructive text-sm font-bold">
                     {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
@@ -232,7 +245,7 @@ export function MFASection() {
                       : t('settings.account.mfa.regenerate')}
                   </Button>
                 </div>
-              </div>
+              </InfoBox>
             )}
 
             {/* リカバリーコード状態（残りがある場合） */}

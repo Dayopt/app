@@ -15,6 +15,31 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * shimmerアニメーション（左→右の波、Facebook/LinkedIn方式）。
+ * pulseより最大40%速く感じられるためローディング知覚改善に有効。
+ */
+export const Shimmer: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <Skeleton animation="shimmer" className="h-5 w-24" />
+          <Skeleton animation="shimmer" className="h-4 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton animation="shimmer" className="h-16 w-full" />
+        </CardContent>
+      </Card>
+      <div className="space-y-2">
+        <Skeleton animation="shimmer" className="h-4 w-full" />
+        <Skeleton animation="shimmer" className="h-4 w-full" />
+        <Skeleton animation="shimmer" className="h-4 w-3/4" />
+      </div>
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -55,6 +80,16 @@ export const AllPatterns: Story = {
           </div>
         ))}
       </div>
+      <p className="text-muted-foreground text-xs">shimmerアニメーション（左→右の波）</p>
+      <Card>
+        <CardHeader className="pb-2">
+          <Skeleton animation="shimmer" className="h-5 w-24" />
+          <Skeleton animation="shimmer" className="h-4 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton animation="shimmer" className="h-16 w-full" />
+        </CardContent>
+      </Card>
     </div>
   ),
 };

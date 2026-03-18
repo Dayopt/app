@@ -11,7 +11,7 @@ export type { CalendarViewType } from '@/lib/calendar-constants';
 // 日付フォーマット型
 export type DateFormatType = 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd';
 
-interface CalendarSettings {
+export interface CalendarSettings {
   // タイムゾーン設定
   timezone: string; // 例: 'Asia/Tokyo', 'America/New_York'
   showUTCOffset: boolean; // UTC表示のON/OFF
@@ -50,21 +50,8 @@ interface CalendarSettings {
   hourHeightDensity: HourHeightDensity;
 }
 
-/**
- * セッション中のみ有効な一時的なオーバーライド
- * ヘッダーのViewSwitcherやキーボードショートカットで変更される
- * リロード時にリセットされ、Settingsで設定したデフォルト値に戻る
- */
-export interface SessionOverrides {
-  showWeekends?: boolean;
-  showWeekNumbers?: boolean;
-  hourHeightDensity?: HourHeightDensity;
-}
-
 interface CalendarSettingsStore extends CalendarSettings {
-  sessionOverrides: SessionOverrides;
   updateSettings: (settings: Partial<CalendarSettings>) => void;
-  updateSessionOverride: (overrides: Partial<SessionOverrides>) => void;
   resetSettings: () => void;
 }
 
@@ -108,7 +95,6 @@ export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
 
         return {
           ...defaultSettings,
-          sessionOverrides: {},
 
           updateSettings: (newSettings) =>
             set((state) => ({
@@ -116,31 +102,20 @@ export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
               ...newSettings,
             })),
 
-          updateSessionOverride: (overrides) =>
-            set((state) => ({
-              sessionOverrides: { ...state.sessionOverrides, ...overrides },
-            })),
-
-          resetSettings: () => set({ ...defaultSettings, sessionOverrides: {} }),
+          resetSettings: () => set({ ...defaultSettings }),
         };
       },
       {
         name: 'calendar-settings',
         partialize: (state) => {
-          // sessionOverrides はリロード時にリセットするため永続化しない
-          const {
-            sessionOverrides: _session,
-            updateSettings: _u,
-            updateSessionOverride: _us,
-            resetSettings: _r,
-            ...persisted
-          } = state;
+          const { updateSettings: _u, resetSettings: _r, ...persisted } = state;
           return persisted;
         },
       },
     ),
     {
       name: 'calendar-settings-store',
+      enabled: process.env.NODE_ENV !== 'production',
     },
   ),
 );

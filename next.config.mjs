@@ -247,11 +247,6 @@ const nextConfig = {
       'recharts',
       'clsx',
       'class-variance-authority',
-      // エディター
-      '@tiptap/react',
-      '@tiptap/core',
-      '@tiptap/starter-kit',
-      '@tiptap/extension-placeholder',
     ],
   },
 

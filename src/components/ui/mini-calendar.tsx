@@ -20,7 +20,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -130,6 +130,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
     minDate,
   }) => {
     const locale = useLocale();
+    const tActions = useTranslations('calendar.actions');
     const weekStartsOn = useCalendarSettingsStore((state) => state.weekStartsOn);
     const isMounted = useHasMounted();
     const [open, setOpen] = useState(false);
@@ -273,7 +274,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             icon
             className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded"
             onClick={handlePrevMonth}
-            aria-label="前の月"
+            aria-label={tActions('previousMonth')}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -320,7 +321,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             icon
             className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded"
             onClick={handleNextMonth}
-            aria-label="次の月"
+            aria-label={tActions('nextMonth')}
           >
             <ChevronRight className="size-4" />
           </Button>

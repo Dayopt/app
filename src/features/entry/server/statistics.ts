@@ -7,6 +7,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { traceDbQuery } from '@/platform/sentry/trace';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
 // =============================================================================
@@ -15,8 +16,8 @@ import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures
 
 /** 期間フィルター用の共通入力スキーマ */
 const dateRangeInput = z.object({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
 });
 
 // =============================================================================
@@ -32,7 +33,9 @@ export const entriesStatisticsRouter = createTRPCRouter({
   getTagStats: protectedProcedure.query(async ({ ctx }) => {
     const { supabase, userId } = ctx;
 
-    const { data, error } = await supabase.rpc('get_tag_stats', { p_user_id: userId });
+    const { data, error } = await traceDbQuery('stats.get_tag_stats', async () =>
+      supabase.rpc('get_tag_stats', { p_user_id: userId }),
+    );
 
     if (error) {
       throw new TRPCError({
@@ -56,86 +59,48 @@ export const entriesStatisticsRouter = createTRPCRouter({
     return { counts, lastUsed };
   }),
 
-  /** Get time spent per tag */
+  /** Get time spent per tag (DB function) */
   getTimeByTag: protectedProcedure
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
-      const MS_PER_HOUR = 3600000;
 
-      let query = supabase
-        .from('entries')
-        .select('id, start_time, end_time')
-        .eq('user_id', userId)
-        .not('start_time', 'is', null)
-        .not('end_time', 'is', null);
+      const { data, error } = await traceDbQuery('stats.get_time_by_tag', async () =>
+        supabase.rpc(
+          'get_time_by_tag' as never,
+          {
+            p_user_id: userId,
+            p_start_date: input?.startDate ?? null,
+            p_end_date: input?.endDate ?? null,
+          } as never,
+        ),
+      );
 
-      if (input?.startDate) query = query.gte('start_time', input.startDate);
-      if (input?.endDate) query = query.lte('start_time', input.endDate);
-
-      const { data: entries, error: entriesError } = await query;
-
-      if (entriesError) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch entries' });
-      }
-      if (entries.length === 0) return [];
-
-      const entryIds = entries.map((e) => e.id);
-      const { data: entryTags, error: tagsError } = await supabase
-        .from('entry_tags')
-        .select('entry_id, tag_id')
-        .in('entry_id', entryIds);
-
-      if (tagsError) {
+      if (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch entry tags',
+          message: 'Failed to fetch time by tag',
         });
       }
 
-      const tagIds = [...new Set(entryTags.map((et) => et.tag_id))];
-      if (tagIds.length === 0) return [];
+      const rows = (data ?? []) as Array<{
+        tag_id: string;
+        tag_name: string;
+        tag_color: string;
+        hours: number;
+      }>;
 
-      const { data: tags, error: tagDetailsError } = await supabase
-        .from('tags')
-        .select('id, name, color')
-        .in('id', tagIds);
-
-      if (tagDetailsError) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch tags' });
-      }
-
-      const tagHours: Record<string, number> = {};
-      for (const entry of entries) {
-        if (entry.start_time && entry.end_time) {
-          const hours =
-            (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) /
-            MS_PER_HOUR;
-          if (hours > 0) {
-            const tagIdsForEntry = entryTags
-              .filter((et) => et.entry_id === entry.id)
-              .map((et) => et.tag_id);
-            for (const tagId of tagIdsForEntry) {
-              tagHours[tagId] = (tagHours[tagId] || 0) + hours;
-            }
-          }
-        }
-      }
-
-      return tags
-        .map((tag) => ({
-          tagId: tag.id,
-          name: tag.name,
-          color: tag.color || 'indigo',
-          hours: tagHours[tag.id] || 0,
-        }))
-        .filter((t) => t.hours > 0)
-        .sort((a, b) => b.hours - a.hours);
+      return rows.map((row) => ({
+        tagId: row.tag_id,
+        name: row.tag_name,
+        color: row.tag_color,
+        hours: row.hours,
+      }));
     }),
 
   /** Get daily hours for heatmap (DB function) */
   getDailyHours: protectedProcedure
-    .input(z.object({ year: z.number() }))
+    .input(z.object({ year: z.number().int().min(2000).max(2100) }))
     .query(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
       const { year } = input;
@@ -143,13 +108,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-      const { data, error } = await supabase.rpc(
-        'get_daily_hours' as never,
-        {
-          p_user_id: userId,
-          p_start_date: startDate.toISOString(),
-          p_end_date: endDate.toISOString(),
-        } as never,
+      const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
+        supabase.rpc(
+          'get_daily_hours' as never,
+          {
+            p_user_id: userId,
+            p_start_date: startDate.toISOString(),
+            p_end_date: endDate.toISOString(),
+          } as never,
+        ),
       );
 
       if (error) {
@@ -168,13 +135,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
 
-      const { data, error } = await supabase.rpc(
-        'get_hourly_distribution' as never,
-        {
-          p_user_id: userId,
-          p_start_date: input?.startDate ?? null,
-          p_end_date: input?.endDate ?? null,
-        } as never,
+      const { data, error } = await traceDbQuery('stats.get_hourly_distribution', async () =>
+        supabase.rpc(
+          'get_hourly_distribution' as never,
+          {
+            p_user_id: userId,
+            p_start_date: input?.startDate ?? null,
+            p_end_date: input?.endDate ?? null,
+          } as never,
+        ),
       );
 
       if (error) {
@@ -208,13 +177,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
 
-      const { data, error } = await supabase.rpc(
-        'get_dow_distribution' as never,
-        {
-          p_user_id: userId,
-          p_start_date: input?.startDate ?? null,
-          p_end_date: input?.endDate ?? null,
-        } as never,
+      const { data, error } = await traceDbQuery('stats.get_dow_distribution', async () =>
+        supabase.rpc(
+          'get_dow_distribution' as never,
+          {
+            p_user_id: userId,
+            p_start_date: input?.startDate ?? null,
+            p_end_date: input?.endDate ?? null,
+          } as never,
+        ),
       );
 
       if (error) {
@@ -247,12 +218,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
       const now = new Date();
       const startDate = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1);
 
-      const { data, error } = await supabase.rpc(
-        'get_monthly_hours' as never,
-        {
-          p_user_id: userId,
-          p_start_date: startDate.toISOString(),
-        } as never,
+      const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
+        supabase.rpc(
+          'get_monthly_hours' as never,
+          {
+            p_user_id: userId,
+            p_start_date: startDate.toISOString(),
+          } as never,
+        ),
       );
 
       if (error) {
@@ -289,13 +262,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
   getPlanRate: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
 
-    const { data, error } = await supabase.rpc(
-      'get_plan_rate' as never,
-      {
-        p_user_id: userId,
-        p_start_date: input.startDate ?? null,
-        p_end_date: input.endDate ?? null,
-      } as never,
+    const { data, error } = await traceDbQuery('stats.get_plan_rate', async () =>
+      supabase.rpc(
+        'get_plan_rate' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
     );
 
     if (error) {
@@ -322,13 +297,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
   getEstimationAccuracy: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
 
-    const { data, error } = await supabase.rpc(
-      'get_estimation_accuracy' as never,
-      {
-        p_user_id: userId,
-        p_start_date: input.startDate ?? null,
-        p_end_date: input.endDate ?? null,
-      } as never,
+    const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
+      supabase.rpc(
+        'get_estimation_accuracy' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
     );
 
     if (error) {
@@ -363,13 +340,15 @@ export const entriesStatisticsRouter = createTRPCRouter({
   getEnergyMap: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
 
-    const { data, error } = await supabase.rpc(
-      'get_energy_map' as never,
-      {
-        p_user_id: userId,
-        p_start_date: input.startDate ?? null,
-        p_end_date: input.endDate ?? null,
-      } as never,
+    const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
+      supabase.rpc(
+        'get_energy_map' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
     );
 
     if (error) {
@@ -379,26 +358,36 @@ export const entriesStatisticsRouter = createTRPCRouter({
       });
     }
 
-    return (data ?? []) as Array<{
+    const rows = (data ?? []) as Array<{
       hour: number;
       dow: number;
       avg_fulfillment: number | null;
       total_minutes: number;
       entry_count: number;
     }>;
+
+    return rows.map((row) => ({
+      hour: row.hour,
+      dow: row.dow,
+      avgFulfillment: row.avg_fulfillment,
+      totalMinutes: row.total_minutes,
+      entryCount: row.entry_count,
+    }));
   }),
 
   /** コンテキストスイッチ: 連続エントリ間のタグ変化回数 */
   getContextSwitches: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
 
-    const { data, error } = await supabase.rpc(
-      'get_context_switches' as never,
-      {
-        p_user_id: userId,
-        p_start_date: input.startDate ?? null,
-        p_end_date: input.endDate ?? null,
-      } as never,
+    const { data, error } = await traceDbQuery('stats.get_context_switches', async () =>
+      supabase.rpc(
+        'get_context_switches' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
     );
 
     if (error) {
@@ -430,15 +419,17 @@ export const entriesStatisticsRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
 
-      const { data, error } = await supabase.rpc(
-        'get_blank_rate' as never,
-        {
-          p_user_id: userId,
-          p_start_date: input.startDate ?? null,
-          p_end_date: input.endDate ?? null,
-          p_wake_hour: input.wakeHour,
-          p_sleep_hour: input.sleepHour,
-        } as never,
+      const { data, error } = await traceDbQuery('stats.get_blank_rate', async () =>
+        supabase.rpc(
+          'get_blank_rate' as never,
+          {
+            p_user_id: userId,
+            p_start_date: input.startDate ?? null,
+            p_end_date: input.endDate ?? null,
+            p_wake_hour: input.wakeHour,
+            p_sleep_hour: input.sleepHour,
+          } as never,
+        ),
       );
 
       if (error) {
@@ -460,6 +451,135 @@ export const entriesStatisticsRouter = createTRPCRouter({
         scheduledMinutes: result?.scheduledMinutes ?? 0,
         blankMinutes: result?.blankMinutes ?? 0,
         blankRate: result?.blankRate ?? 0,
+      };
+    }),
+
+  /** 合計記録時間（分） */
+  getCumulativeTime: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
+    const { supabase, userId } = ctx;
+
+    const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
+      supabase.rpc(
+        'get_cumulative_time' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
+    );
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch cumulative time',
+      });
+    }
+
+    const result = data as { totalMinutes: number } | null;
+    return { totalMinutes: result?.totalMinutes ?? 0 };
+  }),
+
+  /** 平均充実度 */
+  getAvgFulfillment: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
+    const { supabase, userId } = ctx;
+
+    const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
+      supabase.rpc(
+        'get_avg_fulfillment' as never,
+        {
+          p_user_id: userId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never,
+      ),
+    );
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch avg fulfillment',
+      });
+    }
+
+    const result = data as { avgFulfillment: number | null; entryCount: number } | null;
+    return {
+      avgFulfillment: result?.avgFulfillment ?? null,
+      entryCount: result?.entryCount ?? 0,
+    };
+  }),
+
+  // ---------------------------------------------------------------------------
+  // Unified KPI Summary (7 RPCs → 1 round-trip)
+  // ---------------------------------------------------------------------------
+
+  /** 全KPIを1クエリで取得 */
+  getStatsOverview: protectedProcedure
+    .input(
+      dateRangeInput.extend({
+        wakeHour: z.number().min(0).max(23).default(7),
+        sleepHour: z.number().min(0).max(23).default(23),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const { supabase, userId } = ctx;
+
+      const { data, error } = await traceDbQuery('stats.get_kpi_summary', async () =>
+        supabase.rpc(
+          'get_stats_kpi_summary' as never,
+          {
+            p_user_id: userId,
+            p_start_date: input.startDate ?? null,
+            p_end_date: input.endDate ?? null,
+            p_wake_hour: input.wakeHour,
+            p_sleep_hour: input.sleepHour,
+          } as never,
+        ),
+      );
+
+      if (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch stats overview',
+        });
+      }
+
+      const result = data as {
+        cumulativeTime: { totalMinutes: number };
+        avgFulfillment: { avgFulfillment: number | null; entryCount: number };
+        planRate: { totalEntries: number; plannedEntries: number; planRate: number };
+        contextSwitches: { totalSwitches: number; avgPerDay: number };
+        blankRate: {
+          availableMinutes: number;
+          scheduledMinutes: number;
+          blankMinutes: number;
+          blankRate: number;
+        };
+      } | null;
+
+      return {
+        cumulativeTime: {
+          totalMinutes: result?.cumulativeTime?.totalMinutes ?? 0,
+        },
+        avgFulfillment: {
+          avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? null,
+          entryCount: result?.avgFulfillment?.entryCount ?? 0,
+        },
+        planRate: {
+          totalEntries: result?.planRate?.totalEntries ?? 0,
+          plannedEntries: result?.planRate?.plannedEntries ?? 0,
+          planRate: result?.planRate?.planRate ?? 0,
+        },
+        contextSwitches: {
+          totalSwitches: result?.contextSwitches?.totalSwitches ?? 0,
+          avgPerDay: result?.contextSwitches?.avgPerDay ?? 0,
+        },
+        blankRate: {
+          availableMinutes: result?.blankRate?.availableMinutes ?? 0,
+          scheduledMinutes: result?.blankRate?.scheduledMinutes ?? 0,
+          blankMinutes: result?.blankRate?.blankMinutes ?? 0,
+          blankRate: result?.blankRate?.blankRate ?? 0,
+        },
       };
     }),
 });

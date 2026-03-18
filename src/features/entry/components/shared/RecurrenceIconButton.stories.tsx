@@ -70,6 +70,21 @@ export const Weekly: Story = {
   render: () => <RecurrenceIconButtonStory initialType="weekly" />,
 };
 
+/** 毎月が選択された状態 */
+export const Monthly: Story = {
+  render: () => <RecurrenceIconButtonStory initialType="monthly" />,
+};
+
+/** 毎年が選択された状態 */
+export const Yearly: Story = {
+  render: () => <RecurrenceIconButtonStory initialType="yearly" />,
+};
+
+/** 平日（月〜金）が選択された状態 */
+export const Weekdays: Story = {
+  render: () => <RecurrenceIconButtonStory initialType="weekdays" />,
+};
+
 /** カスタムRRULEが設定された状態 */
 export const CustomRule: Story = {
   render: () => <RecurrenceIconButtonStory initialRule="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR" />,
@@ -93,12 +108,28 @@ export const AllPatterns: Story = {
         <RecurrenceIconButtonStory initialType="daily" />
       </div>
       <div>
+        <span className="text-muted-foreground mb-2 block text-xs">毎週</span>
+        <RecurrenceIconButtonStory initialType="weekly" />
+      </div>
+      <div>
+        <span className="text-muted-foreground mb-2 block text-xs">毎月</span>
+        <RecurrenceIconButtonStory initialType="monthly" />
+      </div>
+      <div>
+        <span className="text-muted-foreground mb-2 block text-xs">毎年</span>
+        <RecurrenceIconButtonStory initialType="yearly" />
+      </div>
+      <div>
+        <span className="text-muted-foreground mb-2 block text-xs">平日（月〜金）</span>
+        <RecurrenceIconButtonStory initialType="weekdays" />
+      </div>
+      <div>
         <span className="text-muted-foreground mb-2 block text-xs">カスタム</span>
         <RecurrenceIconButtonStory initialRule="FREQ=MONTHLY;BYMONTHDAY=15" />
       </div>
       <div>
         <span className="text-muted-foreground mb-2 block text-xs">無効化</span>
-        <RecurrenceIconButtonStory initialType="weekly" disabled />
+        <RecurrenceIconButtonStory initialType="daily" disabled />
       </div>
     </div>
   ),

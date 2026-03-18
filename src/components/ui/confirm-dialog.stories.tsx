@@ -74,6 +74,59 @@ export const Destructive: Story = {
   },
 };
 
+/** 警告確認（variant="warning"）。破壊的ではないが注意が必要なアクション。 */
+export const Warning: Story = {
+  render: () => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <>
+          <Button variant="outline" onClick={() => setOpen(true)}>
+            警告ダイアログを開く
+          </Button>
+          <ConfirmDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            onConfirm={() => setOpen(false)}
+            title="この操作を続けますか？"
+            description="設定を変更すると、既存のデータに影響する可能性があります。"
+            variant="warning"
+            confirmLabel="続ける"
+          />
+        </>
+      );
+    }
+    return <Demo />;
+  },
+};
+
+/** 汎用確認（variant="default"）。通常の確認アクション。 */
+export const DefaultVariant: Story = {
+  render: () => {
+    function Demo() {
+      const [open, setOpen] = useState(false);
+
+      return (
+        <>
+          <Button variant="outline" onClick={() => setOpen(true)}>
+            確認ダイアログを開く
+          </Button>
+          <ConfirmDialog
+            open={open}
+            onClose={() => setOpen(false)}
+            onConfirm={() => setOpen(false)}
+            title="変更を保存しますか？"
+            description="変更内容が保存されます。"
+            variant="default"
+          />
+        </>
+      );
+    }
+    return <Demo />;
+  },
+};
+
 /** confirmLabel / loadingLabel 指定 + 非同期処理。実使用: PlanDeleteConfirmDialog */
 export const WithCustomLabels: Story = {
   render: () => {
@@ -113,6 +166,8 @@ export const AllPatterns: Story = {
     function AllPatternsDemo() {
       const [open1, setOpen1] = useState(false);
       const [open2, setOpen2] = useState(false);
+      const [open3, setOpen3] = useState(false);
+      const [open4, setOpen4] = useState(false);
 
       const handleConfirm2 = async () => {
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -145,6 +200,31 @@ export const AllPatterns: Story = {
             variant="destructive"
             confirmLabel="削除"
             loadingLabel="削除中..."
+          />
+
+          <Button variant="outline" onClick={() => setOpen3(true)}>
+            警告ダイアログを開く
+          </Button>
+          <ConfirmDialog
+            open={open3}
+            onClose={() => setOpen3(false)}
+            onConfirm={() => setOpen3(false)}
+            title="この操作を続けますか？"
+            description="設定を変更すると、既存のデータに影響する可能性があります。"
+            variant="warning"
+            confirmLabel="続ける"
+          />
+
+          <Button variant="outline" onClick={() => setOpen4(true)}>
+            確認ダイアログを開く
+          </Button>
+          <ConfirmDialog
+            open={open4}
+            onClose={() => setOpen4(false)}
+            onConfirm={() => setOpen4(false)}
+            title="変更を保存しますか？"
+            description="変更内容が保存されます。"
+            variant="default"
           />
         </div>
       );

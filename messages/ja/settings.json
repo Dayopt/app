@@ -21,6 +21,21 @@
       "email": "メールアドレス",
       "emailDesc": "アカウントに関連付けられたメールアドレス",
       "emailPlaceholder": "メールアドレスを入力",
+      "emailChange": {
+        "title": "メールアドレスを変更",
+        "description": "新しいメールアドレスとパスワードを入力してください",
+        "currentEmail": "現在のメールアドレス",
+        "newEmail": "新しいメールアドレス",
+        "passwordConfirm": "パスワード確認",
+        "passwordPlaceholder": "現在のパスワードを入力",
+        "cancel": "キャンセル",
+        "submitting": "確認中...",
+        "submit": "確認メールを送信",
+        "close": "閉じる",
+        "successTitle": "確認メールを送信しました",
+        "successMessage": "{email} に確認メールを送信しました。",
+        "successHint": "メール内のリンクをクリックして、メールアドレスの変更を完了してください。"
+      },
       "profilePicture": "プロフィール画像",
       "avatar": "アバター",
       "profilePictureDesc": "JPG, PNG, GIF 最大2MB",
@@ -541,7 +556,28 @@
         "startDate": "開始日",
         "endDate": "終了日",
         "exporting": "エクスポート中...",
-        "exportButton": "エクスポート"
+        "exportButton": "エクスポート",
+        "exportSuccess": "データをエクスポートしました",
+        "exportFailed": "エクスポートに失敗しました。もう一度お試しください。",
+        "csvComingSoon": "近日公開",
+        "includedDataTitle": "エクスポートに含まれるデータ",
+        "profileInfo": "プロフィール情報",
+        "tasksEvents": "予定・記録",
+        "tagSettings": "タグ設定",
+        "calendarSettings": "カレンダー設定",
+        "notificationSettings": "通知設定",
+        "otherSettings": "その他の設定"
+      },
+      "import": {
+        "title": "データインポート",
+        "dropzone": "JSONファイルをドロップ、またはクリックして選択",
+        "selectFile": "ファイルを選択",
+        "comingSoon": "インポート機能は近日公開予定です"
+      },
+      "backup": {
+        "title": "自動バックアップ",
+        "enableLabel": "自動バックアップを有効にする",
+        "lastBackup": "最終バックアップ: —"
       },
       "restore": {
         "title": "バックアップ復元",
@@ -619,6 +655,18 @@
         "title": "API連携",
         "description": "APIキーの発行やWebhookの設定は開発者ポータルから行えます。",
         "openPortal": "開発者ポータルを開く（準備中）"
+      },
+      "icalFeed": {
+        "title": "iCalフィード",
+        "description": "このURLをGoogle CalendarやApple Calendarに追加すると、Dayoptのスケジュールを読み取り専用で表示できます。",
+        "feedUrl": "フィードURL",
+        "copy": "コピー",
+        "copied": "コピーしました",
+        "regenerate": "URLを再生成",
+        "regenerateConfirmTitle": "フィードURLを再生成しますか？",
+        "regenerateConfirmDescription": "現在のURLは無効になります。このURLを使用しているカレンダーは更新が必要です。",
+        "regenerateSuccess": "新しいフィードURLを生成しました",
+        "noToken": "フィードURLを生成するには「URLを再生成」をクリックしてください"
       }
     },
     "legal": {
@@ -660,6 +708,7 @@
       "freePlanLabel": "Free プラン",
       "currentBadge": "現在のプラン",
       "freePlanDescription": "基本機能をご利用いただけます",
+      "proPlanDescription": "すべての機能にフルアクセス",
       "selectPlan": "プランを選択",
       "monthly": "月払い",
       "yearly": "年払い",
@@ -671,37 +720,48 @@
       "paymentMethod": "支払い方法",
       "noCard": "カードが登録されていません",
       "addCard": "カードを追加",
-      "paymentComingSoon": "※ 支払い機能は現在準備中です",
+      "updateCard": "更新",
+      "managePayment": "Stripe で支払い方法を管理",
+      "managePlan": "サブスクリプション管理",
+      "adjustPlan": "プランを調整",
+      "processing": "処理中...",
+      "viewInStripe": "Stripe で請求履歴を確認",
+      "openPortal": "Stripe ポータルを開く",
+      "invoicePaid": "支払い済み",
+      "noInvoices": "請求書はまだありません",
+      "invoiceDate": "日付",
+      "invoiceTotal": "合計",
+      "invoiceStatus": "ステータス",
+      "invoiceAction": "アクション",
+      "invoiceView": "表示",
+      "cancelTitle": "サブスクリプションのキャンセル",
+      "cancelDescription": "サブスクリプションは現在の請求期間の終わりまで有効です。",
+      "cancelButton": "サブスクリプションをキャンセル",
+      "cancelConfirmTitle": "サブスクリプションをキャンセルしますか？",
+      "cancelConfirmDescription": "現在の請求期間の終わりまでPro機能を引き続きご利用いただけます。その後、アカウントはFreeプランにダウングレードされます。",
+      "cancelConfirmAction": "キャンセルする",
+      "cancelConfirmCancel": "サブスクリプションを維持",
       "billingHistory": "請求履歴",
-      "noBillingHistory": "請求履歴はありません",
+      "loadError": "課金情報の読み込みに失敗しました",
+      "retry": "再試行",
       "plans": {
         "free": {
           "name": "Free",
           "features": {
-            "basicTasks": "基本的なタスク管理",
-            "maxTasks": "最大100タスク",
-            "tags": "3つのタグ",
-            "calendar": "カレンダー表示"
+            "timeboxing": "タイムボクシング & 時間記録",
+            "basicAnalytics": "基本分析（2指標）",
+            "tags": "タグ 5個まで",
+            "ai": "AI振り返り（月10回）"
           }
         },
         "pro": {
           "name": "Pro",
           "features": {
-            "unlimitedTasks": "無制限のタスク",
+            "fullAnalytics": "全8指標 + チャートビュー",
             "unlimitedTags": "無制限のタグ",
-            "integrations": "外部サービス連携",
-            "prioritySupport": "優先サポート",
-            "advancedAnalytics": "高度な分析"
-          }
-        },
-        "team": {
-          "name": "Team",
-          "features": {
-            "allPro": "Proの全機能",
-            "teamSharing": "チーム共有",
-            "adminDashboard": "管理者ダッシュボード",
-            "sso": "SSO対応",
-            "dedicatedSupport": "専用サポート"
+            "api": "MCP / APIアクセス",
+            "dataExport": "データエクスポート（CSV/JSON）",
+            "unlimitedAI": "AI振り返り無制限 + モデル選択"
           }
         }
       }

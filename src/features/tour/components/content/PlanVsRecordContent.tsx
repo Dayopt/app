@@ -41,9 +41,9 @@ export function PlanVsRecordContent({
       <div className="flex flex-col gap-3">
         {/* Planned time */}
         <div className="flex items-center gap-3">
-          <div className="bg-tag-blue-tint border-tag-blue flex h-10 w-20 items-center rounded-md border-l-3 pl-2">
-            <span className="text-foreground text-xs font-medium tabular-nums">
-              10:00\u201311:00
+          <div className="bg-tag-blue-tint border-tag-blue flex h-10 shrink-0 items-center rounded-md border-l-[3px] px-2">
+            <span className="text-foreground text-xs font-medium whitespace-nowrap tabular-nums">
+              10:00–11:00
             </span>
           </div>
           <div className="flex flex-col">
@@ -78,9 +78,9 @@ export function PlanVsRecordContent({
 
         {/* Actual time */}
         <div className="flex items-center gap-3">
-          <div className="bg-tag-blue-tint border-tag-blue flex h-10 w-20 items-center rounded-md border-l-3 pl-2">
-            <span className="text-foreground text-xs font-medium tabular-nums">
-              10:15\u201311:30
+          <div className="bg-tag-blue-tint border-tag-blue flex h-10 shrink-0 items-center rounded-md border-l-[3px] px-2">
+            <span className="text-foreground text-xs font-medium whitespace-nowrap tabular-nums">
+              10:15–11:30
             </span>
           </div>
           <div className="flex flex-col">

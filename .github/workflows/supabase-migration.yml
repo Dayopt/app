@@ -1,4 +1,4 @@
-name: 🗃️ Supabase Migration (Staging)
+name: 🗃️ Supabase Migration
 
 on:
   push:
@@ -6,11 +6,12 @@ on:
     paths:
       - 'supabase/migrations/**'
   workflow_dispatch:
-
-env:
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
-  STAGING_PROJECT_ID: yvglwblxrnrenfifsnje
+    inputs:
+      skip_production:
+        description: 'Production デプロイをスキップ'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
@@ -20,6 +21,9 @@ jobs:
     name: 🗃️ Push Migrations to Staging
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -30,7 +34,35 @@ jobs:
           version: latest
 
       - name: 🔗 Link to Staging
-        run: supabase link --project-ref ${{ env.STAGING_PROJECT_ID }}
+        run: supabase link --project-ref yvglwblxrnrenfifsnje
+
+      - name: 🧪 Dry Run
+        run: supabase db push --dry-run
+
+      - name: 🚀 Push Migrations
+        run: supabase db push
+
+  migrate-production:
+    name: 🗃️ Push Migrations to Production
+    needs: migrate-staging
+    if: ${{ github.event.inputs.skip_production != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+
+      - name: 🏗️ Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: 🔗 Link to Production
+        run: supabase link --project-ref qloztwfbrbqtjijxicnd
 
       - name: 🧪 Dry Run
         run: supabase db push --dry-run

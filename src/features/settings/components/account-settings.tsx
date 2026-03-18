@@ -18,14 +18,24 @@ import { SectionCard } from '@/components/common/SectionCard';
 import { AccountDeletionDialog } from './account-deletion-dialog';
 import { EmailChangeDialog } from './email-change-dialog';
 import { PasswordChangeDialog } from './password-change-dialog';
-import { MFASection } from './sections/MFASection';
+import { type MFASectionProps, MFASection } from './sections/MFASection';
+
+/** AccountSettings のプロップス定義 */
+export interface AccountSettingsProps {
+  /**
+   * テスト・Storybook用 MFASection 差し替え。
+   * 省略時は本物の MFASection を使用。
+   * 本番コードでは渡さない。
+   */
+  _MFASectionProps?: MFASectionProps;
+}
 
 /**
  * アカウント設定コンポーネント
  *
  * メール、パスワード、ソーシャルログイン、ログアウト、アカウント削除
  */
-export function AccountSettings() {
+export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {}) {
   const t = useTranslations();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -40,12 +50,12 @@ export function AccountSettings() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      toast.success(t('navUser.logoutSuccess'));
+      toast.success(t('navigation.navUser.logoutSuccess'));
       router.push('/auth/login');
       router.refresh();
     } catch (error) {
       logger.error('Logout error:', error);
-      toast.error(t('navUser.logoutFailed'));
+      toast.error(t('navigation.navUser.logoutFailed'));
     } finally {
       setIsLoggingOut(false);
     }
@@ -72,7 +82,7 @@ export function AccountSettings() {
       </SectionCard>
 
       {/* 2段階認証 */}
-      <MFASection />
+      <MFASection {..._MFASectionProps} />
 
       {/* ソーシャルログイン連携 */}
       <SectionCard title={t('settings.account.socialLogin')}>
@@ -140,10 +150,10 @@ export function AccountSettings() {
 
       {/* セッション */}
       <SectionCard title={t('settings.account.session')}>
-        <LabeledRow label={t('navUser.logout')}>
+        <LabeledRow label={t('navigation.navUser.logout')}>
           <Button variant="outline" onClick={handleLogout} disabled={isLoggingOut}>
             <LogOut className="mr-2 h-4 w-4" />
-            {isLoggingOut ? t('navUser.loggingOut') : t('navUser.logout')}
+            {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
           </Button>
         </LabeledRow>
       </SectionCard>

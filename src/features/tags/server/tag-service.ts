@@ -207,22 +207,11 @@ export class TagService {
       throw new TagServiceError('INVALID_INPUT', 'Tag name must be 50 characters or less');
     }
 
-    // 新規タグを先頭に表示するため、既存タグのsort_orderをインクリメント
-    const { data: siblings } = await this.supabase
-      .from('tags')
-      .select('id, sort_order')
-      .eq('user_id', userId);
-
-    // 既存の兄弟タグのsort_orderを+1インクリメント
-    if (siblings && siblings.length > 0) {
-      const incrementPromises = siblings.map((sibling) =>
-        this.supabase
-          .from('tags')
-          .update({ sort_order: (sibling.sort_order ?? 0) + 1 })
-          .eq('id', sibling.id),
-      );
-      await Promise.all(incrementPromises);
-    }
+    // 新規タグを先頭に表示するため、既存タグのsort_orderを一括インクリメント
+    // N+1回の個別UPDATEではなく、RPCで1回のSQLで実行
+    await this.supabase.rpc('increment_tag_sort_orders', {
+      p_user_id: userId,
+    });
 
     // タグデータ作成（sort_order = 0で先頭に追加）
     const tagData: Database['public']['Tables']['tags']['Insert'] = {

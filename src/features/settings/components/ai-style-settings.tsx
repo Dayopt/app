@@ -135,7 +135,7 @@ function StyleCard({ style, isSelected }: StyleCardProps) {
       htmlFor={`ai-style-${style}`}
       className={cn(
         'border-border flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
-        isSelected && 'border-primary bg-primary/5',
+        isSelected && 'border-primary bg-state-active',
       )}
     >
       <RadioGroupItem value={style} id={`ai-style-${style}`} className="mt-0.5" />

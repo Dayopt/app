@@ -80,6 +80,7 @@ export function ChronotypeStep({
             name={t(`onboarding.chronotype.${card.type}.name`)}
             trait={t(`onboarding.chronotype.${card.type}.trait`)}
             time={t(`onboarding.chronotype.${card.type}.time`)}
+            hint={t(`onboarding.chronotype.${card.type}.hint`)}
             isSelected={selectedType === card.type}
             onSelect={handleSelect}
           />
@@ -110,13 +111,14 @@ export function ChronotypeStep({
         </Button>
       </div>
 
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onSkip}
-        className="text-muted-foreground hover:text-foreground block w-full text-center text-xs transition-colors"
+        className="text-muted-foreground hover:text-foreground w-full"
       >
         {t('onboarding.chronotype.skipLink')}
-      </button>
+      </Button>
     </div>
   );
 }

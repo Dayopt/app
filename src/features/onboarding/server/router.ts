@@ -6,8 +6,15 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+
+import { generateSamplePlans } from '../lib/sample-plans';
+
+import type { PresetChronotypeType } from '@/types/chronotype';
 
 /** Chronotype type (inline to avoid cross-feature import) */
 const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
@@ -47,7 +54,7 @@ export const onboardingRouter = createTRPCRouter({
 
   /**
    * オンボーディング完了
-   * 名前・クロノタイプを保存し、完了フラグをセット
+   * 名前・クロノタイプを保存し、完了フラグをセット、サンプルプランを生成
    */
   complete: protectedProcedure
     .input(
@@ -95,6 +102,12 @@ export const onboardingRouter = createTRPCRouter({
         }
       }
 
+      // サンプルプラン生成（非ブロッキング）
+      const chronotype = input.chronotypeType as PresetChronotypeType | undefined;
+      createSamplePlansForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
+        logger.error('Failed to create sample plans:', err);
+      });
+
       return { success: true };
     }),
 
@@ -119,3 +132,35 @@ export const onboardingRouter = createTRPCRouter({
     return { success: true };
   }),
 });
+
+/**
+ * サンプルプランを作成する（オンボーディング完了時）
+ *
+ * entriesテーブルに直接挿入する（feature boundary制約のため entry service は使わない）
+ */
+async function createSamplePlansForUser(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  chronotypeType: PresetChronotypeType | null,
+): Promise<void> {
+  const today = new Date();
+  const plans = generateSamplePlans(chronotypeType, today);
+
+  const rows = plans.map((plan) => ({
+    user_id: userId,
+    title: plan.title,
+    origin: 'planned' as const,
+    start_time: plan.startTime,
+    end_time: plan.endTime,
+    description: '__onboarding_sample__',
+  }));
+
+  const { error } = await supabase
+    .from('entries')
+    .insert(rows as never)
+    .select();
+
+  if (error) {
+    logger.error('Sample plans insert error:', error);
+  }
+}

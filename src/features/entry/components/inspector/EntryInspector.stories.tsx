@@ -13,6 +13,8 @@ import type { FulfillmentScore } from '../../types/entry';
 // eslint-disable-next-line no-restricted-imports
 import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
 
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { Spinner } from '@/components/ui/spinner';
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
 import { InspectorFrame, MockRecurrenceRow, MockReminderRow, MockTagRow } from './story-helpers';
 
@@ -138,6 +140,11 @@ function InspectorContent({
             label={t('plan.inspector.time.fulfillment')}
             score={fulfillment}
             onScoreChange={setFulfillment}
+            scoreLabels={{
+              low: t('plan.inspector.time.fulfillmentLow'),
+              medium: t('plan.inspector.time.fulfillmentMedium'),
+              high: t('plan.inspector.time.fulfillmentHigh'),
+            }}
           />
 
           {/* Recurrence */}
@@ -238,7 +245,8 @@ export const WithMicroInsightEstimation: Story = {
           <EntryMicroInsight
             insight={{
               type: 'estimation_bias',
-              message: 'このタグは平均 +25 分超過する傾向があります',
+              messageKey: 'estimationBiasOver',
+              messageParams: { bias: 25 },
             }}
           />
         }
@@ -263,7 +271,7 @@ export const WithMicroInsightFulfillment: Story = {
           <EntryMicroInsight
             insight={{
               type: 'hourly_fulfillment',
-              message: 'この時間帯の充実度は平均より高い傾向があります',
+              messageKey: 'hourlyFulfillmentHigh',
             }}
           />
         }
@@ -287,39 +295,158 @@ export const WithoutMicroInsight: Story = {
   ),
 };
 
-/** 全パターンを横並びで比較確認。 */
-export const AllPatterns: Story = {
+// ─────────────────────────────────────────────────────────
+// Loading / Empty / Mobile states
+// ─────────────────────────────────────────────────────────
+
+/**
+ * ## Loading
+ *
+ * エントリデータ取得中のスピナー表示。
+ * 実コンポーネントの `isLoading === true` 分岐と同一マークアップ。
+ */
+export const Loading: Story = {
   render: () => (
-    <div className="flex flex-wrap items-start gap-6">
-      <div>
-        <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
-          Upcoming + Planned
-        </p>
-        <InspectorFrame>
-          <InspectorContent
-            tagName="Work"
-            tagDotClass="bg-blue-500"
-            initialPlannedStart="14:00"
-            initialPlannedEnd="15:30"
-            initialNote="Prepare slides"
-          />
-        </InspectorFrame>
+    <InspectorFrame>
+      <div className="flex h-full flex-1 items-center justify-center py-16">
+        <Spinner size="lg" />
       </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Past + Planned</p>
-        <InspectorFrame>
-          <InspectorContent
-            tagName="Meeting"
-            tagDotClass="bg-purple-500"
-            initialPlannedStart="10:00"
-            initialPlannedEnd="11:30"
-            initialActualStart="10:15"
-            initialActualEnd="12:00"
-            initialNote="Ran 30min over"
-            initialFulfillment={2}
-          />
-        </InspectorFrame>
-      </div>
-    </div>
+    </InspectorFrame>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole('status')).toBeInTheDocument();
+  },
+};
+
+/**
+ * ## NotFound
+ *
+ * 指定 entryId のエントリが存在しない場合の空状態表示。
+ * 実コンポーネントの `!entry` 分岐と同一マークアップ。
+ */
+export const NotFound: Story = {
+  render: function NotFoundStory() {
+    const t = useTranslations();
+    return (
+      <InspectorFrame>
+        <div className="flex h-full flex-1 items-center justify-center py-16">
+          <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+        </div>
+      </InspectorFrame>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText('プランが見つかりません')).toBeInTheDocument();
+  },
+};
+
+/**
+ * ## MobileDrawer
+ *
+ * モバイル幅での Drawer レイアウト確認。
+ * 実コンポーネントの `isMobile === true` 分岐と同一構造:
+ * - ドラッグハンドル（灰色バー）
+ * - スクロール可能なコンテンツ領域
+ */
+export const MobileDrawer: Story = {
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' },
+  },
+  render: function MobileDrawerStory() {
+    const [open, setOpen] = useState(true);
+    const snapPoints = [1] as const;
+    const [snap, setSnap] = useState<number | string | null>(snapPoints[0]);
+
+    return (
+      <Drawer
+        open={open}
+        onOpenChange={(next) => !next && setOpen(false)}
+        snapPoints={snapPoints as unknown as (number | string)[]}
+        activeSnapPoint={snap}
+        setActiveSnapPoint={setSnap}
+        fadeFromIndex={1}
+      >
+        <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-none p-0 [&>div:first-child]:hidden">
+          <DrawerTitle className="sr-only">エントリ詳細</DrawerTitle>
+          {/* ドラッグハンドル */}
+          <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
+            <div className="bg-border h-1.5 w-12 rounded-full" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <InspectorContent
+              tagName="Work"
+              tagDotClass="bg-blue-500"
+              initialPlannedStart="10:00"
+              initialPlannedEnd="11:30"
+              initialNote="モバイル Drawer 表示の確認"
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  },
+};
+
+/**
+ * 全パターンを横並びで比較確認。
+ * Loading・NotFound・通常表示の 3 状態を一覧。
+ */
+export const AllPatterns: Story = {
+  render: function AllPatternsStory() {
+    const t = useTranslations();
+    return (
+      <div className="flex flex-wrap items-start gap-6">
+        <div>
+          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
+            Upcoming + Planned
+          </p>
+          <InspectorFrame>
+            <InspectorContent
+              tagName="Work"
+              tagDotClass="bg-blue-500"
+              initialPlannedStart="14:00"
+              initialPlannedEnd="15:30"
+              initialNote="Prepare slides"
+            />
+          </InspectorFrame>
+        </div>
+        <div>
+          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
+            Past + Planned
+          </p>
+          <InspectorFrame>
+            <InspectorContent
+              tagName="Meeting"
+              tagDotClass="bg-purple-500"
+              initialPlannedStart="10:00"
+              initialPlannedEnd="11:30"
+              initialActualStart="10:15"
+              initialActualEnd="12:00"
+              initialNote="Ran 30min over"
+              initialFulfillment={2}
+            />
+          </InspectorFrame>
+        </div>
+        <div>
+          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Loading</p>
+          <InspectorFrame>
+            <div className="flex h-full flex-1 items-center justify-center py-16">
+              <Spinner size="lg" />
+            </div>
+          </InspectorFrame>
+        </div>
+        <div>
+          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Not Found</p>
+          <InspectorFrame>
+            <div className="flex h-full flex-1 items-center justify-center py-16">
+              <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+            </div>
+          </InspectorFrame>
+        </div>
+      </div>
+    );
+  },
 };

@@ -137,31 +137,14 @@ export function getUserTimezone(): string {
  * @param timezone - タイムゾーン（例: 'Asia/Tokyo'）
  * @returns 略称（例: 'JST'）
  */
-export function getTimezoneAbbreviation(timezone: string): string {
-  // よく使われるタイムゾーンの略称マッピング
-  const abbreviations: Record<string, string> = {
-    'Asia/Tokyo': 'JST',
-    'America/New_York': 'EST',
-    'America/Los_Angeles': 'PST',
-    'America/Chicago': 'CST',
-    'America/Denver': 'MST',
-    'Europe/London': 'GMT',
-    'Europe/Paris': 'CET',
-    'Australia/Sydney': 'AEDT',
-    'Pacific/Auckland': 'NZDT',
-  };
-
-  if (abbreviations[timezone]) {
-    return abbreviations[timezone];
-  }
-
-  // マッピングにない場合は Intl API で取得
+export function getTimezoneAbbreviation(timezone: string, date: Date = new Date()): string {
+  // Intl API で動的に取得（DST切り替えを正しく反映: EST↔EDT, PST↔PDT等）
   try {
     const formatter = new Intl.DateTimeFormat('en-US', {
       timeZone: timezone,
       timeZoneName: 'short',
     });
-    const parts = formatter.formatToParts(new Date());
+    const parts = formatter.formatToParts(date);
     const tzPart = parts.find((part) => part.type === 'timeZoneName');
     return tzPart?.value || 'UTC';
   } catch {

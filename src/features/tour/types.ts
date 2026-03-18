@@ -67,6 +67,8 @@ export interface TourStepDef {
   titleKey: string;
   /** i18n キー（description） */
   descriptionKey: string;
+  /** i18n キー（モバイル用description、未指定時はdescriptionKeyを使用） */
+  descriptionMobileKey?: string | undefined;
   /** DOM 監視による自動進行 */
   autoAdvance?: AutoAdvanceStrategy | undefined;
   /** ステップ表示前に実行するアクション */

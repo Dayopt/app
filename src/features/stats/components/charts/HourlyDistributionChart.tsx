@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
@@ -11,6 +12,7 @@ import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } f
 
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { formatHours } from '../../utils/formatHours';
 
 const chartConfig = {
   hours: {
@@ -19,12 +21,8 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function formatHours(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)}m`;
-  return `${hours.toFixed(1)}h`;
-}
-
 export function HourlyDistributionChart() {
+  const t = useTranslations('calendar.stats.charts');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const dateRange = useMemo(
@@ -38,8 +36,8 @@ export function HourlyDistributionChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Hourly Distribution</CardTitle>
-          <CardDescription>When you work</CardDescription>
+          <CardTitle>{t('hourlyDist')}</CardTitle>
+          <CardDescription>{t('hourlyDistDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
@@ -52,12 +50,12 @@ export function HourlyDistributionChart() {
     return (
       <Card className="border-none">
         <CardHeader>
-          <CardTitle>Hourly Distribution</CardTitle>
-          <CardDescription>When you work</CardDescription>
+          <CardTitle>{t('hourlyDist')}</CardTitle>
+          <CardDescription>{t('hourlyDistDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
-            No data
+            {t('noData')}
           </div>
         </CardContent>
       </Card>
@@ -73,9 +71,12 @@ export function HourlyDistributionChart() {
   return (
     <Card className="border-none">
       <CardHeader>
-        <CardTitle>Hourly Distribution</CardTitle>
+        <CardTitle>{t('hourlyDist')}</CardTitle>
         <CardDescription>
-          Peak: {maxSlot?.timeSlot} ({formatHours(maxSlot?.hours ?? 0)})
+          {t('hourlyPeak', {
+            slot: maxSlot?.timeSlot ?? '',
+            hours: formatHours(maxSlot?.hours ?? 0),
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -106,7 +107,7 @@ export function HourlyDistributionChart() {
         </ChartContainer>
 
         <div className="text-muted-foreground mt-2 text-center text-xs">
-          Total {formatHours(totalHours)}
+          {t('hourlyTotal', { hours: formatHours(totalHours) })}
         </div>
       </CardContent>
     </Card>

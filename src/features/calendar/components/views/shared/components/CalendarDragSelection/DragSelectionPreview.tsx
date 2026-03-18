@@ -84,7 +84,9 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
     >
       <div className="flex h-full flex-col justify-between p-2">
         <span className="text-foreground text-sm font-semibold tabular-nums">{timeLabel}</span>
-        <span className="text-foreground/60 text-sm font-medium tabular-nums">{durationText}</span>
+        <span className="text-muted-foreground text-sm font-medium tabular-nums">
+          {durationText}
+        </span>
       </div>
     </div>
   );

@@ -1,16 +1,17 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { usePathname } from '@/platform/i18n/navigation';
 
+import { TOUR_START_DELAY } from '../constants';
 import { useAutoAdvance } from '../hooks/useAutoAdvance';
 import { useBeforeEnter } from '../hooks/useBeforeEnter';
-import { useTourAutoStart } from '../hooks/useTourAutoStart';
 import { useTourSnapshot } from '../hooks/useTourSnapshot';
 import { useTourStore } from '../stores/useTourStore';
 import { TourBackdrop } from './TourBackdrop';
 import { TourDoneCard } from './TourDoneCard';
+import { TourPreChoice } from './TourPreChoice';
 import { TourStepRenderer } from './TourStepRenderer';
 
 import type { StepValidationResult, StepValidators, TourStepId } from '../types';
@@ -35,8 +36,35 @@ export function TourOrchestrator({ stepValidators, onValidationFail }: TourOrche
 
   const isCalendarPage = pathname.startsWith('/calendar');
 
-  // フック: カレンダーページでの自動開始
-  useTourAutoStart(isCalendarPage && snapshot.status !== 'completed');
+  // プレチョイス画面の表示状態
+  const [showPreChoice, setShowPreChoice] = useState(false);
+
+  // カレンダーページで未完了の場合、プレチョイスを表示
+  useEffect(() => {
+    if (!isCalendarPage || snapshot.status !== 'idle') return;
+
+    // completed フラグをチェック（persist された状態）
+    const machine = useTourStore.getState().machine;
+    if (machine.completed) return;
+
+    const timer = setTimeout(() => {
+      setShowPreChoice(true);
+    }, TOUR_START_DELAY);
+
+    return () => clearTimeout(timer);
+  }, [isCalendarPage, snapshot.status]);
+
+  const handlePreChoiceStart = useCallback(() => {
+    setShowPreChoice(false);
+    send({ type: 'START' });
+  }, [send]);
+
+  const handlePreChoiceSkip = useCallback(() => {
+    setShowPreChoice(false);
+    send({ type: 'START' });
+    // START してすぐ SKIP で completed 状態にする
+    send({ type: 'SKIP' });
+  }, [send]);
 
   // フック: beforeEnter 処理（スクロール等）
   const handleBeforeEnterComplete = useCallback(
@@ -71,6 +99,16 @@ export function TourOrchestrator({ stepValidators, onValidationFail }: TourOrche
   );
 
   // ---- レンダリング ----
+
+  // プレチョイス画面
+  if (showPreChoice) {
+    return (
+      <>
+        <TourBackdrop />
+        <TourPreChoice onStart={handlePreChoiceStart} onSkip={handlePreChoiceSkip} />
+      </>
+    );
+  }
 
   if (snapshot.status === 'idle' || snapshot.status === 'completed') return null;
   if (!isCalendarPage) return null;

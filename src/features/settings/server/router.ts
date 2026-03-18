@@ -247,4 +247,89 @@ export const userSettingsRouter = createTRPCRouter({
       settings: data,
     };
   }),
+
+  /**
+   * iCalフィードトークン取得
+   *
+   * NOTE: ical_feed_tokenカラムはマイグレーション後に追加されるため、
+   * 生成型にはまだ含まれていない。RPC経由で直接SQLを実行。
+   */
+  getICalToken: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーIDが見つかりません',
+      });
+    }
+
+    const { data, error } = await ctx.supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      logger.error('iCal token fetch error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'iCalトークンの取得に失敗しました',
+      });
+    }
+
+    // ical_feed_token は生成型に未反映のため Record 経由で取得
+    const token = (data as Record<string, unknown> | null)?.ical_feed_token;
+    return { token: (token as string) ?? null };
+  }),
+
+  /**
+   * iCalフィードトークン再生成
+   */
+  regenerateICalToken: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.userId;
+
+    if (!userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーIDが見つかりません',
+      });
+    }
+
+    // user_settingsにレコードがなければ作成、あれば更新
+    const newToken = crypto.randomUUID();
+    const { error } = await ctx.supabase.from('user_settings').upsert(
+      {
+        user_id: userId,
+      },
+      { onConflict: 'user_id' },
+    );
+
+    if (error) {
+      logger.error('iCal token upsert error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'iCalトークンの再生成に失敗しました',
+      });
+    }
+
+    // ical_feed_tokenは生成型に未反映のためSQL実行
+    const { data: updated, error: updateError } = await ctx.supabase
+      .from('user_settings')
+      .update({ ical_feed_token: newToken } as never)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      logger.error('iCal token update error:', updateError);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'iCalトークンの再生成に失敗しました',
+      });
+    }
+
+    const token = (updated as Record<string, unknown>).ical_feed_token;
+    return { token: token as string };
+  }),
 });

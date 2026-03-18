@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { SignupForm } from './SignupForm';
 
@@ -40,6 +41,77 @@ export const WithInteraction: Story = {
     await expect(passwordInput).not.toBeNull();
     await userEvent.type(passwordInput!, 'SecureP@ss123');
     await expect(passwordInput).toHaveValue('SecureP@ss123');
+  },
+};
+
+/**
+ * 送信中（ローディング）状態。
+ *
+ * signUp を永久にペンディングなPromiseに差し替えて、
+ * フォーム送信後のスピナー・ボタンのdisabled状態を確認する。
+ */
+export const Submitting: Story = {
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        signUp: () => new Promise(() => undefined),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByRole('textbox', { name: /メールアドレス/ });
+    await userEvent.type(emailInput, 'newuser@example.com');
+
+    const passwordInput = canvasElement.querySelector<HTMLInputElement>('#password');
+    await userEvent.type(passwordInput!, 'SecureP@ss123');
+
+    const submitButton = canvas.getByRole('button', { name: /アカウント作成/i });
+    await userEvent.click(submitButton);
+
+    // ボタンがローディング状態になっていることを確認
+    await expect(submitButton).toBeDisabled();
+  },
+};
+
+/**
+ * サーバーエラー表示状態。
+ *
+ * signUp がエラーを返すようにモックし、送信後にエラーメッセージが
+ * フォーム上部に表示されることを確認する。
+ */
+export const ServerError: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        signUp: () =>
+          Promise.resolve({
+            data: { user: null, session: null },
+            error: { message: 'User already registered', name: 'AuthError', status: 400 },
+          } as never),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByRole('textbox', { name: /メールアドレス/ });
+    await userEvent.type(emailInput, 'existing@example.com');
+
+    const passwordInput = canvasElement.querySelector<HTMLInputElement>('#password');
+    await userEvent.type(passwordInput!, 'SecureP@ss123');
+
+    const submitButton = canvas.getByRole('button', { name: /アカウント作成/i });
+    await userEvent.click(submitButton);
+
+    // エラーメッセージが表示されることを確認（非同期のため waitFor）
+    await waitFor(() => expect(canvas.getByRole('alert')).toBeInTheDocument());
   },
 };
 

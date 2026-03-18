@@ -78,6 +78,7 @@ export {
   isRecurringEntry,
 } from './lib/entry-recurrence';
 export type { EntryInstanceException, ExpandedOccurrence } from './lib/entry-recurrence';
+export { entriesToICal } from './lib/entry-to-ical';
 export { configToRRule, configToReadable, ruleToConfig } from './lib/rrule';
 
 // =============================================================================

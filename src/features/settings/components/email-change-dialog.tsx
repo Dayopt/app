@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { InfoBox } from '@/components/common/InfoBox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,7 +25,8 @@ interface EmailChangeDialogProps {
 }
 
 export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailChangeDialogProps) {
-  const t = useTranslations();
+  const t = useTranslations('settings.account.emailChange');
+  const tErrors = useTranslations('common.errors');
   const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +48,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
       });
 
       if (signInError) {
-        throw new Error(t('common.errors.auth.wrongPassword'));
+        throw new Error(tErrors('auth.wrongPassword'));
       }
 
       // 2. メールアドレス更新（確認メール送信）
@@ -58,13 +60,13 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
       );
 
       if (updateError) {
-        throw new Error(`${t('common.errors.auth.emailUpdateFailed')}: ${updateError.message}`);
+        throw new Error(`${tErrors('auth.emailUpdateFailed')}: ${updateError.message}`);
       }
 
       // 成功
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.errors.generic'));
+      setError(err instanceof Error ? err.message : tErrors('generic'));
     } finally {
       setIsLoading(false);
     }
@@ -82,30 +84,22 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>メールアドレスを変更</DialogTitle>
-          <DialogDescription>
-            {success
-              ? '確認メールを送信しました'
-              : '新しいメールアドレスとパスワードを入力してください'}
-          </DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{success ? t('successTitle') : t('description')}</DialogDescription>
         </DialogHeader>
 
         {success ? (
           <div className="space-y-4 py-4">
-            <div className="bg-surface-inset rounded-2xl p-4">
-              <p className="text-sm">
-                <strong>{newEmail}</strong> に確認メールを送信しました。
-              </p>
-              <p className="text-muted-foreground mt-2 text-xs">
-                メール内のリンクをクリックして、メールアドレスの変更を完了してください。
-              </p>
-            </div>
+            <InfoBox>
+              <p className="text-sm">{t('successMessage', { email: newEmail })}</p>
+              <p className="text-muted-foreground mt-2 text-xs">{t('successHint')}</p>
+            </InfoBox>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="current-email">現在のメールアドレス</Label>
+                <Label htmlFor="current-email">{t('currentEmail')}</Label>
                 <Input
                   id="current-email"
                   type="email"
@@ -116,7 +110,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="new-email">新しいメールアドレス</Label>
+                <Label htmlFor="new-email">{t('newEmail')}</Label>
                 <Input
                   id="new-email"
                   type="email"
@@ -131,14 +125,14 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">パスワード確認</Label>
+                <Label htmlFor="password">{t('passwordConfirm')}</Label>
                 <Input
                   id="password"
                   type="password"
                   enterKeyHint="go"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="現在のパスワードを入力"
+                  placeholder={t('passwordPlaceholder')}
                   required
                   autoComplete="current-password"
                 />
@@ -153,10 +147,10 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
-                キャンセル
+                {t('cancel')}
               </Button>
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? '確認中...' : '確認メールを送信'}
+                {isLoading ? t('submitting') : t('submit')}
               </Button>
             </DialogFooter>
           </form>
@@ -164,7 +158,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
 
         {success && (
           <DialogFooter>
-            <Button onClick={handleClose}>閉じる</Button>
+            <Button onClick={handleClose}>{t('close')}</Button>
           </DialogFooter>
         )}
       </DialogContent>

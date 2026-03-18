@@ -169,10 +169,7 @@ export function GroupHeader({
           {onDeleteGroup && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={onDeleteGroup}
-                className="text-destructive focus:text-destructive"
-              >
+              <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
                 <Trash2 className="mr-2 size-4" />
                 {t('calendar.filter.deleteGroup.label')}
               </DropdownMenuItem>

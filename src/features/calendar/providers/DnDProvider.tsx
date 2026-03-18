@@ -45,7 +45,7 @@ interface DnDProviderProps {
 export const DnDProvider = ({ children }: DnDProviderProps) => {
   const t = useTranslations();
   const { updateEntry } = useEntryMutations();
-  const { timezone } = useCalendarSettingsStore();
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
   const { formatDate: formatDateWithSettings } = useDateFormat();
   const { tap, success } = useHapticFeedback();
   const [activeId, setActiveId] = useState<string | null>(null);

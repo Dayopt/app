@@ -16,7 +16,7 @@ const meta = {
     },
     size: {
       control: 'select',
-      options: ['sm', 'default', 'lg', 'icon-sm', 'icon', 'icon-lg'],
+      options: ['sm', 'default', 'lg'],
       description: 'ボタンのサイズ',
     },
     isLoading: {

@@ -49,18 +49,26 @@ describe('normalizeDateTimeConsistency', () => {
     expect(data.end_time).toBe('2025-01-15T10:00:00.000Z');
   });
 
-  it('aligns end_time date to start_time date when dates differ', () => {
+  it('caps end_time at 23:59:59 when crossing midnight (end is on next day)', () => {
+    const data = {
+      start_time: '2025-01-15T23:45:00.000Z',
+      end_time: '2025-01-16T00:45:00.000Z', // next day (midnight crossing)
+    };
+    const result = normalizeDateTimeConsistency(data);
+    // end_time should be capped at 23:59:59.999 on Jan 15
+    expect(data.end_time).toBe('2025-01-15T23:59:59.999Z');
+    expect(result).toBe('capped');
+  });
+
+  it('caps end_time when end is on a later date with later time', () => {
     const data = {
       start_time: '2025-01-15T09:00:00.000Z',
-      end_time: '2025-01-16T10:00:00.000Z', // different day
+      end_time: '2025-01-16T10:00:00.000Z', // different day, end after start in absolute time
     };
-    normalizeDateTimeConsistency(data);
-    // end_time should now be on Jan 15
-    const endDate = new Date(data.end_time!);
-    const startDate = new Date(data.start_time!);
-    expect(endDate.getFullYear()).toBe(startDate.getFullYear());
-    expect(endDate.getMonth()).toBe(startDate.getMonth());
-    expect(endDate.getDate()).toBe(startDate.getDate());
+    const result = normalizeDateTimeConsistency(data);
+    // This is a midnight crossing (end > start but different date), should cap
+    expect(data.end_time).toBe('2025-01-15T23:59:59.999Z');
+    expect(result).toBe('capped');
   });
 
   it('fixes end_time to match start_time when end is before start on same day', () => {
@@ -73,5 +81,14 @@ describe('normalizeDateTimeConsistency', () => {
     const endDate = new Date(data.end_time!);
     const startDate = new Date(data.start_time!);
     expect(endDate.getTime()).toBeGreaterThanOrEqual(startDate.getTime());
+  });
+
+  it('returns undefined when no normalization needed', () => {
+    const data = {
+      start_time: '2025-01-15T09:00:00.000Z',
+      end_time: '2025-01-15T10:00:00.000Z',
+    };
+    const result = normalizeDateTimeConsistency(data);
+    expect(result).toBeUndefined();
   });
 });

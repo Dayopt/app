@@ -164,8 +164,8 @@
   --primary: oklch(0.5 0.188 var(--hue-brand));
   --primary-foreground: var(--white);
 
-  /* State: Active */
-  --state-active: oklch(0.3791 0.1378 265.5222);
+  /* State: Active（WCAG 1.4.11: bg上3:1+） */
+  --state-active: oklch(0.45 0.14 265.52);
   --state-active-foreground: oklch(0.8823 0.0571 254.1284);
 
   /* shadcn/ui互換エイリアス */
@@ -186,9 +186,9 @@
    * 温度グラデーション設計（同上） */
   --chronotype-warmup: oklch(0.55 0.13 145);     /* ウォームアップ - green */
   --chronotype-peak: oklch(0.65 0.16 85);        /* ピーク - amber */
-  --chronotype-dip: oklch(0.42 0.08 250);        /* ディップ - blue */
+  --chronotype-dip: oklch(0.55 0.10 250);        /* ディップ - blue（WCAG 1.4.11: bg上3:1+） */
   --chronotype-recovery: oklch(0.50 0.10 200);   /* リカバリー - cyan */
-  --chronotype-winddown: oklch(0.30 0.05 280);   /* ウインドダウン - indigo */
+  --chronotype-winddown: oklch(0.50 0.08 280);   /* ウインドダウン - indigo（WCAG 1.4.11: bg上3:1+） */
 
   /* Chronotype Tints（タイムライン背景用 - ダークモード、solid）
    * background(L=0.12)に対しL+4〜6%, C=0.025-0.045で色味を出す。
@@ -197,7 +197,7 @@
   --chronotype-tint-peak:     oklch(0.18 0.045 85);
   --chronotype-tint-dip:      oklch(0.16 0.025 250);
   --chronotype-tint-recovery: oklch(0.17 0.035 200);
-  --chronotype-tint-winddown: oklch(0.15 0.020 280);
+  --chronotype-tint-winddown: oklch(0.17 0.040 280);
 
   /* Tag Colors — Base（ダークモード: L=0.78, C=0.15） */
   --tag-red:    oklch(0.78 0.15 25);
@@ -211,21 +211,22 @@
   --tag-pink:   oklch(0.78 0.15 350);
   --tag-gray:   oklch(0.70 0.02 250);
 
-  /* Tag Colors — Tint（ダークモード card背景: L=0.30, C=0.04）
-   * card(L=0.24)上で6%差・foreground text(L≈0.92)とのコントラスト比 ≈ 8:1 */
-  --tag-red-tint:    oklch(0.30 0.04 25);
-  --tag-orange-tint: oklch(0.30 0.04 55);
-  --tag-amber-tint:  oklch(0.30 0.04 80);
-  --tag-green-tint:  oklch(0.30 0.04 145);
-  --tag-teal-tint:   oklch(0.30 0.04 185);
-  --tag-blue-tint:   oklch(0.30 0.04 250);
-  --tag-indigo-tint: oklch(0.30 0.04 280);
-  --tag-violet-tint: oklch(0.30 0.04 310);
-  --tag-pink-tint:   oklch(0.30 0.04 350);
-  --tag-gray-tint:   oklch(0.30 0.01 250);
+  /* Tag Colors — Tint（ダークモード card背景: L=0.28, C=0.06）
+   * card(L=0.24)上で視認可能・低明度でも色味を識別できるようC=0.06に引き上げ
+   * foreground text(L≈0.92)とのコントラスト比 ≈ 8:1 維持 */
+  --tag-red-tint:    oklch(0.28 0.06 25);
+  --tag-orange-tint: oklch(0.28 0.06 55);
+  --tag-amber-tint:  oklch(0.28 0.06 80);
+  --tag-green-tint:  oklch(0.28 0.06 145);
+  --tag-teal-tint:   oklch(0.28 0.06 185);
+  --tag-blue-tint:   oklch(0.28 0.06 250);
+  --tag-indigo-tint: oklch(0.28 0.06 280);
+  --tag-violet-tint: oklch(0.28 0.06 310);
+  --tag-pink-tint:   oklch(0.28 0.06 350);
+  --tag-gray-tint:   oklch(0.28 0.02 250);
 
   /* Borders & Inputs */
-  --border: var(--neutral-37);
+  --border: oklch(0.45 0 0);  /* L=0.45: bg(L=0.12)上で~4:1コントラスト */
   --input: var(--white-08);
   --ring: oklch(0.6231 0.188 var(--hue-brand));
 

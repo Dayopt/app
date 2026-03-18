@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -11,6 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 
+import { formatHours } from '../../utils/formatHours';
+
 import 'react-calendar-heatmap/dist/styles.css';
 
 type HeatmapValue = {
@@ -18,14 +21,8 @@ type HeatmapValue = {
   hours: number;
 };
 
-function formatHours(hours: number): string {
-  if (hours < 1) {
-    return `${Math.round(hours * 60)}m`;
-  }
-  return `${hours.toFixed(1)}h`;
-}
-
 export function YearlyHeatmap() {
+  const t = useTranslations('calendar.stats.charts');
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
@@ -55,9 +52,9 @@ export function YearlyHeatmap() {
     <Card className="border-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
-          <CardTitle>Yearly Grid</CardTitle>
+          <CardTitle>{t('yearlyGrid')}</CardTitle>
           <CardDescription>
-            {year} - Total {formatHours(totalHours)}
+            {year} - {t('yearlyTotal', { hours: formatHours(totalHours) })}
           </CardDescription>
         </div>
         <div className="flex items-center gap-1">
@@ -112,7 +109,7 @@ export function YearlyHeatmap() {
 
         {/* Legend */}
         <div className="text-muted-foreground mt-4 flex items-center justify-end gap-2 text-xs">
-          <span>Less</span>
+          <span>{t('yearlyLess')}</span>
           <div className="flex gap-1">
             <div className={cn('bg-muted size-3 rounded')} />
             <div className={cn('bg-primary/20 size-3 rounded')} />
@@ -120,7 +117,7 @@ export function YearlyHeatmap() {
             <div className={cn('bg-primary/60 size-3 rounded')} />
             <div className={cn('bg-primary/80 size-3 rounded')} />
           </div>
-          <span>More</span>
+          <span>{t('yearlyMore')}</span>
         </div>
       </CardContent>
 

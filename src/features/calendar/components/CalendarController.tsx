@@ -19,6 +19,7 @@ import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/ca
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
+import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
@@ -79,6 +80,9 @@ export interface CalendarControllerProps {
   onToggleWeekends: () => void;
   onDateSelect: (date: Date) => void;
 
+  // --- Settings persistence ---
+  onSettingsChange?: (settings: Partial<CalendarSettings>) => void;
+
   // --- Slots ---
   className?: string;
   rightSlot?: React.ReactNode;
@@ -111,6 +115,7 @@ export function CalendarController({
   onNavigateNext,
   onNavigateToday,
   onToggleWeekends,
+  onSettingsChange,
   onDateSelect,
   className,
   rightSlot,
@@ -189,6 +194,7 @@ export function CalendarController({
           start: viewDateRange.start,
           end: viewDateRange.end,
         }}
+        onSettingsChange={onSettingsChange}
         rightSlot={rightSlot}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />

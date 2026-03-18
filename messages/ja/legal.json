@@ -350,27 +350,5 @@
       },
       "lastUpdated": "最終更新日: 2025-10-15"
     }
-  },
-  "ossCredits": {
-    "title": "オープンソースライセンス",
-    "description": "このプロジェクトで使用しているオープンソースソフトウェアのライセンス情報",
-    "intro": "Dayoptは以下のオープンソースソフトウェアを使用しています。各プロジェクトのメンテナーと貢献者の皆様に深く感謝いたします。",
-    "totalPackages": "総パッケージ数",
-    "searchPlaceholder": "パッケージ名で検索...",
-    "license": "ライセンス",
-    "version": "バージョン",
-    "repository": "リポジトリ",
-    "publisher": "公開者",
-    "noRepository": "リポジトリ情報なし",
-    "noPublisher": "公開者情報なし",
-    "noResults": "検索結果が見つかりませんでした",
-    "loadingError": "ライセンス情報の読み込みに失敗しました",
-    "licenseDistribution": "ライセンス分布",
-    "packageList": "パッケージリスト（{count}件）",
-    "footer": {
-      "notice": "完全なライセンステキストとNOTICEファイルについては：",
-      "thirdPartyNotices": "THIRD_PARTY_NOTICES.txt",
-      "githubRepository": "GitHubリポジトリ"
-    }
   }
 }
