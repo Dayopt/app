@@ -742,6 +742,11 @@
       "cancelConfirmAction": "キャンセルする",
       "cancelConfirmCancel": "サブスクリプションを維持",
       "billingHistory": "請求履歴",
+      "pastDueTitle": "お支払いに問題があります",
+      "pastDueDescription": "前回のお支払いに失敗しました。アクセスを維持するため、お支払い方法を更新してください。",
+      "updatePayment": "支払い方法を更新",
+      "checkoutSuccess": "Proプランへようこそ！サブスクリプションが有効になりました。",
+      "checkoutCanceled": "チェックアウトがキャンセルされました。いつでもアップグレードできます。",
       "loadError": "課金情報の読み込みに失敗しました",
       "retry": "再試行",
       "plans": {
