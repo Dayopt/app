@@ -1,12 +1,8 @@
-import { useState } from 'react';
-
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { FieldError, FieldGroup } from '@/components/ui/field';
-import { Link } from '@/platform/i18n/navigation';
+import { FieldError } from '@/components/ui/field';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { PasswordResetForm } from './PasswordResetForm';
 
@@ -22,37 +18,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-// ─────────────────────────────────────────────────────────
-// Visual Variants
-// ─────────────────────────────────────────────────────────
-
-function PasswordResetSuccessExample() {
-  const [email] = useState('user@example.com');
-
-  return (
-    <div className="flex flex-col gap-6">
-      <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <div className="p-6 md:p-8">
-            <FieldGroup>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Check your email</h1>
-                <p className="text-muted-foreground text-balance">
-                  We sent a password reset link to <span className="font-normal">{email}</span>
-                </p>
-              </div>
-              <Button asChild>
-                <Link href="/auth/login">Back to login</Link>
-              </Button>
-            </FieldGroup>
-          </div>
-          <div className="bg-container relative hidden md:block" />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Stories
@@ -72,9 +37,94 @@ export const WithInteraction: Story = {
   },
 };
 
-/** リセットリンク送信完了 */
+/**
+ * 送信中（ローディング）状態。
+ *
+ * resetPassword を永久にペンディングなPromiseに差し替えて、
+ * フォーム送信後のスピナー・ボタンのdisabled状態を確認する。
+ */
+export const Submitting: Story = {
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        resetPassword: () => new Promise(() => undefined),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByLabelText(/メールアドレス/i);
+    await userEvent.type(emailInput, 'forgot@example.com');
+
+    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    await userEvent.click(submitButton);
+
+    // ボタンがローディング状態になっていることを確認
+    await expect(submitButton).toBeDisabled();
+  },
+};
+
+/**
+ * リセットリンク送信完了。
+ *
+ * resetPassword が成功を返すようにモックし、送信後に
+ * 実コンポーネントの成功画面（日本語テキスト）が表示されることを確認する。
+ */
 export const Success: Story = {
-  render: () => <PasswordResetSuccessExample />,
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        resetPassword: () => Promise.resolve({ error: null } as never),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByLabelText(/メールアドレス/i);
+    await userEvent.type(emailInput, 'user@example.com');
+
+    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    await userEvent.click(submitButton);
+
+    // 実コンポーネントの成功画面が表示されることを確認
+    await expect(canvas.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  },
+};
+
+/**
+ * サーバーエラー表示状態。
+ *
+ * resetPassword がエラーを返すようにモックし、送信後にエラーメッセージが
+ * フォーム上部に表示されることを確認する。
+ */
+export const ServerError: Story = {
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        resetPassword: () =>
+          Promise.resolve({
+            error: { message: 'Email rate limit exceeded', name: 'AuthError', status: 429 },
+          } as never),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByLabelText(/メールアドレス/i);
+    await userEvent.type(emailInput, 'forgot@example.com');
+
+    const submitButton = canvas.getByRole('button', { name: /リセットリンクを送信/i });
+    await userEvent.click(submitButton);
+
+    // エラーメッセージが表示されることを確認
+    await expect(canvas.getByRole('alert')).toBeInTheDocument();
+  },
 };
 
 /** エラーメッセージ一覧 */
@@ -97,8 +147,6 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <p className="text-muted-foreground mb-3 text-xs font-medium">Default</p>
       <PasswordResetForm />
-      <p className="text-muted-foreground mb-3 text-xs font-medium">Success</p>
-      <PasswordResetSuccessExample />
       <p className="text-muted-foreground mb-3 text-xs font-medium">ErrorMessages</p>
       <div className="flex max-w-md flex-col gap-4 p-6">
         <FieldError announceImmediately className="text-center">

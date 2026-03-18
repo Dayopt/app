@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 import { LoginForm } from './LoginForm';
 
@@ -58,6 +59,74 @@ export const PasswordToggle: Story = {
     const toggleButton = canvas.getByRole('button', { name: /パスワードを表示/i });
     await userEvent.click(toggleButton);
     await expect(passwordInput).toHaveAttribute('type', 'text');
+  },
+};
+
+/**
+ * 送信中（ローディング）状態。
+ *
+ * signIn を永久にペンディングなPromiseに差し替えて、
+ * フォーム送信後のスピナー・フィールドのaria-disabled状態を確認する。
+ */
+export const Submitting: Story = {
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        signIn: () => new Promise(() => undefined),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByRole('textbox', { name: /メールアドレス/ });
+    await userEvent.type(emailInput, 'user@example.com');
+
+    const passwordInput = canvasElement.querySelector<HTMLInputElement>('#password');
+    await userEvent.type(passwordInput!, 'SecureP@ss123');
+
+    const submitButton = canvas.getByRole('button', { name: /ログイン/i });
+    await userEvent.click(submitButton);
+
+    // ボタンがローディング状態になっていることを確認
+    await expect(submitButton).toBeDisabled();
+  },
+};
+
+/**
+ * サーバーエラー表示状態。
+ *
+ * signIn がエラーを返すようにモックし、送信後にエラーメッセージが
+ * フォーム上部に表示されることを確認する。
+ */
+export const ServerError: Story = {
+  decorators: [
+    (Story) => {
+      useAuthStore.setState({
+        signIn: () =>
+          Promise.resolve({
+            data: { user: null, session: null },
+            error: { message: 'Invalid login credentials', name: 'AuthError', status: 400 },
+          } as never),
+      } as never);
+      return <Story />;
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    const emailInput = canvas.getByRole('textbox', { name: /メールアドレス/ });
+    await userEvent.type(emailInput, 'user@example.com');
+
+    const passwordInput = canvasElement.querySelector<HTMLInputElement>('#password');
+    await userEvent.type(passwordInput!, 'WrongPassword');
+
+    const submitButton = canvas.getByRole('button', { name: /ログイン/i });
+    await userEvent.click(submitButton);
+
+    // エラーメッセージが表示されることを確認
+    await expect(canvas.getByRole('alert')).toBeInTheDocument();
   },
 };
 
