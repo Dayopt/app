@@ -309,19 +309,45 @@ export class EntryService {
   }
 
   /**
-   * エントリを削除
+   * エントリをソフト削除（deleted_at を設定）
+   *
+   * RLS の SELECT ポリシーが deleted_at IS NULL でフィルタするため、
+   * ソフト削除後はクエリ結果から自動的に除外される。
+   * UPDATE ポリシーは deleted_at をチェックしないため、restore() で復元可能。
    */
   async delete(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
     const { error } = await this.supabase
       .from('entries')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', entryId)
       .eq('user_id', userId);
 
     if (error) {
       throw new EntryServiceError('DELETE_FAILED', `Failed to delete entry: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * ソフト削除されたエントリを復元（Undo用）
+   *
+   * UPDATE RLS ポリシーは user_id のみチェックするため、
+   * deleted_at が設定されたエントリにもアクセス可能。
+   */
+  async restore(options: DeleteEntryOptions): Promise<{ success: boolean }> {
+    const { userId, entryId } = options;
+
+    const { error } = await this.supabase
+      .from('entries')
+      .update({ deleted_at: null })
+      .eq('id', entryId)
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new EntryServiceError('RESTORE_FAILED', `Failed to restore entry: ${error.message}`);
     }
 
     return { success: true };

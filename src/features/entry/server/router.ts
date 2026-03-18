@@ -111,11 +111,21 @@ export const entriesCoreRouter = createTRPCRouter({
       }
     }),
 
-  /** エントリ削除 */
+  /** エントリ削除（soft-delete） */
   delete: protectedProcedure.input(entryIdSchema).mutation(async ({ ctx, input }) => {
     const service = createEntryService(ctx.supabase);
     try {
       return await service.delete({ userId: ctx.userId, entryId: input.id });
+    } catch (error) {
+      handleServiceError(error);
+    }
+  }),
+
+  /** ソフト削除されたエントリを復元（Undo用） */
+  restore: protectedProcedure.input(entryIdSchema).mutation(async ({ ctx, input }) => {
+    const service = createEntryService(ctx.supabase);
+    try {
+      return await service.restore({ userId: ctx.userId, entryId: input.id });
     } catch (error) {
       handleServiceError(error);
     }
@@ -146,14 +156,15 @@ export const entriesCoreRouter = createTRPCRouter({
     return { count: data.length, entries: data };
   }),
 
-  /** 一括削除 */
+  /** 一括削除（soft-delete） */
   bulkDelete: protectedProcedure.input(bulkDeleteEntrySchema).mutation(async ({ ctx, input }) => {
     const { supabase, userId } = ctx;
-    const { error, count } = await supabase
+    const { data, error } = await supabase
       .from('entries')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .in('id', input.ids)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select('id');
 
     if (error) {
       throw new TRPCError({
@@ -161,7 +172,7 @@ export const entriesCoreRouter = createTRPCRouter({
         message: `Failed to bulk delete entries: ${error.message}`,
       });
     }
-    return { success: true, count: count ?? 0 };
+    return { success: true, count: data.length };
   }),
 
   /** 複数エントリにタグを一括設定（1エントリ1タグ、delete+insert） */

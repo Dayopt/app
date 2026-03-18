@@ -10,6 +10,7 @@ import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/shell/components/AppHeader';
 
+import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import { StatsDateDisplay } from './layout/StatsDateDisplay';
@@ -49,6 +50,9 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
   const t = useTranslations();
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<StatsTab>(tab);
+
+  // URL searchParams ↔ Zustand store の双方向同期
+  useStatsFilterSync();
 
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);

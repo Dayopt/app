@@ -17,11 +17,7 @@ import { toast } from 'sonner';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryCacheStore } from '../stores/useEntryCacheStore';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
-import {
-  createListQueryPredicate,
-  createTempId,
-  normalizeDateTime,
-} from './mutations/mutationUtils';
+import { createListQueryPredicate, createTempId } from './mutations/mutationUtils';
 
 /**
  * entries.list クエリキーにマッチする predicate
@@ -87,6 +83,7 @@ export function useEntryMutations() {
         reminder_at: null,
         reminder_sent: false,
         reviewed_at: null,
+        deleted_at: null,
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -308,7 +305,21 @@ export function useEntryMutations() {
     },
   });
 
-  // 削除
+  // 復元（Undo用 — soft-deleteされたエントリのdeleted_atをクリア）
+  const restoreEntry = api.entries.restore.useMutation({
+    onSuccess: (_, { id }) => {
+      logger.debug('[mutation:restore] onSuccess', { id });
+      toast.success(t('plan.toast.restored'));
+      void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
+      void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
+    },
+    onError: (error) => {
+      logger.error('[mutation:restore] onError', error);
+      toast.error(t('plan.toast.restoreFailed'));
+    },
+  });
+
+  // 削除（soft-delete）
   const deleteEntry = api.entries.delete.useMutation({
     onMutate: async ({ id }) => {
       logger.debug('[mutation:delete] onMutate', { id });
@@ -332,40 +343,17 @@ export function useEntryMutations() {
         return oldData.filter((entry) => entry.id !== id);
       });
 
-      // undo付きtoast
-      if (previousEntry) {
-        const restoreData = {
-          title: previousEntry.title,
-          description: previousEntry.description ?? undefined,
-          origin: previousEntry.origin as 'planned' | undefined,
-          start_time: normalizeDateTime(previousEntry.start_time),
-          end_time: normalizeDateTime(previousEntry.end_time),
-          reminder_minutes: previousEntry.reminder_minutes ?? undefined,
-          recurrence_type:
-            (previousEntry.recurrence_type as
-              | 'none'
-              | 'daily'
-              | 'weekly'
-              | 'monthly'
-              | 'yearly'
-              | 'weekdays') ?? undefined,
-          recurrence_rule: previousEntry.recurrence_rule ?? undefined,
-          fulfillment_score: previousEntry.fulfillment_score ?? undefined,
-        };
-
-        const displayTitle = previousEntry.title || t('entry.untitled');
-        toast.success(t('plan.toast.deleted', { title: displayTitle }), {
-          duration: 10000,
-          action: {
-            label: t('common.undo'),
-            onClick: () => {
-              createEntry.mutate(restoreData);
-            },
+      // undo付きtoast（soft-deleteなのでrestore APIで同一ID・タグを完全復元）
+      const displayTitle = previousEntry?.title || t('entry.untitled');
+      toast.success(t('plan.toast.deleted', { title: displayTitle }), {
+        duration: 6000,
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            restoreEntry.mutate({ id });
           },
-        });
-      } else {
-        toast.success(t('plan.toast.deleted'));
-      }
+        },
+      });
 
       closeInspector();
 
@@ -520,6 +508,7 @@ export function useEntryMutations() {
   return {
     createEntry,
     updateEntry,
+    restoreEntry,
     deleteEntry,
     bulkUpdateEntries,
     bulkDeleteEntries,

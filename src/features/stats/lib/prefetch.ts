@@ -5,6 +5,7 @@ import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
  * Stats ビュー用 prefetch
  *
  * デフォルト粒度（week）の日付範囲 + 前期間（TrendBadge 用）を事前取得する。
+ * KPI は統合エンドポイント getStatsOverview で 1 RPC にまとめる。
  */
 export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
@@ -28,22 +29,14 @@ export async function prefetchStatsData() {
     helpers.entries.getHourlyDistribution.prefetch(dateRange),
     helpers.entries.getDayOfWeekDistribution.prefetch(dateRange),
     helpers.entries.getMonthlyTrend.prefetch({ months: 3 }),
-    // KPI metrics（現在期間）
-    helpers.entries.getCumulativeTime.prefetch(dateRange),
-    helpers.entries.getAvgFulfillment.prefetch(dateRange),
-    helpers.entries.getPlanRate.prefetch(dateRange),
+    // KPI unified（現在 + 前期間 = 2 RPC、旧: 14 RPC）
+    helpers.entries.getStatsOverview.prefetch(dateRange),
+    helpers.entries.getStatsOverview.prefetch(prevDateRange),
+    // 個別クエリ（統合に含められないもの）
     helpers.entries.getEstimationAccuracy.prefetch(dateRange),
-    helpers.entries.getEnergyMap.prefetch(dateRange),
-    helpers.entries.getContextSwitches.prefetch(dateRange),
-    helpers.entries.getBlankRate.prefetch(dateRange),
-    // KPI metrics（前期間 — TrendBadge 用）
-    helpers.entries.getCumulativeTime.prefetch(prevDateRange),
-    helpers.entries.getAvgFulfillment.prefetch(prevDateRange),
-    helpers.entries.getPlanRate.prefetch(prevDateRange),
     helpers.entries.getEstimationAccuracy.prefetch(prevDateRange),
+    helpers.entries.getEnergyMap.prefetch(dateRange),
     helpers.entries.getEnergyMap.prefetch(prevDateRange),
-    helpers.entries.getContextSwitches.prefetch(prevDateRange),
-    helpers.entries.getBlankRate.prefetch(prevDateRange),
   ]);
 
   return { helpers, dehydratedState: dehydrate(helpers.queryClient) };

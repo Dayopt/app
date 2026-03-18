@@ -257,6 +257,7 @@ export type Database = {
           actual_end_time: string | null;
           actual_start_time: string | null;
           created_at: string | null;
+          deleted_at: string | null;
           description: string | null;
           duration_minutes: number | null;
           end_time: string | null;
@@ -279,6 +280,7 @@ export type Database = {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           description?: string | null;
           duration_minutes?: number | null;
           end_time?: string | null;
@@ -301,6 +303,7 @@ export type Database = {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
           created_at?: string | null;
+          deleted_at?: string | null;
           description?: string | null;
           duration_minutes?: number | null;
           end_time?: string | null;

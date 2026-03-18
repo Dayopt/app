@@ -11,23 +11,6 @@
         }
       }
     },
-    "emptyState": {
-      "noResults": {
-        "title": "結果なし",
-        "description": "別の検索を試してください",
-        "action": "検索をクリア"
-      },
-      "noMatching": {
-        "title": "一致する項目なし",
-        "description": "フィルターを調整またはクリア",
-        "action": "フィルターをクリア"
-      },
-      "empty": {
-        "title": "プランがありません",
-        "description": "最初のプランを作成",
-        "action": "プランを作成"
-      }
-    },
     "toast": {
       "created": "「{title}」を作成しました",
       "createFailed": "作成に失敗しました: {error}",
@@ -36,6 +19,8 @@
       "updateFailed": "更新に失敗しました",
       "deleted": "削除しました",
       "deleteFailed": "削除に失敗しました: {error}",
+      "restored": "復元しました",
+      "restoreFailed": "復元に失敗しました",
       "bulkUpdated": "{count}件を更新しました",
       "bulkUpdateFailed": "一括更新に失敗しました: {error}",
       "bulkDeleted": "{count}件を削除しました",
@@ -61,24 +46,6 @@
       "willBeRemovedFromCalendar": "カレンダーから削除されます",
       "confirm": "削除",
       "deleting": "削除中..."
-    },
-    "bulk": {
-      "createNew": "新規作成",
-      "selected": "{count}件選択中",
-      "clear": "クリア",
-      "changeStatus": "ステータス変更",
-      "archive": "アーカイブ",
-      "deleteLabel": "削除",
-      "deleteConfirmTitle": "{count}件のプランを削除しますか？",
-      "deleteConfirmDescription": "選択した{count}件のプランを完全に削除します。この操作は取り消せません。",
-      "cancel": "キャンセル",
-      "processing": "処理中...",
-      "bulkAddTags": "タグ一括追加",
-      "bulkAddTagsDescription": "{count}件のプランにタグを追加します",
-      "searchTags": "タグを検索...",
-      "noTagsFound": "タグが見つかりません",
-      "noTags": "タグがありません",
-      "addTags": "タグを追加"
     },
     "status": {
       "label": "ステータス",
@@ -176,20 +143,6 @@
         "fulfillmentLabel": "充実度: {score}/5",
         "addNewPlan": "予定を追加"
       }
-    },
-    "activity": {
-      "created": "プランを作成",
-      "updated": "プランを更新",
-      "statusChanged": "ステータスを変更",
-      "titleChanged": "タイトルを変更",
-      "descriptionChanged": "説明を更新",
-      "timeChanged": "時間を変更",
-      "tagAdded": "タグを追加",
-      "tagRemoved": "タグを削除",
-      "recurrenceChanged": "繰り返しを変更",
-      "reminderChanged": "通知を変更",
-      "deleted": "プランを削除",
-      "changed": "変更"
     },
     "view": {
       "edit": "編集",
