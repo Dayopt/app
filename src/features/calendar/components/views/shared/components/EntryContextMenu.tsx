@@ -164,7 +164,7 @@ export const EventContextMenu = ({
       ref={menuRef}
       role="menu"
       aria-label={t('calendar.contextMenu.title')}
-      className="bg-card text-card-foreground border-border animate-in fade-in-0 zoom-in-95 fixed z-[350] min-w-[12rem] rounded-lg border p-1 shadow-lg motion-reduce:animate-none"
+      className="bg-card text-card-foreground border-border animate-in fade-in-0 zoom-in-95 z-context-menu fixed min-w-[12rem] rounded-lg border p-1 shadow-lg motion-reduce:animate-none"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,

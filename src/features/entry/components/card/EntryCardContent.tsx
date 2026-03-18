@@ -77,12 +77,12 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
           </span>
           {plan.isRecurring && (
             <Repeat
-              className={cn('text-muted-foreground h-3 w-3 flex-shrink-0')}
+              className={cn('text-muted-foreground size-3 flex-shrink-0')}
               aria-label={locale === 'ja' ? '繰り返し' : 'Recurring'}
             />
           )}
           {plan.reminder_minutes != null && (
-            <Bell className="h-3 w-3 flex-shrink-0" aria-label={t('calendar.event.reminderSet')} />
+            <Bell className="size-3 flex-shrink-0" aria-label={t('calendar.event.reminderSet')} />
           )}
         </div>
       )}

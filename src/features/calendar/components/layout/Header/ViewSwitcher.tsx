@@ -160,7 +160,7 @@ export function ViewSwitcher({
         )}
       >
         <span>{currentLabel}</span>
-        <ChevronDown className="ml-2 h-4 w-4" />
+        <ChevronDown className="ml-2 size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="min-w-48">
         {/* メインビュー */}
@@ -172,7 +172,7 @@ export function ViewSwitcher({
           >
             <span>{t(option.labelKey)}</span>
             <div className="flex items-center gap-2">
-              {currentView === option.value && <Check className="text-primary h-4 w-4" />}
+              {currentView === option.value && <Check className="text-primary size-4" />}
               {currentView !== option.value && <span className="w-4" />}
               <span className="bg-surface-container text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
                 {option.shortcut}
@@ -187,7 +187,7 @@ export function ViewSwitcher({
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <span>{t('calendar.views.daysSubmenu')}</span>
-            {isMultiDayView(currentView) && <Check className="text-primary ml-auto h-4 w-4" />}
+            {isMultiDayView(currentView) && <Check className="text-primary ml-auto size-4" />}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             {DAY_COUNTS.map((count) => {
@@ -201,7 +201,7 @@ export function ViewSwitcher({
                 >
                   <span>{t('calendar.views.multiday', { count })}</span>
                   <div className="flex items-center gap-2">
-                    {isActive && <Check className="text-primary h-4 w-4" />}
+                    {isActive && <Check className="text-primary size-4" />}
                     {!isActive && <span className="w-4" />}
                     <span className="bg-surface-container text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
                       {count}

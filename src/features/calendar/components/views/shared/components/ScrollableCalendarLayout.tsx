@@ -219,7 +219,7 @@ export const ScrollableCalendarLayout = ({
 
           {/* 縦の区切り線 */}
           {displayDates && displayDates.length > 1 && (
-            <div className="pointer-events-none absolute inset-0 z-[6] flex">
+            <div className="pointer-events-none absolute inset-0 z-5 flex">
               {displayDates.map((_, index) => (
                 <div
                   key={index}

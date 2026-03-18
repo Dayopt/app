@@ -98,7 +98,7 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
         <button
           type="button"
           onClick={handleDismiss}
-          className="rounded-full p-1 transition-colors hover:bg-white/20"
+          className="hover:bg-primary-foreground/20 rounded-full p-1 transition-colors"
           aria-label={t('actions.close')}
         >
           <X className="size-4" />
