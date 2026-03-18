@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
 import { invalidateUserTagsCache } from '@/platform/cache';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
@@ -113,7 +114,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化（次のリクエストで最新データ取得）
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return tag;
       } catch (error) {
@@ -158,7 +164,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return tag;
       } catch (error) {
@@ -193,7 +204,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -223,7 +239,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return deletedTag;
       } catch (error) {
@@ -251,7 +272,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return { updatedTags, count: updatedTags.length };
       } catch (error) {
@@ -279,7 +305,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -309,7 +340,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -342,7 +378,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
