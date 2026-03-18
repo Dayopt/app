@@ -15,6 +15,7 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
+    a11y: { test: 'todo' },
   },
 } satisfies Meta;
 

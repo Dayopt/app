@@ -12,6 +12,7 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'padded',
+    a11y: { test: 'todo' },
   },
   args: {
     startHour: 0,

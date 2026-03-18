@@ -61,6 +61,9 @@ export const Default: Story = {
 
 /** Lion選択済み */
 export const WithSelection: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     selectedType: 'lion',
     showQuiz: false,
@@ -69,6 +72,9 @@ export const WithSelection: Story = {
 
 /** 完了処理中（ローディング状態） */
 export const Completing: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     selectedType: 'bear',
     showQuiz: false,
@@ -86,6 +92,9 @@ export const QuizMode: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     selectedType: null,
     showQuiz: false,

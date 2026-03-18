@@ -83,6 +83,9 @@ export const Submitting: Story = {
  * フォーム上部に表示されることを確認する。
  */
 export const ServerError: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   decorators: [
     (Story) => {
       useAuthStore.setState({

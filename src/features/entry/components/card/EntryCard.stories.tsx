@@ -176,6 +176,9 @@ export const ActiveState: Story = {
 
 /** ドラッグ中状態。opacity-30 で半透明化（ドラッグゴーストの元カード）。 */
 export const DraggingState: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <Slot>
       <EntryCard

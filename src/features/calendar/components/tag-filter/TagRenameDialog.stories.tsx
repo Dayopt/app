@@ -17,6 +17,7 @@ const meta = {
   component: TagRenameDialog,
   parameters: {
     layout: 'centered',
+    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
   args: {

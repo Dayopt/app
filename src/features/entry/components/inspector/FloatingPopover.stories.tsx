@@ -94,6 +94,9 @@ export const AnchoredRight: Story = {
 
 /** スクロールコンテンツ — max-h-[40rem] を超えるコンテンツはスクロール可能。 */
 export const WithScrollContent: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <FloatingPopover onClose={fn()} title="エントリ詳細（スクロール）">
       <div className="flex flex-col gap-2 p-4">

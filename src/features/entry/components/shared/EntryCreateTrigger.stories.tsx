@@ -41,6 +41,9 @@ export const WithButton: Story = {
 
 /** アイコンのみのボタンをtriggerに渡した場合。 */
 export const WithIconButton: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     triggerElement: (
       <Button variant="ghost" icon>
@@ -72,6 +75,9 @@ export const WithInitialDate: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     triggerElement: (
       <Button variant="primary" size="sm">

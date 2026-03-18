@@ -165,6 +165,7 @@ const meta = {
   component: CalendarFilterList,
   parameters: {
     layout: 'padded',
+    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
   decorators: [

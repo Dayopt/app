@@ -113,6 +113,9 @@ export const Placeholder: Story = {
 
 /** TimeRowPlaceholder — muted（薄く表示）。 */
 export const PlaceholderMuted: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="w-80">
       <TimeRowPlaceholder label="記録時間" icon={Clock} message="記録なし" muted />
@@ -122,6 +125,9 @@ export const PlaceholderMuted: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">

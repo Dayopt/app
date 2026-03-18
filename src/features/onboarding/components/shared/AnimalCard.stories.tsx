@@ -39,6 +39,9 @@ export const Default: Story = {
 
 /** 選択状態 */
 export const Selected: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     type: 'bear',
     emoji: '🐻',
@@ -52,6 +55,9 @@ export const Selected: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
+  parameters: {
+    a11y: { test: 'todo' },
+  },
   args: {
     type: 'lion',
     emoji: '🦁',

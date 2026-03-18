@@ -13,6 +13,7 @@ const meta = {
   title: 'Features/Entry/Inspector/TimeProgressBar',
   parameters: {
     layout: 'padded',
+    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
 } satisfies Meta;

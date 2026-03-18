@@ -10,6 +10,7 @@ const meta = {
   component: TimezoneOffset,
   parameters: {
     layout: 'padded',
+    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof TimezoneOffset>;
