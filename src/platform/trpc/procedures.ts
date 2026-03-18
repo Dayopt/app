@@ -309,7 +309,8 @@ export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
   const status = (data as Record<string, unknown> | null)?.subscription_status as
     | string
     | undefined;
-  const isProActive = status === 'active' || status === 'trialing';
+  // past_due: Stripe dunning（回収リトライ）期間中はアクセス維持
+  const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
 
   if (!isProActive) {
     throw new TRPCError({
