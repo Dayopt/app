@@ -95,8 +95,11 @@ export const ActiveEntry: Story = {
 // オリジン（origin）
 // ---------------------------------------------------------------------------
 
-/** Unplanned エントリ。左アクセントが点線パターンで表示される。 */
-export const UnplannedEntry: Story = {
+/**
+ * Planned エントリ。origin='planned' で予定として登録されたエントリ。
+ * origin 未設定（undefined）の場合はタイムブロック記録として扱われる。
+ */
+export const PlannedEntry: Story = {
   render: () => (
     <Slot>
       <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
@@ -105,10 +108,77 @@ export const UnplannedEntry: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// タグ・レイアウト・選択・アクティブ状態
+// ---------------------------------------------------------------------------
+
+/** タグカラー付き。tagName と tagColor を渡すとアクセントカラーが変わる。 */
+export const WithTag: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard entry={baseEntry} tagName="仕事" tagColor="blue" position={basePosition} />
+    </Slot>
+  ),
+};
+
+/** モバイルレイアウト。isMobile={true} で左アクセント幅が 2px になる。 */
+export const MobileLayout: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard entry={baseEntry} position={basePosition} isMobile />
+    </Slot>
+  ),
+};
+
+/** コンパクト表示（高さ < 40px）。パディング縮小 + 横並びレイアウトで省スペース化。 */
+export const CompactLayout: Story = {
+  render: () => (
+    <div className="flex flex-col gap-4">
+      <p className="text-muted-foreground text-xs">PC（px-2）</p>
+      <Slot height={30}>
+        <EntryCard
+          entry={baseEntry}
+          tagName="仕事"
+          tagColor="blue"
+          position={{ ...basePosition, height: 30 }}
+        />
+      </Slot>
+      <p className="text-muted-foreground text-xs">モバイル（px-1.5）</p>
+      <Slot height={30}>
+        <EntryCard
+          entry={baseEntry}
+          tagName="仕事"
+          tagColor="blue"
+          position={{ ...basePosition, height: 30 }}
+          isMobile
+        />
+      </Slot>
+    </div>
+  ),
+};
+
+/** 選択状態。ring-primary の枠線が付く。 */
+export const SelectedState: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard entry={baseEntry} position={basePosition} isSelected />
+    </Slot>
+  ),
+};
+
+/** アクティブ状態（Inspector で開いているエントリ）。brightness-110 が適用される。 */
+export const ActiveState: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard entry={baseEntry} position={basePosition} isActive />
+    </Slot>
+  ),
+};
+
+// ---------------------------------------------------------------------------
 // 予定 vs 記録の差分オーバーレイ
 // ---------------------------------------------------------------------------
 
-/** 未実行オーバーレイ。予定時間に対して実績が短かった区間に斜線ハッチング。 */
+/** 未実行オーバーレイ。予定時間に対して実績が短かった区間に穏やかなフェードグラデーション。 */
 export const OverlayUnexecuted: Story = {
   render: () => (
     <Slot height={144}>
@@ -130,7 +200,7 @@ export const OverlayUnexecuted: Story = {
   ),
 };
 
-/** 超過オーバーレイ。予定時間を超えて実施した区間に左アクセント点線 + カード拡張。 */
+/** 超過オーバーレイ。予定時間を超えて実施した区間に左アクセントグラデーション + カード拡張。 */
 export const OverlayOvertime: Story = {
   render: () => (
     <Slot height={180}>
@@ -226,9 +296,38 @@ export const AllPatterns: Story = {
 
       {/* --- Origin --- */}
       <section>
-        <p className="text-muted-foreground mb-2 text-xs">Unplanned（左アクセント点線）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Planned（origin=&apos;planned&apos;）</p>
         <Slot>
           <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
+        </Slot>
+      </section>
+
+      {/* --- タグ・レイアウト・インタラクション状態 --- */}
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">WithTag（タグカラー: blue）</p>
+        <Slot>
+          <EntryCard entry={baseEntry} tagName="仕事" tagColor="blue" position={basePosition} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">MobileLayout（isMobile=true）</p>
+        <Slot>
+          <EntryCard entry={baseEntry} position={basePosition} isMobile />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">SelectedState（isSelected=true）</p>
+        <Slot>
+          <EntryCard entry={baseEntry} position={basePosition} isSelected />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">ActiveState（isActive=true）</p>
+        <Slot>
+          <EntryCard entry={baseEntry} position={basePosition} isActive />
         </Slot>
       </section>
 
@@ -243,7 +342,7 @@ export const AllPatterns: Story = {
       {/* --- 予定 vs 記録 差分オーバーレイ --- */}
       <section>
         <p className="text-muted-foreground mb-2 text-xs">
-          Overlay: Unexecuted（予定より実績が短い → 斜線ハッチング）
+          Overlay: Unexecuted（予定より実績が短い → フェードグラデーション）
         </p>
         <Slot height={144}>
           <EntryCard
@@ -265,7 +364,7 @@ export const AllPatterns: Story = {
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">
-          Overlay: Overtime（予定より実績が長い → 点線ボーダー拡張）
+          Overlay: Overtime（予定より実績が長い → グラデーション拡張）
         </p>
         <Slot height={180}>
           <EntryCard
@@ -294,9 +393,16 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト）</p>
+        <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト・PC）</p>
         <Slot height={36}>
           <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} />
+        </Slot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト・モバイル）</p>
+        <Slot height={36}>
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} isMobile />
         </Slot>
       </section>
 

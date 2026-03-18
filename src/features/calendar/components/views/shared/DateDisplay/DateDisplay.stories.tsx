@@ -88,6 +88,16 @@ export const DayDisplayWeekend: Story = {
   },
 };
 
+/** DayDisplay format='long'。曜日・日付・月名を縦に並べて表示する。 */
+export const LongFormat: Story = {
+  render: () => <DayDisplay date={today} format="long" />,
+};
+
+/** DayDisplay format='numeric'。曜日・日付の数字のみを表示する。 */
+export const NumericFormat: Story = {
+  render: () => <DayDisplay date={today} format="numeric" />,
+};
+
 // ---------------------------------------------------------------------------
 // 全パターン一覧
 // ---------------------------------------------------------------------------
