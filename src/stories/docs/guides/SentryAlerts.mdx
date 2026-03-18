@@ -208,6 +208,11 @@ THEN [アクション]
 - `API` - API呼び出しエラー
 - `VALIDATION` - バリデーションエラー
 
+**自動報告される追加タグ**:
+
+- `source:trpc_service` — tRPCの `handleServiceError()` 経由のエラー
+- `type:csp-violation` — CSP違反レポート
+
 ---
 
 ### 5. ユーザー影響大（多数ユーザーに影響）
@@ -228,6 +233,27 @@ THEN [アクション]
    - Send Slack notification to: `#alerts-critical`
    - **Mention**: `@channel` (全員に通知)
 6. **Save Rule**
+
+---
+
+### 6. CSP違反検知（推奨）
+
+**目的**: セキュリティポリシー違反を検知し、XSS等の攻撃を早期発見
+
+#### 設定手順
+
+1. **Create Alert Rule** → **Issues**
+2. **Alert name**: `CSP違反検知`
+3. **Environment**: `production`
+4. **条件設定**:
+   - **When**: `An event is captured`
+   - **Filter**: `tags.type:csp-violation`
+   - **Frequency**: `10 events in 1 hour`（大量違反時のみ通知）
+5. **Action**:
+   - Send Slack notification to: `#alerts-production`
+6. **Save Rule**
+
+> **注意**: ブラウザ拡張機能由来のCSP違反は `/api/csp-report` で自動フィルタ済みのため、このアラートに含まれません。
 
 ---
 
@@ -329,4 +355,4 @@ Slackチャンネルで:
 
 ---
 
-**最終更新**: 2026-02-25 | **バージョン**: v1.1
+**最終更新**: 2026-03-18 | **バージョン**: v1.2

@@ -25,7 +25,7 @@ Sentryはリアルタイムエラー追跡・パフォーマンス監視プラ�
 
 ```typescript
 // エラーパターン辞書との統合
-import { reportToSentry } from '@/lib/sentry';
+import { reportToSentry } from '@/platform/sentry';
 import { AppError } from '@/config/error-patterns';
 
 try {
@@ -54,11 +54,12 @@ dayopt/
 ├── sentry.edge.config.ts        # Edgeランタイム設定
 ├── next.config.mjs              # withSentryConfig()統合
 ├── .sentryclirc                 # Sentry CLI設定
-└── src/lib/sentry/              # ヘルパー関数
-    ├── index.ts                 # エクスポート
-    ├── integration.ts           # エラーパターン統合
-    ├── performance.ts           # パフォーマンス監視
-    └── trace.ts                 # カスタムトレース
+└── src/platform/sentry/           # ヘルパー関数
+    ├── index.ts                   # エクスポート
+    ├── integration.ts             # エラーパターン統合・Sentry連携
+    ├── performance.ts             # パフォーマンス監視
+    ├── trace.ts                   # カスタムトレース
+    └── WebVitalsReporter.tsx      # Web Vitals レポーター
 ```
 
 ### 各ファイルの役割
@@ -78,7 +79,7 @@ dayopt/
   ↓
 AppError生成（エラーパターン辞書）
   ↓
-reportToSentry()
+reportToSentry()  ← src/platform/sentry/integration.ts
   ↓
 カテゴリ別タグ付与・フィンガープリント生成
   ↓
@@ -86,6 +87,16 @@ Sentry送信（自動分類・構造化）
   ↓
 Sentryダッシュボード表示
 ```
+
+### 自動報告パイプライン
+
+手動の `reportToSentry()` 呼び出しに加え、以下の3つの自動報告が有効です：
+
+| パイプライン | 送信元 | 対象 |
+|---|---|---|
+| **CSP違反** | `/api/csp-report` | ブラウザ拡張機能以外のCSP違反 |
+| **tRPCエラー** | `handleServiceError()` | `INTERNAL_SERVER_ERROR` マッピングのエラー |
+| **ユーザーコンテキスト** | 認証レイヤー | ログイン中ユーザーのID（自動付与） |
 
 ### 環境別設定
 
@@ -191,7 +202,7 @@ curl http://localhost:3000/api/test/sentry?type=error
 #### 基本的な使い方
 
 ```typescript
-import { reportToSentry } from '@/lib/sentry';
+import { reportToSentry } from '@/platform/sentry';
 import { AppError } from '@/config/error-patterns';
 
 try {
@@ -209,7 +220,7 @@ try {
 #### Reactコンポーネントでのエラー
 
 ```typescript
-import { handleReactError } from '@/lib/sentry';
+import { handleReactError } from '@/platform/sentry';
 
 class ErrorBoundary extends React.Component {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -221,7 +232,7 @@ class ErrorBoundary extends React.Component {
 #### APIルートでのエラー
 
 ```typescript
-import { handleApiError } from '@/lib/sentry';
+import { handleApiError } from '@/platform/sentry';
 
 export async function GET(request: Request) {
   try {
@@ -254,7 +265,7 @@ Web Vitalsは `instrumentation-client.ts` で自動計測されます。
 #### カスタムパフォーマンストレース
 
 ```typescript
-import { withTrace, traceApiCall, traceDbQuery } from '@/lib/sentry';
+import { withTrace, traceApiCall, traceDbQuery } from '@/platform/sentry';
 
 // API呼び出し計測
 const tasks = await traceApiCall('GET /tasks', async () => {
@@ -278,6 +289,90 @@ const { result, duration } = await withTrace(
   },
 );
 ```
+
+---
+
+## 自動報告の詳細
+
+### CSP違反 → Sentry
+
+`/api/csp-report` エンドポイントで受信したCSP（Content Security Policy）違反をSentryに自動送信します。
+
+**対象ファイル**: `src/app/api/csp-report/route.ts`
+
+```typescript
+import * as Sentry from '@sentry/nextjs';
+
+// ブラウザ拡張機能由来の違反はSentryクォータ節約のため除外
+const IGNORED_URI_PREFIXES = [
+  'chrome-extension://',
+  'moz-extension://',
+  'safari-extension://',
+];
+
+// 拡張機能以外のCSP違反のみ送信
+Sentry.captureMessage(`CSP Violation: ${directive}`, {
+  level: 'warning',
+  tags: { type: 'csp-violation', directive, blockedUri },
+  contexts: { csp: { documentUri, effectiveDirective, sourceFile, lineNumber } },
+});
+```
+
+**ポイント**:
+- ブラウザ拡張機能のCSP違反は無視（`chrome-extension://` 等）
+- `warning` レベルで送信（`error` ではない）
+- Sentryダッシュボードで `type:csp-violation` タグでフィルタ可能
+
+### tRPCエラー → Sentry自動報告
+
+`handleServiceError()` で変換されるエラーのうち、`INTERNAL_SERVER_ERROR` にマッピングされるものを自動報告します。
+
+**対象ファイル**: `src/platform/trpc/errors.ts`
+
+```typescript
+import * as Sentry from '@sentry/nextjs';
+
+// INTERNAL_SERVER_ERROR相当のエラーのみ報告
+if (trpcCode === 'INTERNAL_SERVER_ERROR') {
+  Sentry.captureException(error, {
+    tags: { serviceErrorCode: error.code, source: 'trpc_service' },
+  });
+}
+```
+
+**報告対象の判定**:
+
+| tRPC コード | Sentryに報告 | 理由 |
+|---|---|---|
+| `INTERNAL_SERVER_ERROR` | **する** | サーバー側の異常 |
+| `BAD_REQUEST` | しない | ユーザー入力エラー |
+| `NOT_FOUND` | しない | 通常のリクエスト |
+| `UNAUTHORIZED` | しない | 認証切れ等 |
+| 未知のエラー | **する** | 予期しない障害 |
+
+### Sentry.setUser() 自動設定
+
+ログイン中のユーザーIDをSentryに自動設定し、エラー発生時にどのユーザーが影響を受けたか追跡可能にします。
+
+**サーバー側**: `src/platform/trpc/procedures.ts`
+
+```typescript
+// protectedProcedure middleware内
+Sentry.setUser({ id: ctx.userId });
+```
+
+**クライアント側**: `src/stores/useAuthStore.ts`
+
+```typescript
+// onAuthStateChange コールバック内
+if (session?.user) {
+  Sentry.setUser({ id: session.user.id });
+} else {
+  Sentry.setUser(null); // ログアウト時はクリア
+}
+```
+
+**GDPR対応**: `id` のみ送信。メールアドレス等の個人情報は含めません。
 
 ---
 
@@ -427,6 +522,7 @@ Core Web Vitals目標（2025基準）：
 - Session Replayで `maskAllText: true`, `blockAllMedia: true`
 - GDPR対応: Cookie同意がある場合のみSentry有効化
 - 個人情報（メールアドレス、パスワード等）はマスキング
+- `Sentry.setUser()` は `id` のみ送信（email等は含めない）
 
 ---
 
@@ -451,4 +547,4 @@ Core Web Vitals目標（2025基準）：
 
 ---
 
-**最終更新**: 2026-02-25 | **バージョン**: v2.1
+**最終更新**: 2026-03-18 | **バージョン**: v2.2
