@@ -364,18 +364,28 @@ export async function syncSubscriptionStatus(
   subscriptionId: string | null,
   status: SubscriptionStatus,
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .update({
       subscription_status: status,
       subscription_id: subscriptionId,
     } as never)
-    .eq('stripe_customer_id' as never, stripeCustomerId);
+    .eq('stripe_customer_id' as never, stripeCustomerId)
+    .select('id' as never);
 
   if (error) {
     logger.error('Failed to sync subscription status', { stripeCustomerId, status, error });
     throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync subscription status');
   }
 
-  logger.info('Subscription status synced', { stripeCustomerId, status });
+  const rowsUpdated = (data as unknown[] | null)?.length ?? 0;
+
+  if (rowsUpdated === 0) {
+    logger.warn('No profile found for stripe_customer_id during sync', {
+      stripeCustomerId,
+      status,
+    });
+  }
+
+  logger.info('Subscription status synced', { stripeCustomerId, status, rowsUpdated });
 }

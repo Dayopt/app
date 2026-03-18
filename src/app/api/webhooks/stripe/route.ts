@@ -106,6 +106,25 @@ export async function POST(request: NextRequest) {
   // RLS バイパスの admin client（webhook はユーザーコンテキストなし）
   const supabase = createServiceRoleClient();
 
+  // ─── 冪等性ガード ───────────────────────────────────
+  // 同一 event.id の重複処理を防止（Stripe はリトライする）
+  const { error: idempotencyError } = await supabase
+    .from('stripe_webhook_events' as never)
+    .insert({ event_id: event.id, event_type: event.type } as never);
+
+  if (idempotencyError) {
+    // 23505 = unique_violation → 処理済みイベント
+    if (idempotencyError.code === '23505') {
+      logger.info('Duplicate webhook event, skipping', { eventId: event.id });
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
+    // その他のDB エラーは処理を続行（冪等性チェック失敗でイベントを落とさない）
+    logger.warn('Idempotency check failed, proceeding with processing', {
+      eventId: event.id,
+      error: idempotencyError,
+    });
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -119,9 +138,15 @@ export async function POST(request: NextRequest) {
               ? session.subscription
               : session.subscription.id;
 
-          await syncSubscriptionStatus(supabase, customerId, subscriptionId, 'active');
-          logger.info('Checkout completed', { customerId, subscriptionId });
-          await notifySlack(`🎉 新規サブスクリプション開始\nCustomer: ${customerId}`);
+          // 実際の subscription ステータスを取得（trialing vs active）
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const status = mapStripeStatus(sub.status);
+
+          await syncSubscriptionStatus(supabase, customerId, subscriptionId, status);
+          logger.info('Checkout completed', { customerId, subscriptionId, status });
+          await notifySlack(
+            `🎉 新規サブスクリプション開始\nCustomer: ${customerId}\nStatus: ${status}`,
+          );
         }
         break;
       }
@@ -151,7 +176,7 @@ export async function POST(request: NextRequest) {
             ? subscription.customer
             : subscription.customer.id;
 
-        await syncSubscriptionStatus(supabase, customerId, null, 'free');
+        await syncSubscriptionStatus(supabase, customerId, null, 'canceled');
         logger.info('Subscription deleted', { customerId });
         await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
         break;
