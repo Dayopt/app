@@ -19,8 +19,6 @@
       "updateFailed": "Failed to update",
       "deleted": "Deleted",
       "deleteFailed": "Failed to delete: {error}",
-      "restored": "Restored",
-      "restoreFailed": "Failed to restore",
       "bulkUpdated": "{count, plural, one {1 item} other {# items}} updated",
       "bulkUpdateFailed": "Failed to bulk update: {error}",
       "bulkDeleted": "{count, plural, one {1 item} other {# items}} deleted",

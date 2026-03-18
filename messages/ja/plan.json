@@ -19,8 +19,6 @@
       "updateFailed": "更新に失敗しました",
       "deleted": "削除しました",
       "deleteFailed": "削除に失敗しました: {error}",
-      "restored": "復元しました",
-      "restoreFailed": "復元に失敗しました",
       "bulkUpdated": "{count}件を更新しました",
       "bulkUpdateFailed": "一括更新に失敗しました: {error}",
       "bulkDeleted": "{count}件を削除しました",

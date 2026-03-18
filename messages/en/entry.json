@@ -1,0 +1,9 @@
+{
+  "entry": {
+    "untitled": "Untitled",
+    "toast": {
+      "restored": "Restored",
+      "restoreFailed": "Failed to restore"
+    }
+  }
+}

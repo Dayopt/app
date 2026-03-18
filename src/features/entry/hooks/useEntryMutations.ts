@@ -309,13 +309,13 @@ export function useEntryMutations() {
   const restoreEntry = api.entries.restore.useMutation({
     onSuccess: (_, { id }) => {
       logger.debug('[mutation:restore] onSuccess', { id });
-      toast.success(t('plan.toast.restored'));
+      toast.success(t('entry.toast.restored'));
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
     },
     onError: (error) => {
       logger.error('[mutation:restore] onError', error);
-      toast.error(t('plan.toast.restoreFailed'));
+      toast.error(t('entry.toast.restoreFailed'));
     },
   });
 
