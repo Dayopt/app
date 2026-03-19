@@ -25,6 +25,8 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   error: string | null;
+  /** セッションが失効したことを示すフラグ（UIで通知→リダイレクトに使用） */
+  _sessionExpired: boolean;
 
   // Actions
   initialize: () => Promise<void>;
@@ -51,11 +53,14 @@ export const useAuthStore = create<AuthState>()(
       session: null,
       loading: true,
       error: null,
+      _sessionExpired: false,
 
       // Initialize authentication state
       initialize: async () => {
-        // タイムアウト付きでセッション取得（フリーズ防止）
-        const TIMEOUT_MS = 5000;
+        // オフライン時はタイムアウトを延長（偽ログアウト防止）
+        const isOffline =
+          typeof navigator !== 'undefined' && 'onLine' in navigator && !navigator.onLine;
+        const TIMEOUT_MS = isOffline ? 30_000 : 5_000;
 
         try {
           const supabase = createClient();
@@ -96,7 +101,8 @@ export const useAuthStore = create<AuthState>()(
           try {
             const {
               data: { subscription },
-            } = supabase.auth.onAuthStateChange((_event, session) => {
+            } = supabase.auth.onAuthStateChange((event, session) => {
+              const previousUser = _get().user;
               set({
                 session,
                 user: session?.user ?? null,
@@ -107,6 +113,11 @@ export const useAuthStore = create<AuthState>()(
                 Sentry.setUser({ id: session.user.id });
               } else {
                 Sentry.setUser(null);
+              }
+
+              // C2: セッション失効の検出 — 以前ログイン済みだったのに session が消えた場合
+              if (previousUser && !session?.user && event === 'SIGNED_OUT') {
+                set({ _sessionExpired: true });
               }
             });
 
@@ -328,3 +339,4 @@ export const selectSession = (state: AuthState) => state.session;
 export const selectLoading = (state: AuthState) => state.loading;
 export const selectError = (state: AuthState) => state.error;
 export const selectIsAuthenticated = (state: AuthState) => !!state.user;
+export const selectSessionExpired = (state: AuthState) => state._sessionExpired;
