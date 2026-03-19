@@ -52,7 +52,7 @@ export function ReminderSelect({
         <button
           type="button"
           disabled={disabled}
-          className="border-border bg-secondary text-secondary-foreground hover:bg-state-hover focus-visible:border-ring focus-visible:ring-ring/50 flex h-9 w-fit items-center gap-1 rounded-lg border px-2 py-0 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50"
+          className="border-border bg-secondary text-secondary-foreground hover:bg-state-hover focus-visible:border-ring focus-visible:ring-ring flex h-9 w-fit items-center gap-1 rounded-lg border px-2 py-0 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span>{getDisplayLabel()}</span>
           <svg
