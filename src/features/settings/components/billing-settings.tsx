@@ -125,11 +125,11 @@ export function BillingSettings() {
 
   const handleUpgrade = useCallback(() => {
     if (!STRIPE_PRICE_ID) {
-      toast.error('Stripe is not configured yet');
+      toast.error(t('settings.subscription.stripeNotConfigured'));
       return;
     }
     createCheckout.mutate({ priceId: STRIPE_PRICE_ID });
-  }, [createCheckout]);
+  }, [createCheckout, t]);
 
   const handleManageSubscription = useCallback(() => {
     createPortal.mutate();

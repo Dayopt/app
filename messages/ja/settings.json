@@ -747,6 +747,7 @@
       "updatePayment": "支払い方法を更新",
       "checkoutSuccess": "Proプランへようこそ！サブスクリプションが有効になりました。",
       "checkoutCanceled": "チェックアウトがキャンセルされました。いつでもアップグレードできます。",
+      "stripeNotConfigured": "Stripeがまだ設定されていません",
       "loadError": "課金情報の読み込みに失敗しました",
       "retry": "再試行",
       "plans": {

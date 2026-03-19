@@ -42,7 +42,7 @@ export function StatsDateDisplay({ currentDate, granularity, className }: StatsD
         return format(currentDate, pattern, { locale: dateFnsLocale });
       }
       case 'year': {
-        return locale === 'ja' ? `${currentDate.getFullYear()}年` : `${currentDate.getFullYear()}`;
+        return tCommon('dates.formats.year', { year: currentDate.getFullYear() });
       }
     }
   })();

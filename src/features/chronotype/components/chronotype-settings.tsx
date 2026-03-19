@@ -41,6 +41,7 @@ interface ChronotypeAutoSaveSettings {
 
 function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
   const t = useTranslations();
+  const tCommon = useTranslations('common');
 
   const segments = useMemo(() => {
     const result: Array<{ hour: number; level: ProductivityZone['level']; label: string }> = [];
@@ -67,11 +68,11 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
   return (
     <div className="space-y-2">
       <div className="text-muted-foreground flex justify-between text-xs">
-        <span>0時</span>
-        <span>6時</span>
-        <span>12時</span>
-        <span>18時</span>
-        <span>24時</span>
+        <span>{tCommon('dates.hourLabel', { hour: 0 })}</span>
+        <span>{tCommon('dates.hourLabel', { hour: 6 })}</span>
+        <span>{tCommon('dates.hourLabel', { hour: 12 })}</span>
+        <span>{tCommon('dates.hourLabel', { hour: 18 })}</span>
+        <span>{tCommon('dates.hourLabel', { hour: 24 })}</span>
       </div>
 
       <div className="flex h-6 overflow-hidden rounded-lg">

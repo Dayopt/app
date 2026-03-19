@@ -90,7 +90,7 @@ export function MonthlyTrendChart() {
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value: string) => value.replace('月', '')}
+              tickFormatter={(value: string) => value}
             />
             <YAxis hide />
             <ChartTooltip

@@ -297,7 +297,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([month, hours]) => {
             const monthPart = month.split('-')[1];
-            return { month, label: `${monthPart ? parseInt(monthPart) : 0}月`, hours };
+            return { month, label: `${monthPart ? parseInt(monthPart) : 0}`, hours };
           });
       } catch (error) {
         handleStatsError('getMonthlyTrend', error);

@@ -29,36 +29,41 @@ interface DateRangeDisplayProps {
 }
 
 /**
- * 日付範囲のテキストを生成
+ * 日付範囲のテキストを生成（翻訳テンプレート使用）
  */
 const generateRangeText = (
   date: Date,
   endDate: Date,
   dateFnsLocale: Locale,
-  localeCode: string,
+  tCommon: (key: string, params?: Record<string, string | number>) => string,
 ): string => {
   const sameMonth = date.getMonth() === endDate.getMonth();
   const sameYear = date.getFullYear() === endDate.getFullYear();
-  const isJa = localeCode === 'ja';
 
   if (sameYear && sameMonth) {
-    // 同月の場合: "2025年1月 1-7日" / "1-7 January 2025"
-    if (isJa) {
-      return `${format(date, 'yyyy年M月', { locale: dateFnsLocale })} ${format(date, 'd')}-${format(endDate, 'd')}日`;
-    }
-    return `${format(date, 'd')}-${format(endDate, 'd')} ${format(date, 'MMMM yyyy', { locale: dateFnsLocale })}`;
+    const monthYearPattern = tCommon('dates.formats.monthYear');
+    return tCommon('dates.formats.dayRangeSameMonth', {
+      start: format(date, 'd'),
+      end: format(endDate, 'd'),
+      monthYear: format(date, monthYearPattern, { locale: dateFnsLocale }),
+    });
   } else if (sameYear) {
-    // 同年異月の場合: "2025年 12月30日 - 1月5日" / "30 Dec - 5 Jan 2025"
-    if (isJa) {
-      return `${format(date, 'yyyy年 M月d日', { locale: dateFnsLocale })} - ${format(endDate, 'M月d日', { locale: dateFnsLocale })}`;
-    }
-    return `${format(date, 'd MMM', { locale: dateFnsLocale })} - ${format(endDate, 'd MMM yyyy', { locale: dateFnsLocale })}`;
+    return tCommon('dates.formats.dayRangeDiffMonth', {
+      startDay: format(date, 'd'),
+      startMonth: format(date, 'MMM', { locale: dateFnsLocale }),
+      endDay: format(endDate, 'd'),
+      endMonth: format(endDate, 'MMM', { locale: dateFnsLocale }),
+      year: date.getFullYear(),
+    });
   } else {
-    // 異年の場合: "2024年12月30日 - 2025年1月5日" / "30 Dec 2024 - 5 Jan 2025"
-    if (isJa) {
-      return `${format(date, 'yyyy年M月d日', { locale: dateFnsLocale })} - ${format(endDate, 'yyyy年M月d日', { locale: dateFnsLocale })}`;
-    }
-    return `${format(date, 'd MMM yyyy', { locale: dateFnsLocale })} - ${format(endDate, 'd MMM yyyy', { locale: dateFnsLocale })}`;
+    return tCommon('dates.formats.dayRangeDiffYear', {
+      startDay: format(date, 'd'),
+      startMonth: format(date, 'MMM', { locale: dateFnsLocale }),
+      startYear: date.getFullYear(),
+      endDay: format(endDate, 'd'),
+      endMonth: format(endDate, 'MMM', { locale: dateFnsLocale }),
+      endYear: endDate.getFullYear(),
+    });
   }
 };
 
@@ -93,7 +98,7 @@ export const DateRangeDisplay = ({
   // 表示テキストを決定
   const displayText =
     endDate && date.getTime() !== endDate.getTime()
-      ? generateRangeText(date, endDate, dateFnsLocale, locale)
+      ? generateRangeText(date, endDate, dateFnsLocale, tCommon)
       : format(date, localizedFormatPattern, { locale: dateFnsLocale });
 
   // 日付コンテンツ

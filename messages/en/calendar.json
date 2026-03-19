@@ -300,7 +300,8 @@
       "title": "Failed to load calendar",
       "description": "Please check your network connection and try again.",
       "retry": "Retry",
-      "reload": "Reload page"
+      "reload": "Reload page",
+      "entriesLoadFailed": "Failed to load entries. Please try refreshing."
     }
   }
 }
