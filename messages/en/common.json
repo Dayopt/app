@@ -268,6 +268,24 @@
       "later": "Later",
       "update": "Update"
     },
+    "pwa": {
+      "installTitle": "Install Dayopt",
+      "installDescription": "Add to home screen for a better experience",
+      "install": "Install",
+      "dismiss": "Dismiss",
+      "iosInstallTitle": "Add Dayopt to Home Screen",
+      "iosInstallDescription": "Install the app for a faster, full-screen experience.",
+      "iosStep1": "Tap the Share button",
+      "iosStep2": "Select \"Add to Home Screen\""
+    },
+    "sync": {
+      "offline": "Offline",
+      "pending": "{count, plural, one {# change pending} other {# changes pending}}",
+      "failed": "{count, plural, one {# sync failed} other {# syncs failed}}",
+      "clearFailed": "Clear",
+      "offlineToast": "You're offline. Changes will be saved and synced when you reconnect.",
+      "onlineToast": "Back online. Syncing changes..."
+    },
     "insights": {
       "noRecords": "No records this week.",
       "lastRecord": "Last record: {date}",

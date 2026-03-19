@@ -268,6 +268,24 @@
       "later": "後で",
       "update": "更新"
     },
+    "pwa": {
+      "installTitle": "Dayoptをインストール",
+      "installDescription": "ホーム画面に追加してより快適に",
+      "install": "インストール",
+      "dismiss": "閉じる",
+      "iosInstallTitle": "Dayoptをホーム画面に追加",
+      "iosInstallDescription": "アプリとしてインストールすると、より快適にご利用いただけます。",
+      "iosStep1": "共有ボタンをタップ",
+      "iosStep2": "「ホーム画面に追加」を選択"
+    },
+    "sync": {
+      "offline": "オフライン",
+      "pending": "同期待ち {count}件",
+      "failed": "同期失敗 {count}件",
+      "clearFailed": "クリア",
+      "offlineToast": "オフラインです。変更は保存され、再接続時に同期されます。",
+      "onlineToast": "オンラインに復帰しました。変更を同期中..."
+    },
     "insights": {
       "noRecords": "この週の記録はありません。",
       "lastRecord": "前回の記録: {date}",

@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
+import { SyncStatusIndicator } from '@/shell/components/SyncStatusIndicator';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MobileMenuButton } from './MobileMenuButton';
@@ -69,6 +70,9 @@ export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: Ap
 
         {/* 右側 */}
         <div className="flex items-center gap-2">
+          {/* 同期状態インジケーター（オフライン/同期待ち時のみ表示） */}
+          <SyncStatusIndicator />
+
           {/* モバイル右側コンテンツ */}
           {mobileRightSlot && (
             <div className="flex items-center gap-1 md:hidden">{mobileRightSlot}</div>
