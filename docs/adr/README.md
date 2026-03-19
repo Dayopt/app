@@ -1,0 +1,31 @@
+# Architecture Decision Records (ADR)
+
+Dayoptプロジェクトの主要な設計判断を文書化したADRインデックス。
+
+## 一覧
+
+| ID      | タイトル                                                               | 日付       | ステータス |
+| ------- | ---------------------------------------------------------------------- | ---------- | ---------- |
+| ADR-001 | [統合ブロックモデル](ADR-001-unified-block-model.md)                   | 2026-03-05 | accepted   |
+| ADR-002 | [Feature-Slicedアーキテクチャ](ADR-002-feature-sliced-architecture.md) | 2026-02-26 | accepted   |
+| ADR-003 | [MCP統合](ADR-003-mcp-integration.md)                                  | 2026-02-26 | accepted   |
+| ADR-004 | [3層AIアーキテクチャ](ADR-004-ai-architecture-layers.md)               | 2026-03-02 | accepted   |
+| ADR-005 | [時間不変原則](ADR-005-time-immutability-principle.md)                 | 2026-03-10 | accepted   |
+
+## 依存関係
+
+```
+ADR-001（データモデル）
+  └── ADR-005（時間制約はentriesモデルが前提）
+
+ADR-002（Feature境界）
+  ├── ADR-003（MCPはfeature境界を前提に外部ツール層を構成）
+  └── ADR-004（AI層はfeature境界に沿ったrules/skillsを定義）
+```
+
+## ADRの追加方法
+
+1. 次の連番IDで `ADR-NNN-slug.md` を作成
+2. テンプレート（frontmatter + Context/Decision/Consequences構造）に従う
+3. 本文は日本語、ファイル名は英語
+4. このREADMEのテーブルと依存関係図を更新

@@ -105,6 +105,7 @@
     "@supabase/supabase-js": "^2.50.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-query-persist-client": "^5.90.25",
     "@tiptap/extension-link": "^3.4.2",
     "@tiptap/extension-task-item": "^3.4.2",
     "@tiptap/extension-task-list": "^3.4.2",

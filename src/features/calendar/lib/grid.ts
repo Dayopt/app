@@ -58,22 +58,6 @@ export function pixelsToTime(
 }
 
 /**
- * ピクセル位置から時間と分を取得
- * @param pixels - Y座標（px）
- * @param hourHeight - 1時間の高さ（デフォルト: 72px）
- * @returns {hour, minute}
- */
-export function pixelsToTimeValues(
-  pixels: number,
-  hourHeight: number = DEFAULT_HOUR_HEIGHT,
-): { hour: number; minute: number } {
-  const totalMinutes = (pixels * 60) / hourHeight;
-  const hour = Math.floor(totalMinutes / 60);
-  const minute = Math.floor(totalMinutes % 60);
-  return { hour, minute };
-}
-
-/**
  * イベントの位置スタイルを計算
  * @param start - 開始時刻
  * @param end - 終了時刻
@@ -122,18 +106,6 @@ export function calculateGridHeight(
 }
 
 /**
- * 時間範囲内かチェック
- * @param time - チェックする時刻
- * @param startHour - 開始時間（0-24）
- * @param endHour - 終了時間（0-24）
- * @returns 範囲内ならtrue
- */
-export function isTimeInRange(time: Date, startHour: number, endHour: number): boolean {
-  const hour = time.getHours();
-  return hour >= startHour && hour < endHour;
-}
-
-/**
  * 15分単位に丸める
  * @param time - 丸める時刻
  * @param direction - 'up' | 'down' | 'nearest'
@@ -173,23 +145,6 @@ export function roundToQuarterHour(
  */
 export function getDurationInMinutes(start: Date, end: Date): number {
   return Math.max(0, (end.getTime() - start.getTime()) / MS_PER_MINUTE);
-}
-
-/**
- * スクロール位置を計算
- * @param targetHour - スクロール先の時間
- * @param hourHeight - 1時間の高さ
- * @param containerHeight - コンテナの高さ
- * @returns スクロール位置（px）
- */
-export function calculateScrollPosition(
-  targetHour: number,
-  hourHeight: number = DEFAULT_HOUR_HEIGHT,
-  containerHeight: number = 600,
-): number {
-  const targetPosition = targetHour * hourHeight;
-  // 画面の中央に表示するように調整
-  return Math.max(0, targetPosition - containerHeight / 3);
 }
 
 // ========================================

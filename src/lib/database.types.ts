@@ -846,6 +846,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      batch_rename_tags: {
+        Args: { p_user_id: string; p_tag_ids: string[]; p_new_names: string[] };
+        Returns: number;
+      };
+      batch_reorder_tags: {
+        Args: { p_user_id: string; p_tag_ids: string[]; p_sort_orders: number[] };
+        Returns: number;
+      };
       cleanup_old_auth_audit_logs: { Args: never; Returns: undefined };
       cleanup_old_login_attempts: { Args: never; Returns: undefined };
       cleanup_old_plan_activities: { Args: never; Returns: undefined };
@@ -1006,6 +1014,19 @@ export type Database = {
           p_user_agent?: string;
         };
         Returns: string;
+      };
+      rename_tag_group: {
+        Args: { p_user_id: string; p_old_prefix: string; p_new_prefix: string };
+        Returns: {
+          id: string;
+          user_id: string;
+          name: string;
+          color: string | null;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        }[];
       };
       use_recovery_code: {
         Args: { p_code_hash: string; p_user_id: string };

@@ -48,6 +48,8 @@ const serverSchema = z.object({
 
   // App
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  NEXT_PUBLIC_MAINTENANCE_MODE: z.enum(['true', 'false']).optional(),
   VERCEL_URL: z.string().optional(),
   VERCEL_ENV: z.string().optional(),
   SKIP_AUTH_IN_DEV: z.string().optional(),

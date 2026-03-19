@@ -237,9 +237,10 @@ inactivity_timeout = "720h"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# JWTにsubscription_statusを埋め込み、proProcedureでの毎リクエストDBクエリを排除
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Send Email Hook: カスタム認証メール送信（Resend経由）
 # ローカルでは無効化（Inbucket使用）。リモートは config push 時に env() で解決。

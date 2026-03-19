@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { useLayoutStore } from '@/shell/stores/useLayoutStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { Sidebar } from './Sidebar';
 
