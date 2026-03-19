@@ -63,6 +63,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
   // ドラフト（未保存プレビュー）かどうか判定
   const isDraft = entry.isDraft === true;
+  // 過去エントリかどうか（リサイズ・ドラッグ無効化に使用）
+  const isPast = entry.entryState === 'past';
+  // 進行中エントリかどうか（視覚区別に使用）
+  const isActiveEntry = entry.entryState === 'active';
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
@@ -273,7 +277,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     >
       {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
       <div
-        className="relative shrink-0"
+        className={cn('relative shrink-0', isActiveEntry && 'animate-pulse')}
         style={{
           width: `${accentWidth}px`,
           backgroundColor: accentColor,
@@ -345,7 +349,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
         {/* 下端リサイズハンドル（Draft/Past は非表示）
              視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保 */}
-        {!isDraft && (
+        {!isDraft && !isPast && (
           <div
             className="focus:ring-ring absolute right-0 bottom-[-12px] left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
