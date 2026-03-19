@@ -50,7 +50,7 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
   if (error) {
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `ユーザー情報の取得に失敗しました: ${error.message}`,
+      message: `Failed to fetch user info: ${error.message}`,
       cause: error,
     });
   }
@@ -134,7 +134,7 @@ function handleEmailError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `メール送信に失敗しました (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: `Email operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
     cause: error,
   });
 }

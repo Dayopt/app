@@ -20,7 +20,7 @@ function handlePreferencesError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `通知設定の操作に失敗しました (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: `Notification preferences operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
     cause: error,
   });
 }
@@ -39,7 +39,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -55,7 +55,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           logger.error('NotificationPreferences fetch error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `通知設定の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch notification preferences: ${error.message}`,
           });
         }
 
@@ -93,7 +93,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -111,7 +111,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           logger.error('NotificationPreferences update error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `通知設定の更新に失敗しました: ${error.message}`,
+            message: `Failed to update notification preferences: ${error.message}`,
           });
         }
 
@@ -134,7 +134,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -152,7 +152,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           logger.error('NotificationPreferences update error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `通知設定の更新に失敗しました: ${error.message}`,
+            message: `Failed to update notification preferences: ${error.message}`,
           });
         }
 
@@ -175,7 +175,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -193,7 +193,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           logger.error('NotificationPreferences update error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `通知設定の更新に失敗しました: ${error.message}`,
+            message: `Failed to update notification preferences: ${error.message}`,
           });
         }
 
@@ -216,7 +216,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -234,7 +234,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           logger.error('NotificationPreferences update error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `リマインダー設定の更新に失敗しました: ${error.message}`,
+            message: `Failed to update reminder settings: ${error.message}`,
           });
         }
 

@@ -285,31 +285,31 @@ export const ERROR_CATEGORIES = {
 /** エラーコードごとのメッセージ・レベル・アクション情報 */
 export const ERROR_INFO = {
   [ERROR_CODES.AUTH_INVALID_TOKEN]: {
-    message: '認証トークンが無効です',
+    message: 'Invalid authentication token',
     level: 'error',
     category: 'auth',
-    action: 'ログイン画面にリダイレクト',
+    action: 'Redirect to login',
     recoverable: true,
   },
   [ERROR_CODES.AUTH_EXPIRED]: {
-    message: '認証の有効期限が切れています',
+    message: 'Authentication expired',
     level: 'warning',
     category: 'auth',
-    action: 'トークンリフレッシュまたは再ログイン',
+    action: 'Refresh token or re-login',
     recoverable: true,
   },
   [ERROR_CODES.DATA_NOT_FOUND]: {
-    message: '要求されたデータが見つかりません',
+    message: 'Requested data not found',
     level: 'info',
     category: 'data',
-    action: '404画面表示',
+    action: 'Show 404 page',
     recoverable: false,
   },
   [ERROR_CODES.API_RATE_LIMIT]: {
-    message: 'APIリクエスト制限に達しました',
+    message: 'API rate limit reached',
     level: 'warning',
     category: 'api',
-    action: '一定時間後にリトライ',
+    action: 'Retry after cooldown',
     recoverable: true,
   },
   // 必要に応じて他のエラーコードの情報も追加

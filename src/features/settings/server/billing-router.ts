@@ -74,7 +74,7 @@ export const billingRouter = createTRPCRouter({
           });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `ユーザー情報の取得に失敗しました: ${authError.message}`,
+            message: `Failed to fetch user info: ${authError.message}`,
             cause: authError,
           });
         }
@@ -82,7 +82,7 @@ export const billingRouter = createTRPCRouter({
         if (!user?.email) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'メールアドレスが設定されていません。プロフィール設定を確認してください。',
+            message: 'Email address is not set. Please check your profile settings.',
           });
         }
 

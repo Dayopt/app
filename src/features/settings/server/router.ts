@@ -96,7 +96,7 @@ function handleSettingsError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `設定の操作に失敗しました (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: `Settings operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
     cause: error,
   });
 }
@@ -115,7 +115,7 @@ export const userSettingsRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -130,7 +130,7 @@ export const userSettingsRouter = createTRPCRouter({
           logger.error('UserSettings fetch error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `設定の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch settings: ${error.message}`,
           });
         }
 
@@ -208,7 +208,7 @@ export const userSettingsRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -271,7 +271,7 @@ export const userSettingsRouter = createTRPCRouter({
           logger.error('UserSettings update error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `設定の更新に失敗しました: ${error.message}`,
+            message: `Failed to update settings: ${error.message}`,
           });
         }
 
@@ -299,7 +299,7 @@ export const userSettingsRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -313,7 +313,7 @@ export const userSettingsRouter = createTRPCRouter({
           logger.error('iCal token fetch error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'iCalトークンの取得に失敗しました',
+            message: 'Failed to fetch iCal token',
           });
         }
 
@@ -337,7 +337,7 @@ export const userSettingsRouter = createTRPCRouter({
         if (!userId) {
           throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'ユーザーIDが見つかりません',
+            message: 'User ID not found',
           });
         }
 
@@ -354,7 +354,7 @@ export const userSettingsRouter = createTRPCRouter({
           logger.error('iCal token upsert error:', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'iCalトークンの再生成に失敗しました',
+            message: 'Failed to regenerate iCal token',
           });
         }
 
@@ -370,7 +370,7 @@ export const userSettingsRouter = createTRPCRouter({
           logger.error('iCal token update error:', updateError);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'iCalトークンの再生成に失敗しました',
+            message: 'Failed to regenerate iCal token',
           });
         }
 

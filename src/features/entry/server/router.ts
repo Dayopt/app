@@ -138,7 +138,7 @@ export const entriesCoreRouter = createTRPCRouter({
       if (await isEntryCreateLimited(ctx.userId)) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
-          message: 'エントリの日次作成上限に達しました。しばらく待ってからお試しください。',
+          message: 'Daily entry creation limit reached. Please try again later.',
         });
       }
 
@@ -537,7 +537,7 @@ export const entriesCoreRouter = createTRPCRouter({
         .single();
 
       if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'エントリが見つかりません' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
       }
 
       const { data: tag, error: tagError } = await supabase
@@ -548,7 +548,7 @@ export const entriesCoreRouter = createTRPCRouter({
         .single();
 
       if (tagError || !tag) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'タグが見つかりません' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Tag not found' });
       }
 
       const { error } = await supabase
@@ -561,7 +561,7 @@ export const entriesCoreRouter = createTRPCRouter({
       if (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `タグの追加に失敗しました: ${error.message}`,
+          message: `Failed to add tag: ${error.message}`,
         });
       }
 
@@ -584,7 +584,7 @@ export const entriesCoreRouter = createTRPCRouter({
         .single();
 
       if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'エントリが見つかりません' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
       }
 
       const { error, count } = await supabase
@@ -597,7 +597,7 @@ export const entriesCoreRouter = createTRPCRouter({
       if (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `タグの削除に失敗しました: ${error.message}`,
+          message: `Failed to remove tag: ${error.message}`,
         });
       }
 
@@ -620,7 +620,7 @@ export const entriesCoreRouter = createTRPCRouter({
         .single();
 
       if (entryError || !entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'エントリが見つかりません' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
       }
 
       // タグの所有権チェック
@@ -633,7 +633,7 @@ export const entriesCoreRouter = createTRPCRouter({
           .single();
 
         if (tagError || !validTag) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: '無効なタグIDです' });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid tag ID' });
         }
       }
 
@@ -647,7 +647,7 @@ export const entriesCoreRouter = createTRPCRouter({
       if (deleteError) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `既存タグの削除に失敗しました: ${deleteError.message}`,
+          message: `Failed to remove existing tags: ${deleteError.message}`,
         });
       }
 
@@ -661,7 +661,7 @@ export const entriesCoreRouter = createTRPCRouter({
         if (insertError) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `タグの設定に失敗しました: ${insertError.message}`,
+            message: `Failed to set tag: ${insertError.message}`,
           });
         }
       }

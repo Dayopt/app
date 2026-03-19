@@ -531,7 +531,7 @@ export function createErrorToast(
 
   if (!finalPattern) {
     return {
-      message: '予期しないエラーが発生しました',
+      message: 'An unexpected error occurred',
       emoji: '❌',
       duration: 5000,
       type: 'error',

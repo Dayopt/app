@@ -40,7 +40,7 @@ export const onboardingRouter = createTRPCRouter({
         logger.error('Onboarding getProfile error:', profileResult.error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `プロフィールの取得に失敗しました: ${profileResult.error.message}`,
+          message: `Failed to fetch profile: ${profileResult.error.message}`,
         });
       }
 
@@ -48,7 +48,7 @@ export const onboardingRouter = createTRPCRouter({
         logger.error('Onboarding getUser error:', userResult.error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `ユーザー情報の取得に失敗しました: ${userResult.error.message}`,
+          message: `Failed to fetch user info: ${userResult.error.message}`,
         });
       }
 
@@ -89,7 +89,7 @@ export const onboardingRouter = createTRPCRouter({
         logger.error('Onboarding complete profile error:', profileError);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `プロフィールの更新に失敗しました: ${profileError.message}`,
+          message: `Failed to update profile: ${profileError.message}`,
         });
       }
 
@@ -139,7 +139,7 @@ export const onboardingRouter = createTRPCRouter({
         logger.error('Onboarding reset error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `オンボーディングのリセットに失敗しました: ${error.message}`,
+          message: `Failed to reset onboarding: ${error.message}`,
         });
       }
 

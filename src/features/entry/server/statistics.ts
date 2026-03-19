@@ -31,7 +31,7 @@ function handleStatsError(operation: string, error: unknown): never {
 
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `統計データの取得に失敗しました (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: `Failed to fetch statistics (${operation}): ${error instanceof Error ? error.message : String(error)}`,
     cause: error,
   });
 }
@@ -70,7 +70,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `タグ統計の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch tag statistics: ${error.message}`,
             cause: error,
           });
         }
@@ -115,7 +115,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `タグ別時間の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch time by tag: ${error.message}`,
             cause: error,
           });
         }
@@ -161,7 +161,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `日別時間の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch daily hours: ${error.message}`,
             cause: error,
           });
         }
@@ -194,7 +194,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `時間帯分布の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch hourly distribution: ${error.message}`,
             cause: error,
           });
         }
@@ -242,7 +242,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `曜日別分布の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch day-of-week distribution: ${error.message}`,
             cause: error,
           });
         }
@@ -285,7 +285,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `月別トレンドの取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch monthly trend: ${error.message}`,
             cause: error,
           });
         }
@@ -338,7 +338,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `計画率の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch planning rate: ${error.message}`,
             cause: error,
           });
         }
@@ -381,7 +381,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `見積もり精度の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch estimation accuracy: ${error.message}`,
             cause: error,
           });
         }
@@ -432,7 +432,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `エネルギーマップの取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch energy map: ${error.message}`,
             cause: error,
           });
         }
@@ -479,7 +479,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `コンテキストスイッチの取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch context switches: ${error.message}`,
             cause: error,
           });
         }
@@ -527,7 +527,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `空白率の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch idle rate: ${error.message}`,
             cause: error,
           });
         }
@@ -572,7 +572,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `合計記録時間の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch total recorded time: ${error.message}`,
             cause: error,
           });
         }
@@ -606,7 +606,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `平均充実度の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch average fulfillment: ${error.message}`,
             cause: error,
           });
         }
@@ -646,7 +646,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `アクティブ日数の取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch active days: ${error.message}`,
             cause: error,
           });
         }
@@ -709,7 +709,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         if (error) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `KPIサマリーの取得に失敗しました: ${error.message}`,
+            message: `Failed to fetch KPI summary: ${error.message}`,
             cause: error,
           });
         }

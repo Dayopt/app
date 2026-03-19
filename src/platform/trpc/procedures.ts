@@ -311,8 +311,8 @@ export const protectedProcedure = t.procedure
     if (!ctx.userId) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
-        message: 'ログインが必要です',
-        cause: createAppError('認証が必要です', ERROR_CODES.INVALID_TOKEN, {
+        message: 'Authentication required',
+        cause: createAppError('Authentication required', ERROR_CODES.INVALID_TOKEN, {
           source: 'trpc_middleware',
         }),
       });
@@ -322,7 +322,7 @@ export const protectedProcedure = t.procedure
     if (await isUserRateLimited(ctx.userId)) {
       throw new TRPCError({
         code: 'TOO_MANY_REQUESTS',
-        message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
+        message: 'Too many requests. Please try again later.',
       });
     }
 
@@ -358,7 +358,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
     if (error) {
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: `プロフィールの取得に失敗しました: ${error.message}`,
+        message: `Failed to fetch profile: ${error.message}`,
         cause: createAppError(
           'Failed to fetch profile for pro check',
           ERROR_CODES.SYSTEM_INTERNAL_ERROR,
@@ -382,7 +382,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
   if (!isProActive) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'Pro プランが必要です',
+      message: 'Pro plan required',
       cause: createAppError('Pro subscription required', ERROR_CODES.NO_PERMISSION, {
         source: 'trpc_middleware',
         userId: ctx.userId,
@@ -405,8 +405,8 @@ export const adminProcedure = protectedProcedure
     if (!isAdmin) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: '管理者権限が必要です',
-        cause: createAppError('管理者権限が必要です', ERROR_CODES.NO_PERMISSION, {
+        message: 'Admin permission required',
+        cause: createAppError('Admin permission required', ERROR_CODES.NO_PERMISSION, {
           source: 'trpc_middleware',
           userId: ctx.userId,
         }),
