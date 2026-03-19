@@ -117,7 +117,15 @@ export function useRealtimeSubscription<
           if (isCleanedUp) return;
 
           if (status === 'SUBSCRIBED') {
-            logger.debug(`[Realtime] Subscribed to channel: ${channelName}`);
+            // 再接続成功時（リトライ後の復帰）はコールバックを呼ぶ
+            if (retryCountRef.current > 0) {
+              logger.info(
+                `[Realtime] Reconnected to channel: ${channelName} (after ${retryCountRef.current} retries)`,
+              );
+              configRef.current.onReconnect?.();
+            } else {
+              logger.debug(`[Realtime] Subscribed to channel: ${channelName}`);
+            }
             retryCountRef.current = 0; // 成功時にリトライカウントをリセット
           } else if (status === 'CHANNEL_ERROR') {
             const error = new RealtimeSubscriptionError(
@@ -152,6 +160,7 @@ export function useRealtimeSubscription<
               logger.error(
                 `[Realtime] Max retries (${MAX_RETRY_COUNT}) reached for channel ${channelName}. Giving up.`,
               );
+              configRef.current.onMaxRetriesExceeded?.();
             }
           }
         });

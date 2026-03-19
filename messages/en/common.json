@@ -136,7 +136,11 @@
       "error": "Error",
       "warning": "Warning",
       "info": "Info",
-      "offline": "You are offline. Changes will sync when connection is restored."
+      "offline": "You are offline. Changes will sync when connection is restored.",
+      "realtimeDisconnected": "Real-time connection lost. Please reload the page.",
+      "realtimeReconnected": "Real-time connection restored.",
+      "syncing": "Syncing {count} change(s)...",
+      "syncComplete": "Sync complete."
     },
     "time": {
       "today": "Today",
@@ -222,7 +226,33 @@
       "japanese": "Japanese"
     },
     "search": {
-      "shortcut": "⌘K"
+      "shortcut": "⌘K",
+      "title": "Search",
+      "placeholder": "Search...",
+      "noResults": "No results found",
+      "tagsGroup": "Tags",
+      "blocksGroup": "Blocks"
+    },
+    "offline": {
+      "title": "You're offline",
+      "description": "No internet connection. Check your connection and try again.",
+      "reload": "Reload"
+    },
+    "serviceWorker": {
+      "updateAvailable": "Update available",
+      "updateDescription": "Reload to apply the latest version",
+      "later": "Later",
+      "update": "Update"
+    },
+    "insights": {
+      "noRecords": "No records this week.",
+      "lastRecord": "Last record: {date}",
+      "viewInsights": "View insights for that week →",
+      "insufficientData": "Not enough data for this week.",
+      "insufficientDataHint": "Insights are generated when there are 3 or more days of records.",
+      "recordedDays": "Recorded days:",
+      "pendingGeneration": "Scheduled for generation on {date} ✦",
+      "pendingGenerationNoDate": "Scheduled for generation ✦"
     },
     "createNew": {
       "plan": "Create Plan",

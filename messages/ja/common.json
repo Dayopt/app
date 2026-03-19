@@ -136,7 +136,11 @@
       "error": "エラー",
       "warning": "警告",
       "info": "情報",
-      "offline": "オフラインです。変更は接続復帰後に同期されます。"
+      "offline": "オフラインです。変更は接続復帰後に同期されます。",
+      "realtimeDisconnected": "リアルタイム接続が切断されました。ページをリロードしてください。",
+      "realtimeReconnected": "リアルタイム接続が復旧しました。",
+      "syncing": "{count}件の変更を同期中...",
+      "syncComplete": "同期完了しました。"
     },
     "time": {
       "today": "今日",
@@ -222,7 +226,33 @@
       "japanese": "日本語"
     },
     "search": {
-      "shortcut": "⌘K"
+      "shortcut": "⌘K",
+      "title": "検索",
+      "placeholder": "検索...",
+      "noResults": "見つかりませんでした",
+      "tagsGroup": "タグ",
+      "blocksGroup": "ブロック"
+    },
+    "offline": {
+      "title": "オフラインです",
+      "description": "インターネットに接続されていません。接続を確認してからもう一度お試しください。",
+      "reload": "再読み込み"
+    },
+    "serviceWorker": {
+      "updateAvailable": "アップデートがあります",
+      "updateDescription": "再読み込みして最新版を適用",
+      "later": "後で",
+      "update": "更新"
+    },
+    "insights": {
+      "noRecords": "この週の記録はありません。",
+      "lastRecord": "前回の記録: {date}",
+      "viewInsights": "その週のインサイトを見る →",
+      "insufficientData": "この週のデータが十分ではありません。",
+      "insufficientDataHint": "3日以上の記録があるとインサイトを生成できます。",
+      "recordedDays": "記録された日:",
+      "pendingGeneration": "{date}に生成予定です ✦",
+      "pendingGenerationNoDate": "生成予定です ✦"
     },
     "createNew": {
       "plan": "予定を作成",

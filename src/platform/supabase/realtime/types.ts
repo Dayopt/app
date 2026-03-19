@@ -33,6 +33,10 @@ export interface RealtimeSubscriptionConfig<
   onEvent: (payload: RealtimePostgresChangesPayload<T>) => void;
   /** エラー時のコールバック（オプション） */
   onError?: (error: Error) => void;
+  /** 再接続成功時のコールバック（gap fill用） */
+  onReconnect?: () => void;
+  /** リトライ上限超過時のコールバック */
+  onMaxRetriesExceeded?: () => void;
 }
 
 /**

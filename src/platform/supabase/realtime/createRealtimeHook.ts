@@ -23,6 +23,7 @@
 import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 
+import { useRealtimeConnectionStore } from './useRealtimeConnectionStore';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 import type { AppRouter } from '@/platform/trpc/root';
@@ -79,6 +80,8 @@ export function createRealtimeHook<T extends { id?: string } = { id: string }>(
     const utils = api.useUtils();
     const isMutating = useMutationGuard();
 
+    const setConnectionStatus = useRealtimeConnectionStore((s) => s.setStatus);
+
     useRealtimeSubscription<T>({
       channelName: `${name}-changes-${userId}`,
       table,
@@ -102,7 +105,18 @@ export function createRealtimeHook<T extends { id?: string } = { id: string }>(
       },
       onError: (error) => {
         logger.error(`[${name} Realtime] Subscription error:`, error);
+        setConnectionStatus('reconnecting');
         onError?.(error);
+      },
+      onReconnect: () => {
+        logger.info(`[${name} Realtime] Reconnected — invalidating all caches (gap fill)`);
+        setConnectionStatus('connected');
+        // 切断中に見逃したイベントを補完するため全キャッシュを無効化
+        void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
+        void utils.tags.list.invalidate();
+      },
+      onMaxRetriesExceeded: () => {
+        setConnectionStatus('disconnected');
       },
     });
   };
