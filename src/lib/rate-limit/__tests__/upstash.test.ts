@@ -9,10 +9,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   apiRateLimit,
+  entryCreateRateLimit,
   isUpstashEnabled,
   loginRateLimit,
   passwordResetRateLimit,
   RATE_LIMIT_PRESETS,
+  trpcUserRateLimit,
   UPSTASH_COST_ESTIMATE,
   withUpstashRateLimit,
 } from '../upstash';
@@ -35,6 +37,8 @@ describe('Upstash Rate Limit', () => {
         expect(apiRateLimit).toBeNull();
         expect(loginRateLimit).toBeNull();
         expect(passwordResetRateLimit).toBeNull();
+        expect(trpcUserRateLimit).toBeNull();
+        expect(entryCreateRateLimit).toBeNull();
       }
     });
   });
@@ -105,6 +109,24 @@ describe('Upstash Rate Limit', () => {
       const result = await withUpstashRateLimit(mockRequest, null);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('New Rate Limit Instances (Phase 1+2)', () => {
+    it('should export trpcUserRateLimit (null when Upstash disabled)', () => {
+      if (!isUpstashEnabled) {
+        expect(trpcUserRateLimit).toBeNull();
+      } else {
+        expect(trpcUserRateLimit).not.toBeNull();
+      }
+    });
+
+    it('should export entryCreateRateLimit (null when Upstash disabled)', () => {
+      if (!isUpstashEnabled) {
+        expect(entryCreateRateLimit).toBeNull();
+      } else {
+        expect(entryCreateRateLimit).not.toBeNull();
+      }
     });
   });
 
