@@ -8,7 +8,7 @@
  *
  * 重要:
  * - Root Layout が描画されないため、Tailwind CSS変数が利用不可の場合がある
- * - インラインstyleでフォールバックし、CSSなしでも読めるレイアウトを保証
+ * - <style> タグでデザインシステムのOKLCHトークン相当のCSS変数を定義
  * - NextIntlClientProvider が利用不可のため静的英語テキストを使用
  */
 
@@ -31,6 +31,25 @@ const ERROR_TEXT = {
   goHome: 'Go to Home',
   sentryReport: 'This error has been automatically reported.',
 };
+
+/**
+ * デザインシステム準拠のフォールバックCSS変数
+ *
+ * primitives.css / colors.css のOKLCH値をそのまま使用。
+ * Root Layout のCSSが読めない場合でもデザインシステムと一貫した色を提供する。
+ */
+const FALLBACK_STYLES = `
+  :root {
+    --ge-background: oklch(0.12 0 0);
+    --ge-foreground: oklch(0.99 0 0);
+    --ge-card: oklch(0.24 0 0);
+    --ge-card-inset: oklch(0.16 0 0);
+    --ge-border: oklch(0.3715 0 0);
+    --ge-muted: oklch(0.78 0 0);
+    --ge-primary: oklch(0.5 0.188 259.8145);
+    --ge-destructive: oklch(0.65 0.24 25.33);
+  }
+`;
 
 /**
  * インラインスタイルのみで動作するボタン
@@ -62,12 +81,12 @@ function ErrorButton({
 
   const styles: React.CSSProperties =
     variant === 'primary'
-      ? { ...baseStyle, backgroundColor: '#3b82f6', color: '#ffffff' }
+      ? { ...baseStyle, backgroundColor: 'var(--ge-primary)', color: 'var(--ge-foreground)' }
       : {
           ...baseStyle,
           backgroundColor: 'transparent',
-          color: '#a1a1aa',
-          border: '1px solid #3f3f46',
+          color: 'var(--ge-muted)',
+          border: '1px solid var(--ge-border)',
         };
 
   return (
@@ -104,13 +123,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style dangerouslySetInnerHTML={{ __html: FALLBACK_STYLES }} />
       </head>
       <body
         style={{
           margin: 0,
           padding: 0,
-          backgroundColor: '#18181b',
-          color: '#fafafa',
+          backgroundColor: 'var(--ge-background)',
+          color: 'var(--ge-foreground)',
           fontFamily:
             '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
         }}
@@ -129,8 +149,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             style={{
               width: '100%',
               maxWidth: '28rem',
-              backgroundColor: '#27272a',
-              border: '1px solid #3f3f46',
+              backgroundColor: 'var(--ge-card)',
+              border: '1px solid var(--ge-border)',
               borderRadius: '1rem',
               padding: '2rem',
               boxSizing: 'border-box',
@@ -139,7 +159,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             <div style={{ marginBottom: '1.5rem' }}>
               <h1
                 style={{
-                  color: '#ef4444',
+                  color: 'var(--ge-destructive)',
                   fontSize: '1.5rem',
                   fontWeight: 700,
                   marginTop: 0,
@@ -148,7 +168,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               >
                 {ERROR_TEXT.title}
               </h1>
-              <p style={{ color: '#a1a1aa', margin: 0, lineHeight: 1.5 }}>
+              <p style={{ color: 'var(--ge-muted)', margin: 0, lineHeight: 1.5 }}>
                 {ERROR_TEXT.description}
               </p>
             </div>
@@ -156,14 +176,14 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             {error.digest && (
               <div
                 style={{
-                  backgroundColor: '#1f1f23',
+                  backgroundColor: 'var(--ge-card-inset)',
                   borderRadius: '0.375rem',
                   padding: '1rem',
                   marginBottom: '1rem',
                   fontSize: '0.75rem',
                 }}
               >
-                <p style={{ color: '#a1a1aa', margin: 0 }}>
+                <p style={{ color: 'var(--ge-muted)', margin: 0 }}>
                   {ERROR_TEXT.errorId}:{' '}
                   <code style={{ fontFamily: 'monospace' }}>{error.digest}</code>
                 </p>
@@ -174,7 +194,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               <details style={{ marginBottom: '1.5rem' }}>
                 <summary
                   style={{
-                    color: '#a1a1aa',
+                    color: 'var(--ge-muted)',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     padding: '0.25rem',
@@ -184,7 +204,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                 </summary>
                 <div
                   style={{
-                    backgroundColor: '#1f1f23',
+                    backgroundColor: 'var(--ge-card-inset)',
                     borderRadius: '0.375rem',
                     padding: '1rem',
                     marginTop: '1rem',
@@ -195,7 +215,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                   </p>
                   <pre
                     style={{
-                      color: '#a1a1aa',
+                      color: 'var(--ge-muted)',
                       fontSize: '0.75rem',
                       maxHeight: '10rem',
                       overflow: 'auto',
@@ -219,7 +239,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
 
             <p
               style={{
-                color: '#a1a1aa',
+                color: 'var(--ge-muted)',
                 fontSize: '0.75rem',
                 textAlign: 'center',
                 marginTop: '1.5rem',
