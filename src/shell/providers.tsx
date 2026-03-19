@@ -131,6 +131,7 @@ export function Providers({ children }: ProvidersProps) {
         }),
         defaultOptions: {
           queries: {
+            networkMode: 'offlineFirst', // オフライン時もキャッシュデータを表示
             staleTime: 5 * 60 * 1000, // 5分（一般的なデータのデフォルト）
             gcTime: 10 * 60 * 1000, // 10分（ガベージコレクション）
             refetchOnWindowFocus: true, // 業界標準：タブ切り替え時にstaleなデータのみ再フェッチ
@@ -145,6 +146,7 @@ export function Providers({ children }: ProvidersProps) {
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
           },
           mutations: {
+            networkMode: 'offlineFirst', // オフライン中はpause→復帰時に自動再送
             retry: (failureCount, error) => {
               // 認証エラーはリトライしない
               if (isAuthError(error)) return false;
