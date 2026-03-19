@@ -15,58 +15,61 @@ import { contactFormSchema } from '../schemas';
 import { createGitHubIssue } from './contact-service';
 
 export const contactRouter = createTRPCRouter({
-  submit: protectedProcedure.input(contactFormSchema).mutation(async ({ ctx, input }) => {
-    // レート制限チェック（userId ベース）
-    if (contactRateLimit) {
-      const { success } = await contactRateLimit.limit(ctx.userId);
-      if (!success) {
+  submit: protectedProcedure
+    .meta({ description: 'お問い合わせ送信（GitHub Issue作成）' })
+    .input(contactFormSchema)
+    .mutation(async ({ ctx, input }) => {
+      // レート制限チェック（userId ベース）
+      if (contactRateLimit) {
+        const { success } = await contactRateLimit.limit(ctx.userId);
+        if (!success) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Too many contact requests. Please try again later.',
+          });
+        }
+      }
+
+      // ユーザー情報を取得
+      const {
+        data: { user },
+        error: authError,
+      } = await ctx.supabase.auth.getUser();
+
+      if (authError) {
+        logger.error('Failed to get user for contact form', { error: authError.message });
         throw new TRPCError({
-          code: 'TOO_MANY_REQUESTS',
-          message: 'Too many contact requests. Please try again later.',
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `ユーザー情報の取得に失敗しました: ${authError.message}`,
+          cause: authError,
         });
       }
-    }
 
-    // ユーザー情報を取得
-    const {
-      data: { user },
-      error: authError,
-    } = await ctx.supabase.auth.getUser();
+      const userEmail = user?.email ?? 'unknown';
+      const userName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? 'Unknown';
 
-    if (authError) {
-      logger.error('Failed to get user for contact form', { error: authError.message });
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `ユーザー情報の取得に失敗しました: ${authError.message}`,
-        cause: authError,
-      });
-    }
+      try {
+        const result = await createGitHubIssue({
+          userId: ctx.userId,
+          userEmail,
+          userName,
+          input,
+        });
 
-    const userEmail = user?.email ?? 'unknown';
-    const userName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? 'Unknown';
+        logger.info('Contact form submitted', {
+          userId: ctx.userId,
+          category: input.category,
+          issueNumber: result.issueNumber,
+        });
 
-    try {
-      const result = await createGitHubIssue({
-        userId: ctx.userId,
-        userEmail,
-        userName,
-        input,
-      });
-
-      logger.info('Contact form submitted', {
-        userId: ctx.userId,
-        category: input.category,
-        issueNumber: result.issueNumber,
-      });
-
-      return { success: true as const };
-    } catch (error) {
-      logger.error('Contact form submission failed', {
-        userId: ctx.userId,
-        category: input.category,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return handleServiceError(error);
-    }
-  }),
+        return { success: true as const };
+      } catch (error) {
+        logger.error('Contact form submission failed', {
+          userId: ctx.userId,
+          category: input.category,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return handleServiceError(error);
+      }
+    }),
 });

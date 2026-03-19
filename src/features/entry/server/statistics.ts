@@ -50,48 +50,52 @@ const dateRangeInput = z.object({
 // Router
 // =============================================================================
 
+/** エントリ統計・分析用tRPCルーター（タグ統計・完了率・時間集計などを提供） */
 export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
   // General Statistics
   // ---------------------------------------------------------------------------
 
   /** Get tag statistics (entry count and last used date) */
-  getTagStats: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getTagStats: protectedProcedure
+    .meta({ description: 'タグ別統計取得（エントリ数・最終使用日）' })
+    .query(async ({ ctx }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_tag_stats', async () =>
-        supabase.rpc('get_tag_stats', { p_user_id: userId }),
-      );
+        const { data, error } = await traceDbQuery('stats.get_tag_stats', async () =>
+          supabase.rpc('get_tag_stats', { p_user_id: userId }),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `タグ統計の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
-      }
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `タグ統計の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
 
-      const counts: Record<string, number> = {};
-      const lastUsed: Record<string, string> = {};
+        const counts: Record<string, number> = {};
+        const lastUsed: Record<string, string> = {};
 
-      if (data) {
-        for (const row of data) {
-          counts[row.tag_id] = row.entry_count;
-          if (row.last_used) {
-            lastUsed[row.tag_id] = row.last_used;
+        if (data) {
+          for (const row of data) {
+            counts[row.tag_id] = row.entry_count;
+            if (row.last_used) {
+              lastUsed[row.tag_id] = row.last_used;
+            }
           }
         }
-      }
 
-      return { counts, lastUsed };
-    } catch (error) {
-      handleStatsError('getTagStats', error);
-    }
-  }),
+        return { counts, lastUsed };
+      } catch (error) {
+        handleStatsError('getTagStats', error);
+      }
+    }),
 
   /** Get time spent per tag (DB function) */
   getTimeByTag: protectedProcedure
+    .meta({ description: 'タグ別時間集計（期間フィルタ対応）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
@@ -136,6 +140,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
   /** Get daily hours for heatmap (DB function) */
   getDailyHours: protectedProcedure
+    .meta({ description: '日別記録時間取得（ヒートマップ用）' })
     .input(z.object({ year: z.number().int().min(2000).max(2100) }))
     .query(async ({ ctx, input }) => {
       try {
@@ -169,6 +174,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
   /** Get hourly distribution (DB function) */
   getHourlyDistribution: protectedProcedure
+    .meta({ description: '時間帯別分布取得（2時間スロット）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
@@ -216,6 +222,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
   /** Get day of week distribution (DB function) */
   getDayOfWeekDistribution: protectedProcedure
+    .meta({ description: '曜日別分布取得（月曜始まり）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
       try {
@@ -259,6 +266,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
   /** Get monthly trend (DB function) */
   getMonthlyTrend: protectedProcedure
+    .meta({ description: '月別トレンド取得（デフォルト12ヶ月）' })
     .input(z.object({ months: z.number().min(1).max(120).optional() }).optional())
     .query(async ({ ctx, input }) => {
       try {
@@ -309,177 +317,190 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** 計画率: origin='planned' / 全エントリ */
-  getPlanRate: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getPlanRate: protectedProcedure
+    .meta({ description: '計画率KPI（計画エントリ / 全エントリ）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_plan_rate', async () =>
-        supabase.rpc(
-          'get_plan_rate' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_plan_rate', async () =>
+          supabase.rpc(
+            'get_plan_rate' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `計画率の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `計画率の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const result = data as {
+          totalEntries: number;
+          plannedEntries: number;
+          planRate: number;
+        } | null;
+
+        return {
+          totalEntries: result?.totalEntries ?? 0,
+          plannedEntries: result?.plannedEntries ?? 0,
+          planRate: result?.planRate ?? 0,
+        };
+      } catch (error) {
+        handleStatsError('getPlanRate', error);
       }
-
-      const result = data as {
-        totalEntries: number;
-        plannedEntries: number;
-        planRate: number;
-      } | null;
-
-      return {
-        totalEntries: result?.totalEntries ?? 0,
-        plannedEntries: result?.plannedEntries ?? 0,
-        planRate: result?.planRate ?? 0,
-      };
-    } catch (error) {
-      handleStatsError('getPlanRate', error);
-    }
-  }),
+    }),
 
   /** 見積もり精度: タグ別の予定時間 vs 実績時間 */
-  getEstimationAccuracy: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getEstimationAccuracy: protectedProcedure
+    .meta({ description: '見積もり精度KPI（タグ別の予定vs実績）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
-        supabase.rpc(
-          'get_estimation_accuracy' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
+          supabase.rpc(
+            'get_estimation_accuracy' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `見積もり精度の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `見積もり精度の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const rows = (data ?? []) as Array<{
+          tag_id: string;
+          tag_name: string;
+          tag_color: string;
+          avg_planned_minutes: number;
+          avg_actual_minutes: number;
+          avg_deviation_minutes: number;
+          entry_count: number;
+        }>;
+
+        return rows.map((row) => ({
+          tagId: row.tag_id,
+          tagName: row.tag_name,
+          tagColor: row.tag_color || 'indigo',
+          avgPlannedMinutes: row.avg_planned_minutes,
+          avgActualMinutes: row.avg_actual_minutes,
+          avgDeviationMinutes: row.avg_deviation_minutes,
+          entryCount: row.entry_count,
+        }));
+      } catch (error) {
+        handleStatsError('getEstimationAccuracy', error);
       }
-
-      const rows = (data ?? []) as Array<{
-        tag_id: string;
-        tag_name: string;
-        tag_color: string;
-        avg_planned_minutes: number;
-        avg_actual_minutes: number;
-        avg_deviation_minutes: number;
-        entry_count: number;
-      }>;
-
-      return rows.map((row) => ({
-        tagId: row.tag_id,
-        tagName: row.tag_name,
-        tagColor: row.tag_color || 'indigo',
-        avgPlannedMinutes: row.avg_planned_minutes,
-        avgActualMinutes: row.avg_actual_minutes,
-        avgDeviationMinutes: row.avg_deviation_minutes,
-        entryCount: row.entry_count,
-      }));
-    } catch (error) {
-      handleStatsError('getEstimationAccuracy', error);
-    }
-  }),
+    }),
 
   /** エネルギーマップ: 時間帯×曜日の活動分布（既存DB関数のラッパー） */
-  getEnergyMap: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getEnergyMap: protectedProcedure
+    .meta({ description: 'エネルギーマップ（時間帯×曜日の活動分布）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
-        supabase.rpc(
-          'get_energy_map' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
+          supabase.rpc(
+            'get_energy_map' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `エネルギーマップの取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `エネルギーマップの取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const rows = (data ?? []) as Array<{
+          hour: number;
+          dow: number;
+          avg_fulfillment: number | null;
+          total_minutes: number;
+          entry_count: number;
+        }>;
+
+        return rows.map((row) => ({
+          hour: row.hour,
+          dow: row.dow,
+          avgFulfillment: row.avg_fulfillment,
+          totalMinutes: row.total_minutes,
+          entryCount: row.entry_count,
+        }));
+      } catch (error) {
+        handleStatsError('getEnergyMap', error);
       }
-
-      const rows = (data ?? []) as Array<{
-        hour: number;
-        dow: number;
-        avg_fulfillment: number | null;
-        total_minutes: number;
-        entry_count: number;
-      }>;
-
-      return rows.map((row) => ({
-        hour: row.hour,
-        dow: row.dow,
-        avgFulfillment: row.avg_fulfillment,
-        totalMinutes: row.total_minutes,
-        entryCount: row.entry_count,
-      }));
-    } catch (error) {
-      handleStatsError('getEnergyMap', error);
-    }
-  }),
+    }),
 
   /** コンテキストスイッチ: 連続エントリ間のタグ変化回数 */
-  getContextSwitches: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getContextSwitches: protectedProcedure
+    .meta({ description: 'コンテキストスイッチ回数（タグ変化頻度）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_context_switches', async () =>
-        supabase.rpc(
-          'get_context_switches' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_context_switches', async () =>
+          supabase.rpc(
+            'get_context_switches' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `コンテキストスイッチの取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `コンテキストスイッチの取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const result = data as {
+          totalSwitches: number;
+          avgPerDay: number;
+        } | null;
+
+        return {
+          totalSwitches: result?.totalSwitches ?? 0,
+          avgPerDay: result?.avgPerDay ?? 0,
+        };
+      } catch (error) {
+        handleStatsError('getContextSwitches', error);
       }
-
-      const result = data as {
-        totalSwitches: number;
-        avgPerDay: number;
-      } | null;
-
-      return {
-        totalSwitches: result?.totalSwitches ?? 0,
-        avgPerDay: result?.avgPerDay ?? 0,
-      };
-    } catch (error) {
-      handleStatsError('getContextSwitches', error);
-    }
-  }),
+    }),
 
   /** 空白率: 活動可能時間のうちスケジュールされていない時間の割合 */
   getBlankRate: protectedProcedure
+    .meta({ description: '空白率KPI（未スケジュール時間の割合）' })
     .input(
       dateRangeInput.extend({
         wakeHour: z.number().min(0).max(23).default(7),
@@ -530,122 +551,130 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 合計記録時間（分） */
-  getCumulativeTime: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getCumulativeTime: protectedProcedure
+    .meta({ description: '合計記録時間取得（分単位）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
-        supabase.rpc(
-          'get_cumulative_time' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
+          supabase.rpc(
+            'get_cumulative_time' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `合計記録時間の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `合計記録時間の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const result = data as { totalMinutes: number } | null;
+        return { totalMinutes: result?.totalMinutes ?? 0 };
+      } catch (error) {
+        handleStatsError('getCumulativeTime', error);
       }
-
-      const result = data as { totalMinutes: number } | null;
-      return { totalMinutes: result?.totalMinutes ?? 0 };
-    } catch (error) {
-      handleStatsError('getCumulativeTime', error);
-    }
-  }),
+    }),
 
   /** 平均充実度 */
-  getAvgFulfillment: protectedProcedure.input(dateRangeInput).query(async ({ ctx, input }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getAvgFulfillment: protectedProcedure
+    .meta({ description: '平均充実度取得（1-5スケール）' })
+    .input(dateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
-        supabase.rpc(
-          'get_avg_fulfillment' as never,
-          {
-            p_user_id: userId,
-            p_start_date: input.startDate ?? null,
-            p_end_date: input.endDate ?? null,
-          } as never,
-        ),
-      );
+        const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
+          supabase.rpc(
+            'get_avg_fulfillment' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+            } as never,
+          ),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `平均充実度の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `平均充実度の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const result = data as { avgFulfillment: number | null; entryCount: number } | null;
+        return {
+          avgFulfillment: result?.avgFulfillment ?? null,
+          entryCount: result?.entryCount ?? 0,
+        };
+      } catch (error) {
+        handleStatsError('getAvgFulfillment', error);
       }
-
-      const result = data as { avgFulfillment: number | null; entryCount: number } | null;
-      return {
-        avgFulfillment: result?.avgFulfillment ?? null,
-        entryCount: result?.entryCount ?? 0,
-      };
-    } catch (error) {
-      handleStatsError('getAvgFulfillment', error);
-    }
-  }),
+    }),
 
   // ---------------------------------------------------------------------------
   // Streak
   // ---------------------------------------------------------------------------
 
   /** 連続アクティブ日数（streak）を計算 */
-  getStreak: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const { supabase, userId } = ctx;
+  getStreak: protectedProcedure
+    .meta({ description: '連続アクティブ日数（ストリーク）取得' })
+    .query(async ({ ctx }) => {
+      try {
+        const { supabase, userId } = ctx;
 
-      // 過去365日分のアクティブ日を取得
-      const since = new Date();
-      since.setDate(since.getDate() - 365);
+        // 過去365日分のアクティブ日を取得
+        const since = new Date();
+        since.setDate(since.getDate() - 365);
 
-      const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
-        supabase.rpc('get_active_dates', {
-          p_user_id: userId,
-          p_since: since.toISOString(),
-        }),
-      );
+        const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
+          supabase.rpc('get_active_dates', {
+            p_user_id: userId,
+            p_since: since.toISOString(),
+          }),
+        );
 
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `アクティブ日数の取得に失敗しました: ${error.message}`,
-          cause: error,
-        });
-      }
-
-      const activeDates = data ?? [];
-      const dateSet = new Set(activeDates.map((d) => d.active_date));
-
-      // 今日から逆順にstreakをカウント
-      let streak = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      for (let i = 0; i < 365; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().slice(0, 10);
-        if (dateSet.has(dateStr)) {
-          streak++;
-        } else {
-          break;
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `アクティブ日数の取得に失敗しました: ${error.message}`,
+            cause: error,
+          });
         }
-      }
 
-      return { streak };
-    } catch (error) {
-      handleStatsError('getStreak', error);
-    }
-  }),
+        const activeDates = data ?? [];
+        const dateSet = new Set(activeDates.map((d) => d.active_date));
+
+        // 今日から逆順にstreakをカウント
+        let streak = 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let i = 0; i < 365; i++) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().slice(0, 10);
+          if (dateSet.has(dateStr)) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+
+        return { streak };
+      } catch (error) {
+        handleStatsError('getStreak', error);
+      }
+    }),
 
   // ---------------------------------------------------------------------------
   // Unified KPI Summary (7 RPCs → 1 round-trip)
@@ -653,6 +682,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
   /** 全KPIを1クエリで取得 */
   getStatsOverview: protectedProcedure
+    .meta({ description: '全KPIサマリー一括取得（7指標を1クエリ）' })
     .input(
       dateRangeInput.extend({
         wakeHour: z.number().min(0).max(23).default(7),

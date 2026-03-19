@@ -147,6 +147,7 @@ export const emailRouter = createTRPCRouter({
    * ウェルカムメール送信
    */
   sendWelcome: protectedProcedure
+    .meta({ description: 'ウェルカムメール送信' })
     .input(
       z.object({
         email: z.string().email('Invalid email address'),
@@ -176,6 +177,7 @@ export const emailRouter = createTRPCRouter({
    * ユーザーに対して送信。check-reminders Edge Function から呼び出し可能。
    */
   sendReminder: protectedProcedure
+    .meta({ description: 'プランリマインダーメール送信' })
     .input(
       z.object({
         email: z.string().email(),
@@ -209,6 +211,7 @@ export const emailRouter = createTRPCRouter({
    * 期限超過通知メール送信
    */
   sendOverdue: protectedProcedure
+    .meta({ description: '期限超過通知メール送信' })
     .input(
       z.object({
         email: z.string().email(),
@@ -242,6 +245,7 @@ export const emailRouter = createTRPCRouter({
    * アカウント削除確認メール送信 (GDPR対応)
    */
   sendAccountDeletion: protectedProcedure
+    .meta({ description: 'アカウント削除確認メール送信（GDPR対応）' })
     .input(
       z.object({
         email: z.string().email(),
@@ -276,6 +280,7 @@ export const emailRouter = createTRPCRouter({
    * テストメール送信（開発用）
    */
   sendTest: protectedProcedure
+    .meta({ description: 'テストメール送信（開発環境のみ）', deprecated: true })
     .input(
       z.object({
         to: z.string().email('Invalid email address'),

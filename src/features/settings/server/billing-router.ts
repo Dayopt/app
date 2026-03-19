@@ -20,34 +20,40 @@ import {
   getPaymentMethod,
 } from './billing-service';
 
+/** 課金管理のtRPCルーター（Stripeサブスクリプション・Checkout・Portal・請求書） */
 export const billingRouter = createTRPCRouter({
   /**
    * 課金情報を取得
    */
-  getInfo: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      return await getBillingInfo(ctx.supabase, ctx.userId);
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }),
+  getInfo: protectedProcedure
+    .meta({ description: '課金情報取得（サブスクリプション状態）' })
+    .query(async ({ ctx }) => {
+      try {
+        return await getBillingInfo(ctx.supabase, ctx.userId);
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
 
   /**
    * 課金情報を一括取得（N+1 解消）
    * billingInfo + paymentMethod + invoices を1回の profiles SELECT で返す
    */
-  getOverview: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      return await getBillingOverview(ctx.supabase, ctx.userId);
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }),
+  getOverview: protectedProcedure
+    .meta({ description: '課金情報一括取得（N+1解消、billingInfo+支払方法+請求書）' })
+    .query(async ({ ctx }) => {
+      try {
+        return await getBillingOverview(ctx.supabase, ctx.userId);
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
 
   /**
    * Stripe Checkout Session を作成し、URLを返す
    */
   createCheckoutSession: protectedProcedure
+    .meta({ description: 'Stripe Checkoutセッション作成' })
     .input(
       z.object({
         priceId: z.string().startsWith('price_'),
@@ -97,18 +103,20 @@ export const billingRouter = createTRPCRouter({
   /**
    * デフォルト支払い方法を取得
    */
-  getPaymentMethod: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      return await getPaymentMethod(ctx.supabase, ctx.userId);
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }),
+  getPaymentMethod: protectedProcedure
+    .meta({ description: 'デフォルト支払い方法取得' })
+    .query(async ({ ctx }) => {
+      try {
+        return await getPaymentMethod(ctx.supabase, ctx.userId);
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
 
   /**
    * 請求書一覧を取得
    */
-  getInvoices: protectedProcedure.query(async ({ ctx }) => {
+  getInvoices: protectedProcedure.meta({ description: '請求書一覧取得' }).query(async ({ ctx }) => {
     try {
       return await getInvoices(ctx.supabase, ctx.userId);
     } catch (error) {
@@ -119,12 +127,14 @@ export const billingRouter = createTRPCRouter({
   /**
    * Stripe Customer Portal Session を作成し、URLを返す
    */
-  createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
-    try {
-      const url = await createPortalSession(ctx.supabase, ctx.userId);
-      return { url };
-    } catch (error) {
-      handleServiceError(error);
-    }
-  }),
+  createPortalSession: protectedProcedure
+    .meta({ description: 'Stripe Customer Portalセッション作成' })
+    .mutation(async ({ ctx }) => {
+      try {
+        const url = await createPortalSession(ctx.supabase, ctx.userId);
+        return { url };
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
 });
