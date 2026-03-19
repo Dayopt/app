@@ -219,7 +219,7 @@ export function TagCreateModal({
       aria-labelledby="tag-create-dialog-title"
     >
       <div
-        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border rounded-2xl border p-6 shadow-lg duration-150"
+        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border surface-raised rounded-2xl border p-6 duration-150"
         style={{ width: 'min(calc(100vw - 32px), 400px)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -316,7 +316,7 @@ export function TagCreateModal({
                 </button>
 
                 {isGroupDropdownOpen && (
-                  <div className="bg-card border-border absolute top-full z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border py-1 shadow-lg">
+                  <div className="bg-card border-border surface-raised absolute top-full z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border py-1">
                     <button
                       type="button"
                       onClick={() => {

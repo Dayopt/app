@@ -36,7 +36,7 @@ export function MobileFAB() {
       <Button
         icon
         aria-label={t('common.createNewEvent')}
-        className="fixed right-4 z-50 size-14 rounded-2xl shadow-lg"
+        className="surface-raised fixed right-4 z-50 size-14 rounded-2xl"
         style={{
           // iOS Safe Area対応: 余白(16px) + Safe Area
           bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
