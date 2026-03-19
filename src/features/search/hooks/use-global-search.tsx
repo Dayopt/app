@@ -2,12 +2,12 @@
 
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { GlobalSearchContext } from '@/shell/contexts/use-global-search';
+import { GlobalSearchContext } from '@/hooks/use-global-search';
 import { GlobalSearchModal } from '../components/global-search-modal';
 
 // Re-export for backward compatibility
-export { useGlobalSearch } from '@/shell/contexts/use-global-search';
-export type { GlobalSearchContextType } from '@/shell/contexts/use-global-search';
+export { useGlobalSearch } from '@/hooks/use-global-search';
+export type { GlobalSearchContextType } from '@/hooks/use-global-search';
 
 export const GlobalSearchProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
