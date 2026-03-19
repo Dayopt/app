@@ -2,7 +2,8 @@
   "app": {
     "name": "Dayopt",
     "description": "Task management application",
-    "version": "v1.0.0"
+    "version": "v1.0.0",
+    "keywords": ["task management", "productivity", "project management"]
   },
   "common": {
     "dates": {
@@ -17,10 +18,27 @@
         "yearMonthDay": "yyyy MMM d",
         "withDayOfWeek": "EEE, M/d",
         "dateTime": "MMM d HH:mm",
-        "dayRangeSameMonth": "{start}-{end}",
-        "dayRangeDiffMonth": "{startDay} {startMonth} - {endDay} {endMonth}",
-        "dayRangeDiffYear": "{startDay} {startMonth} {startYear} - {endDay} {endMonth} {endYear}"
-      }
+        "dayRangeSameMonth": "{start}-{end} {monthYear}",
+        "dayRangeDiffMonth": "{startDay} {startMonth} - {endDay} {endMonth} {year}",
+        "dayRangeDiffYear": "{startDay} {startMonth} {startYear} - {endDay} {endMonth} {endYear}",
+        "year": "{year}"
+      },
+      "hourLabel": "{hour}:00",
+      "weekdaysNarrow": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+      "monthsShort": [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+      ]
     },
     "reload": "Reload Page",
     "back": "Back",
@@ -128,7 +146,12 @@
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
       "endTime": "End time",
-      "addPlan": "Tap to add"
+      "addPlan": "Tap to add",
+      "navigationMenu": "Navigation menu",
+      "pageNavigation": "Page navigation",
+      "calendar": "Calendar",
+      "stats": "Stats",
+      "recurring": "Recurring"
     },
     "status": {
       "loading": "Loading...",
@@ -179,7 +202,8 @@
     "datePicker": {
       "placeholder": "Select date",
       "selectLabel": "Select date: {date}",
-      "notSelected": "Select date: not selected"
+      "notSelected": "Select date: not selected",
+      "noDate": "No date"
     },
     "schedule": {
       "datePlaceholder": "Date..."

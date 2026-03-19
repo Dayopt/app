@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import { useClientRouterStore } from '../stores/useClientRouterStore';
 
 interface PageSwitcherProps {
@@ -22,6 +23,7 @@ interface PageSwitcherProps {
  * サーバーラウンドトリップを回避する。
  */
 export function PageSwitcher({ className }: PageSwitcherProps) {
+  const tAria = useTranslations('common.aria');
   const pathname = usePathname();
   const calendarNav = useCalendarNavigation();
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
@@ -76,13 +78,13 @@ export function PageSwitcher({ className }: PageSwitcherProps) {
         className,
       )}
       role="tablist"
-      aria-label="Page navigation"
+      aria-label={tAria('pageNavigation')}
     >
-      <HoverTooltip content="Calendar" side="bottom">
+      <HoverTooltip content={tAria('calendar')} side="bottom">
         <button
           role="tab"
           aria-selected={activePage === 'calendar'}
-          aria-label="Calendar"
+          aria-label={tAria('calendar')}
           className={cn(
             'inline-flex size-7 items-center justify-center rounded-md transition-colors',
             activePage === 'calendar'
@@ -94,11 +96,11 @@ export function PageSwitcher({ className }: PageSwitcherProps) {
           <CalendarDays className="size-4" strokeWidth={activePage === 'calendar' ? 2.5 : 2} />
         </button>
       </HoverTooltip>
-      <HoverTooltip content="Stats" side="bottom">
+      <HoverTooltip content={tAria('stats')} side="bottom">
         <button
           role="tab"
           aria-selected={activePage === 'stats'}
-          aria-label="Stats"
+          aria-label={tAria('stats')}
           className={cn(
             'inline-flex size-7 items-center justify-center rounded-md transition-colors',
             activePage === 'stats'

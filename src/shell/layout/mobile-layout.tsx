@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef } from 'react';
 
@@ -32,6 +33,7 @@ interface MobileLayoutProps {
  * - エレベーション付き
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
+  const tAria = useTranslations('common.aria');
   // auto-generated selectors: 必要な値だけ監視（他の状態変更時の再レンダリングを防止）
   const isOpen = useLayoutStore.use.sidebarOpen();
   const toggle = useLayoutStore.use.toggleSidebar();
@@ -69,7 +71,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
           side="left"
           className="p-0"
           showCloseButton={false}
-          aria-label="Navigation menu"
+          aria-label={tAria('navigationMenu')}
         >
           <Sidebar>
             <SidebarContent />
