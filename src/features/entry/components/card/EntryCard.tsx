@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { memo, useCallback, useEffect, useMemo } from 'react';
+import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
@@ -110,6 +110,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
+      // Rect計測は同期で即座に実行（レイアウト情報が必要）
       if (onAnchorRect) {
         const rect = e.currentTarget.getBoundingClientRect();
         onAnchorRect({
@@ -121,7 +122,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           height: rect.height,
         });
       }
-      onClick?.(entry);
+      // Inspector マウントは重いため startTransition で INP 改善
+      startTransition(() => {
+        onClick?.(entry);
+      });
     },
     [onClick, entry, onAnchorRect],
   );

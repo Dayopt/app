@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { Clock, Flag } from 'lucide-react';
 
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
@@ -53,6 +55,16 @@ export function TimeSelect({
     handleOptionHover,
     handleOpenChange,
   } = useTimeCombobox({ value, onChange, minTime });
+
+  // duration 表示用: options × minTime が変わらない限りキャッシュ
+  const durationLabels = useMemo(() => {
+    if (!showDurationInMenu || !minTime) return null;
+    const map = new Map<string, string>();
+    for (const option of options) {
+      map.set(option, formatDurationDisplay(computeDuration(minTime, option)));
+    }
+    return map;
+  }, [showDurationInMenu, minTime, options]);
 
   return (
     <div>
@@ -145,11 +157,11 @@ export function TimeSelect({
                   onClick={() => handleOptionClick(option)}
                   onMouseEnter={() => handleOptionHover(index)}
                 >
-                  {showDurationInMenu && minTime ? (
+                  {durationLabels ? (
                     <span className="flex items-center gap-2">
                       <span className="tabular-nums">{option}</span>
                       <span className="text-muted-foreground text-xs tabular-nums">
-                        {formatDurationDisplay(computeDuration(minTime, option))}
+                        {durationLabels.get(option)}
                       </span>
                     </span>
                   ) : (
