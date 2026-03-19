@@ -17,6 +17,7 @@ import { openRecurringEditConfirm, type RecurringEditScope } from '@/stores/useM
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
+/** 保留中のドラッグ更新情報 */
 interface PendingDragUpdate {
   plan: CalendarEvent;
   /** 繰り返しインスタンスの親エントリID（ガード済み） */
@@ -26,11 +27,13 @@ interface PendingDragUpdate {
   updates: { startTime: Date; endTime: Date };
 }
 
+/** useRecurringPlanDrag フックのオプション */
 interface UseRecurringPlanDragOptions {
   /** 全プラン配列（繰り返しインスタンス情報を含む） */
   plans: CalendarEvent[];
 }
 
+/** 繰り返しプランのドラッグ移動時にスコープ選択ダイアログを表示して更新処理を行うフック */
 export function useRecurringPlanDrag({ plans }: UseRecurringPlanDragOptions) {
   const { updateEntry } = useEntryMutations();
   const { applyEdit } = useRecurringScopeMutations();

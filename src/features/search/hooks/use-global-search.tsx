@@ -9,6 +9,7 @@ import { GlobalSearchModal } from '../components/global-search-modal';
 export { useGlobalSearch } from '@/hooks/use-global-search';
 export type { GlobalSearchContextType } from '@/hooks/use-global-search';
 
+/** グローバル検索コンテキストを提供するプロバイダー（Cmd/Ctrl+K キーボードショートカット付き） */
 export const GlobalSearchProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
 

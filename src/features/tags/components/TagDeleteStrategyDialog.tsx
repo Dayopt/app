@@ -21,6 +21,11 @@ interface TagDeleteStrategyDialogProps {
   availableTags: Tag[];
 }
 
+/**
+ * タグ削除戦略選択ダイアログ
+ *
+ * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる
+ */
 export function TagDeleteStrategyDialog({
   open,
   onClose,

@@ -31,6 +31,10 @@ const VALID_CATEGORIES = new Set<string>([
   'account',
 ]);
 
+/**
+ * 文字列が有効な設定カテゴリかチェックする型ガード
+ * @param category - チェック対象の文字列
+ */
 export function isValidCategory(category: string): category is SettingsCategory {
   return VALID_CATEGORIES.has(category);
 }

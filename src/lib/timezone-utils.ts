@@ -27,7 +27,7 @@ export {
 // 設定固有の機能
 // ========================================
 
-/** 日本語ラベル付きタイムゾーン情報 */
+/** 日本語ラベル付きタイムゾーン情報（設定UI用） */
 export interface TimezoneInfoJa {
   value: string;
   label: string;

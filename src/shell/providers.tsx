@@ -30,6 +30,8 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
 
+import { handleOfflineMutationError } from '@/lib/pwa/offline-mutation';
+
 // axe-core アクセシビリティチェッカー: 開発環境のみ
 const AxeAccessibilityChecker =
   process.env.NODE_ENV === 'development'
@@ -118,6 +120,7 @@ function handleAuthError(error: unknown): void {
   }
 }
 
+/** 認証必須ページ用フルProviders（tRPC・Realtime・テーマ・検索等の全機能を提供） */
 export function Providers({ children }: ProvidersProps) {
   const [queryClient] = useState(
     () =>
@@ -127,7 +130,10 @@ export function Providers({ children }: ProvidersProps) {
           onError: (error) => handleAuthError(error),
         }),
         mutationCache: new MutationCache({
-          onError: (error) => handleAuthError(error),
+          onError: (error, variables, _context, mutation) => {
+            handleAuthError(error);
+            handleOfflineMutationError(error, variables, mutation.options.mutationKey);
+          },
         }),
         defaultOptions: {
           queries: {

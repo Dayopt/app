@@ -13,6 +13,7 @@ import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Sparkles, Target, Timer } f
 
 import type { MetricDefinition, MetricId } from '../types/metrics.types';
 
+/** 全メトリクスの定義マスター（format / 閾値 / アイコン / バリアント） */
 export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
   totalTime: {
     id: 'totalTime',

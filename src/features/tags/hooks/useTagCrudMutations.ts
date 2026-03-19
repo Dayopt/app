@@ -24,10 +24,13 @@ interface TrpcTagUpdateInput {
   color?: TagColorName | undefined;
 }
 
+/** タグ更新の入力型 */
 export type UpdateTagInput = TrpcTagUpdateInput;
 
-// タグ作成フック（楽観的更新付き）
-// showToast: false でインラインタグ作成時のtoast重複を防止
+/**
+ * タグ作成フック（楽観的更新付き）
+ * @param showToast - トースト通知を表示するか。インラインタグ作成時はfalseで重複防止
+ */
 export function useCreateTag({ showToast = true }: { showToast?: boolean } = {}) {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
@@ -85,7 +88,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
   });
 }
 
-// タグ更新フック（楽観的更新付き）
+/** タグ更新フック（楽観的更新付き）。名前・色の変更に対応 */
 export function useUpdateTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
@@ -149,7 +152,7 @@ export function useUpdateTag() {
   };
 }
 
-// タグ削除フック（楽観的更新付き）
+/** タグ削除フック（楽観的更新付き）。削除戦略（エントリ削除/再割当て）対応 */
 export function useDeleteTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
@@ -199,7 +202,7 @@ export function useDeleteTag() {
   });
 }
 
-// タグリネームフック（楽観的更新付き）
+/** タグリネームフック（楽観的更新付き）。重複名エラー時はトーストで通知 */
 export function useRenameTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
@@ -241,7 +244,7 @@ export function useRenameTag() {
   });
 }
 
-// タグ色変更フック（楽観的更新付き）
+/** タグ色変更フック（楽観的更新付き）。エラー時はキャッシュをロールバック */
 export function useUpdateTagColor() {
   const utils = trpc.useUtils();
   const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
@@ -275,7 +278,7 @@ export function useUpdateTagColor() {
   });
 }
 
-// グループリネームフック（楽観的更新付き）
+/** グループリネームフック（楽観的更新付き）。コロン記法プレフィックスを一括変更する */
 export function useRenameGroup() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
@@ -327,7 +330,7 @@ export function useRenameGroup() {
   });
 }
 
-// グループ解除フック（楽観的更新付き）
+/** グループ解除フック（楽観的更新付き）。コロン記法プレフィックスを除去してフラット化する */
 export function useUngroupTags() {
   const utils = trpc.useUtils();
   const t = useTranslations('calendar');
@@ -410,7 +413,7 @@ export function useUngroupTags() {
   });
 }
 
-// グループ削除フック（楽観的更新付き）
+/** グループ削除フック（楽観的更新付き）。コロン記法プレフィックスのタグを一括削除する */
 export function useDeleteGroup() {
   const utils = trpc.useUtils();
   const t = useTranslations('calendar');
@@ -457,13 +460,13 @@ export function useDeleteGroup() {
   });
 }
 
-// タグ並び替え入力型
+/** タグ並び替えの入力型 */
 export interface ReorderTagInput {
   id: string;
   sort_order: number;
 }
 
-// タグ並び替えフック（楽観的更新付き）
+/** タグ並び替えフック（楽観的更新付き）。sort_orderをバッチ更新してドラッグ&ドロップに対応 */
 export function useReorderTags() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');

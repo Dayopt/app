@@ -19,20 +19,21 @@ import type {
 // Constants
 // ========================================
 
-/** Mouse drag activation threshold (px) */
+/** マウスドラッグ起動閾値（px） */
 export const DRAG_THRESHOLD_PX = 5;
 
-/** Touch movement threshold to cancel long-press (px) — allows scroll */
+/** タッチ移動でロングプレスをキャンセルする閾値（px） — スクロール許容のため */
 export const TOUCH_SCROLL_THRESHOLD_PX = 10;
 
-/** Long-press delay for event drag (ms) */
+/** イベントドラッグのロングプレス遅延（ms） */
 export const LONGPRESS_DELAY_MS = 500;
 
-/** Long-press delay for grid selection (ms) */
+/** グリッド選択のロングプレス遅延（ms） */
 export const SELECTION_LONGPRESS_DELAY_MS = 300;
 
 const DEFAULT_SNAP_INTERVAL = 15;
 
+/** アイドル状態の初期値 */
 export const IDLE: InteractionState = { mode: 'idle' };
 
 // ========================================
@@ -43,7 +44,7 @@ function maxAbsDelta(a: Point, b: Point): number {
   return Math.max(Math.abs(a.clientX - b.clientX), Math.abs(a.clientY - b.clientY));
 }
 
-/** Snap a pixel Y position to the nearest grid interval */
+/** ピクセルY座標を最寄りのグリッドインターバルにスナップする */
 export function snapToGrid(
   yPx: number,
   hourHeight: number,
@@ -122,6 +123,13 @@ function buildSelectionRange(
 // Reducer
 // ========================================
 
+/**
+ * インタラクション状態機械の純粋レデューサー
+ * @param state - 現在の状態
+ * @param action - 発行されたアクション
+ * @param ctx - グリッドのコンテキスト情報
+ * @returns 新しい状態とサイドエフェクトのリスト
+ */
 export function interactionReducer(
   state: InteractionState,
   action: InteractionAction,

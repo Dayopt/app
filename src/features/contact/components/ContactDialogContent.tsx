@@ -26,6 +26,7 @@ import type { ContactCategory } from '../types';
 
 const CATEGORIES: ContactCategory[] = ['bug', 'feature', 'question', 'other'];
 
+/** お問い合わせダイアログUIコンポーネントのProps */
 export interface ContactDialogContentProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +45,7 @@ export interface ContactDialogContentProps {
   };
 }
 
+/** お問い合わせダイアログのUIコンポーネント（tRPC非依存のプレゼンテーション層） */
 export function ContactDialogContent({
   open,
   onOpenChange,

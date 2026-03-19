@@ -25,6 +25,10 @@ interface UseDebouncedSaveOptions {
   entryId: string | null;
 }
 
+/** Inspectorフィールドの統一保存パイプラインフック（デバウンス・即時・タグ保存を提供）
+ * @param options - entryId: 保存対象のエントリID
+ * @returns save, saveImmediate, saveTag, flush, updateEntry, deleteEntry, updateTagsInCache
+ */
 export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const { updateEntry, deleteEntry } = useEntryMutations();
   const { setEntryTags } = useEntryTags();

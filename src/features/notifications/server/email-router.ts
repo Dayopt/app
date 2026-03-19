@@ -139,9 +139,7 @@ function handleEmailError(operation: string, error: unknown): never {
   });
 }
 
-/**
- * Email Router
- */
+/** メール送信（ウェルカム / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
 export const emailRouter = createTRPCRouter({
   /**
    * ウェルカムメール送信

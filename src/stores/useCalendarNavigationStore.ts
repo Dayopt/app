@@ -16,6 +16,7 @@ interface CalendarNavigationStore {
   clearPending: () => void;
 }
 
+/** カレンダーの日付ナビゲーションを仲介するZustandストア */
 export const useCalendarNavigationStore = create<CalendarNavigationStore>()((set) => ({
   pendingDate: null,
   navigateTo: (date) => set({ pendingDate: date }),

@@ -12,6 +12,7 @@
  * @see src/styles/tokens/colors.css
  */
 
+/** OG画像用カラー定数（Satori CSS変数非対応のためhex値で定義） */
 export const OG_COLORS = {
   /** ページ背景（neutral-12相当: oklch(0.12 0 0)） */
   background: '#1c1c1c',

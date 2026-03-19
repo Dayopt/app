@@ -37,6 +37,7 @@ import {
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
 
+/** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
 export function EntryInspectorForm() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();

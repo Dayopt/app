@@ -74,7 +74,9 @@ export const cacheStrategies = {
 } as const;
 
 /**
- * キャッシュ戦略の選択ヘルパー
+ * 機能名からキャッシュ戦略（staleTime/gcTime）を取得する
+ * @param feature cacheStrategiesのキー
+ * @returns キャッシュ設定オブジェクト
  */
 export function getCacheStrategy(feature: keyof typeof cacheStrategies) {
   return cacheStrategies[feature];

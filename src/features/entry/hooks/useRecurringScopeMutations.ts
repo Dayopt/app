@@ -38,6 +38,9 @@ interface ApplyDeleteParams {
   instanceDate: string;
 }
 
+/** 繰り返しエントリのスコープ付き編集・削除を行うフック（this / thisAndFuture / all の3スコープに対応）
+ * @returns applyEdit: スコープ付き編集, applyDelete: スコープ付き削除
+ */
 export function useRecurringScopeMutations() {
   const utils = api.useUtils();
   const { updateEntry, deleteEntry } = useEntryMutations();

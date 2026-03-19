@@ -14,6 +14,7 @@ interface RealtimeConnectionState {
   setStatus: (status: RealtimeConnectionStatus) => void;
 }
 
+/** Supabase Realtime接続状態を管理するZustandストア */
 export const useRealtimeConnectionStore = create<RealtimeConnectionState>((set) => ({
   status: 'connected',
   setStatus: (status) => set({ status }),

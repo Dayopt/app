@@ -21,6 +21,7 @@ import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHei
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 import type { WeekEntryPosition } from '../WeekView.types';
 
+/** WeekContent コンポーネントのプロパティ */
 interface WeekContentProps {
   date: Date;
   entries: CalendarEvent[];
@@ -42,6 +43,7 @@ interface WeekContentProps {
 // Component
 // ========================================
 
+/** 週ビューの1日分のグリッド・エントリ・インタラクションを含むコンポーネント */
 export const WeekContent = React.memo(function WeekContent({
   date,
   entries,

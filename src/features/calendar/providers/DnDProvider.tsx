@@ -42,6 +42,7 @@ interface DnDProviderProps {
  * - 無効なドロップ先 → エラーメッセージ表示
  * - 重複プラン → 既存の時間幅を保持
  */
+/** dnd-kitを使用したドラッグ・アンド・ドロップコンテキストプロバイダー */
 export const DnDProvider = ({ children }: DnDProviderProps) => {
   const t = useTranslations();
   const { updateEntry } = useEntryMutations();

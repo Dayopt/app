@@ -8,6 +8,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { createPlatformStorage } from '@/lib/zustand/storage';
+
+/** カレンダーフィルターの状態インターフェース */
 export interface CalendarFilterState {
   /** タグIDごとの表示設定（デフォルト: すべて表示） */
   visibleTagIds: Set<string>;
@@ -16,6 +19,7 @@ export interface CalendarFilterState {
   initialized: boolean;
 }
 
+/** カレンダーフィルターのアクションインターフェース */
 export interface CalendarFilterActions {
   /** タグの表示切替 */
   toggleTag: (tagId: string) => void;
@@ -80,6 +84,7 @@ const setSerializer = {
   }),
 };
 
+/** カレンダーのタグ表示フィルターを管理するZustandストア（localStorageに永続化） */
 export const useCalendarFilterStore = create<CalendarFilterStore>()(
   persist(
     (set, get) => ({
@@ -208,25 +213,10 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
       // v3: showUntagged削除、matchesTagFilter/isPlanVisible単一タグ対応
       // v4: ItemType ('plan'|'record') → EntryOrigin ('planned'|'unplanned') に変更
       version: 5,
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          const parsed = JSON.parse(str);
-          return {
-            ...parsed,
-            state: setSerializer.deserialize(parsed.state),
-          };
-        },
-        setItem: (name, value) => {
-          const serialized = {
-            ...value,
-            state: setSerializer.serialize(value.state as CalendarFilterState),
-          };
-          localStorage.setItem(name, JSON.stringify(serialized));
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
+      storage: createPlatformStorage<CalendarFilterState>({
+        serialize: (state) => setSerializer.serialize(state),
+        deserialize: (raw) => setSerializer.deserialize(raw as SerializedCalendarFilterState),
+      }),
       // バージョンマイグレーション: 古いバージョンからの移行時はリセット
       migrate: (persistedState, version) => {
         if (version < 5) {

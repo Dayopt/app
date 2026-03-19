@@ -31,6 +31,7 @@ import type {
 // Types
 // ========================================
 
+/** useInteraction フックへの入力プロパティ */
 export interface UseInteractionProps {
   /** Base date of the current view */
   date: Date;
@@ -63,6 +64,7 @@ export interface UseInteractionProps {
   }) => void;
 }
 
+/** useInteraction フックの戻り値 */
 export interface UseInteractionReturn {
   /** Current interaction state (discriminated union) */
   state: InteractionState;
@@ -72,6 +74,7 @@ export interface UseInteractionReturn {
   handlers: InteractionHandlers;
 }
 
+/** DOM要素にアタッチするインタラクションハンドラー群 */
 export interface InteractionHandlers {
   handlePointerDown: (
     entryId: string,
@@ -97,6 +100,7 @@ export interface InteractionHandlers {
 // Hook
 // ========================================
 
+/** 純粋状態機械をReactに接続する統合インタラクションフック */
 export function useInteraction(props: UseInteractionProps): UseInteractionReturn {
   const haptic = useHapticFeedback();
 

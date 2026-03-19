@@ -50,6 +50,7 @@ function buildLookup(data: EnergyMapRow[]): Map<string, EnergyMapRow> {
   return map;
 }
 
+/** 時間帯×曜日のエネルギーマップをヒートマップで表示（記録量 / 充実度の2モード対応） */
 export function EnergyMapHeatmap() {
   const t = useTranslations('calendar.stats');
   const currentDate = useStatsFilterStore((s) => s.currentDate);

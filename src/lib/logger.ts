@@ -17,6 +17,7 @@ function toBreadcrumbMessage(args: unknown[]): string {
     .slice(0, 200);
 }
 
+/** アプリケーション統一ロガー（error/warnはSentry breadcrumbも記録） */
 export const logger = {
   log: (...args: unknown[]) => {
     if (isDevelopment) {

@@ -4,6 +4,7 @@ import type React from 'react';
 
 import { usePathname } from 'next/navigation';
 
+/** 認証ページ共通レイアウト。ログイン・サインアップ等の特定パスでは素通し、それ以外はカード中央配置 */
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 

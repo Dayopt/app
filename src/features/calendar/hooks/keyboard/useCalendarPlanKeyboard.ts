@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
 
+/** useCalendarEventKeyboard フックのオプション */
 interface UseCalendarEventKeyboardOptions {
   /** ショートカットを有効にするか */
   enabled?: boolean;

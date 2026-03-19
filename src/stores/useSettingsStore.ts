@@ -15,6 +15,7 @@ interface SettingsStoreState {
   setCategory: (category: SettingsCategory) => void;
 }
 
+/** 設定モーダルの開閉状態とカテゴリを管理するZustandストア */
 export const useSettingsStore = create<SettingsStoreState>((set) => ({
   isOpen: false,
   category: 'profile',

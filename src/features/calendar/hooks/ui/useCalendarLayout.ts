@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { CalendarViewType } from '../../types/calendar.types';
 
+/** カレンダーのレイアウトモード */
 export type LayoutMode = 'default' | 'compact' | 'fullscreen';
+/** サイドバーの表示幅状態 */
 export type SidebarWidth = 'full' | 'collapsed' | 'hidden';
+/** レスポンシブブレークポイント */
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
 interface CalendarLayoutState {

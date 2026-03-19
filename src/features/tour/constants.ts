@@ -6,7 +6,7 @@ export const TOUR_START_DELAY = 500;
 /** beforeEnter スクロール完了待ち時間（ms） */
 export const TOUR_SCROLL_DELAY = 500;
 
-/** ツアーステップ定義（表示順） */
+/** ツアーのステップ定義一覧（表示順） */
 export const TOUR_STEPS: TourStepDef[] = [
   {
     id: 'intro',
@@ -58,5 +58,5 @@ export const TOUR_STEPS: TourStepDef[] = [
   },
 ];
 
-/** ツアーの総ステップ数（最大） */
+/** ツアーの総ステップ数（スキップ条件適用前の最大値） */
 export const TOUR_TOTAL_STEPS = TOUR_STEPS.length;

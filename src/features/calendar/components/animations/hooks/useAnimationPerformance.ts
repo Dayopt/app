@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+/** アニメーションのFPSをリアルタイム計測するフック */
 export function useAnimationPerformance() {
   const frameCount = useRef(0);
   // eslint-disable-next-line react-hooks/purity -- FPS計測のベースライン取得（useRef初期値）

@@ -34,6 +34,7 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
+/** エントリカードの内部コンテンツ（タグ名・時間範囲・繰り返し/リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,

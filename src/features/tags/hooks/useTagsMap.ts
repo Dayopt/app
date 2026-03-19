@@ -15,12 +15,14 @@ import { useCallback, useMemo } from 'react';
 
 import { useTags } from './useTagsQuery';
 
+/** タグの表示情報（ID・名前・色） */
 export type TagInfo = {
   id: string;
   name: string;
   color: string;
 };
 
+/** タグIDからタグ情報へのMapを提供するフック。plan.tagIdからタグ詳細を高速ルックアップできる */
 export function useTagsMap() {
   const { data: tags } = useTags();
 

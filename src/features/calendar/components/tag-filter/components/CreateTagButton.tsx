@@ -7,6 +7,7 @@ import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
 
+/** 新規タグ作成モーダルを開くボタンコンポーネント */
 export function CreateTagButton() {
   const t = useTranslations();
   const { openTagCreateModal } = useTagModalNavigation();

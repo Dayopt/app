@@ -3,6 +3,7 @@
  * 7つの主要カテゴリでエラーを分類し、適切なハンドリング戦略を提供
  */
 
+/** エラーのカテゴリ定数マップ */
 export const ERROR_CATEGORIES = {
   AUTH: 'AUTH',
   VALIDATION: 'VALIDATION',
@@ -13,6 +14,7 @@ export const ERROR_CATEGORIES = {
   RATE: 'RATE',
 } as const;
 
+/** エラーカテゴリの型 */
 export type ErrorCategory = (typeof ERROR_CATEGORIES)[keyof typeof ERROR_CATEGORIES];
 
 /**
@@ -185,6 +187,7 @@ export const CATEGORY_SEVERITY = {
   [ERROR_CATEGORIES.RATE]: 'low',
 } as const;
 
+/** エラーの重要度レベル */
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 
 /**

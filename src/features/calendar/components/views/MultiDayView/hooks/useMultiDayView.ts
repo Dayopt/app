@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
 
+/** useMultiDayView フックのオプション */
 export interface UseMultiDayViewOptions {
   centerDate: Date;
   dayCount: number;
@@ -10,6 +11,7 @@ export interface UseMultiDayViewOptions {
   showWeekends?: boolean;
 }
 
+/** useMultiDayView フックの戻り値 */
 export interface UseMultiDayViewReturn {
   displayDates: Date[];
   eventsByDate: Record<string, CalendarEvent[]>;

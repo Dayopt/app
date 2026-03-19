@@ -12,6 +12,7 @@ import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticF
 import type { DateTimeSelection, TimeRange } from './types';
 import { DRAG_CONSTANTS } from './types';
 
+/** useSelectionEvents フックのオプション */
 interface UseSelectionEventsOptions {
   date: Date;
   disabled: boolean;
@@ -23,6 +24,7 @@ interface UseSelectionEventsOptions {
   checkOverlap: (sel: TimeRange) => boolean;
 }
 
+/** useSelectionEvents フックの戻り値 */
 interface UseSelectionEventsReturn {
   isSelecting: boolean;
   selection: TimeRange | null;
@@ -33,6 +35,7 @@ interface UseSelectionEventsReturn {
   handleTouchStart: (e: React.TouchEvent) => void;
 }
 
+/** マウス・タッチイベントハンドラーとグローバルリスナーを管理するフック */
 export function useSelectionEvents({
   date,
   disabled,

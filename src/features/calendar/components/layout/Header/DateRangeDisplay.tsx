@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 import type { Locale } from 'date-fns';
 
+/** DateRangeDisplay コンポーネントのプロパティ */
 interface DateRangeDisplayProps {
   date: Date;
   endDate?: Date | undefined;

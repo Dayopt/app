@@ -69,6 +69,7 @@ interface StatsMetricCard {
   progressStatus: 'good' | 'warning' | 'critical' | undefined;
 }
 
+/** useStatsMetrics の戻り値型 */
 export interface UseStatsMetricsResult {
   /** レンダリング可能なメトリクスカードデータ */
   cards: StatsMetricCard[];

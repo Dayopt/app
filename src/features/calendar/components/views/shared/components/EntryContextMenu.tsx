@@ -21,6 +21,7 @@ interface EntryContextMenuProps {
   onMoveToDate?: (entry: CalendarEvent) => void;
 }
 
+/** エントリの右クリックコンテキストメニューコンポーネント */
 export const EventContextMenu = ({
   entry,
   position,

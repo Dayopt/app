@@ -6,16 +6,19 @@
 
 import { useMemo } from 'react';
 
+/** 今日の列位置情報 */
 interface TodayColumnPosition {
   left: string | number;
   width: string;
 }
 
+/** useSleepHoursLayout フックのオプション */
 interface UseSleepHoursLayoutOptions {
   hourHeight: number;
   displayDates?: Date[] | undefined;
 }
 
+/** useSleepHoursLayout フックの戻り値 */
 interface UseSleepHoursLayoutReturn {
   gridHeight: number;
   todayColumnPosition: TodayColumnPosition | null;

@@ -48,6 +48,7 @@ interface OnboardingProvidersProps {
   children: React.ReactNode;
 }
 
+/** オンボーディングページ用の軽量Providers（tRPC + Auth + Theme のみ提供） */
 export function OnboardingProviders({ children }: OnboardingProvidersProps) {
   const [queryClient] = useState(
     () =>

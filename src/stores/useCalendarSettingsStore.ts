@@ -4,13 +4,15 @@ import { devtools, persist } from 'zustand/middleware';
 import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import { listenToTimezoneChange } from '@/lib/timezone-listener';
+import { platformStorage } from '@/lib/zustand/storage';
 import type { ChronotypeSettings as ChronotypeSettingsState } from '@/types/chronotype';
 
 export type { CalendarViewType } from '@/lib/calendar-constants';
 
-// 日付フォーマット型
+/** 日付フォーマットの種別（日本式・米国式・欧州式・ISO式） */
 export type DateFormatType = 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd';
 
+/** カレンダーの各種設定項目を表すインターフェース */
 export interface CalendarSettings {
   // タイムゾーン設定
   timezone: string; // 例: 'Asia/Tokyo', 'America/New_York'
@@ -76,6 +78,7 @@ const defaultSettings: CalendarSettings = {
   hourHeightDensity: 'default',
 };
 
+/** カレンダー設定を管理するZustandストア（localStorageに永続化） */
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(
     persist(
@@ -107,6 +110,7 @@ export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
       },
       {
         name: 'calendar-settings',
+        storage: platformStorage(),
         partialize: (state) => {
           const { updateSettings: _u, resetSettings: _r, ...persisted } = state;
           return persisted;

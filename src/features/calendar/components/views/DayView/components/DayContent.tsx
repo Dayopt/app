@@ -24,6 +24,7 @@ import type { DayContentProps } from '../DayView.types';
 // Component
 // ========================================
 
+/** DayView のグリッド・エントリ・インタラクションを含むメインコンテンツコンポーネント */
 export const DayContent = ({
   date,
   events,

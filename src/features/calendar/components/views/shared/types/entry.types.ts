@@ -4,25 +4,27 @@
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-// 時間指定エントリ（start/endを持つエントリ）
-// CalendarEventの startDate/endDate を start/end に変換した型
+/** 時間指定エントリ型（startDate/endDateをstart/endにエイリアス） */
 export type TimedEntry = CalendarEvent & {
   start: Date; // startDateのエイリアス
   end: Date; // endDateのエイリアス
   isReadOnly?: boolean;
 };
 
+/** 重複グループ化されたエントリ群 */
 export interface EntryGroup {
   entries: CalendarEvent[];
   columns: EntryColumn[];
 }
 
+/** カラム割り当て済みのエントリ列情報 */
 export interface EntryColumn {
   entries: CalendarEvent[];
   columnIndex: number;
   totalColumns: number;
 }
 
+/** エントリのインタラクションハンドラー型 */
 export type EntryInteractionHandler = {
   onClick?: (entry: CalendarEvent) => void;
   onContextMenu?: (entry: CalendarEvent, e: React.MouseEvent) => void;

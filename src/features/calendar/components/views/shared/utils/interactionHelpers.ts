@@ -9,7 +9,12 @@ import type React from 'react';
 
 import type { InteractionState } from '../../../../interaction';
 
-/** ドラッグ・リサイズ中のプランスタイルを調整 */
+/**
+ * ドラッグ・リサイズ中のプランスタイルを調整する
+ * @param originalStyle - 元のCSSスタイル
+ * @param planId - 対象プランのID
+ * @param state - 現在のインタラクション状態
+ */
 export function getAdjustedStyle(
   originalStyle: React.CSSProperties,
   planId: string,
@@ -28,7 +33,12 @@ export function getAdjustedStyle(
   return originalStyle;
 }
 
-/** リサイズ中のプレビュー時刻を取得（ドラッグ時はゴースト側に表示） */
+/**
+ * リサイズ中のプレビュー時刻を取得する（ドラッグ時はゴースト側に表示）
+ * @param planId - 対象プランのID
+ * @param state - 現在のインタラクション状態
+ * @returns リサイズ中の場合はプレビュー時刻、それ以外はnull
+ */
 export function getPreviewTime(
   planId: string,
   state: InteractionState,

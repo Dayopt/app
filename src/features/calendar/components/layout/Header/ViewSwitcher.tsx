@@ -24,6 +24,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
 
+/** ViewSwitcher コンポーネントのプロパティ */
 interface ViewSwitcherProps {
   currentView: CalendarViewType;
   onChange: (view: CalendarViewType) => void;
@@ -31,6 +32,7 @@ interface ViewSwitcherProps {
   className?: string;
 }
 
+/** ビュー選択オプションの定義 */
 interface MainViewOption {
   value: CalendarViewType;
   labelKey: string;

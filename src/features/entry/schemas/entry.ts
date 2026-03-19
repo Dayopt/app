@@ -2,8 +2,10 @@ import { z } from 'zod';
 
 // Entry 用 Zod スキーマ（plans + records を統合）
 
+/** エントリ発生源スキーマ（"planned" のみ許可） */
 export const entryOriginSchema = z.literal('planned');
 
+/** 繰り返しタイプスキーマ */
 export const recurrenceTypeSchema = z.enum([
   'none',
   'daily',
@@ -13,7 +15,7 @@ export const recurrenceTypeSchema = z.enum([
   'weekdays',
 ]);
 
-// 充実度スコア（3段階: 1=微妙, 2=普通, 3=良い）
+/** 充実度スコアスキーマ（3段階: 1=微妙, 2=普通, 3=良い） */
 export const fulfillmentScoreSchema = z.number().int().min(1).max(3);
 
 // 時間順序の検証（end >= start）
@@ -61,18 +63,18 @@ const baseEntrySchema = z.object({
   reminder_minutes: z.number().int().min(0).nullable().optional(),
 });
 
-// Entry 作成スキーマ
+/** エントリ作成スキーマ */
 export const createEntrySchema = baseEntrySchema.superRefine(timeOrderRefine);
 
-// Entry 更新スキーマ
+/** エントリ更新スキーマ（全フィールド任意） */
 export const updateEntrySchema = baseEntrySchema.partial().superRefine(timeOrderRefine);
 
-// Entry ID スキーマ
+/** エントリIDスキーマ */
 export const entryIdSchema = z.object({
   id: z.string().uuid('validation.invalidUuid'),
 });
 
-// Entry フィルタスキーマ
+/** エントリ一覧取得のフィルタスキーマ */
 export const entryFilterSchema = z.object({
   origin: entryOriginSchema.optional(),
   search: z.string().max(200).optional(),
@@ -91,32 +93,39 @@ export const entryFilterSchema = z.object({
   offset: z.number().min(0).optional(),
 });
 
-// リレーション取得オプション
+/** リレーション取得オプションスキーマ */
 export const entryIncludeSchema = z.object({
   tags: z.boolean().optional(),
 });
 
-// getById 用スキーマ
+/** getById 用入力スキーマ */
 export const getEntryByIdSchema = z.object({
   id: z.string().uuid('validation.invalidUuid'),
   include: entryIncludeSchema.optional(),
 });
 
-// 一括操作用スキーマ
+/** 一括更新スキーマ */
 export const bulkUpdateEntrySchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
   data: updateEntrySchema,
 });
 
+/** 一括削除スキーマ */
 export const bulkDeleteEntrySchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
 });
 
-// 型エクスポート
+/** エントリ作成入力型 */
 export type CreateEntryInput = z.infer<typeof createEntrySchema>;
+/** エントリ更新入力型 */
 export type UpdateEntryInput = z.infer<typeof updateEntrySchema>;
+/** エントリフィルター型 */
 export type EntryFilter = z.infer<typeof entryFilterSchema>;
+/** エントリインクルードオプション型 */
 export type EntryInclude = z.infer<typeof entryIncludeSchema>;
+/** getById 入力型 */
 export type GetEntryByIdInput = z.infer<typeof getEntryByIdSchema>;
+/** 一括更新入力型 */
 export type BulkUpdateEntryInput = z.infer<typeof bulkUpdateEntrySchema>;
+/** 一括削除入力型 */
 export type BulkDeleteEntryInput = z.infer<typeof bulkDeleteEntrySchema>;

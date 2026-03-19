@@ -5,6 +5,10 @@ import { useCallback, useMemo } from 'react';
 import { useEntries } from '../../../hooks/useEntries';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
 
+/** Inspector内でエントリ一覧を前後に移動するフック
+ * @param entryId - 現在表示中のエントリID
+ * @returns hasPrevious, hasNext, goToPrevious, goToNext
+ */
 export function useInspectorNavigation(entryId: string | null) {
   const openInspector = useEntryInspectorStore((state) => state.openInspector);
 

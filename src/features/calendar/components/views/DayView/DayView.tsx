@@ -15,6 +15,7 @@ import { DayContent } from './components/DayContent';
 import type { DayViewProps } from './DayView.types';
 import { useDayView } from './hooks/useDayView';
 
+/** 1日表示のカレンダービューコンポーネント */
 export const DayView = ({
   dateRange: _dateRange,
   entries,

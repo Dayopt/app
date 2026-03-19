@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
+/** recharts チャートのラベル・色設定マップ */
 export type ChartConfig = {
   [k in string]: {
     label?: React.ReactNode;
@@ -80,6 +81,7 @@ function useChart() {
   return context;
 }
 
+/** recharts をラップするチャートコンテナ（CSS変数によるカラーシステムを提供） */
 function ChartContainer({
   id,
   className,
@@ -111,6 +113,7 @@ function ChartContainer({
   );
 }
 
+/** ChartConfig を CSS 変数に変換してスタイルタグを注入 */
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([, config]) => config.theme || config.color);
 
@@ -140,6 +143,7 @@ ${colorConfig
   );
 };
 
+/** recharts Tooltip の再エクスポート（ChartConfig と統合済み） */
 const ChartTooltip = Tooltip;
 
 type TooltipPayload = {
@@ -174,6 +178,7 @@ type ChartTooltipContentProps = {
   color?: string;
 };
 
+/** カスタムツールチップコンテンツ（インジケーター・ラベル・フォーマット対応） */
 function ChartTooltipContent({
   active,
   payload,
@@ -304,6 +309,7 @@ function ChartTooltipContent({
   );
 }
 
+/** recharts Legend の再エクスポート */
 const ChartLegend = Legend;
 
 type ChartLegendContentProps = {
@@ -314,6 +320,7 @@ type ChartLegendContentProps = {
   nameKey?: string;
 };
 
+/** カスタム凡例コンテンツ（アイコン・ラベル対応） */
 function ChartLegendContent({
   className,
   hideIcon = false,

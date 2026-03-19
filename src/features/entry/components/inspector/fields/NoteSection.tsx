@@ -44,6 +44,7 @@ interface NoteSectionProps {
   maxLength?: number;
 }
 
+/** Inspectorのメモ入力行（自動拡張textarea、HTMLタグ自動除去対応） */
 export function NoteSection({
   label,
   icon: Icon,

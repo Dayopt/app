@@ -10,6 +10,7 @@ interface StepIndicatorProps {
   currentStep: OnboardingStep;
 }
 
+/** オンボーディングのステップ進捗インジケーターコンポーネント */
 export function StepIndicator({ currentStep }: StepIndicatorProps) {
   const t = useTranslations();
   const currentIndex = ONBOARDING_STEPS.indexOf(currentStep);

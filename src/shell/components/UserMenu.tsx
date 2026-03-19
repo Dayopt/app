@@ -42,6 +42,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/types/settings';
 
+/** ユーザーメニュー（アバター + ドロップダウン）。設定・ヘルプ・ログアウトへのアクセスを提供する。 */
 export function UserMenu({
   user,
 }: {

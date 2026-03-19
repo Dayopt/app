@@ -4,6 +4,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 /**
  * メディアクエリの状態を監視するフック（React 18+ useSyncExternalStore使用）
+ * @param query CSSメディアクエリ文字列（例: '(max-width: 767px)'）
+ * @returns クエリが一致する場合true
  */
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(

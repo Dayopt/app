@@ -52,12 +52,14 @@ export interface TrpcRequestLike {
   };
 }
 
+/** tRPCレスポンスの最低限のインターフェース */
 export interface TrpcResponseLike {
   headers?: Headers;
   setHeader?: (name: string, value: string | readonly string[]) => void;
   end?: (...args: unknown[]) => void;
 }
 
+/** tRPCプロシージャのコンテキスト型 */
 export interface Context {
   req: TrpcRequestLike;
   res: TrpcResponseLike;
@@ -214,6 +216,7 @@ export async function createTRPCContext(opts: {
   };
 }
 
+/** Fetch API用tRPCコンテキスト作成（App Router Route Handler向け） */
 export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions): Promise<Context> {
   return createTRPCContext({
     req: createRequestLike(opts.req),
@@ -348,7 +351,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
   if (!status) {
     const { data, error } = await ctx.supabase
       .from('profiles')
-      .select('id, subscription_status')
+      .select('*')
       .eq('id', ctx.userId)
       .single();
 
@@ -463,6 +466,7 @@ export const paginationSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+/** ページネーション入力の型定義 */
 export type PaginationInput = z.infer<typeof paginationSchema>;
 
 function createRequestLike(req: Request): TrpcRequestLike {

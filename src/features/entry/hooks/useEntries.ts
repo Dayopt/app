@@ -17,6 +17,10 @@ import type { EntryFilter } from '../schemas/entry';
  *
  * @see {@link cacheStrategies.entries} - realtimeCache設定を使用
  */
+/** エントリ一覧を取得するフック（フィルター・ソート・ページネーション対応）
+ * @param filters - フィルター条件（origin, search, tagId, 日付範囲など）
+ * @param options - React Queryオプション（enabled など）
+ */
 export function useEntries(filters?: EntryFilter, options?: { enabled?: boolean }) {
   return api.entries.list.useQuery(filters, {
     ...cacheStrategies.entries, // staleTime: 5分, gcTime: 10分

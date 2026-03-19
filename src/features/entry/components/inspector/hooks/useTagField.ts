@@ -18,6 +18,10 @@ interface UseTagFieldOptions {
   saveTag: (tagId: string | null) => void;
 }
 
+/** Inspectorのタグフィールド状態管理フック（単一タグの選択・即時保存）
+ * @param options - entryId, entry, saveTag
+ * @returns selectedTagId, handleTagChange
+ */
 export function useTagField({ entryId, entry, saveTag }: UseTagFieldOptions) {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const selectedTagIdRef = useRef<string | null>(selectedTagId);

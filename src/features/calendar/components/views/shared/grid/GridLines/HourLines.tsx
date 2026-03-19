@@ -9,6 +9,7 @@ import { memo } from 'react';
 import { HOUR_LINE_COLOR } from '../../constants/grid.constants';
 import { useTimeGrid } from '../../hooks/useTimeGrid';
 
+/** HourLines コンポーネントのプロパティ */
 interface HourLinesProps {
   startHour?: number;
   endHour?: number;
@@ -16,6 +17,7 @@ interface HourLinesProps {
   className?: string;
 }
 
+/** 1時間ごとの横線を描画するコンポーネント */
 export const HourLines = memo<HourLinesProps>(function HourLines({
   startHour = 0,
   endHour = 24,

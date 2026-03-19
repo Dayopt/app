@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+/** TimezoneOffset コンポーネントのプロパティ */
 interface TimezoneOffsetProps {
   className?: string;
 }
 
+/** タイムゾーンを選択するドロップダウンコンポーネント（UTC オフセット表示） */
 export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);

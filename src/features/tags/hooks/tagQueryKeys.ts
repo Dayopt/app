@@ -1,5 +1,6 @@
 // タグ用クエリキー定義
 
+/** TanStack Query用タグクエリキー定義 */
 export const tagKeys = {
   all: ['tags'] as const,
   lists: () => [...tagKeys.all, 'list'] as const,

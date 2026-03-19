@@ -1,6 +1,7 @@
 // features/calendar/theme/styles.ts
 // カレンダー専用のスタイル定義（Tailwindクラスベース）
 
+/** カレンダーのTailwindクラスベーススタイル定義 */
 export interface CalendarStyles {
   event: {
     borderRadius: string;
@@ -43,7 +44,7 @@ export interface CalendarStyles {
   };
 }
 
-// カレンダー専用スタイル（既存テーマシステム準拠）
+/** カレンダー専用スタイル定数（既存テーマシステム準拠） */
 export const calendarStyles: CalendarStyles = {
   event: {
     // 角丸 - rounded.component.card準拠
@@ -123,7 +124,7 @@ export const calendarStyles: CalendarStyles = {
   },
 } as const;
 
-// カスタムCSS変数とキーフレームアニメーション（calendar.cssに定義済み）
+/** カレンダー専用カスタムCSSアニメーション・スクロールバースタイル文字列 */
 export const calendarCustomCSS = `
 /* Calendar Custom Animations - calendar-layout.cssから移行 */
 @keyframes calendar-zoom-in {

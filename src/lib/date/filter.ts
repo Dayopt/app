@@ -4,7 +4,7 @@
  * Plan/Record共通で使用する日付範囲フィルタリング。
  */
 
-/** 日付範囲フィルターの選択肢 */
+/** 日付範囲フィルターの選択肢（'all'〜'this_month'） */
 export type DateRangeFilter =
   | 'all'
   | 'today'

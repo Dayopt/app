@@ -25,6 +25,7 @@ export const TAG_GROUP_NAME_MAX_LENGTH = 50;
 // カラー名一覧
 // ========================================
 
+/** 使用可能なタグカラー名の一覧 */
 export const TAG_COLOR_NAMES = [
   'red',
   'orange',
@@ -38,12 +39,14 @@ export const TAG_COLOR_NAMES = [
   'gray',
 ] as const;
 
+/** タグカラー名の型 */
 export type TagColorName = (typeof TAG_COLOR_NAMES)[number];
 
 // ========================================
 // カラー名 → クラス/CSS変数 マッピング
 // ========================================
 
+/** タグカラーのTailwindクラスとCSS変数のマッピング */
 export interface TagColorEntry {
   /** border用 Tailwindクラス (e.g. 'border-tag-blue') */
   border: string;
@@ -67,6 +70,7 @@ function entry(name: TagColorName): TagColorEntry {
   };
 }
 
+/** タグカラー名からTailwindクラス/CSS変数へのマッピングテーブル */
 export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
   red: entry('red'),
   orange: entry('orange'),
@@ -84,7 +88,9 @@ export const TAG_COLOR_MAP: Record<TagColorName, TagColorEntry> = {
 // デフォルト値
 // ========================================
 
+/** タグのデフォルトカラー */
 export const DEFAULT_TAG_COLOR: TagColorName = 'blue';
+/** タググループのデフォルトカラー */
 export const DEFAULT_GROUP_COLOR: TagColorName = 'gray';
 
 // ========================================

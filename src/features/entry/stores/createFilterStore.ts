@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { platformStorage } from '@/lib/zustand/storage';
+
 /**
  * フィルターストアの基本型
  */
@@ -113,6 +115,7 @@ export function createFilterStore<TState extends BaseFilterState, TExtra extends
       },
       {
         name,
+        storage: platformStorage(),
         // isSearchOpenは永続化しない（ページリロード時は閉じているべき）
         partialize: (state) => {
           const { isSearchOpen, ...rest } = state as TState & Setters & BaseFilterActions & TExtra;

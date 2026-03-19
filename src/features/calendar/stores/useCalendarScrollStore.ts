@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { platformStorage } from '@/lib/zustand/storage';
+
 import type { CalendarViewType } from '../types/calendar.types';
 
 /**
@@ -37,6 +39,7 @@ const initialState: CalendarScrollState = {
   lastActiveView: 'week',
 };
 
+/** カレンダーのスクロール位置をビュー別に永続化するZustandストア */
 export const useCalendarScrollStore = create<CalendarScrollState & CalendarScrollActions>()(
   persist(
     (set, get) => ({
@@ -61,6 +64,7 @@ export const useCalendarScrollStore = create<CalendarScrollState & CalendarScrol
     }),
     {
       name: 'calendar-scroll-positions',
+      storage: platformStorage(),
     },
   ),
 );

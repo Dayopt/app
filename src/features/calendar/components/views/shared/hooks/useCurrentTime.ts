@@ -9,6 +9,7 @@ export interface UseCurrentTimeOptions {
   enabled?: boolean; // 更新を有効にするか
 }
 
+/** 一定間隔で現在時刻を更新するフック */
 export function useCurrentTime(options: UseCurrentTimeOptions = {}) {
   const { updateInterval = 60000, enabled = true } = options; // デフォルト1分間隔
 

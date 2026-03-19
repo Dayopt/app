@@ -25,6 +25,7 @@ function handlePreferencesError(operation: string, error: unknown): never {
   });
 }
 
+/** 通知設定（ブラウザ / メール / プッシュ / リマインダー時間）を管理する tRPC ルーター */
 export const notificationPreferencesRouter = createTRPCRouter({
   /**
    * 通知設定取得

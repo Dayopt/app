@@ -39,6 +39,7 @@ function InspectorURLSyncHandler() {
 /** モバイル Drawer のスナップポイント */
 const SNAP_POINTS = [1] as const;
 
+/** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
 export function EntryInspector() {
   const t = useTranslations();
   const isMobile = useMediaQuery('(max-width: 767px)');

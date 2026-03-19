@@ -27,6 +27,7 @@ interface GhostRendererProps {
   renderGhost?: (params: GhostRenderParams) => React.ReactNode;
 }
 
+/** GhostRendererのrenderGhostコールバックに渡されるパラメータ */
 export interface GhostRenderParams {
   entryId: string;
   previewTime: TimeRange;
@@ -39,6 +40,7 @@ export interface GhostRenderParams {
 // Component
 // ========================================
 
+/** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
 export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
   if (state.mode !== 'dragging') return null;
 

@@ -72,6 +72,7 @@ const initialState: CalendarDragState = {
   snappedPosition: null,
 };
 
+/** カレンダーのドラッグ状態を管理するZustandストア */
 export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>((set) => ({
   ...initialState,
 

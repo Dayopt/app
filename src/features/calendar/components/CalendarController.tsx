@@ -30,6 +30,7 @@ initializePreload();
 // Props
 // =============================================================================
 
+/** CalendarController コンポーネントのプロパティ */
 export interface CalendarControllerProps {
   /** ビュータイプ */
   viewType: CalendarViewType;

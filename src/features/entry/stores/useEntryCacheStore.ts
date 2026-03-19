@@ -22,6 +22,7 @@ interface EntryMutationGuardState {
   setIsMutating: (value: boolean) => void;
 }
 
+/** Entry mutation ガードストア（mutation中フラグ管理・Realtime二重更新防止） */
 export const useEntryCacheStore = create<EntryMutationGuardState>((set, get) => ({
   mutatingCount: 0,
   isMutating: false,

@@ -36,4 +36,5 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
   ),
 );
 
+/** インライン作成ストア（セレクタ付き） */
 export const useInlineCreateStore = createSelectors(useInlineCreateStoreBase);

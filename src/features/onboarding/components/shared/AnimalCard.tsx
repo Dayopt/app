@@ -13,6 +13,7 @@ interface AnimalCardProps {
   onSelect: (type: PresetChronotypeType) => void;
 }
 
+/** クロノタイプ選択用の動物カードコンポーネント */
 export function AnimalCard({
   type,
   emoji,

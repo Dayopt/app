@@ -9,6 +9,7 @@
 
 import { createContext, useContext } from 'react';
 
+/** グローバル検索コンテキストの型 */
 export interface GlobalSearchContextType {
   open: () => void;
   close: () => void;
@@ -18,6 +19,7 @@ export interface GlobalSearchContextType {
 const noop = () => {};
 const fallback: GlobalSearchContextType = { open: noop, close: noop, isOpen: false };
 
+/** グローバル検索のReact Context */
 export const GlobalSearchContext = createContext<GlobalSearchContextType | null>(null);
 
 /** Provider外ではnoop fallbackを返す（Storybook等で安全に動作） */

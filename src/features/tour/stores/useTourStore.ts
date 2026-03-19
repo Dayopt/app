@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 
 import { createSelectors } from '@/lib/zustand/createSelectors';
+import { platformStorage } from '@/lib/zustand/storage';
 
 import { TOUR_STEPS } from '../constants';
 import { createInitialState, transition } from '../machine/tourMachine';
@@ -63,6 +64,7 @@ const useTourStoreBase = create<TourStoreState>()(
       }),
       {
         name: 'tour-storage',
+        storage: platformStorage(),
         partialize: (state) => ({
           // completed のみ永続化
           machine: {
@@ -78,4 +80,5 @@ const useTourStoreBase = create<TourStoreState>()(
   ),
 );
 
+/** ツアーのステートマシン管理ストア（完了フラグのみ永続化） */
 export const useTourStore = createSelectors(useTourStoreBase);

@@ -17,6 +17,7 @@ import { api } from '@/platform/trpc';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 
+/** 通知設定コンポーネント。ブラウザ通知・メール通知・プッシュ通知の有効/無効を管理する */
 export function NotificationSettings() {
   const t = useTranslations();
   const utils = api.useUtils();

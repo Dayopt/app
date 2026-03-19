@@ -53,6 +53,10 @@ function detectBrowser(ua: string): string {
   return 'Unknown';
 }
 
+/**
+ * ブラウザ環境情報を収集してお問い合わせに添付するデータを返す
+ * @param appVersion - アプリのバージョン文字列
+ */
 export function collectEnvironment(appVersion: string): ContactEnvironment {
   const ua = navigator.userAgent;
 

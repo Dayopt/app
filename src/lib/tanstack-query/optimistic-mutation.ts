@@ -33,7 +33,7 @@
 // 型定義
 // ========================================
 
-/** ページネーション付きリストデータ（tags形式） */
+/** ページネーション付きリストデータ（data配列＋総件数） */
 export interface PaginatedList<T> {
   data: T[];
   count: number;
@@ -56,7 +56,7 @@ interface SnapshotItem<TData, TInput = undefined> {
   key: TInput;
 }
 
-/** スナップショット結果 */
+/** キャッシュスナップショットとロールバック関数を持つオブジェクト */
 export interface Snapshot {
   restore: () => void;
 }

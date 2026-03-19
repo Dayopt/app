@@ -18,6 +18,7 @@ import { Link } from '@/platform/i18n/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 
+/** 新しいパスワード設定フォーム。URLのaccess_token/refresh_tokenを利用してパスワードを更新する */
 export function ResetPasswordForm({ className, ...props }: React.ComponentProps<'div'>) {
   const router = useRouter();
   const searchParams = useSearchParams();

@@ -18,6 +18,7 @@ interface UseCalendarNavigationHandlersOptions {
   changeView: (view: CalendarViewType) => void;
 }
 
+/** カレンダーナビゲーション（前後移動・ビュー切り替え・週末スキップ）のハンドラーを提供するフック */
 export function useCalendarNavigationHandlers({
   viewType,
   currentDate,

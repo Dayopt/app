@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 
 import { createSelectors } from '@/lib/zustand/createSelectors';
+import { platformStorage } from '@/lib/zustand/storage';
 
 interface LayoutStoreState {
   // ── Sidebar ──
@@ -40,6 +41,7 @@ const useLayoutStoreBase = create<LayoutStoreState>()(
       }),
       {
         name: 'layout-storage',
+        storage: platformStorage(),
         partialize: (state) => ({
           sidebarOpen: state.sidebarOpen,
         }),
@@ -49,4 +51,5 @@ const useLayoutStoreBase = create<LayoutStoreState>()(
   ),
 );
 
+/** レイアウト状態（サイドバー開閉など）を管理するZustandストア（auto-selectors付き） */
 export const useLayoutStore = createSelectors(useLayoutStoreBase);

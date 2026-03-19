@@ -16,11 +16,13 @@ import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 
+/** PanelDragPreview コンポーネントのプロパティ */
 interface PanelDragPreviewProps {
   /** このコンテンツの日付インデックス */
   dayIndex: number;
 }
 
+/** パネルからドラッグ中のプレビューをカレンダーグリッド上に表示するコンポーネント */
 export const PanelDragPreview = memo(function PanelDragPreview({
   dayIndex,
 }: PanelDragPreviewProps) {

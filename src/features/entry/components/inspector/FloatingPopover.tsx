@@ -52,6 +52,7 @@ function computePosition(anchor: { top: number; right: number; bottom: number; l
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** PC用Inspectorのフローティングポップオーバー（anchorRectに基づいて位置を自動計算） */
 export function FloatingPopover({ children, onClose, title, anchorRect }: FloatingPopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);

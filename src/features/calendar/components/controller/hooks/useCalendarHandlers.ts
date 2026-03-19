@@ -9,6 +9,7 @@ import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
 import type { CalendarEvent } from '../../../types/calendar.types';
 
+/** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
 export function useCalendarHandlers() {
   const openPlanInspector = useEntryInspectorStore((state) => state.openInspector);
   const inspectorPlanId = useEntryInspectorStore((state) => state.entryId);

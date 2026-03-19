@@ -19,6 +19,7 @@ interface CalendarNavigationContextValue {
 
 const CalendarNavigationContext = createContext<CalendarNavigationContextValue | null>(null);
 
+/** カレンダーナビゲーション状態を提供するコンテキストプロバイダー */
 export const CalendarNavigationProvider = ({
   children,
   initialDate = new Date(),
@@ -140,6 +141,7 @@ export const CalendarNavigationProvider = ({
   );
 };
 
+/** カレンダーナビゲーションコンテキストを取得するフック（カレンダーページ外ではnullを返す） */
 export function useCalendarNavigation() {
   const context = useContext(CalendarNavigationContext);
   if (!context) {

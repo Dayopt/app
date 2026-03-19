@@ -18,6 +18,7 @@ import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigat
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
 
+/** ビュー選択オプションの定義 */
 interface MainViewOption {
   value: CalendarViewType;
   labelKey: string;

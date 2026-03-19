@@ -4,6 +4,7 @@ import type { TourEvent, TourStatus, TourStepDef } from '../types';
 // State
 // ---------------------------------------------------------------------------
 
+/** ツアーステートマシンの状態 */
 export interface TourMachineState {
   status: TourStatus;
   stepIndex: number;
@@ -11,6 +12,11 @@ export interface TourMachineState {
   completed: boolean;
 }
 
+/**
+ * ツアーステートマシンの初期状態を生成する
+ * @param steps - 表示するステップ配列
+ * @param completed - 完了済みフラグ（永続化から復元）
+ */
 export function createInitialState(steps: TourStepDef[], completed: boolean): TourMachineState {
   return {
     status: completed ? 'completed' : 'idle',

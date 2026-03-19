@@ -28,6 +28,7 @@ interface RecentEntry {
   count: number;
 }
 
+/** サジェストサービス固有のエラークラス */
 export class SuggestionServiceError extends ServiceError {
   constructor(code: string, message: string) {
     super(code, message);
@@ -35,6 +36,7 @@ export class SuggestionServiceError extends ServiceError {
   }
 }
 
+/** 最近のエントリからタイトル+タグのサジェストを提供するサービスクラス */
 export class SuggestionService {
   constructor(private readonly supabase: ServiceSupabaseClient) {}
 
@@ -120,6 +122,7 @@ export class SuggestionService {
   }
 }
 
+/** SuggestionService のファクトリ関数 */
 export function createSuggestionService(supabase: ServiceSupabaseClient): SuggestionService {
   return new SuggestionService(supabase);
 }

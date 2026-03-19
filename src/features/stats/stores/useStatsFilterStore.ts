@@ -45,6 +45,7 @@ function navigateDate(
   }
 }
 
+/** Stats フィルター状態を管理する Zustand ストア */
 export const useStatsFilterStore = create<StatsFilterState>((set, get) => ({
   granularity: 'week',
   currentDate: new Date(),

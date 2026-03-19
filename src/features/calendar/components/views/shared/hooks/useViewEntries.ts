@@ -19,6 +19,7 @@ interface UseViewEntriesOptions {
   timezone: string;
 }
 
+/** グリッド上のエントリ描画位置情報 */
 export interface EntryPosition {
   plan: CalendarEvent;
   top: number;
@@ -42,6 +43,7 @@ interface UseViewEntriesReturn {
  * 汎用的なビューエントリ処理フック
  * DayView, WeekView等で共通利用可能
  */
+/** 指定日のエントリをフィルタ・配置計算するフック（DayView/WeekView等で共通利用） */
 export function useViewEntries({
   date,
   entries = [],

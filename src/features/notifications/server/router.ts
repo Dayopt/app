@@ -9,6 +9,7 @@ import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures
 import { listNotificationsSchema, markAllAsReadSchema, notificationIdSchema } from '../schemas';
 import { createNotificationService } from './service-index';
 
+/** 通知 CRUD を提供する tRPC ルーター */
 export const notificationsRouter = createTRPCRouter({
   /**
    * 通知一覧取得

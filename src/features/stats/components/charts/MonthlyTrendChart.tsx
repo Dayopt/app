@@ -21,6 +21,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+/** 月次の記録時間トレンドをエリアチャートで表示 */
 export function MonthlyTrendChart() {
   const t = useTranslations('calendar.stats.charts');
   const granularity = useStatsFilterStore((s) => s.granularity);

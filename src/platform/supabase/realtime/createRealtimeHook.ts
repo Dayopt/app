@@ -125,4 +125,6 @@ export function createRealtimeHook<T extends { id?: string } = { id: string }>(
 // ========================================
 // 型エクスポート
 // ========================================
+
+/** tRPC Router の入出力型・ユーティリティ型の再エクスポート */
 export type { RouterInputs, RouterOutputs, TRPCUtils };

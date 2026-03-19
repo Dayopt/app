@@ -4,6 +4,7 @@ import { addDays, isWeekend } from 'date-fns';
 
 import type { CalendarViewType } from '../../types/calendar.types';
 
+/** useWeekendNavigation フックのプロパティ */
 interface UseWeekendNavigationProps {
   viewType: CalendarViewType;
   currentDate: Date;

@@ -19,6 +19,7 @@ import type { PresetChronotypeType } from '@/types/chronotype';
 /** Chronotype type (inline to avoid cross-feature import) */
 const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
 
+/** オンボーディング完了管理のtRPCルーター */
 export const onboardingRouter = createTRPCRouter({
   /**
    * プロフィール取得（名前の事前入力用）

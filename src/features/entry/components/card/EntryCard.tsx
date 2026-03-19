@@ -32,6 +32,7 @@ const Z_INDEX = {
   DRAGGING: 30,
 } as const;
 
+/** カレンダーグリッド上に表示するエントリカードコンポーネント（ドラッグ・リサイズ・Inspector連携対応） */
 export const EntryCard = memo<EntryCardProps>(function EntryCard({
   entry,
   tagName = null,

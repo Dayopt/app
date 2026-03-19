@@ -25,6 +25,7 @@ interface OnboardingActions {
   reset: () => void;
 }
 
+/** オンボーディングウィザードのグローバル状態管理ストア */
 export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
   devtools(
     (set, get) => ({

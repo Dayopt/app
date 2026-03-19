@@ -27,6 +27,7 @@ interface GlobalSearchModalProps {
   onClose: () => void;
 }
 
+/** グローバル検索モーダル（タグ検索 + エントリ検索、Cmd/Ctrl+K で開閉） */
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const t = useTranslations('common.search');
   const [query, setQuery] = useState('');

@@ -34,7 +34,7 @@ export type PersonalizationValues = Partial<Record<PersonalizationCategory, Pers
 /** AIコミュニケーションスタイル */
 export type AICommunicationStyle = 'coach' | 'analyst' | 'friendly' | 'custom';
 
-/** カテゴリの順序定義 */
+/** パーソナライゼーションカテゴリの表示順序定義 */
 export const PERSONALIZATION_CATEGORIES: PersonalizationCategory[] = [
   'family',
   'romance',
@@ -50,7 +50,7 @@ export const PERSONALIZATION_CATEGORIES: PersonalizationCategory[] = [
   'art',
 ];
 
-/** AIスタイルの選択肢 */
+/** AIコミュニケーションスタイルの選択肢一覧 */
 export const AI_COMMUNICATION_STYLES: AICommunicationStyle[] = [
   'coach',
   'analyst',
@@ -111,7 +111,7 @@ export type ValueKeyword =
   | 'contribution'
   | 'authenticity';
 
-/** 全キーワードの順序定義 */
+/** 価値観キーワードの表示順序定義（約50個） */
 export const VALUE_KEYWORDS: ValueKeyword[] = [
   'integrity',
   'courage',
@@ -165,5 +165,5 @@ export const VALUE_KEYWORDS: ValueKeyword[] = [
   'authenticity',
 ];
 
-/** ランキングの最大数 */
+/** 価値観ランキングの最大選択数 */
 export const MAX_RANKED_VALUES = 5;

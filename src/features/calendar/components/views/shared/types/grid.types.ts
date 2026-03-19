@@ -2,6 +2,7 @@
  * グリッドシステムの型定義
  */
 
+/** グリッドのピクセル寸法 */
 export interface GridDimensions {
   width: number;
   height: number;
@@ -10,6 +11,7 @@ export interface GridDimensions {
   timeColumnWidth: number;
 }
 
+/** グリッド上の位置（px） */
 export interface GridPosition {
   top: number;
   left: number;
@@ -17,6 +19,7 @@ export interface GridPosition {
   height: number;
 }
 
+/** 時間列コンポーネントのプロパティ */
 export interface TimeColumnProps {
   startHour?: number | undefined;
   endHour?: number | undefined;
@@ -25,6 +28,7 @@ export interface TimeColumnProps {
   className?: string | undefined;
 }
 
+/** グリッド線コンポーネントのプロパティ */
 export interface GridLinesProps {
   startHour?: number | undefined;
   endHour?: number | undefined;
@@ -33,6 +37,7 @@ export interface GridLinesProps {
   className?: string | undefined;
 }
 
+/** 現在時刻線コンポーネントのプロパティ */
 export interface CurrentTimeLineProps {
   hourHeight?: number | undefined;
   timeColumnWidth?: number | undefined;
@@ -47,11 +52,13 @@ export interface CurrentTimeLineProps {
   showOnOtherDays?: boolean | undefined;
 }
 
+/** 時間範囲（開始・終了） */
 export interface TimeRange {
   start: Date;
   end: Date;
 }
 
+/** 15分単位の時間スロット */
 export interface TimeSlot {
   time: string; // "09:15"
   hour: number; // 9
@@ -62,6 +69,7 @@ export interface TimeSlot {
   isQuarterHour: boolean; // true if 15分または45分
 }
 
+/** グリッド上のイベント表示位置情報 */
 export interface GridEvent {
   id: string;
   start: Date;

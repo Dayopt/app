@@ -19,6 +19,7 @@ interface RecurrenceRowProps {
   onRecurrenceRuleChange: (rrule: string | null) => void;
 }
 
+/** Inspectorの繰り返し設定行（アイコン + ラベル + RecurrenceIconButton） */
 export function RecurrenceRow({
   recurrenceRule,
   recurrenceType,

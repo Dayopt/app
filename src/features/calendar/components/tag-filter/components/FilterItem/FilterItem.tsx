@@ -20,6 +20,7 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';
 
+/** フィルターアイテムコンポーネントのプロパティ */
 export interface FilterItemProps {
   label: string;
   tagId?: string;
@@ -36,6 +37,7 @@ export interface FilterItemProps {
   onShowOnlyThis?: () => void;
 }
 
+/** カレンダーフィルターの単一タグ行コンポーネント（チェックボックス・色変更・メニュー付き） */
 export function FilterItem({
   label,
   tagId,

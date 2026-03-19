@@ -30,7 +30,7 @@ import type { Tag } from '../types';
 
 import { TagRadioItem } from './TagRadioItem';
 
-/** タグゼロ時に表示するサンプルタグ候補 */
+/** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
 const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName }> = [
   { nameKey: 'work', color: 'blue' },
   { nameKey: 'study', color: 'indigo' },
@@ -307,6 +307,7 @@ function calcAnchoredPosition(anchorRect: DOMRect, panelWidth: number) {
   return { top, left };
 }
 
+/** タグ選択フローティングパネル。モバイルはDrawer、PCはアンカー横フローティング */
 export function TagQuickSelector({
   open,
   onOpenChange,

@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
 import type { CalendarEvent } from '../../types/calendar.types';
 
+/** コンテキストメニューで使用するプラン操作アクション（削除・編集・複製・コピー・ペースト・完了）を提供するフック */
 export function usePlanContextActions() {
   const t = useTranslations();
   const openInspector = useEntryInspectorStore((s) => s.openInspector);

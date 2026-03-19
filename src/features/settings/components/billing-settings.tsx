@@ -70,6 +70,7 @@ const PLANS: Plan[] = [
  */
 const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? '';
 
+/** 請求・サブスクリプション設定コンポーネント。プラン変更・支払方法・請求履歴・キャンセルを管理 */
 export function BillingSettings() {
   const t = useTranslations();
   const searchParams = useSearchParams();

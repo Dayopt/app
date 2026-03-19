@@ -4,6 +4,7 @@
 
 import type { CalendarEvent } from '../../../../../types/calendar.types';
 
+/** ドラッグ選択の時間範囲（時・分単位） */
 export interface TimeRange {
   startHour: number;
   startMinute: number;
@@ -11,10 +12,12 @@ export interface TimeRange {
   endMinute: number;
 }
 
+/** 日付を含む時間範囲選択結果 */
 export interface DateTimeSelection extends TimeRange {
   date: Date;
 }
 
+/** CalendarDragSelection コンポーネントのプロパティ */
 export interface CalendarDragSelectionProps {
   /** 必須：この列が担当する日付 */
   date: Date;

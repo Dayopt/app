@@ -4,6 +4,10 @@ import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '@/lib/date';
  * プラン番号のフォーマット
  * @example formatplanNumber("TKT-20241030-001") => "#TKT-001"
  */
+/** プラン番号を短縮表示形式にフォーマット（例: "TKT-20241030-001" → "#TKT-001"）
+ * @param planNumber - プラン番号文字列
+ * @returns 短縮形式のプラン番号
+ */
 export function formatplanNumber(planNumber: string): string {
   // TKT-20241030-001 → #TKT-001
   const parts = planNumber.split('-');
@@ -19,6 +23,11 @@ export function formatplanNumber(planNumber: string): string {
  * @param locale - 'en' | 'ja' (デフォルト: 'en')
  * @example formatplanDate("2025-01-15", "ja") => "2025年1月15日"
  * @example formatplanDate("2025-01-15", "en") => "Jan 15, 2025"
+ */
+/** 日付文字列をロケール対応形式にフォーマット
+ * @param dateString - ISO 8601形式の日時文字列
+ * @param locale - ロケール（'en' | 'ja'、デフォルト: 'en'）
+ * @returns フォーマット済み日付文字列
  */
 export function formatplanDate(
   dateString: string | null | undefined,
@@ -41,6 +50,7 @@ export function formatplanDate(
 /**
  * 日時のフォーマット（ISO 8601 → YYYY/MM/DD HH:mm）
  */
+/** 日時文字列を "YYYY/MM/DD HH:mm" 形式にフォーマット */
 export function formatplanDateTime(dateTimeString: string | null | undefined): string {
   if (!dateTimeString) return '-';
 
@@ -80,6 +90,11 @@ type SupportedLocale = keyof typeof relativeTimeTranslations;
  * @param dateString - ISO 8601形式の日時文字列
  * @param locale - 'en' | 'ja' (デフォルト: 'en')
  * @example formatRelativeTime("2024-01-01T00:00:00Z", "ja") => "2分前"
+ */
+/** 日時文字列を相対時間（"2分前", "3h ago" など）にフォーマット
+ * @param dateString - ISO 8601形式の日時文字列
+ * @param locale - ロケール（'en' | 'ja'、デフォルト: 'en'）
+ * @returns 相対時間文字列
  */
 export function formatRelativeTime(
   dateString: string | null | undefined,

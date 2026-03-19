@@ -34,6 +34,7 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
   );
 }
 
+/** tRPCエラーコードの型定義 */
 export type TRPCErrorCode =
   | 'INTERNAL_SERVER_ERROR'
   | 'NOT_FOUND'

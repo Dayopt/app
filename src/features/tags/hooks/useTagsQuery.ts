@@ -2,9 +2,11 @@
 
 import { trpc } from '@/platform/trpc/client';
 
-// タグ一覧取得フック
-// Note: selectを使わず直接data.dataにアクセスする
-// selectを使うとsetData()でキャッシュ更新しても再評価がトリガーされない場合がある
+/**
+ * タグ一覧取得フック（5分キャッシュ）
+ *
+ * selectを使わずdata.dataに直接アクセスすることで、setData()による楽観的更新を確実に検出する
+ */
 export function useTags() {
   const query = trpc.tags.list.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
@@ -19,7 +21,10 @@ export function useTags() {
   };
 }
 
-// 単一タグ取得フック（ID別）
+/**
+ * 単一タグ取得フック（ID別、5分キャッシュ）
+ * @param id - 取得するタグのID
+ */
 export function useTag(id: string) {
   return trpc.tags.getById.useQuery(
     { id },

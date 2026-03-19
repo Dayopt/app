@@ -1,4 +1,4 @@
-/** ツアーステップID */
+/** ツアーの各ステップ識別子 */
 export type TourStepId =
   | 'intro'
   | 'grid-drag-plan'

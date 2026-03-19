@@ -12,6 +12,7 @@ interface CalendarGridProviderProps {
   children: React.ReactNode;
 }
 
+/** カレンダーグリッドのCSS変数（--calendar-hour-height等）をルート要素に設定するプロバイダー */
 export const CalendarGridProvider = ({ children }: CalendarGridProviderProps) => {
   const hourHeight = useResponsiveHourHeight();
 

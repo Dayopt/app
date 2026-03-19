@@ -14,6 +14,7 @@ import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures
 import { contactFormSchema } from '../schemas';
 import { createGitHubIssue } from './contact-service';
 
+/** お問い合わせフォームのtRPCルーター */
 export const contactRouter = createTRPCRouter({
   submit: protectedProcedure
     .meta({ description: 'お問い合わせ送信（GitHub Issue作成）' })

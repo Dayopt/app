@@ -33,6 +33,10 @@ interface UseRecurringGuardOptions {
   instanceDate: string | null;
 }
 
+/** 繰り返しエントリ編集時のスコープ選択ダイアログを管理するフック
+ * @param options - entry, entryId, instanceDate
+ * @returns isRecurringInstance, hasPendingChanges, pendingChanges, accumulateChange, openScopeDialog, clearPendingChanges
+ */
 export function useRecurringGuard({ entry, entryId, instanceDate }: UseRecurringGuardOptions) {
   const { applyEdit } = useRecurringScopeMutations();
 

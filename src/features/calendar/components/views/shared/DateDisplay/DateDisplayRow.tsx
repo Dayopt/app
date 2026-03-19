@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { DateDisplay } from './DateDisplay';
 import type { DateDisplayRowProps } from './DateDisplay.types';
 
+/** 複数日付を横一列に表示するコンポーネント */
 export const DateDisplayRow = ({
   dates,
   className,

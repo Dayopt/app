@@ -84,6 +84,7 @@ const INTEGRATIONS: Integration[] = [
   },
 ];
 
+/** 連携設定コンポーネント。AIプロバイダーAPIキー・外部サービス連携・iCalフィード・同期設定を管理 */
 export const IntegrationSettings = memo(function IntegrationSettings() {
   const t = useTranslations();
   const user = useAuthStore((state) => state.user);

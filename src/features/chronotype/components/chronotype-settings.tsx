@@ -99,6 +99,7 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
   );
 }
 
+/** クロノタイプ設定パネル（診断・表示・変更を管理） */
 export function ChronotypeSettings() {
   const t = useTranslations();
   const utils = api.useUtils();

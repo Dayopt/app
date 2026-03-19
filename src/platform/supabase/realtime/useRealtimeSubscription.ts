@@ -41,6 +41,11 @@ const MAX_RETRY_COUNT = 5;
 /** リトライ間隔の基数（ms） */
 const RETRY_BASE_DELAY = 2000;
 
+/**
+ * Supabase Postgresの変更イベントを購読する汎用フック
+ *
+ * @param config - 購読設定（テーブル名・フィルター・イベントコールバック等）
+ */
 export function useRealtimeSubscription<
   T extends Record<string, unknown> = Record<string, unknown>,
 >(config: RealtimeSubscriptionConfig<T>) {

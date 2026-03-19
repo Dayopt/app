@@ -21,6 +21,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+/** 時間帯別の記録時間を横棒グラフで表示 */
 export function HourlyDistributionChart() {
   const t = useTranslations('calendar.stats.charts');
   const currentDate = useStatsFilterStore((s) => s.currentDate);

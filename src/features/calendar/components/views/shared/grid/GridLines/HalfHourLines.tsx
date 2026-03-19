@@ -9,6 +9,7 @@ import { memo } from 'react';
 import { HALF_HOUR_LINE_COLOR } from '../../constants/grid.constants';
 import { useTimeGrid } from '../../hooks/useTimeGrid';
 
+/** HalfHourLines コンポーネントのプロパティ */
 interface HalfHourLinesProps {
   startHour?: number;
   endHour?: number;
@@ -16,6 +17,7 @@ interface HalfHourLinesProps {
   className?: string;
 }
 
+/** 30分ごとの薄い横線を描画するコンポーネント */
 export const HalfHourLines = memo<HalfHourLinesProps>(function HalfHourLines({
   startHour = 0,
   endHour = 24,

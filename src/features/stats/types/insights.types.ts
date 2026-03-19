@@ -8,6 +8,7 @@
 // Finding Categories
 // =============================================================================
 
+/** インサイト発見のカテゴリ */
 export type FindingCategory =
   | 'time_usage'
   | 'fulfillment'
@@ -17,12 +18,14 @@ export type FindingCategory =
   | 'chronotype'
   | 'values';
 
+/** インサイト発見の感情トーン */
 export type FindingSentiment = 'positive' | 'neutral' | 'needs_attention';
 
 // =============================================================================
 // LLM Output Schema
 // =============================================================================
 
+/** LLM が生成する個別の気づき（カテゴリ・見出し・詳細・感情トーン） */
 export interface InsightFinding {
   category: FindingCategory;
   /** max 60 chars */
@@ -32,6 +35,7 @@ export interface InsightFinding {
   sentiment: FindingSentiment;
 }
 
+/** LLM が生成するアクション提案 */
 export interface InsightSuggestion {
   /** max 150 chars */
   action: string;
@@ -39,6 +43,7 @@ export interface InsightSuggestion {
   rationale: string;
 }
 
+/** 前期間との比較サマリー */
 export interface InsightComparison {
   /** max 150 chars */
   summary: string;
@@ -63,6 +68,7 @@ export interface InsightOutput {
 // Empty State Types
 // =============================================================================
 
+/** Insights タブの空状態の理由 */
 export type InsightsEmptyReason =
   /** 記録が 0 件 */
   | 'no_records'
@@ -71,6 +77,7 @@ export type InsightsEmptyReason =
   /** データ十分だが生成未実行 */
   | 'pending_generation';
 
+/** Insights 空状態の詳細情報 */
 export interface InsightsEmptyInfo {
   reason: InsightsEmptyReason;
   /** 前回記録日（no_records 時） */

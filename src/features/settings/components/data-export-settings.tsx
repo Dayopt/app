@@ -13,6 +13,7 @@ import { api } from '@/platform/trpc';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 
+/** データエクスポート設定コンポーネント。JSONダウンロード・自動バックアップのUI */
 export const DataExportSettings = memo(function DataExportSettings() {
   const t = useTranslations();
   const [autoBackup, setAutoBackup] = useState(true);

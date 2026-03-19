@@ -16,14 +16,17 @@ import { ServiceError } from '@/platform/trpc/errors';
 
 // ===== Types =====
 
+/** Stripeサブスクリプションの状態値 */
 export type SubscriptionStatus = 'free' | 'active' | 'past_due' | 'canceled' | 'trialing';
 
+/** ユーザーの課金情報（サブスクリプション状態・Stripe ID） */
 export interface BillingInfo {
   subscriptionStatus: SubscriptionStatus;
   stripeCustomerId: string | null;
   subscriptionId: string | null;
 }
 
+/** クレジットカード支払い方法の概要情報 */
 export interface PaymentMethod {
   brand: string; // visa, mastercard, amex, etc.
   last4: string;
@@ -31,6 +34,7 @@ export interface PaymentMethod {
   expYear: number;
 }
 
+/** 請求書の概要情報（一覧表示用） */
 export interface InvoiceItem {
   id: string;
   date: string; // ISO 8601
@@ -42,6 +46,7 @@ export interface InvoiceItem {
 
 // ===== Error Codes =====
 
+/** 課金サービス固有のエラークラス */
 export class BillingServiceError extends ServiceError {
   constructor(code: string, message: string) {
     super(code, message);
@@ -251,6 +256,7 @@ export async function getInvoices(
 
 // ===== Overview (統合エンドポイント) =====
 
+/** 課金情報の一括取得結果（billingInfo・支払い方法・請求書を含む） */
 export interface BillingOverview {
   billingInfo: BillingInfo;
   paymentMethod: PaymentMethod | null;

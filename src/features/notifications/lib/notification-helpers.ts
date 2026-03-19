@@ -9,10 +9,10 @@ export {
   requestNotificationPermission,
 } from '@/lib/browser-notification';
 
-// 日付グループのキー
+/** 通知の日付グループキー */
 export type DateGroupKey = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'older';
 
-// グループ化された通知
+/** 日付グループ化された通知のデータ構造 */
 export interface GroupedNotifications<T> {
   key: DateGroupKey;
   label: string;
@@ -71,6 +71,13 @@ export function groupNotificationsByDate<T extends { created_at: string }>(
     }));
 }
 
+/**
+ * ブラウザ通知を表示する
+ * @param title - 通知タイトル
+ * @param options - ブラウザ Notification API のオプション
+ * @param t - i18n翻訳関数（エラーメッセージ用）
+ * @returns 作成した Notification インスタンス、または null（権限なし/失敗時）
+ */
 export const showBrowserNotification = (
   title: string,
   options?: NotificationOptions,

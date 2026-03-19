@@ -16,6 +16,7 @@ import type { TagColorName } from '@/lib/tag-colors';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
+/** タグのグループ情報 */
 export interface GroupOption {
   name: string;
   color: string | null;
@@ -39,6 +40,7 @@ interface FilterItemMenuProps {
   onDeleteTag: (() => void) | undefined;
 }
 
+/** フィルターアイテムのドロップダウンメニュー（タグ操作: 名前変更・色変更・グループ移動・削除等） */
 export function FilterItemMenu({
   displayColor,
   currentGroup,
@@ -131,7 +133,7 @@ export function FilterItemMenu({
   );
 }
 
-/** タグなし用のシンプルなメニュー */
+/** タグなしエントリ用のシンプルなフィルターメニュー */
 export function UntaggedItemMenu({ onShowOnlyThis }: { onShowOnlyThis: () => void }) {
   const t = useTranslations();
 

@@ -32,6 +32,7 @@ interface TagRowProps {
   onDelete?: (() => void) | undefined;
 }
 
+/** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
 export function TagRow({
   tagId,
   tagName,
