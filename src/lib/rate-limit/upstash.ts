@@ -13,7 +13,7 @@ import { Redis } from '@upstash/redis';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
-import { extractClientIp } from '@/platform/security/ip-validation';
+import { extractClientIp } from '@/lib/security/ip-validation';
 
 /**
  * 環境変数チェック
