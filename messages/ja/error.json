@@ -20,6 +20,11 @@
       "unknown": "不明",
       "checkConsole": "詳細はブラウザのコンソールを確認してください。",
       "featureError": "{{feature}}機能でエラーが発生しました"
+    },
+    "notFound": {
+      "title": "ページが見つかりません",
+      "description": "お探しのページは存在しないか、移動された可能性があります。",
+      "goHome": "ホームに戻る"
     }
   }
 }
