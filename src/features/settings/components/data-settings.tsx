@@ -250,8 +250,10 @@ function McpApiSection() {
   const t = useTranslations('settings.dataControls.mcp');
   const [copied, setCopied] = useState<'url' | 'key' | null>(null);
 
-  // TODO: Replace with actual Pro plan check
-  const isPro = false;
+  // Pro判定: billing overview の subscription status から判定
+  const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
+  const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
+  const isPro = subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due';
   // TODO: Replace with actual API key from backend
   const apiKey: string | null = null;
 

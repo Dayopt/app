@@ -750,6 +750,11 @@
       "stripeNotConfigured": "Stripe is not configured yet",
       "loadError": "Failed to load billing information",
       "retry": "Retry",
+      "trialBadge": "Trial",
+      "trialDescription": "You're on a 7-day free trial. After the trial ends, you'll automatically be moved to the Pro plan.",
+      "canceledTitle": "Subscription Canceled",
+      "canceledDescription": "Your Pro subscription has been canceled. Upgrade again to regain access to all features.",
+      "resubscribe": "Upgrade Again",
       "plans": {
         "free": {
           "name": "Free",

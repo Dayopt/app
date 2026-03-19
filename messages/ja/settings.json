@@ -750,6 +750,11 @@
       "stripeNotConfigured": "Stripeがまだ設定されていません",
       "loadError": "課金情報の読み込みに失敗しました",
       "retry": "再試行",
+      "trialBadge": "トライアル中",
+      "trialDescription": "7日間のトライアル期間中です。トライアル終了後、自動的にProプランに移行します。",
+      "canceledTitle": "サブスクリプションがキャンセルされました",
+      "canceledDescription": "Proプランの機能はご利用いただけなくなりました。再度アップグレードすることで、すべての機能にアクセスできます。",
+      "resubscribe": "再度アップグレード",
       "plans": {
         "free": {
           "name": "Free",

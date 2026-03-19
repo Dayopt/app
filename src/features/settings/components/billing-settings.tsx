@@ -214,11 +214,16 @@ export function BillingSettings() {
                   : t('settings.subscription.freePlanLabel')}
               </h4>
               <Badge variant="secondary">{t('settings.subscription.currentBadge')}</Badge>
+              {subscriptionStatus === 'trialing' && (
+                <Badge variant="outline">{t('settings.subscription.trialBadge')}</Badge>
+              )}
             </div>
             <p className="text-muted-foreground text-sm">
-              {currentPlan === 'pro'
-                ? t('settings.subscription.proPlanDescription')
-                : t('settings.subscription.freePlanDescription')}
+              {subscriptionStatus === 'trialing'
+                ? t('settings.subscription.trialDescription')
+                : currentPlan === 'pro'
+                  ? t('settings.subscription.proPlanDescription')
+                  : t('settings.subscription.freePlanDescription')}
             </p>
           </div>
           {currentPlan === 'pro' && (
@@ -257,8 +262,33 @@ export function BillingSettings() {
         </SectionCard>
       )}
 
-      {/* プラン変更（Free ユーザーのみ） — 年額トグル削除（P1-7） */}
-      {currentPlan === 'free' && (
+      {/* キャンセル済み通知（canceled 時のみ） */}
+      {subscriptionStatus === 'canceled' && (
+        <SectionCard>
+          <div className="flex items-center gap-3 rounded-lg p-4">
+            <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{t('settings.subscription.canceledTitle')}</p>
+              <p className="text-muted-foreground text-sm">
+                {t('settings.subscription.canceledDescription')}
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              className="ml-auto shrink-0"
+              disabled={!isStripeConfigured || isMutating}
+              onClick={handleUpgrade}
+            >
+              {isMutating
+                ? t('settings.subscription.processing')
+                : t('settings.subscription.resubscribe')}
+            </Button>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* プラン変更（Free ユーザーのみ — canceled は上で専用UIを表示） */}
+      {currentPlan === 'free' && subscriptionStatus !== 'canceled' && (
         <SectionCard title={t('settings.subscription.selectPlan')}>
           <div className="grid gap-4 md:grid-cols-2">
             {PLANS.map((plan) => (
