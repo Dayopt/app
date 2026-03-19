@@ -10,6 +10,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import {
@@ -130,11 +131,15 @@ export const entriesCoreRouter = createTRPCRouter({
 
     const service = createEntryService(ctx.supabase);
     try {
-      return await service.create({
+      const result = await service.create({
         userId: ctx.userId,
         input,
         preventOverlappingEntries: true,
       });
+      captureBusinessEvent('entry.created', {
+        entryType: input.origin ?? 'plan',
+      });
+      return result;
     } catch (error) {
       handleServiceError(error);
     }
@@ -225,6 +230,7 @@ export const entriesCoreRouter = createTRPCRouter({
         message: `Failed to bulk delete entries: ${error.message}`,
       });
     }
+    captureBusinessEvent('entry.bulk_deleted', { count: data.length });
     return { success: true, count: data.length };
   }),
 

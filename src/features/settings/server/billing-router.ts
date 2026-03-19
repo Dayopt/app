@@ -7,6 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
@@ -86,6 +87,7 @@ export const billingRouter = createTRPCRouter({
           input.priceId,
         );
 
+        captureBusinessEvent('billing.checkout_started', { priceId: input.priceId });
         return { url };
       } catch (error) {
         handleServiceError(error);

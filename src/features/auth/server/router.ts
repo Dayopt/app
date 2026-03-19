@@ -17,6 +17,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/recovery-codes';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
@@ -57,6 +58,7 @@ export const userRouter = createTRPCRouter({
           confirmText: input.confirmText,
         });
 
+        captureBusinessEvent('account.deleted', {}, 'warning');
         return result;
       } catch (error) {
         return handleServiceError(error);

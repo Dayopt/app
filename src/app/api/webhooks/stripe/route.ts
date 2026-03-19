@@ -17,10 +17,13 @@ import type Stripe from 'stripe';
 
 export const maxDuration = 30;
 
+import * as Sentry from '@sentry/nextjs';
+
 import { env } from '@/env';
 import type { SubscriptionStatus } from '@/features/settings/server/billing-service';
 import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
 import { logger } from '@/lib/logger';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { requireStripe } from '@/platform/stripe/client';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 
@@ -143,6 +146,7 @@ export async function POST(request: NextRequest) {
           const status = mapStripeStatus(sub.status);
 
           await syncSubscriptionStatus(supabase, customerId, subscriptionId, status);
+          captureBusinessEvent('billing.checkout_completed', { customerId, status });
           logger.info('Checkout completed', { customerId, subscriptionId, status });
           await notifySlack(
             `🎉 新規サブスクリプション開始\nCustomer: ${customerId}\nStatus: ${status}`,
@@ -160,6 +164,7 @@ export async function POST(request: NextRequest) {
 
         const status = mapStripeStatus(subscription.status);
         await syncSubscriptionStatus(supabase, customerId, subscription.id, status);
+        captureBusinessEvent('billing.subscription_changed', { customerId, toStatus: status });
         logger.info('Subscription updated', {
           customerId,
           subscriptionId: subscription.id,
@@ -177,8 +182,23 @@ export async function POST(request: NextRequest) {
             : subscription.customer.id;
 
         await syncSubscriptionStatus(supabase, customerId, null, 'canceled');
+        captureBusinessEvent('billing.subscription_changed', { customerId, toStatus: 'canceled' });
         logger.info('Subscription deleted', { customerId });
         await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId =
+          typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+        captureBusinessEvent(
+          'billing.payment_failed',
+          { customerId: customerId ?? 'unknown' },
+          'warning',
+        );
+        logger.warn('Payment failed', { customerId });
+        await notifySlack(`🚨 支払い失敗\nCustomer: ${customerId ?? 'unknown'}`);
         break;
       }
 
@@ -189,6 +209,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     logger.error('Stripe webhook processing error', { error, eventType: event.type });
+    Sentry.captureException(error, {
+      tags: { source: 'stripe_webhook', eventType: event.type },
+      contexts: { webhook: { eventId: event.id, eventType: event.type } },
+    });
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }

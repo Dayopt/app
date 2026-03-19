@@ -7,6 +7,7 @@
 import * as Sentry from '@sentry/nextjs';
 
 import { logger } from '@/lib/logger';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { createClient } from '@/platform/supabase/client';
 import type { AuthError, AuthResponse, OAuthResponse, Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
@@ -182,6 +183,7 @@ export const useAuthStore = create<AuthState>()(
               loading: false,
               error: null,
             });
+            captureBusinessEvent('auth.login', { method: 'password' });
           }
 
           return result;
@@ -211,6 +213,8 @@ export const useAuthStore = create<AuthState>()(
           if (result.error) {
             const safeError = getAuthErrorKey(result.error.message, 'oauth');
             set({ error: safeError, loading: false });
+          } else {
+            captureBusinessEvent('auth.login', { method: 'oauth', provider });
           }
 
           return result;
