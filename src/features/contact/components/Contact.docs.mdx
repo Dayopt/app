@@ -1,0 +1,107 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Features/Contact/Docs" />
+
+# Contact
+
+ユーザーがアプリ内からバグ報告・機能要望・質問などを送信できるお問い合わせ機能。送信内容は GitHub Issue として自動作成される。ブラウザ環境情報（OS・ブラウザ・タイムゾーン等）を自動収集して付記する。
+
+---
+
+## 概要
+
+| 項目 | 値 |
+|------|-----|
+| カテゴリ | bug / feature / question / other |
+| メッセージ | 最小10文字 / 最大5000文字 |
+| 送信先 | GitHub Issues（`GITHUB_CONTACT_REPO` で指定） |
+| レート制限 | Upstash（userId ベース） |
+| 認証 | ログイン必須（`protectedProcedure`） |
+| 環境情報 | appVersion / OS / ブラウザ / タイムゾーン / 言語を自動収集 |
+
+---
+
+## コンポーネント構成
+
+```
+ContactDialog                   Container（tRPC mutation + 環境収集 + toast 通知）
+└── ContactDialogContent        Presentational UI（tRPC非依存、Storybook対応）
+                                ├── RadioGroup  カテゴリ選択（2列グリッド）
+                                └── Textarea    メッセージ入力（最大5000文字）
+```
+
+`ContactDialog` が tRPC・環境情報・i18n ラベルを収集し、純粋UIの `ContactDialogContent` に props として渡す Container/Presentational パターンを採用している。
+
+---
+
+## 状態管理
+
+Contact 機能専用の Zustand ストアは存在しない。ダイアログの open/close 状態は呼び出し元コンポーネントが管理する。フォームのローカル状態（category / message / error）は `ContactDialogContent` 内の `useState` で管理する。
+
+---
+
+## Hooks
+
+### Mutation
+
+| Hook | 用途 |
+|------|------|
+| `api.contact.submit.useMutation()` | フォーム送信。成功時に toast + ダイアログ閉じる。レート制限エラー時は専用メッセージ表示 |
+
+### ユーティリティ
+
+| 関数 | 用途 |
+|------|------|
+| `collectEnvironment(appVersion)` | `navigator.userAgent` から OS・ブラウザを検出し、タイムゾーン・言語とともに返す |
+
+---
+
+## tRPC ルーター
+
+| エンドポイント | タイプ | 説明 |
+|-------------|-------|------|
+| `contact.submit` | mutation | カテゴリ・メッセージ・環境情報を受け取り GitHub Issue を作成 |
+
+### バリデーションスキーマ（`contactFormSchema`）
+
+| フィールド | 型 | バリデーション |
+|-----------|-----|--------------|
+| `category` | enum | 'bug' / 'feature' / 'question' / 'other' |
+| `message` | string | min(10) / max(5000) |
+| `environment.appVersion` | string | - |
+| `environment.os` | string | UA から自動検出 |
+| `environment.browser` | string | UA から自動検出 |
+| `environment.timezone` | string | `Intl.DateTimeFormat` から取得 |
+| `environment.language` | string | `navigator.language` から取得 |
+
+---
+
+## GitHub Issue フォーマット
+
+送信された問い合わせは以下のフォーマットで Issue 本文に整形される：
+
+```
+> via **Dayopt App**
+
+**From:** {userName} ({userEmail})
+**User ID:** `{userId}`
+**Plan:** Free
+**Category:** {categoryLabel}
+
+**Environment:**
+- App Version: {appVersion}
+- OS: {os}
+- Browser: {browser}
+- Timezone: {timezone}
+- Language: {language}
+
+---
+
+{message}
+```
+
+Issue ラベルは `['contact', 'app', category]` の3つが自動付与される。
+
+---
+
+**最終更新**: 2026-03-19
