@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockContext, createTestCaller } from '@/test/trpc-test-helpers';
+import { createMockContext } from '@/test/trpc-test-helpers';
+
+import { createCallerFactory } from '@/platform/trpc/procedures';
 
 import { billingRouter } from '../billing-router';
 
@@ -32,11 +34,13 @@ vi.mock('@/platform/trpc/errors', () => ({
 // billing-service のモックを取得
 const billingServiceMock = await import('../billing-service');
 
+const createCaller = createCallerFactory(billingRouter);
+
 describe('billing-router', () => {
   describe('認証ガード', () => {
     it('未認証での getOverview は UNAUTHORIZED', async () => {
       const ctx = createMockContext({ userId: undefined });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.getOverview()).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
@@ -45,7 +49,7 @@ describe('billing-router', () => {
 
     it('未認証での getInfo は UNAUTHORIZED', async () => {
       const ctx = createMockContext({ userId: undefined });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.getInfo()).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
@@ -54,7 +58,7 @@ describe('billing-router', () => {
 
     it('未認証での createCheckoutSession は UNAUTHORIZED', async () => {
       const ctx = createMockContext({ userId: undefined });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.createCheckoutSession({ priceId: 'price_test' })).rejects.toThrow(
         expect.objectContaining({ code: 'UNAUTHORIZED' }),
@@ -76,7 +80,7 @@ describe('billing-router', () => {
       vi.mocked(billingServiceMock.getBillingOverview).mockResolvedValue(mockOverview);
 
       const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       const result = await caller.getOverview();
       expect(result?.billingInfo.subscriptionStatus).toBe('active');
@@ -96,7 +100,7 @@ describe('billing-router', () => {
       vi.mocked(billingServiceMock.getBillingOverview).mockResolvedValue(mockOverview);
 
       const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       const result = await caller.getOverview();
       expect(result?.billingInfo.subscriptionStatus).toBe('free');
@@ -107,7 +111,7 @@ describe('billing-router', () => {
   describe('createCheckoutSession', () => {
     it('無効な priceId は Zod バリデーションエラー', async () => {
       const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       // "price_" で始まらない priceId
       await expect(caller.createCheckoutSession({ priceId: 'invalid_id' })).rejects.toThrow();
@@ -117,13 +121,13 @@ describe('billing-router', () => {
       const ctx = createMockContext({ userId: 'user-1' });
 
       // auth.getUser がメールなしのユーザーを返すようモック
-      const mockSupabase = ctx.supabase as Record<string, unknown>;
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
       (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
         data: { user: { id: 'user-1', email: null } },
         error: null,
       });
 
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.createCheckoutSession({ priceId: 'price_test123' })).rejects.toThrow(
         expect.objectContaining({ code: 'BAD_REQUEST' }),
@@ -133,13 +137,13 @@ describe('billing-router', () => {
     it('auth.getUser 失敗で INTERNAL_SERVER_ERROR', async () => {
       const ctx = createMockContext({ userId: 'user-1' });
 
-      const mockSupabase = ctx.supabase as Record<string, unknown>;
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
       (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
         data: { user: null },
         error: { message: 'Auth service unavailable' },
       });
 
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.createCheckoutSession({ priceId: 'price_test123' })).rejects.toThrow(
         expect.objectContaining({ code: 'INTERNAL_SERVER_ERROR' }),
@@ -153,13 +157,13 @@ describe('billing-router', () => {
 
       const ctx = createMockContext({ userId: 'user-1' });
 
-      const mockSupabase = ctx.supabase as Record<string, unknown>;
+      const mockSupabase = ctx.supabase as unknown as Record<string, unknown>;
       (mockSupabase.auth as Record<string, unknown>).getUser = vi.fn().mockResolvedValue({
         data: { user: { id: 'user-1', email: 'test@example.com' } },
         error: null,
       });
 
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
       const result = await caller.createCheckoutSession({ priceId: 'price_test123' });
 
       expect(result?.url).toBe('https://checkout.stripe.com/test');
@@ -173,7 +177,7 @@ describe('billing-router', () => {
       );
 
       const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       const result = await caller.createPortalSession();
       expect(result?.url).toBe('https://billing.stripe.com/portal/test');
@@ -181,14 +185,14 @@ describe('billing-router', () => {
 
     it('Stripe顧客なしでサービスエラー', async () => {
       vi.mocked(billingServiceMock.createPortalSession).mockRejectedValue(
-        new (billingServiceMock.BillingServiceError as never)(
-          'NOT_FOUND',
-          'No Stripe customer found',
-        ),
+        new (billingServiceMock.BillingServiceError as unknown as new (
+          code: string,
+          message: string,
+        ) => Error)('NOT_FOUND', 'No Stripe customer found'),
       );
 
       const ctx = createMockContext({ userId: 'user-1' });
-      const caller = createTestCaller(billingRouter, ctx);
+      const caller = createCaller(ctx);
 
       await expect(caller.createPortalSession()).rejects.toThrow('No Stripe customer found');
     });

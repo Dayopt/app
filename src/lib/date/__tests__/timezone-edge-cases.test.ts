@@ -66,9 +66,9 @@ describe('localTimeToUTCISO', () => {
       const date = new Date(result);
       expect(date).toBeInstanceOf(Date);
       expect(isNaN(date.getTime())).toBe(false);
-      // JST環境では new Date(2025, 10, 2, 1, 30) は JST 01:30 を作成し、
-      // fromZonedTime が NY TZ に変換 → EST（UTC-5）を選択 → 06:30Z
-      expect(result).toBe('2025-11-02T06:30:00.000Z');
+      // 曖昧な時刻のため、ランタイムの TZ 環境により EDT（UTC-4）または EST（UTC-5）が選択される
+      // EDT → 05:30Z、EST → 06:30Z のどちらも正しい
+      expect(['2025-11-02T05:30:00.000Z', '2025-11-02T06:30:00.000Z']).toContain(result);
     });
   });
 
