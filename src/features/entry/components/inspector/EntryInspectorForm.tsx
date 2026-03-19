@@ -170,12 +170,16 @@ export function EntryInspectorForm() {
         onDelete={handleDelete}
       />
 
-      {/* アラート（時間重複エラー） */}
-      {timeConflictError && (
-        <div className="mt-2">
+      {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
+      <div
+        className="mt-2 grid transition-[grid-template-rows] duration-200"
+        style={{ gridTemplateRows: timeConflictError ? '1fr' : '0fr' }}
+        aria-hidden={!timeConflictError}
+      >
+        <div className="overflow-hidden">
           <TimeConflictAlert message={t('calendar.toast.conflictDescription')} />
         </div>
-      )}
+      </div>
 
       {/* スケジュールカード */}
       <div className="bg-surface-inset mt-3 rounded-xl">

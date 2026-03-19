@@ -9,7 +9,7 @@
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Plus, Search, X } from 'lucide-react';
@@ -61,6 +61,7 @@ function TagQuickSelectorContent({
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [newTagName, setNewTagName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -70,12 +71,12 @@ function TagQuickSelectorContent({
     return [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [tags]);
 
-  // 検索フィルタリング
+  // 検索フィルタリング（deferred でグルーピング計算の頻度を抑制）
   const filteredTags = useMemo(() => {
-    if (!searchQuery) return sortedTags;
-    const q = searchQuery.toLowerCase();
+    if (!deferredSearchQuery) return sortedTags;
+    const q = deferredSearchQuery.toLowerCase();
     return sortedTags.filter((tag) => tag.name.toLowerCase().includes(q));
-  }, [sortedTags, searchQuery]);
+  }, [sortedTags, deferredSearchQuery]);
 
   // コロン記法でグルーピング
   // prefix と完全一致するタグがあれば親タグとして使用

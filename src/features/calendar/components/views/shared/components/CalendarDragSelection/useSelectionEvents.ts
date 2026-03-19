@@ -53,6 +53,8 @@ export function useSelectionEvents({
   const touchStartTime = useRef<number | null>(null);
   /** ドラッグ距離計算用の実際のマウスダウン/タッチ位置（コンテナ相対px） */
   const dragStartPixelY = useRef<number | null>(null);
+  /** RAF スロットル用 */
+  const rafId = useRef<number | null>(null);
 
   // State
   const [isSelecting, setIsSelecting] = useState(false);
@@ -249,35 +251,39 @@ export function useSelectionEvents({
     if (!isSelecting) return;
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current || !selectionStartRef.current) return;
+      if (rafId.current !== null) return; // RAF スロットル: 前フレーム未処理なら skip
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        if (!containerRef.current || !selectionStartRef.current) return;
 
-      const rect = containerRef.current.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const currentTime = pixelsToTimeRef.current(y);
+        const rect = containerRef.current.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const currentTime = pixelsToTimeRef.current(y);
 
-      // 実際のマウスダウン位置からの距離でドラッグ判定（グリッドスナップ位置ではなく）
-      const rawStartY = dragStartPixelY.current ?? y;
-      const deltaY = Math.abs(y - rawStartY);
-      if (deltaY > DRAG_CONSTANTS.MIN_DRAG_DISTANCE) {
-        isDragging.current = true;
-        setShowSelectionPreview(true);
-      }
-
-      const newSelection = calculateSelection(selectionStartRef.current, currentTime);
-
-      // ハプティックフィードバック
-      const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
-      const newEndMinutes = newSelection.endHour * 60 + newSelection.endMinute;
-      if (lastSelectionRef.current) {
-        const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
-        if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
-          tapRef.current();
+        // 実際のマウスダウン位置からの距離でドラッグ判定（グリッドスナップ位置ではなく）
+        const rawStartY = dragStartPixelY.current ?? y;
+        const deltaY = Math.abs(y - rawStartY);
+        if (deltaY > DRAG_CONSTANTS.MIN_DRAG_DISTANCE) {
+          isDragging.current = true;
+          setShowSelectionPreview(true);
         }
-      }
-      lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
 
-      setSelection(newSelection);
-      setIsOverlapping(checkOverlapRef.current(newSelection));
+        const newSelection = calculateSelection(selectionStartRef.current, currentTime);
+
+        // ハプティックフィードバック
+        const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
+        const newEndMinutes = newSelection.endHour * 60 + newSelection.endMinute;
+        if (lastSelectionRef.current) {
+          const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
+          if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
+            tapRef.current();
+          }
+        }
+        lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
+
+        setSelection(newSelection);
+        setIsOverlapping(checkOverlapRef.current(newSelection));
+      });
     };
 
     const handleGlobalMouseUp = () => {
@@ -340,33 +346,46 @@ export function useSelectionEvents({
       if (!containerRef.current || !selectionStartRef.current || !isLongPressActiveRef.current)
         return;
 
+      // タッチドラッグ中はスクロール抑制が必要なため、preventDefault は RAF 外で即座に呼ぶ
       const rect = containerRef.current.getBoundingClientRect();
       const y = touch.clientY - rect.top;
-      const currentTime = pixelsToTimeRef.current(y);
-
-      // 実際のタッチ開始位置からの距離でドラッグ判定（グリッドスナップ位置ではなく）
       const rawStartY = dragStartPixelY.current ?? y;
       const deltaY = Math.abs(y - rawStartY);
       if (deltaY > DRAG_CONSTANTS.MIN_DRAG_DISTANCE) {
-        isDragging.current = true;
-        setShowSelectionPreview(true);
         e.preventDefault();
       }
 
-      const newSelection = calculateSelection(selectionStartRef.current, currentTime);
+      if (rafId.current !== null) return; // RAF スロットル
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        if (!containerRef.current || !selectionStartRef.current) return;
 
-      const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
-      const newEndMinutes = newSelection.endHour * 60 + newSelection.endMinute;
-      if (lastSelectionRef.current) {
-        const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
-        if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
-          tapRef.current();
+        const touchRect = containerRef.current.getBoundingClientRect();
+        const touchY = touch.clientY - touchRect.top;
+        const currentTime = pixelsToTimeRef.current(touchY);
+
+        const touchRawStartY = dragStartPixelY.current ?? touchY;
+        const touchDeltaY = Math.abs(touchY - touchRawStartY);
+        if (touchDeltaY > DRAG_CONSTANTS.MIN_DRAG_DISTANCE) {
+          isDragging.current = true;
+          setShowSelectionPreview(true);
         }
-      }
-      lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
 
-      setSelection(newSelection);
-      setIsOverlapping(checkOverlapRef.current(newSelection));
+        const newSelection = calculateSelection(selectionStartRef.current, currentTime);
+
+        const newStartMinutes = newSelection.startHour * 60 + newSelection.startMinute;
+        const newEndMinutes = newSelection.endHour * 60 + newSelection.endMinute;
+        if (lastSelectionRef.current) {
+          const { startMinutes: prevStart, endMinutes: prevEnd } = lastSelectionRef.current;
+          if (newStartMinutes !== prevStart || newEndMinutes !== prevEnd) {
+            tapRef.current();
+          }
+        }
+        lastSelectionRef.current = { startMinutes: newStartMinutes, endMinutes: newEndMinutes };
+
+        setSelection(newSelection);
+        setIsOverlapping(checkOverlapRef.current(newSelection));
+      });
     };
 
     const handleGlobalTouchEnd = (e: TouchEvent) => {
@@ -488,6 +507,10 @@ export function useSelectionEvents({
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('touchmove', handleGlobalTouchMove);
       document.removeEventListener('touchend', handleGlobalTouchEnd);
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
     };
     // isSelecting のみに依存 — ドラッグ開始/終了時のみリスナー登録/解除
     // ホットパス値（selection, selectionStart, isOverlapping等）は ref 経由で読み取り
