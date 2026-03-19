@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useHasMounted } from '@/hooks/useHasMounted';
 
-import { closeModal, useModalStore, type RecurringEditScope } from '@/shell/stores/useModalStore';
+import { closeModal, useModalStore, type RecurringEditScope } from '@/stores/useModalStore';
 
 // Re-export type for barrel consumers
 export type { RecurringEditScope };

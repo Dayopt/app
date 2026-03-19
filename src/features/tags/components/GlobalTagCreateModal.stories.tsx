@@ -18,7 +18,7 @@ import type { ReactNode } from 'react';
 
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
-import { useModalStore } from '@/shell/stores/useModalStore';
+import { useModalStore } from '@/stores/useModalStore';
 
 import { GlobalTagCreateModal } from './GlobalTagCreateModal';
 

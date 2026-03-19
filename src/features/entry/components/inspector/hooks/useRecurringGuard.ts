@@ -12,7 +12,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { logger } from '@/lib/logger';
-import { openRecurringEditConfirm, type RecurringEditScope } from '@/shell/stores/useModalStore';
+import { openRecurringEditConfirm, type RecurringEditScope } from '@/stores/useModalStore';
 import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMutations';
 import { isRecurringEntry } from '../../../lib/entry-recurrence';
 

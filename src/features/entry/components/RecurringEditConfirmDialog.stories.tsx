@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Button } from '@/components/ui/button';
 
-import { openRecurringEditConfirm } from '@/shell/stores/useModalStore';
+import { openRecurringEditConfirm } from '@/stores/useModalStore';
 
 import { RecurringEditConfirmDialog } from './RecurringEditConfirmDialog';
 

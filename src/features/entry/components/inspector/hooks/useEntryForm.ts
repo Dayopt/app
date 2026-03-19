@@ -16,7 +16,7 @@ import {
   openRecurringEditConfirm,
   useModalStore,
   type RecurringEditScope,
-} from '@/shell/stores/useModalStore';
+} from '@/stores/useModalStore';
 import { useEntry } from '../../../hooks/useEntry';
 import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMutations';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';

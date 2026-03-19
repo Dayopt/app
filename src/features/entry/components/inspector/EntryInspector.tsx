@@ -19,7 +19,7 @@ import { Suspense, useCallback } from 'react';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useModalStore } from '@/shell/stores/useModalStore';
+import { useModalStore } from '@/stores/useModalStore';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';

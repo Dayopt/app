@@ -13,7 +13,7 @@ import { useCallback, useRef } from 'react';
 
 import { useEntryMutations, useRecurringScopeMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { openRecurringEditConfirm, type RecurringEditScope } from '@/shell/stores/useModalStore';
+import { openRecurringEditConfirm, type RecurringEditScope } from '@/stores/useModalStore';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 

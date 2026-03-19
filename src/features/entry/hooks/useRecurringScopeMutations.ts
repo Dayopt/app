@@ -14,7 +14,7 @@
 import { useCallback } from 'react';
 
 import { api } from '@/platform/trpc';
-import type { RecurringEditScope } from '@/shell/stores/useModalStore';
+import type { RecurringEditScope } from '@/stores/useModalStore';
 import { useEntryInstanceMutations } from './useEntryInstances';
 import { useEntryMutations } from './useEntryMutations';
 
