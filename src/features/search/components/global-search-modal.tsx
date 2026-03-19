@@ -15,9 +15,10 @@ import { useEntries, useEntryInspectorStore } from '@/features/entry';
 import { useTags } from '@/features/tags';
 import { formatDateShort, formatTimeRange } from '@/lib/date/format';
 import { getTagColorClasses } from '@/lib/tag-colors';
-import { useCalendarNavigationStore } from '@/shell/stores/useCalendarNavigationStore';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
+import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { useTranslations } from 'next-intl';
 
 import { HighlightedText } from '../lib/highlight-text';
 
@@ -27,6 +28,7 @@ interface GlobalSearchModalProps {
 }
 
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
+  const t = useTranslations('common.search');
   const [query, setQuery] = useState('');
 
   // Data - only fetch when modal is open
@@ -104,11 +106,11 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-[42rem] overflow-hidden p-0" showCloseButton={false}>
         <VisuallyHidden>
-          <DialogTitle>Search</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </VisuallyHidden>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground !rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2">
           <div className="relative">
-            <CommandInput placeholder="Search..." value={query} onValueChange={setQuery} />
+            <CommandInput placeholder={t('placeholder')} value={query} onValueChange={setQuery} />
             <div className="absolute top-1/2 right-3 hidden -translate-y-1/2 items-center gap-1 md:flex">
               <kbd className="bg-surface-container text-muted-foreground inline-flex h-6 items-center gap-1 rounded border px-2 font-mono text-xs font-normal opacity-100 select-none">
                 ESC
@@ -116,11 +118,11 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             </div>
           </div>
           <CommandList className="max-h-[30rem]">
-            <CommandEmpty>No results found</CommandEmpty>
+            <CommandEmpty>{t('noResults')}</CommandEmpty>
 
             {/* Tags */}
             {filteredTags.length > 0 && (
-              <CommandGroup heading="Tags">
+              <CommandGroup heading={t('tagsGroup')}>
                 {filteredTags.map((tag) => {
                   const colorClasses = getTagColorClasses(tag.color);
                   return (
@@ -142,7 +144,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
             {/* Entries (only when searching) */}
             {filteredEntries.length > 0 && (
-              <CommandGroup heading="Blocks">
+              <CommandGroup heading={t('blocksGroup')}>
                 {filteredEntries.map((entry) => {
                   const tag = entry.tagId ? tags.find((t) => t.id === entry.tagId) : null;
                   const colorClasses = getTagColorClasses(tag?.color);

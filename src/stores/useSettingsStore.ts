@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { SettingsCategory } from '@/shell/types/settings';
+import type { SettingsCategory } from '@/types/settings';
 
 interface SettingsStoreState {
   /** モーダルが開いているか */

@@ -37,10 +37,10 @@ import { getInitials } from '@/lib/user';
 import { useRouter } from '@/platform/i18n/navigation';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useContactStore } from '@/shell/stores/useContactStore';
-import { useSettingsStore } from '@/shell/stores/useSettingsStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { SettingsCategory } from '@/shell/types/settings';
+import type { SettingsCategory } from '@/types/settings';
 
 export function UserMenu({
   user,
@@ -73,6 +73,7 @@ export function UserMenu({
         <button
           type="button"
           className="hover:bg-state-hover data-[state=open]:bg-state-selected flex w-fit items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden"
+          aria-label={t('navigation.navUser.accountMenuLabel', { name: user.name })}
         >
           <Avatar size="xs" className="rounded-2xl">
             {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}

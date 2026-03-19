@@ -27,7 +27,7 @@ import {
 } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
-import { useCalendarNavigationStore } from '@/shell/stores/useCalendarNavigationStore';
+import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
 import { getCurrentTimezone, setUserTimezone, useUserSettings } from '@/features/settings';
 import { logger } from '@/lib/logger';

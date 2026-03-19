@@ -3,13 +3,13 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { AppHeader } from '@/components/AppHeader';
 import { isCalendarViewPath } from '@/features/calendar';
 import { NotificationDropdown } from '@/features/notifications';
 import { cn } from '@/lib/utils';
-import { AppHeader } from '@/shell/components/AppHeader';
 import { Sidebar } from '@/shell/components/Sidebar';
-import { useLayoutStore } from '@/shell/stores/useLayoutStore';
 import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';

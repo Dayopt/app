@@ -15,7 +15,7 @@ import { useTourStore } from '@/features/tour';
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
-import { useSettingsStore } from '@/shell/stores/useSettingsStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 import { DisplaySettings } from './display-settings';
 
