@@ -8,6 +8,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 
 // ナビゲーション計測用フック（Sentry SDK が要求）
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
@@ -69,27 +70,29 @@ function initSentry(dsn: string) {
 
     // エラーフィルタリング
     beforeSend(event) {
-      // 開発環境のノイズ除去
-      if (!IS_PRODUCTION) {
-        const errorMessage = event.exception?.values?.[0]?.value || '';
+      const errorMessage = event.exception?.values?.[0]?.value || '';
 
-        // HMR・Webpack関連エラーをフィルタ
-        const ignoredPatterns = [
-          'HMR',
-          'Unexpected token',
-          'ChunkLoadError',
-          'Loading chunk',
-          'Network Error',
-        ];
+      // ブラウザ拡張機能・サードパーティスクリプト・ネットワーク系のノイズを除外
+      const ignoredPatterns = [
+        'ResizeObserver loop',
+        'Non-Error promise rejection captured',
+        'AbortError',
+        'ChunkLoadError',
+        'Loading chunk',
+        'Network request failed',
+      ];
 
-        if (ignoredPatterns.some((pattern) => errorMessage.includes(pattern))) {
-          return null;
-        }
+      if (ignoredPatterns.some((pattern) => errorMessage.includes(pattern))) {
+        return null;
       }
 
-      // テストエラーは通す
-      if (event.tags?.test === true) {
-        return event;
+      // 開発環境のノイズ除去
+      if (!IS_PRODUCTION) {
+        const devIgnoredPatterns = ['HMR', 'Unexpected token', 'Network Error'];
+
+        if (devIgnoredPatterns.some((pattern) => errorMessage.includes(pattern))) {
+          return null;
+        }
       }
 
       return event;
@@ -107,8 +110,26 @@ function initSentry(dsn: string) {
         maskAllText: true, // テキストをマスク
         blockAllMedia: true, // メディアをブロック
       }),
+
+      // Supabase操作（auth, DB）の自動計測
+      ...(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? [
+            Sentry.supabaseIntegration({
+              supabaseClient: createBrowserClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+              ),
+            }),
+          ]
+        : []),
     ],
   });
+
+  // プラットフォームタグ: PWA（standalone）か通常ブラウザかを識別
+  if (typeof window !== 'undefined') {
+    const isPwa = window.matchMedia('(display-mode: standalone)').matches;
+    Sentry.setTag('app.platform', isPwa ? 'pwa' : 'web');
+  }
 }
 
 // DSNが設定されている場合のみ処理
