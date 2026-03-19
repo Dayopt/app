@@ -16,4 +16,7 @@
   /* スクロールバー（8pxグリッド準拠） */
   --scrollbar-width: 1rem; /* 16px - スクロールバー全体の幅 */
   --scrollbar-padding: 0.25rem; /* 4px - thumbの周りの余白 */
+
+  /* ボーダーインジケータ（カレンダーエントリの左端アクセント） */
+  --border-indicator: 3px;
 }

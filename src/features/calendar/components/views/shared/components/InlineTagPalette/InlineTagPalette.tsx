@@ -173,7 +173,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 rounded-r-lg border-l-[3px] duration-100 motion-reduce:animate-none"
+          className="animate-in fade-in-0 zoom-in-95 border-l-indicator absolute right-0 left-0 rounded-r-lg duration-100 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,

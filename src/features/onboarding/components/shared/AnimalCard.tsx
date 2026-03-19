@@ -34,8 +34,8 @@ export function AnimalCard({
       <span className="text-3xl">{emoji}</span>
       <span className="text-sm font-medium">{name}</span>
       <span className="text-muted-foreground text-xs">{trait}</span>
-      <span className="text-muted-foreground text-[11px]">{time}</span>
-      <span className="text-muted-foreground/70 text-[10px] leading-tight">{hint}</span>
+      <span className="text-muted-foreground text-xs">{time}</span>
+      <span className="text-muted-foreground/70 text-xs leading-tight">{hint}</span>
     </button>
   );
 }
