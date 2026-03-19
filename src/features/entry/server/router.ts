@@ -142,7 +142,13 @@ export const entriesCoreRouter = createTRPCRouter({
 
   /** エントリ更新 */
   update: protectedProcedure
-    .input(z.object({ id: z.string().uuid(), data: updateEntrySchema }))
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        data: updateEntrySchema,
+        expectedUpdatedAt: z.string().datetime().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const service = createEntryService(ctx.supabase);
       try {
@@ -151,6 +157,7 @@ export const entriesCoreRouter = createTRPCRouter({
           entryId: input.id,
           input: input.data,
           preventOverlappingEntries: true,
+          expectedUpdatedAt: input.expectedUpdatedAt,
         });
       } catch (error) {
         handleServiceError(error);

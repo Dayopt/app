@@ -12,6 +12,9 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
+import { logger } from '@/lib/logger';
+import { api } from '@/platform/trpc';
+
 import { useEntryMutations } from '../../../hooks/useEntryMutations';
 import { useEntryTags } from '../../../hooks/useEntryTags';
 import { useUpdateEntityTagsInCache } from '../../../hooks/useUpdateEntityTagsInCache';
@@ -26,6 +29,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const { updateEntry, deleteEntry } = useEntryMutations();
   const { setEntryTags } = useEntryTags();
   const updateTagsInCache = useUpdateEntityTagsInCache('entries');
+  const utils = api.useUtils();
 
   // 単一タイマー + pending フィールドのマージ
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,6 +38,15 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const entryIdRef = useRef(entryId);
   // eslint-disable-next-line react-hooks/refs -- flush() で最新の entryId を参照するための ref 同期
   entryIdRef.current = entryId;
+
+  /** キャッシュからエントリの updated_at を取得（楽観的ロック用） */
+  const getExpectedUpdatedAt = useCallback(
+    (id: string): string | undefined => {
+      const cached = utils.entries.getById.getData({ id });
+      return cached?.updated_at ?? undefined;
+    },
+    [utils],
+  );
 
   /**
    * デバウンス保存（500ms）
@@ -52,10 +65,14 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
         const data = pendingRef.current;
         pendingRef.current = {};
         timerRef.current = null;
-        updateEntry.mutate({ id: entryId, data });
+        updateEntry.mutate({
+          id: entryId,
+          data,
+          expectedUpdatedAt: getExpectedUpdatedAt(entryId),
+        });
       }, 500);
     },
-    [entryId, updateEntry],
+    [entryId, updateEntry, getExpectedUpdatedAt],
   );
 
   /**
@@ -64,9 +81,13 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const saveImmediate = useCallback(
     (fields: SaveFields) => {
       if (!entryId) return;
-      updateEntry.mutate({ id: entryId, data: fields });
+      updateEntry.mutate({
+        id: entryId,
+        data: fields,
+        expectedUpdatedAt: getExpectedUpdatedAt(entryId),
+      });
     },
-    [entryId, updateEntry],
+    [entryId, updateEntry, getExpectedUpdatedAt],
   );
 
   /**
@@ -93,9 +114,13 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     const id = entryIdRef.current;
     if (id && Object.keys(data).length > 0) {
       pendingRef.current = {};
-      updateEntry.mutate({ id, data });
+      updateEntry.mutate({
+        id,
+        data,
+        expectedUpdatedAt: getExpectedUpdatedAt(id),
+      });
     }
-  }, [updateEntry]);
+  }, [updateEntry, getExpectedUpdatedAt]);
 
   // entryId 変更時 or unmount 時に flush
   useEffect(() => {
@@ -107,10 +132,44 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
       const data = pendingRef.current;
       if (entryId && Object.keys(data).length > 0) {
         pendingRef.current = {};
-        updateEntry.mutate({ id: entryId, data });
+        updateEntry.mutate({
+          id: entryId,
+          data,
+          expectedUpdatedAt: getExpectedUpdatedAt(entryId),
+        });
       }
     };
-  }, [entryId, updateEntry]);
+  }, [entryId, updateEntry, getExpectedUpdatedAt]);
+
+  // ブラウザ閉じ・タブ切替時のデータ保護
+  // visibilitychange: タブ非表示時に通常の flush（tRPC mutation）
+  // beforeunload: ブラウザ閉じ時に sendBeacon で最終手段の保存
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        flush();
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const data = pendingRef.current;
+      const id = entryIdRef.current;
+      if (id && Object.keys(data).length > 0) {
+        const payload = JSON.stringify({ id, data });
+        navigator.sendBeacon('/api/beacon/entry-save', payload);
+        pendingRef.current = {};
+        logger.debug('[useDebouncedSave] sendBeacon fired for entry', id);
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [flush]);
 
   return {
     save,

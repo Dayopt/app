@@ -62,6 +62,8 @@ export interface UpdateEntryOptions {
   entryId: string;
   input: UpdateEntryInput;
   preventOverlappingEntries?: boolean;
+  /** 楽観的ロック: クライアントが認識している updated_at（不一致なら CONFLICT） */
+  expectedUpdatedAt?: string | undefined;
 }
 
 /**

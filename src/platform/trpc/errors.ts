@@ -39,7 +39,8 @@ type TRPCErrorCode =
   | 'NOT_FOUND'
   | 'BAD_REQUEST'
   | 'FORBIDDEN'
-  | 'UNAUTHORIZED';
+  | 'UNAUTHORIZED'
+  | 'CONFLICT';
 
 /**
  * エラーコードとTRPCエラーコードのマッピング
@@ -72,9 +73,10 @@ const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== Tag並び替え関連 =====
   REORDER_FAILED: 'INTERNAL_SERVER_ERROR',
 
-  // ===== Plan関連 =====
+  // ===== Entry/Plan関連 =====
   TAG_FILTER_FAILED: 'INTERNAL_SERVER_ERROR',
   TIME_OVERLAP: 'BAD_REQUEST',
+  CONFLICT: 'CONFLICT',
 
   // ===== Plan Transaction関連 =====
   CREATE_WITH_TAGS_FAILED: 'INTERNAL_SERVER_ERROR',

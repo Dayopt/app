@@ -229,10 +229,20 @@ export class EntryService {
    * 自動調整（auto-shrink）し、adjustedEntries に含めて返す。
    */
   async update(options: UpdateEntryOptions): Promise<UpdateEntryResult> {
-    const { userId, entryId, input, preventOverlappingEntries } = options;
+    const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt } = options;
 
     // 既存データを取得
     const oldData = await this.getExistingEntry(entryId, userId);
+
+    // 楽観的ロック: 他タブ/デバイスでの変更を検出
+    if (expectedUpdatedAt && oldData?.updated_at) {
+      if (oldData.updated_at !== expectedUpdatedAt) {
+        throw new EntryServiceError(
+          'CONFLICT',
+          'このエントリは他の場所で更新されています。最新データをリロードしてください。',
+        );
+      }
+    }
 
     // 日時の正規化
     const normalizedInput = this.normalizeDateTimeFieldsForUpdate(input, oldData);

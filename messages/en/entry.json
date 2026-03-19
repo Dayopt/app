@@ -3,7 +3,8 @@
     "untitled": "Untitled",
     "toast": {
       "restored": "Restored",
-      "restoreFailed": "Failed to restore"
+      "restoreFailed": "Failed to restore",
+      "conflict": "This entry was modified elsewhere. Reload to see the latest version."
     }
   }
 }
