@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+import { OG_COLORS } from '@/lib/og-colors';
+
 export const runtime = 'edge';
 
 export const alt = 'Dayopt';
@@ -20,7 +22,7 @@ export default function OgImage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0f0a1e 0%, #1a1035 40%, #0d0d1a 100%)',
+          background: `linear-gradient(135deg, ${OG_COLORS.backgroundDark} 0%, ${OG_COLORS.backgroundMid} 40%, ${OG_COLORS.background} 100%)`,
           fontFamily: 'Inter, system-ui, sans-serif',
         }}
       >
@@ -33,7 +35,7 @@ export default function OgImage() {
             width: 400,
             height: 400,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)',
+            background: `radial-gradient(circle, ${OG_COLORS.primaryGlow15} 0%, transparent 70%)`,
           }}
         />
         <div
@@ -44,7 +46,7 @@ export default function OgImage() {
             width: 500,
             height: 500,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)',
+            background: `radial-gradient(circle, ${OG_COLORS.primaryGlow10} 0%, transparent 70%)`,
           }}
         />
 
@@ -57,16 +59,16 @@ export default function OgImage() {
             width: 80,
             height: 80,
             borderRadius: 20,
-            background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+            background: `linear-gradient(135deg, ${OG_COLORS.primary} 0%, ${OG_COLORS.primaryLight} 100%)`,
             marginBottom: 32,
-            boxShadow: '0 8px 32px rgba(124,58,237,0.3)',
+            boxShadow: `0 8px 32px ${OG_COLORS.primaryGlow30}`,
           }}
         >
           <div
             style={{
               fontSize: 40,
               fontWeight: 700,
-              color: '#ffffff',
+              color: OG_COLORS.foreground,
               lineHeight: 1,
             }}
           >
@@ -79,7 +81,7 @@ export default function OgImage() {
           style={{
             fontSize: 64,
             fontWeight: 700,
-            color: '#ffffff',
+            color: OG_COLORS.foreground,
             letterSpacing: '-0.02em',
             lineHeight: 1,
             marginBottom: 16,
@@ -92,7 +94,7 @@ export default function OgImage() {
         <div
           style={{
             fontSize: 24,
-            color: 'rgba(255,255,255,0.6)',
+            color: OG_COLORS.muted,
             fontWeight: 400,
             letterSpacing: '-0.01em',
           }}
@@ -113,7 +115,7 @@ export default function OgImage() {
           <div
             style={{
               fontSize: 14,
-              color: 'rgba(255,255,255,0.3)',
+              color: OG_COLORS.mutedSubtle,
               letterSpacing: '0.05em',
             }}
           >
