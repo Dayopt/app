@@ -1,4 +1,5 @@
 import { Meta } from '@storybook/addon-docs/blocks';
+import { Mermaid } from '../../../../.storybook/components/Mermaid';
 
 <Meta title="Docs/Architecture/Data Flow" />
 
@@ -10,21 +11,136 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
 
 ## 全体像
 
-```
-[ユーザー操作]
-     ↓
-[React Component] ← Zustand (UI状態)
-     ↓
-[tRPC Client] ← TanStack Query (キャッシュ)
-     ↓
-[tRPC Router]
-     ↓
-[Service Layer] ← ビジネスロジック
-     ↓
-[Supabase Client]
-     ↓
-[PostgreSQL] ← RLS (行レベルセキュリティ)
-```
+<Mermaid chart={`graph TD
+    User["👤 ユーザー操作"]
+
+    subgraph Client["🖥️ クライアント"]
+        RC["React Component"]
+        ZS["Zustand Store<br/>(UI状態)"]
+        TQ["TanStack Query<br/>(キャッシュ)"]
+        TRPC_C["tRPC Client<br/>(httpBatchLink)"]
+    end
+
+    subgraph Server["⚙️ サーバー"]
+        API["/api/trpc/[trpc]"]
+        MW["Middleware<br/>(認証・Rate Limit)"]
+        TRPC_R["tRPC Router<br/>(protectedProcedure)"]
+        SVC["Service Layer<br/>(ビジネスロジック)"]
+    end
+
+    subgraph DB["🗄️ データベース"]
+        SB["Supabase Client"]
+        PG["PostgreSQL + RLS"]
+    end
+
+    RT["Supabase Realtime"]
+
+    User --> RC
+    RC <--> ZS
+    RC --> TRPC_C
+    TRPC_C --> TQ
+    TRPC_C -->|"POST (batch)"| API
+    API --> MW
+    MW --> TRPC_R
+    TRPC_R --> SVC
+    SVC --> SB
+    SB --> PG
+    PG -.->|"INSERT/UPDATE/DELETE 通知"| RT
+    RT -.->|"キャッシュ invalidation"| TQ
+    TQ -.->|"再レンダリング"| RC
+`} />
+
+## 認証フロー
+
+<Mermaid chart={`graph LR
+    subgraph AuthModes["認証モード（自動判定）"]
+        S["Session<br/>(Cookie)"]
+        O["OAuth 2.1<br/>(Bearer Token)"]
+        SR["Service-Role<br/>(API Key)"]
+    end
+
+    subgraph Middleware
+        CTX["createFetchTRPCContext"]
+        RL["Rate Limit<br/>(100 req/min)"]
+    end
+
+    S --> CTX
+    O --> CTX
+    SR --> CTX
+    CTX -->|"userId 抽出"| RL
+    RL --> Router["tRPC Router"]
+`} />
+
+## Provider 階層
+
+<Mermaid chart={`graph TD
+    P["Providers (root)"]
+    P --> QC["QueryClientProvider"]
+    P --> TC["api.Provider (tRPC)"]
+    P --> AS["AuthStoreInitializer"]
+    P --> RP["RealtimeProvider"]
+    P --> TP["ThemeProvider"]
+    P --> GS["GlobalSearchProvider (lazy)"]
+    P --> SW["ServiceWorkerProvider (lazy)"]
+    P --> GT["GlobalTagCreateModal (lazy)"]
+`} />
+
+## キャッシュ戦略
+
+<Mermaid chart={`graph LR
+    subgraph Cache["TanStack Query キャッシュ"]
+        E["entries / calendars<br/>stale: 5min, gc: 10min"]
+        T["tags<br/>stale: 5min, gc: 10min"]
+        US["userSettings<br/>stale: 1h, gc: 2h"]
+        TU["tagUsage<br/>stale: 1min, gc: 5min"]
+    end
+
+    RT["Realtime"] -.->|"invalidate"| E
+    RT -.->|"invalidate"| T
+`} />
+
+## Feature 間の依存（Composition Layer）
+
+<Mermaid chart={`graph TD
+    subgraph Features
+        CAL["calendar"]
+        ENT["entry"]
+        TAG["tags"]
+        AUTH["auth"]
+        STAT["stats"]
+        NOTIF["notifications"]
+        SET["settings"]
+        AI["ai"]
+        CHRONO["chronotype"]
+        SEARCH["search"]
+        ONBOARD["onboarding"]
+        TOUR["tour"]
+        CONTACT["contact"]
+    end
+
+    subgraph Composition["Composition Layer"]
+        SHELL["src/shell/"]
+        PLAT["src/platform/"]
+        COMP["src/components/"]
+        STORE["src/stores/"]
+        TYPES["src/types/"]
+    end
+
+    CAL -->|"hooks"| COMP
+    ENT -->|"hooks"| COMP
+    TAG --> STORE
+    AUTH --> PLAT
+    STAT --> STORE
+    NOTIF --> PLAT
+    SET --> STORE
+    CHRONO --> TYPES
+
+    SHELL --> CAL
+    SHELL --> ENT
+    SHELL --> TAG
+    SHELL --> NOTIF
+    SHELL --> SEARCH
+`} />
 
 ---
 
@@ -136,4 +252,4 @@ USING (auth.uid() = user_id);
 
 ---
 
-**最終更新**: 2026-02-12 | **バージョン**: v1.0
+**最終更新**: 2026-03-19 | **バージョン**: v2.0
