@@ -118,6 +118,12 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
       suppressHydrationWarning
       className={`${inter.variable} ${notoSansJP.variable}`}
     >
+      <head>
+        {/* LCP改善: Supabase API への早期接続確立 */}
+        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+        )}
+      </head>
       <body className={cn('bg-background')} suppressHydrationWarning>
         <Suspense fallback={null}>
           {children}

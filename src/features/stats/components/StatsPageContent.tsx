@@ -1,13 +1,14 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
 import { AppHeader } from '@/components/AppHeader';
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
 
 import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
@@ -16,11 +17,25 @@ import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import { StatsDateDisplay } from './layout/StatsDateDisplay';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
 
+/** Stats タブの遅延読み込み用 Skeleton */
+function StatsTabSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-4 p-4">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-64 w-full" />
+      <Skeleton className="h-32 w-full" />
+    </div>
+  );
+}
+
 // recharts (~200KB) を含むタブビューを遅延読み込み
 // アクティブタブのみ読み込むことでバンドルサイズを削減
-const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.StatsView })));
-const ProgressView = dynamic(() =>
-  import('./progress/ProgressView').then((m) => ({ default: m.ProgressView })),
+const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.StatsView })), {
+  loading: () => <StatsTabSkeleton />,
+});
+const ProgressView = dynamic(
+  () => import('./progress/ProgressView').then((m) => ({ default: m.ProgressView })),
+  { loading: () => <StatsTabSkeleton /> },
 );
 // InsightsView は AI 分析実装後に復活予定
 // const InsightsView = dynamic(() =>
@@ -109,13 +124,17 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
 
         <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
           <FeatureErrorBoundary featureName="stats">
-            <StatsView />
+            <Suspense fallback={<StatsTabSkeleton />}>
+              <StatsView />
+            </Suspense>
           </FeatureErrorBoundary>
         </TabsContent>
 
         <TabsContent value="progress" className="flex min-h-0 flex-1 flex-col">
           <FeatureErrorBoundary featureName="stats-progress">
-            <ProgressView />
+            <Suspense fallback={<StatsTabSkeleton />}>
+              <ProgressView />
+            </Suspense>
           </FeatureErrorBoundary>
         </TabsContent>
 
