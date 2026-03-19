@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { AppHeader } from './AppHeader';
+import { AppHeader } from '@/components/AppHeader';
 
 // ─────────────────────────────────────────────────────────
 // Stub UI Helpers

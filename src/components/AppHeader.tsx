@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { useLayoutStore } from '@/shell/stores/useLayoutStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MobileMenuButton } from './MobileMenuButton';
 
