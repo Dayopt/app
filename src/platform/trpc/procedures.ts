@@ -28,6 +28,20 @@ import {
 import type { Database } from '@/lib/database.types';
 
 /**
+ * プロシージャメタデータ（API仕様書自動生成用）
+ */
+export interface ProcedureMeta {
+  /** OpenAPI description */
+  description?: string;
+  /** 認証レベル */
+  auth?: 'public' | 'protected' | 'pro' | 'admin';
+  /** エンドポイント固有のレート制限（グローバル100 req/minを上書き） */
+  rateLimit?: { requests: number; window: string };
+  /** 非推奨フラグ */
+  deprecated?: boolean;
+}
+
+/**
  * リクエストコンテキストの型定義
  */
 export interface TrpcRequestLike {
@@ -54,6 +68,8 @@ export interface Context {
   authMode: AuthMode;
   /** OAuth 2.1トークン（oauth modeの場合のみ） */
   accessToken?: string | undefined;
+  /** JWTカスタムクレームから取得したサブスクリプション状態（custom_access_token hook） */
+  subscriptionStatus?: string | undefined;
 }
 
 /**
@@ -165,6 +181,27 @@ export async function createTRPCContext(opts: {
     }
   }
 
+  // JWTカスタムクレームからsubscription_statusを取得（custom_access_token hook）
+  let subscriptionStatus: string | undefined;
+  const tokenToDecode = accessToken ?? sessionId;
+  if (tokenToDecode) {
+    try {
+      const payload = tokenToDecode.split('.')[1];
+      if (payload) {
+        const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<
+          string,
+          unknown
+        >;
+        subscriptionStatus =
+          typeof claims['subscription_status'] === 'string'
+            ? claims['subscription_status']
+            : undefined;
+      }
+    } catch {
+      // JWTデコード失敗時はundefined（proProcedureでフォールバック）
+    }
+  }
+
   return {
     req,
     res,
@@ -173,6 +210,7 @@ export async function createTRPCContext(opts: {
     accessToken,
     supabase,
     authMode,
+    subscriptionStatus,
   };
 }
 
@@ -186,33 +224,36 @@ export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions):
 /**
  * tRPCインスタンス初期化
  */
-const t = initTRPC.context<Context>().create({
-  transformer: superjson,
-  errorFormatter({ shape, error }) {
-    const isProduction = process.env.NODE_ENV === 'production';
+const t = initTRPC
+  .context<Context>()
+  .meta<ProcedureMeta>()
+  .create({
+    transformer: superjson,
+    errorFormatter({ shape, error }) {
+      const isProduction = process.env.NODE_ENV === 'production';
 
-    // エラーの詳細情報をプロダクションでは非表示
-    const message =
-      isProduction && error.code === 'INTERNAL_SERVER_ERROR'
-        ? 'サーバーエラーが発生しました'
-        : shape.message;
+      // エラーの詳細情報をプロダクションでは非表示
+      const message =
+        isProduction && error.code === 'INTERNAL_SERVER_ERROR'
+          ? 'サーバーエラーが発生しました'
+          : shape.message;
 
-    return {
-      ...shape,
-      message,
-      data: {
-        ...shape.data,
-        // 開発環境でのみスタックトレースを含める
-        stack: isProduction ? undefined : error.stack,
-      },
-    };
-  },
-});
+      return {
+        ...shape,
+        message,
+        data: {
+          ...shape.data,
+          // 開発環境でのみスタックトレースを含める
+          stack: isProduction ? undefined : error.stack,
+        },
+      };
+    },
+  });
 
 /**
  * 公開プロシージャ（認証不要）
  */
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure.meta({ auth: 'public' });
 
 /**
  * per-userId レート制限（100 req/min）
@@ -261,73 +302,78 @@ async function isUserRateLimited(userId: string): Promise<boolean> {
 /**
  * 認証が必要なプロシージャ
  */
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.userId) {
-    throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'ログインが必要です',
-      cause: createAppError('認証が必要です', ERROR_CODES.INVALID_TOKEN, {
-        source: 'trpc_middleware',
-      }),
+export const protectedProcedure = t.procedure
+  .meta({ auth: 'protected' })
+  .use(async ({ ctx, next }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'ログインが必要です',
+        cause: createAppError('認証が必要です', ERROR_CODES.INVALID_TOKEN, {
+          source: 'trpc_middleware',
+        }),
+      });
+    }
+
+    // per-userId レート制限
+    if (await isUserRateLimited(ctx.userId)) {
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
+      });
+    }
+
+    // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
+    Sentry.setUser({ id: ctx.userId });
+
+    return next({
+      ctx: {
+        ...ctx,
+        userId: ctx.userId, // TypeScriptの型保証のため
+      },
     });
-  }
-
-  // per-userId レート制限
-  if (await isUserRateLimited(ctx.userId)) {
-    throw new TRPCError({
-      code: 'TOO_MANY_REQUESTS',
-      message: 'リクエストが多すぎます。しばらく待ってからお試しください。',
-    });
-  }
-
-  // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
-  Sentry.setUser({ id: ctx.userId });
-
-  return next({
-    ctx: {
-      ...ctx,
-      userId: ctx.userId, // TypeScriptの型保証のため
-    },
   });
-});
 
 /**
  * Pro プラン以上が必要なプロシージャ
  *
- * profiles.subscription_status が 'active' | 'trialing' の場合に許可。
- * 注: カラムが生成型に未反映のため Record 経由で取得。
+ * JWTカスタムクレーム（custom_access_token hook）から subscription_status を読み取り。
+ * クレーム未設定時はDBフォールバック（hook未適用の既存セッション対応）。
+ * past_due: Stripe dunning（回収リトライ）期間中はアクセス維持。
  */
-export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const { data, error } = await ctx.supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', ctx.userId)
-    .single();
+export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
+  let status = ctx.subscriptionStatus;
 
-  if (error) {
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: `プロフィールの取得に失敗しました: ${error.message}`,
-      cause: createAppError(
-        'Failed to fetch profile for pro check',
-        ERROR_CODES.SYSTEM_INTERNAL_ERROR,
-        {
-          source: 'trpc_middleware',
-          userId: ctx.userId,
-          supabaseError: error.message,
-        },
-      ),
-    });
+  // JWTクレームが未設定の場合のみDBフォールバック（hook適用前の既存トークン対応）
+  if (!status) {
+    const { data, error } = await ctx.supabase
+      .from('profiles')
+      .select('id, subscription_status')
+      .eq('id', ctx.userId)
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `プロフィールの取得に失敗しました: ${error.message}`,
+        cause: createAppError(
+          'Failed to fetch profile for pro check',
+          ERROR_CODES.SYSTEM_INTERNAL_ERROR,
+          {
+            source: 'trpc_middleware',
+            userId: ctx.userId,
+            supabaseError: error.message,
+          },
+        ),
+      });
+    }
+
+    status = (data as Record<string, unknown> | null)?.subscription_status as string | undefined;
   }
-
-  const status = (data as Record<string, unknown> | null)?.subscription_status as
-    | string
-    | undefined;
 
   // Sentryにプラン情報をタグ付け（エラー分析時のフィルタ用）
   Sentry.setTag('user.plan', status ?? 'free');
 
-  // past_due: Stripe dunning（回収リトライ）期間中はアクセス維持
   const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
 
   if (!isProActive) {
@@ -347,23 +393,25 @@ export const proProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 /**
  * 管理者権限が必要なプロシージャ
  */
-export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  // ここで管理者権限の確認を行う
-  const isAdmin = await checkAdminPermission(ctx.userId);
+export const adminProcedure = protectedProcedure
+  .meta({ auth: 'admin' })
+  .use(async ({ ctx, next }) => {
+    // ここで管理者権限の確認を行う
+    const isAdmin = await checkAdminPermission(ctx.userId);
 
-  if (!isAdmin) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: '管理者権限が必要です',
-      cause: createAppError('管理者権限が必要です', ERROR_CODES.NO_PERMISSION, {
-        source: 'trpc_middleware',
-        userId: ctx.userId,
-      }),
-    });
-  }
+    if (!isAdmin) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: '管理者権限が必要です',
+        cause: createAppError('管理者権限が必要です', ERROR_CODES.NO_PERMISSION, {
+          source: 'trpc_middleware',
+          userId: ctx.userId,
+        }),
+      });
+    }
 
-  return next({ ctx });
-});
+    return next({ ctx });
+  });
 
 /**
  * ルーター作成関数
