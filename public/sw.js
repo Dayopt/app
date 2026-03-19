@@ -9,6 +9,11 @@
  * - 破壊的変更がない限りキャッシュは引き継ぐ
  */
 
+// SW内ログ: 開発時のみ出力（本番ではno-op）
+const __SW_DEBUG__ = typeof location !== 'undefined' && location.hostname === 'localhost';
+const swLog = __SW_DEBUG__ ? console.log.bind(console) : () => {};
+const swError = console.error.bind(console); // エラーは常に出力
+
 // キャッシュバージョン: 破壊的変更時のみインクリメント
 const CACHE_VERSION = '2';
 const CACHE_NAME = `dayopt-v${CACHE_VERSION}`;
@@ -50,7 +55,7 @@ self.addEventListener('install', (event) => {
     caches
       .open(STATIC_CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching static assets');
+        swLog('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
       .then(() => self.skipWaiting()),
@@ -76,7 +81,7 @@ self.addEventListener('activate', (event) => {
               );
             })
             .map((name) => {
-              console.log('[SW] Deleting old cache:', name);
+              swLog('[SW] Deleting old cache:', name);
               return caches.delete(name);
             }),
         );
@@ -215,7 +220,7 @@ self.addEventListener('message', (event) => {
   // iOS Safari SW キャッシュ7日制限対策: keep-alive ping
   if (event.data && event.data.type === 'KEEP_ALIVE') {
     // SWがアクティブ状態を維持するだけで十分
-    console.log('[SW] Keep-alive ping received');
+    swLog('[SW] Keep-alive ping received');
   }
 });
 
@@ -275,7 +280,7 @@ async function processSyncQueue() {
         // 送信成功 → 削除
         await deleteEntry(db, STORE_NAME, entry.id);
       } catch (error) {
-        console.error('[SW] Sync failed for entry:', entry.id, error);
+        swError('[SW] Sync failed for entry:', entry.id, error);
 
         const newRetryCount = entry.retryCount + 1;
         const newStatus = newRetryCount >= entry.maxRetries ? 'failed' : 'pending';
@@ -288,7 +293,7 @@ async function processSyncQueue() {
 
     db.close();
   } catch (error) {
-    console.error('[SW] processSyncQueue error:', error);
+    swError('[SW] processSyncQueue error:', error);
   }
 }
 
