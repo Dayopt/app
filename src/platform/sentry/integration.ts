@@ -229,3 +229,63 @@ export function handleApiError(error: Error, context?: Record<string, unknown>):
 export function isSentryInitialized(): boolean {
   return !!Sentry.getClient();
 }
+
+// ─── Observability ヘルパー ──────────────────────────
+
+/**
+ * タグ値を文字列に正規化（Sentryタグは文字列のみ受付）
+ */
+function stringifyTags(tags: Record<string, string | number | boolean>): Record<string, string> {
+  return Object.fromEntries(Object.entries(tags).map(([k, v]) => [k, String(v)]));
+}
+
+/**
+ * ビジネスイベントをSentryに記録
+ *
+ * エラーではなく「重要な操作の成功/状態変化」を追跡するために使用。
+ * Sentryの Issues > Search で `eventName:billing.checkout_started` のようにフィルタ可能。
+ *
+ * @example
+ * ```typescript
+ * captureBusinessEvent('billing.checkout_started', { priceId: 'price_xxx' })
+ * captureBusinessEvent('account.deleted', {}, 'warning')
+ * ```
+ */
+export function captureBusinessEvent(
+  eventName: string,
+  tags: Record<string, string | number | boolean>,
+  level: Sentry.SeverityLevel = 'info',
+): void {
+  Sentry.captureMessage(eventName, {
+    level,
+    tags: { eventName, ...stringifyTags(tags) },
+    fingerprint: ['dayopt', 'business-event', eventName],
+  });
+}
+
+/**
+ * ユーザー操作のbreadcrumbを追加
+ *
+ * エラー発生前の操作コンテキストを残すために使用。
+ */
+export function addUserActionBreadcrumb(
+  message: string,
+  data?: Record<string, unknown>,
+  category = 'user.action',
+): void {
+  Sentry.addBreadcrumb({
+    message,
+    category,
+    level: 'info',
+    ...(data && { data }),
+  });
+}
+
+/**
+ * ユーザーのプランタグをグローバルに設定
+ *
+ * 以降のすべてのイベント/エラーに `user.plan` タグが付与される。
+ */
+export function setUserPlanTag(plan: string): void {
+  Sentry.setTag('user.plan', plan);
+}
