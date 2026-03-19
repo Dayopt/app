@@ -21,6 +21,7 @@ import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
+import { getEntryState } from '../../lib/entry-status';
 import type { FulfillmentScore, RecurrenceType } from '../../types/entry';
 
 import {
@@ -156,6 +157,11 @@ export function EntryInspectorForm() {
     [effectiveActualStart, effectiveActualEnd],
   );
 
+  // past エントリのみ記録行・充実度を表示（upcoming/active では非表示）
+  const isPastEntry = entry
+    ? getEntryState({ start_time: entry.start_time, end_time: entry.end_time }) === 'past'
+    : false;
+
   if (!entry) return null;
 
   return (
@@ -203,23 +209,25 @@ export function EntryInspectorForm() {
             hasError={timeConflictError}
           />
 
-          {/* 記録行 */}
-          <TimeRow
-            label={t('plan.inspector.time.actual')}
-            icon={Play}
-            startTime={effectiveActualStart}
-            endTime={effectiveActualEnd}
-            onStartChange={(time) => handleActualStartChange(time)}
-            onEndChange={(time) => handleActualEndChange(time)}
-          />
+          {/* 記録行（past エントリのみ表示 — upcoming/active では actual time 設定不可） */}
+          {isPastEntry && (
+            <TimeRow
+              label={t('plan.inspector.time.actual')}
+              icon={Play}
+              startTime={effectiveActualStart}
+              endTime={effectiveActualEnd}
+              onStartChange={(time) => handleActualStartChange(time)}
+              onEndChange={(time) => handleActualEndChange(time)}
+            />
+          )}
 
           {/* プログレスバー + 差分バッジ */}
-          {plannedDuration > 0 && (
+          {isPastEntry && plannedDuration > 0 && (
             <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
           )}
 
-          {/* 充実度（endTimeが過去のエントリのみ表示） */}
-          {entry.end_time && new Date(entry.end_time) < new Date() && (
+          {/* 充実度（past エントリのみ表示） */}
+          {isPastEntry && (
             <FulfillmentRow
               label={t('plan.inspector.time.fulfillment')}
               score={fulfillmentScore ?? null}
