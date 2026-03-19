@@ -12,6 +12,7 @@
 
 import { FileQuestion } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
@@ -26,11 +27,13 @@ export default function AppNotFound() {
         </div>
 
         <div>
-          <h2 className="mb-2 text-xl font-bold">{t('title')}</h2>
+          <h1 className="mb-2 text-xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground text-sm">{t('description')}</p>
         </div>
 
-        <Button onClick={() => (window.location.href = '/')}>{t('goHome')}</Button>
+        <Button asChild>
+          <Link href="/">{t('goHome')}</Link>
+        </Button>
       </div>
     </div>
   );
