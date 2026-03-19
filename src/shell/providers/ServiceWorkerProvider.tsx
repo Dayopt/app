@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { useServiceWorker } from '../hooks/useServiceWorker';
 
@@ -12,6 +13,7 @@ import { useServiceWorker } from '../hooks/useServiceWorker';
  * Service Workerの登録と更新通知UIを提供
  */
 export function ServiceWorkerProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('common.serviceWorker');
   const { updateAvailable, applyUpdate } = useServiceWorker();
   // updateAvailable が一度 true になったら表示を維持（ユーザーが「後で」で閉じるまで）
   const [dismissed, setDismissed] = useState(false);
@@ -24,11 +26,11 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
       {/* 更新バナー */}
       {showUpdateBanner && (
         <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 z-50 md:bottom-4">
-          <div className="bg-card border-border flex items-center gap-4 rounded-2xl border p-4 shadow-lg">
+          <div className="bg-card border-border surface-raised flex items-center gap-4 rounded-2xl border p-4">
             <RefreshCw className="text-primary h-5 w-5" />
             <div className="flex-1">
-              <p className="text-foreground text-sm font-normal">アップデートがあります</p>
-              <p className="text-muted-foreground text-xs">再読み込みして最新版を適用</p>
+              <p className="text-foreground text-sm font-normal">{t('updateAvailable')}</p>
+              <p className="text-muted-foreground text-xs">{t('updateDescription')}</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -36,14 +38,14 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
                 onClick={() => setDismissed(true)}
                 className="text-muted-foreground hover:text-foreground text-sm transition-colors"
               >
-                後で
+                {t('later')}
               </button>
               <button
                 type="button"
                 onClick={applyUpdate}
                 className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-normal transition-colors"
               >
-                更新
+                {t('update')}
               </button>
             </div>
           </div>
