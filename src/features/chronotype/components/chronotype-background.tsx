@@ -8,12 +8,14 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { CHRONOTYPE_LEVEL_TINT_CLASSES } from '../lib/constants';
 import { getPresetChronotypeProfile, getVisibleProductivityZones } from '../lib/utils';
 
+/** クロノタイプ背景コンポーネントのProps */
 export interface ChronotypeBackgroundProps {
   startHour: number;
   endHour: number;
   hourHeight: number;
 }
 
+/** カレンダーグリッドにクロノタイプの生産性ゾーン色を背景として描画するコンポーネント */
 export const ChronotypeBackground = memo<ChronotypeBackgroundProps>(function ChronotypeBackground({
   startHour,
   endHour,

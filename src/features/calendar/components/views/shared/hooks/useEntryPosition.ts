@@ -14,10 +14,12 @@ export interface UseEntryPositionOptions {
   hourHeight?: number;
 }
 
+/** 位置情報が付加されたエントリ型 */
 export interface PositionedEntry extends TimedEntry {
   position: EntryCardPosition;
 }
 
+/** エントリのグリッド上の配置位置（top/height/left/width）をMapで返すフック */
 export function useEntryPosition(entries: TimedEntry[], options: UseEntryPositionOptions = {}) {
   const { hourHeight = HOUR_HEIGHT } = options;
 
@@ -57,6 +59,7 @@ export function useEntryPosition(entries: TimedEntry[], options: UseEntryPositio
 /**
  * エントリと位置を結合して配置済みエントリを返すフック
  */
+/** エントリに位置情報を結合して配置済みエントリ配列を返すフック */
 export function usePositionedEntries(
   entries: TimedEntry[],
   options: UseEntryPositionOptions = {},

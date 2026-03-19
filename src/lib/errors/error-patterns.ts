@@ -22,6 +22,7 @@ export type { ErrorCode, ErrorLevel } from './error-codes';
 // エラーメッセージ統一システム
 // ==============================================
 
+/** エラーコードに対応するパターン情報（メッセージ、アクション、復旧可能性など） */
 export interface ErrorPattern {
   /** 技術者向けメッセージ */
   technical: string;
@@ -374,6 +375,7 @@ const EXTERNAL_ERROR_PATTERNS: Record<number, ErrorPattern> = {
 // エラーパターン統合辞書
 // ==============================================
 
+/** エラーコードとエラーパターンの統合辞書 */
 export const ERROR_PATTERNS: Record<number, ErrorPattern> = {
   ...AUTH_ERROR_PATTERNS,
   ...API_ERROR_PATTERNS,
@@ -529,7 +531,7 @@ export function createErrorToast(
 
   if (!finalPattern) {
     return {
-      message: '予期しないエラーが発生しました',
+      message: 'An unexpected error occurred',
       emoji: '❌',
       duration: 5000,
       type: 'error',
@@ -578,6 +580,7 @@ export function getDetailedErrorInfo(errorCode: ErrorCode): {
 // AppError クラス
 // ==============================================
 
+/** AppErrorに付随するメタデータ */
 export interface AppErrorMetadata {
   [key: string]: unknown;
   userId?: string;
@@ -587,9 +590,12 @@ export interface AppErrorMetadata {
   ip?: string;
 }
 
+/** AppErrorのエラーカテゴリ型 */
 export type ErrorCategory = 'AUTH' | 'VALIDATION' | 'DB' | 'BIZ' | 'EXTERNAL' | 'SYSTEM' | 'RATE';
+/** AppErrorの重要度レベル型 */
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
 
+/** アプリケーション統一エラークラス（エラーコード・カテゴリ・重要度を含む） */
 export class AppError extends Error {
   public readonly code: ErrorCode;
   public readonly category: ErrorCategory;

@@ -6,6 +6,8 @@
  *
  * エンドポイント:
  * - user.deleteAccount: アカウント即時削除
+ * - user.deleteBlocks: 全ブロック（エントリ）を削除
+ * - user.deleteAllData: 全データを削除（アカウント保持）
  * - user.exportData: ユーザーデータエクスポート
  * - user.verifyRecoveryCode: リカバリーコードでMFA認証（MFA無効化 + ログイン許可）
  */
@@ -15,20 +17,20 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/recovery-codes';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
 
-/**
- * User Router
- */
+/** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */
 export const userRouter = createTRPCRouter({
   /**
    * アカウント即時削除
    * auth.users 削除 → CASCADE DELETE で全データ削除
    */
   deleteAccount: protectedProcedure
+    .meta({ description: 'アカウント即時削除（CASCADE DELETE）' })
     .input(
       z.object({
         password: z.string().min(1),
@@ -55,7 +57,39 @@ export const userRouter = createTRPCRouter({
           confirmText: input.confirmText,
         });
 
+        captureBusinessEvent('account.deleted', {}, 'warning');
         return result;
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * 全ブロック（エントリ）を削除
+   * タグ・設定は保持
+   */
+  deleteBlocks: protectedProcedure
+    .meta({ description: '全エントリを削除（タグ・設定は保持）' })
+    .input(z.object({ confirmText: z.literal('DELETE') }))
+    .mutation(async ({ ctx }) => {
+      try {
+        const service = createUserService(ctx.supabase);
+        return await service.deleteBlocks(ctx.userId!);
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
+
+  /**
+   * 全データを削除（アカウントは保持）
+   */
+  deleteAllData: protectedProcedure
+    .meta({ description: '全データを削除（アカウントは保持）' })
+    .input(z.object({ confirmText: z.literal('DELETE') }))
+    .mutation(async ({ ctx }) => {
+      try {
+        const service = createUserService(ctx.supabase);
+        return await service.deleteAllData(ctx.userId!);
       } catch (error) {
         return handleServiceError(error);
       }
@@ -65,18 +99,20 @@ export const userRouter = createTRPCRouter({
    * ユーザーデータエクスポート
    * GDPR "Right to Data Portability" 準拠
    */
-  exportData: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const service = createUserService(ctx.supabase);
-      const result = await service.exportData({
-        userId: ctx.userId!,
-      });
+  exportData: protectedProcedure
+    .meta({ description: 'ユーザーデータエクスポート（GDPR対応）' })
+    .query(async ({ ctx }) => {
+      try {
+        const service = createUserService(ctx.supabase);
+        const result = await service.exportData({
+          userId: ctx.userId!,
+        });
 
-      return result;
-    } catch (error) {
-      return handleServiceError(error);
-    }
-  }),
+        return result;
+      } catch (error) {
+        return handleServiceError(error);
+      }
+    }),
 
   /**
    * リカバリーコードでMFA認証
@@ -85,6 +121,7 @@ export const userRouter = createTRPCRouter({
    * ユーザーは設定から再度MFAを有効化できる。
    */
   verifyRecoveryCode: protectedProcedure
+    .meta({ description: 'リカバリーコードでMFA認証（MFA無効化 + ログイン許可）' })
     .input(
       z.object({
         code: z.string().refine((val) => isValidRecoveryCodeFormat(val), {
@@ -166,9 +203,17 @@ export const userRouter = createTRPCRouter({
       }
 
       // 残りのコード数を取得
-      const { data: remainingCount } = await ctx.supabase.rpc('count_unused_recovery_codes', {
-        p_user_id: userId,
-      });
+      const { data: remainingCount, error: countError } = await ctx.supabase.rpc(
+        'count_unused_recovery_codes',
+        {
+          p_user_id: userId,
+        },
+      );
+
+      if (countError) {
+        logger.error('Failed to count remaining recovery codes:', countError);
+        // リカバリーコード消費は成功しているため、カウント失敗は非致命的
+      }
 
       return {
         success: true,

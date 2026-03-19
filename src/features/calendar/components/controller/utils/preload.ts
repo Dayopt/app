@@ -1,4 +1,4 @@
-// ビューのプリロード: ブラウザがアイドル状態の時に先読みして遷移を高速化
+/** カレンダービューコンポーネントをプリロードしてナビゲーションを高速化する */
 export const preloadCalendarViews = () => {
   // 最もよく使うビューを先読み（絶対パスで指定）
   import('@/features/calendar/components/views/DayView');
@@ -6,7 +6,7 @@ export const preloadCalendarViews = () => {
   import('@/features/calendar/components/views/MultiDayView');
 };
 
-// クライアントサイドでのみ実行
+/** クライアントサイドでのみビュープリロードを初期化する（requestIdleCallback / setTimeout フォールバック） */
 export const initializePreload = () => {
   if (typeof window !== 'undefined') {
     if ('requestIdleCallback' in window) {

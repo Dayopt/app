@@ -13,8 +13,3 @@ export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
 
 // Hooks
 export { useSessionMonitor } from './hooks/useSessionMonitor';
-export { AUTH_CONFIG as authConfig } from './lib/auth-config';
-
-// Audit Log
-export { getAuditLogs, getRecentLogins, recordAuthAuditLog } from './lib/audit-log';
-export type { AuthAuditEventType, AuthAuditLogEntry, AuthAuditMetadata } from './lib/audit-log';

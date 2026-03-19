@@ -79,4 +79,31 @@
     inset 0 1px 0 0 var(--elevation-highlight),
     0 1px 3px 0 oklch(0 0 0 / 0.25),
     0 8px 16px -4px oklch(0 0 0 / 0.30);
+
+  /* Glassmorphism: ダーク用 */
+  --glass-bg-light: oklch(0.24 0 0 / 0.6);
+  --glass-bg-medium: oklch(0.24 0 0 / 0.4);
+  --glass-bg-heavy: oklch(0.24 0 0 / 0.2);
+  --glass-border: oklch(1 0 0 / 0.08);
+}
+
+/* ============================================
+ * Glassmorphism トークン
+ *
+ * 半透明背景 + backdrop-blur による「ガラス」効果。
+ * 3段階の透明度 × 3段階のブラー。
+ *
+ * 使い方:
+ *   glass-light  → ほぼ不透明、微ブラー（ツールバー、ヘッダー）
+ *   glass-medium → 半透明（パネル、サイドバー）
+ *   glass-heavy  → 強い透過（オーバーレイ、装飾的背景）
+ * ============================================ */
+:root {
+  --glass-bg-light: oklch(1 0 0 / 0.6);
+  --glass-bg-medium: oklch(1 0 0 / 0.4);
+  --glass-bg-heavy: oklch(1 0 0 / 0.2);
+  --glass-blur-sm: 8px;
+  --glass-blur-md: 16px;
+  --glass-blur-lg: 24px;
+  --glass-border: oklch(1 0 0 / 0.15);
 }

@@ -8,6 +8,7 @@ import type { EntryInteractionHandler } from './entry.types';
 /** @deprecated CalendarViewType を使用してください */
 export type ViewType = CalendarViewType;
 
+/** ビューコンポーネントの基本プロパティ */
 export interface ViewProps {
   dates: Date[];
   events: CalendarEvent[];
@@ -16,6 +17,7 @@ export interface ViewProps {
   className?: string;
 }
 
+/** 日付列コンポーネントのプロパティ */
 export interface DayColumnProps {
   date: Date;
   events: CalendarEvent[];
@@ -28,6 +30,7 @@ export interface DayColumnProps {
   className?: string | undefined;
 }
 
+/** 日付表示コンポーネントのプロパティ */
 export interface DayDisplayProps {
   date: Date;
   isToday?: boolean;
@@ -38,6 +41,7 @@ export interface DayDisplayProps {
   className?: string;
 }
 
+/** 空状態コンポーネントのプロパティ */
 export interface EmptyStateProps {
   title?: string;
   description?: string;
@@ -47,6 +51,7 @@ export interface EmptyStateProps {
   className?: string;
 }
 
+/** ビューナビゲーションコンポーネントのプロパティ */
 export interface ViewNavigationProps {
   currentDate: Date;
   viewType: ViewType;
@@ -56,6 +61,7 @@ export interface ViewNavigationProps {
   className?: string;
 }
 
+/** ビューの表示設定 */
 export interface ViewConfiguration {
   hourHeight: number;
   timeColumnWidth: number;
@@ -68,6 +74,7 @@ export interface ViewConfiguration {
   scrollToHour: number;
 }
 
+/** ビューコンテキストの値（設定＋インタラクションハンドラー＋データ） */
 export interface ViewContextValue extends ViewConfiguration, EntryInteractionHandler {
   dates: Date[];
   events: CalendarEvent[];

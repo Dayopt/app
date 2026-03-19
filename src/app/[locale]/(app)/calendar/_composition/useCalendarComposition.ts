@@ -27,12 +27,13 @@ import {
 } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
-import { useCalendarNavigationStore } from '@/shell/stores/useCalendarNavigationStore';
+import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
 import { getCurrentTimezone, setUserTimezone, useUserSettings } from '@/features/settings';
 import { logger } from '@/lib/logger';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 // =============================================================================
@@ -114,6 +115,11 @@ export function useCalendarComposition({
   changeView,
 }: CalendarCompositionInput): CalendarCompositionResult {
   // =========================================================================
+  // i18n
+  // =========================================================================
+  const tError = useTranslations('calendar.error');
+
+  // =========================================================================
   // Settings
   // =========================================================================
   const timezone = useCalendarSettingsStore((state) => state.timezone);
@@ -174,9 +180,9 @@ export function useCalendarComposition({
   useEffect(() => {
     if (entriesError) {
       logger.error('[useCalendarComposition] entries fetch error', entriesError);
-      toast.error('Failed to load entries. Please try refreshing.');
+      toast.error(tError('entriesLoadFailed'));
     }
-  }, [entriesError]);
+  }, [entriesError, tError]);
 
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）

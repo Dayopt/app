@@ -1,3 +1,4 @@
+/** DateDisplay コンポーネントのプロパティ */
 export interface DateDisplayProps {
   date: Date;
   className?: string | undefined;
@@ -11,6 +12,7 @@ export interface DateDisplayProps {
   onDoubleClick?: ((date: Date) => void) | undefined;
 }
 
+/** DateDisplayRow コンポーネントのプロパティ */
 export interface DateDisplayRowProps {
   dates: Date[];
   className?: string | undefined;
@@ -23,6 +25,7 @@ export interface DateDisplayRowProps {
   onDateDoubleClick?: ((date: Date) => void) | undefined;
 }
 
+/** DateDisplay のスタイル計算に使用するプロパティ */
 export interface DateDisplayStyleProps {
   isToday: boolean;
   isSelected: boolean;

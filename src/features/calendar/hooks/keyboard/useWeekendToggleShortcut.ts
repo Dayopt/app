@@ -133,9 +133,7 @@ function showToggleFeedback(newState: boolean) {
   }, 2000);
 }
 
-/**
- * ショートカットキーのヘルプ情報
- */
+/** 週末表示切り替えショートカットのヘルプ情報 */
 export const WEEKEND_TOGGLE_SHORTCUT_HELP = {
   key: 'Cmd/Ctrl + W',
   description: 'Toggle Weekend Display',

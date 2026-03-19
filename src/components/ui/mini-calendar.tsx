@@ -20,7 +20,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -57,46 +57,13 @@ export interface MiniCalendarProps {
 }
 
 // 週の開始日に応じた曜日配列を取得する関数
-function getWeekdays(locale: string, weekStartsOn: 0 | 1 | 6): string[] {
-  const weekdaysJa = ['日', '月', '火', '水', '木', '金', '土'];
-  const weekdaysEn = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-  const base = locale === 'ja' ? weekdaysJa : weekdaysEn;
-
+function rotateWeekdays(weekdaysNarrow: string[], weekStartsOn: 0 | 1 | 6): string[] {
   // weekStartsOnに応じて配列を回転
   // 0: 日曜始まり → そのまま
   // 1: 月曜始まり → 月火水木金土日
   // 6: 土曜始まり → 土日月火水木金
-  return [...base.slice(weekStartsOn), ...base.slice(0, weekStartsOn)];
+  return [...weekdaysNarrow.slice(weekStartsOn), ...weekdaysNarrow.slice(0, weekStartsOn)];
 }
-
-const MONTHS_JA = [
-  '1月',
-  '2月',
-  '3月',
-  '4月',
-  '5月',
-  '6月',
-  '7月',
-  '8月',
-  '9月',
-  '10月',
-  '11月',
-  '12月',
-];
-const MONTHS_EN = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
 
 const START_YEAR = 2020;
 const END_YEAR = 2050;
@@ -129,7 +96,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
     displayRange: _displayRange,
     minDate,
   }) => {
-    const locale = useLocale();
+    const tCommon = useTranslations('common');
     const tActions = useTranslations('calendar.actions');
     const weekStartsOn = useCalendarSettingsStore((state) => state.weekStartsOn);
     const isMounted = useHasMounted();
@@ -158,8 +125,10 @@ export const MiniCalendar = memo<MiniCalendarProps>(
       setPrevSelectedDate(selectedDate);
     }
 
-    const weekdays = getWeekdays(locale, weekStartsOn);
-    const months = locale === 'ja' ? MONTHS_JA : MONTHS_EN;
+    const weekdaysRaw = tCommon.raw('dates.weekdaysNarrow') as string[];
+    const monthsRaw = tCommon.raw('dates.monthsShort') as string[];
+    const weekdays = rotateWeekdays(weekdaysRaw, weekStartsOn);
+    const months = monthsRaw;
 
     // カレンダーの日付配列を生成
     const calendarDays = useMemo(() => {
@@ -284,7 +253,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             <Select value={getMonth(viewMonth).toString()} onValueChange={handleMonthSelect}>
               <SelectTrigger
                 size="sm"
-                className="border-border hover:bg-state-hover h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0"
+                className="border-border hover:bg-state-hover focus-visible:ring-ring h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-2"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -300,7 +269,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             <Select value={getYear(viewMonth).toString()} onValueChange={handleYearSelect}>
               <SelectTrigger
                 size="sm"
-                className="border-border hover:bg-state-hover h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0"
+                className="border-border hover:bg-state-hover focus-visible:ring-ring h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-2"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -390,7 +359,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                 className="text-muted-foreground hover:text-foreground w-full"
                 onClick={handleClearDate}
               >
-                {locale === 'ja' ? '日付なし' : 'No date'}
+                {tCommon('datePicker.noDate')}
               </Button>
             </div>
           </div>

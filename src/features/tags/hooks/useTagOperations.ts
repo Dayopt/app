@@ -9,6 +9,12 @@ import type { CreateTagInput, Tag, UpdateTagInput } from '../types';
 import { useCreateTag, useDeleteTag, useRenameTag, useUpdateTag } from './useTagCrudMutations';
 import { useOptimisticTagUpdate } from './useTagsOptimistic';
 
+/**
+ * タグ操作のビジネスロジックを集約したフック
+ *
+ * 作成・編集・削除・リネーム・マージの各操作とモーダル状態を管理する
+ * @param tags - 既存タグ一覧（楽観的更新のベースに使用）
+ */
 export function useTagOperations(tags: Tag[]) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);

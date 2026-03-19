@@ -41,4 +41,5 @@ const usePageTitleStoreBase = create<PageTitleState>()(
 );
 
 // Auto-generated selectors でパフォーマンス最適化
+/** ページタイトルストア（セレクター自動生成済み） */
 export const usePageTitleStore = createSelectors(usePageTitleStoreBase);

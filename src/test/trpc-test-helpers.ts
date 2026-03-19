@@ -34,8 +34,8 @@ export { createMockEntry, createMockTag } from '@/test/factories';
  * モックコンテキストのオプション
  */
 export interface MockContextOptions {
-  userId?: string;
-  sessionId?: string;
+  userId?: string | undefined;
+  sessionId?: string | undefined;
   supabaseOverrides?: Partial<MockSupabaseClient>;
 }
 

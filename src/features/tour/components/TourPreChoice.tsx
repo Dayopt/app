@@ -16,7 +16,7 @@ export function TourPreChoice({ onStart, onSkip }: TourPreChoiceProps) {
   return (
     <div className="z-tour fixed inset-0 flex items-center justify-center">
       <div
-        className="bg-card animate-in fade-in zoom-in-95 mx-4 flex w-full max-w-80 flex-col items-center gap-4 rounded-xl p-8 text-center shadow-lg duration-150"
+        className="bg-card animate-in fade-in zoom-in-95 surface-raised mx-4 flex w-full max-w-80 flex-col items-center gap-4 rounded-xl p-8 text-center duration-150"
         role="dialog"
         aria-label={t('tour.preChoice.title')}
       >
@@ -26,7 +26,11 @@ export function TourPreChoice({ onStart, onSkip }: TourPreChoiceProps) {
           <Button onClick={onStart} className="w-full">
             {t('tour.preChoice.start')}
           </Button>
-          <Button variant="ghost" onClick={onSkip} className="text-muted-foreground w-full">
+          <Button
+            variant="ghost"
+            onClick={onSkip}
+            className="text-muted-foreground hover:text-foreground w-full"
+          >
             {t('tour.preChoice.skip')}
           </Button>
         </div>

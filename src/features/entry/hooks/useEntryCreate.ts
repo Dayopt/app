@@ -34,6 +34,10 @@ function getNextQuarterHour(date: Date): Date {
   return result;
 }
 
+/** エントリ作成フローを統合したフック（空きスロット検索→作成→Inspectorオープン）
+ * @param options - onSuccess: 作成後コールバック
+ * @returns create: 初期日付を受け取りエントリを作成する関数
+ */
 export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
   const { createEntry } = useEntryMutations();

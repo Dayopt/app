@@ -69,6 +69,12 @@
   --shadow-elevation-raised: var(--elevation-raised);
   --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
 
+  /* Glassmorphism — 背景色トークン */
+  --color-glass-light: var(--glass-bg-light);
+  --color-glass-medium: var(--glass-bg-medium);
+  --color-glass-heavy: var(--glass-bg-heavy);
+  --color-glass-border: var(--glass-border);
+
   /* ============================================
    * Tag Colors — Base（borders / dots / accents）
    * 使用例: bg-tag-blue, border-tag-red

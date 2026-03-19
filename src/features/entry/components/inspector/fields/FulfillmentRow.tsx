@@ -38,6 +38,7 @@ const DEFAULT_SCORE_LABELS: Record<'low' | 'medium' | 'high', string> = {
   high: 'High',
 };
 
+/** Inspectorの充実度入力行（3段階トグルアイコン、再クリックで解除） */
 export function FulfillmentRow({
   label,
   score,

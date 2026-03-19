@@ -10,19 +10,19 @@
 // Primitives
 // ========================================
 
-/** Normalized pointer coordinates (viewport-relative) */
+/** 正規化されたポインター座標（ビューポート相対） */
 export interface Point {
   clientX: number;
   clientY: number;
 }
 
-/** Time range with start and end */
+/** 開始・終了を持つ時間範囲 */
 export interface TimeRange {
   start: Date;
   end: Date;
 }
 
-/** Entry position on grid (px) */
+/** グリッド上のエントリ位置（px） */
 export interface EntryRect {
   top: number;
   left: number;
@@ -34,6 +34,7 @@ export interface EntryRect {
 // States (discriminated union)
 // ========================================
 
+/** カレンダーインタラクションの状態（判別共用体） */
 export type InteractionState =
   | IdleState
   | PendingState
@@ -126,6 +127,7 @@ export interface SelectionLongPressPendingState {
 // Actions
 // ========================================
 
+/** インタラクション状態機械に送るアクション */
 export type InteractionAction =
   | {
       type: 'POINTER_DOWN';
@@ -160,6 +162,7 @@ export type InteractionAction =
 // Context (injected dependencies)
 // ========================================
 
+/** レデューサーに注入する依存コンテキスト */
 export interface InteractionContext {
   /** Pixels per hour on the time grid */
   hourHeight: number;
@@ -181,6 +184,7 @@ export interface InteractionContext {
 // Effects (side effects for the hook to execute)
 // ========================================
 
+/** レデューサーが返すサイドエフェクト（hookが実行する） */
 export type InteractionEffect =
   | { type: 'START_LONGPRESS_TIMER'; delayMs: number }
   | { type: 'CLEAR_LONGPRESS_TIMER' }
@@ -195,7 +199,7 @@ export type InteractionEffect =
   | { type: 'DRAG_STORE_UPDATE'; targetDateIndex: number }
   | { type: 'DRAG_STORE_END' };
 
-/** Reducer return type: new state + side effects to execute */
+/** レデューサーの戻り値型: 新しい状態 + 実行するサイドエフェクト */
 export interface InteractionResult {
   state: InteractionState;
   effects: InteractionEffect[];

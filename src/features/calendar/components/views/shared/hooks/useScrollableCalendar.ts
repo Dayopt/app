@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
 import { useCalendarScrollStore } from '../../../../stores';
 
+/** スクロール管理に使用するカレンダービューモード */
 export type CalendarViewModeForScroll = 'day' | '3day' | '5day' | 'week';
 
 interface UseScrollableCalendarOptions {

@@ -5,6 +5,7 @@ import type { UseDayViewOptions, UseDayViewReturn } from '../DayView.types';
 
 import { useDayEntries } from './useDayEntries';
 
+/** DayView のエントリ取得・スタイル計算・今日判定を集約したフック */
 export function useDayView({
   date,
   entries,

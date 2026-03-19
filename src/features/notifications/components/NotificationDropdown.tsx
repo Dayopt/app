@@ -18,7 +18,7 @@ import type { NotificationType } from '../schemas';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useRouter } from '@/platform/i18n/navigation';
-import { useSettingsStore } from '@/shell/stores/useSettingsStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 import {
   useNotificationMutations,
@@ -233,9 +233,9 @@ export function NotificationDropdown({
               type="button"
               onClick={handleOpenSettings}
               className="hover:bg-state-hover flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+              aria-label={t('notification.settings.title')}
             >
               <Settings className="h-4 w-4" />
-              <span className="sr-only">{t('notification.settings.title')}</span>
             </button>
           </HoverTooltip>
         </DropdownMenuLabel>

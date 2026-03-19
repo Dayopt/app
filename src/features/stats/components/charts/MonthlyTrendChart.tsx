@@ -21,6 +21,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+/** 月次の記録時間トレンドをエリアチャートで表示 */
 export function MonthlyTrendChart() {
   const t = useTranslations('calendar.stats.charts');
   const granularity = useStatsFilterStore((s) => s.granularity);
@@ -90,7 +91,7 @@ export function MonthlyTrendChart() {
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value: string) => value.replace('月', '')}
+              tickFormatter={(value: string) => value}
             />
             <YAxis hide />
             <ChartTooltip

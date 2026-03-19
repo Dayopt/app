@@ -24,6 +24,7 @@ import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore
 
 import { Z_INDEX } from '../../constants/grid.constants';
 
+/** InlineTagPalette コンポーネントのプロパティ */
 interface InlineTagPaletteProps {
   /** 1時間あたりの高さ（px） */
   hourHeight: number;
@@ -31,6 +32,7 @@ interface InlineTagPaletteProps {
   date?: Date | undefined;
 }
 
+/** ドラッグ選択後にカレンダーグリッド上でタグ選択してエントリ作成するコンポーネント */
 export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
@@ -173,7 +175,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 rounded-r-lg border-l-[3px] duration-100 motion-reduce:animate-none"
+          className="animate-in fade-in-0 zoom-in-95 border-l-indicator absolute right-0 left-0 rounded-r-lg duration-100 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,

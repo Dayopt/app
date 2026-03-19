@@ -20,6 +20,7 @@ export interface ChronotypeQuizQuestion {
 }
 
 /** 6問の診断クイズ */
+/** 6問の診断クイズ質問リスト */
 export const CHRONOTYPE_QUIZ_QUESTIONS: ChronotypeQuizQuestion[] = [
   {
     // Q1: 目覚ましなしの自然な起床時間
@@ -106,4 +107,5 @@ export function calculateChronotypeResult(answers: Record<string, string>): Pres
   return entries[0]?.[0] ?? 'bear';
 }
 
+/** クイズの総問題数 */
 export const QUIZ_QUESTION_COUNT = CHRONOTYPE_QUIZ_QUESTIONS.length;

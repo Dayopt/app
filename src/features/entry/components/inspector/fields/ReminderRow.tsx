@@ -16,6 +16,7 @@ interface ReminderRowProps {
   onChange: (minutes: number | null) => void;
 }
 
+/** Inspectorのリマインダー設定行（アイコン + ラベル + ReminderSelect） */
 export function ReminderRow({ value, onChange }: ReminderRowProps) {
   const t = useTranslations();
 

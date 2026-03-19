@@ -118,6 +118,72 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
       suppressHydrationWarning
       className={`${inter.variable} ${notoSansJP.variable}`}
     >
+      <head>
+        {/* LCP改善: Supabase API への早期接続確立 */}
+        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+        )}
+        {/*
+         * iOS スプラッシュスクリーン（apple-touch-startup-image）
+         *
+         * Next.js の Metadata API は apple-touch-startup-image に未対応のため手動指定。
+         * 各デバイスの論理解像度 × デバイスピクセル比 = 物理解像度で media クエリを設定。
+         *
+         * @see https://developer.apple.com/design/human-interface-guidelines/
+         * @see https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html
+         */}
+        {/* iPhone 16 Pro Max (430×932 @3x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/splash-1290x2796.png"
+        />
+        {/* iPhone 16 Pro / 15 Pro (393×852 @3x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/splash-1179x2556.png"
+        />
+        {/* iPhone 16 Plus / 15 Plus / 14 Plus (430×932 @3x) — same as 16 Pro Max bucket */}
+        {/* iPhone 15 / 14 Pro (393×852 @3x) — same as 16 Pro bucket */}
+        {/* iPhone 14 (390×844 @3x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/splash-1170x2532.png"
+        />
+        {/* iPhone SE 3rd gen / 8 / 7 (375×667 @2x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/splash-750x1334.png"
+        />
+        {/* iPad Pro 12.9" (1024×1366 @2x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/splash-2048x2732.png"
+        />
+        {/* iPad Pro 11" / Air 5th gen (834×1194 @2x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/splash-1668x2388.png"
+        />
+        {/* iPad Air 4th gen / iPad mini 6th gen (820×1180 @2x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/splash-1640x2360.png"
+        />
+        {/* iPad 10th gen (820×1180 @2x) — same bucket as above */}
+        {/* iPad 9th gen (768×1024 @2x) */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/splash-1536x2048.png"
+        />
+      </head>
       <body className={cn('bg-background')} suppressHydrationWarning>
         <Suspense fallback={null}>
           {children}

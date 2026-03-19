@@ -21,6 +21,7 @@ export interface ActualTimeDiffOverlay {
   heightDelta: number; // px（全体の追加高さ）
 }
 
+/** 差分なし（デフォルト値） */
 export const NO_OVERLAY: ActualTimeDiffOverlay = {
   topKind: 'none',
   topHeight: 0,

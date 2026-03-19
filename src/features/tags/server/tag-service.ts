@@ -299,54 +299,25 @@ export class TagService {
       return [];
     }
 
-    // oldPrefix: で始まるタグを全取得
-    const { data: matchingTags, error: fetchError } = await this.supabase
-      .from('tags')
-      .select('*')
-      .eq('user_id', userId)
-      .like('name', `${oldPrefix}:%`);
+    // RPC で1クエリにバッチリネーム
+    const { data: updatedTags, error: rpcError } = await this.supabase.rpc('rename_tag_group', {
+      p_user_id: userId,
+      p_old_prefix: oldPrefix,
+      p_new_prefix: newPrefix,
+    });
 
-    if (fetchError) {
-      throw new TagServiceError(
-        'FETCH_FAILED',
-        `Failed to fetch group tags: ${fetchError.message}`,
-      );
+    if (rpcError) {
+      if (rpcError.code === '23505') {
+        throw new TagServiceError('DUPLICATE_NAME', 'A tag with the new name already exists');
+      }
+      throw new TagServiceError('UPDATE_FAILED', `Failed to rename group: ${rpcError.message}`);
     }
 
-    if (!matchingTags || matchingTags.length === 0) {
+    if (!updatedTags || updatedTags.length === 0) {
       return [];
     }
 
-    // 各タグの name を newPrefix:suffix に更新
-    const updatePromises = matchingTags.map((tag) => {
-      const colonIndex = tag.name.indexOf(':');
-      const suffix = colonIndex !== -1 ? tag.name.slice(colonIndex + 1) : '';
-      const newName = `${newPrefix}:${suffix}`;
-      return this.supabase
-        .from('tags')
-        .update({ name: newName })
-        .eq('id', tag.id)
-        .eq('user_id', userId)
-        .select()
-        .single();
-    });
-
-    const results = await Promise.all(updatePromises);
-
-    // エラーチェック
-    const errors = results.filter((r) => r.error);
-    if (errors.length > 0) {
-      const firstError = errors[0];
-      if (firstError?.error?.code === '23505') {
-        throw new TagServiceError('DUPLICATE_NAME', 'A tag with the new name already exists');
-      }
-      throw new TagServiceError(
-        'UPDATE_FAILED',
-        `Failed to rename group: ${firstError?.error?.message ?? 'Unknown error'}`,
-      );
-    }
-
-    return results.filter((r) => r.data !== null).map((r) => transformDbTag(r.data));
+    return (updatedTags as DbTagRow[]).map(transformDbTag);
   }
 
   /**
@@ -428,26 +399,20 @@ export class TagService {
       mergedCount++;
     }
 
-    // 非衝突タグをリネーム（suffix 部分のみに）
-    const updatePromises = nonConflicts.map(({ tag, suffix }) =>
-      this.supabase
-        .from('tags')
-        .update({ name: suffix })
-        .eq('id', tag.id)
-        .eq('user_id', userId)
-        .select()
-        .single(),
-    );
+    // 非衝突タグをRPCで1クエリにバッチリネーム（suffix 部分のみに）
+    if (nonConflicts.length > 0) {
+      const { error: renameError } = await this.supabase.rpc('batch_rename_tags', {
+        p_user_id: userId,
+        p_tag_ids: nonConflicts.map(({ tag }) => tag.id),
+        p_new_names: nonConflicts.map(({ suffix }) => suffix),
+      });
 
-    const results = await Promise.all(updatePromises);
-
-    const errors = results.filter((r) => r.error);
-    if (errors.length > 0) {
-      const firstError = errors[0];
-      throw new TagServiceError(
-        'UPDATE_FAILED',
-        `Failed to ungroup tags: ${firstError?.error?.message ?? 'Unknown error'}`,
-      );
+      if (renameError) {
+        throw new TagServiceError(
+          'UPDATE_FAILED',
+          `Failed to ungroup tags: ${renameError.message}`,
+        );
+      }
     }
 
     // prefix 名の単体タグが存在するか確認（リネーム後の状態で再チェック）
@@ -731,30 +696,18 @@ export class TagService {
       throw new TagServiceError('NOT_FOUND', `Tags not found: ${invalidIds.join(', ')}`);
     }
 
-    // バッチ更新（並列実行）
-    const updatePromises = updates.map((update) =>
-      this.supabase
-        .from('tags')
-        .update({
-          sort_order: update.sort_order,
-        })
-        .eq('id', update.id)
-        .eq('user_id', userId),
-    );
+    // RPC で1クエリにバッチ更新
+    const { data: updatedCount, error: rpcError } = await this.supabase.rpc('batch_reorder_tags', {
+      p_user_id: userId,
+      p_tag_ids: updates.map((u) => u.id),
+      p_sort_orders: updates.map((u) => u.sort_order),
+    });
 
-    const results = await Promise.all(updatePromises);
-
-    // エラーチェック
-    const errors = results.filter((r) => r.error);
-    if (errors.length > 0) {
-      const firstError = errors[0];
-      throw new TagServiceError(
-        'UPDATE_FAILED',
-        `Failed to reorder tags: ${firstError?.error?.message ?? 'Unknown error'}`,
-      );
+    if (rpcError) {
+      throw new TagServiceError('UPDATE_FAILED', `Failed to reorder tags: ${rpcError.message}`);
     }
 
-    return { count: updates.length };
+    return { count: typeof updatedCount === 'number' ? updatedCount : updates.length };
   }
 
   /**

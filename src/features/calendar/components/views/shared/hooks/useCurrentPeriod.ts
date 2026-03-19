@@ -9,6 +9,7 @@ import { isSameDay, isSameWeek } from 'date-fns';
 
 import { getTodayIndex } from '../utils/dateHelpers';
 
+/** useCurrentPeriod フックのオプション */
 export interface UseCurrentPeriodOptions {
   dates: Date[];
   referenceDate?: Date | undefined; // 基準日（デフォルト: 今日）
@@ -16,6 +17,7 @@ export interface UseCurrentPeriodOptions {
   weekStartsOn?: 0 | 1 | 6 | undefined; // 週の開始日
 }
 
+/** useCurrentPeriod フックの戻り値 */
 export interface UseCurrentPeriodReturn {
   isCurrentPeriod: boolean;
   todayIndex: number; // -1 if not in period

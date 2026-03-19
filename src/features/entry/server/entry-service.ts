@@ -229,10 +229,20 @@ export class EntryService {
    * 自動調整（auto-shrink）し、adjustedEntries に含めて返す。
    */
   async update(options: UpdateEntryOptions): Promise<UpdateEntryResult> {
-    const { userId, entryId, input, preventOverlappingEntries } = options;
+    const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt } = options;
 
     // 既存データを取得
     const oldData = await this.getExistingEntry(entryId, userId);
+
+    // 楽観的ロック: 他タブ/デバイスでの変更を検出
+    if (expectedUpdatedAt && oldData?.updated_at) {
+      if (oldData.updated_at !== expectedUpdatedAt) {
+        throw new EntryServiceError(
+          'CONFLICT',
+          'このエントリは他の場所で更新されています。最新データをリロードしてください。',
+        );
+      }
+    }
 
     // 日時の正規化
     const normalizedInput = this.normalizeDateTimeFieldsForUpdate(input, oldData);
@@ -365,6 +375,8 @@ export class EntryService {
    *
    * - 左隣（開始が自分より前、終了が自分の開始に食い込む）→ actual_end_time を引き戻す
    * - 右隣（開始が自分の終了に食い込む、終了が自分より後）→ actual_start_time を押し出す
+   *
+   * PostgreSQL RPC で検索+バッチ更新を1クエリに統合。
    */
   private async autoShrinkNeighbors(options: {
     userId: string;
@@ -379,58 +391,27 @@ export class EntryService {
     const myEnd = new Date(actualEnd);
     if (isNaN(myStart.getTime()) || isNaN(myEnd.getTime())) return [];
 
-    // 隣接エントリのみ取得（±24時間の範囲に限定）
-    // 全エントリを取得するとユーザーのデータ量に比例してクエリが重くなる
-    const dayBefore = new Date(myStart.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const dayAfter = new Date(myEnd.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    // RPC関数は生成型に未反映のため rpc() を型アサーションで呼び出し
+    // supabase gen types 実行後にアサーション不要になる
+    const { data, error } = await (
+      this.supabase.rpc as unknown as (
+        fn: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message: string } | null }>
+    )('auto_shrink_neighbors', {
+      p_user_id: userId,
+      p_entry_id: entryId,
+      p_actual_start: actualStart,
+      p_actual_end: actualEnd,
+    });
 
-    const { data: entries, error } = await this.supabase
-      .from('entries')
-      .select('id, start_time, end_time, actual_start_time, actual_end_time')
-      .eq('user_id', userId)
-      .neq('id', entryId)
-      .not('start_time', 'is', null)
-      .gte('start_time', dayBefore)
-      .lte('start_time', dayAfter);
-
-    if (error || !entries) return [];
-
-    const adjustments: Array<{ id: string; data: Record<string, string> }> = [];
-
-    for (const entry of entries) {
-      const nStart = new Date(entry.actual_start_time ?? entry.start_time ?? '');
-      const nEnd = new Date(entry.actual_end_time ?? entry.end_time ?? '');
-      if (isNaN(nStart.getTime()) || isNaN(nEnd.getTime())) continue;
-
-      // 左隣: 自分より前に始まり、終了が自分の開始に食い込む → 終了を引き戻す
-      if (nStart < myStart && nEnd > myStart && nEnd <= myEnd) {
-        adjustments.push({ id: entry.id, data: { actual_end_time: actualStart } });
-      }
-
-      // 右隣: 自分の範囲内に始まり、自分より後に終わる → 開始を押し出す
-      if (nStart >= myStart && nStart < myEnd && nEnd > myEnd) {
-        adjustments.push({ id: entry.id, data: { actual_start_time: actualEnd } });
-      }
+    if (error) {
+      // RPC失敗時はログのみ（auto-shrinkは補助機能のため、エラーで本体を止めない）
+      logger.warn('auto_shrink_neighbors RPC failed', { error: error.message, entryId });
+      return [];
     }
 
-    if (adjustments.length === 0) return [];
-
-    const updatedEntries: EntryRow[] = [];
-    for (const adj of adjustments) {
-      const { data, error: updateError } = await this.supabase
-        .from('entries')
-        .update(adj.data)
-        .eq('id', adj.id)
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-      if (!updateError && data) {
-        updatedEntries.push(data);
-      }
-    }
-
-    return updatedEntries;
+    return (data as EntryRow[] | null) ?? [];
   }
 
   /**

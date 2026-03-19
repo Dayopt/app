@@ -4,6 +4,7 @@ import type {
   ProductivityLevel,
 } from '@/types/chronotype';
 
+/** 生産性レベルの表示順 */
 export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [
   'warmup',
   'peak',
@@ -12,6 +13,7 @@ export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [
   'winddown',
 ];
 
+/** ユーザーが選択可能なプリセットクロノタイプの一覧 */
 export const CHRONOTYPE_SELECTABLE_TYPES: PresetChronotypeType[] = [
   'bear',
   'lion',
@@ -19,6 +21,7 @@ export const CHRONOTYPE_SELECTABLE_TYPES: PresetChronotypeType[] = [
   'dolphin',
 ];
 
+/** クロノタイプ別の絵文字マッピング */
 export const CHRONOTYPE_EMOJI: Record<PresetChronotypeType, string> = {
   lion: '🦁',
   bear: '🐻',
@@ -26,6 +29,7 @@ export const CHRONOTYPE_EMOJI: Record<PresetChronotypeType, string> = {
   dolphin: '🐬',
 };
 
+/** プリセットクロノタイプのプロフィール定義 */
 export const CHRONOTYPE_PRESETS: Record<ChronotypeProfile['type'], ChronotypeProfile> = {
   lion: {
     type: 'lion',
@@ -87,6 +91,7 @@ export const CHRONOTYPE_PRESETS: Record<ChronotypeProfile['type'], ChronotypePro
   },
 };
 
+/** 生産性レベル別の背景色クラス（タイムライン表示用） */
 export const CHRONOTYPE_LEVEL_CLASSES: Record<ProductivityLevel, string> = {
   warmup: 'bg-chronotype-warmup',
   peak: 'bg-chronotype-peak',
@@ -95,6 +100,7 @@ export const CHRONOTYPE_LEVEL_CLASSES: Record<ProductivityLevel, string> = {
   winddown: 'bg-chronotype-winddown',
 };
 
+/** 生産性レベル別の半透明背景クラス（カレンダー背景表示用） */
 export const CHRONOTYPE_LEVEL_TINT_CLASSES: Record<ProductivityLevel, string> = {
   warmup: 'bg-chronotype-tint-warmup',
   peak: 'bg-chronotype-tint-peak',
@@ -103,6 +109,7 @@ export const CHRONOTYPE_LEVEL_TINT_CLASSES: Record<ProductivityLevel, string> = 
   winddown: 'bg-chronotype-tint-winddown',
 };
 
+/** 生産性レベル別のCSS変数カラー値（グラフ描画等に使用） */
 export const CHRONOTYPE_LEVEL_COLORS: Record<ProductivityLevel, string> = {
   warmup: 'var(--chronotype-warmup)',
   peak: 'var(--chronotype-peak)',
@@ -111,6 +118,7 @@ export const CHRONOTYPE_LEVEL_COLORS: Record<ProductivityLevel, string> = {
   winddown: 'var(--chronotype-winddown)',
 };
 
+/** 生産性レベルに対応するCSS変数カラー値を取得する */
 export function getChronotypeColor(level: ProductivityLevel): string {
   return CHRONOTYPE_LEVEL_COLORS[level];
 }

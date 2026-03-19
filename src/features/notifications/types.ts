@@ -5,7 +5,7 @@ export type { NotificationType } from './schemas';
 
 import type { NotificationType } from './schemas';
 
-// データベースエンティティ（Supabaseから取得する型 — plan JOINデータ含む）
+/** Supabase から取得する通知エンティティ（entries JOIN データ含む） */
 export interface NotificationEntity {
   id: string;
   user_id: string;
@@ -17,7 +17,7 @@ export interface NotificationEntity {
   plans?: { title: string } | null;
 }
 
-// クライアント側の通知型
+/** クライアント側で扱う通知型（camelCase に変換済み） */
 export interface Notification {
   id: string;
   type: NotificationType;

@@ -69,6 +69,7 @@ interface StatsMetricCard {
   progressStatus: 'good' | 'warning' | 'critical' | undefined;
 }
 
+/** useStatsMetrics の戻り値型 */
 export interface UseStatsMetricsResult {
   /** レンダリング可能なメトリクスカードデータ */
   cards: StatsMetricCard[];
@@ -108,6 +109,7 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
   const prevEstimationAccuracy = api.entries.getEstimationAccuracy.useQuery(prevDateRange);
   const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
   const prevEnergyMap = api.entries.getEnergyMap.useQuery(prevDateRange);
+  const streakQuery = api.entries.getStreak.useQuery();
 
   const isLoading = overview.isPending || estimationAccuracy.isPending || energyMap.isPending;
 
@@ -170,8 +172,13 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
       };
     }
 
-    // TODO: streak — getStreak エンドポイント接続後に有効化
-    map.streak = { id: 'streak', value: null, trend: null };
+    if (streakQuery.data) {
+      map.streak = {
+        id: 'streak',
+        value: streakQuery.data.streak,
+        trend: null,
+      };
+    }
 
     if (avgDeviation !== null) {
       map.estimationAccuracy = {
@@ -221,6 +228,7 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
     prevAvgDeviation,
     peakUtilization,
     prevPeakUtilization,
+    streakQuery.data,
   ]);
 
   // アクティブなメトリクスのみカード化

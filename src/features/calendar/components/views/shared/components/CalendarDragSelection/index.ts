@@ -4,7 +4,7 @@
 
 export { CalendarDragSelection } from './CalendarDragSelection';
 export { DragSelectionPreview } from './DragSelectionPreview';
-export { MobileTouchHint, dismissMobileTouchHintPermanently } from './MobileTouchHint';
+export { MobileTouchHint } from './MobileTouchHint';
 export { DRAG_CONSTANTS } from './types';
 export type {
   CalendarDragSelectionProps,

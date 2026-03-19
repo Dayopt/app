@@ -29,6 +29,7 @@ interface ChronotypeStepProps {
   isCompleting: boolean;
 }
 
+/** オンボーディングのクロノタイプ選択ステップコンポーネント */
 export function ChronotypeStep({
   selectedType,
   showQuiz,

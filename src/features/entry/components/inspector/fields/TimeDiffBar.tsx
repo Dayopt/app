@@ -26,6 +26,7 @@ interface TimeDiffBarProps {
   actualMinutes: number;
 }
 
+/** 予定時間と記録時間の差分を視覚的に表示するコンポーネント（プログレスバー + 差分バッジ） */
 export function TimeDiffBar({ plannedMinutes, actualMinutes }: TimeDiffBarProps) {
   const diffMinutes = actualMinutes - plannedMinutes;
 

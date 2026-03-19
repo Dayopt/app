@@ -11,9 +11,12 @@ import type { MetricId } from '../types/metrics.types';
 // Types
 // =============================================================================
 
+/** ルールインサイトの分類（閾値 / トレンド / 異常値） */
 export type RuleInsightType = 'threshold' | 'trend' | 'anomaly';
+/** ルールインサイトの重要度 */
 export type RuleInsightSeverity = 'info' | 'warning' | 'critical';
 
+/** 閾値ルールが生成する気づき1件 */
 export interface RuleInsight {
   metricId: MetricId;
   type: RuleInsightType;
@@ -28,9 +31,10 @@ export interface RuleInsight {
   detailParams?: Record<string, string | number>;
 }
 
-/** メトリクス値のマップ（null = データなし） */
+/** メトリクス値のスナップショット（各 MetricId に対応する数値、null = データなし） */
 export type MetricValues = Partial<Record<MetricId, number>>;
 
+/** ルールインサイトの判定閾値設定 */
 export interface RuleThresholds {
   planRate: { low: number };
   peakUtilization: { low: number };

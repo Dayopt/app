@@ -13,11 +13,13 @@ import {
 } from '@/features/chronotype';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+/** useCurrentTimeLine フックのオプション */
 interface UseCurrentTimeLineOptions {
   hourHeight: number;
   showCurrentTime: boolean;
 }
 
+/** useCurrentTimeLine フックの戻り値 */
 interface UseCurrentTimeLineReturn {
   currentTime: Date;
   currentTimePosition: number;

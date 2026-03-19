@@ -21,6 +21,7 @@ function getCurrentMonth(): string {
   return `${year}-${month}`;
 }
 
+/** AI使用量サービスを生成する（無料枠の月間リクエスト数を管理） */
 function createAIUsageService(supabase: AISupabaseClient) {
   return {
     /**

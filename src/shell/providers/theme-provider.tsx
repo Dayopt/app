@@ -19,6 +19,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
+/** テーマコンテキストを取得するフック（テーマ・カラースキームの取得/設定） */
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
@@ -63,6 +64,7 @@ const getStoredColorScheme = (): ColorScheme => {
   return (localStorage.getItem('colorScheme') as ColorScheme) || 'blue';
 };
 
+/** テーマ・カラースキームをDB連携で管理するProvider */
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   // 初期値はlocalStorageから（SSR対応・DB取得前のフォールバック）
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);

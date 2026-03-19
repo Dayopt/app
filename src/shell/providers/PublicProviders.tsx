@@ -19,6 +19,7 @@ interface PublicProvidersProps {
   children: React.ReactNode;
 }
 
+/** 公開ページ（/auth/・/legal/・/error/）用の最小限Providers */
 export function PublicProviders({ children }: PublicProvidersProps) {
   return <PublicThemeProvider>{children}</PublicThemeProvider>;
 }

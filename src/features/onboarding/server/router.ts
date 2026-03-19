@@ -19,44 +19,56 @@ import type { PresetChronotypeType } from '@/types/chronotype';
 /** Chronotype type (inline to avoid cross-feature import) */
 const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
 
+/** オンボーディング完了管理のtRPCルーター */
 export const onboardingRouter = createTRPCRouter({
   /**
    * プロフィール取得（名前の事前入力用）
    */
-  getProfile: protectedProcedure.query(async ({ ctx }) => {
-    const [profileResult, userResult] = await Promise.all([
-      ctx.supabase
-        .from('profiles')
-        .select('full_name, onboarding_completed_at')
-        .eq('id', ctx.userId)
-        .single(),
-      ctx.supabase.auth.getUser(),
-    ]);
+  getProfile: protectedProcedure
+    .meta({ description: 'オンボーディング用プロフィール取得' })
+    .query(async ({ ctx }) => {
+      const [profileResult, userResult] = await Promise.all([
+        ctx.supabase
+          .from('profiles')
+          .select('full_name, onboarding_completed_at')
+          .eq('id', ctx.userId)
+          .single(),
+        ctx.supabase.auth.getUser(),
+      ]);
 
-    if (profileResult.error) {
-      logger.error('Onboarding getProfile error:', profileResult.error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `プロフィールの取得に失敗しました: ${profileResult.error.message}`,
-      });
-    }
+      if (profileResult.error) {
+        logger.error('Onboarding getProfile error:', profileResult.error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch profile: ${profileResult.error.message}`,
+        });
+      }
 
-    // OAuth名がなければメールアドレスの@前をフォールバックに
-    const fullName = profileResult.data.full_name;
-    const email = userResult.data.user?.email;
-    const emailPrefix = email ? email.split('@')[0] : null;
+      if (userResult.error) {
+        logger.error('Onboarding getUser error:', userResult.error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to fetch user info: ${userResult.error.message}`,
+        });
+      }
 
-    return {
-      ...profileResult.data,
-      full_name: fullName || emailPrefix,
-    };
-  }),
+      // OAuth名がなければメールアドレスの@前をフォールバックに
+      const fullName = profileResult.data.full_name;
+      const email = userResult.data.user?.email;
+      const emailPrefix = email ? email.split('@')[0] : null;
+
+      return {
+        ...profileResult.data,
+        full_name: fullName || emailPrefix,
+      };
+    }),
 
   /**
    * オンボーディング完了
    * 名前・クロノタイプを保存し、完了フラグをセット、サンプルプランを生成
    */
   complete: protectedProcedure
+    .meta({ description: 'オンボーディング完了（名前・クロノタイプ保存+サンプルプラン生成）' })
     .input(
       z.object({
         fullName: z.string().min(1).max(100),
@@ -77,7 +89,7 @@ export const onboardingRouter = createTRPCRouter({
         logger.error('Onboarding complete profile error:', profileError);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `プロフィールの更新に失敗しました: ${profileError.message}`,
+          message: `Failed to update profile: ${profileError.message}`,
         });
       }
 
@@ -115,22 +127,24 @@ export const onboardingRouter = createTRPCRouter({
    * オンボーディングリセット
    * onboarding_completed_at を null にして再実行可能にする
    */
-  reset: protectedProcedure.mutation(async ({ ctx }) => {
-    const { error } = await ctx.supabase
-      .from('profiles')
-      .update({ onboarding_completed_at: null })
-      .eq('id', ctx.userId);
+  reset: protectedProcedure
+    .meta({ description: 'オンボーディングリセット（再実行可能にする）' })
+    .mutation(async ({ ctx }) => {
+      const { error } = await ctx.supabase
+        .from('profiles')
+        .update({ onboarding_completed_at: null })
+        .eq('id', ctx.userId);
 
-    if (error) {
-      logger.error('Onboarding reset error:', error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `オンボーディングのリセットに失敗しました: ${error.message}`,
-      });
-    }
+      if (error) {
+        logger.error('Onboarding reset error:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Failed to reset onboarding: ${error.message}`,
+        });
+      }
 
-    return { success: true };
-  }),
+      return { success: true };
+    }),
 });
 
 /**

@@ -16,7 +16,7 @@ interface TourStepRendererProps {
   onSkip: () => void;
 }
 
-/** placement → Popover / Sheet / Center の分岐 */
+/** placement に応じてPopover・Sheet・Centerの適切なコンポーネントに振り分けるレンダラー */
 export function TourStepRenderer({
   step,
   snapshot,

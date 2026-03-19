@@ -15,6 +15,7 @@ interface WelcomeStepProps {
   onContinue: () => void;
 }
 
+/** オンボーディングのウェルカムステップコンポーネント（表示名の入力を担当） */
 export function WelcomeStep({
   displayName,
   hasExistingName,

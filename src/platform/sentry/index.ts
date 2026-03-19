@@ -8,10 +8,13 @@
 // メイン統合機能
 export {
   SentryErrorHandler,
+  addUserActionBreadcrumb,
+  captureBusinessEvent,
   handleApiError,
   handleReactError,
   isSentryInitialized,
   reportToSentry,
+  setUserPlanTag,
 } from './integration';
 
 // パフォーマンス監視

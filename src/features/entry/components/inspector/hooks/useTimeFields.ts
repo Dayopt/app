@@ -38,6 +38,10 @@ function toHHMM(date: Date): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
+/** Inspectorの時間・リマインダーフィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
+ * @param options - entry, entryId, save, saveImmediate, recurringGuard
+ * @returns scheduleDate, startTime, endTime, actualStartTime, actualEndTime, reminderMinutes および各ハンドラー
+ */
 export function useTimeFields({
   entry,
   entryId,

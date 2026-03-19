@@ -17,6 +17,7 @@
 // ==============================================
 // 1000番台: 認証・セキュリティ系エラー
 // ==============================================
+/** 認証・セキュリティ系エラーコード定数（1000番台） */
 export const AUTH_ERRORS = {
   /** 無効な認証トークン */
   AUTH_INVALID_TOKEN: 1001,
@@ -53,6 +54,7 @@ export const AUTH_ERRORS = {
 // ==============================================
 // 2000番台: API・ネットワーク系エラー
 // ==============================================
+/** API・ネットワーク系エラーコード定数（2000番台） */
 export const API_ERRORS = {
   /** APIレート制限超過 */
   API_RATE_LIMIT: 2001,
@@ -87,6 +89,7 @@ export const API_ERRORS = {
 // ==============================================
 // 3000番台: データ・データベース系エラー
 // ==============================================
+/** データ・データベース系エラーコード定数（3000番台） */
 export const DATA_ERRORS = {
   /** データが見つからない */
   DATA_NOT_FOUND: 3001,
@@ -127,6 +130,7 @@ export const DATA_ERRORS = {
 // ==============================================
 // 4000番台: UI・フロントエンド系エラー
 // ==============================================
+/** UI・フロントエンド系エラーコード定数（4000番台） */
 export const UI_ERRORS = {
   /** コンポーネントエラー */
   UI_COMPONENT_ERROR: 4001,
@@ -153,6 +157,7 @@ export const UI_ERRORS = {
 // ==============================================
 // 5000番台: システム・インフラ系エラー
 // ==============================================
+/** システム・インフラ系エラーコード定数（5000番台） */
 export const SYSTEM_ERRORS = {
   /** メモリ不足エラー */
   SYSTEM_MEMORY_ERROR: 5001,
@@ -189,6 +194,7 @@ export const SYSTEM_ERRORS = {
 // ==============================================
 // 6000番台: ビジネスロジック系エラー
 // ==============================================
+/** ビジネスロジック系エラーコード定数（6000番台） */
 export const BUSINESS_ERRORS = {
   /** ビジネスルール違反 */
   BUSINESS_RULE_VIOLATION: 6001,
@@ -215,6 +221,7 @@ export const BUSINESS_ERRORS = {
 // ==============================================
 // 7000番台: 外部サービス連携系エラー
 // ==============================================
+/** 外部サービス連携系エラーコード定数（7000番台） */
 export const EXTERNAL_ERRORS = {
   /** 外部API接続エラー */
   EXTERNAL_API_CONNECTION: 7001,
@@ -247,6 +254,7 @@ export const EXTERNAL_ERRORS = {
 // ==============================================
 // 全エラーコードの統合
 // ==============================================
+/** 全エラーコードを統合したオブジェクト */
 export const ERROR_CODES = {
   ...AUTH_ERRORS,
   ...API_ERRORS,
@@ -260,6 +268,7 @@ export const ERROR_CODES = {
 // ==============================================
 // エラーカテゴリマッピング
 // ==============================================
+/** エラーカテゴリ別に整理したエラーコードマップ */
 export const ERROR_CATEGORIES = {
   auth: AUTH_ERRORS,
   api: API_ERRORS,
@@ -273,33 +282,34 @@ export const ERROR_CATEGORIES = {
 // ==============================================
 // エラー情報辞書
 // ==============================================
+/** エラーコードごとのメッセージ・レベル・アクション情報 */
 export const ERROR_INFO = {
   [ERROR_CODES.AUTH_INVALID_TOKEN]: {
-    message: '認証トークンが無効です',
+    message: 'Invalid authentication token',
     level: 'error',
     category: 'auth',
-    action: 'ログイン画面にリダイレクト',
+    action: 'Redirect to login',
     recoverable: true,
   },
   [ERROR_CODES.AUTH_EXPIRED]: {
-    message: '認証の有効期限が切れています',
+    message: 'Authentication expired',
     level: 'warning',
     category: 'auth',
-    action: 'トークンリフレッシュまたは再ログイン',
+    action: 'Refresh token or re-login',
     recoverable: true,
   },
   [ERROR_CODES.DATA_NOT_FOUND]: {
-    message: '要求されたデータが見つかりません',
+    message: 'Requested data not found',
     level: 'info',
     category: 'data',
-    action: '404画面表示',
+    action: 'Show 404 page',
     recoverable: false,
   },
   [ERROR_CODES.API_RATE_LIMIT]: {
-    message: 'APIリクエスト制限に達しました',
+    message: 'API rate limit reached',
     level: 'warning',
     category: 'api',
-    action: '一定時間後にリトライ',
+    action: 'Retry after cooldown',
     recoverable: true,
   },
   // 必要に応じて他のエラーコードの情報も追加
@@ -308,10 +318,14 @@ export const ERROR_INFO = {
 // ==============================================
 // TypeScript型定義
 // ==============================================
+/** エラーコードの型 */
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+/** エラーカテゴリの型 */
 export type ErrorCategory = keyof typeof ERROR_CATEGORIES;
+/** エラーの重要度レベルの型 */
 export type ErrorLevel = 'info' | 'warning' | 'error' | 'critical';
 
+/** エラーコードに対応するメタ情報 */
 export interface ErrorInfo {
   message: string;
   level: ErrorLevel;

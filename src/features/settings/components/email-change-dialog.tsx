@@ -24,6 +24,7 @@ interface EmailChangeDialogProps {
   currentEmail: string;
 }
 
+/** メールアドレス変更ダイアログ。現在のパスワードで再認証後、確認メールを送信する */
 export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailChangeDialogProps) {
   const t = useTranslations('settings.account.emailChange');
   const tErrors = useTranslations('common.errors');

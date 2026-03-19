@@ -1,6 +1,6 @@
 'use client';
 
-import { closeModal, useModalStore } from '@/shell/stores/useModalStore';
+import { closeModal, useModalStore } from '@/stores/useModalStore';
 import { TagMergeModal } from './tag-merge-modal';
 
 /**

@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useTranslations } from 'next-intl';
 
-import { closeModal, useModalStore } from '@/shell/stores/useModalStore';
+import { closeModal, useModalStore } from '@/stores/useModalStore';
 
 /**
  * プラン削除確認ダイアログ

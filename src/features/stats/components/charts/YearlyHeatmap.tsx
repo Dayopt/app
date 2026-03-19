@@ -21,6 +21,7 @@ type HeatmapValue = {
   hours: number;
 };
 
+/** 年間の日別記録をGitHub草風カレンダーヒートマップで表示 */
 export function YearlyHeatmap() {
   const t = useTranslations('calendar.stats.charts');
   const currentYear = new Date().getFullYear();

@@ -391,6 +391,50 @@ export const NestedSpacing: Story = {
   ),
 };
 
+export const BorderIndicator: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-6 text-2xl font-bold">Border Indicator</h1>
+      <p className="text-muted-foreground mb-8">
+        カレンダーエントリの左端アクセント線。3px幅のデザイントークン。
+      </p>
+
+      <div className="space-y-6">
+        <div>
+          <h2 className="mb-4 font-bold">
+            Utility: <code className="text-muted-foreground text-xs">border-l-indicator</code>
+          </h2>
+          <div className="space-y-4">
+            <div className="bg-tag-blue-tint border-tag-blue border-l-indicator flex h-10 items-center rounded-md px-2">
+              <span className="text-foreground text-xs font-medium tabular-nums">
+                10:00–11:00 ミーティング
+              </span>
+            </div>
+            <div className="bg-tag-green-tint border-tag-green border-l-indicator flex h-10 items-center rounded-md px-2">
+              <span className="text-foreground text-xs font-medium tabular-nums">
+                14:00–15:00 コーディング
+              </span>
+            </div>
+            <div className="bg-tag-amber-tint border-tag-amber border-l-indicator flex h-10 items-center rounded-md px-2">
+              <span className="text-foreground text-xs font-medium tabular-nums">
+                16:00–17:00 レビュー
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-info text-info rounded-lg border p-4">
+          <p className="text-sm">
+            <strong>CSS変数:</strong> <code className="text-xs">--border-indicator: 3px</code>
+            <br />
+            3pxは8pxグリッド外だが、視覚的アクセントとして意図的に定義。
+          </p>
+        </div>
+      </div>
+    </div>
+  ),
+};
+
 export const QuickReference: Story = {
   render: () => (
     <div>

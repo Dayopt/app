@@ -8,6 +8,7 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
+import { createClient } from '@supabase/supabase-js';
 
 // サーバーサイドではSENTRY_DSNを優先（ランタイム環境変数）
 const SENTRY_DSN = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -64,6 +65,17 @@ if (SENTRY_DSN) {
       Sentry.extraErrorDataIntegration({
         depth: 5,
       }),
+      // Supabase操作（auth, DB）の自動計測
+      ...(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        ? [
+            Sentry.supabaseIntegration({
+              supabaseClient: createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+              ),
+            }),
+          ]
+        : []),
     ],
   });
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import type { CalendarViewType } from '../../types/calendar.types';
 
+/** useCalendarKeyboard フックのプロパティ */
 interface UseCalendarKeyboardProps {
   viewType: CalendarViewType;
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;

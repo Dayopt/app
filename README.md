@@ -1,6 +1,6 @@
 # Dayopt App
 
-Next.js 16 + TypeScript で構築されたタスク管理アプリケーション
+Next.js 15 + TypeScript で構築されたタスク管理アプリケーション
 
 ## 🚀 クイックスタート
 
@@ -20,7 +20,7 @@ npm run dev
 
 | カテゴリ           | 技術                                                         |
 | ------------------ | ------------------------------------------------------------ |
-| **フレームワーク** | Next.js 16 (App Router), React 19, TypeScript 5              |
+| **フレームワーク** | Next.js 15 (App Router), React 19, TypeScript 5              |
 | **UIライブラリ**   | shadcn/ui (Radix UI)                                         |
 | **スタイリング**   | Tailwind CSS v4, セマンティックトークン (src/styles/tokens/) |
 | **状態管理**       | Zustand (グローバル), TanStack Query (サーバー状態)          |

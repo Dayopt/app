@@ -19,4 +19,4 @@
 export { createCachedTagsFetcher, getUserTagsCacheTag } from './tag-cache';
 
 // サーバーアクション（キャッシュ無効化）
-export { invalidateUserTagsCache } from './actions';
+export { invalidateCalendarCache, invalidateUserTagsCache } from './actions';

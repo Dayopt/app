@@ -20,6 +20,7 @@ interface TagCacheState {
   setIsSettling: (value: boolean) => void;
 }
 
+/** タグmutation数とリアルタイム更新競合防止フラグを管理するZustandストア */
 export const useTagCacheStore = create<TagCacheState>((set) => ({
   mutationCount: 0,
   incrementMutation: () => set((state) => ({ mutationCount: state.mutationCount + 1 })),

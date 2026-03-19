@@ -8,6 +8,7 @@ interface TimeConflictAlertProps {
   message: string;
 }
 
+/** 時間重複エラーをインラインで表示するアラートコンポーネント */
 export function TimeConflictAlert({ message }: TimeConflictAlertProps) {
   return (
     <div

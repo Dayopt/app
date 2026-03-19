@@ -16,6 +16,7 @@
 
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
 import { invalidateUserTagsCache } from '@/platform/cache';
 import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
@@ -29,6 +30,7 @@ export const tagsRouter = createTRPCRouter({
    * タグ一覧取得
    */
   list: protectedProcedure
+    .meta({ description: 'タグ一覧取得（ソート対応）' })
     .input(
       z
         .object({
@@ -59,6 +61,7 @@ export const tagsRouter = createTRPCRouter({
    * タグID指定で取得
    */
   getById: protectedProcedure
+    .meta({ description: 'タグ詳細取得' })
     .input(
       z.object({
         id: z.string().uuid(),
@@ -82,6 +85,7 @@ export const tagsRouter = createTRPCRouter({
    * タグ作成
    */
   create: protectedProcedure
+    .meta({ description: 'タグ作成' })
     .input(
       z.object({
         name: z.string().min(1).max(50),
@@ -113,7 +117,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化（次のリクエストで最新データ取得）
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return tag;
       } catch (error) {
@@ -125,6 +134,7 @@ export const tagsRouter = createTRPCRouter({
    * タグ更新
    */
   update: protectedProcedure
+    .meta({ description: 'タグ更新（名前・色）' })
     .input(
       z.object({
         id: z.string().uuid(),
@@ -158,7 +168,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return tag;
       } catch (error) {
@@ -173,6 +188,7 @@ export const tagsRouter = createTRPCRouter({
    * オプションでソースタグを削除します。
    */
   merge: protectedProcedure
+    .meta({ description: 'タグマージ（ソース→ターゲットに関連移行）' })
     .input(
       z.object({
         sourceTagId: z.string().uuid(),
@@ -193,7 +209,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -205,6 +226,7 @@ export const tagsRouter = createTRPCRouter({
    * タグ削除
    */
   delete: protectedProcedure
+    .meta({ description: 'タグ削除（エントリ削除/再割当て選択可）' })
     .input(
       z.object({
         id: z.string().uuid(),
@@ -223,7 +245,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return deletedTag;
       } catch (error) {
@@ -235,6 +262,7 @@ export const tagsRouter = createTRPCRouter({
    * グループ（コロン記法プレフィックス）の一括リネーム
    */
   renameGroup: protectedProcedure
+    .meta({ description: 'グループ一括リネーム（コロン記法プレフィックス）' })
     .input(
       z.object({
         oldPrefix: z.string().min(1).max(50),
@@ -251,7 +279,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return { updatedTags, count: updatedTags.length };
       } catch (error) {
@@ -263,6 +296,7 @@ export const tagsRouter = createTRPCRouter({
    * グループ解除（コロン記法プレフィックスを除去）
    */
   ungroupTags: protectedProcedure
+    .meta({ description: 'グループ解除（プレフィックス除去）' })
     .input(
       z.object({
         prefix: z.string().min(1).max(50),
@@ -279,7 +313,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -291,6 +330,7 @@ export const tagsRouter = createTRPCRouter({
    * グループ削除（コロン記法プレフィックスのタグを一括削除）
    */
   deleteGroup: protectedProcedure
+    .meta({ description: 'グループ一括削除' })
     .input(
       z.object({
         prefix: z.string().min(1).max(50),
@@ -309,7 +349,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {
@@ -321,6 +366,7 @@ export const tagsRouter = createTRPCRouter({
    * タグ並び替え（バッチ更新）
    */
   reorder: protectedProcedure
+    .meta({ description: 'タグ並び替え（バッチsort_order更新、最大200件）' })
     .input(
       z.object({
         updates: z
@@ -342,7 +388,12 @@ export const tagsRouter = createTRPCRouter({
         });
 
         // サーバーサイドキャッシュを無効化
-        await invalidateUserTagsCache(ctx.userId);
+        await invalidateUserTagsCache(ctx.userId).catch((cacheErr) => {
+          logger.warn('Tags cache invalidation failed (non-fatal)', {
+            userId: ctx.userId,
+            error: cacheErr instanceof Error ? cacheErr.message : String(cacheErr),
+          });
+        });
 
         return result;
       } catch (error) {

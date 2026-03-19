@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
- * Custom hook for debouncing callbacks
- * Returns a debounced version of the callback that delays invocation
+ * コールバック関数をデバウンス（遅延実行）するフック
+ * @param callback デバウンス対象の関数
+ * @param delay 遅延時間（ミリ秒）
+ * @returns デバウンスされた関数
  */
 export function useDebouncedCallback<T extends (...args: Parameters<T>) => ReturnType<T>>(
   callback: T,

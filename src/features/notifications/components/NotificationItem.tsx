@@ -36,6 +36,7 @@ const typeColors: Record<NotificationType, string> = {
   energy_insight: 'text-primary',
 };
 
+/** 通知1件を表示するリストアイテム（既読化・削除ボタン付き） */
 export function NotificationItem({
   id,
   type,

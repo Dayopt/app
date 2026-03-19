@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarDays, Clock, Sparkles } from 'lucide-react';
+import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
@@ -36,14 +37,23 @@ export function InsightsEmptyState({ info, className }: InsightsEmptyStateProps)
 // =============================================================================
 
 function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
+  const t = useTranslations('common.insights');
+  const format = useFormatter();
+
   return (
     <>
       <CalendarDays className="text-muted-foreground size-10" />
       <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">この週の記録はありません。</p>
+        <p className="text-foreground text-sm font-medium">{t('noRecords')}</p>
         {info.lastRecordDate && (
           <p className="text-muted-foreground text-sm">
-            前回の記録: {formatDate(info.lastRecordDate)}
+            {t('lastRecord', {
+              date: format.dateTime(info.lastRecordDate, {
+                month: 'numeric',
+                day: 'numeric',
+                weekday: 'short',
+              }),
+            })}
           </p>
         )}
       </div>
@@ -52,7 +62,7 @@ function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
           href={info.lastInsightPath}
           className="text-primary hover:text-primary/80 text-sm font-medium"
         >
-          その週のインサイトを見る →
+          {t('viewInsights')}
         </Link>
       )}
     </>
@@ -60,18 +70,18 @@ function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
 }
 
 function InsufficientDataState({ info }: { info: InsightsEmptyInfo }) {
+  const t = useTranslations('common.insights');
+
   return (
     <>
       <Clock className="text-muted-foreground size-10" />
       <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">この週のデータが十分ではありません。</p>
-        <p className="text-muted-foreground text-sm">
-          3日以上の記録があるとインサイトを生成できます。
-        </p>
+        <p className="text-foreground text-sm font-medium">{t('insufficientData')}</p>
+        <p className="text-muted-foreground text-sm">{t('insufficientDataHint')}</p>
       </div>
       {info.recordedDays && info.recordedDays.length > 0 && (
         <div className="text-muted-foreground text-sm">
-          <p className="mb-1 font-medium">記録された日:</p>
+          <p className="mb-1 font-medium">{t('recordedDays')}</p>
           {info.recordedDays.map((day) => (
             <p key={day.dayLabel}>
               {day.dayLabel}（{day.duration}）
@@ -84,23 +94,23 @@ function InsufficientDataState({ info }: { info: InsightsEmptyInfo }) {
 }
 
 function PendingGenerationState({ info }: { info: InsightsEmptyInfo }) {
+  const t = useTranslations('common.insights');
+  const format = useFormatter();
+
   return (
     <>
       <Sparkles className="text-muted-foreground size-10" />
       <p className="text-foreground text-sm font-medium">
-        {info.expectedDate ? `${formatDate(info.expectedDate)}に生成予定です` : '生成予定です'} ✦
+        {info.expectedDate
+          ? t('pendingGeneration', {
+              date: format.dateTime(info.expectedDate, {
+                month: 'numeric',
+                day: 'numeric',
+                weekday: 'short',
+              }),
+            })
+          : t('pendingGenerationNoDate')}
       </p>
     </>
   );
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-function formatDate(date: Date): string {
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const weekday = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-  return `${month}月${day}日（${weekday}）`;
 }

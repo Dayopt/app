@@ -7,10 +7,10 @@ import { Search } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
+import { AppHeader } from '@/components/AppHeader';
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { Button } from '@/components/ui/button';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { useGlobalSearch } from '@/shell/contexts/use-global-search';
+import { useGlobalSearch } from '@/hooks/use-global-search';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
@@ -19,6 +19,7 @@ import type { CalendarViewType } from '../../types/calendar.types';
 import { DateRangeDisplay } from './Header/DateRangeDisplay';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
+/** CalendarLayout コンポーネントのプロパティ */
 export interface CalendarLayoutProps {
   children: React.ReactNode;
   className?: string | undefined;

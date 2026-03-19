@@ -23,6 +23,7 @@ import { useTranslations } from 'next-intl';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 
+/** パスワードリセットメール送信フォーム。送信成功後は確認メッセージに切り替わる */
 export function PasswordResetForm({ className, ...props }: React.ComponentProps<'div'>) {
   const t = useTranslations();
   const [email, setEmail] = useState('');

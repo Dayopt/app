@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calculateGridHeight,
-  calculateScrollPosition,
   getDurationInMinutes,
   getEventStyle,
-  isTimeInRange,
   pixelsToTime,
-  pixelsToTimeValues,
   roundToQuarterHour,
   timeToPixels,
 } from '../grid';
@@ -74,28 +71,6 @@ describe('pixelsToTime', () => {
   });
 });
 
-describe('pixelsToTimeValues', () => {
-  it('0pxを0時0分に変換する', () => {
-    const result = pixelsToTimeValues(0, 72);
-    expect(result).toEqual({ hour: 0, minute: 0 });
-  });
-
-  it('72pxを1時0分に変換する', () => {
-    const result = pixelsToTimeValues(72, 72);
-    expect(result).toEqual({ hour: 1, minute: 0 });
-  });
-
-  it('36pxを0時30分に変換する', () => {
-    const result = pixelsToTimeValues(36, 72);
-    expect(result).toEqual({ hour: 0, minute: 30 });
-  });
-
-  it('864pxを12時0分に変換する（hourHeight=72）', () => {
-    const result = pixelsToTimeValues(864, 72);
-    expect(result).toEqual({ hour: 12, minute: 0 });
-  });
-});
-
 describe('getEventStyle', () => {
   it('基本的なスタイルを返す', () => {
     const start = new Date('2026-01-15T10:00:00');
@@ -141,28 +116,6 @@ describe('calculateGridHeight', () => {
 
   it('デフォルトで0-24時を使用する', () => {
     expect(calculateGridHeight(undefined, undefined, 72)).toBe(1728);
-  });
-});
-
-describe('isTimeInRange', () => {
-  it('範囲内の時刻はtrueを返す', () => {
-    const time = new Date('2026-01-15T12:00:00');
-    expect(isTimeInRange(time, 8, 18)).toBe(true);
-  });
-
-  it('開始時間ちょうどはtrueを返す', () => {
-    const time = new Date('2026-01-15T08:00:00');
-    expect(isTimeInRange(time, 8, 18)).toBe(true);
-  });
-
-  it('終了時間ちょうどはfalseを返す（排他的上限）', () => {
-    const time = new Date('2026-01-15T18:00:00');
-    expect(isTimeInRange(time, 8, 18)).toBe(false);
-  });
-
-  it('範囲外の時刻はfalseを返す', () => {
-    const time = new Date('2026-01-15T06:00:00');
-    expect(isTimeInRange(time, 8, 18)).toBe(false);
   });
 });
 
@@ -265,24 +218,5 @@ describe('getDurationInMinutes', () => {
   it('同じ時刻の場合0を返す', () => {
     const time = new Date('2026-01-15T10:00:00');
     expect(getDurationInMinutes(time, time)).toBe(0);
-  });
-});
-
-describe('calculateScrollPosition', () => {
-  it('ターゲット時間に基づくスクロール位置を返す', () => {
-    const result = calculateScrollPosition(8, 72, 600);
-    // 8 * 72 - 600 / 3 = 576 - 200 = 376
-    expect(result).toBe(376);
-  });
-
-  it('負の値にならない（0以上）', () => {
-    const result = calculateScrollPosition(0, 72, 600);
-    expect(result).toBe(0);
-  });
-
-  it('小さなhourHeightでも動作する', () => {
-    const result = calculateScrollPosition(8, 48, 600);
-    // 8 * 48 - 600 / 3 = 384 - 200 = 184
-    expect(result).toBe(184);
   });
 });

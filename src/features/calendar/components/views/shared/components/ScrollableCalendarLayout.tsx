@@ -24,6 +24,7 @@ import { useSleepHoursLayout } from '../hooks/useSleepHoursLayout';
 import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { TimezoneOffset } from './TimezoneOffset';
 
+/** ScrollableCalendarLayout コンポーネントのプロパティ */
 interface ScrollableCalendarLayoutProps {
   children: React.ReactNode;
   className?: string | undefined;
@@ -220,9 +221,9 @@ export const ScrollableCalendarLayout = ({
           {/* 縦の区切り線 */}
           {displayDates && displayDates.length > 1 && (
             <div className="pointer-events-none absolute inset-0 z-5 flex">
-              {displayDates.map((_, index) => (
+              {displayDates.map((date, index) => (
                 <div
-                  key={index}
+                  key={date.toISOString()}
                   className={cn(
                     'flex-1',
                     index < displayDates.length - 1 && 'border-border border-r',

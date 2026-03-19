@@ -16,6 +16,10 @@ import { api } from '@/platform/trpc';
  *
  * @see {@link cacheStrategies.plans} - realtimeCache設定を使用
  */
+/** 単一エントリをIDで取得するフック（タグ情報含む・キャッシュからプレースホルダー表示）
+ * @param id - エントリID
+ * @param options - includeTags: タグ情報を含む, enabled: クエリ有効化フラグ
+ */
 export function useEntry(id: string, options?: { includeTags?: boolean; enabled?: boolean }) {
   const utils = api.useUtils();
 

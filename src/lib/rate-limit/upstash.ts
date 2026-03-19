@@ -13,17 +13,12 @@ import { Redis } from '@upstash/redis';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
-import { extractClientIp } from '@/platform/security/ip-validation';
+import { extractClientIp } from '@/lib/security/ip-validation';
 
-/**
- * 環境変数チェック
- */
 const UPSTASH_REDIS_REST_URL = env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_REDIS_REST_TOKEN = env.UPSTASH_REDIS_REST_TOKEN;
 
-/**
- * Upstash Redis有効化フラグ
- */
+/** Upstash Redisが有効かどうか（環境変数が設定されている場合のみtrue） */
 export const isUpstashEnabled = Boolean(UPSTASH_REDIS_REST_URL && UPSTASH_REDIS_REST_TOKEN);
 
 /**
@@ -91,6 +86,32 @@ export const contactRateLimit =
         limiter: Ratelimit.slidingWindow(5, '1 h'),
         analytics: true,
         prefix: 'ratelimit:contact',
+      })
+    : null;
+
+/**
+ * tRPC protectedProcedure 用レート制限
+ * 100リクエスト / 1分 per user
+ */
+export const trpcUserRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(100, '1 m'),
+        prefix: 'ratelimit:trpc:user',
+      })
+    : null;
+
+/**
+ * エントリ作成の日次上限
+ * 500リクエスト / 24時間 per user
+ */
+export const entryCreateRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(500, '24 h'),
+        prefix: 'ratelimit:entry:create',
       })
     : null;
 

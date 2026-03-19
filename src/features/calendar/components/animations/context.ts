@@ -10,6 +10,7 @@ const AnimationContext = createContext<AnimationContextType>({
   duration: 'normal',
 });
 
+/** アニメーションコンテキストを取得するフック */
 export function useAnimation() {
   return useContext(AnimationContext);
 }

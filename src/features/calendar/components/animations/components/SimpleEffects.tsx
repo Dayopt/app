@@ -2,7 +2,7 @@
 
 import type { HoverEffectProps } from '../types';
 
-// スムーズなホバーエフェクト
+/** スムーズなホバーエフェクトを適用するコンポーネント */
 export function HoverEffect({ children, isHovered, disabled = false }: HoverEffectProps) {
   if (disabled) return <>{children}</>;
 

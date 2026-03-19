@@ -4,11 +4,12 @@ import { useEffect, useRef } from 'react';
 
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { openDeleteConfirm } from '@/shell/stores/useModalStore';
+import { openDeleteConfirm } from '@/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
 
+/** useCalendarEventKeyboard フックのオプション */
 interface UseCalendarEventKeyboardOptions {
   /** ショートカットを有効にするか */
   enabled?: boolean;

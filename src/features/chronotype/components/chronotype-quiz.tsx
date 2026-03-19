@@ -26,6 +26,7 @@ interface ChronotypeQuizProps {
 /** クイズの状態: 回答中 or 結果表示 */
 type QuizPhase = 'answering' | 'result';
 
+/** クロノタイプ診断クイズコンポーネント（6問の設問で自動判定） */
 export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
   const t = useTranslations();
   const [currentStep, setCurrentStep] = useState(0);

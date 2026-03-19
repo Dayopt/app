@@ -3,7 +3,8 @@
     "untitled": "無題",
     "toast": {
       "restored": "復元しました",
-      "restoreFailed": "復元に失敗しました"
+      "restoreFailed": "復元に失敗しました",
+      "conflict": "このエントリは他の場所で変更されています。最新データをリロードしてください。"
     }
   }
 }

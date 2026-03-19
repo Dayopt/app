@@ -6,6 +6,7 @@
  * サーバー専用の env を import してはいけない。
  */
 
+/** reCAPTCHA v2/v3 の設定定数（サイトキー・スコア閾値・検証URL） */
 export const RECAPTCHA_CONFIG = {
   // サイトキー（クライアントサイド — ビルド時置換）
   SITE_KEY_V3: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY_V3 || '',

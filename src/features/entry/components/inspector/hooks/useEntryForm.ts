@@ -16,7 +16,7 @@ import {
   openRecurringEditConfirm,
   useModalStore,
   type RecurringEditScope,
-} from '@/shell/stores/useModalStore';
+} from '@/stores/useModalStore';
 import { useEntry } from '../../../hooks/useEntry';
 import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMutations';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
@@ -30,6 +30,9 @@ import { useTimeFields } from './useTimeFields';
 // 繰り返しインスタンスでスコープダイアログを表示するフィールド
 const SCOPE_DIALOG_FIELDS = ['start_time', 'end_time'] as const;
 
+/** InspectorフォームのメインフックーDebouncedSave/TimeFields/TagField/RecurringGuardを統合）
+ * @returns entryId, entry, fields, handlers, state, actions
+ */
 export function useEntryForm() {
   const entryId = useEntryInspectorStore((state) => state.entryId);
   const instanceDate = useEntryInspectorStore((state) => state.instanceDate);

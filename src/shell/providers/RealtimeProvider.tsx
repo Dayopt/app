@@ -22,12 +22,16 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { useNotificationRealtime } from '@/features/notifications';
 import { useTagRealtime } from '@/features/tags';
 import { useHasMounted } from '@/hooks/useHasMounted';
+import { useRealtimeConnectionStore } from '@/platform/supabase/realtime/useRealtimeConnectionStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useEntryRealtime } from '../hooks/useEntryRealtime';
 
@@ -92,6 +96,29 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
     enabled: shouldSubscribe && subscriptionConfig.tags,
   });
   useNotificationRealtime(userId, shouldSubscribe && subscriptionConfig.notifications);
+
+  // Realtime接続状態の通知
+  const t = useTranslations();
+  const connectionStatus = useRealtimeConnectionStore((s) => s.status);
+  const prevStatusRef = useRef(connectionStatus);
+
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = connectionStatus;
+
+    if (connectionStatus === 'disconnected' && prev !== 'disconnected') {
+      toast.error(t('common.status.realtimeDisconnected'), {
+        id: 'realtime-disconnected',
+        duration: Infinity,
+      });
+    } else if (connectionStatus === 'connected' && prev === 'reconnecting') {
+      toast.dismiss('realtime-disconnected');
+      toast.success(t('common.status.realtimeReconnected'), {
+        id: 'realtime-reconnected',
+        duration: 3000,
+      });
+    }
+  }, [connectionStatus, t]);
 
   return <>{children}</>;
 }

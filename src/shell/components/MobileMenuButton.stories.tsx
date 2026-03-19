@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useLayoutStore } from '@/shell/stores/useLayoutStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
-import { MobileMenuButton } from './MobileMenuButton';
+import { MobileMenuButton } from '@/components/MobileMenuButton';
 
 /** モバイル用ハンバーガーメニューボタン。クリックでSidebarを開閉する。 */
 const meta = {

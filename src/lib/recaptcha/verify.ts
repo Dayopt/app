@@ -12,9 +12,7 @@ function isDevelopment(): boolean {
   return process.env.NODE_ENV === 'development';
 }
 
-/**
- * reCAPTCHA検証レスポンス
- */
+/** Google reCAPTCHA APIの検証レスポンス */
 export interface RecaptchaVerifyResponse {
   success: boolean;
   score?: number | undefined; // v3のみ

@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 
 import { HOUR_HEIGHT } from '../constants/grid.constants';
 
+/** 時間グリッドの1時間分のデータ */
 export interface TimeGridHours {
   hour: number;
   label: string;
@@ -19,6 +20,7 @@ export interface UseTimeGridOptions {
   format?: '12h' | '24h';
 }
 
+/** 時間グリッドの時間一覧とグリッド高さを返すフック */
 export function useTimeGrid(options: UseTimeGridOptions = {}) {
   const { startHour = 0, endHour = 24, hourHeight = HOUR_HEIGHT, format = '24h' } = options;
 

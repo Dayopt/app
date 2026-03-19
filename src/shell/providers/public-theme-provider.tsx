@@ -24,6 +24,7 @@ interface PublicThemeContextType {
 
 const PublicThemeContext = createContext<PublicThemeContextType | null>(null);
 
+/** 公開ページ用テーマコンテキストを取得するフック */
 export function usePublicTheme() {
   const context = useContext(PublicThemeContext);
   if (!context) {
@@ -60,6 +61,7 @@ const getStoredColorScheme = (): ColorScheme => {
   return (localStorage.getItem('colorScheme') as ColorScheme) || 'blue';
 };
 
+/** 公開ページ用の軽量ThemeProvider（localStorageのみでテーマ管理） */
 export const PublicThemeProvider = ({ children }: PublicThemeProviderProps) => {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
   const [colorScheme, setColorSchemeState] = useState<ColorScheme>(getStoredColorScheme);

@@ -19,6 +19,7 @@ import { DragSelectionPreview } from './DragSelectionPreview';
 import type { CalendarDragSelectionProps } from './types';
 import { useDragSelection } from './useDragSelection';
 
+/** カレンダー列のドラッグ選択・ダブルクリックによる時間範囲選択コンポーネント */
 export const CalendarDragSelection = ({
   date,
   className,

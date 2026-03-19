@@ -107,10 +107,11 @@ const nextConfig = {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
-          // XSS対策（レガシーブラウザ用）
+          // XSS対策: CSPに完全移行のため無効化（'1; mode=block'はChrome 78+で削除済み、
+          // 一部ケースでバイパスに利用される可能性があるためMDN推奨に従い0に設定）
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           // リファラー情報制御
           {

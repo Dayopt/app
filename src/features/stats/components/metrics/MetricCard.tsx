@@ -30,6 +30,7 @@ interface MetricCardProps {
   isLoading?: boolean;
 }
 
+/** KPIメトリクスを1枚のカードで表示（hero/default バリアント、プログレスバー対応） */
 export function MetricCard({
   label,
   valueParts,

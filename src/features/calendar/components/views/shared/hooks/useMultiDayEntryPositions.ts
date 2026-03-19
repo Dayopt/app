@@ -13,6 +13,7 @@ import type { EntryPosition } from './useViewEntries';
 const ENTRY_PADDING = 2; // エントリ間のパディング
 const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
+/** useMultiDayEntryPositions フックのオプション */
 interface UseMultiDayEntryPositionsOptions {
   displayDates: Date[];
   entries: CalendarEvent[];
@@ -20,6 +21,7 @@ interface UseMultiDayEntryPositionsOptions {
   timezone: string;
 }
 
+/** useMultiDayEntryPositions フックの戻り値 */
 interface UseMultiDayEntryPositionsReturn {
   entryPositions: EntryPosition[];
   entriesByDate: Map<string, CalendarEvent[]>;

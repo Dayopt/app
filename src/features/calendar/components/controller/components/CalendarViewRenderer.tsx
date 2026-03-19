@@ -31,6 +31,7 @@ const MultiDayView = React.lazy(() =>
 /** モバイルでは列数が多すぎると狭くなるため、最大3日にフォールバック */
 const MOBILE_MAX_DAYS = 3;
 
+/** CalendarViewRenderer コンポーネントのプロパティ */
 interface CalendarViewRendererProps {
   viewType: CalendarViewType;
   /** GridViewPropsを渡す（showWeekendsは含まれる） */

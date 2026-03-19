@@ -13,13 +13,15 @@
 
 import { useState } from 'react';
 
+import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useModalStore } from '@/shell/stores/useModalStore';
+import { useModalStore } from '@/stores/useModalStore';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
@@ -37,6 +39,7 @@ function InspectorURLSyncHandler() {
 /** モバイル Drawer のスナップポイント */
 const SNAP_POINTS = [1] as const;
 
+/** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
 export function EntryInspector() {
   const t = useTranslations();
   const isMobile = useMediaQuery('(max-width: 767px)');
@@ -47,7 +50,12 @@ export function EntryInspector() {
   const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
-  const { data: planData, isLoading } = useEntry(entryId!, {
+  const {
+    data: planData,
+    isLoading,
+    isError,
+    refetch,
+  } = useEntry(entryId!, {
     includeTags: true,
     enabled: !!entryId,
   });
@@ -79,6 +87,16 @@ export function EntryInspector() {
     content = (
       <div className="flex h-full flex-1 items-center justify-center">
         <Spinner size="lg" />
+      </div>
+    );
+  } else if (isError) {
+    content = (
+      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4">
+        <AlertTriangle className="text-muted-foreground size-8" />
+        <p className="text-muted-foreground text-sm">{t('error.boundary.title')}</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          {t('error.boundary.retry')}
+        </Button>
       </div>
     );
   } else if (!entry) {

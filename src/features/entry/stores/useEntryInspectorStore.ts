@@ -53,6 +53,7 @@ interface EntryInspectorActions {
  */
 type EntryInspectorStore = EntryInspectorState & EntryInspectorActions;
 
+/** Entry Inspector の開閉状態・対象エントリID・アンカー位置を管理するストア */
 export const useEntryInspectorStore = create<EntryInspectorStore>()(
   devtools(
     (set) => ({

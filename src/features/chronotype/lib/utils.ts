@@ -7,6 +7,11 @@ import type {
   ProductivityZone,
 } from '@/types/chronotype';
 
+/**
+ * クロノタイプ設定からプロフィールを取得する
+ * @param type - クロノタイプ種別
+ * @param customZones - カスタムタイプ時の生産性ゾーン配列
+ */
 export function getChronotypeProfile(
   type: ChronotypeType,
   customZones?: ProductivityZone[],
@@ -21,6 +26,10 @@ export function getChronotypeProfile(
   return CHRONOTYPE_PRESETS[type];
 }
 
+/**
+ * 設定からクロノタイプが有効な場合のみプロフィールを返す
+ * @returns 無効な場合は null
+ */
 export function getEnabledChronotypeProfile(
   settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'>,
 ): ChronotypeProfile | null {
@@ -31,6 +40,10 @@ export function getEnabledChronotypeProfile(
   return getChronotypeProfile(settings.type, settings.customZones);
 }
 
+/**
+ * プリセットクロノタイプのプロフィールを取得する（カスタムは非対応）
+ * @returns custom タイプの場合は null
+ */
 export function getPresetChronotypeProfile(type: ChronotypeType): ChronotypeProfile | null {
   if (type === 'custom') {
     return null;
@@ -39,6 +52,11 @@ export function getPresetChronotypeProfile(type: ChronotypeType): ChronotypeProf
   return CHRONOTYPE_PRESETS[type];
 }
 
+/**
+ * 指定時間に該当する生産性ゾーンを取得する
+ * @param hour - 時間（0-23）
+ * @returns 該当ゾーンがない場合は null
+ */
 export function getProductivityZoneForHour(
   profile: ChronotypeProfile,
   hour: number,
@@ -54,6 +72,12 @@ export function getProductivityZoneForHour(
   );
 }
 
+/**
+ * カレンダー表示範囲内に収まる生産性ゾーンをピクセル座標付きで返す
+ * @param startHour - 表示開始時間
+ * @param endHour - 表示終了時間
+ * @param hourHeight - 1時間あたりの高さ（px）
+ */
 export function getVisibleProductivityZones(
   profile: ChronotypeProfile,
   startHour: number,
@@ -108,6 +132,10 @@ export function getVisibleProductivityZones(
   return zones;
 }
 
+/**
+ * 生産性ゾーン配列からピーク時間帯を "HH:00 - HH:00" 形式で返す
+ * @returns ピークゾーンがない場合は '-'
+ */
 export function getPeakHours(zones: ProductivityZone[]): string {
   const peakZone = zones.find((zone) => zone.level === 'peak');
   if (!peakZone) {

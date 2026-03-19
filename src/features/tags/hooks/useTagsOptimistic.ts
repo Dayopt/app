@@ -5,6 +5,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Tag } from '../types';
 import { tagKeys } from './tagQueryKeys';
 
+/**
+ * タグキャッシュの楽観的更新ヘルパーフック（レガシー版）
+ *
+ * TanStack QueryのqueryClientを直接操作して更新・追加・削除を行う
+ */
 export function useOptimisticTagUpdate() {
   const queryClient = useQueryClient();
 

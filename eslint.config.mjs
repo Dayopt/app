@@ -36,12 +36,11 @@ const eslintConfig = defineConfig([
       // console.log禁止（warn/errorは許可）
       'no-console': ['error', { allow: ['warn', 'error'] }],
       // React 19.2 の新しい react-hooks ルール
-      // TODO: 段階的に error に昇格して既存コードを修正する
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/refs': 'warn',
-      'react-hooks/purity': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/refs': 'error',
+      'react-hooks/purity': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
       // 空のインターフェースは type alias で代替可能だが既存コードに多いため warn
       '@typescript-eslint/no-empty-object-type': 'warn',
       // no-unused-vars は以前の設定では未有効。段階的に有効化する

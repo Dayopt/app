@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ChronotypeType } from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 
+/** AIサービス用Supabaseクライアント型 */
 export type AISupabaseClient = SupabaseClient<Database>;
 
 /** AI プロバイダー識別子 */

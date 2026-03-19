@@ -12,7 +12,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { logger } from '@/lib/logger';
-import { openRecurringEditConfirm, type RecurringEditScope } from '@/shell/stores/useModalStore';
+import { openRecurringEditConfirm, type RecurringEditScope } from '@/stores/useModalStore';
 import { useRecurringScopeMutations } from '../../../hooks/useRecurringScopeMutations';
 import { isRecurringEntry } from '../../../lib/entry-recurrence';
 
@@ -33,6 +33,10 @@ interface UseRecurringGuardOptions {
   instanceDate: string | null;
 }
 
+/** 繰り返しエントリ編集時のスコープ選択ダイアログを管理するフック
+ * @param options - entry, entryId, instanceDate
+ * @returns isRecurringInstance, hasPendingChanges, pendingChanges, accumulateChange, openScopeDialog, clearPendingChanges
+ */
 export function useRecurringGuard({ entry, entryId, instanceDate }: UseRecurringGuardOptions) {
   const { applyEdit } = useRecurringScopeMutations();
 

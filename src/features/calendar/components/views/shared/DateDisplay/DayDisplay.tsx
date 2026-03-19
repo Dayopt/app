@@ -49,6 +49,7 @@ const getTextClasses = (isToday: boolean, isBase: boolean = false): string => {
   return 'text-muted-foreground';
 };
 
+/** 曜日・日付・今日マーカーを含む日付ヘッダーコンポーネント */
 export const DayDisplay = memo<DayDisplayProps>(function DayDisplay({
   date,
   isToday = false,

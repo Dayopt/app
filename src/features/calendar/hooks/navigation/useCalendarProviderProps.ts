@@ -14,11 +14,13 @@ function isValidViewType(view: string): view is CalendarViewType {
   return false;
 }
 
+/** カレンダーProviderの初期値 */
 interface CalendarProviderProps {
   initialDate: Date;
   initialView: CalendarViewType;
 }
 
+/** useCalendarProviderProps フックの戻り値 */
 interface UseCalendarProviderPropsReturn {
   isCalendarPage: boolean;
   calendarProviderProps: CalendarProviderProps | null;

@@ -4,10 +4,10 @@ import type { CalendarEvent } from '../../../types/calendar.types';
 
 import type { DateTimeSelection, GridViewProps, TimeSlot } from '../shared';
 
-// DayViewの固有Props（GridViewPropsを継承して時間グリッド機能を使用）
+/** DayViewの固有Props（GridViewPropsを継承して時間グリッド機能を使用） */
 export type DayViewProps = GridViewProps;
 
-// シンプル版のProps（後方互換性のため）
+/** シンプル版のDayViewProps（後方互換性のため） */
 export interface SimpleDayViewProps {
   date: Date;
   entries?: CalendarEvent[];
@@ -18,6 +18,7 @@ export interface SimpleDayViewProps {
   onEntryDelete?: (entryId: string) => void;
 }
 
+/** DayContent コンポーネントのプロパティ */
 export interface DayContentProps {
   date: Date;
   entries?: CalendarEvent[] | undefined;
@@ -39,6 +40,7 @@ export interface DayContentProps {
   disabledEntryId?: string | null | undefined;
 }
 
+/** useDayView フックのオプション */
 export interface UseDayViewOptions {
   date: Date;
   entries: CalendarEvent[];
@@ -46,6 +48,7 @@ export interface UseDayViewOptions {
   timezone: string;
 }
 
+/** useDayView フックの戻り値 */
 export interface UseDayViewReturn {
   dayEntries: CalendarEvent[];
   entryStyles: Record<string, CSSProperties>;
@@ -53,18 +56,21 @@ export interface UseDayViewReturn {
   timeSlots: TimeSlot[];
 }
 
+/** useDayEntries フックのオプション */
 export interface UseDayEntriesOptions {
   date: Date;
   entries: CalendarEvent[];
   timezone: string;
 }
 
+/** useDayEntries フックの戻り値 */
 export interface UseDayEntriesReturn {
   dayEntries: CalendarEvent[];
   entryPositions: EntryPosition[];
   maxConcurrentEntries: number;
 }
 
+/** エントリの計算済み位置情報 */
 export interface EntryPosition {
   plan: CalendarEvent;
   top: number;
@@ -76,6 +82,7 @@ export interface EntryPosition {
   totalColumns: number;
 }
 
+/** DayView の表示設定 */
 export interface DayViewSettings {
   startHour: number;
   endHour: number;

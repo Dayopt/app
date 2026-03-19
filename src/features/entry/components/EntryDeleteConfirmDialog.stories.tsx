@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { Button } from '@/components/ui/button';
-import { useModalStore } from '@/shell/stores/useModalStore';
+import { useModalStore } from '@/stores/useModalStore';
 
 import { EntryDeleteConfirmDialog } from './EntryDeleteConfirmDialog';
 

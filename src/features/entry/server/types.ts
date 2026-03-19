@@ -20,11 +20,6 @@ export type ServiceSupabaseClient = SupabaseClient<Database>;
 export type EntryRow = Database['public']['Tables']['entries']['Row'];
 
 /**
- * エントリタグのデータベース行型
- */
-export type EntryTagRow = Database['public']['Tables']['entry_tags']['Row'];
-
-/**
  * タグのデータベース行型
  */
 export type TagRow = Database['public']['Tables']['tags']['Row'];
@@ -62,6 +57,8 @@ export interface UpdateEntryOptions {
   entryId: string;
   input: UpdateEntryInput;
   preventOverlappingEntries?: boolean;
+  /** 楽観的ロック: クライアントが認識している updated_at（不一致なら CONFLICT） */
+  expectedUpdatedAt?: string | undefined;
 }
 
 /**

@@ -7,10 +7,12 @@
 
 import { logger } from '@/lib/logger';
 
+/** ブラウザがNotification APIをサポートしているか確認する */
 export const checkBrowserNotificationSupport = (): boolean => {
   return typeof window !== 'undefined' && 'Notification' in window;
 };
 
+/** ブラウザ通知の許可をユーザーにリクエストする */
 export const requestNotificationPermission = async (
   t?: (key: string) => string,
 ): Promise<NotificationPermission> => {

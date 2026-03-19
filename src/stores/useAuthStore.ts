@@ -7,6 +7,7 @@
 import * as Sentry from '@sentry/nextjs';
 
 import { logger } from '@/lib/logger';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { createClient } from '@/platform/supabase/client';
 import type { AuthError, AuthResponse, OAuthResponse, Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
@@ -24,6 +25,8 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   error: string | null;
+  /** セッションが失効したことを示すフラグ（UIで通知→リダイレクトに使用） */
+  _sessionExpired: boolean;
 
   // Actions
   initialize: () => Promise<void>;
@@ -42,6 +45,7 @@ interface AuthState {
   _setError: (error: string | null) => void;
 }
 
+/** 認証状態を管理するZustandストア */
 export const useAuthStore = create<AuthState>()(
   devtools(
     (set, _get) => ({
@@ -50,11 +54,14 @@ export const useAuthStore = create<AuthState>()(
       session: null,
       loading: true,
       error: null,
+      _sessionExpired: false,
 
       // Initialize authentication state
       initialize: async () => {
-        // タイムアウト付きでセッション取得（フリーズ防止）
-        const TIMEOUT_MS = 5000;
+        // オフライン時はタイムアウトを延長（偽ログアウト防止）
+        const isOffline =
+          typeof navigator !== 'undefined' && 'onLine' in navigator && !navigator.onLine;
+        const TIMEOUT_MS = isOffline ? 30_000 : 5_000;
 
         try {
           const supabase = createClient();
@@ -95,7 +102,8 @@ export const useAuthStore = create<AuthState>()(
           try {
             const {
               data: { subscription },
-            } = supabase.auth.onAuthStateChange((_event, session) => {
+            } = supabase.auth.onAuthStateChange((event, session) => {
+              const previousUser = _get().user;
               set({
                 session,
                 user: session?.user ?? null,
@@ -106,6 +114,11 @@ export const useAuthStore = create<AuthState>()(
                 Sentry.setUser({ id: session.user.id });
               } else {
                 Sentry.setUser(null);
+              }
+
+              // C2: セッション失効の検出 — 以前ログイン済みだったのに session が消えた場合
+              if (previousUser && !session?.user && event === 'SIGNED_OUT') {
+                set({ _sessionExpired: true });
               }
             });
 
@@ -182,6 +195,7 @@ export const useAuthStore = create<AuthState>()(
               loading: false,
               error: null,
             });
+            captureBusinessEvent('auth.login', { method: 'password' });
           }
 
           return result;
@@ -211,6 +225,8 @@ export const useAuthStore = create<AuthState>()(
           if (result.error) {
             const safeError = getAuthErrorKey(result.error.message, 'oauth');
             set({ error: safeError, loading: false });
+          } else {
+            captureBusinessEvent('auth.login', { method: 'oauth', provider });
           }
 
           return result;
@@ -318,9 +334,15 @@ export const useAuthStore = create<AuthState>()(
   ),
 );
 
-// Selectors for optimized component re-renders
+/** ユーザー情報を選択するセレクター */
 export const selectUser = (state: AuthState) => state.user;
+/** セッション情報を選択するセレクター */
 export const selectSession = (state: AuthState) => state.session;
+/** ローディング状態を選択するセレクター */
 export const selectLoading = (state: AuthState) => state.loading;
+/** エラーメッセージ（i18nキー）を選択するセレクター */
 export const selectError = (state: AuthState) => state.error;
+/** 認証済みかどうかを選択するセレクター */
 export const selectIsAuthenticated = (state: AuthState) => !!state.user;
+/** セッション失効フラグを選択するセレクター */
+export const selectSessionExpired = (state: AuthState) => state._sessionExpired;

@@ -34,19 +34,21 @@ function hasErrorCode(error: unknown): error is Error & { code: string } {
   );
 }
 
-type TRPCErrorCode =
+/** tRPCエラーコードの型定義 */
+export type TRPCErrorCode =
   | 'INTERNAL_SERVER_ERROR'
   | 'NOT_FOUND'
   | 'BAD_REQUEST'
   | 'FORBIDDEN'
-  | 'UNAUTHORIZED';
+  | 'UNAUTHORIZED'
+  | 'CONFLICT';
 
 /**
  * エラーコードとTRPCエラーコードのマッピング
  *
  * 全サービスのエラーコードを一元管理
  */
-const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
+export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== 共通エラー =====
   FETCH_FAILED: 'INTERNAL_SERVER_ERROR',
   NOT_FOUND: 'NOT_FOUND',
@@ -72,9 +74,10 @@ const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== Tag並び替え関連 =====
   REORDER_FAILED: 'INTERNAL_SERVER_ERROR',
 
-  // ===== Plan関連 =====
+  // ===== Entry/Plan関連 =====
   TAG_FILTER_FAILED: 'INTERNAL_SERVER_ERROR',
   TIME_OVERLAP: 'BAD_REQUEST',
+  CONFLICT: 'CONFLICT',
 
   // ===== Plan Transaction関連 =====
   CREATE_WITH_TAGS_FAILED: 'INTERNAL_SERVER_ERROR',

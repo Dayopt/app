@@ -10,12 +10,14 @@
 // Types
 // =============================================================================
 
+/** マイクロインサイトの種別（見積もり精度 / 時間帯充実度 / タグ充実度 / ピーク時間帯） */
 export type MicroInsightType =
   | 'estimation_bias'
   | 'hourly_fulfillment'
   | 'tag_fulfillment'
   | 'peak_hour';
 
+/** Inspector に表示する1行インサイト */
 export interface MicroInsight {
   type: MicroInsightType;
   /** i18n メッセージキー（calendar.stats.insights 配下） */

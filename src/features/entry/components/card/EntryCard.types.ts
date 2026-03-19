@@ -6,6 +6,7 @@ import type { CalendarEvent } from '@/types/calendar-event';
 
 import type { AnchorRect } from '../../stores/useEntryInspectorStore';
 
+/** EntryCardコンポーネントのPropsをまとめた型 */
 export interface EntryCardProps {
   /** エントリデータ */
   entry: CalendarEvent;
@@ -57,6 +58,7 @@ export interface EntryCardProps {
   hourHeight?: number | undefined;
 }
 
+/** カレンダーグリッド上のEntryCardの位置情報（top/left/width/heightはpx or %） */
 export interface EntryCardPosition {
   top: number; // px
   left: number; // %
@@ -65,12 +67,14 @@ export interface EntryCardPosition {
   zIndex?: number;
 }
 
+/** EntryCardのインタラクション状態（選択・ドラッグ・リサイズ） */
 export interface EntryInteractionState {
   isSelected: boolean;
   isDragging: boolean;
   isResizing: boolean;
 }
 
+/** ドラッグ操作の対象エントリと開始位置・元の時間を保持するデータ型 */
 export interface EntryDragData {
   entryId: string;
   startPosition: { x: number; y: number };
@@ -78,6 +82,7 @@ export interface EntryDragData {
   originalEnd: Date;
 }
 
+/** リサイズ操作の対象エントリと方向・元の時間を保持するデータ型 */
 export interface EntryResizeData {
   entryId: string;
   resizeDirection: 'top' | 'bottom';

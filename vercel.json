@@ -4,6 +4,7 @@
   "devCommand": "npm run dev",
   "installCommand": "npm ci",
   "framework": "nextjs",
+  "regions": ["hnd1"],
   "git": {
     "deploymentEnabled": true
   }

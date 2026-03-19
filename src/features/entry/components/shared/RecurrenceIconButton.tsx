@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -60,6 +60,32 @@ export function RecurrenceIconButton({
     return null;
   })();
 
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    if (items.length === 0) return;
+
+    const currentIndex = items.findIndex((item) => item === document.activeElement);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+      items[nextIndex]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+      items[prevIndex]?.focus();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setShowPopover(false);
+    }
+  }, []);
+
+  const handleOpenAutoFocus = useCallback((e: Event) => {
+    e.preventDefault();
+    const menu = (e.target as HTMLElement).querySelector<HTMLElement>('[role="menuitem"]');
+    menu?.focus();
+  }, []);
+
   return (
     <>
       <Popover open={showPopover} onOpenChange={setShowPopover}>
@@ -82,10 +108,19 @@ export function RecurrenceIconButton({
           </button>
         </PopoverTrigger>
 
-        <PopoverContent className="z-overlay-popover w-48 p-1" align="start" sideOffset={4}>
-          <div role="menu" aria-label={t('plan.inspector.recurrence.options')}>
+        <PopoverContent
+          className="z-overlay-popover w-48 p-1"
+          align="start"
+          sideOffset={4}
+          onOpenAutoFocus={handleOpenAutoFocus}
+        >
+          <div
+            role="menu"
+            aria-label={t('plan.inspector.recurrence.options')}
+            onKeyDown={handleMenuKeyDown}
+          >
             <button
-              className="hover:bg-state-hover focus-visible:bg-state-hover flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:outline-none"
+              className="hover:bg-state-hover focus-visible:bg-state-hover focus-visible:ring-ring flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
               onClick={() => {
                 onRepeatTypeChange('');
                 onRecurrenceRuleChange(null);
@@ -101,7 +136,7 @@ export function RecurrenceIconButton({
             {RECURRENCE_OPTIONS.slice(1).map((option) => (
               <button
                 key={option.value}
-                className="hover:bg-state-hover focus-visible:bg-state-hover flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:outline-none"
+                className="hover:bg-state-hover focus-visible:bg-state-hover focus-visible:ring-ring flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 onClick={() => {
                   onRepeatTypeChange(option.value);
                   onRecurrenceRuleChange(null);
@@ -118,7 +153,7 @@ export function RecurrenceIconButton({
             ))}
             <div className="border-border my-1 border-t" />
             <button
-              className="hover:bg-state-hover focus-visible:bg-state-hover flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:outline-none"
+              className="hover:bg-state-hover focus-visible:bg-state-hover focus-visible:ring-ring flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
               onClick={() => {
                 setShowPopover(false);
                 setShowCustomDialog(true);

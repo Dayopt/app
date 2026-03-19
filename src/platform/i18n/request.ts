@@ -51,6 +51,7 @@ async function loadMessages(locale: string): Promise<Record<string, unknown>> {
   return messages;
 }
 
+/** next-intlのリクエスト設定 — ロケールとメッセージをリクエストごとに解決する */
 export default getRequestConfig(async ({ requestLocale }) => {
   // requestLocale は通常、ミドルウェアから提供される
   let locale = await requestLocale;

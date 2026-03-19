@@ -26,9 +26,18 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
+
+import {
+  CACHE_BUSTER,
+  PERSIST_MAX_AGE_MS,
+  queryPersister,
+} from '@/lib/tanstack-query/persist-storage';
+
+import { handleOfflineMutationError } from '@/lib/pwa/offline-mutation';
 
 // axe-core アクセシビリティチェッカー: 開発環境のみ
 const AxeAccessibilityChecker =
@@ -118,6 +127,7 @@ function handleAuthError(error: unknown): void {
   }
 }
 
+/** 認証必須ページ用フルProviders（tRPC・Realtime・テーマ・検索等の全機能を提供） */
 export function Providers({ children }: ProvidersProps) {
   const [queryClient] = useState(
     () =>
@@ -127,12 +137,18 @@ export function Providers({ children }: ProvidersProps) {
           onError: (error) => handleAuthError(error),
         }),
         mutationCache: new MutationCache({
-          onError: (error) => handleAuthError(error),
+          onError: (error, variables, _context, mutation) => {
+            handleAuthError(error);
+            handleOfflineMutationError(error, variables, mutation.options.mutationKey);
+          },
         }),
         defaultOptions: {
           queries: {
+            networkMode: 'offlineFirst', // オフライン時もキャッシュデータを表示
             staleTime: 5 * 60 * 1000, // 5分（一般的なデータのデフォルト）
-            gcTime: 10 * 60 * 1000, // 10分（ガベージコレクション）
+            // PERSIST_MAX_AGE_MS（2時間）以上にする必要がある。
+            // 永続化から復元されたデータが GC される前に読み込まれるために必須。
+            gcTime: PERSIST_MAX_AGE_MS, // 2時間（IndexedDB 永続化と同期）
             refetchOnWindowFocus: true, // 業界標準：タブ切り替え時にstaleなデータのみ再フェッチ
             refetchOnReconnect: 'always',
             retry: (failureCount, error) => {
@@ -145,6 +161,7 @@ export function Providers({ children }: ProvidersProps) {
             retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
           },
           mutations: {
+            networkMode: 'offlineFirst', // オフライン中はpause→復帰時に自動再送
             retry: (failureCount, error) => {
               // 認証エラーはリトライしない
               if (isAuthError(error)) return false;
@@ -182,10 +199,26 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   // Provider階層（最適化済み）
-  // Context Provider: QueryClientProvider → api.Provider → ThemeProvider → GlobalSearchProvider
+  // Context Provider: PersistQueryClientProvider → api.Provider → ThemeProvider → GlobalSearchProvider
   // 非Context: AuthStoreInitializer（並列配置）、RealtimeProvider（ページ別購読）
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        // staticCache の gcTime（2時間）に合わせ、タブを閉じても復元できる期間を確保
+        maxAge: PERSIST_MAX_AGE_MS,
+        // デプロイ毎にキャッシュを破棄（stale なキャッシュを本番で表示しないため）
+        buster: CACHE_BUSTER,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) =>
+            // 成功・データあり のクエリのみ永続化（エラー状態は永続化しない）
+            query.state.status === 'success' && query.state.data !== undefined,
+          // mutation は永続化しない（sync queue で別管理）
+          shouldDehydrateMutation: () => false,
+        },
+      }}
+    >
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {/* 認証ストア初期化（Contextを提供しないので並列配置可能） */}
         <AuthStoreInitializer />
@@ -204,6 +237,6 @@ export function Providers({ children }: ProvidersProps) {
         {/* 開発ツール（開発環境のみ） */}
         {process.env.NODE_ENV === 'development' && <AxeAccessibilityChecker />}
       </api.Provider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

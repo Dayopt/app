@@ -27,6 +27,11 @@ interface NotificationPayload {
   user_id: string;
 }
 
+/**
+ * Supabase Realtime で通知の INSERT を購読し、Toast・ブラウザ通知を表示するフック
+ * @param userId - 購読対象のユーザーID（undefined の場合は購読しない）
+ * @param enabled - false にすると購読を無効化（デフォルト: true）
+ */
 export function useNotificationRealtime(userId: string | undefined, enabled = true) {
   const utils = trpc.useUtils();
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']> | null>(null);

@@ -1,14 +1,15 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { AppHeader } from '@/components/AppHeader';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { isCalendarViewPath } from '@/features/calendar';
-import { AppHeader } from '@/shell/components/AppHeader';
 import { Sidebar } from '@/shell/components/Sidebar';
-import { useLayoutStore } from '@/shell/stores/useLayoutStore';
 import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
@@ -32,11 +33,12 @@ interface MobileLayoutProps {
  * - エレベーション付き
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
-  // selector化: 必要な値だけ監視（他の状態変更時の再レンダリングを防止）
-  const isOpen = useLayoutStore((state) => state.sidebarOpen);
-  const toggle = useLayoutStore((state) => state.toggleSidebar);
-  const close = useLayoutStore((state) => state.closeSidebar);
-  const title = usePageTitleStore((state) => state.title);
+  const tAria = useTranslations('common.aria');
+  // auto-generated selectors: 必要な値だけ監視（他の状態変更時の再レンダリングを防止）
+  const isOpen = useLayoutStore.use.sidebarOpen();
+  const toggle = useLayoutStore.use.toggleSidebar();
+  const close = useLayoutStore.use.closeSidebar();
+  const title = usePageTitleStore.use.title();
 
   // モバイルでの初期表示時にサイドバーを閉じる
   // デスクトップとストアを共有しているため、初期状態がtrueになる問題を解決
@@ -69,7 +71,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
           side="left"
           className="p-0"
           showCloseButton={false}
-          aria-label="Navigation menu"
+          aria-label={tAria('navigationMenu')}
         >
           <Sidebar>
             <SidebarContent />

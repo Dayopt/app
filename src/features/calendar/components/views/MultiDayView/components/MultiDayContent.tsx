@@ -19,6 +19,7 @@ import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 
+/** MultiDayContent コンポーネントのプロパティ */
 interface MultiDayContentProps {
   date: Date;
   entries: CalendarEvent[];
@@ -39,6 +40,7 @@ interface MultiDayContentProps {
 // Component
 // ========================================
 
+/** N日間ビューの1日分のグリッド・エントリ・インタラクションを含むコンポーネント */
 export function MultiDayContent({
   date,
   entries,

@@ -20,7 +20,7 @@ import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from './constants';
 // 日付フォーマット
 // ========================================
 
-/** 日付フォーマットオプション */
+/** `formatDate` 関数に渡すオプション */
 export interface DateFormatOptions {
   /** 年を含めるか（デフォルト: true） */
   includeYear?: boolean;
@@ -86,7 +86,7 @@ export function formatDateISO(date: Date): string {
 // 時刻フォーマット
 // ========================================
 
-/** 時刻フォーマット */
+/** 時刻フォーマットの種別（12時間制 or 24時間制） */
 export type TimeFormat = '12h' | '24h';
 
 /**
@@ -172,7 +172,7 @@ export function formatDateTime(
 // 相対時間フォーマット
 // ========================================
 
-/** 相対時間フォーマットオプション */
+/** `formatRelativeTime` 関数に渡すオプション */
 export interface RelativeTimeOptions {
   /** 基準日時（デフォルト: now） */
   baseDate?: Date;

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { trpc } from '@/platform/trpc/client';
 import { useTagCacheStore } from '../stores/useTagCacheStore';
 
+/** タグマージフック（楽観的更新付き）。ソースタグの関連付けをターゲットに移行して削除する */
 export function useMergeTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');

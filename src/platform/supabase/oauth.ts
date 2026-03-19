@@ -197,6 +197,14 @@ export function createServiceRoleClient(): SupabaseClient<Database> {
       autoRefreshToken: false,
       persistSession: false,
     },
+    global: {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          signal: options?.signal ?? AbortSignal.timeout(15_000),
+        });
+      },
+    },
   });
 }
 

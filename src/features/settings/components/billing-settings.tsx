@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AlertTriangle, Check, CreditCard, RefreshCw, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import {
@@ -69,18 +70,37 @@ const PLANS: Plan[] = [
  */
 const STRIPE_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? '';
 
+/** 請求・サブスクリプション設定コンポーネント。プラン変更・支払方法・請求履歴・キャンセルを管理 */
 export function BillingSettings() {
   const t = useTranslations();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  // チェックアウト結果のフィードバック（URL params処理、データfetchではない）
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true') {
+      toast.success(t('settings.subscription.checkoutSuccess'));
+      router.replace('/settings/subscription', { scroll: false });
+    } else if (canceled === 'true') {
+      toast.info(t('settings.subscription.checkoutCanceled'));
+      router.replace('/settings/subscription', { scroll: false });
+    }
+  }, [searchParams, router, t]);
 
   // 統合エンドポイントで一括取得（N+1 解消）
   const overview = api.billing.getOverview.useQuery(undefined, {
     retry: false,
   });
 
+  const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
   const currentPlan =
-    overview.data?.billingInfo.subscriptionStatus === 'active' ||
-    overview.data?.billingInfo.subscriptionStatus === 'trialing'
+    subscriptionStatus === 'active' ||
+    subscriptionStatus === 'trialing' ||
+    subscriptionStatus === 'past_due'
       ? 'pro'
       : 'free';
 
@@ -106,11 +126,11 @@ export function BillingSettings() {
 
   const handleUpgrade = useCallback(() => {
     if (!STRIPE_PRICE_ID) {
-      toast.error('Stripe is not configured yet');
+      toast.error(t('settings.subscription.stripeNotConfigured'));
       return;
     }
     createCheckout.mutate({ priceId: STRIPE_PRICE_ID });
-  }, [createCheckout]);
+  }, [createCheckout, t]);
 
   const handleManageSubscription = useCallback(() => {
     createPortal.mutate();
@@ -195,11 +215,16 @@ export function BillingSettings() {
                   : t('settings.subscription.freePlanLabel')}
               </h4>
               <Badge variant="secondary">{t('settings.subscription.currentBadge')}</Badge>
+              {subscriptionStatus === 'trialing' && (
+                <Badge variant="outline">{t('settings.subscription.trialBadge')}</Badge>
+              )}
             </div>
             <p className="text-muted-foreground text-sm">
-              {currentPlan === 'pro'
-                ? t('settings.subscription.proPlanDescription')
-                : t('settings.subscription.freePlanDescription')}
+              {subscriptionStatus === 'trialing'
+                ? t('settings.subscription.trialDescription')
+                : currentPlan === 'pro'
+                  ? t('settings.subscription.proPlanDescription')
+                  : t('settings.subscription.freePlanDescription')}
             </p>
           </div>
           {currentPlan === 'pro' && (
@@ -215,8 +240,56 @@ export function BillingSettings() {
         </div>
       </SectionCard>
 
-      {/* プラン変更（Free ユーザーのみ） — 年額トグル削除（P1-7） */}
-      {currentPlan === 'free' && (
+      {/* 支払い失敗警告（past_due 時のみ） */}
+      {subscriptionStatus === 'past_due' && (
+        <SectionCard>
+          <div className="bg-warning/10 flex items-center gap-3 rounded-lg p-4">
+            <AlertTriangle className="text-warning h-5 w-5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{t('settings.subscription.pastDueTitle')}</p>
+              <p className="text-muted-foreground text-sm">
+                {t('settings.subscription.pastDueDescription')}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="ml-auto shrink-0"
+              onClick={handleManageSubscription}
+              disabled={isMutating}
+            >
+              {t('settings.subscription.updatePayment')}
+            </Button>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* キャンセル済み通知（canceled 時のみ） */}
+      {subscriptionStatus === 'canceled' && (
+        <SectionCard>
+          <div className="flex items-center gap-3 rounded-lg p-4">
+            <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{t('settings.subscription.canceledTitle')}</p>
+              <p className="text-muted-foreground text-sm">
+                {t('settings.subscription.canceledDescription')}
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              className="ml-auto shrink-0"
+              disabled={!isStripeConfigured || isMutating}
+              onClick={handleUpgrade}
+            >
+              {isMutating
+                ? t('settings.subscription.processing')
+                : t('settings.subscription.resubscribe')}
+            </Button>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* プラン変更（Free ユーザーのみ — canceled は上で専用UIを表示） */}
+      {currentPlan === 'free' && subscriptionStatus !== 'canceled' && (
         <SectionCard title={t('settings.subscription.selectPlan')}>
           <div className="grid gap-4 md:grid-cols-2">
             {PLANS.map((plan) => (

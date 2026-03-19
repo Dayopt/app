@@ -20,7 +20,7 @@ import { useCallback } from 'react';
 import {
   openTagCreateModal as openTagCreate,
   openTagMergeModal as openTagMerge,
-} from '@/shell/stores/useModalStore';
+} from '@/stores/useModalStore';
 
 export function useTagModalNavigation() {
   /**

@@ -15,6 +15,9 @@
 import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+/** max-h-20 = 5rem = 80px（Tailwind クラスと同期） */
+const TEXTAREA_MAX_HEIGHT = 80;
+
 /** HTML タグを除去してプレーンテキストに変換 */
 function stripHtml(html: string): string {
   if (!html) return '';
@@ -41,6 +44,7 @@ interface NoteSectionProps {
   maxLength?: number;
 }
 
+/** Inspectorのメモ入力行（自動拡張textarea、HTMLタグ自動除去対応） */
 export function NoteSection({
   label,
   icon: Icon,
@@ -62,8 +66,7 @@ export function NoteSection({
     const scrollH = el.scrollHeight;
     el.style.height = `${scrollH}px`;
     // max-height（max-h-20 = 80px）を超えた場合のみスクロール表示
-    const maxH = parseFloat(getComputedStyle(el).maxHeight) || Infinity;
-    if (scrollH > maxH) {
+    if (scrollH > TEXTAREA_MAX_HEIGHT) {
       el.style.overflowY = 'auto';
     }
   }, []);

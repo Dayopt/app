@@ -26,6 +26,7 @@ interface ContactDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/** お問い合わせダイアログのコンテナコンポーネント（tRPC送信・環境情報収集を担当） */
 export function ContactDialog({ open, onOpenChange }: ContactDialogProps) {
   const t = useTranslations();
 

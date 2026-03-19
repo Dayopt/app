@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// 通知タイプ（リマインダー + AI通知）
+/** 通知タイプのZodスキーマ（リマインダー + AI通知） */
 export const notificationTypeSchema = z.enum([
   'reminder',
   'overdue',
@@ -10,24 +10,24 @@ export const notificationTypeSchema = z.enum([
   'energy_insight',
 ]);
 
-// 通知作成
+/** 通知作成リクエストのZodスキーマ */
 export const createNotificationSchema = z.object({
   type: notificationTypeSchema,
   plan_id: z.string().uuid(),
 });
 
-// 通知更新（既読化など）
+/** 通知更新（既読化など）のZodスキーマ */
 export const updateNotificationSchema = z.object({
   is_read: z.boolean().optional(),
   read_at: z.string().datetime().nullable().optional(),
 });
 
-// 通知ID
+/** 通知IDのZodスキーマ */
 export const notificationIdSchema = z.object({
   id: z.string().uuid('validation.invalidUuid'),
 });
 
-// 通知一覧取得オプション
+/** 通知一覧取得オプションのZodスキーマ */
 export const listNotificationsSchema = z.object({
   is_read: z.boolean().optional(),
   type: notificationTypeSchema.optional(),
@@ -35,20 +35,25 @@ export const listNotificationsSchema = z.object({
   offset: z.number().min(0).optional().default(0),
 });
 
-// 一括既読化
+/** 一括既読化リクエストのZodスキーマ */
 export const markAllAsReadSchema = z.object({
   type: notificationTypeSchema.optional(),
 });
 
-// 一括削除
+/** 通知一括削除リクエストのZodスキーマ */
 export const deleteNotificationsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(100),
 });
 
-// 型エクスポート
+/** 通知タイプの型 */
 export type NotificationType = z.infer<typeof notificationTypeSchema>;
+/** 通知作成リクエストの型 */
 export type CreateNotificationInput = z.infer<typeof createNotificationSchema>;
+/** 通知更新リクエストの型 */
 export type UpdateNotificationInput = z.infer<typeof updateNotificationSchema>;
+/** 通知一覧取得オプションの型 */
 export type ListNotificationsInput = z.infer<typeof listNotificationsSchema>;
+/** 一括既読化リクエストの型 */
 export type MarkAllAsReadInput = z.infer<typeof markAllAsReadSchema>;
+/** 通知一括削除リクエストの型 */
 export type DeleteNotificationsInput = z.infer<typeof deleteNotificationsSchema>;

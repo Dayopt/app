@@ -11,12 +11,14 @@ import type { CalendarEvent } from '../types/base.types';
 import { isValidEvent } from '../utils/dateHelpers';
 import { sortAgendaEventsByDateKeys, sortEventsByDateKeys } from '../utils/entrySorting';
 
+/** useEntriesByDate フックのオプション */
 export interface UseEntriesByDateOptions {
   dates: Date[];
   entries: CalendarEvent[];
   sortType?: 'standard' | 'agenda';
 }
 
+/** useEntriesByDate フックの戻り値 */
 export interface UseEntriesByDateReturn {
   entriesByDate: Record<string, CalendarEvent[]>;
   totalEntries: number;

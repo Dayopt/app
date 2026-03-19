@@ -41,7 +41,8 @@ shadow_port = 54320
 major_version = 17
 
 [db.pooler]
-enabled = false
+# ローカルでもPooler有効化。本番はSupabase Dashboard で Transaction Mode Pooler が自動有効。
+enabled = true
 # Port to use for the local connection pooler.
 port = 54329
 # Specifies when a server connection can be reused by other clients.
@@ -52,8 +53,10 @@ default_pool_size = 20
 # Maximum number of client connections allowed.
 max_client_conn = 100
 
-# [db.vault]
-# secret_key = "env(SECRET_VALUE)"
+# Vault: DB レベルの暗号化シークレット管理
+# ローカル開発用。ホスト環境（Staging/Production）では Supabase が自動管理。
+[db.vault]
+secret_key = "env(VAULT_SECRET_KEY)"
 
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.
@@ -234,9 +237,10 @@ inactivity_timeout = "720h"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# JWTにsubscription_statusを埋め込み、proProcedureでの毎リクエストDBクエリを排除
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Send Email Hook: カスタム認証メール送信（Resend経由）
 # ローカルでは無効化（Inbucket使用）。リモートは config push 時に env() で解決。

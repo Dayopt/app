@@ -8,18 +8,21 @@
  * カレンダー機能内部にそのまま残る。ここではストアが型として必要な最小限のみ定義。
  */
 
-// 密度プリセット（デバイス × 密度）
+/** 時間の高さ密度プリセット（デバイス × 密度ごとのピクセル値） */
 export const HOUR_HEIGHT_DENSITIES = {
   compact: { mobile: 36, tablet: 40, desktop: 48 },
   default: { mobile: 48, tablet: 60, desktop: 72 },
   spacious: { mobile: 64, tablet: 80, desktop: 96 },
 } as const;
 
+/** 時間の高さ密度のキー型 */
 export type HourHeightDensity = keyof typeof HOUR_HEIGHT_DENSITIES;
 
-// カレンダービュー型（共有ストアとfeature双方が参照するため共有層に配置）
+/** 複数日ビューで表示可能な日数（2〜9） */
 export type MultiDayCount = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+/** 複数日ビューの型（例: '3day', '5day'） */
 export type MultiDayViewType = `${MultiDayCount}day`;
+/** カレンダービューの種類 */
 export type CalendarViewType = 'day' | 'week' | MultiDayViewType;
 
 /** MultiDayView（2day〜9day）かどうかを判定 */

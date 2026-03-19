@@ -6,6 +6,7 @@
 
 import { memo } from 'react';
 
+/** TimeLabel コンポーネントのプロパティ */
 interface TimeLabelProps {
   hour: number;
   label: string;
@@ -15,6 +16,7 @@ interface TimeLabelProps {
   isLast: boolean;
 }
 
+/** 時間グリッドの個別時間ラベルを表示するコンポーネント */
 export const TimeLabel = memo<TimeLabelProps>(function TimeLabel({
   hour,
   label,

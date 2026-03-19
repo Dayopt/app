@@ -2,12 +2,12 @@ import type { CSSProperties } from 'react';
 
 import type { BaseEntryPosition, CalendarEvent, DateTimeSelection, GridViewProps } from '../shared';
 
-// WeekViewの固有Props（GridViewPropsを継承して時間グリッド機能を使用）
+/** WeekView の固有Props（GridViewPropsを継承して時間グリッド機能を使用） */
 export interface WeekViewProps extends GridViewProps {
   weekStartsOn?: 0 | 1 | 6; // 0: 日曜始まり, 1: 月曜始まり, 6: 土曜始まり
 }
 
-// WeekGridコンポーネントのProps
+/** WeekGrid コンポーネントのプロパティ */
 export interface WeekGridProps {
   weekDates: Date[];
   events: CalendarEvent[];
@@ -24,7 +24,7 @@ export interface WeekGridProps {
   className?: string | undefined;
 }
 
-// useWeekViewフックのオプション
+/** useWeekView フックのオプション */
 export interface UseWeekViewOptions {
   startDate: Date;
   events: CalendarEvent[];
@@ -32,7 +32,7 @@ export interface UseWeekViewOptions {
   onEventUpdate?: (entry: CalendarEvent) => void;
 }
 
-// useWeekViewフックの返却値
+/** useWeekView フックの戻り値 */
 export interface UseWeekViewReturn {
   weekDates: Date[];
   eventsByDate: Record<string, CalendarEvent[]>;
@@ -41,7 +41,7 @@ export interface UseWeekViewReturn {
   isCurrentWeek: boolean;
 }
 
-// useWeekEntriesフックのオプション
+/** useWeekEntries フックのオプション */
 export interface UseWeekEntriesOptions {
   weekDates: Date[];
   events: CalendarEvent[];
@@ -49,20 +49,19 @@ export interface UseWeekEntriesOptions {
   timezone: string;
 }
 
-// useWeekEntriesフックの返却値
+/** useWeekEntries フックの戻り値 */
 export interface UseWeekEntriesReturn {
   entriesByDate: Record<string, CalendarEvent[]>;
   entryPositions: WeekEntryPosition[];
   maxConcurrentEntries: number;
 }
 
-// 週ビューでのエントリ位置情報
-// WeekEntryPositionはBaseEntryPositionにdayIndexを追加
+/** 週ビューでのエントリ位置情報（BaseEntryPosition に dayIndex を追加） */
 export interface WeekEntryPosition extends BaseEntryPosition {
   dayIndex: number;
 }
 
-// 時間スロット情報
+/** 週ビューの時間スロット情報 */
 export interface WeekTimeSlot {
   time: string;
   hour: number;
@@ -73,7 +72,7 @@ export interface WeekTimeSlot {
   isQuarterHour: boolean;
 }
 
-// 週ビューの設定
+/** 週ビューの表示設定 */
 export interface WeekViewSettings {
   startHour: number;
   endHour: number;
@@ -87,7 +86,7 @@ export interface WeekViewSettings {
   weekStartsOn: 0 | 1 | 6;
 }
 
-// 日付ヘッダーの情報
+/** 週ビューの日付ヘッダー情報 */
 export interface WeekDateDisplay {
   date: Date;
   dayName: string;
@@ -98,7 +97,7 @@ export interface WeekDateDisplay {
   eventCount: number;
 }
 
-// イベントのスタイル情報
+/** 週ビューのイベントスタイル情報 */
 export interface WeekEventStyle {
   position: CSSProperties;
   color: string;

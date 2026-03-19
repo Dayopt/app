@@ -1,3 +1,5 @@
+import { env } from '@/env';
+
 /**
  * アプリのベースURLを取得する
  * 優先順位: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
@@ -6,7 +8,7 @@
  * VERCEL_URL（サーバーのみ利用可能）のフォールバックが動作する
  */
 export function getAppUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (env.NEXT_PUBLIC_APP_URL) return env.NEXT_PUBLIC_APP_URL;
+  if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
   return 'http://localhost:3000';
 }

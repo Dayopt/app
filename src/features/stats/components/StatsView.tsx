@@ -114,7 +114,7 @@ export function StatsView({ className }: StatsViewProps) {
 
   return (
     <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
-      <div className="flex-1 overflow-y-auto">
+      <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
           {/* タグ別時間内訳 */}
           <TagBreakdownBar segments={tagSegments} />

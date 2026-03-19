@@ -5,7 +5,7 @@
 
 import { logger } from '@/lib/logger';
 
-// サポートするタイムゾーンの定義
+/** アプリでサポートするタイムゾーン一覧（value・ラベル・オフセット付き） */
 export const SUPPORTED_TIMEZONES = [
   {
     value: 'Asia/Tokyo',
@@ -63,6 +63,7 @@ export const SUPPORTED_TIMEZONES = [
   },
 ] as const;
 
+/** サポートされているタイムゾーン値のユニオン型 */
 export type TimezoneValue = (typeof SUPPORTED_TIMEZONES)[number]['value'];
 
 /**

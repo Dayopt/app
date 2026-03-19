@@ -21,6 +21,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+/** 曜日別の記録時間を棒グラフで表示 */
 export function DayOfWeekChart() {
   const t = useTranslations('calendar.stats.charts');
   const currentDate = useStatsFilterStore((s) => s.currentDate);

@@ -9,6 +9,11 @@
  * - 破壊的変更がない限りキャッシュは引き継ぐ
  */
 
+// SW内ログ: 開発時のみ出力（本番ではno-op）
+const __SW_DEBUG__ = typeof location !== 'undefined' && location.hostname === 'localhost';
+const swLog = __SW_DEBUG__ ? console.log.bind(console) : () => {};
+const swError = console.error.bind(console); // エラーは常に出力
+
 // キャッシュバージョン: 破壊的変更時のみインクリメント
 const CACHE_VERSION = '2';
 const CACHE_NAME = `dayopt-v${CACHE_VERSION}`;
@@ -50,7 +55,7 @@ self.addEventListener('install', (event) => {
     caches
       .open(STATIC_CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching static assets');
+        swLog('[SW] Caching static assets');
         return cache.addAll(STATIC_ASSETS);
       })
       .then(() => self.skipWaiting()),
@@ -76,7 +81,7 @@ self.addEventListener('activate', (event) => {
               );
             })
             .map((name) => {
-              console.log('[SW] Deleting old cache:', name);
+              swLog('[SW] Deleting old cache:', name);
               return caches.delete(name);
             }),
         );
@@ -211,4 +216,127 @@ self.addEventListener('message', (event) => {
       }),
     );
   }
+
+  // iOS Safari SW キャッシュ7日制限対策: keep-alive ping
+  if (event.data && event.data.type === 'KEEP_ALIVE') {
+    // SWがアクティブ状態を維持するだけで十分
+    swLog('[SW] Keep-alive ping received');
+  }
 });
+
+/**
+ * Background Sync ハンドラー
+ *
+ * オフライン時にキューに蓄積されたmutationを
+ * オンライン復帰時にバックグラウンドで再送する
+ */
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'dayopt-sync-mutations') {
+    event.waitUntil(processSyncQueue());
+  }
+});
+
+/**
+ * 同期キューの処理
+ *
+ * IndexedDBからpendingのmutationを取得し、
+ * 順番に送信する。失敗した場合はリトライカウントを増やす。
+ */
+async function processSyncQueue() {
+  const DB_NAME = 'dayopt-sync';
+  const STORE_NAME = 'mutations';
+
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const entries = await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    const pending = entries.filter((e) => e.status === 'pending');
+
+    for (const entry of pending) {
+      try {
+        // ステータスを processing に更新
+        await updateEntryStatus(db, STORE_NAME, entry.id, 'processing');
+
+        // クライアントにsyncリクエストを通知
+        const clients = await self.clients.matchAll();
+        for (const client of clients) {
+          client.postMessage({
+            type: 'SYNC_MUTATION',
+            payload: entry,
+          });
+        }
+
+        // 送信成功 → 削除
+        await deleteEntry(db, STORE_NAME, entry.id);
+      } catch (error) {
+        swError('[SW] Sync failed for entry:', entry.id, error);
+
+        const newRetryCount = entry.retryCount + 1;
+        const newStatus = newRetryCount >= entry.maxRetries ? 'failed' : 'pending';
+        await updateEntryInDB(db, STORE_NAME, entry.id, {
+          retryCount: newRetryCount,
+          status: newStatus,
+        });
+      }
+    }
+
+    db.close();
+  } catch (error) {
+    swError('[SW] processSyncQueue error:', error);
+  }
+}
+
+function updateEntryStatus(db, storeName, id, status) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const entry = getReq.result;
+      if (entry) {
+        entry.status = status;
+        store.put(entry);
+      }
+      resolve();
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+function updateEntryInDB(db, storeName, id, update) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const entry = getReq.result;
+      if (entry) {
+        Object.assign(entry, update);
+        store.put(entry);
+      }
+      resolve();
+    };
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+function deleteEntry(db, storeName, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}

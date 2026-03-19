@@ -5,10 +5,7 @@
 
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-/**
- * イベントを時刻順でソート（基本パターン）
- * WeekView, MultiDayView で使用
- */
+/** イベントを開始時刻順でソート（WeekView / MultiDayViewで使用） */
 export function sortEventsByTime(events: CalendarEvent[]): CalendarEvent[] {
   return [...events].sort((a, b) => {
     const aTime = a.startDate ? a.startDate.getTime() : 0;
@@ -17,10 +14,7 @@ export function sortEventsByTime(events: CalendarEvent[]): CalendarEvent[] {
   });
 }
 
-/**
- * 日付キーごとのイベントをソート
- * Record<string, CalendarEvent[]>形式のデータで使用
- */
+/** 日付キー別イベントマップをそれぞれ時刻順でソート */
 export function sortEventsByDateKeys(
   eventsByDate: Record<string, CalendarEvent[]>,
 ): Record<string, CalendarEvent[]> {
@@ -33,16 +27,12 @@ export function sortEventsByDateKeys(
   return sorted;
 }
 
-/**
- * AgendaView用ソート（時刻順）
- */
+/** AgendaView用のイベントソート（時刻順） */
 export function sortEventsForAgenda(events: CalendarEvent[]): CalendarEvent[] {
   return sortEventsByTime(events);
 }
 
-/**
- * 日付キーごとのイベントをAgenda用ソート
- */
+/** 日付キー別イベントマップをAgendaView用にソート */
 export function sortAgendaEventsByDateKeys(
   eventsByDate: Record<string, CalendarEvent[]>,
 ): Record<string, CalendarEvent[]> {

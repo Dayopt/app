@@ -7,8 +7,10 @@
  * - 必須Cookieは常に有効（無効化不可）
  */
 
+/** Cookieのカテゴリ種別 */
 export type CookieCategory = 'necessary' | 'analytics' | 'marketing';
 
+/** Cookie同意の状態を表すインターフェース */
 export interface CookieConsent {
   necessary: boolean; // 常にtrue（無効化不可）
   analytics: boolean;

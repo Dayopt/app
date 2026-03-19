@@ -86,6 +86,27 @@
 }
 
 /* ============================================
+ * Scrollbar CLS 防止
+ *
+ * スクロールバー出現/消滅時のレイアウトシフトを防ぐ。
+ * メインコンテンツ領域などのスクロールコンテナに適用。
+ * ポップオーバー等の小さな要素には使用しないこと。
+ * ============================================ */
+@utility scrollbar-stable {
+  scrollbar-gutter: stable;
+}
+
+/* ============================================
+ * ボーダーインジケータ
+ *
+ * カレンダーエントリの左端アクセント線。
+ * 3px幅は8pxグリッド外だが、視覚的アクセントとして定義。
+ * ============================================ */
+@utility border-l-indicator {
+  border-left-width: var(--border-indicator);
+}
+
+/* ============================================
  * Physical Elevation ユーティリティ
  *
  * 3段階のサーフェスロール（物理照明ベース）。
@@ -116,4 +137,32 @@
 @utility surface-raised-heavy {
   background-image: var(--elevation-gradient-card);
   box-shadow: var(--elevation-raised-heavy);
+}
+
+/* ============================================
+ * Glassmorphism ユーティリティ
+ *
+ * 3段階の透明度。デフォルト blur は --glass-blur-md (16px)。
+ * blur を変更したい場合は backdrop-blur-* を併用:
+ *   class="glass-light backdrop-blur-sm"
+ * ============================================ */
+@utility glass-light {
+  background-color: var(--glass-bg-light);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: 1px solid var(--glass-border);
+}
+
+@utility glass-medium {
+  background-color: var(--glass-bg-medium);
+  backdrop-filter: blur(var(--glass-blur-md));
+  -webkit-backdrop-filter: blur(var(--glass-blur-md));
+  border: 1px solid var(--glass-border);
+}
+
+@utility glass-heavy {
+  background-color: var(--glass-bg-heavy);
+  backdrop-filter: blur(var(--glass-blur-lg));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+  border: 1px solid var(--glass-border);
 }

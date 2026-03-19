@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useReducedMotion } from './useReducedMotion';
 
 /**
@@ -32,14 +32,20 @@ export function useHapticFeedback() {
     return 'vibrate' in navigator;
   }, [prefersReducedMotion]);
 
+  /** tap スロットル用（ドラッグ中の過剰呼び出し防止） */
+  const lastTapTime = useRef(0);
+
   /**
    * 軽いタップフィードバック（ボタンクリック等）
    * 10ms - Apple HIG推奨の「Light」相当
+   * 100ms スロットル: ドラッグ中の連続呼び出しを抑制
    */
   const tap = useCallback(() => {
-    if (isSupported) {
-      navigator.vibrate(10);
-    }
+    if (!isSupported) return;
+    const now = performance.now();
+    if (now - lastTapTime.current < 100) return;
+    lastTapTime.current = now;
+    navigator.vibrate(10);
   }, [isSupported]);
 
   /**

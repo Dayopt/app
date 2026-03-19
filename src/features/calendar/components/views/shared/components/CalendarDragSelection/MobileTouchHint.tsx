@@ -19,17 +19,6 @@ import { cn } from '@/lib/utils';
 const STORAGE_KEY = 'calendar-mobile-hint-dismissed';
 const AUTO_DISMISS_MS = 15_000;
 
-/**
- * 長押しによるエントリ作成成功時にヒントを永続的に非表示にする
- */
-export function dismissMobileTouchHintPermanently(): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, 'true');
-  } catch {
-    // localStorage アクセスエラーは無視
-  }
-}
-
 interface MobileTouchHintProps {
   className?: string;
 }
@@ -83,7 +72,7 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
       className={cn(
         'fixed right-4 bottom-20 left-4 z-50',
         'bg-primary text-primary-foreground',
-        'rounded-2xl px-4 py-4 shadow-lg',
+        'surface-raised rounded-2xl px-4 py-4',
         'animate-in slide-in-from-bottom-4 fade-in duration-150',
         className,
       )}

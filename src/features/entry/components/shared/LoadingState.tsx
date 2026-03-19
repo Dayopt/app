@@ -64,6 +64,7 @@ function FormSkeleton() {
   );
 }
 
+/** Board/Table/Form用のスケルトンローディング表示コンポーネント（card/list/form の3種類対応） */
 export function LoadingState({ count = 3, type = 'card' }: LoadingStateProps) {
   const SkeletonComponent = {
     card: CardSkeleton,

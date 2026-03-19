@@ -21,6 +21,7 @@ interface DateRowProps {
   minDate?: Date | undefined;
 }
 
+/** Inspectorの日付選択行（アイコン + ラベル + DatePickerPopover） */
 export function DateRow({
   label,
   icon: Icon,

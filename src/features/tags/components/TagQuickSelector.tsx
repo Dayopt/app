@@ -9,7 +9,7 @@
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { Plus, Search, X } from 'lucide-react';
@@ -30,7 +30,7 @@ import type { Tag } from '../types';
 
 import { TagRadioItem } from './TagRadioItem';
 
-/** タグゼロ時に表示するサンプルタグ候補 */
+/** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
 const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName }> = [
   { nameKey: 'work', color: 'blue' },
   { nameKey: 'study', color: 'indigo' },
@@ -61,6 +61,7 @@ function TagQuickSelectorContent({
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [newTagName, setNewTagName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -70,12 +71,12 @@ function TagQuickSelectorContent({
     return [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [tags]);
 
-  // 検索フィルタリング
+  // 検索フィルタリング（deferred でグルーピング計算の頻度を抑制）
   const filteredTags = useMemo(() => {
-    if (!searchQuery) return sortedTags;
-    const q = searchQuery.toLowerCase();
+    if (!deferredSearchQuery) return sortedTags;
+    const q = deferredSearchQuery.toLowerCase();
     return sortedTags.filter((tag) => tag.name.toLowerCase().includes(q));
-  }, [sortedTags, searchQuery]);
+  }, [sortedTags, deferredSearchQuery]);
 
   // コロン記法でグルーピング
   // prefix と完全一致するタグがあれば親タグとして使用
@@ -306,6 +307,7 @@ function calcAnchoredPosition(anchorRect: DOMRect, panelWidth: number) {
   return { top, left };
 }
 
+/** タグ選択フローティングパネル。モバイルはDrawer、PCはアンカー横フローティング */
 export function TagQuickSelector({
   open,
   onOpenChange,
@@ -396,7 +398,7 @@ export function TagQuickSelector({
         aria-modal="false"
         aria-label={t('tagSelector.title')}
         className={cn(
-          'bg-card border-border absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border shadow-xl',
+          'bg-card border-border surface-raised-heavy absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border',
           'animate-in fade-in duration-150',
         )}
         style={position ? { top: position.top, left: position.left } : undefined}

@@ -65,6 +65,10 @@ export interface UseTimeComboboxReturn {
   handleOpenChange: (open: boolean) => void;
 }
 
+/** 15分刻み時刻選択コンボボックスのロジックフック（キーボード操作・ドロップダウン管理）
+ * @param options - value, onChange, minTime
+ * @returns isOpen, listRef, optionRefs, filteredOptions, highlightedIndex および各ハンドラー
+ */
 export function useTimeCombobox({
   value,
   onChange,

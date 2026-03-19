@@ -20,6 +20,7 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';
 
+/** フィルターアイテムコンポーネントのプロパティ */
 export interface FilterItemProps {
   label: string;
   tagId?: string;
@@ -36,6 +37,7 @@ export interface FilterItemProps {
   onShowOnlyThis?: () => void;
 }
 
+/** カレンダーフィルターの単一タグ行コンポーネント（チェックボックス・色変更・メニュー付き） */
 export function FilterItem({
   label,
   tagId,
@@ -149,7 +151,7 @@ export function FilterItem({
             <button
               type="button"
               aria-label={t('calendar.filter.tagMenu')}
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-['']"
+              className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />

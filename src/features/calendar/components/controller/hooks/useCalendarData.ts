@@ -38,6 +38,11 @@ interface UseCalendarDataResult {
   isEntriesLoading: boolean;
 }
 
+/**
+ * カレンダーデータ取得・変換フック
+ *
+ * ビュータイプと日付からエントリを取得し、CalendarEvent型に変換・フィルタリングして返す
+ */
 export function useCalendarData({
   viewType,
   currentDate,

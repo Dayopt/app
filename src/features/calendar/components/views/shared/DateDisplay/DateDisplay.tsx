@@ -126,6 +126,7 @@ const DateMainDisplay = ({
   </div>
 );
 
+/** 日付（曜日・日付・月年）を表示するコンポーネント */
 export const DateDisplay = ({
   date,
   className,

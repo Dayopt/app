@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { generateTimeSlots } from '../../../../lib/grid';
 import type { TimeSlot } from '../types/grid.types';
 
+/** useTimeSlots フックのオプション */
 interface UseTimeSlotsOptions {
   startHour?: number;
   endHour?: number;

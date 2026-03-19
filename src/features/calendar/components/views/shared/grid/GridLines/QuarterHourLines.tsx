@@ -8,6 +8,7 @@ import { memo } from 'react';
 
 import { useTimeGrid } from '../../hooks/useTimeGrid';
 
+/** QuarterHourLines コンポーネントのプロパティ */
 interface QuarterHourLinesProps {
   startHour?: number;
   endHour?: number;
@@ -15,6 +16,7 @@ interface QuarterHourLinesProps {
   className?: string;
 }
 
+/** 15分ごとの薄い点線を描画するコンポーネント */
 export const QuarterHourLines = memo<QuarterHourLinesProps>(function QuarterHourLines({
   startHour = 0,
   endHour = 24,

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
-import QRCode from 'qrcode';
 
 import { logger } from '@/lib/logger';
+import { captureBusinessEvent } from '@/platform/sentry';
 import { createClient } from '@/platform/supabase/client';
 
 interface MFAState {
@@ -156,6 +156,7 @@ export function useMFA(): UseMFAReturn {
       if (data) {
         setFactorId(data.id);
         setSecret(data.totp.secret);
+        const { default: QRCode } = await import('qrcode');
         const qrCodeDataUrl = await QRCode.toDataURL(data.totp.uri);
         setQrCode(qrCodeDataUrl);
         setShowMFASetup(true);
@@ -219,6 +220,7 @@ export function useMFA(): UseMFAReturn {
         setRecoveryCodeCount(codes.length);
       }
 
+      captureBusinessEvent('account.mfa_changed', { action: 'enroll' });
       setSuccess(t('common.errors.mfa.enabled'));
       setHasMFA(true);
       setShowMFASetup(false);
@@ -309,6 +311,7 @@ export function useMFA(): UseMFAReturn {
           throw new Error(`${t('common.errors.mfa.disableFailed')}: ${unenrollError.message}`);
         }
 
+        captureBusinessEvent('account.mfa_changed', { action: 'unenroll' });
         setSuccess(t('common.errors.mfa.disabled'));
         setHasMFA(false);
         setShowDisableDialog(false);

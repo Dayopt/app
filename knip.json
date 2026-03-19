@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,loading,error,not-found,default,template,route,global-error,opengraph-image,sitemap}.{ts,tsx}"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/**/*.stories.tsx",
+    "src/**/*.test.{ts,tsx}",
+    "src/**/*.spec.{ts,tsx}",
+    "src/stories/**",
+    "src/test/**",
+    "src/emails/**"
+  ],
+  "ignoreDependencies": [
+    "@axe-core/react",
+    "@next/bundle-analyzer",
+    "@storybook/*",
+    "@vueless/storybook-dark-mode",
+    "husky",
+    "storybook"
+  ]
+}

@@ -27,6 +27,7 @@ interface TimeRowProps {
   isPrimary?: boolean;
 }
 
+/** Inspectorの時間入力行（開始・終了のTimeSelect × 2、予定行・記録行共用） */
 export function TimeRow({
   label,
   icon: Icon,
@@ -79,6 +80,7 @@ interface TimeRowPlaceholderProps {
   muted?: boolean;
 }
 
+/** 時間未設定時のプレースホルダー表示行（メッセージのみ、TimeSelectなし） */
 export function TimeRowPlaceholder({
   label,
   icon: Icon,

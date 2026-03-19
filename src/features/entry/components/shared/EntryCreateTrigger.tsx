@@ -13,6 +13,7 @@ interface EntryCreateTriggerProps {
   initialDate?: Date;
 }
 
+/** 任意のトリガー要素にエントリ作成フローを付与するコンポーネント（空きスロット検索→作成→Inspectorオープン） */
 export function EntryCreateTrigger({
   triggerElement,
   onSuccess,

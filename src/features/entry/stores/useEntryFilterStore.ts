@@ -44,6 +44,7 @@ interface EntryFilterState extends BaseFilterState {
  * Board/Table間でフィルター状態を共有
  * LocalStorageで永続化
  */
+/** エントリフィルターストア（Board/Table間の共有、LocalStorage永続化） */
 export const useEntryFilterStore = createFilterStore<EntryFilterState>({
   name: 'plan-filter',
   initialState: {

@@ -23,8 +23,10 @@ import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
+import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import type { Context } from '@/platform/trpc/procedures';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import * as Sentry from '@sentry/nextjs';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {
@@ -42,7 +44,16 @@ const APP_URL = getAppUrl();
 async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<void> {
   const {
     data: { user },
+    error,
   } = await ctx.supabase.auth.getUser();
+
+  if (error) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: `Failed to fetch user info: ${error.message}`,
+      cause: error,
+    });
+  }
 
   if (!user?.email || user.email !== inputEmail) {
     throw new TRPCError({
@@ -53,7 +64,29 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
 }
 
 /**
+ * サプレッションリストをチェックし、送信をスキップすべきか判定
+ */
+async function isEmailSuppressed(email: string): Promise<boolean> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase
+    .from('email_suppressions')
+    .select('reason')
+    .eq('email', email.toLowerCase())
+    .limit(1);
+
+  if (error) {
+    logger.error('Failed to check email suppression', { email, error });
+    // チェック失敗時は送信を許可（可用性優先）
+    return false;
+  }
+
+  return data.length > 0;
+}
+
+/**
  * Resend APIでメールを送信する共通ヘルパー
+ *
+ * サプレッションリスト（バウンス/苦情）に含まれるアドレスへの送信をスキップ
  */
 async function sendEmail({
   to,
@@ -66,6 +99,12 @@ async function sendEmail({
   react: React.ReactElement;
   context: string;
 }) {
+  // サプレッションチェック
+  if (await isEmailSuppressed(to)) {
+    logger.warn(`${context} skipped: email suppressed`, { to });
+    return { success: true as const, emailId: undefined, suppressed: true as const };
+  }
+
   const { data, error } = await getResend().emails.send({
     from: `Dayopt <${FROM_EMAIL}>`,
     to,
@@ -85,14 +124,28 @@ async function sendEmail({
   return { success: true as const, emailId: data?.id };
 }
 
-/**
- * Email Router
- */
+/** メール操作の共通エラーハンドラ */
+function handleEmailError(operation: string, error: unknown): never {
+  if (error instanceof TRPCError) throw error;
+  Sentry.captureException(error, { tags: { source: 'email_router', operation } });
+  logger.error('Email operation failed', {
+    operation,
+    error: error instanceof Error ? error.message : String(error),
+  });
+  throw new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: `Email operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    cause: error,
+  });
+}
+
+/** メール送信（ウェルカム / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
 export const emailRouter = createTRPCRouter({
   /**
    * ウェルカムメール送信
    */
   sendWelcome: protectedProcedure
+    .meta({ description: 'ウェルカムメール送信' })
     .input(
       z.object({
         email: z.string().email('Invalid email address'),
@@ -100,15 +153,19 @@ export const emailRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await verifyEmailOwnership(ctx, input.email);
-      logger.info('Sending welcome email', { email: input.email, userId: ctx.userId });
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending welcome email', { email: input.email, userId: ctx.userId });
 
-      return sendEmail({
-        to: input.email,
-        subject: 'Welcome to Dayopt!',
-        react: WelcomeEmail({ userName: input.userName, appUrl: APP_URL }),
-        context: 'Welcome email',
-      });
+        return sendEmail({
+          to: input.email,
+          subject: 'Welcome to Dayopt!',
+          react: WelcomeEmail({ userName: input.userName, appUrl: APP_URL }),
+          context: 'Welcome email',
+        });
+      } catch (error) {
+        return handleEmailError('sendWelcome', error);
+      }
     }),
 
   /**
@@ -118,6 +175,7 @@ export const emailRouter = createTRPCRouter({
    * ユーザーに対して送信。check-reminders Edge Function から呼び出し可能。
    */
   sendReminder: protectedProcedure
+    .meta({ description: 'プランリマインダーメール送信' })
     .input(
       z.object({
         email: z.string().email(),
@@ -127,26 +185,31 @@ export const emailRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await verifyEmailOwnership(ctx, input.email);
-      logger.info('Sending reminder email', { planTitle: input.planTitle, userId: ctx.userId });
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending reminder email', { planTitle: input.planTitle, userId: ctx.userId });
 
-      return sendEmail({
-        to: input.email,
-        subject: `Reminder: ${input.planTitle}`,
-        react: ReminderEmail({
-          userName: input.userName,
-          planTitle: input.planTitle,
-          startTime: input.startTime,
-          appUrl: APP_URL,
-        }),
-        context: 'Reminder email',
-      });
+        return sendEmail({
+          to: input.email,
+          subject: `Reminder: ${input.planTitle}`,
+          react: ReminderEmail({
+            userName: input.userName,
+            planTitle: input.planTitle,
+            startTime: input.startTime,
+            appUrl: APP_URL,
+          }),
+          context: 'Reminder email',
+        });
+      } catch (error) {
+        return handleEmailError('sendReminder', error);
+      }
     }),
 
   /**
    * 期限超過通知メール送信
    */
   sendOverdue: protectedProcedure
+    .meta({ description: '期限超過通知メール送信' })
     .input(
       z.object({
         email: z.string().email(),
@@ -156,26 +219,31 @@ export const emailRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await verifyEmailOwnership(ctx, input.email);
-      logger.info('Sending overdue email', { planTitle: input.planTitle, userId: ctx.userId });
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending overdue email', { planTitle: input.planTitle, userId: ctx.userId });
 
-      return sendEmail({
-        to: input.email,
-        subject: `Overdue: ${input.planTitle}`,
-        react: OverdueEmail({
-          userName: input.userName,
-          planTitle: input.planTitle,
-          endTime: input.endTime,
-          appUrl: APP_URL,
-        }),
-        context: 'Overdue email',
-      });
+        return sendEmail({
+          to: input.email,
+          subject: `Overdue: ${input.planTitle}`,
+          react: OverdueEmail({
+            userName: input.userName,
+            planTitle: input.planTitle,
+            endTime: input.endTime,
+            appUrl: APP_URL,
+          }),
+          context: 'Overdue email',
+        });
+      } catch (error) {
+        return handleEmailError('sendOverdue', error);
+      }
     }),
 
   /**
    * アカウント削除確認メール送信 (GDPR対応)
    */
   sendAccountDeletion: protectedProcedure
+    .meta({ description: 'アカウント削除確認メール送信（GDPR対応）' })
     .input(
       z.object({
         email: z.string().email(),
@@ -183,29 +251,34 @@ export const emailRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await verifyEmailOwnership(ctx, input.email);
-      logger.info('Sending account deletion email', { userId: ctx.userId });
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending account deletion email', { userId: ctx.userId });
 
-      return sendEmail({
-        to: input.email,
-        subject: 'Your Dayopt account has been deleted',
-        react: AccountDeletionEmail({
-          userName: input.userName,
-          deletionDate: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
+        return sendEmail({
+          to: input.email,
+          subject: 'Your Dayopt account has been deleted',
+          react: AccountDeletionEmail({
+            userName: input.userName,
+            deletionDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            appUrl: APP_URL,
           }),
-          appUrl: APP_URL,
-        }),
-        context: 'Account deletion email',
-      });
+          context: 'Account deletion email',
+        });
+      } catch (error) {
+        return handleEmailError('sendAccountDeletion', error);
+      }
     }),
 
   /**
    * テストメール送信（開発用）
    */
   sendTest: protectedProcedure
+    .meta({ description: 'テストメール送信（開発環境のみ）', deprecated: true })
     .input(
       z.object({
         to: z.string().email('Invalid email address'),
@@ -213,24 +286,28 @@ export const emailRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      // 本番環境では無効化
-      if (process.env.NODE_ENV === 'production') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Test endpoint is not available in production',
+      try {
+        // 本番環境では無効化
+        if (process.env.NODE_ENV === 'production') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Test endpoint is not available in production',
+          });
+        }
+
+        logger.info('Sending test email', { to: input.to });
+
+        return sendEmail({
+          to: input.to,
+          subject: input.subject,
+          react: WelcomeEmail({
+            userName: 'Test User',
+            appUrl: getAppUrl(),
+          }),
+          context: 'Test email',
         });
+      } catch (error) {
+        return handleEmailError('sendTest', error);
       }
-
-      logger.info('Sending test email', { to: input.to });
-
-      return sendEmail({
-        to: input.to,
-        subject: input.subject,
-        react: WelcomeEmail({
-          userName: 'Test User',
-          appUrl: getAppUrl(),
-        }),
-        context: 'Test email',
-      });
     }),
 });

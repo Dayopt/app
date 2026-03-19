@@ -27,6 +27,7 @@ interface OnboardingWizardProps {
   isCompleting: boolean;
 }
 
+/** オンボーディングウィザードのメインコンポーネント（ステップ管理と各ステップの描画を担当） */
 export function OnboardingWizard({
   initialName,
   cardData,

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-// ビュータイプの定義
+/** カレンダービュータイプ */
 export type CalendarView =
   | 'day'
   | 'split-day'
@@ -10,10 +10,10 @@ export type CalendarView =
   | 'week-no-weekend'
   | 'schedule';
 
-// 方向の定義
+/** スライドアニメーションの方向 */
 export type SlideDirection = 'left' | 'right' | 'up' | 'down';
 
-// GPU加速用のスタイル定数
+/** GPU加速用のスタイル定数 */
 export const GPU_OPTIMIZED_STYLES = {
   willChange: 'transform, opacity' as const,
   backfaceVisibility: 'hidden' as const,
@@ -21,7 +21,7 @@ export const GPU_OPTIMIZED_STYLES = {
   transformStyle: 'preserve-3d' as const,
 };
 
-// アニメーション設定
+/** アニメーション設定（ビュー切り替え・スライド・イベント展開等） */
 export const ANIMATION_CONFIG = {
   // ビュー切り替え
   viewTransition: {
@@ -49,7 +49,7 @@ export const ANIMATION_CONFIG = {
   },
 } as const;
 
-// Props型定義
+/** AdvancedViewTransition コンポーネントのプロパティ */
 export interface AdvancedViewTransitionProps {
   currentView: CalendarView;
   children: ReactNode;
@@ -57,6 +57,7 @@ export interface AdvancedViewTransitionProps {
   onTransitionComplete?: () => void;
 }
 
+/** AdvancedSlideTransition コンポーネントのプロパティ */
 export interface AdvancedSlideTransitionProps {
   direction: SlideDirection;
   children: ReactNode;
@@ -65,6 +66,7 @@ export interface AdvancedSlideTransitionProps {
   onComplete?: () => void;
 }
 
+/** EventCollapse コンポーネントのプロパティ */
 export interface EventCollapseProps {
   isExpanded: boolean;
   children: ReactNode;
@@ -72,23 +74,27 @@ export interface EventCollapseProps {
   className?: string;
 }
 
+/** ViewTransition コンポーネントのプロパティ */
 export interface ViewTransitionProps {
   children: ReactNode;
   viewType: string;
   className?: string;
 }
 
+/** TaskDragAnimation コンポーネントのプロパティ */
 export interface TaskDragAnimationProps {
   isDragging: boolean;
   children: ReactNode;
 }
 
+/** HoverEffect コンポーネントのプロパティ */
 export interface HoverEffectProps {
   children: ReactNode;
   isHovered: boolean;
   disabled?: boolean;
 }
 
+/** FadeTransition コンポーネントのプロパティ */
 export interface FadeTransitionProps {
   show: boolean;
   children: ReactNode;
@@ -96,6 +102,7 @@ export interface FadeTransitionProps {
   className?: string;
 }
 
+/** SlideTransition コンポーネントのプロパティ */
 export interface SlideTransitionProps {
   show: boolean;
   direction?: 'up' | 'down' | 'left' | 'right';
@@ -104,17 +111,20 @@ export interface SlideTransitionProps {
   className?: string;
 }
 
+/** TaskCreateAnimation コンポーネントのプロパティ */
 export interface TaskCreateAnimationProps {
   children: ReactNode;
   isNew?: boolean;
 }
 
+/** CalendarViewAnimation コンポーネントのプロパティ */
 export interface CalendarViewAnimationProps {
   children: ReactNode;
   viewType: string;
   previousViewType?: string;
 }
 
+/** SkeletonAnimation コンポーネントのプロパティ */
 export interface SkeletonAnimationProps {
   show: boolean;
   count?: number;
@@ -122,35 +132,41 @@ export interface SkeletonAnimationProps {
   className?: string;
 }
 
+/** TaskHoverTooltip コンポーネントのプロパティ */
 export interface TaskHoverTooltipProps {
   show: boolean;
   children: ReactNode;
   position?: { x: number; y: number };
 }
 
+/** AnimationWrapper コンポーネントのプロパティ */
 export interface AnimationWrapperProps {
   children: ReactNode;
   disabled?: boolean;
   className?: string;
 }
 
+/** アニメーションコンテキストの状態 */
 export interface AnimationContextType {
   enabled: boolean;
   reducedMotion: boolean;
   duration: 'fast' | 'normal' | 'slow';
 }
 
+/** AnimationProvider コンポーネントのプロパティ */
 export interface AnimationProviderProps {
   children: ReactNode;
   config?: Partial<AnimationContextType>;
 }
 
+/** StaggeredAnimation コンポーネントのプロパティ */
 export interface StaggeredAnimationProps {
   children: React.ReactNode[];
   staggerDelay?: number;
   className?: string;
 }
 
+/** SpringAnimation コンポーネントのプロパティ */
 export interface SpringAnimationProps {
   children: React.ReactNode;
   isActive: boolean;
@@ -162,24 +178,28 @@ export interface SpringAnimationProps {
   className?: string;
 }
 
+/** Parallax コンポーネントのプロパティ */
 export interface ParallaxProps {
   children: React.ReactNode;
   offset: number;
   className?: string;
 }
 
+/** PerformanceIndicator コンポーネントのプロパティ */
 export interface PerformanceIndicatorProps {
   isLoading: boolean;
   progress?: number;
   className?: string;
 }
 
+/** TouchAnimation コンポーネントのプロパティ */
 export interface TouchAnimationProps {
   children: React.ReactNode;
   onTap?: () => void;
   className?: string;
 }
 
+/** OptimizedListAnimation コンポーネントのプロパティ */
 export interface OptimizedListAnimationProps {
   children: React.ReactNode[];
   itemHeight: number;

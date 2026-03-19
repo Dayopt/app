@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
       .not('reminder_at', 'is', null)
       .eq('reminder_sent', false)
       .lte('reminder_at', oneMinuteLater.toISOString())
+      .limit(500)
       .returns<ReminderEntry[]>();
 
     if (entriesError) {
@@ -40,52 +41,47 @@ Deno.serve(async (req) => {
       return jsonResponse({ message: 'No reminders to send', count: 0 });
     }
 
-    // 各エントリに対して通知を作成
-    const notificationsCreated = [];
-    const entriesUpdated = [];
+    if (entries.length >= 500) {
+      log('warn', 'Reminder batch limit reached — some reminders may be deferred to next run', {
+        count: entries.length,
+      });
+    }
 
-    for (const entry of entries) {
-      // 通知を作成（冪等: 同一 entry_id + type の重複は無視）
-      const { data: notification, error: notificationError } = await supabase
-        .from('notifications')
-        .upsert(
-          {
-            user_id: entry.user_id,
-            type: 'reminder',
-            entry_id: entry.id,
-            is_read: false,
-          },
-          { onConflict: 'entry_id,type', ignoreDuplicates: true },
-        )
-        .select()
-        .single();
+    // バッチで通知を作成（冪等: 同一 entry_id + type の重複は無視）
+    const notificationRows = entries.map((entry) => ({
+      user_id: entry.user_id,
+      type: 'reminder' as const,
+      entry_id: entry.id,
+      is_read: false,
+    }));
 
-      if (notificationError) {
-        log('error', 'Error creating notification', { error: notificationError.message });
-        continue;
-      }
+    const { data: notifications, error: notificationError } = await supabase
+      .from('notifications')
+      .upsert(notificationRows, { onConflict: 'entry_id,type', ignoreDuplicates: true })
+      .select();
 
-      notificationsCreated.push(notification);
+    if (notificationError) {
+      log('error', 'Error creating notifications batch', { error: notificationError.message });
+      throw notificationError;
+    }
 
-      // エントリのreminder_sentをtrueに更新
-      const { error: updateError } = await supabase
-        .from('entries')
-        .update({ reminder_sent: true })
-        .eq('id', entry.id);
+    // バッチでreminder_sentをtrueに更新
+    const entryIds = entries.map((entry) => entry.id);
+    const { error: updateError } = await supabase
+      .from('entries')
+      .update({ reminder_sent: true })
+      .in('id', entryIds);
 
-      if (updateError) {
-        log('error', 'Error updating entry', { entryId: entry.id, error: updateError.message });
-        continue;
-      }
-
-      entriesUpdated.push(entry.id);
+    if (updateError) {
+      log('error', 'Error updating entries batch', { error: updateError.message });
+      throw updateError;
     }
 
     return jsonResponse({
       message: 'Reminders processed successfully',
-      notificationsCreated: notificationsCreated.length,
-      entriesUpdated: entriesUpdated.length,
-      entryIds: entriesUpdated,
+      notificationsCreated: notifications?.length ?? 0,
+      entriesUpdated: entryIds.length,
+      entryIds,
     });
   } catch (error) {
     log('error', 'check-reminders function failed', {

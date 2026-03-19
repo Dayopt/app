@@ -42,6 +42,7 @@ interface DnDProviderProps {
  * - 無効なドロップ先 → エラーメッセージ表示
  * - 重複プラン → 既存の時間幅を保持
  */
+/** dnd-kitを使用したドラッグ・アンド・ドロップコンテキストプロバイダー */
 export const DnDProvider = ({ children }: DnDProviderProps) => {
   const t = useTranslations();
   const { updateEntry } = useEntryMutations();
@@ -278,7 +279,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
       {/* ドラッグ中のプレビュー */}
       <DragOverlay>
         {activeplan ? (
-          <div className="bg-card border-primary flex h-20 w-64 flex-col gap-1 rounded-2xl border-2 p-4 shadow-lg">
+          <div className="bg-card border-primary surface-raised flex h-20 w-64 flex-col gap-1 rounded-2xl border-2 p-4">
             <div className="flex items-center gap-2">
               <div className="bg-primary h-8 w-1 rounded-full" />
               <div className="text-foreground flex-1 text-sm font-bold">{activeplan.title}</div>

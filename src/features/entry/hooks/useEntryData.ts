@@ -24,9 +24,12 @@ type EntryStatus = 'open' | 'closed';
 /**
  * ソートオプション
  */
+/** ソートフィールドの種別 */
 export type SortField = 'title' | 'created_at' | 'updated_at';
+/** ソート方向 */
 export type SortDirection = 'asc' | 'desc';
 
+/** エントリのソートオプション */
 export interface EntrySortOptions {
   field: SortField | null;
   direction: SortDirection;
@@ -36,11 +39,13 @@ export interface EntrySortOptions {
  * APIから返されるエントリデータの型
  * @internal テスト用にエクスポート
  */
+/** APIから返されるエントリデータの型（テスト用エクスポート） */
 export type PlanWithTagIds = EntryWithTags;
 
 /**
  * エントリアイテム
  */
+/** Board/Table表示用のエントリアイテム型 */
 export interface EntryItem {
   id: string;
   title: string;
@@ -68,6 +73,7 @@ export interface EntryItem {
 /**
  * エントリフィルター型
  */
+/** useEntryData で使用するクライアント側フィルター */
 export interface EntryDataFilters {
   status?: EntryStatus | undefined;
   search?: string | undefined;
@@ -116,9 +122,9 @@ function matchesScheduleFilter(
   return filter === 'scheduled' ? isScheduled : !isScheduled;
 }
 
-/**
- * EntryをEntryItemに変換
- * @internal テスト用にエクスポート
+/** EntryをEntryItemに変換する（テスト用エクスポート）
+ * @param entry - 変換元のエントリデータ
+ * @returns Board/Table表示用のEntryItem
  */
 export function planToPlanItem(entry: PlanWithTagIds): EntryItem {
   // 時間位置ベースでステータスを導出
@@ -141,9 +147,10 @@ export function planToPlanItem(entry: PlanWithTagIds): EntryItem {
   };
 }
 
-/**
- * Entry用データ取得フック
- * Board/Table共通のデータを取得
+/** Board/Table共通のエントリデータ取得フック（クライアント側フィルタリング・ソート付き）
+ * @param filters - ステータス・タグ・スケジュール等のフィルター条件
+ * @param sort - ソートフィールドと方向
+ * @returns items: フィルター済みEntryItem配列, entries: 生データ, isPending, error
  */
 export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOptions) {
   const {

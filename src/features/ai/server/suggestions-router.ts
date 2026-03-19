@@ -10,11 +10,13 @@ import { handleServiceError } from '@/platform/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import { createSuggestionService } from './suggestions-index';
 
+/** タイトルサジェストのtRPCルーター */
 export const suggestionsRouter = createTRPCRouter({
   /**
    * 最近のユニークなタイトル+タグ組み合わせを取得
    */
   recentTitles: protectedProcedure
+    .meta({ description: '最近のタイトル+タグサジェスト取得' })
     .input(
       z
         .object({

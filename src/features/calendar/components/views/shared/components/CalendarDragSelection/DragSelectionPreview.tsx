@@ -73,7 +73,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   // 通常時: PlanCardと同じデザイン（左ボーダーアクセント + 右角丸）
   return (
     <div
-      className="pointer-events-none absolute right-0 left-0 rounded-r-lg border-l-[3px]"
+      className="border-l-indicator pointer-events-none absolute right-0 left-0 rounded-r-lg"
       style={{
         top,
         height,

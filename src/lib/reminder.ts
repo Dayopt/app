@@ -21,6 +21,7 @@ export const REMINDER_OPTIONS = [
   { minutes: 10080, i18nKey: 'common.reminder.week1' },
 ] as const;
 
+/** リマインダーの分数値の型（REMINDER_OPTIONSに定義された値のみ） */
 export type ReminderMinutes = (typeof REMINDER_OPTIONS)[number]['minutes'];
 
 /**

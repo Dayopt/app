@@ -20,6 +20,7 @@ import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/f
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
 
+/** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルターを組み立てる Composition Layer） */
 export function SidebarContent() {
   const pathname = usePathname();
   const navigation = useCalendarNavigation();

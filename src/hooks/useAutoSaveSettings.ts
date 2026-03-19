@@ -15,6 +15,10 @@ interface UseAutoSaveSettingsOptions<T> {
   errorMessage?: string;
 }
 
+/**
+ * 設定値の変更を検知してデバウンス付きで自動保存するフック
+ * @returns values（現在の値）、updateValue（単一フィールド更新）、updateValues（複数フィールド更新）、isSaving（保存中フラグ）
+ */
 export function useAutoSaveSettings<T>({
   initialValues,
   onSave,

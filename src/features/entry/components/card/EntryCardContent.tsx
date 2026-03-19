@@ -7,7 +7,7 @@
 import { Bell, Repeat } from 'lucide-react';
 import { memo } from 'react';
 
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 import { formatTimeRange } from '@/lib/date';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
+/** エントリカードの内部コンテンツ（タグ名・時間範囲・繰り返し/リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,
@@ -43,7 +44,6 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   previewTime = null,
 }) {
   const t = useTranslations();
-  const locale = useLocale();
 
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
@@ -78,7 +78,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
           {plan.isRecurring && (
             <Repeat
               className={cn('text-muted-foreground size-3 flex-shrink-0')}
-              aria-label={locale === 'ja' ? '繰り返し' : 'Recurring'}
+              aria-label={t('common.aria.recurring')}
             />
           )}
           {plan.reminder_minutes != null && (

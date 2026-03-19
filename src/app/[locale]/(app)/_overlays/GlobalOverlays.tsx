@@ -1,21 +1,38 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
-import { ContactDialog } from '@/features/contact';
+import { useEntryInspectorStore } from '@/features/entry';
 import {
   EntryDeleteConfirmDialog,
   EntryInspector,
   RecurringEditConfirmDialog,
 } from '@/features/entry/components';
-import { SettingsDialog } from '@/features/settings';
 import { TourOrchestrator } from '@/features/tour';
 import { useContactStore } from '@/shell/stores/useContactStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
+
+const ContactDialog = dynamic(
+  () =>
+    import('@/features/contact/components/ContactDialog').then((m) => ({
+      default: m.ContactDialog,
+    })),
+  { ssr: false },
+);
+
+const SettingsDialog = dynamic(
+  () =>
+    import('@/features/settings/components/SettingsDialog').then((m) => ({
+      default: m.SettingsDialog,
+    })),
+  { ssr: false },
+);
 
 /**
  * グローバルオーバーレイ群
@@ -38,8 +55,18 @@ export function GlobalOverlays() {
     [t],
   );
 
-  const contactOpen = useContactStore((s) => s.isOpen);
-  const closeContact = useContactStore((s) => s.close);
+  const contactOpen = useContactStore.use.isOpen();
+  const closeContact = useContactStore.use.close();
+
+  const settingsOpen = useSettingsStore((s) => s.isOpen);
+  const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
+
+  // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
+  useEffect(() => {
+    if (settingsOpen || contactOpen) {
+      closeInspector();
+    }
+  }, [settingsOpen, contactOpen, closeInspector]);
 
   return (
     <>

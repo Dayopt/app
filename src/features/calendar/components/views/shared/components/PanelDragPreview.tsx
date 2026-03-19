@@ -16,11 +16,13 @@ import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 
+/** PanelDragPreview コンポーネントのプロパティ */
 interface PanelDragPreviewProps {
   /** このコンテンツの日付インデックス */
   dayIndex: number;
 }
 
+/** パネルからドラッグ中のプレビューをカレンダーグリッド上に表示するコンポーネント */
 export const PanelDragPreview = memo(function PanelDragPreview({
   dayIndex,
 }: PanelDragPreviewProps) {
@@ -49,7 +51,7 @@ export const PanelDragPreview = memo(function PanelDragPreview({
     <div
       className={cn(
         'pointer-events-none absolute left-0 w-full',
-        'rounded-r-lg border-l-[3px]',
+        'border-l-indicator rounded-r-lg',
         'after:bg-state-selected after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit]',
       )}
       style={{

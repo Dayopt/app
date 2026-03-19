@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -34,6 +35,41 @@ import { SectionCard } from '@/components/common/SectionCard';
 
 type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
+
+const CSV_COLUMNS = [
+  'id',
+  'title',
+  'description',
+  'origin',
+  'start_time',
+  'end_time',
+  'actual_start_time',
+  'actual_end_time',
+  'duration_minutes',
+  'fulfillment_score',
+  'created_at',
+] as const;
+
+/**
+ * entriesをCSV文字列に変換
+ * RFC 4180準拠: ダブルクォートでフィールドをエスケープ
+ */
+function entriesToCsv(entries: Record<string, unknown>[]): string {
+  const escapeCsvField = (value: unknown): string => {
+    if (value == null) return '';
+    const str = String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const header = CSV_COLUMNS.join(',');
+  const rows = entries.map((entry) =>
+    CSV_COLUMNS.map((col) => escapeCsvField(entry[col])).join(','),
+  );
+  return [header, ...rows].join('\n');
+}
 
 /**
  * データ管理設定コンポーネント
@@ -69,13 +105,37 @@ function ExportSection() {
       const result = await exportDataQuery.refetch();
       if (!result.data) throw new Error('Export failed');
 
-      // TODO: CSV format + date range filtering
-      const jsonString = JSON.stringify(result.data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      const exportData = result.data;
+
+      // 日付範囲フィルタリング
+      if (range === 'custom' && startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        exportData.data.entries = exportData.data.entries.filter((entry) => {
+          const entryDate = new Date(entry.start_time ?? entry.created_at ?? '');
+          return entryDate >= start && entryDate <= end;
+        });
+      }
+
+      let blob: Blob;
+      let mimeType: string;
+
+      if (format === 'csv') {
+        const csvContent = entriesToCsv(exportData.data.entries);
+        blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+        mimeType = 'csv';
+      } else {
+        const jsonString = JSON.stringify(exportData, null, 2);
+        blob = new Blob([jsonString], { type: 'application/json' });
+        mimeType = 'json';
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dayopt-export-${Date.now()}.${format}`;
+      a.download = `dayopt-export-${Date.now()}.${mimeType}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -85,7 +145,7 @@ function ExportSection() {
     } catch {
       toast.error(t('exportFailed'));
     }
-  }, [exportDataQuery, format, t]);
+  }, [exportDataQuery, format, range, startDate, endDate, t]);
 
   const isExporting = exportDataQuery.isLoading || exportDataQuery.isFetching;
 
@@ -101,9 +161,7 @@ function ExportSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="json">{t('formatJson')}</SelectItem>
-              <SelectItem value="csv" disabled>
-                {t('formatCsv')} ({t('csvComingSoon')})
-              </SelectItem>
+              <SelectItem value="csv">{t('formatCsv')}</SelectItem>
             </SelectContent>
           </Select>
         </LabeledRow>
@@ -192,8 +250,10 @@ function McpApiSection() {
   const t = useTranslations('settings.dataControls.mcp');
   const [copied, setCopied] = useState<'url' | 'key' | null>(null);
 
-  // TODO: Replace with actual Pro plan check
-  const isPro = false;
+  // Pro判定: billing overview の subscription status から判定
+  const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
+  const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
+  const isPro = subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due';
   // TODO: Replace with actual API key from backend
   const apiKey: string | null = null;
 
@@ -306,27 +366,90 @@ function CopyButton({
 
 // ─── Deletion ────────────────────────────────────────
 
+type DeletionTarget = 'blocks' | 'all' | null;
+
 function DeletionSection() {
   const t = useTranslations('settings.dataControls.deletion');
+  const [target, setTarget] = useState<DeletionTarget>(null);
+  const [confirmInput, setConfirmInput] = useState('');
 
-  // TODO: tRPC 実装後に確認ダイアログ付きの削除フローを有効化
+  const keyword = t('confirmKeyword');
+  const isConfirmed = confirmInput === keyword;
+
+  const deleteBlocksMutation = api.user.deleteBlocks.useMutation({
+    onSuccess: (data) => {
+      toast.success(t('deleteBlocks') + ` (${data.deletedCount})`);
+      setTarget(null);
+      setConfirmInput('');
+    },
+    onError: () => {
+      toast.error(t('deleteBlocks'));
+    },
+  });
+
+  const deleteAllDataMutation = api.user.deleteAllData.useMutation({
+    onSuccess: () => {
+      toast.success(t('deleteAllData'));
+      setTarget(null);
+      setConfirmInput('');
+    },
+    onError: () => {
+      toast.error(t('deleteAllData'));
+    },
+  });
+
+  const handleConfirm = useCallback(async () => {
+    if (!isConfirmed) return;
+    if (target === 'blocks') {
+      await deleteBlocksMutation.mutateAsync({ confirmText: 'DELETE' });
+    } else if (target === 'all') {
+      await deleteAllDataMutation.mutateAsync({ confirmText: 'DELETE' });
+    }
+  }, [target, isConfirmed, deleteBlocksMutation, deleteAllDataMutation]);
+
+  const handleClose = useCallback(() => {
+    setTarget(null);
+    setConfirmInput('');
+  }, []);
+
   return (
     <SectionCard title={t('title')}>
       <div className="space-y-0">
         <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={() => setTarget('blocks')}>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteBlocks')}
           </Button>
         </LabeledRow>
 
         <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm" onClick={() => setTarget('all')}>
             <Trash2 className="mr-2 h-4 w-4" />
             {t('deleteAllData')}
           </Button>
         </LabeledRow>
       </div>
+
+      <ConfirmDialog
+        open={target !== null}
+        onClose={handleClose}
+        onConfirm={handleConfirm}
+        title={t('confirmTitle')}
+        description={target === 'blocks' ? t('confirmDeleteBlocks') : t('confirmDeleteAll')}
+        variant="destructive"
+        confirmDisabled={!isConfirmed}
+        loadingLabel={t('deleting')}
+      >
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm">{t('typeToConfirm', { keyword })}</p>
+          <Input
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            placeholder={keyword}
+            autoFocus
+          />
+        </div>
+      </ConfirmDialog>
     </SectionCard>
   );
 }

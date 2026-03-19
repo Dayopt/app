@@ -75,6 +75,7 @@ export function CreateActionSheet({ open, onOpenChange, onSelect }: CreateAction
                 key={action.id}
                 type="button"
                 onClick={() => handleSelect(action.id)}
+                aria-label={action.label}
                 className={cn(
                   'flex items-center gap-4 rounded-2xl p-4',
                   'bg-card hover:bg-state-hover',

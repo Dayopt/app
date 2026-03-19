@@ -66,12 +66,14 @@ export interface MetricData {
 // tRPC Response Types（DB関数のレスポンス型）
 // =============================================================================
 
+/** プラン率の tRPC レスポンス型 */
 export interface PlanRateData {
   totalEntries: number;
   plannedEntries: number;
   planRate: number;
 }
 
+/** 見積もり精度のタグ別 tRPC レスポンス型 */
 export interface EstimationAccuracyData {
   tagId: string;
   tagName: string;
@@ -82,11 +84,13 @@ export interface EstimationAccuracyData {
   entryCount: number;
 }
 
+/** コンテキストスイッチ数の tRPC レスポンス型 */
 export interface ContextSwitchData {
   totalSwitches: number;
   avgPerDay: number;
 }
 
+/** 空き時間率の tRPC レスポンス型 */
 export interface BlankRateData {
   availableMinutes: number;
   scheduledMinutes: number;
@@ -94,12 +98,14 @@ export interface BlankRateData {
   blankRate: number;
 }
 
+/** ピーク時間帯活用率の計算結果型 */
 export interface PeakUtilizationData {
   peakMinutes: number;
   totalPeakAvailable: number;
   peakUtilization: number;
 }
 
+/** エネルギーマップの時間帯×曜日行データ */
 export interface EnergyMapRow {
   hour: number;
   dow: number;

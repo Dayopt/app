@@ -21,7 +21,7 @@ import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
 import { Button } from '@/components/ui/button';
-import { useSettingsStore } from '@/shell/stores/useSettingsStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { SettingsCategory } from '../types';
 import { SettingsDialog } from './SettingsDialog';
 
