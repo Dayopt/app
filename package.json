@@ -28,6 +28,8 @@
     "types:generate:local": "supabase gen types typescript --local > src/lib/database.types.ts",
     "lint:i18n": "tsx scripts/check-i18n-integrity.ts",
     "docs:check": "tsx scripts/validate-doc-references.ts",
+    "api:spec": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx scripts/generate-api-spec.ts",
+    "api:spec:check": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx scripts/generate-api-spec.ts --check",
     "license:check": "npx license-checker --production --excludePackages \"dayopt-app@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
     "license:check-risks": "tsx scripts/check-license-risks.ts",
     "license:audit": "npx license-checker --production --summary",
@@ -208,7 +210,8 @@
     "tsx": "^4.20.6",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "zod-to-json-schema": "^3.25.1"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
