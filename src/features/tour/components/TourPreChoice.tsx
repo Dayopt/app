@@ -26,7 +26,11 @@ export function TourPreChoice({ onStart, onSkip }: TourPreChoiceProps) {
           <Button onClick={onStart} className="w-full">
             {t('tour.preChoice.start')}
           </Button>
-          <Button variant="ghost" onClick={onSkip} className="text-muted-foreground w-full">
+          <Button
+            variant="ghost"
+            onClick={onSkip}
+            className="text-muted-foreground hover:text-foreground w-full"
+          >
             {t('tour.preChoice.skip')}
           </Button>
         </div>
