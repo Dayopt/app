@@ -30,7 +30,7 @@ export function ReminderEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>Plan Reminder</Text>
             <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
-            <Text style={styles.paragraph}>Your upcoming plan is starting soon:</Text>
+            <Text style={styles.paragraph}>Your plan is starting now:</Text>
             <Section style={styles.infoBox}>
               <Text style={styles.infoBoxLabel}>Plan</Text>
               <Text style={styles.infoBoxValue}>{planTitle}</Text>

@@ -1,6 +1,6 @@
 /**
  * tRPC Router: NotificationPreferences
- * 通知設定管理API（ブラウザ/メール/プッシュ通知ON/OFF + デフォルトリマインダー時間）
+ * 通知設定管理API（ブラウザ/メール/プッシュ通知ON/OFF + デフォルトリマインダーON/OFF）
  */
 
 import { TRPCError } from '@trpc/server';
@@ -25,7 +25,7 @@ function handlePreferencesError(operation: string, error: unknown): never {
   });
 }
 
-/** 通知設定（ブラウザ / メール / プッシュ / リマインダー時間）を管理する tRPC ルーター */
+/** 通知設定（ブラウザ / メール / プッシュ / リマインダーON/OFF）を管理する tRPC ルーター */
 export const notificationPreferencesRouter = createTRPCRouter({
   /**
    * 通知設定取得
@@ -65,7 +65,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
             enableBrowserNotifications: true,
             enableEmailNotifications: false,
             enablePushNotifications: false,
-            defaultReminderMinutes: 10,
+            defaultReminderEnabled: true,
           };
         }
 
@@ -73,7 +73,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           enableBrowserNotifications: data.enable_browser_notifications,
           enableEmailNotifications: data.enable_email_notifications,
           enablePushNotifications: data.enable_push_notifications,
-          defaultReminderMinutes: data.default_reminder_minutes ?? 10,
+          defaultReminderEnabled: data.default_reminder_enabled ?? true,
         };
       } catch (error) {
         return handlePreferencesError('get', error);
@@ -204,11 +204,11 @@ export const notificationPreferencesRouter = createTRPCRouter({
     }),
 
   /**
-   * デフォルトリマインダー時間を更新
+   * デフォルトリマインダーON/OFFを更新
    */
-  updateDefaultReminderMinutes: protectedProcedure
-    .meta({ description: 'デフォルトリマインダー時間更新（分単位）' })
-    .input(z.object({ minutes: z.number().min(0).max(10080).nullable() }))
+  updateDefaultReminderEnabled: protectedProcedure
+    .meta({ description: 'デフォルトリマインダーON/OFF更新' })
+    .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       try {
         const userId = ctx.userId;
@@ -225,7 +225,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
         const { error } = await supabase.from('notification_preferences').upsert(
           {
             user_id: userId,
-            default_reminder_minutes: input.minutes,
+            default_reminder_enabled: input.enabled,
           },
           { onConflict: 'user_id' },
         );
@@ -240,7 +240,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updateDefaultReminderMinutes', error);
+        return handlePreferencesError('updateDefaultReminderEnabled', error);
       }
     }),
 });
