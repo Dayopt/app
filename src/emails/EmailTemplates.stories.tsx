@@ -14,12 +14,20 @@ import { render } from '@react-email/render';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { AccountDeletionEmail } from './AccountDeletionEmail';
+import { CancellationConfirmEmail } from './CancellationConfirmEmail';
 import { ConfirmEmail } from './ConfirmEmail';
 import { MagicLinkEmail } from './MagicLinkEmail';
 import { OverdueEmail } from './OverdueEmail';
+import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
+import { PaymentFailedEmail } from './PaymentFailedEmail';
+import { PaymentRecoveredEmail } from './PaymentRecoveredEmail';
+import { ProStartEmail } from './ProStartEmail';
 import { ReminderEmail } from './ReminderEmail';
 import { colors } from './styles';
+import { TrialExpiredEmail } from './TrialExpiredEmail';
+import { TrialExpiringEmail } from './TrialExpiringEmail';
+import { TrialStartEmail } from './TrialStartEmail';
 import { WelcomeEmail } from './WelcomeEmail';
 
 const meta = {
@@ -88,6 +96,14 @@ export const Guidelines: Story = {
           <p>src/emails/</p>
           <p className="pl-4">styles.ts — 共通スタイル（Edge Function側と同一値を維持）</p>
           <p className="pl-4">WelcomeEmail.tsx — 新規登録</p>
+          <p className="pl-4">TrialStartEmail.tsx — トライアル開始</p>
+          <p className="pl-4">TrialExpiringEmail.tsx — トライアル残3日</p>
+          <p className="pl-4">TrialExpiredEmail.tsx — トライアル期限切れ</p>
+          <p className="pl-4">ProStartEmail.tsx — Pro開始</p>
+          <p className="pl-4">PaymentFailedEmail.tsx — 支払い失敗</p>
+          <p className="pl-4">PaymentRecoveredEmail.tsx — 支払い復旧</p>
+          <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
+          <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">ReminderEmail.tsx — プランリマインダー</p>
           <p className="pl-4">OverdueEmail.tsx — 期限超過</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
@@ -139,6 +155,14 @@ export const Guidelines: Story = {
                 ['PasswordResetEmail', 'PW リセット', 'Auth Hook (recovery)'],
                 ['MagicLinkEmail', 'マジックリンク', 'Auth Hook (magic_link)'],
                 ['WelcomeEmail', '新規登録', 'email.sendWelcome'],
+                ['TrialStartEmail', 'トライアル開始', 'email.sendTrialStart'],
+                ['TrialExpiringEmail', 'トライアル残3日', 'email.sendTrialExpiring'],
+                ['TrialExpiredEmail', 'トライアル期限切れ', 'email.sendTrialExpired'],
+                ['ProStartEmail', 'Pro開始', 'email.sendProStart'],
+                ['PaymentFailedEmail', '支払い失敗', 'email.sendPaymentFailed'],
+                ['PaymentRecoveredEmail', '支払い復旧', 'email.sendPaymentRecovered'],
+                ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
+                ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
                 ['ReminderEmail', 'リマインダー', 'email.sendReminder'],
                 ['OverdueEmail', '期限超過', 'email.sendOverdue'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
@@ -173,7 +197,7 @@ export const Guidelines: Story = {
           </div>
           <div>
             <h3 className="text-foreground mb-2 text-sm font-bold">
-              アプリメール（welcome / reminder / overdue / deletion）
+              アプリメール（welcome / trial / pro / billing / reminder / overdue / deletion）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
               <p>App → tRPC email.sendXxx → React Email render</p>
@@ -266,6 +290,105 @@ export const Overdue: Story = {
         endTime: '5:00 PM',
       })}
       title="Overdue"
+    />
+  ),
+};
+
+/** トライアル開始 */
+export const TrialStart: Story = {
+  render: () => (
+    <EmailPreview
+      element={TrialStartEmail({
+        userName: 'Tomoya',
+        trialEndDate: 'March 30, 2026',
+      })}
+      title="Trial Start"
+    />
+  ),
+};
+
+/** トライアル残3日 */
+export const TrialExpiring: Story = {
+  render: () => (
+    <EmailPreview
+      element={TrialExpiringEmail({
+        userName: 'Tomoya',
+        trialEndDate: 'March 30, 2026',
+      })}
+      title="Trial Expiring"
+    />
+  ),
+};
+
+/** トライアル期限切れ */
+export const TrialExpired: Story = {
+  render: () => (
+    <EmailPreview
+      element={TrialExpiredEmail({
+        userName: 'Tomoya',
+      })}
+      title="Trial Expired"
+    />
+  ),
+};
+
+/** Pro開始 */
+export const ProStart: Story = {
+  render: () => (
+    <EmailPreview
+      element={ProStartEmail({
+        userName: 'Tomoya',
+      })}
+      title="Pro Start"
+    />
+  ),
+};
+
+/** 支払い失敗 */
+export const PaymentFailed: Story = {
+  render: () => (
+    <EmailPreview
+      element={PaymentFailedEmail({
+        userName: 'Tomoya',
+      })}
+      title="Payment Failed"
+    />
+  ),
+};
+
+/** 支払い復旧 */
+export const PaymentRecovered: Story = {
+  render: () => (
+    <EmailPreview
+      element={PaymentRecoveredEmail({
+        userName: 'Tomoya',
+      })}
+      title="Payment Recovered"
+    />
+  ),
+};
+
+/** パスワード変更通知 */
+export const PasswordChanged: Story = {
+  render: () => (
+    <EmailPreview
+      element={PasswordChangedEmail({
+        userName: 'Tomoya',
+      })}
+      title="Password Changed"
+    />
+  ),
+};
+
+/** Pro解約確認 */
+export const CancellationConfirm: Story = {
+  render: () => (
+    <EmailPreview
+      element={CancellationConfirmEmail({
+        userName: 'Tomoya',
+        periodEndDate: 'April 23, 2026',
+      })}
+      title="Cancellation Confirm"
     />
   ),
 };
