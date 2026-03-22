@@ -18,10 +18,17 @@ import type Stripe from 'stripe';
 export const maxDuration = 30;
 
 import * as Sentry from '@sentry/nextjs';
+import { Resend } from 'resend';
 
+import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
+import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
+import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
+import { ProStartEmail } from '@/emails/ProStartEmail';
+import { TrialStartEmail } from '@/emails/TrialStartEmail';
 import { env } from '@/env';
 import type { SubscriptionStatus } from '@/features/settings/server/billing-service';
 import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
+import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/platform/sentry';
 import { requireStripe } from '@/platform/stripe/client';
@@ -47,6 +54,77 @@ async function notifySlack(text: string): Promise<void> {
   } catch (error) {
     // Slack通知失敗はWebhook処理をブロックしない
     logger.warn('Slack billing notification failed', { error });
+  }
+}
+
+// ─── トランザクションメール送信 ─────────────────────────
+
+const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const APP_URL = getAppUrl();
+
+/**
+ * stripe_customer_id からユーザーのメールアドレスと名前を取得
+ */
+async function getUserByCustomerId(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  stripeCustomerId: string,
+): Promise<{ email: string; userName: string } | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name' as never)
+    .eq('stripe_customer_id' as never, stripeCustomerId)
+    .single();
+
+  if (error || !data) {
+    logger.warn('Failed to look up user for transactional email', { stripeCustomerId, error });
+    return null;
+  }
+
+  const profile = data as unknown as { id: string; full_name: string | null };
+
+  // Supabase Auth からメールアドレスを取得
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.admin.getUserById(profile.id);
+
+  if (authError || !user?.email) {
+    logger.warn('Failed to get user email for transactional email', {
+      userId: profile.id,
+      error: authError,
+    });
+    return null;
+  }
+
+  return { email: user.email, userName: profile.full_name || 'there' };
+}
+
+/**
+ * トランザクションメール送信（fire-and-forget）
+ * メール送信失敗は webhook 処理をブロックしない
+ */
+async function sendTransactionalEmail(
+  to: string,
+  subject: string,
+  react: React.ReactElement,
+  context: string,
+): Promise<void> {
+  try {
+    const resend = new Resend(env.RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from: `Dayopt <${FROM_EMAIL}>`,
+      to,
+      subject,
+      react,
+    });
+
+    if (error) {
+      logger.error(`${context} failed`, { error, to });
+    } else {
+      logger.info(`${context} sent`, { to });
+    }
+  } catch (error) {
+    logger.error(`${context} failed unexpectedly`, { error, to });
   }
 }
 
@@ -151,6 +229,37 @@ export async function POST(request: NextRequest) {
           await notifySlack(
             `🎉 新規サブスクリプション開始\nCustomer: ${customerId}\nStatus: ${status}`,
           );
+
+          // トランザクションメール送信
+          const user = await getUserByCustomerId(supabase, customerId);
+          if (user) {
+            if (status === 'trialing') {
+              const trialEnd = sub.trial_end
+                ? new Date(sub.trial_end * 1000).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : '7 days from now';
+              await sendTransactionalEmail(
+                user.email,
+                'Your 7-day Pro trial has started',
+                TrialStartEmail({
+                  userName: user.userName,
+                  trialEndDate: trialEnd,
+                  appUrl: APP_URL,
+                }),
+                'Trial start email',
+              );
+            } else if (status === 'active') {
+              await sendTransactionalEmail(
+                user.email,
+                'Welcome to Pro',
+                ProStartEmail({ userName: user.userName, appUrl: APP_URL }),
+                'Pro start email',
+              );
+            }
+          }
         }
         break;
       }
@@ -163,14 +272,48 @@ export async function POST(request: NextRequest) {
             : subscription.customer.id;
 
         const status = mapStripeStatus(subscription.status);
+        const previousStatus = event.data.previous_attributes
+          ? mapStripeStatus(
+              (event.data.previous_attributes as { status?: Stripe.Subscription.Status }).status ??
+                subscription.status,
+            )
+          : null;
+
         await syncSubscriptionStatus(supabase, customerId, subscription.id, status);
         captureBusinessEvent('billing.subscription_changed', { customerId, toStatus: status });
         logger.info('Subscription updated', {
           customerId,
           subscriptionId: subscription.id,
           status,
+          previousStatus,
         });
         await notifySlack(`📝 サブスクリプション更新: ${status}\nCustomer: ${customerId}`);
+
+        // trialing → active: Pro開始メール
+        if (previousStatus === 'trialing' && status === 'active') {
+          const updatedUser = await getUserByCustomerId(supabase, customerId);
+          if (updatedUser) {
+            await sendTransactionalEmail(
+              updatedUser.email,
+              'Welcome to Pro',
+              ProStartEmail({ userName: updatedUser.userName, appUrl: APP_URL }),
+              'Pro start email (trial conversion)',
+            );
+          }
+        }
+
+        // past_due → active: 支払い復旧メール
+        if (previousStatus === 'past_due' && status === 'active') {
+          const recoveredUser = await getUserByCustomerId(supabase, customerId);
+          if (recoveredUser) {
+            await sendTransactionalEmail(
+              recoveredUser.email,
+              "Payment successful — you're all set",
+              PaymentRecoveredEmail({ userName: recoveredUser.userName, appUrl: APP_URL }),
+              'Payment recovered email',
+            );
+          }
+        }
         break;
       }
 
@@ -185,6 +328,30 @@ export async function POST(request: NextRequest) {
         captureBusinessEvent('billing.subscription_changed', { customerId, toStatus: 'canceled' });
         logger.info('Subscription deleted', { customerId });
         await notifySlack(`⚠️ サブスクリプション解約\nCustomer: ${customerId}`);
+
+        // 解約確認メール
+        const cancelUser = await getUserByCustomerId(supabase, customerId);
+        if (cancelUser) {
+          const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
+            .current_period_end;
+          const periodEnd = rawPeriodEnd
+            ? new Date(rawPeriodEnd * 1000).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : 'your current billing period';
+          await sendTransactionalEmail(
+            cancelUser.email,
+            'Your Pro subscription has been canceled',
+            CancellationConfirmEmail({
+              userName: cancelUser.userName,
+              periodEndDate: periodEnd,
+              appUrl: APP_URL,
+            }),
+            'Cancellation confirm email',
+          );
+        }
         break;
       }
 
@@ -199,6 +366,19 @@ export async function POST(request: NextRequest) {
         );
         logger.warn('Payment failed', { customerId });
         await notifySlack(`🚨 支払い失敗\nCustomer: ${customerId ?? 'unknown'}`);
+
+        // 支払い失敗メール
+        if (customerId) {
+          const paymentUser = await getUserByCustomerId(supabase, customerId);
+          if (paymentUser) {
+            await sendTransactionalEmail(
+              paymentUser.email,
+              'Action needed: payment failed',
+              PaymentFailedEmail({ userName: paymentUser.userName, appUrl: APP_URL }),
+              'Payment failed email',
+            );
+          }
+        }
         break;
       }
 

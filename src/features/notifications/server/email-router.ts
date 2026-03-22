@@ -17,8 +17,16 @@ import { Resend } from 'resend';
 import { z } from 'zod';
 
 import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
+import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
 import { OverdueEmail } from '@/emails/OverdueEmail';
+import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
+import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
+import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
+import { ProStartEmail } from '@/emails/ProStartEmail';
 import { ReminderEmail } from '@/emails/ReminderEmail';
+import { TrialExpiredEmail } from '@/emails/TrialExpiredEmail';
+import { TrialExpiringEmail } from '@/emails/TrialExpiringEmail';
+import { TrialStartEmail } from '@/emails/TrialStartEmail';
 import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
@@ -139,7 +147,7 @@ function handleEmailError(operation: string, error: unknown): never {
   });
 }
 
-/** メール送信（ウェルカム / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
+/** メール送信（ウェルカム / Trial / Pro / 課金 / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
 export const emailRouter = createTRPCRouter({
   /**
    * ウェルカムメール送信
@@ -165,6 +173,254 @@ export const emailRouter = createTRPCRouter({
         });
       } catch (error) {
         return handleEmailError('sendWelcome', error);
+      }
+    }),
+
+  /**
+   * トライアル開始メール送信
+   */
+  sendTrialStart: protectedProcedure
+    .meta({ description: 'トライアル開始メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+        trialEndDate: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending trial start email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Your 7-day Pro trial has started',
+          react: TrialStartEmail({
+            userName: input.userName,
+            trialEndDate: input.trialEndDate,
+            appUrl: APP_URL,
+          }),
+          context: 'Trial start email',
+        });
+      } catch (error) {
+        return handleEmailError('sendTrialStart', error);
+      }
+    }),
+
+  /**
+   * トライアル残3日メール送信
+   */
+  sendTrialExpiring: protectedProcedure
+    .meta({ description: 'トライアル残3日メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+        trialEndDate: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending trial expiring email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Your Pro trial ends in 3 days',
+          react: TrialExpiringEmail({
+            userName: input.userName,
+            trialEndDate: input.trialEndDate,
+            appUrl: APP_URL,
+          }),
+          context: 'Trial expiring email',
+        });
+      } catch (error) {
+        return handleEmailError('sendTrialExpiring', error);
+      }
+    }),
+
+  /**
+   * トライアル期限切れメール送信
+   */
+  sendTrialExpired: protectedProcedure
+    .meta({ description: 'トライアル期限切れメール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending trial expired email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Your Pro trial has ended',
+          react: TrialExpiredEmail({
+            userName: input.userName,
+            appUrl: APP_URL,
+          }),
+          context: 'Trial expired email',
+        });
+      } catch (error) {
+        return handleEmailError('sendTrialExpired', error);
+      }
+    }),
+
+  /**
+   * Pro開始メール送信
+   */
+  sendProStart: protectedProcedure
+    .meta({ description: 'Pro開始メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending Pro start email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Welcome to Pro',
+          react: ProStartEmail({
+            userName: input.userName,
+            appUrl: APP_URL,
+          }),
+          context: 'Pro start email',
+        });
+      } catch (error) {
+        return handleEmailError('sendProStart', error);
+      }
+    }),
+
+  /**
+   * 支払い失敗メール送信
+   */
+  sendPaymentFailed: protectedProcedure
+    .meta({ description: '支払い失敗メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+        portalUrl: z.string().url().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending payment failed email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Action needed: payment failed',
+          react: PaymentFailedEmail({
+            userName: input.userName,
+            ...(input.portalUrl ? { portalUrl: input.portalUrl } : {}),
+            appUrl: APP_URL,
+          }),
+          context: 'Payment failed email',
+        });
+      } catch (error) {
+        return handleEmailError('sendPaymentFailed', error);
+      }
+    }),
+
+  /**
+   * 支払い復旧メール送信
+   */
+  sendPaymentRecovered: protectedProcedure
+    .meta({ description: '支払い復旧メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending payment recovered email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: "Payment successful — you're all set",
+          react: PaymentRecoveredEmail({
+            userName: input.userName,
+            appUrl: APP_URL,
+          }),
+          context: 'Payment recovered email',
+        });
+      } catch (error) {
+        return handleEmailError('sendPaymentRecovered', error);
+      }
+    }),
+
+  /**
+   * パスワード変更通知メール送信
+   */
+  sendPasswordChanged: protectedProcedure
+    .meta({ description: 'パスワード変更通知メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending password changed email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Your password has been changed',
+          react: PasswordChangedEmail({
+            userName: input.userName,
+            appUrl: APP_URL,
+          }),
+          context: 'Password changed email',
+        });
+      } catch (error) {
+        return handleEmailError('sendPasswordChanged', error);
+      }
+    }),
+
+  /**
+   * Pro解約確認メール送信
+   */
+  sendCancellationConfirm: protectedProcedure
+    .meta({ description: 'Pro解約確認メール送信' })
+    .input(
+      z.object({
+        email: z.string().email(),
+        userName: z.string().min(1),
+        periodEndDate: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await verifyEmailOwnership(ctx, input.email);
+        logger.info('Sending cancellation confirm email', { userId: ctx.userId });
+
+        return sendEmail({
+          to: input.email,
+          subject: 'Your Pro subscription has been canceled',
+          react: CancellationConfirmEmail({
+            userName: input.userName,
+            periodEndDate: input.periodEndDate,
+            appUrl: APP_URL,
+          }),
+          context: 'Cancellation confirm email',
+        });
+      } catch (error) {
+        return handleEmailError('sendCancellationConfirm', error);
       }
     }),
 
