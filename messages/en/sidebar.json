@@ -1,0 +1,12 @@
+{
+  "sidebar": {
+    "palette": {
+      "title": "Palette",
+      "empty": "Frequently used blocks will appear here",
+      "add": "Add to palette",
+      "addToNow": "Add at current time",
+      "pin": "Pin",
+      "unpin": "Unpin"
+    }
+  }
+}

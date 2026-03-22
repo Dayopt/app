@@ -546,6 +546,7 @@ export type Database = {
       notification_preferences: {
         Row: {
           created_at: string;
+          default_reminder_enabled: boolean;
           default_reminder_minutes: number | null;
           enable_browser_notifications: boolean;
           enable_email_notifications: boolean;
@@ -556,6 +557,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          default_reminder_enabled?: boolean;
           default_reminder_minutes?: number | null;
           enable_browser_notifications?: boolean;
           enable_email_notifications?: boolean;
@@ -566,6 +568,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          default_reminder_enabled?: boolean;
           default_reminder_minutes?: number | null;
           enable_browser_notifications?: boolean;
           enable_email_notifications?: boolean;
@@ -575,6 +578,47 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      palette_items: {
+        Row: {
+          id: string;
+          user_id: string;
+          tag_id: string;
+          duration_minutes: number;
+          sort_order: number;
+          is_pinned: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          tag_id: string;
+          duration_minutes: number;
+          sort_order?: number;
+          is_pinned?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          tag_id?: string;
+          duration_minutes?: number;
+          sort_order?: number;
+          is_pinned?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'palette_items_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       notifications: {
         Row: {

@@ -3,7 +3,7 @@
 /**
  * サイドバーコンテンツ（Composition Layer）
  *
- * ミニカレンダー + ビュー切り替え + フィルターを組み立てる。
+ * ミニカレンダー + ビュー切り替え + フィルター + パレットを組み立てる。
  * features の組み合わせはこの composition layer で行う。
  */
 
@@ -17,10 +17,11 @@ import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
+import { Palette } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
 
-/** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルターを組み立てる Composition Layer） */
+/** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルター・パレットを組み立てる Composition Layer） */
 export function SidebarContent() {
   const pathname = usePathname();
   const navigation = useCalendarNavigation();
@@ -59,6 +60,9 @@ export function SidebarContent() {
         {/* カレンダーフィルター */}
         <CalendarFilterList />
       </div>
+
+      {/* パレット（よく使うブロックのクイック配置） */}
+      <Palette />
 
       {/* テーマ切替 */}
       <SidebarUtilities />
