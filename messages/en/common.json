@@ -172,10 +172,10 @@
       "hoursAgo": "{count, plural, one {1h ago} other {#h ago}}"
     },
     "reminder": {
-      "label": "Reminder",
-      "none": "No reminder",
-      "add": "Add reminder",
-      "atStart": "At start time"
+      "label": "Start notification",
+      "none": "No notification",
+      "add": "Add notification",
+      "atStart": "Notify at start"
     },
     "note": {
       "edit": "Edit note",

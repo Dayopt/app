@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * リマインダーON/OFFトグル
+ * 開始時通知ON/OFFトグル
  *
  * ブロック開始時に通知するかどうかを切り替える。
  * ON → onChange(0), OFF → onChange(null)
@@ -24,7 +24,7 @@ interface ReminderToggleProps {
   className?: string;
 }
 
-/** リマインダーON/OFFトグル（Inspector, Card, Table で使用） */
+/** 開始時通知ON/OFFトグル（Inspector, Card, Table で使用） */
 export function ReminderToggle({
   value,
   onChange,

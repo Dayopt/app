@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * リマインダー設定行
+ * 開始時通知設定行
  *
  * icon + label（左） | ReminderToggle（右）
  */
@@ -16,7 +16,7 @@ interface ReminderRowProps {
   onChange: (minutes: number | null) => void;
 }
 
-/** Inspectorのリマインダー設定行（アイコン + ラベル + ReminderToggle） */
+/** Inspectorの開始時通知設定行（アイコン + ラベル + ReminderToggle） */
 export function ReminderRow({ value, onChange }: ReminderRowProps) {
   const t = useTranslations();
 

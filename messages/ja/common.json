@@ -172,10 +172,10 @@
       "hoursAgo": "{count}時間前"
     },
     "reminder": {
-      "label": "リマインダー",
+      "label": "開始時通知",
       "none": "通知しない",
       "add": "通知を追加",
-      "atStart": "開始時刻"
+      "atStart": "開始時に通知"
     },
     "note": {
       "edit": "メモを編集",
