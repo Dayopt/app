@@ -63,6 +63,13 @@ export function NotificationSettings() {
     onError: onSettingsError,
   });
 
+  // デフォルト開始時通知設定を更新
+  const updateDefaultReminder =
+    api.notificationPreferences.updateDefaultReminderEnabled.useMutation({
+      onSuccess: onSettingsSuccess,
+      onError: onSettingsError,
+    });
+
   const handleBrowserToggle = useCallback(
     async (checked: boolean) => {
       if (checked) {
@@ -141,6 +148,16 @@ export function NotificationSettings() {
               checked={preferences?.enablePushNotifications ?? false}
               onCheckedChange={(checked) => updatePushNotifications.mutate({ enabled: checked })}
               disabled={updatePushNotifications.isPending}
+            />
+          </LabeledRow>
+          <LabeledRow
+            label={t('notification.settings.defaultReminder.label')}
+            description={t('notification.settings.defaultReminder.description')}
+          >
+            <Switch
+              checked={preferences?.defaultReminderEnabled ?? true}
+              onCheckedChange={(checked) => updateDefaultReminder.mutate({ enabled: checked })}
+              disabled={updateDefaultReminder.isPending}
             />
           </LabeledRow>
         </div>
