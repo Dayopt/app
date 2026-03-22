@@ -23,12 +23,14 @@ const MOCK_NOTIFICATION_PREFERENCES = {
   enableBrowserNotifications: true,
   enableEmailNotifications: false,
   enablePushNotifications: false,
+  defaultReminderEnabled: true,
 };
 
 const MOCK_ALL_DISABLED = {
   enableBrowserNotifications: false,
   enableEmailNotifications: false,
   enablePushNotifications: false,
+  defaultReminderEnabled: false,
 };
 
 // ─────────────────────────────────────────────────────────

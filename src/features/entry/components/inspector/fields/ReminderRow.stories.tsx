@@ -6,7 +6,7 @@ import { fn } from 'storybook/test';
 import { ReminderRow } from './ReminderRow';
 
 /**
- * ReminderRow — リマインダー設定行
+ * ReminderRow — 開始時通知設定行
  *
  * icon + ラベル（左）| ReminderToggle（右）の構成。
  * ON（開始時に通知）/ OFF（通知なし）の2択。
@@ -31,12 +31,12 @@ function ReminderRowDemo({ initialValue = null }: { initialValue?: number | null
   );
 }
 
-/** リマインダーOFF（デフォルト） */
+/** 開始時通知OFF（デフォルト） */
 export const Default: Story = {
   render: () => <ReminderRowDemo />,
 };
 
-/** リマインダーON（開始時に通知） */
+/** 開始時通知ON */
 export const Enabled: Story = {
   render: () => <ReminderRowDemo initialValue={0} />,
 };

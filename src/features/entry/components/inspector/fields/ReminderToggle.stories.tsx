@@ -25,7 +25,7 @@ function ReminderToggleDemo({
   return <ReminderToggle value={value} onChange={setValue} variant={variant} />;
 }
 
-/** Inspector variant（デフォルト）— Switch表示 */
+/** Inspector variant（デフォルト）— Switch で開始時通知ON/OFF */
 export const Inspector: StoryObj = {
   render: () => <ReminderToggleDemo variant="inspector" />,
 };
