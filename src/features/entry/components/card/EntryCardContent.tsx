@@ -4,13 +4,12 @@
 
 'use client';
 
-import { Bell, Repeat } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
 import { formatTimeRange } from '@/lib/date';
-import { cn } from '@/lib/utils';
 import type { CalendarEvent } from '@/types/calendar-event';
 
 interface EntryCardContentProps {
@@ -34,7 +33,7 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
-/** エントリカードの内部コンテンツ（タグ名・時間範囲・繰り返し/リマインダーアイコン） */
+/** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,
@@ -75,12 +74,6 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
                 ? formatTimeRange(planStart, planEnd, timeFormat)
                 : t('calendar.event.noTimeSet')}
           </span>
-          {plan.isRecurring && (
-            <Repeat
-              className={cn('text-muted-foreground size-3 flex-shrink-0')}
-              aria-label={t('common.aria.recurring')}
-            />
-          )}
           {plan.reminder_minutes != null && (
             <Bell className="size-3 flex-shrink-0" aria-label={t('calendar.event.reminderSet')} />
           )}

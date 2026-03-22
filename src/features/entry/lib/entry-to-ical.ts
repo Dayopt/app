@@ -11,7 +11,6 @@ interface ICalEntry {
   description: string | null;
   start_time: string | null;
   end_time: string | null;
-  recurrence_rule: string | null;
   created_at: string | null;
   updated_at: string | null;
   tag_name: string | null;
@@ -84,10 +83,6 @@ export function entriesToICal(entries: ICalEntry[]): string {
 
     if (entry.description) {
       lines.push(foldLine(`DESCRIPTION:${escapeICalText(entry.description)}`));
-    }
-
-    if (entry.recurrence_rule) {
-      lines.push(`RRULE:${entry.recurrence_rule}`);
     }
 
     if (entry.created_at) {

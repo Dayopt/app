@@ -15,9 +15,6 @@ const createMockEntry = (overrides: Partial<PlanWithTagIds> = {}): PlanWithTagId
   actual_end_time: null,
   duration_minutes: null,
   fulfillment_score: null,
-  recurrence_type: null,
-  recurrence_end_date: null,
-  recurrence_rule: null,
   reminder_minutes: null,
   reviewed_at: null,
   created_at: '2025-01-15T10:00:00Z',
@@ -90,23 +87,17 @@ describe('useEntryData', () => {
       expect(result.tagId).toBeNull();
     });
 
-    it('時間・繰り返し関連のフィールドを正しく変換する', () => {
+    it('時間関連のフィールドを正しく変換する', () => {
       const entry = createMockEntry({
         id: 'entry-1',
         start_time: '2025-01-20T09:00:00Z',
         end_time: '2025-01-20T10:00:00Z',
-        recurrence_type: 'daily',
-        recurrence_end_date: '2025-02-20',
-        recurrence_rule: 'FREQ=DAILY;COUNT=30',
       });
 
       const result = planToPlanItem(entry);
 
       expect(result.start_time).toBe('2025-01-20T09:00:00Z');
       expect(result.end_time).toBe('2025-01-20T10:00:00Z');
-      expect(result.recurrence_type).toBe('daily');
-      expect(result.recurrence_end_date).toBe('2025-02-20');
-      expect(result.recurrence_rule).toBe('FREQ=DAILY;COUNT=30');
     });
 
     it('created_atがnullの場合は現在時刻を使用する', () => {

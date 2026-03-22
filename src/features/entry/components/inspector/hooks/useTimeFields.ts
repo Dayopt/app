@@ -23,14 +23,6 @@ interface UseTimeFieldsOptions {
   save: (fields: Record<string, string | number | null | undefined>) => void;
   /** useDebouncedSave.saveImmediate — 即時保存 */
   saveImmediate: (fields: Record<string, string | number | null | undefined>) => void;
-  /** useRecurringGuard から取得 */
-  recurringGuard: {
-    isRecurringInstance: boolean;
-    openScopeDialog: (
-      field?: 'title' | 'description' | 'start_time' | 'end_time',
-      value?: string | undefined,
-    ) => void;
-  };
 }
 
 /** HH:MM 形式の時間文字列を生成 */
@@ -39,16 +31,10 @@ function toHHMM(date: Date): string {
 }
 
 /** Inspectorの時間・リマインダーフィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
- * @param options - entry, entryId, save, saveImmediate, recurringGuard
+ * @param options - entry, entryId, save, saveImmediate
  * @returns scheduleDate, startTime, endTime, actualStartTime, actualEndTime, reminderMinutes および各ハンドラー
  */
-export function useTimeFields({
-  entry,
-  entryId,
-  save,
-  saveImmediate,
-  recurringGuard,
-}: UseTimeFieldsOptions) {
+export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFieldsOptions) {
   const timezone = useCalendarSettingsStore((state) => state.timezone);
   const utils = api.useUtils();
 
@@ -195,17 +181,11 @@ export function useTimeFields({
           ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
           : null;
 
-      // 繰り返しインスタンス → スコープダイアログ
-      if (recurringGuard.isRecurringInstance) {
-        recurringGuard.openScopeDialog('start_time', isoValue ?? undefined);
-        return;
-      }
-
       if (isoValue && !timeConflictError) {
         save({ start_time: isoValue });
       }
     },
-    [scheduleDate, recurringGuard, save, timezone, timeConflictError],
+    [scheduleDate, save, timezone, timeConflictError],
   );
 
   const handleEndTimeChange = useCallback(
@@ -218,16 +198,11 @@ export function useTimeFields({
           ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
           : null;
 
-      if (recurringGuard.isRecurringInstance) {
-        recurringGuard.openScopeDialog('end_time', isoValue ?? undefined);
-        return;
-      }
-
       if (isoValue && !timeConflictError) {
         save({ end_time: isoValue });
       }
     },
-    [scheduleDate, recurringGuard, save, timezone, timeConflictError],
+    [scheduleDate, save, timezone, timeConflictError],
   );
 
   // リマインダー: 即時保存

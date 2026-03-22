@@ -65,7 +65,7 @@ const baseEvent: CalendarEvent = {
   displayEndDate: makeDate(today, 11, 0),
   duration: 60,
   isMultiDay: false,
-  isRecurring: false,
+
   origin: 'planned',
 };
 

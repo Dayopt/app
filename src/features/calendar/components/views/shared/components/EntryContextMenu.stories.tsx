@@ -36,7 +36,7 @@ const sampleEntry: CalendarEvent = {
   displayEndDate: new Date('2026-03-18T11:00:00'),
   duration: 60,
   isMultiDay: false,
-  isRecurring: false,
+
   origin: 'planned',
 };
 

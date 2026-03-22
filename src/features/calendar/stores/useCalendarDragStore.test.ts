@@ -18,7 +18,6 @@ const mockCalendarEvent: CalendarEvent = {
   displayEndDate: new Date('2026-02-21T11:00:00'),
   duration: 60,
   isMultiDay: false,
-  isRecurring: false,
 };
 
 const mockPlanWithTags: DragEntryData = {

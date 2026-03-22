@@ -110,23 +110,6 @@
         "noMatch": "一致するRecordがありません",
         "addNew": "作業ログを追加"
       },
-      "recurrence": {
-        "setRepeat": "繰り返しを設定",
-        "repeatLabel": "繰り返し: {type}",
-        "options": "繰り返しオプション",
-        "customEllipsis": "カスタム...",
-        "dialog": {
-          "weekdaysShort": {
-            "0": "日",
-            "1": "月",
-            "2": "火",
-            "3": "水",
-            "4": "木",
-            "5": "金",
-            "6": "土"
-          }
-        }
-      },
       "recordCreate": {
         "titlePlaceholder": "何をした？",
         "titleLabel": "記録タイトル",

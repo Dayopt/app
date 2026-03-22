@@ -95,8 +95,6 @@
       "syncErrorDescription": "ネットワーク接続を確認してください",
       "batchComplete": "{operation}を完了しました",
       "batchDescription": "{count}件の予定を処理しました",
-      "recurringAll": "繰り返し予定をすべて更新しました",
-      "recurringSingle": "この予定のみを更新しました",
       "reminderSet": "リマインダーを設定しました",
       "reminderDescription": "{title} - {time}",
       "hoursBefore": "{hours}時間前",

@@ -1,7 +1,6 @@
 export { useDebouncedSave } from './useDebouncedSave';
 export { useEntryForm } from './useEntryForm';
 export { useInspectorNavigation } from './useInspectorNavigation';
-export { useRecurringGuard } from './useRecurringGuard';
 export { useTagField } from './useTagField';
 export { useTimeFields } from './useTimeFields';
 

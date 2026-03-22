@@ -19,7 +19,7 @@ export function createMockEntry(overrides: Partial<EntryRow> = {}): EntryRow {
     actual_end_time: null,
     duration_minutes: null,
     fulfillment_score: null,
-    recurrence_type: 'none',
+    recurrence_type: null,
     recurrence_rule: null,
     recurrence_end_date: null,
     reminder_minutes: null,

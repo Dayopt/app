@@ -2,19 +2,16 @@
 
 import { useEffect, useMemo } from 'react';
 
-import { addDays, format, subDays } from 'date-fns';
+import { addDays, subDays } from 'date-fns';
 
 import type { EntryWithTags } from '@/features/entry';
-import { isRecurringEntry, useEntries } from '@/features/entry';
+import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
 import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import * as Sentry from '@sentry/nextjs';
-import {
-  expandEntriesToCalendarEvents,
-  type EntryInstanceException,
-} from '../../../lib/entry-adapter';
+import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
@@ -103,53 +100,10 @@ export function useCalendarData({
   // タグフィルタ変更時に useMemo を再実行させるためのリアクティブ依存
   const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
 
-  // 繰り返しエントリのIDを抽出
-  const recurringEntryIds = useMemo(() => {
-    if (!entriesData) return [];
-    return entriesData.filter((entry) => isRecurringEntry(entry)).map((entry) => entry.id);
-  }, [entriesData]);
-
-  // 繰り返しエントリの例外情報を取得（繰り返しエントリがある場合のみ）
-  const { data: instancesData } = api.entries.getInstances.useQuery(
-    {
-      entryIds: recurringEntryIds,
-      startDate: format(viewDateRange.start, 'yyyy-MM-dd'),
-      endDate: format(viewDateRange.end, 'yyyy-MM-dd'),
-    },
-    {
-      enabled: recurringEntryIds.length > 0,
-      staleTime: 30 * 1000,
-    },
-  );
-
-  // 例外情報をMapに変換
-  const exceptionsMap = useMemo(() => {
-    const map = new Map<string, EntryInstanceException[]>();
-    if (!instancesData) return map;
-
-    for (const inst of instancesData) {
-      const entryId = inst.entry_id; // instances テーブルの entry_id
-      if (!map.has(entryId)) {
-        map.set(entryId, []);
-      }
-      map.get(entryId)!.push({
-        instanceDate: inst.instance_date,
-        exceptionType: inst.exception_type as 'modified' | 'cancelled' | 'moved' | undefined,
-        title: inst.title ?? undefined,
-        description: inst.description ?? undefined,
-        instanceStart: inst.instance_start ?? undefined,
-        instanceEnd: inst.instance_end ?? undefined,
-        originalDate: inst.original_date ?? undefined,
-      });
-    }
-    return map;
-  }, [instancesData]);
-
-  // 全エントリをCalendarEvent型に変換（繰り返しエントリを展開）
+  // 全エントリをCalendarEvent型に変換
   const allCalendarEvents = useMemo(() => {
     const calendarPlans: CalendarEvent[] = [];
 
-    // Entries の変換（繰り返し展開含む）
     if (entriesData) {
       const startTime = performance.now();
 
@@ -158,12 +112,7 @@ export function useCalendarData({
         ...e,
         tagId: e.tagId ?? null,
       })) as EntryWithTags[];
-      const expandedEvents = expandEntriesToCalendarEvents(
-        normalized,
-        viewDateRange.start,
-        viewDateRange.end,
-        exceptionsMap,
-      );
+      const expandedEvents = expandEntriesToCalendarEvents(normalized);
       calendarPlans.push(...expandedEvents);
 
       const duration = performance.now() - startTime;
@@ -182,7 +131,7 @@ export function useCalendarData({
     }
 
     return calendarPlans;
-  }, [entriesData, viewDateRange, exceptionsMap]);
+  }, [entriesData]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {

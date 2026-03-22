@@ -31,7 +31,7 @@ function createTimedEntry(overrides: Partial<TimedEntry> & { start: Date; end: D
     displayEndDate: overrides.end,
     duration: (overrides.end.getTime() - overrides.start.getTime()) / 60000,
     isMultiDay: false,
-    isRecurring: false,
+
     status: 'open',
     color: '',
     createdAt: new Date(),
@@ -51,7 +51,7 @@ function createCalendarEvent(
     displayEndDate: overrides.endDate,
     duration: (overrides.endDate.getTime() - overrides.startDate.getTime()) / 60000,
     isMultiDay: false,
-    isRecurring: false,
+
     status: 'open',
     color: '',
     createdAt: new Date(),

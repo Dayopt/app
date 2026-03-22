@@ -110,23 +110,6 @@
         "noMatch": "No matching records",
         "addNew": "Add work log"
       },
-      "recurrence": {
-        "setRepeat": "Set repeat",
-        "repeatLabel": "Repeat: {type}",
-        "options": "Repeat options",
-        "customEllipsis": "Custom...",
-        "dialog": {
-          "weekdaysShort": {
-            "0": "Sun",
-            "1": "Mon",
-            "2": "Tue",
-            "3": "Wed",
-            "4": "Thu",
-            "5": "Fri",
-            "6": "Sat"
-          }
-        }
-      },
       "recordCreate": {
         "titlePlaceholder": "What did you do?",
         "titleLabel": "Record title",

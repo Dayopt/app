@@ -68,8 +68,5 @@ export const useEntryRealtime = createRealtimeHook({
     if (recordId) {
       void utils.entries.getById.invalidate({ id: recordId });
     }
-
-    // 繰り返しインスタンスも無効化
-    void utils.entries.getInstances.invalidate();
   },
 });

@@ -27,7 +27,7 @@ describe('entryPositioning', () => {
     origin: 'planned',
     status: 'open',
     color: 'blue',
-    isRecurring: false,
+
     tagId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -171,7 +171,7 @@ describe('entryPositioning', () => {
       displayEndDate: new Date(2025, 0, 15, 11, 0),
       duration: 60,
       isMultiDay: false,
-      isRecurring: false,
+
       origin: 'planned',
       entryState: 'past',
       actualStartDate: null,

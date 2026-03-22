@@ -5,9 +5,6 @@
  *
  * useEntryForm() で全状態を取得し、フラットにフィールドを描画する。
  * props は entry + onDelete のみ。
- *
- * 旧 EntryInspectorContent + EntryInspectorDetailsTab + InspectorDetailsLayout +
- * InspectorTimeSection を統合。
  */
 
 import { useCallback, useMemo } from 'react';
@@ -22,13 +19,12 @@ import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
 import { getEntryState } from '../../lib/entry-status';
-import type { FulfillmentScore, RecurrenceType } from '../../types/entry';
+import type { FulfillmentScore } from '../../types/entry';
 
 import {
   DateRow,
   FulfillmentRow,
   NoteSection,
-  RecurrenceRow,
   ReminderRow,
   TagRow,
   TimeConflictAlert,
@@ -63,7 +59,7 @@ export function EntryInspectorForm() {
     autoSave,
   } = handlers;
   const { timeConflictError } = state;
-  const { updateEntry: updateEntryMutation, handleDelete } = actions;
+  const { handleDelete } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -102,33 +98,6 @@ export function EntryInspectorForm() {
       updateEntry.mutate({ id: entryId, data: { fulfillment_score: score } });
     },
     [entryId, updateEntry],
-  );
-
-  // 繰り返し（TanStack Query の楽観的更新で即座に反映）
-  const recurrenceRule = entry?.recurrence_rule ?? null;
-  const recurrenceType: RecurrenceType | null =
-    (entry?.recurrence_type as RecurrenceType | null) ?? null;
-
-  const handleRepeatTypeChange = useCallback(
-    (type: string) => {
-      if (!entryId) return;
-      updateEntryMutation.mutate({
-        id: entryId,
-        data: {
-          recurrence_type: (type || 'none') as RecurrenceType,
-          recurrence_rule: null,
-        },
-      });
-    },
-    [entryId, updateEntryMutation],
-  );
-
-  const handleRecurrenceRuleChange = useCallback(
-    (rrule: string | null) => {
-      if (!entryId) return;
-      updateEntryMutation.mutate({ id: entryId, data: { recurrence_rule: rrule } });
-    },
-    [entryId, updateEntryMutation],
   );
 
   // 予定行の自動調整
@@ -240,14 +209,6 @@ export function EntryInspectorForm() {
               }}
             />
           )}
-
-          {/* 繰り返し */}
-          <RecurrenceRow
-            recurrenceRule={recurrenceRule}
-            recurrenceType={recurrenceType}
-            onRepeatTypeChange={handleRepeatTypeChange}
-            onRecurrenceRuleChange={handleRecurrenceRuleChange}
-          />
 
           {/* リマインダー */}
           <ReminderRow value={reminderMinutes} onChange={handleReminderChange} />

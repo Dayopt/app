@@ -36,12 +36,12 @@ interface CacheState<T> {
  *
  * @example
  * ```typescript
- * interface PlanCache {
- *   recurrence_type?: 'none' | 'daily' | 'weekly' | null;
- *   recurrence_rule?: string | null;
+ * interface EntryCache {
+ *   title?: string;
+ *   description?: string | null;
  * }
  *
- * export const usePlanCacheStore = createCacheStore<PlanCache>();
+ * export const useEntryCacheStore = createCacheStore<EntryCache>();
  * ```
  */
 export function createCacheStore<T>() {

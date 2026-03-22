@@ -5,7 +5,7 @@
  *
  * 全 Inspector フィールドの保存を一元管理:
  * - save(): 500ms debounce（テキスト・時間フィールド）
- * - saveImmediate(): 即時（fulfillment, reminder, recurrence）
+ * - saveImmediate(): 即時（fulfillment, reminder）
  * - saveTag(): 即時（別 API）
  * - flush(): 強制送信（unmount / entry 切替時）
  */
@@ -80,7 +80,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   );
 
   /**
-   * 即時保存（fulfillment, reminder, recurrence 等の選択式 UI 用）
+   * 即時保存（fulfillment, reminder 等の選択式 UI 用）
    */
   const saveImmediate = useCallback(
     (fields: SaveFields) => {

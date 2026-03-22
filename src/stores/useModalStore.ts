@@ -5,9 +5,6 @@ import { devtools } from 'zustand/middleware';
 
 import { createSelectors } from '@/lib/zustand/createSelectors';
 
-/** 繰り返しプラン編集時の対象スコープ（この予定のみ・以降・すべて） */
-export type RecurringEditScope = 'this' | 'thisAndFuture' | 'all';
-
 /**
  * モーダルの状態を表す判別共用体型
  * `type` フィールドでTypeScriptの型絞り込みが有効
@@ -26,12 +23,6 @@ export type ModalState =
   | {
       type: 'tagMerge';
       sourceTag: { id: string; name: string; color?: string | null };
-    }
-  | {
-      type: 'recurringEdit';
-      planTitle: string | null;
-      mode: 'edit' | 'delete';
-      onConfirm: (scope: RecurringEditScope) => Promise<void>;
     };
 
 interface ModalStoreState {
@@ -57,8 +48,7 @@ const useModalStoreBase = create<ModalStoreState>()(
 /**
  * 統合モーダルStore
  *
- * 旧 useDeleteConfirmStore, useTagCreateModalStore, useTagMergeModalStore,
- * useRecurringEditConfirmStore を統合。
+ * 旧 useDeleteConfirmStore, useTagCreateModalStore, useTagMergeModalStore を統合。
  * 設定モーダルは Intercepting Routes（/settings/[category]）に移行済み。
  *
  * @example
@@ -98,15 +88,6 @@ export function openTagCreateModal(defaultGroup?: string) {
 /** タグマージモーダルを開く便利関数 */
 export function openTagMergeModal(sourceTag: { id: string; name: string; color?: string | null }) {
   useModalStore.getState().openModal({ type: 'tagMerge', sourceTag });
-}
-
-/** 繰り返しプラン編集確認モーダルを開く便利関数 */
-export function openRecurringEditConfirm(
-  planTitle: string | null,
-  mode: 'edit' | 'delete',
-  onConfirm: (scope: RecurringEditScope) => Promise<void>,
-) {
-  useModalStore.getState().openModal({ type: 'recurringEdit', planTitle, mode, onConfirm });
 }
 
 /** 現在開いているモーダルを閉じる便利関数 */

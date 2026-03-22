@@ -76,8 +76,8 @@ export function useEntryMutations() {
         actual_end_time: null,
         duration_minutes: input.duration_minutes ?? null,
         fulfillment_score: input.fulfillment_score ?? null,
-        recurrence_type: input.recurrence_type ?? null,
-        recurrence_rule: input.recurrence_rule ?? null,
+        recurrence_type: null,
+        recurrence_rule: null,
         recurrence_end_date: null,
         reminder_minutes: input.reminder_minutes ?? null,
         reminder_at: null,
@@ -184,8 +184,6 @@ export function useEntryMutations() {
       // 3. 楽観的更新: TanStack Queryキャッシュを更新
       const updateData: UpdateEntryInput = {};
 
-      if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type;
-      if (data.recurrence_rule !== undefined) updateData.recurrence_rule = data.recurrence_rule;
       if (data.start_time !== undefined) updateData.start_time = data.start_time;
       if (data.end_time !== undefined) updateData.end_time = data.end_time;
       if (data.title !== undefined) updateData.title = data.title;

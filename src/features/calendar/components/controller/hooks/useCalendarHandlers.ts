@@ -2,9 +2,8 @@
 
 import { useCallback } from 'react';
 
-import { getInstanceRef, useEntryInspectorStore } from '@/features/entry';
+import { useEntryInspectorStore } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { closeModal, useModalStore } from '@/stores/useModalStore';
 import { useInlineCreateStore } from '../../../stores/useInlineCreateStore';
 
 import type { CalendarEvent } from '../../../types/calendar.types';
@@ -23,28 +22,12 @@ export function useCalendarHandlers() {
   // エントリクリックハンドラー（Plan/Record 統一）
   const handlePlanClick = useCallback(
     (plan: CalendarEvent) => {
-      // ドラッグ操作で開いたダイアログが残っている場合は閉じる
-      const modal = useModalStore.getState().modal;
-      if (modal?.type === 'recurringEdit') closeModal();
+      openPlanInspector(plan.id);
 
-      // 繰り返しインスタンスの場合は親エントリIDを使用
-      const entryIdToOpen = plan.calendarId ?? plan.id;
-
-      // 繰り返しプランの場合はインスタンス日付を渡す
-      const ref = plan.isRecurring ? getInstanceRef(plan) : null;
-      const instanceDateRaw = ref?.instanceDate ?? plan.startDate?.toISOString().slice(0, 10);
-
-      openPlanInspector(
-        entryIdToOpen,
-        instanceDateRaw && plan.isRecurring ? { instanceDate: instanceDateRaw } : undefined,
-      );
-
-      logger.log('📋 Opening Entry Inspector:', {
-        entryId: entryIdToOpen,
+      logger.log('Opening Entry Inspector:', {
+        entryId: plan.id,
         title: plan.title,
         origin: plan.origin,
-        isRecurringInstance: !!plan.calendarId,
-        instanceDate: instanceDateRaw,
       });
     },
     [openPlanInspector],
@@ -67,7 +50,7 @@ export function useCalendarHandlers() {
         endMinutes = startMinutes + 15;
       }
 
-      logger.log('📅 Calendar Drag Selection → InlineTagPalette:', {
+      logger.log('Calendar Drag Selection:', {
         date: selection.date.toDateString(),
         start: `${selection.startHour}:${String(selection.startMinute).padStart(2, '0')}`,
         end: `${Math.floor(endMinutes / 60)}:${String(endMinutes % 60).padStart(2, '0')}`,

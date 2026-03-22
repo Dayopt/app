@@ -12,11 +12,7 @@ import { getEntryState } from '../lib/entry-status';
 import type { EntryWithTags } from '../types/entry';
 import { useEntries } from './useEntries';
 
-import type {
-  RecurrenceFilter,
-  ReminderFilter,
-  ScheduleFilter,
-} from '../stores/useEntryFilterStore';
+import type { ReminderFilter, ScheduleFilter } from '../stores/useEntryFilterStore';
 
 /** エントリステータス（時間位置から自動判定） */
 type EntryStatus = 'open' | 'closed';
@@ -56,17 +52,6 @@ export interface EntryItem {
   start_time?: string | null | undefined;
   end_time?: string | null | undefined;
   reminder_minutes?: number | null | undefined;
-  recurrence_type?:
-    | 'none'
-    | 'daily'
-    | 'weekly'
-    | 'monthly'
-    | 'yearly'
-    | 'weekdays'
-    | null
-    | undefined;
-  recurrence_end_date?: string | null | undefined;
-  recurrence_rule?: string | null | undefined;
   tagId?: string | null | undefined;
 }
 
@@ -78,24 +63,11 @@ export interface EntryDataFilters {
   status?: EntryStatus | undefined;
   search?: string | undefined;
   tags?: string[] | undefined;
-  recurrence?: RecurrenceFilter | undefined;
   reminder?: ReminderFilter | undefined;
   schedule?: ScheduleFilter | undefined;
   createdAt?: DateRangeFilter | undefined;
   updatedAt?: DateRangeFilter | undefined;
   hideCompleted?: boolean | undefined;
-}
-
-/**
- * 繰り返しフィルターの判定
- */
-function matchesRecurrenceFilter(
-  recurrenceType: string | null | undefined,
-  filter: RecurrenceFilter,
-): boolean {
-  if (filter === 'all') return true;
-  const hasRecurrence = recurrenceType && recurrenceType !== 'none';
-  return filter === 'yes' ? !!hasRecurrence : !hasRecurrence;
 }
 
 /**
@@ -140,9 +112,6 @@ export function planToPlanItem(entry: PlanWithTagIds): EntryItem {
     description: entry.description ?? undefined,
     start_time: entry.start_time,
     end_time: entry.end_time,
-    recurrence_type: entry.recurrence_type,
-    recurrence_end_date: entry.recurrence_end_date,
-    recurrence_rule: entry.recurrence_rule,
     tagId: entry.tagId,
   };
 }
@@ -177,13 +146,6 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
         if (!item.tagId) return false;
         return filters.tags!.includes(item.tagId);
       });
-    }
-
-    // 繰り返しフィルタリング
-    if (filters.recurrence && filters.recurrence !== 'all') {
-      result = result.filter((item) =>
-        matchesRecurrenceFilter(item.recurrence_type, filters.recurrence!),
-      );
     }
 
     // リマインダーフィルタリング

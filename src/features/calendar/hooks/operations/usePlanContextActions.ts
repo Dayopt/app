@@ -1,19 +1,10 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 
-import {
-  getInstanceRef,
-  useEntryInspectorStore,
-  useEntryMutations,
-  useRecurringScopeMutations,
-} from '@/features/entry';
+import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import {
-  openDeleteConfirm,
-  openRecurringEditConfirm,
-  type RecurringEditScope,
-} from '@/stores/useModalStore';
+import { openDeleteConfirm } from '@/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
@@ -24,59 +15,20 @@ export function usePlanContextActions() {
   const t = useTranslations();
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
   const { deleteEntry, createEntry } = useEntryMutations();
-  const { applyDelete } = useRecurringScopeMutations();
-
-  // 繰り返しプラン削除用のターゲットをrefで保持（ダイアログのコールバックで参照）
-  const recurringDeleteTargetRef = useRef<CalendarEvent | null>(null);
-
-  // 繰り返しプラン削除確認ハンドラー（ダイアログのコールバック）
-  const handleRecurringDeleteConfirm = useCallback(
-    async (scope: RecurringEditScope) => {
-      const target = recurringDeleteTargetRef.current;
-      if (!target) return;
-
-      try {
-        const ref = getInstanceRef(target);
-        if (!ref) return;
-
-        await applyDelete({
-          scope,
-          entryId: ref.parentEntryId,
-          instanceDate: ref.instanceDate,
-        });
-      } finally {
-        recurringDeleteTargetRef.current = null;
-      }
-    },
-    [applyDelete],
-  );
 
   const handleDeletePlan = useCallback(
     (plan: CalendarEvent) => {
-      // 繰り返しプランの場合はスコープ選択ダイアログを表示
-      if (plan.isRecurring) {
-        recurringDeleteTargetRef.current = plan;
-        openRecurringEditConfirm(plan.title, 'delete', handleRecurringDeleteConfirm);
-        return;
-      }
-
-      // 通常プラン: カスタム削除確認ダイアログを使用
-      const planIdToDelete = plan.calendarId || plan.id;
+      const planIdToDelete = plan.id;
       openDeleteConfirm(planIdToDelete, plan.title, async () => {
         await deleteEntry.mutateAsync({ id: planIdToDelete });
       });
     },
-    [deleteEntry, handleRecurringDeleteConfirm],
+    [deleteEntry],
   );
 
   const handleEditPlan = useCallback(
     (plan: CalendarEvent) => {
-      // planInspectorを開いて編集モードにする
-      // 繰り返しプランの場合はインスタンス日付を渡す
-      const ref = plan.isRecurring ? getInstanceRef(plan) : null;
-      const instanceDate = ref?.instanceDate ?? plan.startDate?.toISOString().slice(0, 10);
-
-      openInspector(plan.calendarId || plan.id, instanceDate ? { instanceDate } : undefined);
+      openInspector(plan.id);
     },
     [openInspector],
   );

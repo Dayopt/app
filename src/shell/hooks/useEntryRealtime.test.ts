@@ -6,7 +6,6 @@ const mockUtils = {
   entries: {
     list: { invalidate: vi.fn() },
     getById: { invalidate: vi.fn() },
-    getInstances: { invalidate: vi.fn() },
   },
 };
 
@@ -97,7 +96,6 @@ describe('useEntryRealtime', () => {
       refetchType: 'all',
     });
     expect(mockUtils.entries.getById.invalidate).toHaveBeenCalledWith({ id: 'entry-1' });
-    expect(mockUtils.entries.getInstances.invalidate).toHaveBeenCalled();
   });
 
   it('mutation中はキャッシュ無効化をスキップする', () => {

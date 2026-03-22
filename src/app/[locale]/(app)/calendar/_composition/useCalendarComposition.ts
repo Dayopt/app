@@ -22,7 +22,6 @@ import {
   useCalendarNavigationHandlers,
   usePlanContextActions,
   usePlanOperations,
-  useRecurringPlanDrag,
   useWeekendToggleShortcut,
 } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
@@ -192,14 +191,11 @@ export function useCalendarComposition({
   // =========================================================================
   // Plan Operations（CRUD）
   // =========================================================================
-  const { handlePlanDelete: deletePlan, handlePlanRestore } = usePlanOperations();
-
-  // =========================================================================
-  // Recurring Plan Drag（ダイアログ付きドラッグ処理）
-  // =========================================================================
-  const { handleUpdatePlan } = useRecurringPlanDrag({
-    plans: allCalendarEvents,
-  });
+  const {
+    handlePlanDelete: deletePlan,
+    handlePlanRestore,
+    handleUpdatePlan: handlePlanUpdate,
+  } = usePlanOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
@@ -351,7 +347,7 @@ export function useCalendarComposition({
       onTimeRangeSelect: handleDateTimeRangeSelect,
 
       // Plan CRUD
-      onUpdatePlan: handleUpdatePlan,
+      onUpdatePlan: handlePlanUpdate,
       onDeletePlan: deletePlan,
       onRestorePlan: handlePlanRestore,
 
@@ -380,7 +376,7 @@ export function useCalendarComposition({
       disabledPlanId,
       handlePlanClick,
       handleDateTimeRangeSelect,
-      handleUpdatePlan,
+      handlePlanUpdate,
       deletePlan,
       handlePlanRestore,
       handleEditPlan,

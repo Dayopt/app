@@ -95,8 +95,6 @@
       "syncErrorDescription": "Please check your network connection",
       "batchComplete": "{operation} completed",
       "batchDescription": "{count} events processed",
-      "recurringAll": "Updated all recurring events",
-      "recurringSingle": "Updated this event only",
       "reminderSet": "Reminder set",
       "reminderDescription": "{title} - {time}",
       "hoursBefore": "{hours} hours before",

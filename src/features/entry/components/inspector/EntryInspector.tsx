@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useModalStore } from '@/stores/useModalStore';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
@@ -61,10 +60,7 @@ export function EntryInspector() {
   });
   const entry: EntryWithTags | null = (planData ?? null) as EntryWithTags | null;
 
-  // 繰り返しダイアログが開いている間は Inspector を閉じない
   const handleClose = useCallback(() => {
-    const modal = useModalStore.getState().modal;
-    if (modal?.type === 'recurringEdit') return;
     closeInspector();
   }, [closeInspector]);
 

@@ -38,7 +38,6 @@ const baseEntry: CalendarEvent = {
   displayEndDate: new Date('2024-01-15T11:00:00'),
   duration: 60,
   isMultiDay: false,
-  isRecurring: false,
 };
 
 /** カード幅を固定するラッパー */
@@ -90,19 +89,6 @@ export const Compact: Story = {
   ),
 };
 
-/** 繰り返しエントリ。Repeat アイコンが時刻の後ろに表示される。 */
-export const Recurring: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent
-        plan={{ ...baseEntry, isRecurring: true }}
-        tagName="朝会"
-        timeFormat="24h"
-      />
-    </CardSlot>
-  ),
-};
-
 /** リマインダー設定あり。Bell アイコンが表示される。 */
 export const WithReminder: Story = {
   render: () => (
@@ -110,19 +96,6 @@ export const WithReminder: Story = {
       <EntryCardContent
         plan={{ ...baseEntry, reminder_minutes: 15 }}
         tagName="締め切り確認"
-        timeFormat="24h"
-      />
-    </CardSlot>
-  ),
-};
-
-/** 繰り返し + リマインダーの両方。 */
-export const RecurringWithReminder: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent
-        plan={{ ...baseEntry, isRecurring: true, reminder_minutes: 10 }}
-        tagName="週次レビュー"
         timeFormat="24h"
       />
     </CardSlot>
@@ -192,26 +165,9 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-1 text-xs">Recurring（繰り返しアイコン）</p>
-        <CardSlot>
-          <EntryCardContent plan={{ ...baseEntry, isRecurring: true }} tagName="朝会" />
-        </CardSlot>
-      </section>
-
-      <section>
         <p className="text-muted-foreground mb-1 text-xs">WithReminder（ベルアイコン）</p>
         <CardSlot>
           <EntryCardContent plan={{ ...baseEntry, reminder_minutes: 15 }} tagName="締め切り確認" />
-        </CardSlot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-1 text-xs">繰り返し + リマインダー</p>
-        <CardSlot>
-          <EntryCardContent
-            plan={{ ...baseEntry, isRecurring: true, reminder_minutes: 10 }}
-            tagName="週次レビュー"
-          />
         </CardSlot>
       </section>
 

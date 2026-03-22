@@ -4,7 +4,7 @@
  * Plan/Record の Inspector Stories で共通利用するモックデータとコンポーネント
  */
 
-import { Bell, ChevronDown, FolderOpen, Plus, Repeat, Trash2, X } from 'lucide-react';
+import { Bell, ChevronDown, FolderOpen, Plus, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
@@ -94,28 +94,6 @@ export function MockTagRow({
       >
         <Trash2 className="size-4" />
       </button>
-    </div>
-  );
-}
-
-/** モック用繰り返し行（RecurrenceRow は store 依存のためモック） */
-export function MockRecurrenceRow() {
-  const t = useTranslations();
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Repeat className="text-muted-foreground size-4 flex-shrink-0" />
-        <span className="text-muted-foreground text-sm">{t('common.recurrence.label')}</span>
-      </div>
-      <div className="-mr-2">
-        <button
-          type="button"
-          className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
-          aria-label="Set recurrence"
-        >
-          {t('common.recurrence.none')}
-        </button>
-      </div>
     </div>
   );
 }

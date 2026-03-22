@@ -32,11 +32,11 @@ src/platform/i18n/
 
 ### ファイル名
 
-| ルール | 例 |
-|--------|-----|
+| ルール                | 例                                     |
+| --------------------- | -------------------------------------- |
 | 1ファイル = 1ドメイン | `calendar.json` → calendarドメインのみ |
-| 単数形 | `tag.json` ✅ / `tags.json` ❌ |
-| camelCase | `aiChat.json` ✅ / `ai-chat.json` ❌ |
+| 単数形                | `tag.json` ✅ / `tags.json` ❌         |
+| camelCase             | `aiChat.json` ✅ / `ai-chat.json` ❌   |
 
 **例外**: `settings`, `stats` は英語で複数形が自然なため許容
 
@@ -46,12 +46,12 @@ src/platform/i18n/
 domain.section.key
 ```
 
-| 階層 | 説明 | 例 |
-|------|------|-----|
-| 1 | ドメイン（ファイル名と一致） | `calendar` |
-| 2 | 画面名 or UIセクション名 | `toolbar`, `modal`, `form` |
-| 3 | 具体的な意味 | `title`, `description` |
-| 4 | 特殊ケースのみ | `calendar.toolbar.view.month` |
+| 階層 | 説明                         | 例                            |
+| ---- | ---------------------------- | ----------------------------- |
+| 1    | ドメイン（ファイル名と一致） | `calendar`                    |
+| 2    | 画面名 or UIセクション名     | `toolbar`, `modal`, `form`    |
+| 3    | 具体的な意味                 | `title`, `description`        |
+| 4    | 特殊ケースのみ               | `calendar.toolbar.view.month` |
 
 ### sectionの許容値
 
@@ -125,21 +125,21 @@ t('toolbar.today'); // → calendar.toolbar.today
 
 ## ネームスペース一覧
 
-| ネームスペース | 用途 |
-|---------------|------|
-| `app` | アプリ全般（メタデータ等） |
-| `auth` | 認証 |
-| `board` | ボード |
-| `calendar` | カレンダー |
-| `common` | 共通UI |
-| `error` | エラーメッセージ |
-| `legal` | 法的文書 |
-| `navigation` | ナビゲーション |
-| `notification` | 通知 |
-| `settings` | 設定（例外: 複数形） |
-| `stats` | 統計（例外: 複数形） |
-| `table` | テーブル |
-| `tag` | タグ |
+| ネームスペース | 用途                       |
+| -------------- | -------------------------- |
+| `app`          | アプリ全般（メタデータ等） |
+| `auth`         | 認証                       |
+| `board`        | ボード                     |
+| `calendar`     | カレンダー                 |
+| `common`       | 共通UI                     |
+| `error`        | エラーメッセージ           |
+| `legal`        | 法的文書                   |
+| `navigation`   | ナビゲーション             |
+| `notification` | 通知                       |
+| `settings`     | 設定（例外: 複数形）       |
+| `stats`        | 統計（例外: 複数形）       |
+| `table`        | テーブル                   |
+| `tag`          | タグ                       |
 
 ---
 
@@ -183,14 +183,13 @@ t('toolbar.today'); // → calendar.toolbar.today
 ```
 common
 ├── actions        # ボタンラベル: save, cancel, close, delete, create, edit, ...
-├── confirm        # 確認ダイアログ: delete, archive, bulkDelete, recurring
+├── confirm        # 確認ダイアログ: delete, archive, bulkDelete
 ├── aria           # アクセシビリティ: openMenu, selectColor, selectDate, ...
 ├── form           # フォーム: required, optional, processing
 ├── validation     # バリデーション: required, title.maxLength, password.*, ...
 ├── errors         # エラー: generic, auth.*, mfa.*, calendar.*
 ├── status         # ステータス: loading, success, error, warning, info
 ├── time           # 相対時間: today, yesterday, daysAgo, minutesAgo, ...
-├── recurrence     # 繰り返し: daily, weekly, monthly, dialog.*
 ├── reminder       # リマインダー: none, atStart, min10, min30, ...
 ├── suggest        # サジェスト入力: recentHistory, loading, noResults
 ├── createNew      # 新規作成メニュー: plan, task, tag
@@ -207,11 +206,11 @@ common
 
 ### 翻訳キーの使い分け
 
-| パターン | 例 | 用途 |
-|---------|-----|------|
-| `useTranslations()` | `t('common.actions.save')` | 複数ネームスペースを参照するコンポーネント |
-| `useTranslations('common')` | `t('actions.save')` | common のみ参照するコンポーネント |
-| `useTranslations('common.suggest')` | `t('loading')` | 特定セクションのみ参照する場合 |
+| パターン                            | 例                         | 用途                                       |
+| ----------------------------------- | -------------------------- | ------------------------------------------ |
+| `useTranslations()`                 | `t('common.actions.save')` | 複数ネームスペースを参照するコンポーネント |
+| `useTranslations('common')`         | `t('actions.save')`        | common のみ参照するコンポーネント          |
+| `useTranslations('common.suggest')` | `t('loading')`             | 特定セクションのみ参照する場合             |
 
 **推奨**: 多くのコンポーネントは `common` + Feature固有キーの両方を使うため、`useTranslations()`（ルートスコープ）が最も一般的。
 
@@ -224,7 +223,7 @@ Storybookでは `.storybook/preview.tsx` で `NextIntlClientProvider` に直接�
 const messages = {
   common: {
     actions: { save: '保存', cancel: 'キャンセル', ... },
-    confirm: { recurring: { ... } },
+    confirm: { delete: { ... } },
     ...
   },
   calendar: { ... },
@@ -233,6 +232,7 @@ const messages = {
 ```
 
 **ルール**:
+
 - 実際のJSONファイルと**同じキー構造**を維持すること
 - Storyに必要なキーのみを含める（全キーのコピーは不要）
 - 新しいStoryを追加する際、翻訳キーが不足していれば `preview.tsx` のメッセージに追加する
