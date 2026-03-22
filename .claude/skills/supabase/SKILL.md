@@ -1,6 +1,8 @@
 ---
 name: supabase
 description: Supabaseスキル。RLS設計、マイグレーション作成、Realtime購読の実装時に自動発動。3環境分離での安全な運用を支援。
+effort: high
+maxTurns: 25
 ---
 
 # Supabaseスキル

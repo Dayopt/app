@@ -1,6 +1,8 @@
 ---
 name: store-creating
 description: DayoptのZustand storeを作成。devtools, persist, 型安全なパターンを適用。
+effort: low
+maxTurns: 10
 ---
 
 # Store Creating Skill

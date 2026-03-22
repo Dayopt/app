@@ -1,6 +1,8 @@
 ---
 name: i18n
 description: 国際化スキル。UIテキストを含むコンポーネント作成時、ハードコードされた文字列検出時に自動発動。next-intlパターンに沿った翻訳キー追加を支援。
+effort: low
+maxTurns: 10
 ---
 
 # 国際化（i18n）スキル
