@@ -111,6 +111,38 @@ export function usePaletteMutations() {
     },
   });
 
+  const reorderMutation = api.palette.reorder.useMutation({
+    onMutate: async (input) => {
+      await utils.palette.list.cancel();
+
+      const previous = utils.palette.list.getData();
+
+      utils.palette.list.setData(undefined, (old) => {
+        if (!old) return old;
+        const idToItem = new Map(old.map((item) => [item.id, item]));
+        return input.ids
+          .map((id, index) => {
+            const item = idToItem.get(id);
+            return item ? { ...item, sort_order: index } : null;
+          })
+          .filter((item): item is PaletteItem => item !== null);
+      });
+
+      return { previous };
+    },
+
+    onError: (_err, _input, context) => {
+      if (context?.previous) {
+        utils.palette.list.setData(undefined, context.previous);
+      }
+      toast.error(t('sidebar.palette.updateFailed'));
+    },
+
+    onSettled: () => {
+      void utils.palette.list.invalidate();
+    },
+  });
+
   const pinItem = useCallback(
     (tagId: string, durationMinutes: number) => {
       pinMutation.mutate({ tagId, durationMinutes });
@@ -132,10 +164,18 @@ export function usePaletteMutations() {
     [updateDurationMutation],
   );
 
+  const reorderItems = useCallback(
+    (ids: string[]) => {
+      reorderMutation.mutate({ ids });
+    },
+    [reorderMutation],
+  );
+
   return {
     pinItem,
     unpinItem,
     updateDuration,
+    reorderItems,
     isPinning: pinMutation.isPending,
   };
 }

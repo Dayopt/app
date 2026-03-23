@@ -21,6 +21,10 @@ import { usePaletteItems } from '../hooks/usePaletteQuery';
 import { PaletteAddPopover } from './PaletteAddPopover';
 import { PaletteItemMenu } from './PaletteItemMenu';
 
+// ─────────────────────────────────────────────────────────
+// Palette
+// ─────────────────────────────────────────────────────────
+
 /** Palette — サイドバーのピン留めブロック配置セクション */
 export function Palette() {
   const t = useTranslations();
@@ -56,25 +60,25 @@ export function Palette() {
           </div>
         )}
 
-        {/* ピン留めアイテム */}
         {pinnedWithTags.map((item) =>
           item ? (
-            <BlockItem
-              key={item.id}
-              tagId={item.tag_id}
-              tagName={item.tag.name}
-              tagColor={item.tag.color}
-              durationMinutes={item.duration_minutes}
-              onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
-              menuSlot={
-                <PaletteItemMenu
-                  itemId={item.id}
-                  currentDuration={item.duration_minutes}
-                  onChangeDuration={updateDuration}
-                  onRemove={unpinItem}
-                />
-              }
-            />
+            <div key={item.id}>
+              <BlockItem
+                tagName={item.tag.name}
+                tagColor={item.tag.color}
+                durationMinutes={item.duration_minutes}
+                tagId={item.tag_id}
+                onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
+                menuSlot={
+                  <PaletteItemMenu
+                    itemId={item.id}
+                    currentDuration={item.duration_minutes}
+                    onChangeDuration={updateDuration}
+                    onRemove={unpinItem}
+                  />
+                }
+              />
+            </div>
           ) : null,
         )}
       </SidebarSection>

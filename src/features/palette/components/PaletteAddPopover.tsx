@@ -100,7 +100,8 @@ export function PaletteAddPopover({ pinnedItems }: PaletteAddPopoverProps) {
                     <SelectItem key={tag.id} value={tag.id}>
                       <span className="flex items-center gap-2">
                         <span
-                          className={`size-2.5 shrink-0 rounded-full bg-tag-${tag.color ?? 'gray'}`}
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: `var(--tag-${tag.color ?? 'gray'})` }}
                           aria-hidden="true"
                         />
                         {tag.name}

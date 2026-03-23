@@ -58,6 +58,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
+                dotVariant="outline"
                 onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}
                 menuSlot={
                   onPinItem ? (
