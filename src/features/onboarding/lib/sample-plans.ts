@@ -2,19 +2,42 @@
  * サンプルプラン定義
  *
  * オンボーディング完了時にクロノタイプのピーク時間帯に基づいて
- * サンプルプランを自動配置する。
+ * プリセットタグ + サンプルエントリを自動配置する。
  */
 
 import type { PresetChronotypeType } from '@/types/chronotype';
 
-/** サンプルプランのテンプレート */
+// ─────────────────────────────────────────────────────────
+// プリセットタグ
+// ─────────────────────────────────────────────────────────
+
+export type PresetTagKey = 'work' | 'learning' | 'life' | 'exercise' | 'hobby';
+
+export interface PresetTagDefinition {
+  name: string;
+  color: string;
+}
+
+/** オンボーディング時に自動作成されるプリセットタグ */
+export const PRESET_TAGS: Record<PresetTagKey, PresetTagDefinition> = {
+  work: { name: 'Work', color: 'blue' },
+  learning: { name: 'Learning', color: 'green' },
+  life: { name: 'Life', color: 'amber' },
+  exercise: { name: 'Exercise', color: 'teal' },
+  hobby: { name: 'Hobby', color: 'violet' },
+};
+
+// ─────────────────────────────────────────────────────────
+// サンプルプランテンプレート
+// ─────────────────────────────────────────────────────────
+
 interface SamplePlanTemplate {
-  /** プランのタイトル */
   title: string;
-  /** ピーク開始時刻からの相対オフセット（時間） */
   offsetHours: number;
-  /** 継続時間（分） */
   durationMinutes: number;
+  tagKey: PresetTagKey;
+  description?: string;
+  reminderMinutes?: number;
 }
 
 /** クロノタイプ別のピーク開始時間 */
@@ -29,19 +52,37 @@ const PEAK_START_HOURS: Record<PresetChronotypeType, number> = {
  * サンプルプランテンプレート（全クロノタイプ共通）
  *
  * ピーク開始時刻を基準に相対配置。
- * 例: bear (peak=10:00) → 集中作業 10:00-11:30, メール 11:30-12:00, 休憩 12:00-12:30, 振り返り 12:30-13:00
+ * 例: bear (peak=10:00) → Morning Run 08:00, Draft Proposal 10:00, ...
  */
 const SAMPLE_TEMPLATES: SamplePlanTemplate[] = [
-  { title: 'Focus Work', offsetHours: 0, durationMinutes: 90 },
-  { title: 'Email & Messages', offsetHours: 1.5, durationMinutes: 30 },
-  { title: 'Break', offsetHours: 2, durationMinutes: 30 },
-  { title: 'Afternoon Work', offsetHours: 2.5, durationMinutes: 60 },
+  { title: 'Morning Run', offsetHours: -2, durationMinutes: 30, tagKey: 'exercise' },
+  {
+    title: 'Draft Proposal',
+    offsetHours: 0,
+    durationMinutes: 90,
+    tagKey: 'work',
+    reminderMinutes: 5,
+  },
+  {
+    title: 'English Lesson',
+    offsetHours: 1.75,
+    durationMinutes: 45,
+    tagKey: 'learning',
+    description: 'Unit 5 — Pronunciation practice',
+  },
+  { title: 'Lunch & Walk', offsetHours: 3, durationMinutes: 45, tagKey: 'life' },
+  { title: 'Prepare Presentation', offsetHours: 4.5, durationMinutes: 60, tagKey: 'work' },
+  { title: 'Reading', offsetHours: 6, durationMinutes: 30, tagKey: 'hobby' },
+  { title: 'Yoga', offsetHours: 8, durationMinutes: 45, tagKey: 'exercise' },
 ];
 
-interface GeneratedSamplePlan {
+export interface GeneratedSamplePlan {
   title: string;
   startTime: string;
   endTime: string;
+  tagKey: PresetTagKey;
+  description: string | null;
+  reminderMinutes: number | null;
 }
 
 /**
@@ -70,6 +111,9 @@ export function generateSamplePlans(
       title: template.title,
       startTime: startDate.toISOString(),
       endTime: endDate.toISOString(),
+      tagKey: template.tagKey,
+      description: template.description ?? null,
+      reminderMinutes: template.reminderMinutes ?? null,
     };
   });
 }
