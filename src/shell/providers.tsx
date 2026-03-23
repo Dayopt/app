@@ -3,16 +3,15 @@
  *
  * @description
  * 認証が必要なページ（/plan, /calendar, /tags, /stats等）で使用。
- * tRPC、Realtime購読、GlobalSearch等の全機能を提供する。
+ * tRPC、GlobalSearch等の全機能を提供する。
  *
  * プロバイダー階層（CLAUDE.md準拠）:
  * 1. QueryClientProvider（データ層）
  * 2. tRPC Provider（API層）
  * 3. AuthStoreInitializer（認証層 - Zustand）
- * 4. RealtimeProvider（リアルタイム購読層 - Supabase）
- * 5. ThemeProvider（UI層）
- * 6. GlobalSearchProvider（機能層）
- * 7. AxeAccessibilityChecker（開発ツール - 本番環境では自動除外）
+ * 4. ThemeProvider（UI層）
+ * 5. GlobalSearchProvider（機能層）
+ * 6. AxeAccessibilityChecker（開発ツール - 本番環境では自動除外）
  *
  * 公開ページ（/auth/、/legal/、/error/）では、このProvidersではなく
  * 軽量なPublicProvidersを使用すること。
@@ -53,7 +52,6 @@ const AxeAccessibilityChecker =
 
 import { AuthStoreInitializer } from '@/features/auth';
 import { api } from '@/platform/trpc';
-import { RealtimeProvider } from '@/shell/providers/RealtimeProvider';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 // GlobalSearchProviderを遅延ロード（初回レンダリングをブロックしない）
@@ -127,7 +125,7 @@ function handleAuthError(error: unknown): void {
   }
 }
 
-/** 認証必須ページ用フルProviders（tRPC・Realtime・テーマ・検索等の全機能を提供） */
+/** 認証必須ページ用フルProviders（tRPC・テーマ・検索等の全機能を提供） */
 export function Providers({ children }: ProvidersProps) {
   const [queryClient] = useState(
     () =>
@@ -200,7 +198,7 @@ export function Providers({ children }: ProvidersProps) {
 
   // Provider階層（最適化済み）
   // Context Provider: PersistQueryClientProvider → api.Provider → ThemeProvider → GlobalSearchProvider
-  // 非Context: AuthStoreInitializer（並列配置）、RealtimeProvider（ページ別購読）
+  // 非Context: AuthStoreInitializer（並列配置）
   return (
     <PersistQueryClientProvider
       client={queryClient}
@@ -222,18 +220,15 @@ export function Providers({ children }: ProvidersProps) {
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {/* 認証ストア初期化（Contextを提供しないので並列配置可能） */}
         <AuthStoreInitializer />
-        {/* Realtime購読（ページ別遅延初期化で最適化済み） */}
-        <RealtimeProvider>
-          <ThemeProvider>
-            <GlobalSearchProvider>
-              <ServiceWorkerProvider>
-                {children}
-                <GlobalTagCreateModal />
-                <GlobalTagMergeModal />
-              </ServiceWorkerProvider>
-            </GlobalSearchProvider>
-          </ThemeProvider>
-        </RealtimeProvider>
+        <ThemeProvider>
+          <GlobalSearchProvider>
+            <ServiceWorkerProvider>
+              {children}
+              <GlobalTagCreateModal />
+              <GlobalTagMergeModal />
+            </ServiceWorkerProvider>
+          </GlobalSearchProvider>
+        </ThemeProvider>
         {/* 開発ツール（開発環境のみ） */}
         {process.env.NODE_ENV === 'development' && <AxeAccessibilityChecker />}
       </api.Provider>
