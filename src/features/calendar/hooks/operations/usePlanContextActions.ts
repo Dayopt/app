@@ -29,29 +29,6 @@ export function usePlanContextActions() {
     [openInspector],
   );
 
-  const handleDuplicatePlan = useCallback(
-    async (plan: CalendarEvent) => {
-      const startTime = plan.startDate ? plan.startDate.toISOString() : undefined;
-      const endTime = plan.endDate ? plan.endDate.toISOString() : undefined;
-
-      // 即DB作成 → Inspector edit mode で開く
-      try {
-        const result = await createEntry.mutateAsync({
-          title: `${plan.title} (copy)`,
-          description: plan.description ?? undefined,
-          start_time: startTime,
-          end_time: endTime,
-        });
-        if (result?.id) {
-          openInspector(result.id);
-        }
-      } catch {
-        logger.error('Failed to duplicate entry');
-      }
-    },
-    [createEntry, openInspector],
-  );
-
   const handleCopyPlan = useCallback(
     (plan: CalendarEvent) => {
       const startHour = plan.startDate?.getHours() ?? 0;
@@ -136,7 +113,6 @@ export function usePlanContextActions() {
   return {
     handleDeletePlan,
     handleEditPlan,
-    handleDuplicatePlan,
     handleCopyPlan,
     handlePastePlan,
     handleCompleteWithRecord,

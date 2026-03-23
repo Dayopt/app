@@ -79,14 +79,13 @@ function ContextMenuTrigger({
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** 全アクション（編集・複製・コピー・リンクコピー・タグ・移動・削除）。 */
+/** 全アクション（編集・コピー・リンクコピー・タグ・移動・削除）。 */
 export const AllActions: Story = {
   render: () => (
     <ContextMenuTrigger
       entry={sampleEntry}
       menuProps={{
         onEdit: fn(),
-        onDuplicate: fn(),
         onCopy: fn(),
         onCopyLink: fn(),
         onAddTag: fn(),
@@ -117,7 +116,6 @@ export const NoDelete: Story = {
       entry={sampleEntry}
       menuProps={{
         onEdit: fn(),
-        onDuplicate: fn(),
         onCopy: fn(),
         onCopyLink: fn(),
         onAddTag: fn(),
@@ -148,7 +146,6 @@ export const DirectDisplay: Story = {
         position={{ x: 20, y: 20 }}
         onClose={fn()}
         onEdit={fn()}
-        onDuplicate={fn()}
         onCopy={fn()}
         onCopyLink={fn()}
         onAddTag={fn()}
@@ -171,7 +168,6 @@ export const AllPatterns: Story = {
             position={{ x: 0, y: 0 }}
             onClose={fn()}
             onEdit={fn()}
-            onDuplicate={fn()}
             onCopy={fn()}
             onCopyLink={fn()}
             onAddTag={fn()}

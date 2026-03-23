@@ -68,7 +68,6 @@ export interface CalendarControllerProps {
   // --- Context menu actions ---
   onEditEntry: (entry: CalendarEvent) => void;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
-  onDuplicateEntry: (entry: CalendarEvent) => void;
   onCopyEntry: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
@@ -107,7 +106,6 @@ export function CalendarController({
   onRestoreEntry,
   onEditEntry,
   onDeleteEntryConfirm,
-  onDuplicateEntry,
   onCopyEntry,
   onNavigate,
   onViewChange,
@@ -207,7 +205,6 @@ export function CalendarController({
           onClose={handleCloseContextMenu}
           onEdit={onEditEntry}
           onDelete={onDeleteEntryConfirm}
-          onDuplicate={onDuplicateEntry}
           onCopy={onCopyEntry}
         />
       ) : null}

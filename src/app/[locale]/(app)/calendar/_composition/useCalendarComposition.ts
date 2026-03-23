@@ -85,7 +85,6 @@ export interface CalendarCompositionResult {
   // === Context menu actions ===
   onEditPlan: (plan: CalendarEvent) => void;
   onDeletePlanConfirm: (plan: CalendarEvent) => void;
-  onDuplicatePlan: (plan: CalendarEvent) => void;
   onCopyPlan: (plan: CalendarEvent) => void;
   onCompleteWithRecord: (plan: CalendarEvent) => void;
 
@@ -203,7 +202,6 @@ export function useCalendarComposition({
   const {
     handleDeletePlan: handleDeletePlanConfirm,
     handleEditPlan,
-    handleDuplicatePlan,
     handleCopyPlan,
     handleCompleteWithRecord,
   } = usePlanContextActions();
@@ -354,7 +352,6 @@ export function useCalendarComposition({
       // Context menu actions
       onEditPlan: handleEditPlan,
       onDeletePlanConfirm: handleDeletePlanConfirm,
-      onDuplicatePlan: handleDuplicatePlan,
       onCopyPlan: handleCopyPlan,
       onCompleteWithRecord: handleCompleteWithRecord,
 
@@ -381,7 +378,6 @@ export function useCalendarComposition({
       handlePlanRestore,
       handleEditPlan,
       handleDeletePlanConfirm,
-      handleDuplicatePlan,
       handleCopyPlan,
       handleCompleteWithRecord,
       handleNavigate,

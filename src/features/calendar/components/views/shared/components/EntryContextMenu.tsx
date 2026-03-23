@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Calendar, ClipboardCopy, Copy, Edit2, Link, Tag, Trash2 } from 'lucide-react';
+import { Calendar, ClipboardCopy, Edit2, Link, Tag, Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -14,7 +14,6 @@ interface EntryContextMenuProps {
   onClose: () => void;
   onEdit?: (entry: CalendarEvent) => void;
   onDelete?: (entry: CalendarEvent) => void;
-  onDuplicate?: (entry: CalendarEvent) => void;
   onCopy?: (entry: CalendarEvent) => void;
   onCopyLink?: (entry: CalendarEvent) => void;
   onAddTag?: (entry: CalendarEvent) => void;
@@ -28,7 +27,6 @@ export const EventContextMenu = ({
   onClose,
   onEdit,
   onDelete,
-  onDuplicate,
   onCopy,
   onCopyLink,
   onAddTag,
@@ -120,12 +118,6 @@ export const EventContextMenu = ({
       label: t('calendar.contextMenu.edit'),
       action: () => onEdit?.(entry),
       available: !!onEdit,
-    },
-    {
-      icon: Copy,
-      label: t('calendar.contextMenu.duplicate'),
-      action: () => onDuplicate?.(entry),
-      available: !!onDuplicate,
     },
     {
       icon: ClipboardCopy,
