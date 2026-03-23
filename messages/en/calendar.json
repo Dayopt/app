@@ -36,6 +36,7 @@
       "restoreFailed": "Failed to restore",
       "adjustEndTime": "Drag to adjust end time",
       "noTimeSet": "No time set",
+      "selectTag": "Select tag...",
       "noDescription": "No description",
       "newTask": "New Task",
       "created": "Event created",

@@ -348,6 +348,14 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           />
         )}
 
+        {/* 新規作成アニメーション: 斜めシャイン（アイテム取得風） */}
+        {className?.includes('animate-entry-pop') && (
+          <div
+            aria-hidden="true"
+            className="animate-entry-shine pointer-events-none absolute inset-0"
+          />
+        )}
+
         {/* 下端リサイズハンドル（Draft/Past は非表示）
              視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保 */}
         {!isDraft && !isPast && (

@@ -38,6 +38,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const t = useTranslations('tags');
+  const tCalendar = useTranslations('calendar');
 
   const { createEntry, bulkAddTags } = useEntryMutations();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -170,24 +171,48 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       {/* 選択範囲ハイライト（カレンダーグリッド上） */}
       <div
         data-tag-palette
-        className="pointer-events-none absolute right-0 left-0"
+        className="pointer-events-none absolute right-2 left-0"
         style={{ zIndex: Z_INDEX.POPOVER }}
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 border-l-indicator absolute right-0 left-0 rounded-r-lg duration-100 motion-reduce:animate-none"
+          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 flex rounded-r-lg duration-100 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,
-            borderLeftColor: 'var(--entry-default)',
-            backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
           }}
         >
-          <div className="flex h-full flex-col justify-between p-2">
-            <span className="text-foreground text-sm font-semibold tabular-nums">{timeLabel}</span>
-            <span className="text-muted-foreground text-sm font-medium tabular-nums">
-              {durationText}
-            </span>
+          {/* 左アクセントストリップ */}
+          <div
+            className="shrink-0"
+            style={{
+              width: '3px',
+              backgroundColor: 'var(--entry-default)',
+            }}
+          />
+          {/* カード本体 */}
+          <div
+            className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
+            style={{
+              backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
+            }}
+          >
+            {selectionHeight < 40 ? (
+              <div className="flex h-full items-center px-2">
+                <span className="text-muted-foreground truncate text-xs tabular-nums">
+                  {timeLabel}
+                </span>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col gap-1 p-2">
+                <span className="text-muted-foreground text-sm leading-tight font-normal">
+                  {tCalendar('event.selectTag')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+                  {timeLabel}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

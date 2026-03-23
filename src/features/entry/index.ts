@@ -63,6 +63,11 @@ export { getEntryState, isEntryPast } from './lib/entry-status';
 export { entriesToICal } from './lib/entry-to-ical';
 
 // =============================================================================
+// Lib (new entry animation tracker)
+// =============================================================================
+export { isNewEntry } from './lib/new-entry-tracker';
+
+// =============================================================================
 // Components (EntryCard)
 // =============================================================================
 export { EntryCard, EntryCardContent } from './components/card';
@@ -71,7 +76,6 @@ export type { EntryCardPosition, EntryCardProps } from './components/card';
 // =============================================================================
 // Components
 // =============================================================================
-export { EntryDeleteConfirmDialog } from './components/EntryDeleteConfirmDialog';
 export { EntryInspector } from './components/inspector/EntryInspector';
 export { EntryCreateTrigger } from './components/shared/EntryCreateTrigger';
 export { LoadingState } from './components/shared/LoadingState';

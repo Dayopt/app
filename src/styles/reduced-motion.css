@@ -44,6 +44,14 @@
     transform: none !important;
   }
 
+  /* エントリ作成アニメーションを無効化 */
+  .animate-entry-pop,
+  .animate-entry-shine {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
   /* フェード・スライドアニメーションを無効化 */
   .animate-in,
   .animate-out,

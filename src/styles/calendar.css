@@ -48,6 +48,59 @@
   animation: calendar-slide-in 0.2s ease-out forwards;
 }
 
+/* エントリ作成ゲーミフィケーション: その場で実体化 + ポヨンバウンス（任天堂風） */
+@keyframes entry-pop {
+  0% {
+    transform: scaleX(0.97) scaleY(1.02);
+  }
+  20% {
+    transform: scaleX(1.06) scaleY(0.95);
+  }
+  45% {
+    transform: scaleX(0.97) scaleY(1.04);
+  }
+  65% {
+    transform: scaleX(1.02) scaleY(0.99);
+  }
+  80% {
+    transform: scaleX(0.995) scaleY(1.01);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* エントリ作成ゲーミフィケーション: 斜めシャイン（アイテム取得風） */
+@keyframes entry-shine {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(200%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.animate-entry-pop {
+  animation: entry-pop 400ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.animate-entry-shine {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.7) 45%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0.7) 55%,
+    transparent 100%
+  );
+  animation: entry-shine 500ms 100ms ease-out both;
+}
+
 /* カレンダー用カスタムスクロールバー（16px幅、8pxグリッド準拠） */
 @layer utilities {
   .calendar-scrollbar::-webkit-scrollbar {
@@ -65,11 +118,19 @@
     border: 4px solid transparent !important; /* --scrollbar-padding */
     background-clip: padding-box !important;
     border-radius: 9999px !important;
-    background-color: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) !important;
+    background-color: color-mix(
+      in oklch,
+      var(--color-muted-foreground) 30%,
+      transparent
+    ) !important;
   }
 
   .calendar-scrollbar:hover::-webkit-scrollbar-thumb {
-    background-color: color-mix(in oklch, var(--color-muted-foreground) 50%, transparent) !important;
+    background-color: color-mix(
+      in oklch,
+      var(--color-muted-foreground) 50%,
+      transparent
+    ) !important;
   }
 
   /* Firefox */

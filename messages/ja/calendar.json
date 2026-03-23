@@ -36,6 +36,7 @@
       "restoreFailed": "復元できませんでした",
       "adjustEndTime": "ドラッグして終了時間を調整",
       "noTimeSet": "時間未設定",
+      "selectTag": "タグを選択...",
       "noDescription": "説明なし",
       "newTask": "新しいタスク",
       "created": "予定を作成しました",
