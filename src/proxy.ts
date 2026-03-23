@@ -88,8 +88,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // メンテナンスページは言語処理をスキップ
-  if (pathname === '/maintenance') {
+  // メンテナンス / オフラインページは言語処理をスキップ
+  if (pathname === '/maintenance' || pathname === '/offline') {
     return NextResponse.next();
   }
 
