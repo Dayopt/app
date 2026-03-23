@@ -39,7 +39,7 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
-import { resolveTagColor } from '@/lib/tag-colors';
+import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -520,8 +520,8 @@ function SortableTagItem({
               onCheckedChange={onToggle}
               className="ml-2 shrink-0 cursor-pointer"
               style={{
-                borderColor: displayColor,
-                backgroundColor: checked ? displayColor : 'transparent',
+                borderColor: getTagColorClasses(displayColor).cssVar,
+                backgroundColor: checked ? getTagColorClasses(displayColor).cssVar : 'transparent',
               }}
             />
             <HoverTooltip
