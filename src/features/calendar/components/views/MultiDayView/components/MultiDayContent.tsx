@@ -15,7 +15,6 @@ import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 
@@ -138,8 +137,6 @@ export function MultiDayContent({
       </CalendarDragSelection>
 
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={dayIndex} />
-
         {entries.map((entry) => {
           const style = entryStyles[entry.id];
           if (!style) return null;

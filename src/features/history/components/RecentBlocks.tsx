@@ -54,7 +54,6 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
             item ? (
               <BlockItem
                 key={`${item.tagId}-${item.durationMinutes}`}
-                tagId={item.tagId}
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}

@@ -16,7 +16,6 @@ import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, useEntryStyles } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 import type { WeekEntryPosition } from '../WeekView.types';
@@ -170,8 +169,6 @@ export const WeekContent = React.memo(function WeekContent({
       </CalendarDragSelection>
 
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={dayIndex} />
-
         {entries.map((entry) => {
           const style = entryStyles[entry.id];
           if (!style) return null;

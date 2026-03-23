@@ -4,24 +4,12 @@
  * BlockItem — ブロックアイテム（共通コンポーネント）
  *
  * タグカラードット + タグ名 + duration + ホバー時メニュー
- * クリックで現在時刻にエントリを配置 / ドラッグでカレンダーに配置
+ * クリックで現在時刻にエントリを配置。
  * Palette・RecentBlocks の両方で使用。
  */
 
-import { useDraggable } from '@dnd-kit/core';
-import { useMemo } from 'react';
-
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
-
-/** ブロックアイテムのドラッグデータ（DnDProvider で識別に使用） */
-export interface BlockDragData {
-  type: 'palette-item';
-  tagId: string;
-  tagName: string;
-  tagColor: string | null;
-  durationMinutes: number;
-}
 
 interface BlockItemProps {
   tagName: string;
@@ -29,8 +17,6 @@ interface BlockItemProps {
   durationMinutes: number;
   onClick: () => void;
   className?: string;
-  /** ドラッグ用タグID（省略時はドラッグ無効） */
-  tagId?: string;
   /** メニュートリガーのスロット（DropdownMenu等を渡す） */
   menuSlot?: React.ReactNode;
   /** ドットの表示バリアント: solid=塗り（デフォルト）, outline=中抜き */
@@ -51,33 +37,17 @@ export function BlockItem({
   durationMinutes,
   onClick,
   className,
-  tagId,
   menuSlot,
   dotVariant = 'solid',
 }: BlockItemProps) {
-  const dragData = useMemo<BlockDragData>(
-    () => ({ type: 'palette-item', tagId: tagId ?? '', tagName, tagColor, durationMinutes }),
-    [tagId, tagName, tagColor, durationMinutes],
-  );
-
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: tagId ? `palette-${tagId}-${durationMinutes}` : 'palette-disabled',
-    data: dragData,
-    disabled: !tagId,
-  });
-
   const colorClasses = getTagColorClasses(tagColor);
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
         'group/block hover:bg-state-hover flex h-8 w-full items-center rounded text-sm transition-colors',
-        isDragging && 'opacity-50',
         className,
       )}
-      {...attributes}
-      {...listeners}
     >
       {/* クリック領域（タグ名 + duration） */}
       <button

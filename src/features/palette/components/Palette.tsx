@@ -67,7 +67,6 @@ export function Palette() {
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.duration_minutes}
-                tagId={item.tag_id}
                 onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
                 menuSlot={
                   <PaletteItemMenu

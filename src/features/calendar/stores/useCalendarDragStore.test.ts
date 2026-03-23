@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { CalendarEvent } from '../types/calendar.types';
-import type { DragEntryData } from './useCalendarDragStore';
 
 import { useCalendarDragStore } from './useCalendarDragStore';
 
@@ -20,11 +19,6 @@ const mockCalendarEvent: CalendarEvent = {
   isMultiDay: false,
 };
 
-const mockPlanWithTags: DragEntryData = {
-  id: 'plan-2',
-  title: 'パネルプラン',
-};
-
 describe('useCalendarDragStore', () => {
   beforeEach(() => {
     useCalendarDragStore.getState().endDrag();
@@ -35,34 +29,18 @@ describe('useCalendarDragStore', () => {
       const state = useCalendarDragStore.getState();
       expect(state.isDragging).toBe(false);
       expect(state.draggedPlanId).toBeNull();
-      expect(state.dragSource).toBeNull();
     });
   });
 
-  describe('startDrag (カレンダー内)', () => {
+  describe('startDrag', () => {
     it('カレンダー内ドラッグを開始できる', () => {
       useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 2);
       const state = useCalendarDragStore.getState();
       expect(state.isDragging).toBe(true);
-      expect(state.dragSource).toBe('calendar');
       expect(state.draggedPlanId).toBe('plan-1');
       expect(state.draggedPlan).toEqual(mockCalendarEvent);
-      expect(state.draggedPlanData).toBeNull();
       expect(state.originalDateIndex).toBe(2);
       expect(state.targetDateIndex).toBe(2);
-    });
-  });
-
-  describe('startPanelDrag (パネルから)', () => {
-    it('パネルドラッグを開始できる', () => {
-      useCalendarDragStore.getState().startPanelDrag(mockPlanWithTags);
-      const state = useCalendarDragStore.getState();
-      expect(state.isDragging).toBe(true);
-      expect(state.dragSource).toBe('panel');
-      expect(state.draggedPlanId).toBe('plan-2');
-      expect(state.draggedPlan).toBeNull();
-      expect(state.draggedPlanData).toEqual(mockPlanWithTags);
-      expect(state.originalDateIndex).toBe(-1);
     });
   });
 
@@ -71,31 +49,15 @@ describe('useCalendarDragStore', () => {
       useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 0);
       useCalendarDragStore.getState().updateDrag({ targetDateIndex: 3 });
       expect(useCalendarDragStore.getState().targetDateIndex).toBe(3);
-      // 他のフィールドは維持
       expect(useCalendarDragStore.getState().draggedPlanId).toBe('plan-1');
     });
-  });
 
-  describe('endDrag', () => {
-    it('ドラッグ状態を初期化できる', () => {
-      useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 2);
-      useCalendarDragStore.getState().endDrag();
-      const state = useCalendarDragStore.getState();
-      expect(state.isDragging).toBe(false);
-      expect(state.draggedPlanId).toBeNull();
-      expect(state.dragSource).toBeNull();
-    });
-  });
-
-  describe('updateDrag — targetDateIndex', () => {
     it('ターゲット日付を更新できる', () => {
       useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 0);
       useCalendarDragStore.getState().updateDrag({ targetDateIndex: 5 });
       expect(useCalendarDragStore.getState().targetDateIndex).toBe(5);
     });
-  });
 
-  describe('updateDrag — previewTime', () => {
     it('プレビュー時間を設定できる', () => {
       const time = {
         start: new Date('2026-02-21T14:00:00'),
@@ -111,6 +73,16 @@ describe('useCalendarDragStore', () => {
       });
       useCalendarDragStore.getState().updateDrag({ previewTime: null });
       expect(useCalendarDragStore.getState().previewTime).toBeNull();
+    });
+  });
+
+  describe('endDrag', () => {
+    it('ドラッグ状態を初期化できる', () => {
+      useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 2);
+      useCalendarDragStore.getState().endDrag();
+      const state = useCalendarDragStore.getState();
+      expect(state.isDragging).toBe(false);
+      expect(state.draggedPlanId).toBeNull();
     });
   });
 });

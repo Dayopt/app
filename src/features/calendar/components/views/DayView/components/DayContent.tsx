@@ -14,7 +14,6 @@ import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import type { CalendarEvent } from '../../shared/types/base.types';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
@@ -105,8 +104,6 @@ export const DayContent = ({
 
       {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={0} />
-
         {events?.map((entry) => {
           const style = eventStyles?.[entry.id];
           if (!style) return null;

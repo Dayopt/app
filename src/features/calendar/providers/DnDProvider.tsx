@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import type { DragEndEvent, DragMoveEvent, DragStartEvent, Over } from '@dnd-kit/core';
 import {
@@ -15,8 +15,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import { useBlockPlace, useEntries, useEntryMutations } from '@/features/entry';
-import type { BlockDragData as PaletteDragData } from '@/shell/components/sidebar';
+import { useEntries, useEntryMutations } from '@/features/entry';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useResponsiveHourHeight } from '../components/views/shared/hooks/useResponsiveHourHeight';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
@@ -66,11 +65,9 @@ function resolveDropTime(event: DragMoveEvent | DragEndEvent, hourHeight: number
   const { over, activatorEvent, delta } = event;
   if (!over?.data?.current) return null;
 
-  // CalendarDropZone の pointermove で同期更新された値を優先
   const liveTime = over.data.current.time;
   if (liveTime) return liveTime as string;
 
-  // フォールバック: activatorEvent + delta から計算
   const dayIndex = over.data.current.dayIndex;
   if (typeof dayIndex !== 'number') return null;
 
@@ -91,14 +88,14 @@ function resolveDropTime(event: DragMoveEvent | DragEndEvent, hourHeight: number
 // ========================================
 
 /**
- * DnDProvider — パレット↔カレンダー間の cross-boundary DnD コンテキスト
+ * DnDProvider — カレンダー内エントリ移動の DnD コンテキスト
  *
- * カレンダー内操作（エントリ移動/リサイズ/選択）は interaction/machine.ts が担当。
+ * パレット→カレンダーはクリックで現在時刻に配置（DnD不要）。
+ * カレンダー内操作（リサイズ/選択）は interaction/machine.ts が担当。
  */
 export const DnDProvider = ({ children }: DnDProviderProps) => {
   const t = useTranslations();
   const { updateEntry } = useEntryMutations();
-  const { placeBlock } = useBlockPlace();
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const { tap, success } = useHapticFeedback();
   const hourHeight = useResponsiveHourHeight();
@@ -110,10 +107,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
   // 自動スクロール
   const { updatePointerY } = useAutoScrollOnDrag({ isActive: activeId !== null });
 
-  // パレットアイテムのドラッグデータを保持
-  const activeDragDataRef = useRef<PaletteDragData | null>(null);
-
-  // エントリ一覧（ドラッグ中のプレビュー + 重複チェック用）
+  // エントリ一覧（ドラッグ中のプレビュー用）
   const { data: entries } = useEntries();
   const activeplan = entries?.find((t) => t.id === activeId);
 
@@ -133,19 +127,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     (event: DragStartEvent) => {
       setActiveId(event.active.id as string);
       setDragPreviewTime(null);
-
-      const data = event.active.data?.current;
-      if (data?.type === 'palette-item') {
-        const palData = data as PaletteDragData;
-        activeDragDataRef.current = palData;
-        useCalendarDragStore.getState().startPanelDrag({
-          id: 'palette-new',
-          title: palData.tagName,
-        });
-      } else {
-        activeDragDataRef.current = null;
-      }
-
       tap();
     },
     [tap],
@@ -163,10 +144,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
       if (!over) {
         setDragPreviewTime(null);
-        const store = useCalendarDragStore.getState();
-        if (store.isDragging && store.dragSource === 'panel') {
-          store.updateDrag({ targetDateIndex: -1, snappedPosition: null, previewTime: null });
-        }
         return;
       }
 
@@ -182,46 +159,12 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
         date: extractDateStr(dropData.date),
         ...(computedTime ? { time: computedTime } : {}),
       });
-
-      // PanelDragPreview store 更新
-      const dragData = activeDragDataRef.current;
-      if (dragData && computedTime) {
-        const parsed = parseTimeString(computedTime);
-        if (parsed) {
-          const targetDayIndex = typeof dropData.dayIndex === 'number' ? dropData.dayIndex : 0;
-          const topPx = ((parsed.hour * 60 + parsed.minute) / 60) * hourHeight;
-          const heightPx = (dragData.durationMinutes / 60) * hourHeight;
-
-          const dateStr = extractDateStr(dropData.date);
-          const [year, month, day] = dateStr.split('-').map(Number);
-          const previewStart = fromZonedTime(
-            new Date(year!, month! - 1, day!, parsed.hour, parsed.minute, 0),
-            timezone,
-          );
-          const previewEnd = new Date(previewStart.getTime() + dragData.durationMinutes * 60000);
-
-          const isOverlapping =
-            entries?.some((entry) => {
-              if (!entry.start_time || !entry.end_time) return false;
-              const entryStart = new Date(entry.start_time);
-              const entryEnd = new Date(entry.end_time);
-              return entryStart < previewEnd && entryEnd > previewStart;
-            }) ?? false;
-
-          useCalendarDragStore.getState().updateDrag({
-            targetDateIndex: targetDayIndex,
-            snappedPosition: { top: topPx, height: heightPx },
-            previewTime: { start: previewStart, end: previewEnd },
-            isOverlapping,
-          });
-        }
-      }
     },
-    [hourHeight, timezone, entries, updatePointerY],
+    [hourHeight, updatePointerY],
   );
 
   /** 既存エントリのドロップ処理（移動） */
-  const handleplanDrop = useCallback(
+  const handleEntryDrop = useCallback(
     (planId: string, over: Over, event: DragEndEvent) => {
       const dropData = over.data?.current;
       if (!dropData || !dropData.date) {
@@ -272,53 +215,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     [updateEntry, timezone, t, success, entries, hourHeight],
   );
 
-  /** パレットアイテムのドロップ処理（新規エントリ作成） */
-  const handlePaletteDrop = useCallback(
-    (dragData: PaletteDragData, over: Over, event: DragEndEvent) => {
-      const dropData = over.data?.current;
-      if (!dropData || !dropData.date) {
-        toast.error(t('calendar.toast.dropInvalid'));
-        setActiveId(null);
-        activeDragDataRef.current = null;
-        return;
-      }
-
-      const dropTime = resolveDropTime(event, hourHeight);
-
-      if (!dropTime) {
-        toast.error(t('calendar.toast.dropInvalid'));
-        setActiveId(null);
-        activeDragDataRef.current = null;
-        return;
-      }
-
-      try {
-        const dateStr = extractDateStr(dropData.date);
-        const parsed = parseTimeString(dropTime);
-        if (!parsed) throw new Error(t('common.errors.calendar.invalidTimeFormat'));
-
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const zonedStart = new Date(year!, month! - 1, day!, parsed.hour, parsed.minute, 0);
-        const startTime = fromZonedTime(zonedStart, timezone);
-
-        placeBlock({
-          tagId: dragData.tagId,
-          tagName: dragData.tagName,
-          startTime,
-          durationMinutes: dragData.durationMinutes,
-        });
-        success();
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('calendar.toast.dropFailed'));
-      } finally {
-        setActiveId(null);
-        setDragPreviewTime(null);
-        activeDragDataRef.current = null;
-      }
-    },
-    [placeBlock, timezone, t, success, hourHeight],
-  );
-
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
@@ -327,17 +223,11 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
       if (!over) {
         setActiveId(null);
-        activeDragDataRef.current = null;
         return;
       }
 
       const dragData = active.data?.current;
       const dragType = dragData?.type;
-
-      if (dragType === 'palette-item') {
-        handlePaletteDrop(dragData as PaletteDragData, over, event);
-        return;
-      }
 
       let currentPlanId: string;
       if (dragType === 'calendar-event') {
@@ -351,13 +241,10 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
         currentPlanId = active.id as string;
       }
 
-      handleplanDrop(currentPlanId, over, event);
+      handleEntryDrop(currentPlanId, over, event);
     },
-    [handleplanDrop, handlePaletteDrop],
+    [handleEntryDrop],
   );
-
-  // パレットドラッグ中のプレビューデータ
-  const paletteDrag = activeDragDataRef.current;
 
   return (
     <DndContext
@@ -369,29 +256,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
       {children}
 
       <DragOverlay style={{ pointerEvents: 'none' }}>
-        {paletteDrag ? (
-          <div
-            className="surface-raised border-l-indicator flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90"
-            style={{
-              borderLeftColor: paletteDrag.tagColor
-                ? `var(--tag-${paletteDrag.tagColor})`
-                : 'var(--entry-default)',
-              backgroundColor: paletteDrag.tagColor
-                ? `color-mix(in oklch, var(--tag-${paletteDrag.tagColor}) 12%, var(--background))`
-                : 'var(--background)',
-            }}
-          >
-            <span className="text-foreground truncate text-sm font-normal">
-              {paletteDrag.tagName}
-            </span>
-            {dragPreviewTime?.time && (
-              <span className="text-muted-foreground text-xs tabular-nums">
-                {dragPreviewTime.time} –{' '}
-                {computeEndTime(dragPreviewTime.time, paletteDrag.durationMinutes)}
-              </span>
-            )}
-          </div>
-        ) : activeplan ? (
+        {activeplan ? (
           <div
             className="surface-raised border-l-indicator flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90"
             style={{
