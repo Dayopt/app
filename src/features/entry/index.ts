@@ -38,7 +38,14 @@ export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useEntries, useEntry, useEntryCreate, useEntryMutations } from './hooks';
+export {
+  useBlockPlace,
+  useEntries,
+  useEntry,
+  useEntryCreate,
+  useEntryMutations,
+  useEntryTags,
+} from './hooks';
 
 // =============================================================================
 // Stores
