@@ -8,11 +8,26 @@ import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { PageNav } from '@/shell/components/sidebar';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
+function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
+  const segments = pathname.split('/');
+  const pathWithoutLocale =
+    segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
+      ? '/' + segments.slice(2).join('/')
+      : pathname;
+
+  if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
+  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  return 'calendar';
+}
+
 /** PageNav にナビゲーションロジックを接続する Composition Layer コンポーネント */
 export function SidebarPageNav() {
   const pathname = usePathname();
   const calendarNav = useCalendarNavigation();
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
+  // clientPage を直接読むことで、pushState 後の即座のUI更新を実現
+  // usePathname() は Next.js のソフトナビゲーション完了まで遅延するため
+  const clientPage = useClientRouterStore((s) => s.clientPage);
 
   const locale = useMemo(() => {
     const segments = pathname?.split('/') ?? [];
@@ -22,17 +37,8 @@ export function SidebarPageNav() {
     return 'ja';
   }, [pathname]);
 
-  const activePage = useMemo(() => {
-    const segments = pathname?.split('/') ?? [];
-    const pathWithoutLocale =
-      segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
-        ? '/' + segments.slice(2).join('/')
-        : (pathname ?? '/');
-
-    if (isCalendarViewPath(pathWithoutLocale)) return 'calendar' as const;
-    if (pathWithoutLocale.startsWith('/stats')) return 'stats' as const;
-    return 'calendar' as const;
-  }, [pathname]);
+  // clientPage（Zustand）を優先、null（初回/リロード）時は pathname から判定
+  const activePage = clientPage ?? getActivePageFromPath(pathname ?? '/');
 
   const handleCalendarClick = useCallback(() => {
     if (activePage === 'calendar') return;
