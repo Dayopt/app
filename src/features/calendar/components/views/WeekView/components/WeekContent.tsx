@@ -110,8 +110,8 @@ export const WeekContent = React.memo(function WeekContent({
         plan: pos.plan,
         top: pos.top,
         height: pos.height,
-        left: 2,
-        width: 96,
+        left: 0,
+        width: 100,
         zIndex: pos.zIndex,
         column: pos.column,
         totalColumns: pos.totalColumns,
@@ -153,9 +153,6 @@ export const WeekContent = React.memo(function WeekContent({
       data-calendar-grid
       data-calendar-day-index={dayIndex}
     >
-      {/* 左端セパレータ（エントリのアクセントストリップがこの上に乗る） */}
-      <div className="bg-border pointer-events-none absolute inset-y-0 left-0 w-px" />
-
       <CalendarDragSelection
         date={date}
         className="absolute inset-0 z-10"

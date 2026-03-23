@@ -88,9 +88,6 @@ export const DayContent = ({
       data-calendar-day-index="0"
       data-tour-target="grid-drag"
     >
-      {/* 左端セパレータ（エントリのアクセントストリップがこの上に乗る） */}
-      <div className="bg-border pointer-events-none absolute inset-y-0 left-0 w-px" />
-
       {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
       <CalendarDragSelection
         date={date}
