@@ -4,32 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '12.2.3 (519615d)';
-  };
-  graphql_public: {
-    Tables: {
-      [_ in never]: never;
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
-        Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
+    PostgrestVersion: '14.1';
   };
   public: {
     Tables: {
@@ -255,42 +230,6 @@ export type Database = {
           id?: string;
           reason?: string;
           source_event_id?: string | null;
-        };
-        Relationships: [];
-      };
-      entity_types: {
-        Row: {
-          created_at: string | null;
-          description: string | null;
-          display_name: string;
-          display_name_ja: string;
-          enabled: boolean | null;
-          icon: string | null;
-          sort_order: number | null;
-          type: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          description?: string | null;
-          display_name: string;
-          display_name_ja: string;
-          enabled?: boolean | null;
-          icon?: string | null;
-          sort_order?: number | null;
-          type: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          description?: string | null;
-          display_name?: string;
-          display_name_ja?: string;
-          enabled?: boolean | null;
-          icon?: string | null;
-          sort_order?: number | null;
-          type?: string;
-          updated_at?: string | null;
         };
         Relationships: [];
       };
@@ -736,75 +675,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      tag_operation_logs: {
-        Row: {
-          affected_tag_ids: string[] | null;
-          created_at: string | null;
-          details: Json | null;
-          id: string;
-          operation_type: string;
-          user_id: string;
-        };
-        Insert: {
-          affected_tag_ids?: string[] | null;
-          created_at?: string | null;
-          details?: Json | null;
-          id?: string;
-          operation_type: string;
-          user_id: string;
-        };
-        Update: {
-          affected_tag_ids?: string[] | null;
-          created_at?: string | null;
-          details?: Json | null;
-          id?: string;
-          operation_type?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-      tag_relations: {
-        Row: {
-          created_at: string | null;
-          entity_id: string;
-          entity_type: string;
-          id: string;
-          tag_id: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string | null;
-          entity_id: string;
-          entity_type: string;
-          id?: string;
-          tag_id: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string | null;
-          entity_id?: string;
-          entity_type?: string;
-          id?: string;
-          tag_id?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'tag_relations_entity_type_fkey';
-            columns: ['entity_type'];
-            isOneToOne: false;
-            referencedRelation: 'entity_types';
-            referencedColumns: ['type'];
-          },
-          {
-            foreignKeyName: 'tag_relations_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       tags: {
         Row: {
           color: string | null;
@@ -855,7 +725,6 @@ export type Database = {
           default_duration: number;
           default_view: string;
           hour_height_density: string;
-          ical_feed_token: string | null;
           id: string;
           personalization_ranked_values: Json | null;
           personalization_values: Json | null;
@@ -888,7 +757,6 @@ export type Database = {
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
-          ical_feed_token?: string | null;
           id?: string;
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
@@ -921,7 +789,6 @@ export type Database = {
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
-          ical_feed_token?: string | null;
           id?: string;
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
@@ -942,31 +809,7 @@ export type Database = {
       };
     };
     Views: {
-      tag_relations_stats: {
-        Row: {
-          entity_type: string | null;
-          last_used_at: string | null;
-          tag_id: string | null;
-          unique_entities: number | null;
-          usage_count: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'tag_relations_entity_type_fkey';
-            columns: ['entity_type'];
-            isOneToOne: false;
-            referencedRelation: 'entity_types';
-            referencedColumns: ['type'];
-          },
-          {
-            foreignKeyName: 'tag_relations_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
+      [_ in never]: never;
     };
     Functions: {
       auto_shrink_neighbors: {
@@ -1013,6 +856,10 @@ export type Database = {
         };
         Returns: number;
       };
+      bulk_soft_delete_entries: {
+        Args: { p_entry_ids: string[]; p_user_id: string };
+        Returns: number;
+      };
       cleanup_old_auth_audit_logs: { Args: never; Returns: undefined };
       cleanup_old_login_attempts: { Args: never; Returns: undefined };
       cleanup_old_plan_activities: { Args: never; Returns: undefined };
@@ -1022,18 +869,6 @@ export type Database = {
       };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
       delete_old_notifications: { Args: never; Returns: undefined };
-      delete_tag_completely: {
-        Args: { p_tag_id: string; p_user_id: string };
-        Returns: Json;
-      };
-      delete_tag_promote_children: {
-        Args: { p_tag_id: string; p_user_id: string };
-        Returns: Json;
-      };
-      delete_tag_with_replacement: {
-        Args: { p_tag_id: string; p_target_tag_id: string; p_user_id: string };
-        Returns: Json;
-      };
       get_active_dates: {
         Args: { p_since: string; p_user_id: string };
         Returns: {
@@ -1074,43 +909,29 @@ export type Database = {
         Returns: Json;
       };
       get_daily_hours: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
+        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
         Returns: {
           date: string;
           hours: number;
         }[];
       };
       get_dow_distribution: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
           dow: number;
           hours: number;
         }[];
       };
-      get_energy_map:
-        | {
-            Args: { p_end: string; p_start: string; p_user_id: string };
-            Returns: {
-              avg_score: number;
-              dow: number;
-              entry_count: number;
-              hour: number;
-            }[];
-          }
-        | {
-            Args: {
-              p_end_date?: string;
-              p_start_date?: string;
-              p_user_id: string;
-            };
-            Returns: {
-              avg_fulfillment: number;
-              dow: number;
-              entry_count: number;
-              hour: number;
-              total_minutes: number;
-            }[];
-          };
+      get_energy_map: {
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Returns: {
+          avg_fulfillment: number;
+          dow: number;
+          entry_count: number;
+          hour: number;
+          total_minutes: number;
+        }[];
+      };
       get_estimation_accuracy: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
@@ -1124,22 +945,22 @@ export type Database = {
         }[];
       };
       get_fulfillment_trend: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
+        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
         Returns: {
           avg_score: number;
+          count: number;
           date: string;
-          entry_count: number;
         }[];
       };
       get_hourly_distribution: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
           hour: number;
           hours: number;
         }[];
       };
       get_monthly_hours: {
-        Args: { p_since: string; p_user_id: string };
+        Args: { p_start_date: string; p_user_id: string };
         Returns: {
           hours: number;
           month: string;
@@ -1178,7 +999,7 @@ export type Database = {
         }[];
       };
       get_timeboxing_adherence: {
-        Args: { p_end: string; p_start: string; p_user_id: string };
+        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
         Returns: Json;
       };
       get_total_time: { Args: { p_user_id: string }; Returns: Json };
@@ -1186,11 +1007,14 @@ export type Database = {
       get_weekly_focus_score: {
         Args: { p_user_id: string; p_weeks?: number };
         Returns: {
-          entry_count: number;
           focus_score: number;
-          unique_tags: number;
+          total_minutes: number;
           week_start: string;
         }[];
+      };
+      get_weekly_reflection_data: {
+        Args: { p_user_id: string; p_week_start: string };
+        Returns: Json;
       };
       increment_ai_usage: {
         Args: { p_month: string; p_user_id: string };
@@ -1248,6 +1072,14 @@ export type Database = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      restore_entry: {
+        Args: { p_entry_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      soft_delete_entry: {
+        Args: { p_entry_id: string; p_user_id: string };
+        Returns: undefined;
       };
       use_recovery_code: {
         Args: { p_code_hash: string; p_user_id: string };
@@ -1380,9 +1212,6 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

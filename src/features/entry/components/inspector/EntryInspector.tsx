@@ -38,8 +38,13 @@ function InspectorURLSyncHandler() {
 /** モバイル Drawer のスナップポイント */
 const SNAP_POINTS = [1] as const;
 
+interface EntryInspectorProps {
+  /** パレットへのピン留めコールバック（Composition Layer から注入） */
+  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+}
+
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
-export function EntryInspector() {
+export function EntryInspector({ onPinToPalette }: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
@@ -102,7 +107,7 @@ export function EntryInspector() {
       </div>
     );
   } else {
-    content = <EntryInspectorForm />;
+    content = <EntryInspectorForm onPinToPalette={onPinToPalette} />;
   }
 
   if (!isOpen) return null;

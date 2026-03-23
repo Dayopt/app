@@ -46,13 +46,6 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
 
-  // 合計時間
-  const totalMinutes = endMinutes - startMinutes;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const durationText =
-    hours > 0 ? (minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`) : `${minutes}m`;
-
   // 重複時は赤背景でエラー表示
   if (isOverlapping) {
     return (

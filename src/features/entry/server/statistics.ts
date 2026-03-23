@@ -153,8 +153,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
           supabase.rpc('get_daily_hours', {
             p_user_id: userId,
-            p_start: startDate.toISOString(),
-            p_end: endDate.toISOString(),
+            p_start_date: startDate.toISOString(),
+            p_end_date: endDate.toISOString(),
           }),
         );
 
@@ -278,7 +278,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
           supabase.rpc('get_monthly_hours', {
             p_user_id: userId,
-            p_since: startDate.toISOString(),
+            p_start_date: startDate.toISOString(),
           }),
         );
 

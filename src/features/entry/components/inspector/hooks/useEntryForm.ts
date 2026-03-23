@@ -22,7 +22,6 @@ import { useTimeFields } from './useTimeFields';
  */
 export function useEntryForm() {
   const entryId = useEntryInspectorStore((state) => state.entryId);
-  const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   // データ取得
   const { data: entryData } = useEntry(entryId!, {
