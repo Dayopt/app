@@ -46,7 +46,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   /** キャッシュからエントリの updated_at を取得（楽観的ロック用） */
   const getExpectedUpdatedAt = useCallback(
     (id: string): string | undefined => {
-      const cached = utils.entries.getById.getData({ id });
+      // include なし / include: { tags: true } の両キャッシュを確認
+      const cached =
+        utils.entries.getById.getData({ id, include: { tags: true } }) ??
+        utils.entries.getById.getData({ id });
       return cached?.updated_at ?? undefined;
     },
     [utils],
