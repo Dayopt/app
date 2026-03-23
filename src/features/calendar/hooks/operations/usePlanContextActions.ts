@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { openDeleteConfirm } from '@/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
@@ -18,10 +17,7 @@ export function usePlanContextActions() {
 
   const handleDeletePlan = useCallback(
     (plan: CalendarEvent) => {
-      const planIdToDelete = plan.id;
-      openDeleteConfirm(planIdToDelete, plan.title, async () => {
-        await deleteEntry.mutateAsync({ id: planIdToDelete });
-      });
+      deleteEntry.mutate({ id: plan.id });
     },
     [deleteEntry],
   );

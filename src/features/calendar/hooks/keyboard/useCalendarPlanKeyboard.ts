@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { openDeleteConfirm } from '@/stores/useModalStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
@@ -117,16 +116,13 @@ export function useCalendarEventKeyboard({
       // 入力フィールドにフォーカスがある場合は以降のショートカットを無効化
       if (isInputFocused) return;
 
-      // Delete / Backspace: 選択中のプランの削除確認ダイアログを表示
+      // Delete / Backspace: 選択中のプランを即削除（undo toast で復元可能）
       if ((e.key === 'Delete' || e.key === 'Backspace') && isOpen && entryId) {
         e.preventDefault();
-        const title = getSelectedPlanTitleRef.current?.() ?? null;
         const deleteCallback = onDeletePlanRef.current;
         if (deleteCallback) {
-          openDeleteConfirm(entryId, title, async () => {
-            await deleteCallback(entryId);
-            closeInspector();
-          });
+          void deleteCallback(entryId);
+          closeInspector();
         }
         return;
       }

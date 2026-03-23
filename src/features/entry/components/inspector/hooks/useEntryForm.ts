@@ -9,7 +9,6 @@
 
 import { useCallback } from 'react';
 
-import { openDeleteConfirm } from '@/stores/useModalStore';
 import { useEntry } from '../../../hooks/useEntry';
 import { useEntryInspectorStore } from '../../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../../types/entry';
@@ -78,15 +77,11 @@ export function useEntryForm() {
     [entryId, save],
   );
 
-  // --- 削除 ---
+  // --- 削除（soft-delete → undo toast で即実行） ---
   const handleDelete = useCallback(() => {
     if (!entryId) return;
-
-    openDeleteConfirm(entryId, entry?.title ?? null, async () => {
-      await deleteEntry.mutateAsync({ id: entryId });
-      closeInspector();
-    });
-  }, [entryId, entry?.title, deleteEntry, closeInspector]);
+    deleteEntry.mutate({ id: entryId });
+  }, [entryId, deleteEntry]);
 
   return {
     entryId,
