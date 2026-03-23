@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import type { DragEndEvent, DragMoveEvent, DragStartEvent, Over } from '@dnd-kit/core';
 import {
@@ -21,11 +21,21 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useResponsiveHourHeight } from '../components/views/shared/hooks/useResponsiveHourHeight';
 import { useHapticFeedback } from '../hooks/accessibility/useHapticFeedback';
 import { useAutoScrollOnDrag } from '../hooks/useAutoScrollOnDrag';
+import {
+  addMinutesToTime,
+  formatTimeString,
+  parseTimeString,
+  pixelsToTime,
+} from '../interaction/time-math';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
 interface DnDProviderProps {
   children: React.ReactNode;
 }
+
+// ========================================
+// Helpers
+// ========================================
 
 /** ドロップ先の日付文字列を取得 */
 function extractDateStr(dropDate: Date | string): string {
@@ -38,73 +48,53 @@ function extractDateStr(dropDate: Date | string): string {
   return dropDate;
 }
 
-/** 時刻文字列をパースして hour, minute を返す */
-function parseTime(time: string): { hour: number; minute: number } | null {
-  const match = time.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  const hour = parseInt(match[1]!, 10);
-  const minute = parseInt(match[2]!, 10);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-  return { hour, minute };
-}
-
 /** 終了時刻文字列を計算（HH:mm 形式） */
 function computeEndTime(startTime: string, durationMinutes: number): string {
-  const parsed = parseTime(startTime);
+  const parsed = parseTimeString(startTime);
   if (!parsed) return startTime;
-  const totalMinutes = parsed.hour * 60 + parsed.minute + durationMinutes;
-  const endHour = Math.floor(totalMinutes / 60) % 24;
-  const endMinute = totalMinutes % 60;
-  return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+  const end = addMinutesToTime(parsed.hour, parsed.minute, durationMinutes);
+  return formatTimeString(end.hour, end.minute);
 }
 
 /**
- * リアルタイムポインタ座標からドロップ先時刻を計算（15分スナップ）
+ * dnd-kit イベントからドロップ時刻を解決
  *
- * dnd-kit はドラッグ中に setPointerCapture を使うため、
- * カレンダーグリッドの pointermove リスナーが発火しない。
- * そのため window レベルで追跡したポインタ座標から直接計算する。
+ * 1. CalendarDropZone の dropTimeRef（over.data.current.time getter）
+ * 2. フォールバック: activatorEvent.clientY + delta.y → data-calendar-day-index で列特定
  */
-function computeTimeFromGlobalPointer(
-  pointerX: number,
-  pointerY: number,
-  hourHeight: number,
-): string | null {
-  // DragOverlay は pointer-events: none なので elementFromPoint は下のグリッドを返す
-  const el = document.elementFromPoint(pointerX, pointerY);
-  const gridEl = el?.closest<HTMLElement>('[aria-label="Calendar time grid"]');
-  if (!gridEl) return null;
+function resolveDropTime(event: DragMoveEvent | DragEndEvent, hourHeight: number): string | null {
+  const { over, activatorEvent, delta } = event;
+  if (!over?.data?.current) return null;
 
-  const rect = gridEl.getBoundingClientRect();
+  // CalendarDropZone の pointermove で同期更新された値を優先
+  const liveTime = over.data.current.time;
+  if (liveTime) return liveTime as string;
+
+  // フォールバック: activatorEvent + delta から計算
+  const dayIndex = over.data.current.dayIndex;
+  if (typeof dayIndex !== 'number') return null;
+
+  const pointerY = (activatorEvent as PointerEvent).clientY + (delta?.y ?? 0);
+  const column = document.querySelector<HTMLElement>(`[data-calendar-day-index="${dayIndex}"]`);
+  if (!column) return null;
+
+  const rect = column.getBoundingClientRect();
   const relativeY = pointerY - rect.top;
   if (relativeY < 0) return null;
 
-  const totalMinutes = (relativeY / hourHeight) * 60;
-  let minute = Math.round((totalMinutes % 60) / 15) * 15;
-  let hour = Math.floor(totalMinutes / 60);
-
-  if (minute >= 60) {
-    minute = 0;
-    hour += 1;
-  }
-  if (hour >= 24) {
-    hour = 23;
-    minute = 45;
-  }
-
-  return `${String(Math.max(0, hour)).padStart(2, '0')}:${String(Math.max(0, minute)).padStart(2, '0')}`;
+  const { hour, minute } = pixelsToTime(relativeY, hourHeight);
+  return formatTimeString(hour, minute);
 }
 
+// ========================================
+// Component
+// ========================================
+
 /**
- * DnDProvider - dnd-kit を使用したドラッグ・アンド・ドロップコンテキスト
+ * DnDProvider — パレット↔カレンダー間の cross-boundary DnD コンテキスト
  *
- * **機能**:
- * - planCard（Sidebar）からCalendar グリッドへのドラッグ
- * - PaletteItem からCalendar グリッドへのドラッグ（新規エントリ作成）
- * - PointerSensor: 8px移動したらドラッグ開始（誤動作防止）
- * - ドロップ位置から日付・時刻を計算してplan更新 or エントリ作成
+ * カレンダー内操作（エントリ移動/リサイズ/選択）は interaction/machine.ts が担当。
  */
-/** dnd-kitを使用したドラッグ・アンド・ドロップコンテキストプロバイダー */
 export const DnDProvider = ({ children }: DnDProviderProps) => {
   const t = useTranslations();
   const { updateEntry } = useEntryMutations();
@@ -120,26 +110,10 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
   // 自動スクロール
   const { updatePointerY } = useAutoScrollOnDrag({ isActive: activeId !== null });
 
-  // ドラッグ中のデータを保持（palette-item の場合はエントリが存在しないため）
+  // パレットアイテムのドラッグデータを保持
   const activeDragDataRef = useRef<PaletteDragData | null>(null);
 
-  // handleDragMove で計算した最後の時刻（ドロップ時のフォールバック用）
-  const lastComputedTimeRef = useRef<string | null>(null);
-
-  // ドラッグ中のリアルタイムポインタ位置（window レベルで追跡）
-  // dnd-kit が setPointerCapture するため、個別要素の pointermove は発火しない
-  const pointerRef = useRef({ x: 0, y: 0 });
-  React.useEffect(() => {
-    if (!activeId) return;
-    const onMove = (e: PointerEvent) => {
-      pointerRef.current = { x: e.clientX, y: e.clientY };
-    };
-    // capture phase でポインタキャプチャより先にイベントを取得
-    window.addEventListener('pointermove', onMove, true);
-    return () => window.removeEventListener('pointermove', onMove, true);
-  }, [activeId]);
-
-  // ドラッグ中のplan情報を取得（リアルタイム性最適化済み）
+  // エントリ一覧（ドラッグ中のプレビュー + 重複チェック用）
   const { data: entries } = useEntries();
   const activeplan = entries?.find((t) => t.id === activeId);
 
@@ -153,19 +127,17 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     }),
   );
 
+  // ---- Handlers ----
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       setActiveId(event.active.id as string);
       setDragPreviewTime(null);
-      lastComputedTimeRef.current = null;
 
-      // パレットアイテムのドラッグデータを保持
       const data = event.active.data?.current;
       if (data?.type === 'palette-item') {
         const palData = data as PaletteDragData;
         activeDragDataRef.current = palData;
-
-        // PanelDragPreview 用に store 連携
         useCalendarDragStore.getState().startPanelDrag({
           id: 'palette-new',
           title: palData.tagName,
@@ -181,10 +153,9 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
-      // 自動スクロール用にポインタ Y 座標を更新
+      // 自動スクロール
       const activatorEvent = event.activatorEvent as PointerEvent | undefined;
       if (activatorEvent?.clientY != null) {
-        // dnd-kit の delta を使ってポインタ現在位置を計算
         updatePointerY(activatorEvent.clientY + (event.delta?.y ?? 0));
       }
 
@@ -192,7 +163,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
       if (!over) {
         setDragPreviewTime(null);
-        // カレンダー外に出たら store プレビューもクリア
         const store = useCalendarDragStore.getState();
         if (store.isDragging && store.dragSource === 'panel') {
           store.updateDrag({ targetDateIndex: -1, snappedPosition: null, previewTime: null });
@@ -206,30 +176,22 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
         return;
       }
 
-      // dropData.time は dnd-kit のポインタキャプチャにより null の場合がある
-      // → window レベルで追跡したリアルタイムポインタ座標から計算
-      const computedTime =
-        dropData.time ??
-        computeTimeFromGlobalPointer(pointerRef.current.x, pointerRef.current.y, hourHeight);
-
-      // ドロップ時のフォールバック用に保持
-      lastComputedTimeRef.current = computedTime ?? null;
+      const computedTime = resolveDropTime(event, hourHeight);
 
       setDragPreviewTime({
         date: extractDateStr(dropData.date),
-        time: computedTime,
+        ...(computedTime ? { time: computedTime } : {}),
       });
 
       // PanelDragPreview store 更新
       const dragData = activeDragDataRef.current;
       if (dragData && computedTime) {
-        const parsed = parseTime(computedTime);
+        const parsed = parseTimeString(computedTime);
         if (parsed) {
           const targetDayIndex = typeof dropData.dayIndex === 'number' ? dropData.dayIndex : 0;
           const topPx = ((parsed.hour * 60 + parsed.minute) / 60) * hourHeight;
           const heightPx = (dragData.durationMinutes / 60) * hourHeight;
 
-          // previewTime を計算（表示用）
           const dateStr = extractDateStr(dropData.date);
           const [year, month, day] = dateStr.split('-').map(Number);
           const previewStart = fromZonedTime(
@@ -238,7 +200,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
           );
           const previewEnd = new Date(previewStart.getTime() + dragData.durationMinutes * 60000);
 
-          // 重複チェック
           const isOverlapping =
             entries?.some((entry) => {
               if (!entry.start_time || !entry.end_time) return false;
@@ -261,7 +222,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
   /** 既存エントリのドロップ処理（移動） */
   const handleplanDrop = useCallback(
-    (planId: string, over: Over) => {
+    (planId: string, over: Over, event: DragEndEvent) => {
       const dropData = over.data?.current;
       if (!dropData || !dropData.date) {
         toast.error(t('calendar.toast.dropInvalid'));
@@ -271,21 +232,15 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
       try {
         const dateStr = extractDateStr(dropData.date);
-
-        // リアルタイムポインタ座標から時刻を計算（フォールバックチェーン）
-        const dropTime =
-          dropData.time ??
-          lastComputedTimeRef.current ??
-          computeTimeFromGlobalPointer(pointerRef.current.x, pointerRef.current.y, hourHeight);
+        const dropTime = resolveDropTime(event, hourHeight);
 
         let start_time: string | null = null;
         let end_time: string | null = null;
 
         if (dropTime) {
-          const parsed = parseTime(dropTime);
+          const parsed = parseTimeString(dropTime);
           if (!parsed) throw new Error(t('common.errors.calendar.invalidTimeFormat'));
 
-          // 元エントリの実 duration を保持（フォールバック: 60分）
           const draggedEntry = entries?.find((e) => e.id === planId);
           let durationMinutes = 60;
           if (draggedEntry?.start_time && draggedEntry?.end_time) {
@@ -319,7 +274,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
   /** パレットアイテムのドロップ処理（新規エントリ作成） */
   const handlePaletteDrop = useCallback(
-    (dragData: PaletteDragData, over: Over) => {
+    (dragData: PaletteDragData, over: Over, event: DragEndEvent) => {
       const dropData = over.data?.current;
       if (!dropData || !dropData.date) {
         toast.error(t('calendar.toast.dropInvalid'));
@@ -328,11 +283,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
         return;
       }
 
-      // リアルタイムポインタ座標から時刻を計算（フォールバックチェーン）
-      const dropTime =
-        dropData.time ??
-        lastComputedTimeRef.current ??
-        computeTimeFromGlobalPointer(pointerRef.current.x, pointerRef.current.y, hourHeight);
+      const dropTime = resolveDropTime(event, hourHeight);
 
       if (!dropTime) {
         toast.error(t('calendar.toast.dropInvalid'));
@@ -343,7 +294,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
 
       try {
         const dateStr = extractDateStr(dropData.date);
-        const parsed = parseTime(dropTime);
+        const parsed = parseTimeString(dropTime);
         if (!parsed) throw new Error(t('common.errors.calendar.invalidTimeFormat'));
 
         const [year, month, day] = dateStr.split('-').map(Number);
@@ -372,7 +323,6 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     (event: DragEndEvent) => {
       const { active, over } = event;
 
-      // ドラッグ終了時に store をクリア
       useCalendarDragStore.getState().endDrag();
 
       if (!over) {
@@ -384,13 +334,11 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
       const dragData = active.data?.current;
       const dragType = dragData?.type;
 
-      // パレットアイテムのドロップ
       if (dragType === 'palette-item') {
-        handlePaletteDrop(dragData as PaletteDragData, over);
+        handlePaletteDrop(dragData as PaletteDragData, over, event);
         return;
       }
 
-      // カレンダーイベントのドロップ
       let currentPlanId: string;
       if (dragType === 'calendar-event') {
         const calendarEvent = dragData?.event;
@@ -403,7 +351,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
         currentPlanId = active.id as string;
       }
 
-      handleplanDrop(currentPlanId, over);
+      handleplanDrop(currentPlanId, over, event);
     },
     [handleplanDrop, handlePaletteDrop],
   );
@@ -420,8 +368,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     >
       {children}
 
-      {/* ドラッグ中のプレビュー — エントリカード風 */}
-      <DragOverlay>
+      <DragOverlay style={{ pointerEvents: 'none' }}>
         {paletteDrag ? (
           <div
             className="surface-raised border-l-indicator flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90"
