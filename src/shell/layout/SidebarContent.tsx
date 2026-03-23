@@ -84,7 +84,7 @@ function SidebarUtilities() {
   }, [resolvedTheme, setTheme]);
 
   return (
-    <div className="flex items-center gap-1 px-2 py-2">
+    <div className="flex items-center gap-1 py-2">
       <HoverTooltip content={resolvedTheme === 'light' ? 'Dark mode' : 'Light mode'} side="right">
         <Button
           variant="ghost"

@@ -8,7 +8,7 @@
 export { Palette } from './components/Palette';
 
 // Types (re-exported from shared component)
-export type { SidebarBlockDragData as PaletteDragData } from '@/shell/components/SidebarBlockItem';
+export type { BlockDragData as PaletteDragData } from '@/shell/components/sidebar';
 
 // Hooks
 export { usePaletteMutations } from './hooks/usePaletteMutations';

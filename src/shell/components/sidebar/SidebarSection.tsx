@@ -50,9 +50,9 @@ export function SidebarSection({
   action,
 }: SidebarSectionProps) {
   return (
-    <Collapsible defaultOpen={defaultOpen} className="w-full min-w-0 overflow-hidden px-2">
+    <Collapsible defaultOpen={defaultOpen} className="w-full min-w-0 overflow-hidden">
       <CollapsibleTrigger asChild>
-        <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded px-2 transition-colors">
+        <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded pl-2 transition-colors">
           <div className="text-muted-foreground flex h-8 min-w-0 items-center text-left text-xs font-bold">
             <span className="truncate">{title}</span>
             <ChevronRight className="ml-1 size-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-90" />

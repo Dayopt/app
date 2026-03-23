@@ -6,11 +6,12 @@ import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 
+import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
 
 /** SidebarSection — サイドバー余白デバッグ */
 const meta = {
-  title: 'Components/SidebarSection',
+  title: 'Components/Shell/SidebarSection',
   component: SidebarSection,
   parameters: {
     layout: 'centered',
@@ -23,10 +24,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // ─────────────────────────────────────────────────────────
-// 実コンポーネント再現パーツ
+// モックパーツ（tRPC/Store依存のため実コンポーネント使用不可）
 // ─────────────────────────────────────────────────────────
 
-/** CreateTagButton / PaletteAddPopover と同一: size-6 */
+/** CreateTagButton と同一構造: size-8, ghost */
 function ActionButton() {
   return (
     <button
@@ -39,7 +40,13 @@ function ActionButton() {
   );
 }
 
-/** SortableTagItem と同一構造 */
+/**
+ * FilterItem (TagFlatList内) と同一構造
+ * 実物: src/features/calendar/components/tag-filter/components/FilterItem/FilterItem.tsx
+ * - group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded text-sm
+ * - Checkbox: ml-2 shrink-0
+ * - Label: ml-1 min-w-0 flex-1 truncate
+ */
 function TagRow({
   name,
   color,
@@ -50,7 +57,7 @@ function TagRow({
   checked?: boolean;
 }) {
   return (
-    <div className="hover:bg-state-hover group/item flex h-8 cursor-grab items-center rounded text-sm">
+    <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm">
       <Checkbox
         checked={checked}
         className="ml-2 shrink-0 cursor-pointer"
@@ -61,31 +68,6 @@ function TagRow({
       />
       <span className="ml-1 min-w-0 flex-1 truncate">{name}</span>
     </div>
-  );
-}
-
-/** PaletteItem と同一構造 */
-function PaletteRow({
-  tagName,
-  tagColor,
-  duration,
-}: {
-  tagName: string;
-  tagColor: string;
-  duration: string;
-}) {
-  return (
-    <button
-      type="button"
-      className="hover:bg-state-hover flex h-8 w-full items-center gap-2 rounded px-2 text-sm transition-colors"
-      onClick={fn()}
-    >
-      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: tagColor }} />
-      <span className="text-foreground min-w-0 truncate">{tagName}</span>
-      <span className="text-muted-foreground ml-auto shrink-0 text-xs tabular-nums">
-        {duration}
-      </span>
-    </button>
   );
 }
 
@@ -120,7 +102,7 @@ function MockSidebarFooter() {
   return (
     <div className="shrink-0 py-2 pr-2 pl-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 pl-2">
+        <div className="flex items-center gap-2">
           <div className="bg-primary size-6 rounded-full" />
           <span className="text-sm">Tomoya</span>
           <ChevronRight className="text-muted-foreground size-3" />
@@ -136,10 +118,10 @@ function MockSidebarFooter() {
   );
 }
 
-/** SidebarUtilities と同一構造 */
+/** SidebarUtilities と同一構造（px-2なし — Sidebar scroll area が提供） */
 function MockThemeToggle() {
   return (
-    <div className="flex items-center gap-1 px-2 py-2">
+    <div className="flex items-center gap-1 py-2">
       <button
         type="button"
         className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
@@ -160,9 +142,12 @@ function DebugWrapper({ children }: { children: React.ReactNode }) {
       className="bg-surface-container border-border relative flex w-[256px] flex-col border-r"
       style={{ height: 700 }}
     >
-      {/* 16pxガイドライン（赤）— ヘッダーアイコン基準 */}
+      {/* 8px ガイドライン（青）— ホバー背景の開始位置 */}
+      <div className="pointer-events-none absolute inset-y-0 left-2 z-50 w-px bg-blue-400 opacity-40" />
+      <div className="pointer-events-none absolute inset-y-0 right-2 z-50 w-px bg-blue-400 opacity-40" />
+      {/* 16px ガイドライン（赤）— テキスト/コンテンツの開始位置 */}
       <div className="pointer-events-none absolute inset-y-0 left-4 z-50 w-px bg-red-400 opacity-40" />
-      <div className="pointer-events-none absolute inset-y-0 right-2 z-50 w-px bg-red-400 opacity-40" />
+      <div className="pointer-events-none absolute inset-y-0 right-4 z-50 w-px bg-red-400 opacity-40" />
       {children}
     </div>
   );
@@ -173,17 +158,16 @@ function DebugWrapper({ children }: { children: React.ReactNode }) {
 // ─────────────────────────────────────────────────────────
 
 const today = new Date();
+const noop = fn();
 
 /** サイドバー全体再現 — ヘッダー + ミニカレンダー + タグ + パレット + テーマ + フッター */
 export const SidebarReproduction: Story = {
   render: () => (
     <DebugWrapper>
-      {/* ヘッダー（Sidebar.tsx と同一） */}
       <MockSidebarHeader />
 
-      {/* スクロールエリア（Sidebar.tsx content と同一） */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        {/* ミニカレンダー（実コンポーネント） */}
+      {/* Sidebar.tsx scroll area と同一: px-2 が全コンテンツの外枠 */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2">
         <div className="shrink-0">
           <MiniCalendar
             selectedDate={today}
@@ -192,7 +176,7 @@ export const SidebarReproduction: Story = {
           />
         </div>
 
-        {/* タグセクション — CalendarFilterList と同一構造 */}
+        {/* CalendarFilterList と同一構造 */}
         <div className="flex min-w-0 flex-col overflow-hidden">
           <div className="w-full min-w-0 space-y-2 overflow-hidden">
             <SidebarSection title="タグ" defaultOpen className="py-1" action={<ActionButton />}>
@@ -201,18 +185,16 @@ export const SidebarReproduction: Story = {
           </div>
         </div>
 
-        {/* パレットセクション — Palette と同一構造 */}
+        {/* Palette と同一構造 — 実BlockItem使用 */}
         <div className="w-full min-w-0 overflow-hidden">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-            <PaletteRow tagName="タグ" tagColor="var(--primary)" duration="30m" />
+            <BlockItem tagName="タグ" tagColor="blue" durationMinutes={30} onClick={noop} />
           </SidebarSection>
         </div>
 
-        {/* テーマ切替 */}
         <MockThemeToggle />
       </div>
 
-      {/* フッター */}
       <MockSidebarFooter />
     </DebugWrapper>
   ),
@@ -224,7 +206,7 @@ export const FullSidebar: Story = {
     <DebugWrapper>
       <MockSidebarHeader />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2">
         <div className="shrink-0">
           <MiniCalendar
             selectedDate={today}
@@ -247,8 +229,8 @@ export const FullSidebar: Story = {
 
         <div className="w-full min-w-0 overflow-hidden">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-            <PaletteRow tagName="Work" tagColor="var(--tag-blue)" duration="60m" />
-            <PaletteRow tagName="Exercise" tagColor="var(--tag-teal)" duration="30m" />
+            <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
+            <BlockItem tagName="Exercise" tagColor="teal" durationMinutes={30} onClick={noop} />
           </SidebarSection>
         </div>
 

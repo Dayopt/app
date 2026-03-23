@@ -53,7 +53,7 @@ export function usePaletteMutations() {
       if (context?.previous) {
         utils.palette.list.setData(undefined, context.previous);
       }
-      toast.error(t('sidebar.palette.pin') + ' failed');
+      toast.error(t('sidebar.palette.pinFailed'));
     },
 
     onSettled: () => {
@@ -80,7 +80,7 @@ export function usePaletteMutations() {
       if (context?.previous) {
         utils.palette.list.setData(undefined, context.previous);
       }
-      toast.error(t('sidebar.palette.unpin') + ' failed');
+      toast.error(t('sidebar.palette.unpinFailed'));
     },
 
     onSettled: () => {
