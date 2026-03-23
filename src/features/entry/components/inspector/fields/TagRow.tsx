@@ -5,16 +5,17 @@
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * タグ未設定時は「タグを追加」を表示。
- * 右側に削除ボタンを配置。
+ * 右側にパレット登録ボタン + 削除ボタンを配置。
  *
  * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
  */
 
 import { useCallback, useRef, useState } from 'react';
 
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Star, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { TagQuickSelector } from '@/features/tags';
 import type { TagColorEntry } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,10 @@ interface TagRowProps {
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
   onCreateAndSelect: (name: string, color?: string | null) => void;
+  /** パレットに登録するコールバック（タグ+時間が有効な場合のみ表示） */
+  onPinToPalette?: (() => void) | undefined;
+  /** パレット登録済みかどうか */
+  isPinnedInPalette?: boolean | undefined;
   /** 削除ボタンのコールバック */
   onDelete?: (() => void) | undefined;
 }
@@ -39,6 +44,8 @@ export function TagRow({
   tagColorClasses: colorClasses,
   onTagChange,
   onCreateAndSelect,
+  onPinToPalette,
+  isPinnedInPalette,
   onDelete,
 }: TagRowProps) {
   const t = useTranslations();
@@ -94,17 +101,44 @@ export function TagRow({
           )}
         </button>
 
-        {/* 右側: 削除 */}
-        {onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-8 items-center justify-center rounded-lg transition-colors"
-            aria-label={t('common.actions.delete')}
-          >
-            <Trash2 className="size-4" />
-          </button>
-        )}
+        {/* 右側: パレット登録 + 削除 */}
+        <div className="flex items-center">
+          {onPinToPalette && (
+            <HoverTooltip
+              content={
+                isPinnedInPalette
+                  ? t('common.actions.alreadyInPalette')
+                  : t('common.actions.addToPalette')
+              }
+              side="bottom"
+            >
+              <button
+                type="button"
+                onClick={isPinnedInPalette ? undefined : onPinToPalette}
+                className={cn(
+                  'flex size-8 items-center justify-center rounded-lg transition-colors',
+                  isPinnedInPalette
+                    ? 'text-warning cursor-default'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-state-hover',
+                )}
+                aria-label={t('common.actions.addToPalette')}
+                aria-pressed={isPinnedInPalette}
+              >
+                <Star className={cn('size-4', isPinnedInPalette && 'fill-current')} />
+              </button>
+            </HoverTooltip>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-8 items-center justify-center rounded-lg transition-colors"
+              aria-label={t('common.actions.delete')}
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <TagQuickSelector

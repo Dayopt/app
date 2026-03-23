@@ -41,10 +41,12 @@ const SNAP_POINTS = [1] as const;
 interface EntryInspectorProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
   onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレット登録済みチェック関数（Composition Layer から注入） */
+  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
 }
 
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
-export function EntryInspector({ onPinToPalette }: EntryInspectorProps) {
+export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
@@ -107,7 +109,9 @@ export function EntryInspector({ onPinToPalette }: EntryInspectorProps) {
       </div>
     );
   } else {
-    content = <EntryInspectorForm onPinToPalette={onPinToPalette} />;
+    content = (
+      <EntryInspectorForm onPinToPalette={onPinToPalette} isPinnedInPalette={isPinnedInPalette} />
+    );
   }
 
   if (!isOpen) return null;

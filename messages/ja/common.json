@@ -92,7 +92,10 @@
       "archiving": "アーカイブ中...",
       "restoring": "復元中...",
       "clear": "クリア",
-      "options": "オプション"
+      "options": "オプション",
+      "addToPalette": "パレットに追加",
+      "addedToPalette": "パレットに追加しました",
+      "alreadyInPalette": "パレットに登録済み"
     },
     "confirm": {
       "delete": {

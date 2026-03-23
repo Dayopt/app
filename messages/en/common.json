@@ -92,7 +92,10 @@
       "archiving": "Archiving...",
       "restoring": "Restoring...",
       "clear": "Clear",
-      "options": "Options"
+      "options": "Options",
+      "addToPalette": "Add to palette",
+      "addedToPalette": "Added to palette",
+      "alreadyInPalette": "Already in palette"
     },
     "confirm": {
       "delete": {

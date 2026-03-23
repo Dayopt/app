@@ -4,7 +4,7 @@
  * Inspector フォーム（Level 2）
  *
  * useEntryForm() で全状態を取得し、フラットにフィールドを描画する。
- * props は entry + onDelete のみ。
+ * onPinToPalette は Composition Layer（GlobalOverlays）から注入される。
  */
 
 import { useCallback, useMemo } from 'react';
@@ -33,8 +33,20 @@ import {
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
 
+/** 15分単位にスナップ（パレット登録用） */
+function snapToQuarter(minutes: number): number {
+  return Math.round(minutes / 15) * 15 || 15;
+}
+
+interface EntryInspectorFormProps {
+  /** パレットへのピン留めコールバック（Composition Layer から注入） */
+  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレット登録済みチェック関数（Composition Layer から注入） */
+  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
+}
+
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
-export function EntryInspectorForm() {
+export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -120,8 +132,23 @@ export function EntryInspectorForm() {
   const effectiveActualStart = actualStartTime ?? startTime;
   const effectiveActualEnd = actualEndTime ?? endTime;
 
-  // Duration / diff
+  // Duration
   const plannedDuration = useMemo(() => computeDuration(startTime, endTime), [startTime, endTime]);
+
+  // パレット登録ハンドラ + 登録済みチェック
+  const snappedDuration = plannedDuration > 0 ? snapToQuarter(plannedDuration) : 0;
+
+  const handlePinToPalette = useCallback(() => {
+    if (!selectedTagId || snappedDuration <= 0 || !onPinToPalette) return;
+    onPinToPalette(selectedTagId, snappedDuration);
+  }, [selectedTagId, snappedDuration, onPinToPalette]);
+
+  const isPinned =
+    !!isPinnedInPalette && !!selectedTagId && snappedDuration > 0
+      ? isPinnedInPalette(selectedTagId, snappedDuration)
+      : false;
+
+  // Duration diff
   const actualDuration = useMemo(
     () => computeDuration(effectiveActualStart, effectiveActualEnd),
     [effectiveActualStart, effectiveActualEnd],
@@ -143,13 +170,16 @@ export function EntryInspectorForm() {
         tagColorClasses={selectedTagColorClasses}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
+        onPinToPalette={
+          onPinToPalette && selectedTagId && snappedDuration > 0 ? handlePinToPalette : undefined
+        }
+        isPinnedInPalette={isPinned}
         onDelete={handleDelete}
       />
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
-        className="mt-2 grid transition-[grid-template-rows] duration-200"
-        style={{ gridTemplateRows: timeConflictError ? '1fr' : '0fr' }}
+        className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
