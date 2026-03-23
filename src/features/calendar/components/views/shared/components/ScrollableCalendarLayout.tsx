@@ -184,7 +184,7 @@ export const ScrollableCalendarLayout = ({
         {/* 時間軸列 */}
         {showTimeColumn && (
           <div
-            className="bg-background border-border sticky left-0 z-10 shrink-0 border-r"
+            className="bg-background sticky left-0 z-10 shrink-0"
             style={{ width: timeColumnWidth }}
           >
             <div className="relative h-full overflow-hidden">

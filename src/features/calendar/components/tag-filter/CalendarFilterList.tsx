@@ -102,7 +102,7 @@ export function CalendarFilterList() {
 
   return (
     <>
-      <div className="w-full min-w-0 space-y-2 overflow-hidden p-2">
+      <div className="w-full min-w-0 space-y-2 overflow-hidden">
         {/* タグ */}
         <SidebarSection
           title={t('calendar.filter.tags')}
