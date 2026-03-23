@@ -6,3 +6,6 @@
  */
 
 export { Palette } from './components/Palette';
+
+// Hooks
+export { usePaletteMutations } from './hooks/usePaletteMutations';

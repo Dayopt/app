@@ -6,7 +6,11 @@
       "add": "Add to palette",
       "addToNow": "Add at current time",
       "pin": "Pin",
-      "unpin": "Unpin"
+      "unpin": "Unpin",
+      "tagLabel": "Tag",
+      "tagPlaceholder": "Select tag",
+      "durationLabel": "Duration",
+      "durationPlaceholder": "Select duration"
     }
   }
 }

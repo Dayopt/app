@@ -10,15 +10,14 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { SidebarSection } from '@/components/SidebarSection';
-import { Button } from '@/components/ui/button';
 import { useEntryMutations } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { api } from '@/platform/trpc';
 
+import { PaletteAddPopover } from './PaletteAddPopover';
 import { PaletteItem } from './PaletteItem';
 
 const SNAP_MINUTES = 15;
@@ -59,7 +58,6 @@ export function Palette() {
         },
         {
           onSuccess: (newEntry) => {
-            // エントリ作成後にタグを設定
             setTags.mutate({ entryId: newEntry.id, tagId });
           },
         },
@@ -95,46 +93,40 @@ export function Palette() {
   const hasItems = pinnedWithTags.length > 0 || frequentWithTags.length > 0;
 
   return (
-    <SidebarSection
-      title={t('sidebar.palette.title')}
-      defaultOpen
-      action={
-        <Button variant="ghost" icon className="size-6" aria-label={t('sidebar.palette.add')}>
-          <Plus className="size-3.5" />
-        </Button>
-      }
-    >
-      {!hasItems && (
-        <p className="text-muted-foreground px-2 py-3 text-xs">{t('sidebar.palette.empty')}</p>
-      )}
+    <div className="w-full min-w-0 overflow-hidden">
+      <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={<PaletteAddPopover />}>
+        {!hasItems && (
+          <p className="text-muted-foreground px-2 py-3 text-xs">{t('sidebar.palette.empty')}</p>
+        )}
 
-      {/* ピン留めアイテム */}
-      {pinnedWithTags.map((item) =>
-        item ? (
-          <PaletteItem
-            key={item.id}
-            tagName={item.tag.name}
-            tagColor={item.tag.color}
-            durationMinutes={item.duration_minutes}
-            isPinned
-            onClick={() => handlePlace(item.tag_id, item.duration_minutes, item.tag.name)}
-          />
-        ) : null,
-      )}
+        {/* ピン留めアイテム */}
+        {pinnedWithTags.map((item) =>
+          item ? (
+            <PaletteItem
+              key={item.id}
+              tagName={item.tag.name}
+              tagColor={item.tag.color}
+              durationMinutes={item.duration_minutes}
+              isPinned
+              onClick={() => handlePlace(item.tag_id, item.duration_minutes, item.tag.name)}
+            />
+          ) : null,
+        )}
 
-      {/* 自動集計アイテム */}
-      {frequentWithTags.map((item) =>
-        item ? (
-          <PaletteItem
-            key={`${item.tagId}-${item.durationMinutes}`}
-            tagName={item.tag.name}
-            tagColor={item.tag.color}
-            durationMinutes={item.durationMinutes}
-            isPinned={false}
-            onClick={() => handlePlace(item.tagId, item.durationMinutes, item.tag.name)}
-          />
-        ) : null,
-      )}
-    </SidebarSection>
+        {/* 自動集計アイテム */}
+        {frequentWithTags.map((item) =>
+          item ? (
+            <PaletteItem
+              key={`${item.tagId}-${item.durationMinutes}`}
+              tagName={item.tag.name}
+              tagColor={item.tag.color}
+              durationMinutes={item.durationMinutes}
+              isPinned={false}
+              onClick={() => handlePlace(item.tagId, item.durationMinutes, item.tag.name)}
+            />
+          ) : null,
+        )}
+      </SidebarSection>
+    </div>
   );
 }

@@ -6,7 +6,11 @@
       "add": "パレットに追加",
       "addToNow": "現在時刻に追加",
       "pin": "ピン留め",
-      "unpin": "ピン解除"
+      "unpin": "ピン解除",
+      "tagLabel": "タグ",
+      "tagPlaceholder": "タグを選択",
+      "durationLabel": "時間",
+      "durationPlaceholder": "時間を選択"
     }
   }
 }
