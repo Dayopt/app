@@ -13,12 +13,16 @@
 
 import { useCallback } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import type { CalendarViewType } from '@/lib/calendar-constants';
+import { getMultiDayCount, isMultiDayView } from '@/lib/calendar-constants';
 import { snapToNextInterval } from '@/lib/time-utils';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
+import { createListQueryPredicate } from './mutations/mutationUtils';
 import { useEntryMutations } from './useEntryMutations';
 import { useEntryTags } from './useEntryTags';
 
@@ -33,6 +37,31 @@ function applyTimeToDate(targetDate: Date): Date {
   const result = new Date(targetDate);
   result.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
   return result;
+}
+
+/** 今日がカレンダー表示範囲内かを判定し、範囲内なら今日を返す */
+function resolveTargetDate(viewedDate: Date, viewType: CalendarViewType): Date {
+  // day ビュー: そのまま viewedDate を使用
+  if (viewType === 'day') return viewedDate;
+
+  // week / multi-day ビュー: 今日が範囲内なら今日を使用
+  const dayCount =
+    viewType === 'week' ? 7 : isMultiDayView(viewType) ? getMultiDayCount(viewType) : 1;
+
+  const today = new Date();
+  const startOfViewed = new Date(viewedDate);
+  startOfViewed.setHours(0, 0, 0, 0);
+  const endOfRange = new Date(startOfViewed);
+  endOfRange.setDate(startOfViewed.getDate() + dayCount);
+
+  const todayStart = new Date(today);
+  todayStart.setHours(0, 0, 0, 0);
+
+  if (todayStart >= startOfViewed && todayStart < endOfRange) {
+    return today;
+  }
+
+  return viewedDate;
 }
 
 /** カレンダーのスクロールコンテナを指定時刻位置にスクロール */
@@ -50,16 +79,53 @@ function scrollCalendarToTime(hour: number, minute: number) {
   });
 }
 
+/** キャッシュ済みエントリとの重複を事前チェック */
+function hasOverlapInCache(
+  queryClient: ReturnType<typeof useQueryClient>,
+  startTime: Date,
+  endTime: Date,
+): boolean {
+  const isEntriesList = createListQueryPredicate('entries');
+  type CachedEntry = {
+    start_time: string | null;
+    end_time: string | null;
+    deleted_at: string | null;
+  };
+  const allCaches = queryClient.getQueriesData<CachedEntry[]>({ predicate: isEntriesList });
+
+  for (const [, entries] of allCaches) {
+    if (!entries) continue;
+    for (const entry of entries) {
+      if (entry.deleted_at) continue;
+      if (!entry.start_time || !entry.end_time) continue;
+      const entryStart = new Date(entry.start_time);
+      const entryEnd = new Date(entry.end_time);
+      // half-open interval overlap
+      if (entryStart < endTime && entryEnd > startTime) return true;
+    }
+  }
+  return false;
+}
+
 /** 指定時刻にブロック（エントリ + タグ）を配置するフック */
 export function useBlockPlace() {
   const { createEntry, deleteEntry } = useEntryMutations();
   const { setEntryTags } = useEntryTags();
   const t = useTranslations();
+  const queryClient = useQueryClient();
 
   /** 指定時刻にブロックを配置 */
   const placeBlock = useCallback(
     (params: { tagId: string; tagName: string; startTime: Date; durationMinutes: number }) => {
       const end = new Date(params.startTime.getTime() + params.durationMinutes * 60 * 1000);
+
+      // キャッシュから事前重複チェック（楽観的更新でカードが一瞬現れるのを防ぐ）
+      if (hasOverlapInCache(queryClient, params.startTime, end)) {
+        const timeStr = formatHHmm(params.startTime);
+        toast.error(t('sidebar.palette.overlapError', { time: timeStr }));
+        return;
+      }
+
       createEntry.mutate(
         {
           title: params.tagName,
@@ -91,14 +157,15 @@ export function useBlockPlace() {
         },
       );
     },
-    [createEntry, deleteEntry, setEntryTags, t],
+    [createEntry, deleteEntry, queryClient, setEntryTags, t],
   );
 
-  /** カレンダー表示日の現在時刻にブロックを配置 */
+  /** カレンダー表示日の現在時刻にブロックを配置（週表示で今日が範囲内なら今日に配置） */
   const placeBlockNow = useCallback(
     (tagId: string, durationMinutes: number, tagName: string) => {
-      const viewedDate = useCalendarNavigationStore.getState().viewedDate;
-      const startTime = snapToNextInterval(applyTimeToDate(viewedDate));
+      const { viewedDate, viewType } = useCalendarNavigationStore.getState();
+      const targetDate = resolveTargetDate(viewedDate, viewType);
+      const startTime = snapToNextInterval(applyTimeToDate(targetDate));
       placeBlock({
         tagId,
         tagName,

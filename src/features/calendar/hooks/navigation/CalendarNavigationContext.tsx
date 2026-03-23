@@ -51,6 +51,7 @@ export const CalendarNavigationProvider = ({
   }, [currentDate]);
   React.useEffect(() => {
     viewTypeRef.current = viewType;
+    useCalendarNavigationStore.getState().setViewType(viewType);
   }, [viewType]);
   React.useEffect(() => {
     localeRef.current = locale;
