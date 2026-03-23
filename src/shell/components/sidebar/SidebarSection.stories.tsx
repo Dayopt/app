@@ -1,3 +1,10 @@
+/**
+ * SidebarSection Stories
+ *
+ * サイドバー共通の折りたたみセクション。
+ * 実際のサイドバー構成を再現したストーリーで視覚ヒエラルキーを確認。
+ */
+
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
@@ -5,34 +12,23 @@ import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
+import { getTagColorClasses } from '@/lib/tag-colors';
 
 import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
 
-/** SidebarSection — サイドバー余白デバッグ */
-const meta = {
-  title: 'Components/Shell/Sidebar/Section',
-  parameters: {
-    layout: 'fullscreen',
-    a11y: { test: 'todo' },
-  },
-  tags: ['autodocs'],
-} satisfies Meta;
-
-export default meta;
-type Story = StoryObj<typeof meta>;
-
 // ─────────────────────────────────────────────────────────
-// モックパーツ（tRPC/Store依存のため実コンポーネント使用不可）
+// モックパーツ
 // ─────────────────────────────────────────────────────────
 
-/** CreateTagButton と同一構造: size-8, ghost */
+/** CreateTagButton / PaletteAddPopover と同一構造 */
 function ActionButton() {
   return (
     <button
       type="button"
       className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded"
       onClick={fn()}
+      aria-label="Add"
     >
       <Plus className="size-4" />
     </button>
@@ -40,11 +36,8 @@ function ActionButton() {
 }
 
 /**
- * FilterItem (TagFlatList内) と同一構造
- * 実物: src/features/calendar/components/tag-filter/components/FilterItem/FilterItem.tsx
- * - group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded text-sm
- * - Checkbox: ml-2 shrink-0
- * - Label: ml-1 min-w-0 flex-1 truncate
+ * TagFlatList 内 SortableTagItem と同一構造。
+ * borderColor/backgroundColor に getTagColorClasses().cssVar を使用。
  */
 function TagRow({
   name,
@@ -55,14 +48,15 @@ function TagRow({
   color: string;
   checked?: boolean;
 }) {
+  const colorClasses = getTagColorClasses(color);
   return (
     <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm">
       <Checkbox
         checked={checked}
         className="ml-2 shrink-0 cursor-pointer"
         style={{
-          borderColor: color,
-          backgroundColor: checked ? color : 'transparent',
+          borderColor: colorClasses.cssVar,
+          backgroundColor: checked ? colorClasses.cssVar : 'transparent',
         }}
       />
       <span className="ml-1 min-w-0 flex-1 truncate">{name}</span>
@@ -82,12 +76,14 @@ function MockSidebarHeader() {
         <button
           type="button"
           className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          aria-label="Search"
         >
           <Search className="text-muted-foreground size-4" />
         </button>
         <button
           type="button"
           className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          aria-label="Close sidebar"
         >
           <PanelLeft className="text-muted-foreground size-4" />
         </button>
@@ -106,12 +102,6 @@ function MockSidebarFooter() {
           <span className="text-sm">Tomoya</span>
           <ChevronRight className="text-muted-foreground size-3" />
         </div>
-        <button
-          type="button"
-          className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
-        >
-          <span className="text-muted-foreground text-sm">🔔</span>
-        </button>
       </div>
     </div>
   );
@@ -124,6 +114,7 @@ function MockThemeToggle() {
       <button
         type="button"
         className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+        aria-label="Toggle theme"
       >
         <Moon className="text-muted-foreground size-4" />
       </button>
@@ -132,16 +123,36 @@ function MockThemeToggle() {
 }
 
 // ─────────────────────────────────────────────────────────
-// デバッグラッパー（256px + ガイドライン）
+// デバッグラッパー（256px）
 // ─────────────────────────────────────────────────────────
 
-function DebugWrapper({ children }: { children: React.ReactNode }) {
+function SidebarShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="border-border flex w-[256px] flex-col border-r" style={{ height: 700 }}>
+    <div
+      className="border-border bg-surface-container flex w-[256px] flex-col border-r"
+      style={{ height: 700 }}
+    >
       {children}
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────
+// Meta
+// ─────────────────────────────────────────────────────────
+
+/** SidebarSection — サイドバー共通の折りたたみセクション。ヘッダー + コンテンツのCollapsible。 */
+const meta = {
+  title: 'Components/Shell/Sidebar/Section',
+  component: SidebarSection,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  tags: ['autodocs'],
+} satisfies Meta<typeof SidebarSection>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // ─────────────────────────────────────────────────────────
 // Stories
@@ -150,69 +161,97 @@ function DebugWrapper({ children }: { children: React.ReactNode }) {
 const today = new Date();
 const noop = fn();
 
-/** サイドバー全体再現 — ヘッダー + ミニカレンダー + タグ + パレット + テーマ + フッター */
-export const SidebarReproduction: Story = {
+/** 基本的な使用例（defaultOpen + action スロット）。 */
+export const Default: Story = {
+  args: {
+    title: 'セクション',
+    defaultOpen: true,
+    children: (
+      <div className="space-y-1">
+        <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+        <BlockItem tagName="勉強" tagColor="green" durationMinutes={30} onClick={noop} />
+      </div>
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-64 px-2">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/** 閉じた状態。 */
+export const Collapsed: Story = {
+  args: {
+    title: 'セクション',
+    defaultOpen: false,
+    children: <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />,
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-64 px-2">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/** action スロット付き（+ボタン）。 */
+export const WithAction: Story = {
+  args: {
+    title: 'パレット',
+    defaultOpen: true,
+    action: <ActionButton />,
+    children: (
+      <div className="space-y-1">
+        <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+        <BlockItem tagName="運動" tagColor="teal" durationMinutes={30} onClick={noop} />
+      </div>
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div className="w-64 px-2">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/** サイドバー全体再現 — ヘッダー + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
+export const FullSidebar: Story = {
+  args: { title: '', children: null },
   render: () => (
-    <DebugWrapper>
+    <SidebarShell>
       <MockSidebarHeader />
 
-      {/* Sidebar.tsx scroll area（px-2なし — 各セクションが自前で管理） */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        <MiniCalendar
-          selectedDate={today}
-          onDateSelect={() => {}}
-          className="w-full bg-transparent"
-        />
-
-        {/* CalendarFilterList と同一構造 */}
-        <div className="flex min-w-0 flex-col overflow-hidden px-2">
-          <div className="w-full min-w-0 space-y-2 overflow-hidden">
-            <SidebarSection title="タグ" defaultOpen className="py-1" action={<ActionButton />}>
-              <TagRow name="タグ" color="var(--primary)" />
-            </SidebarSection>
-          </div>
-        </div>
-
-        {/* Palette と同一構造 — 実BlockItem使用 */}
-        <div className="w-full min-w-0 overflow-hidden px-2">
-          <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-            <BlockItem tagName="タグ" tagColor="blue" durationMinutes={30} onClick={noop} />
+      {/* Sidebar scroll area: gap-4 (16px) between sections */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
+        {/* MiniCalendar in SidebarSection */}
+        <div className="px-2">
+          <SidebarSection title="カレンダー" defaultOpen>
+            <MiniCalendar
+              selectedDate={today}
+              onDateSelect={() => {}}
+              className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+            />
           </SidebarSection>
         </div>
 
-        <MockThemeToggle />
-      </div>
-
-      <MockSidebarFooter />
-    </DebugWrapper>
-  ),
-};
-
-/** プリセットタグ5個のフル構成 */
-export const FullSidebar: Story = {
-  render: () => (
-    <DebugWrapper>
-      <MockSidebarHeader />
-
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        <MiniCalendar
-          selectedDate={today}
-          onDateSelect={() => {}}
-          className="w-full bg-transparent"
-        />
-
+        {/* タグフィルター */}
         <div className="flex min-w-0 flex-col overflow-hidden px-2">
-          <div className="w-full min-w-0 space-y-2 overflow-hidden">
-            <SidebarSection title="タグ" defaultOpen className="py-1" action={<ActionButton />}>
-              <TagRow name="Work" color="var(--tag-blue)" />
-              <TagRow name="Learning" color="var(--tag-green)" />
-              <TagRow name="Life" color="var(--tag-amber)" />
-              <TagRow name="Exercise" color="var(--tag-teal)" />
-              <TagRow name="Hobby" color="var(--tag-violet)" />
-            </SidebarSection>
-          </div>
+          <SidebarSection title="タグ" defaultOpen action={<ActionButton />}>
+            <TagRow name="Work" color="blue" />
+            <TagRow name="Learning" color="green" />
+            <TagRow name="Life" color="amber" />
+            <TagRow name="Exercise" color="teal" />
+            <TagRow name="Hobby" color="violet" />
+          </SidebarSection>
         </div>
 
+        {/* パレット（塗りドット） */}
         <div className="w-full min-w-0 overflow-hidden px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
             <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
@@ -220,10 +259,115 @@ export const FullSidebar: Story = {
           </SidebarSection>
         </div>
 
+        {/* 履歴（中抜きドット） */}
+        <div className="w-full min-w-0 overflow-hidden px-2">
+          <SidebarSection title="履歴" defaultOpen>
+            <BlockItem
+              tagName="Work"
+              tagColor="blue"
+              durationMinutes={45}
+              dotVariant="outline"
+              onClick={noop}
+            />
+            <BlockItem
+              tagName="Learning"
+              tagColor="green"
+              durationMinutes={30}
+              dotVariant="outline"
+              onClick={noop}
+            />
+            <BlockItem
+              tagName="Life"
+              tagColor="amber"
+              durationMinutes={15}
+              dotVariant="outline"
+              onClick={noop}
+            />
+          </SidebarSection>
+        </div>
+
         <MockThemeToggle />
       </div>
 
       <MockSidebarFooter />
-    </DebugWrapper>
+    </SidebarShell>
+  ),
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { title: '', children: null },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">Default（開いた状態）</p>
+        <div className="w-64 px-2">
+          <SidebarSection title="セクション" defaultOpen>
+            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+            <BlockItem tagName="勉強" tagColor="green" durationMinutes={30} onClick={noop} />
+          </SidebarSection>
+        </div>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">Collapsed（閉じた状態）</p>
+        <div className="w-64 px-2">
+          <SidebarSection title="セクション">
+            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+          </SidebarSection>
+        </div>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">WithAction（+ボタン付き）</p>
+        <div className="w-64 px-2">
+          <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+          </SidebarSection>
+        </div>
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
+          FullSidebar（全セクション構成）
+        </p>
+        <SidebarShell>
+          <MockSidebarHeader />
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
+            <div className="px-2">
+              <SidebarSection title="カレンダー" defaultOpen>
+                <MiniCalendar
+                  selectedDate={today}
+                  onDateSelect={() => {}}
+                  className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+                />
+              </SidebarSection>
+            </div>
+            <div className="flex min-w-0 flex-col overflow-hidden px-2">
+              <SidebarSection title="タグ" defaultOpen action={<ActionButton />}>
+                <TagRow name="Work" color="blue" />
+                <TagRow name="Learning" color="green" />
+                <TagRow name="Life" color="amber" />
+              </SidebarSection>
+            </div>
+            <div className="w-full min-w-0 overflow-hidden px-2">
+              <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+                <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
+              </SidebarSection>
+            </div>
+            <div className="w-full min-w-0 overflow-hidden px-2">
+              <SidebarSection title="履歴" defaultOpen>
+                <BlockItem
+                  tagName="Work"
+                  tagColor="blue"
+                  durationMinutes={45}
+                  dotVariant="outline"
+                  onClick={noop}
+                />
+              </SidebarSection>
+            </div>
+            <MockThemeToggle />
+          </div>
+          <MockSidebarFooter />
+        </SidebarShell>
+      </div>
+    </div>
   ),
 };

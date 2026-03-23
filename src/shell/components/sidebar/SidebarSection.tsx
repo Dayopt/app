@@ -20,28 +20,7 @@ interface SidebarSectionProps {
   action?: ReactNode | undefined;
 }
 
-/**
- * SidebarSection - サイドバー共通セクションコンポーネント
- *
- * 全サイドバーで統一された折りたたみセクションを提供。
- *
- * **デザイン仕様（8pxグリッド準拠）**:
- * - ヘッダー高さ: 32px（h-8）
- * - 左パディング: 16px（pl-4）、右パディング: 8px（pr-2）
- * - 上下パディング: 8px（py-2）
- * - ホバー: bg-state-hover（Material Design 3準拠）
- * - 角丸: rounded（4px - 内部小要素用）
- * - フォント: text-xs font-bold
- * - アイコン: 16px（size-4）、右端配置、開閉時90度回転
- *
- * @example
- * ```tsx
- * <SidebarSection title="マイカレンダー" defaultOpen>
- *   <FilterItem label="Plan" checked={true} />
- *   <FilterItem label="Record" checked={false} />
- * </SidebarSection>
- * ```
- */
+/** サイドバー共通の折りたたみセクション。タイトル + 開閉シェブロン + action スロット（右端）。 */
 export function SidebarSection({
   title,
   children,
@@ -53,7 +32,7 @@ export function SidebarSection({
     <Collapsible defaultOpen={defaultOpen} className="w-full min-w-0 overflow-hidden">
       <CollapsibleTrigger asChild>
         <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded pl-2 transition-colors">
-          <div className="text-muted-foreground flex h-8 min-w-0 items-center text-left text-xs font-bold">
+          <div className="text-muted-foreground flex h-8 min-w-0 items-center text-left text-sm font-bold">
             <span className="truncate">{title}</span>
             <ChevronRight className="ml-1 size-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-90" />
           </div>
