@@ -367,10 +367,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         )}
 
         {/* 下端リサイズハンドル（Draft/Past は非表示）
-             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保 */}
+             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。
+             短いカード（< 40px）はハンドルを縮小してクリック領域を確保 */}
         {!isDraft && !isPast && (
           <div
-            className="focus:ring-ring absolute right-0 bottom-[-12px] left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
             tabIndex={0}
             aria-label="Resize entry duration"
@@ -382,7 +383,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             onTouchStart={handleBottomResizeTouchStart}
             onKeyDown={handleResizeKeyDown}
             style={{
-              height: '32px',
+              height: safePosition.height < 40 ? '16px' : '32px',
+              bottom: safePosition.height < 40 ? '-4px' : '-12px',
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}
