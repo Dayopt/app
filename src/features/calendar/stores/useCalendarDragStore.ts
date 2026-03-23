@@ -56,10 +56,6 @@ interface CalendarDragActions {
   ) => void;
   /** ドラッグ終了 */
   endDrag: () => void;
-  /** ターゲット日付インデックスを更新 */
-  setTargetDateIndex: (index: number) => void;
-  /** プレビュー時間を更新 */
-  setPreviewTime: (time: { start: Date; end: Date } | null) => void;
 }
 
 const initialState: CalendarDragState = {
@@ -112,16 +108,4 @@ export const useCalendarDragStore = create<CalendarDragState & CalendarDragActio
     })),
 
   endDrag: () => set(initialState),
-
-  setTargetDateIndex: (index) =>
-    set((state) => ({
-      ...state,
-      targetDateIndex: index,
-    })),
-
-  setPreviewTime: (time) =>
-    set((state) => ({
-      ...state,
-      previewTime: time,
-    })),
 }));

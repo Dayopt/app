@@ -87,30 +87,29 @@ describe('useCalendarDragStore', () => {
     });
   });
 
-  describe('setTargetDateIndex', () => {
+  describe('updateDrag — targetDateIndex', () => {
     it('ターゲット日付を更新できる', () => {
       useCalendarDragStore.getState().startDrag('plan-1', mockCalendarEvent, 0);
-      useCalendarDragStore.getState().setTargetDateIndex(5);
+      useCalendarDragStore.getState().updateDrag({ targetDateIndex: 5 });
       expect(useCalendarDragStore.getState().targetDateIndex).toBe(5);
     });
   });
 
-  describe('setPreviewTime', () => {
+  describe('updateDrag — previewTime', () => {
     it('プレビュー時間を設定できる', () => {
       const time = {
         start: new Date('2026-02-21T14:00:00'),
         end: new Date('2026-02-21T15:00:00'),
       };
-      useCalendarDragStore.getState().setPreviewTime(time);
+      useCalendarDragStore.getState().updateDrag({ previewTime: time });
       expect(useCalendarDragStore.getState().previewTime).toEqual(time);
     });
 
     it('nullでクリアできる', () => {
-      useCalendarDragStore.getState().setPreviewTime({
-        start: new Date(),
-        end: new Date(),
+      useCalendarDragStore.getState().updateDrag({
+        previewTime: { start: new Date(), end: new Date() },
       });
-      useCalendarDragStore.getState().setPreviewTime(null);
+      useCalendarDragStore.getState().updateDrag({ previewTime: null });
       expect(useCalendarDragStore.getState().previewTime).toBeNull();
     });
   });
