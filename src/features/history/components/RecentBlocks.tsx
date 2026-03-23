@@ -9,12 +9,14 @@
 
 import { useMemo } from 'react';
 
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { HoverTooltip } from '@/components/ui/tooltip';
+import { usePaletteMutations } from '@/features/palette';
 import { useTagsMap } from '@/features/tags';
 import { api } from '@/platform/trpc';
-import { SidebarBlockItem } from '@/shell/components/SidebarBlockItem';
-import { SidebarSection } from '@/shell/components/SidebarSection';
+import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
 import { useRecentPlace } from '../hooks/useRecentPlace';
 
@@ -23,6 +25,7 @@ export function RecentBlocks() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const { handlePlace } = useRecentPlace();
+  const { pinItem } = usePaletteMutations();
 
   const { data: recentBlocks } = api.history.getRecentBlocks.useQuery();
 
@@ -48,14 +51,28 @@ export function RecentBlocks() {
         ) : (
           itemsWithTags.map((item) =>
             item ? (
-              <SidebarBlockItem
+              <BlockItem
                 key={`${item.tagId}-${item.durationMinutes}`}
                 tagId={item.tagId}
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
-                tooltipContent={t('sidebar.palette.addToNow')}
                 onClick={() => handlePlace(item.tagId, item.durationMinutes, item.tag.name)}
+                menuSlot={
+                  <HoverTooltip content={t('sidebar.palette.add')}>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        pinItem(item.tagId, item.durationMinutes);
+                      }}
+                      aria-label={t('sidebar.palette.add')}
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </HoverTooltip>
+                }
               />
             ) : null,
           )
