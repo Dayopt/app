@@ -2,7 +2,8 @@
   "sidebar": {
     "palette": {
       "title": "Palette",
-      "empty": "Frequently used blocks will appear here",
+      "empty": "Register your go-to blocks for quick daily scheduling",
+      "emptyHint": "You can also add from history",
       "add": "Add to palette",
       "addToNow": "Add at current time",
       "pin": "Pin",
@@ -10,7 +11,11 @@
       "tagLabel": "Tag",
       "tagPlaceholder": "Select tag",
       "durationLabel": "Duration",
-      "durationPlaceholder": "Select duration"
+      "durationPlaceholder": "Select duration",
+      "duplicateError": "This combination is already pinned",
+      "pinFailed": "Failed to pin",
+      "unpinFailed": "Failed to unpin",
+      "tagAssignFailed": "Failed to assign tag"
     },
     "recentBlocks": {
       "title": "Recent",

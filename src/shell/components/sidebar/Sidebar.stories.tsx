@@ -67,7 +67,7 @@ function MockFooterActions() {
 
 /** サイドバーコンテナ。Dayoptロゴ + 検索 + 閉じるボタン、children スロット、UserMenu + footerActions。 */
 const meta = {
-  title: 'Components/Shell/Sidebar',
+  title: 'Components/Shell/Sidebar/Container',
   component: Sidebar,
   parameters: {
     layout: 'fullscreen',

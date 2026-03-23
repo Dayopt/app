@@ -18,7 +18,7 @@ import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
 import { RecentBlocks } from '@/features/history';
-import { Palette } from '@/features/palette';
+import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -26,6 +26,7 @@ import { useTheme } from '@/hooks/useTheme';
 export function SidebarContent() {
   const pathname = usePathname();
   const navigation = useCalendarNavigation();
+  const { pinItem } = usePaletteMutations();
 
   const isStatsPage = pathname?.includes('/stats') ?? false;
   const statsCurrentDate = useStatsFilterStore((s) => s.currentDate);
@@ -42,19 +43,17 @@ export function SidebarContent() {
 
   return (
     <>
-      {/* ミニカレンダー（PCのみ）- ラッパーでパディング管理、他セクションと幅統一 */}
-      <div className="hidden shrink-0 md:block">
-        <MiniCalendar
-          selectedDate={miniCalendarDate}
-          onDateSelect={(date) => {
-            if (date) handleDateSelect(date);
-          }}
-          className="w-full bg-transparent"
-        />
-      </div>
+      {/* ミニカレンダー（PCのみ） */}
+      <MiniCalendar
+        selectedDate={miniCalendarDate}
+        onDateSelect={(date) => {
+          if (date) handleDateSelect(date);
+        }}
+        className="hidden w-full bg-transparent md:block"
+      />
 
       {/* ビュー切り替え・フィルター */}
-      <div className="flex min-w-0 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-col overflow-hidden px-2">
         {/* ビュー切り替え（モバイルのみ） */}
         <ViewSwitcherList />
 
@@ -66,7 +65,7 @@ export function SidebarContent() {
       <Palette />
 
       {/* 履歴（頻度×鮮度ベースの自動集計） */}
-      <RecentBlocks />
+      <RecentBlocks onPinItem={pinItem} />
 
       {/* テーマ切替 */}
       <SidebarUtilities />
@@ -84,7 +83,7 @@ function SidebarUtilities() {
   }, [resolvedTheme, setTheme]);
 
   return (
-    <div className="flex items-center gap-1 py-2">
+    <div className="flex items-center gap-1 px-2 py-2">
       <HoverTooltip content={resolvedTheme === 'light' ? 'Dark mode' : 'Light mode'} side="right">
         <Button
           variant="ghost"

@@ -11,14 +11,13 @@ import { SidebarSection } from './SidebarSection';
 
 /** SidebarSection — サイドバー余白デバッグ */
 const meta = {
-  title: 'Components/Shell/SidebarSection',
-  component: SidebarSection,
+  title: 'Components/Shell/Sidebar/Section',
   parameters: {
-    layout: 'centered',
+    layout: 'fullscreen',
     a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
-} satisfies Meta<typeof SidebarSection>;
+} satisfies Meta;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -100,7 +99,7 @@ function MockSidebarHeader() {
 /** Sidebar.tsx フッターと同一構造 */
 function MockSidebarFooter() {
   return (
-    <div className="shrink-0 py-2 pr-2 pl-4">
+    <div className="shrink-0 px-2 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-primary size-6 rounded-full" />
@@ -118,10 +117,10 @@ function MockSidebarFooter() {
   );
 }
 
-/** SidebarUtilities と同一構造（px-2なし — Sidebar scroll area が提供） */
+/** SidebarUtilities と同一構造 */
 function MockThemeToggle() {
   return (
-    <div className="flex items-center gap-1 py-2">
+    <div className="flex items-center gap-1 px-2 py-2">
       <button
         type="button"
         className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
@@ -138,16 +137,7 @@ function MockThemeToggle() {
 
 function DebugWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="bg-surface-container border-border relative flex w-[256px] flex-col border-r"
-      style={{ height: 700 }}
-    >
-      {/* 8px ガイドライン（青）— ホバー背景の開始位置 */}
-      <div className="pointer-events-none absolute inset-y-0 left-2 z-50 w-px bg-blue-400 opacity-40" />
-      <div className="pointer-events-none absolute inset-y-0 right-2 z-50 w-px bg-blue-400 opacity-40" />
-      {/* 16px ガイドライン（赤）— テキスト/コンテンツの開始位置 */}
-      <div className="pointer-events-none absolute inset-y-0 left-4 z-50 w-px bg-red-400 opacity-40" />
-      <div className="pointer-events-none absolute inset-y-0 right-4 z-50 w-px bg-red-400 opacity-40" />
+    <div className="border-border flex w-[256px] flex-col border-r" style={{ height: 700 }}>
       {children}
     </div>
   );
@@ -166,18 +156,16 @@ export const SidebarReproduction: Story = {
     <DebugWrapper>
       <MockSidebarHeader />
 
-      {/* Sidebar.tsx scroll area と同一: px-2 が全コンテンツの外枠 */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2">
-        <div className="shrink-0">
-          <MiniCalendar
-            selectedDate={today}
-            onDateSelect={() => {}}
-            className="w-full bg-transparent"
-          />
-        </div>
+      {/* Sidebar.tsx scroll area（px-2なし — 各セクションが自前で管理） */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        <MiniCalendar
+          selectedDate={today}
+          onDateSelect={() => {}}
+          className="w-full bg-transparent"
+        />
 
         {/* CalendarFilterList と同一構造 */}
-        <div className="flex min-w-0 flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-col overflow-hidden px-2">
           <div className="w-full min-w-0 space-y-2 overflow-hidden">
             <SidebarSection title="タグ" defaultOpen className="py-1" action={<ActionButton />}>
               <TagRow name="タグ" color="var(--primary)" />
@@ -186,7 +174,7 @@ export const SidebarReproduction: Story = {
         </div>
 
         {/* Palette と同一構造 — 実BlockItem使用 */}
-        <div className="w-full min-w-0 overflow-hidden">
+        <div className="w-full min-w-0 overflow-hidden px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
             <BlockItem tagName="タグ" tagColor="blue" durationMinutes={30} onClick={noop} />
           </SidebarSection>
@@ -206,16 +194,14 @@ export const FullSidebar: Story = {
     <DebugWrapper>
       <MockSidebarHeader />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2">
-        <div className="shrink-0">
-          <MiniCalendar
-            selectedDate={today}
-            onDateSelect={() => {}}
-            className="w-full bg-transparent"
-          />
-        </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        <MiniCalendar
+          selectedDate={today}
+          onDateSelect={() => {}}
+          className="w-full bg-transparent"
+        />
 
-        <div className="flex min-w-0 flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-col overflow-hidden px-2">
           <div className="w-full min-w-0 space-y-2 overflow-hidden">
             <SidebarSection title="タグ" defaultOpen className="py-1" action={<ActionButton />}>
               <TagRow name="Work" color="var(--tag-blue)" />
@@ -227,7 +213,7 @@ export const FullSidebar: Story = {
           </div>
         </div>
 
-        <div className="w-full min-w-0 overflow-hidden">
+        <div className="w-full min-w-0 overflow-hidden px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
             <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
             <BlockItem tagName="Exercise" tagColor="teal" durationMinutes={30} onClick={noop} />

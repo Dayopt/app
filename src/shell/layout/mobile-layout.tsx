@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/shell/components/AppHeader';
-import { Sidebar } from '@/shell/components/Sidebar';
+import { Sidebar } from '@/shell/components/sidebar';
 import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 

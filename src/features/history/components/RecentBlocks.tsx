@@ -13,19 +13,20 @@ import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { usePaletteMutations } from '@/features/palette';
+import { useBlockPlace } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { api } from '@/platform/trpc';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
-import { useRecentPlace } from '../hooks/useRecentPlace';
+interface RecentBlocksProps {
+  onPinItem?: (tagId: string, durationMinutes: number) => void;
+}
 
 /** RecentBlocks — サイドバーの履歴ブロックセクション */
-export function RecentBlocks() {
+export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
-  const { handlePlace } = useRecentPlace();
-  const { pinItem } = usePaletteMutations();
+  const { placeBlockNow } = useBlockPlace();
 
   const { data: recentBlocks } = api.history.getRecentBlocks.useQuery();
 
@@ -42,7 +43,7 @@ export function RecentBlocks() {
   );
 
   return (
-    <div className="w-full min-w-0 overflow-hidden">
+    <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.recentBlocks.title')} defaultOpen>
         {itemsWithTags.length === 0 ? (
           <p className="text-muted-foreground px-2 py-3 text-xs">
@@ -57,21 +58,23 @@ export function RecentBlocks() {
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
-                onClick={() => handlePlace(item.tagId, item.durationMinutes, item.tag.name)}
+                onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}
                 menuSlot={
-                  <HoverTooltip content={t('sidebar.palette.add')}>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        pinItem(item.tagId, item.durationMinutes);
-                      }}
-                      aria-label={t('sidebar.palette.add')}
-                    >
-                      <Plus className="size-3.5" />
-                    </button>
-                  </HoverTooltip>
+                  onPinItem ? (
+                    <HoverTooltip content={t('sidebar.palette.add')}>
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPinItem(item.tagId, item.durationMinutes);
+                        }}
+                        aria-label={t('sidebar.palette.add')}
+                      >
+                        <Plus className="size-3.5" />
+                      </button>
+                    </HoverTooltip>
+                  ) : undefined
                 }
               />
             ) : null,

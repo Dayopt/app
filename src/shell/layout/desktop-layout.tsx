@@ -7,7 +7,7 @@ import { DnDProvider, isCalendarViewPath } from '@/features/calendar';
 import { NotificationDropdown } from '@/features/notifications';
 import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
-import { Sidebar } from '@/shell/components/Sidebar';
+import { Sidebar } from '@/shell/components/sidebar';
 import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 

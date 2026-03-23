@@ -9,7 +9,7 @@ import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TagDeleteStrategyDialog, useDeleteTag, useTagCacheStore, useTags } from '@/features/tags';
 import { api } from '@/platform/trpc';
-import { SidebarSection } from '@/shell/components/SidebarSection';
+import { SidebarSection } from '@/shell/components/sidebar';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
 
 import { CreateTagButton } from './components/CreateTagButton';

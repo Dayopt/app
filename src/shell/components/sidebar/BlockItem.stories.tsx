@@ -11,7 +11,7 @@ import { fn } from 'storybook/test';
 import { BlockItem } from './BlockItem';
 
 const meta = {
-  title: 'Components/Shell/BlockItem',
+  title: 'Components/Shell/Sidebar/BlockItem',
   component: BlockItem,
   parameters: { layout: 'padded' },
   args: {

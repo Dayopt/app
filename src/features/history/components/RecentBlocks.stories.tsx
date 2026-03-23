@@ -6,8 +6,10 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
 // ─────────────────────────────────────────────────────────
@@ -16,8 +18,10 @@ import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
 function RecentBlocksStory({
   items,
+  onPinItem,
 }: {
   items: { tagName: string; tagColor: string; durationMinutes: number }[];
+  onPinItem?: (tagId: string, durationMinutes: number) => void;
 }) {
   return (
     <div className="w-64 min-w-0 overflow-hidden">
@@ -32,6 +36,23 @@ function RecentBlocksStory({
               tagColor={item.tagColor}
               durationMinutes={item.durationMinutes}
               onClick={fn()}
+              menuSlot={
+                onPinItem ? (
+                  <HoverTooltip content="パレットに追加">
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPinItem(item.tagName, item.durationMinutes);
+                      }}
+                      aria-label="パレットに追加"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                  </HoverTooltip>
+                ) : undefined
+              }
             />
           ))
         )}
@@ -76,6 +97,18 @@ export const Empty: Story = {
   },
 };
 
+/** ピン留めボタン付き（onPinItem 注入時） */
+export const WithPinButton: Story = {
+  args: {
+    items: [
+      { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+      { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+      { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+    ],
+    onPinItem: fn(),
+  },
+};
+
 /** 多数の履歴（最大8件） */
 export const ManyItems: Story = {
   args: {
@@ -93,5 +126,6 @@ export const ManyItems: Story = {
       },
       { tagName: '昼食', tagColor: 'lime', durationMinutes: 60 },
     ],
+    onPinItem: fn(),
   },
 };

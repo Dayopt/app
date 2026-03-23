@@ -86,12 +86,12 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
       </div>
 
       {/* Content */}
-      <div className="scrollbar-stable flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-2">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         {children}
       </div>
 
       {/* Footer - UserMenu + Actions */}
-      <div className="shrink-0 py-2 pr-2 pl-4">
+      <div className="shrink-0 px-2 py-2">
         <div className="flex items-center justify-between">
           <UserMenu user={userData} />
           <div className="flex items-center">{footerActions}</div>

@@ -1,8 +1,8 @@
 /**
- * Palette Stories
+ * PaletteAddPopover Stories
  *
- * サイドバーのパレットセクション（ピン留めブロックのクイック配置）。
- * tRPC で palette.list / tags.list をモック。
+ * パレットへのピン追加ポップオーバー（タグ選択 + duration 選択）。
+ * tRPC で tags.list / palette.pin をモック。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -10,11 +10,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TRPCLink } from '@trpc/client';
 import { observable } from '@trpc/server/observable';
 import type { ReactNode } from 'react';
+import { userEvent, within } from 'storybook/test';
 
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
-import { Palette } from './Palette';
+import { PaletteAddPopover } from './PaletteAddPopover';
 
 // ─────────────────────────────────────────────────────────
 // モックデータ
@@ -75,28 +76,20 @@ const MOCK_TAGS = [
 
 const MOCK_PINNED_ITEMS = [
   { id: 'pin-1', tag_id: 'tag-work', duration_minutes: 60, sort_order: 0, is_pinned: true },
-  { id: 'pin-2', tag_id: 'tag-study', duration_minutes: 30, sort_order: 1, is_pinned: true },
-  { id: 'pin-3', tag_id: 'tag-exercise', duration_minutes: 45, sort_order: 2, is_pinned: true },
 ];
 
 // ─────────────────────────────────────────────────────────
 // tRPC モックプロバイダー
 // ─────────────────────────────────────────────────────────
 
-interface MockConfig {
-  pinnedItems: typeof MOCK_PINNED_ITEMS;
-  tags: typeof MOCK_TAGS;
-}
-
-function createMockLink(config: MockConfig): TRPCLink<AppRouter> {
+function createMockLink(): TRPCLink<AppRouter> {
   return () =>
     ({ op }) =>
       observable((observer) => {
         if (op.type === 'query') {
           const responseMap: Record<string, unknown> = {
-            'palette.list': config.pinnedItems,
-            'tags.list': config.tags,
-            'entries.list': [],
+            'tags.list': MOCK_TAGS,
+            'palette.list': MOCK_PINNED_ITEMS,
           };
           const result = op.path in responseMap ? responseMap[op.path] : [];
           observer.next({ result: { type: 'data', data: result } });
@@ -108,22 +101,14 @@ function createMockLink(config: MockConfig): TRPCLink<AppRouter> {
       });
 }
 
-function MockProvider({
-  children,
-  pinnedItems = MOCK_PINNED_ITEMS,
-  tags = MOCK_TAGS,
-}: {
-  children: ReactNode;
-  pinnedItems?: typeof MOCK_PINNED_ITEMS;
-  tags?: typeof MOCK_TAGS;
-}) {
+function MockProvider({ children }: { children: ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
       mutations: { retry: false },
     },
   });
-  const link = createMockLink({ pinnedItems, tags });
+  const link = createMockLink();
   const trpcClient = api.createClient({ links: [link] });
 
   return (
@@ -138,17 +123,18 @@ function MockProvider({
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Palette/Palette',
-  component: Palette,
-  parameters: { layout: 'padded' },
+  title: 'Features/Palette/PaletteAddPopover',
+  component: PaletteAddPopover,
+  parameters: { layout: 'centered' },
   decorators: [
     (Story) => (
-      <div className="w-64">
+      <MockProvider>
         <Story />
-      </div>
+      </MockProvider>
     ),
   ],
-} satisfies Meta<typeof Palette>;
+  tags: ['autodocs'],
+} satisfies Meta<typeof PaletteAddPopover>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -157,42 +143,26 @@ type Story = StoryObj<typeof meta>;
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** ピン留め3件の標準状態。 */
-export const Default: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+/** 閉じた状態（+ ボタンのみ）。 */
+export const Default: Story = {};
+
+/** ポップオーバーが開いた状態。 */
+export const Opened: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const trigger = canvas.getByRole('button', { name: /パレットに追加|Add to palette/i });
+    await userEvent.click(trigger);
+  },
 };
 
-/** アイテムなし（空状態）。 */
-export const EmptyState: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider pinnedItems={[]}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
-};
-
-/** 全パターン比較。 */
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
-    <div className="flex gap-8">
+    <div className="flex items-start gap-12">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs">Default</p>
+        <p className="text-muted-foreground mb-3 text-center text-xs">Closed</p>
         <MockProvider>
-          <Palette />
-        </MockProvider>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-2 text-xs">Empty</p>
-        <MockProvider pinnedItems={[]}>
-          <Palette />
+          <PaletteAddPopover />
         </MockProvider>
       </div>
     </div>
