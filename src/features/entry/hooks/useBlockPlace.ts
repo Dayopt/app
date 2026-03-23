@@ -24,7 +24,6 @@ import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore'
 
 import { createListQueryPredicate } from './mutations/mutationUtils';
 import { useEntryMutations } from './useEntryMutations';
-import { useEntryTags } from './useEntryTags';
 
 /** 時刻を HH:mm にフォーマット */
 function formatHHmm(date: Date): string {
@@ -109,8 +108,7 @@ function hasOverlapInCache(
 
 /** 指定時刻にブロック（エントリ + タグ）を配置するフック */
 export function useBlockPlace() {
-  const { createEntry, deleteEntry } = useEntryMutations();
-  const { setEntryTags } = useEntryTags();
+  const { createEntry, deleteEntry } = useEntryMutations({ suppressCreateToast: true });
   const t = useTranslations();
   const queryClient = useQueryClient();
 
@@ -132,13 +130,10 @@ export function useBlockPlace() {
           start_time: params.startTime.toISOString(),
           end_time: end.toISOString(),
           duration_minutes: params.durationMinutes,
+          tagId: params.tagId,
         },
         {
           onSuccess: (newEntry) => {
-            void setEntryTags(newEntry.id, params.tagId).then((ok) => {
-              if (!ok) toast.error(t('sidebar.palette.tagAssignFailed'));
-            });
-
             // Undo 付きトースト
             const timeStr = formatHHmm(params.startTime);
             toast.success(t('sidebar.palette.placed', { name: params.tagName, time: timeStr }), {
@@ -157,7 +152,7 @@ export function useBlockPlace() {
         },
       );
     },
-    [createEntry, deleteEntry, queryClient, setEntryTags, t],
+    [createEntry, deleteEntry, queryClient, t],
   );
 
   /** カレンダー表示日の現在時刻にブロックを配置（週表示で今日が範囲内なら今日に配置） */
