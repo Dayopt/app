@@ -3,7 +3,7 @@
 本番デプロイ事故時の逆マイグレーションSQL集。Supabaseはネイティブのrollback機構を持たないため、**逆SQLを新しいマイグレーションとして適用する**方式で対応する。
 
 > **最終更新**: 2026-03-19
-> **対象**: `supabase/migrations/` 配下の全19マイグレーション（baseline除く）
+> **対象**: `supabase/migrations/` 配下の全17マイグレーション（baseline除く）
 
 ---
 
@@ -88,21 +88,7 @@ ALTER TABLE public.entries DROP CONSTRAINT IF EXISTS entries_no_time_overlap;
 
 ---
 
-### 3. `20260317040427_add_split_recurrence_rpc.sql`
-
-| 項目       | 値                   |
-| ---------- | -------------------- |
-| 内容       | split_recurrence関数 |
-| リスク     | LOW                  |
-| データ損失 | なし                 |
-
-```sql
-DROP FUNCTION IF EXISTS public.split_recurrence(UUID, UUID, DATE, TIMESTAMPTZ, TIMESTAMPTZ, TEXT, TEXT);
-```
-
----
-
-### 4. `20260317040428_add_reminder_idempotency.sql`
+### 3. `20260317040428_add_reminder_idempotency.sql`
 
 | 項目       | 値                               |
 | ---------- | -------------------------------- |
@@ -116,7 +102,7 @@ DROP INDEX IF EXISTS public.idx_notifications_entry_type_unique;
 
 ---
 
-### 5. `20260317100000_add_ical_feed_token.sql`
+### 4. `20260317100000_add_ical_feed_token.sql`
 
 | 項目       | 値                                      |
 | ---------- | --------------------------------------- |
@@ -139,7 +125,7 @@ ALTER TABLE user_settings DROP COLUMN IF EXISTS ical_feed_token;
 
 ---
 
-### 6. `20260317120000_add_stripe_billing_columns.sql`
+### 5. `20260317120000_add_stripe_billing_columns.sql`
 
 | 項目       | 値                                                                   |
 | ---------- | -------------------------------------------------------------------- |
@@ -167,7 +153,7 @@ ALTER TABLE profiles
 
 ---
 
-### 7. `20260318083030_optimize_tag_sort_and_rls.sql`
+### 6. `20260318083030_optimize_tag_sort_and_rls.sql`
 
 | 項目       | 値                                        |
 | ---------- | ----------------------------------------- |
@@ -200,54 +186,7 @@ CREATE POLICY "Users can insert own notification preferences" ON public.notifica
 
 ---
 
-### 8. `20260318084604_optimize_entry_instances_and_indexes.sql`
-
-| 項目       | 値                                                                     |
-| ---------- | ---------------------------------------------------------------------- |
-| 内容       | entry_instances に user_id追加 + バックフィル + RLS変更 + インデックス |
-| リスク     | **HIGH**                                                               |
-| データ損失 | なし（user_idは冗長カラム、entriesから再生成可）                       |
-| 依存       | **先に #18 をロールバックすること**                                    |
-
-```sql
--- インデックス削除
-DROP INDEX IF EXISTS idx_entries_user_time_range;
-DROP INDEX IF EXISTS idx_entries_end_time;
-DROP INDEX IF EXISTS idx_entry_instances_user_id;
-
--- RLS を EXISTSサブクエリ版に戻す
-DROP POLICY IF EXISTS "Users can view own plan instances" ON public.entry_instances;
-CREATE POLICY "Users can view own plan instances" ON public.entry_instances
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_instances.entry_id AND entries.user_id = auth.uid())
-  );
-
-DROP POLICY IF EXISTS "Users can insert own plan instances" ON public.entry_instances;
-CREATE POLICY "Users can insert own plan instances" ON public.entry_instances
-  FOR INSERT WITH CHECK (
-    EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_instances.entry_id AND entries.user_id = auth.uid())
-  );
-
-DROP POLICY IF EXISTS "Users can update own plan instances" ON public.entry_instances;
-CREATE POLICY "Users can update own plan instances" ON public.entry_instances
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_instances.entry_id AND entries.user_id = auth.uid())
-  );
-
-DROP POLICY IF EXISTS "Users can delete own plan instances" ON public.entry_instances;
-CREATE POLICY "Users can delete own plan instances" ON public.entry_instances
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_instances.entry_id AND entries.user_id = auth.uid())
-  );
-
--- user_id カラム削除
-ALTER TABLE public.entry_instances ALTER COLUMN user_id DROP NOT NULL;
-ALTER TABLE public.entry_instances DROP COLUMN IF EXISTS user_id;
-```
-
----
-
-### 9. `20260318090000_create_get_time_by_tag_function.sql`
+### 8. `20260318090000_create_get_time_by_tag_function.sql`
 
 | 項目       | 値                  |
 | ---------- | ------------------- |
@@ -261,7 +200,7 @@ DROP FUNCTION IF EXISTS public.get_time_by_tag(UUID, TIMESTAMPTZ, TIMESTAMPTZ);
 
 ---
 
-### 10. `20260318091249_create_email_suppressions.sql`
+### 9. `20260318091249_create_email_suppressions.sql`
 
 | 項目       | 値                          |
 | ---------- | --------------------------- |
@@ -279,14 +218,14 @@ DROP TABLE IF EXISTS public.email_suppressions CASCADE;
 
 ---
 
-### 11. `20260318120000_create_stats_kpi_functions.sql`
+### 10. `20260318120000_create_stats_kpi_functions.sql`
 
 | 項目       | 値                                       |
 | ---------- | ---------------------------------------- |
 | 内容       | KPI関数7つ                               |
 | リスク     | LOW                                      |
 | データ損失 | なし                                     |
-| 依存       | **先に #12, #13 をロールバックすること** |
+| 依存       | **先に #11, #12 をロールバックすること** |
 
 ```sql
 DROP FUNCTION IF EXISTS public.get_plan_rate(UUID, TIMESTAMPTZ, TIMESTAMPTZ);
@@ -300,7 +239,7 @@ DROP FUNCTION IF EXISTS public.get_avg_fulfillment(UUID, TIMESTAMPTZ, TIMESTAMPT
 
 ---
 
-### 12. `20260318130000_fix_stats_context_switches_and_energy_map.sql`
+### 11. `20260318130000_fix_stats_context_switches_and_energy_map.sql`
 
 | 項目       | 値                                                  |
 | ---------- | --------------------------------------------------- |
@@ -326,7 +265,7 @@ GRANT EXECUTE ON FUNCTION public.get_plan_rate(UUID, TIMESTAMPTZ, TIMESTAMPTZ) T
 
 ---
 
-### 13. `20260318140000_create_stats_kpi_summary.sql`
+### 12. `20260318140000_create_stats_kpi_summary.sql`
 
 | 項目       | 値                            |
 | ---------- | ----------------------------- |
@@ -341,14 +280,14 @@ DROP FUNCTION IF EXISTS public.get_stats_kpi_summary(UUID, TIMESTAMPTZ, TIMESTAM
 
 ---
 
-### 14. `20260318150000_add_entries_soft_delete.sql`
+### 13. `20260318150000_add_entries_soft_delete.sql`
 
 | 項目       | 値                                            |
 | ---------- | --------------------------------------------- |
 | 内容       | entries に deleted_at カラム + SELECT RLS更新 |
 | リスク     | **HIGH**                                      |
 | データ損失 | あり（ソフトデリート区別が消失）              |
-| 依存       | **先に #18 をロールバックすること**           |
+| 依存       | **先に #17 をロールバックすること**           |
 
 ```sql
 -- 事前バックアップ（必須）
@@ -368,7 +307,7 @@ ALTER TABLE public.entries DROP COLUMN IF EXISTS deleted_at;
 
 ---
 
-### 15. `20260319000000_enable_vault.sql`
+### 14. `20260319000000_enable_vault.sql`
 
 | 項目       | 値                                |
 | ---------- | --------------------------------- |
@@ -385,14 +324,14 @@ DROP EXTENSION IF EXISTS supabase_vault CASCADE;
 
 ---
 
-### 16. `20260319000001_vault_helper_functions.sql`
+### 15. `20260319000001_vault_helper_functions.sql`
 
 | 項目       | 値                                    |
 | ---------- | ------------------------------------- |
 | 内容       | get_vault_secret, vault_secret_exists |
 | リスク     | MEDIUM                                |
 | データ損失 | なし                                  |
-| 依存       | **先に #17 をロールバックすること**   |
+| 依存       | **先に #16 をロールバックすること**   |
 
 ```sql
 DROP FUNCTION IF EXISTS public.vault_secret_exists(TEXT);
@@ -401,7 +340,7 @@ DROP FUNCTION IF EXISTS public.get_vault_secret(TEXT);
 
 ---
 
-### 17. `20260319000003_vault_invoke_edge_function.sql`
+### 16. `20260319000003_vault_invoke_edge_function.sql`
 
 | 項目       | 値                       |
 | ---------- | ------------------------ |
@@ -419,7 +358,7 @@ DROP FUNCTION IF EXISTS public.invoke_edge_function(TEXT, JSONB);
 
 ---
 
-### 18. `20260319083000_rls_audit_fixes.sql`
+### 17. `20260319083000_rls_audit_fixes.sql`
 
 | 項目       | 値                                               |
 | ---------- | ------------------------------------------------ |
@@ -436,15 +375,11 @@ DROP POLICY IF EXISTS "Users can view own plan_tags" ON public.entry_tags;
 CREATE POLICY "Users can view own plan_tags" ON public.entry_tags
   FOR SELECT USING ((SELECT auth.uid()) = user_id);
 
--- entry_instances SELECT（soft-deleteフィルタなし版に戻す）
-DROP POLICY IF EXISTS "Users can view own plan instances" ON public.entry_instances;
-CREATE POLICY "Users can view own plan instances" ON public.entry_instances
-  FOR SELECT USING ((SELECT auth.uid()) = user_id);
 ```
 
 ---
 
-### 19. `20260319090000_create_stripe_webhook_events.sql`
+### 18. `20260319090000_create_stripe_webhook_events.sql`
 
 | 項目       | 値                             |
 | ---------- | ------------------------------ |
@@ -463,16 +398,15 @@ DROP TABLE IF EXISTS public.stripe_webhook_events CASCADE;
 逆順で適用すること。特に重要な依存チェーン:
 
 ```
-#18 → #14 (soft_delete)     ← #18が14のdeleted_atカラムに依存
-#18 → #8  (entry_instances)  ← #18が8のuser_idカラムに依存
-#17 → #16 → #15 (vault)     ← invoke_edge_function → helpers → extension
-#13 → #12 → #11 (stats)     ← summary → fix → kpi_functions
+#17 → #13 (soft_delete)     ← #17が13のdeleted_atカラムに依存
+#16 → #15 → #14 (vault)     ← invoke_edge_function → helpers → extension
+#12 → #11 → #10 (stats)     ← summary → fix → kpi_functions
 ```
 
 **安全なロールバック順序**（最新から）:
 
 ```
-19 → 18 → 17 → 16 → 15 → 14 → 13 → 12 → 11 → 10 → 9 → 8 → 7 → 6 → 5 → 4 → 3 → 2 → 1
+18 → 17 → 16 → 15 → 14 → 13 → 12 → 11 → 10 → 9 → 8 → 7 → 6 → 5 → 4 → 3 → 2 → 1
 ```
 
 ---
@@ -506,9 +440,9 @@ WHERE version = '20260319090000';  -- 該当バージョンに置き換え
 
 ## リスクサマリー
 
-| リスク     | マイグレーション                                                                    |
-| ---------- | ----------------------------------------------------------------------------------- |
-| **HIGH**   | #6 (stripe billing), #8 (entry_instances user_id), #14 (soft delete), #15 (vault)   |
-| **MEDIUM** | #5 (ical token), #10 (email suppressions), #16 (vault helpers), #17 (edge function) |
-| **LOW**    | #1-4, #7, #9, #11-13, #18-19                                                        |
-| **非推奨** | #1 (IDOR fix), #12 (auth.uid() check), #15 (vault extension)                        |
+| リスク     | マイグレーション                                                                   |
+| ---------- | ---------------------------------------------------------------------------------- |
+| **HIGH**   | #5 (stripe billing), #13 (soft delete), #14 (vault)                                |
+| **MEDIUM** | #4 (ical token), #9 (email suppressions), #15 (vault helpers), #16 (edge function) |
+| **LOW**    | #1-3, #6, #8, #10-12, #17-18                                                       |
+| **非推奨** | #1 (IDOR fix), #11 (auth.uid() check), #14 (vault extension)                       |

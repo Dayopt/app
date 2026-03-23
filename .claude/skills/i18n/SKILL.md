@@ -152,17 +152,17 @@ t('items', { count: 5 }); // → "5 items"
 
 `common.json` は複数のトップレベルキーを持つ特殊なファイル:
 
-| トップレベルキー | 用途                                                                                | 例                                             |
-| ---------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `common`         | ナビゲーション・状態・ユーティリティ                                                | `common.loading`, `common.back`, `common.undo` |
-| `actions`        | **汎用アクション動詞** + ローディング状態                                           | `actions.save`, `actions.deleting`             |
-| `confirm`        | 確認ダイアログテンプレート                                                          | `confirm.delete.title`                         |
-| `aria`           | アクセシビリティラベル                                                              | `aria.closeModal`                              |
-| `status`         | ステータス表示                                                                      | `status.loading`, `status.error`               |
-| `time`           | 相対時間表現                                                                        | `time.daysAgo`, `time.justNow`                 |
-| `validation`     | バリデーションメッセージ                                                            | `validation.required`                          |
-| `errors`         | サービスエラー                                                                      | `errors.generic`                               |
-| その他           | `reminder`, `recurrence`, `language`, `theme`, `createNew`, `createSheet`, `search` |
+| トップレベルキー | 用途                                                                  | 例                                             |
+| ---------------- | --------------------------------------------------------------------- | ---------------------------------------------- |
+| `common`         | ナビゲーション・状態・ユーティリティ                                  | `common.loading`, `common.back`, `common.undo` |
+| `actions`        | **汎用アクション動詞** + ローディング状態                             | `actions.save`, `actions.deleting`             |
+| `confirm`        | 確認ダイアログテンプレート                                            | `confirm.delete.title`                         |
+| `aria`           | アクセシビリティラベル                                                | `aria.closeModal`                              |
+| `status`         | ステータス表示                                                        | `status.loading`, `status.error`               |
+| `time`           | 相対時間表現                                                          | `time.daysAgo`, `time.justNow`                 |
+| `validation`     | バリデーションメッセージ                                              | `validation.required`                          |
+| `errors`         | サービスエラー                                                        | `errors.generic`                               |
+| その他           | `reminder`, `language`, `theme`, `createNew`, `createSheet`, `search` |
 
 ### キー配置の判断フロー
 
