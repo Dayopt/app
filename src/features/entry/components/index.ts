@@ -1,5 +1,4 @@
 // Inspector Components
-export { EntryDeleteConfirmDialog } from './EntryDeleteConfirmDialog';
 export { EntryInspector } from './inspector/EntryInspector';
 
 // Shared Components

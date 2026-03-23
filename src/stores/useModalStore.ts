@@ -11,12 +11,6 @@ import { createSelectors } from '@/lib/zustand/createSelectors';
  */
 export type ModalState =
   | {
-      type: 'deleteConfirm';
-      planId: string;
-      planTitle: string | null;
-      onConfirm: () => Promise<void>;
-    }
-  | {
       type: 'tagCreate';
       defaultGroup?: string;
     }
@@ -55,10 +49,9 @@ const useModalStoreBase = create<ModalStoreState>()(
  * ```tsx
  * // モーダルの状態取得
  * const modal = useModalStore.use.modal();
- * const isDeleteConfirm = modal?.type === 'deleteConfirm';
  *
  * // モーダルを開く（便利関数を使用）
- * openDeleteConfirm(planId, planTitle, onConfirm);
+ * openTagCreateModal();
  *
  * // モーダルを閉じる
  * const closeModal = useModalStore.use.closeModal();
@@ -68,15 +61,6 @@ const useModalStoreBase = create<ModalStoreState>()(
 export const useModalStore = createSelectors(useModalStoreBase);
 
 // ── 便利関数 ──
-
-/** 削除確認モーダルを開く便利関数 */
-export function openDeleteConfirm(
-  planId: string,
-  planTitle: string | null,
-  onConfirm: () => Promise<void>,
-) {
-  useModalStore.getState().openModal({ type: 'deleteConfirm', planId, planTitle, onConfirm });
-}
 
 /** タグ作成モーダルを開く便利関数 */
 export function openTagCreateModal(defaultGroup?: string) {

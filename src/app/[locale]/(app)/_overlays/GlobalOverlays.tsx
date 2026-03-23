@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
-import { EntryDeleteConfirmDialog, EntryInspector } from '@/features/entry/components';
+import { EntryInspector } from '@/features/entry/components';
 import { TourOrchestrator } from '@/features/tour';
 import { useContactStore } from '@/shell/stores/useContactStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -74,7 +74,6 @@ export function GlobalOverlays() {
       />
       <SettingsDialog />
       <EntryInspector />
-      <EntryDeleteConfirmDialog />
       <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>
