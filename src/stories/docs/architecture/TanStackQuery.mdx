@@ -19,23 +19,23 @@ export const featureKeys = {
   list: (filters: Record<string, unknown>) => [...featureKeys.lists(), { filters }] as const,
   details: () => [...featureKeys.all, 'detail'] as const,
   detail: (id: string) => [...featureKeys.details(), id] as const,
-}
+};
 ```
 
 ### 階層的なキャッシュ無効化
 
 ```typescript
 // すべてのタグ関連クエリを無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.all })
+queryClient.invalidateQueries({ queryKey: tagKeys.all });
 
 // リストのみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.lists() })
+queryClient.invalidateQueries({ queryKey: tagKeys.lists() });
 
 // 特定のフィルタのみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.list({ includeChildren: true }) })
+queryClient.invalidateQueries({ queryKey: tagKeys.list({ includeChildren: true }) });
 
 // 特定のタグ詳細のみ無効化
-queryClient.invalidateQueries({ queryKey: tagKeys.detail('tag-id') })
+queryClient.invalidateQueries({ queryKey: tagKeys.detail('tag-id') });
 ```
 
 ---
@@ -47,21 +47,21 @@ queryClient.invalidateQueries({ queryKey: tagKeys.detail('tag-id') })
 ```typescript
 // src/lib/tanstack-query/cache-config.ts
 export const cacheStrategies = {
-  events: realtimeCache,     // 30秒
-  calendars: realtimeCache,  // 30秒
-  tags: standardCache,       // 5分
+  events: activeCache, // 30秒
+  calendars: activeCache, // 30秒
+  tags: standardCache, // 5分
   smartFolders: standardCache, // 5分
   userSettings: staticCache, // 1時間
-}
+};
 ```
 
-| 機能 | staleTime | gcTime | 理由 |
-|------|-----------|--------|------|
-| **Events** | 30秒 | 2分 | リアルタイム性が重要 |
-| **Calendar** | 30秒 | 2分 | 同期が重要 |
-| **Tags** | 5分 | 10分 | 頻繁に変更されない |
-| **Smart Folders** | 5分 | 10分 | 設定的な性質 |
-| **User Settings** | 1時間 | 2時間 | ほぼ静的 |
+| 機能              | staleTime | gcTime | 理由                 |
+| ----------------- | --------- | ------ | -------------------- |
+| **Events**        | 30秒      | 2分    | リアルタイム性が重要 |
+| **Calendar**      | 30秒      | 2分    | 同期が重要           |
+| **Tags**          | 5分       | 10分   | 頻繁に変更されない   |
+| **Smart Folders** | 5分       | 10分   | 設定的な性質         |
+| **User Settings** | 1時間     | 2時間  | ほぼ静的             |
 
 ### 使用例
 
@@ -71,7 +71,7 @@ export function useEvents(filters?: EventFilters) {
     queryKey: eventKeys.list(filters),
     queryFn: () => fetchEvents(filters),
     ...cacheStrategies.events,
-  })
+  });
 }
 ```
 
@@ -82,24 +82,24 @@ export function useEvents(filters?: EventFilters) {
 ### 統一エラーハンドラー
 
 ```typescript
-import { handleQueryError } from '@/lib/tanstack-query/error-handler'
+import { handleQueryError } from '@/lib/tanstack-query/error-handler';
 
 export function useCreateTag() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: tagAPI.createTag,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagKeys.all })
+      queryClient.invalidateQueries({ queryKey: tagKeys.all });
     },
     onError: (error) => {
       handleQueryError(error, {
         queryKey: tagKeys.all,
         operation: 'create',
         feature: 'tags',
-      })
+      });
     },
-  })
+  });
 }
 ```
 
@@ -120,26 +120,26 @@ export function useCreateTag() {
 
 ```typescript
 export function useCreateTag() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: tagAPI.createTag,
     onMutate: async (newTag) => {
-      await queryClient.cancelQueries({ queryKey: tagKeys.lists() })
-      const previous = queryClient.getQueryData(tagKeys.lists())
+      await queryClient.cancelQueries({ queryKey: tagKeys.lists() });
+      const previous = queryClient.getQueryData(tagKeys.lists());
 
       // 楽観的更新
-      queryClient.setQueryData(tagKeys.lists(), (old) => [...old, newTag])
+      queryClient.setQueryData(tagKeys.lists(), (old) => [...old, newTag]);
 
-      return { previous }
+      return { previous };
     },
     onError: (error, variables, context) => {
       // エラー時にロールバック
       if (context?.previous) {
-        queryClient.setQueryData(tagKeys.lists(), context.previous)
+        queryClient.setQueryData(tagKeys.lists(), context.previous);
       }
     },
-  })
+  });
 }
 ```
 
@@ -178,12 +178,12 @@ describe('useTags', () => {
   it('should fetch tags', async () => {
     const { result } = renderHook(() => useTags(), {
       wrapper: createWrapper(),
-    })
+    });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toHaveLength(3)
-  })
-})
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toHaveLength(3);
+  });
+});
 ```
 
 ---
@@ -192,23 +192,23 @@ describe('useTags', () => {
 
 ```typescript
 // ❌ Before: 手動fetch
-const [data, setData] = useState([])
-const [loading, setLoading] = useState(false)
+const [data, setData] = useState([]);
+const [loading, setLoading] = useState(false);
 
 useEffect(() => {
-  setLoading(true)
+  setLoading(true);
   fetch('/api/data')
     .then((res) => res.json())
     .then(setData)
-    .finally(() => setLoading(false))
-}, [])
+    .finally(() => setLoading(false));
+}, []);
 
 // ✅ After: TanStack Query
 const { data, isLoading } = useQuery({
   queryKey: dataKeys.lists(),
   queryFn: () => fetch('/api/data').then((res) => res.json()),
   ...cacheStrategies.standard,
-})
+});
 ```
 
 ---

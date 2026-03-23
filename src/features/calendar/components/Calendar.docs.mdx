@@ -99,9 +99,9 @@ CalendarController              メインエントリポイント
 
 ---
 
-## リアルタイム更新
+## データ同期
 
-`useEntryRealtime` で Supabase Realtime を購読。Entries / Tags の変更をリアルタイムに反映。
+`refetchOnWindowFocus`（TanStack Query）でタブ切り替え時にデータを自動再取得。
 
 ---
 

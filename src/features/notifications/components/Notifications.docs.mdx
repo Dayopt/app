@@ -10,10 +10,10 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 通知タイプ
 
-| タイプ | 説明 | アイコン |
-|-------|------|---------|
-| `reminder` | プラン開始前リマインダー | Bell |
-| `overdue` | 期限超過通知（将来追加） | AlertTriangle |
+| タイプ     | 説明                     | アイコン      |
+| ---------- | ------------------------ | ------------- |
+| `reminder` | プラン開始前リマインダー | Bell          |
+| `overdue`  | 期限超過通知（将来追加） | AlertTriangle |
 
 ---
 
@@ -21,25 +21,25 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### notifications テーブル
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `id` | UUID | PK |
-| `user_id` | UUID | FK → auth.users |
-| `type` | TEXT | 通知タイプ: reminder \| overdue |
-| `plan_id` | UUID | 対象プランID（FK → plans） |
-| `is_read` | BOOLEAN | 既読状態 |
-| `read_at` | TIMESTAMPTZ | 既読日時 |
-| `created_at` | TIMESTAMPTZ | 作成日時 |
+| カラム       | 型          | 説明                            |
+| ------------ | ----------- | ------------------------------- |
+| `id`         | UUID        | PK                              |
+| `user_id`    | UUID        | FK → auth.users                 |
+| `type`       | TEXT        | 通知タイプ: reminder \| overdue |
+| `plan_id`    | UUID        | 対象プランID（FK → plans）      |
+| `is_read`    | BOOLEAN     | 既読状態                        |
+| `read_at`    | TIMESTAMPTZ | 既読日時                        |
+| `created_at` | TIMESTAMPTZ | 作成日時                        |
 
 - **RLS**: `auth.uid() = user_id` で自分の通知のみアクセス
 - **インデックス**: `user_id`, `(user_id, is_read)`, `plan_id`, `created_at DESC`
 
 ### notification_preferences テーブル
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `enable_browser_notifications` | BOOLEAN | ブラウザ通知ON/OFF |
-| `default_reminder_minutes` | INTEGER | デフォルトリマインダー時間（分） |
+| カラム                         | 型      | 説明                             |
+| ------------------------------ | ------- | -------------------------------- |
+| `enable_browser_notifications` | BOOLEAN | ブラウザ通知ON/OFF               |
+| `default_reminder_minutes`     | INTEGER | デフォルトリマインダー時間（分） |
 
 ---
 
@@ -50,9 +50,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
        ↓
 [Edge Function → Supabase INSERT]
        ↓
-[Realtime Subscription]
-       ↓
-[tRPC + TanStack Query キャッシュ更新]
+[tRPC + TanStack Query キャッシュ更新（refetchOnWindowFocus）]
        ↓
 [UI更新: NotificationDropdown + NotificationItem]
 ```
@@ -70,7 +68,6 @@ src/features/notifications/
 ├── hooks/
 │   ├── useNotifications.ts           ブラウザ通知管理
 │   ├── useNotificationPreferences.ts ブラウザ通知ON/OFF設定
-│   ├── useNotificationRealtime.ts    Realtime購読
 │   └── useNotificationsData.ts       tRPCデータ取得・楽観的更新
 ├── utils/
 │   └── notification-helpers.ts       ヘルパー関数
@@ -84,15 +81,15 @@ src/features/notifications/
 
 ## tRPC ルーター
 
-| プロシージャ | タイプ | 説明 |
-|-------------|-------|------|
-| `notifications.list` | query | 通知一覧取得（plan titleをJOIN） |
-| `notifications.markAsRead` | mutation | 個別既読化 |
-| `notifications.markAllAsRead` | mutation | 一括既読化 |
-| `notifications.delete` | mutation | 通知削除 |
-| `notificationPreferences.get` | query | 設定取得 |
-| `notificationPreferences.updateBrowserNotifications` | mutation | ブラウザ通知ON/OFF |
-| `notificationPreferences.updateDefaultReminderMinutes` | mutation | リマインダー時間更新 |
+| プロシージャ                                           | タイプ   | 説明                             |
+| ------------------------------------------------------ | -------- | -------------------------------- |
+| `notifications.list`                                   | query    | 通知一覧取得（plan titleをJOIN） |
+| `notifications.markAsRead`                             | mutation | 個別既読化                       |
+| `notifications.markAllAsRead`                          | mutation | 一括既読化                       |
+| `notifications.delete`                                 | mutation | 通知削除                         |
+| `notificationPreferences.get`                          | query    | 設定取得                         |
+| `notificationPreferences.updateBrowserNotifications`   | mutation | ブラウザ通知ON/OFF               |
+| `notificationPreferences.updateDefaultReminderMinutes` | mutation | リマインダー時間更新             |
 
 ---
 

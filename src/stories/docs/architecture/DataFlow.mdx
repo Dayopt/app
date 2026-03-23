@@ -33,8 +33,6 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
         PG["PostgreSQL + RLS"]
     end
 
-    RT["Supabase Realtime"]
-
     User --> RC
     RC <--> ZS
     RC --> TRPC_C
@@ -45,9 +43,8 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
     TRPC_R --> SVC
     SVC --> SB
     SB --> PG
-    PG -.->|"INSERT/UPDATE/DELETE 通知"| RT
-    RT -.->|"キャッシュ invalidation"| TQ
-    TQ -.->|"再レンダリング"| RC
+    TQ -.->|"refetchOnWindowFocus"| RC
+
 `} />
 
 ## 認証フロー
@@ -69,21 +66,23 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
     SR --> CTX
     CTX -->|"userId 抽出"| RL
     RL --> Router["tRPC Router"]
+
 `} />
 
 ## Provider 階層
 
-<Mermaid chart={`graph TD
+<Mermaid
+  chart={`graph TD
     P["Providers (root)"]
     P --> QC["QueryClientProvider"]
     P --> TC["api.Provider (tRPC)"]
     P --> AS["AuthStoreInitializer"]
-    P --> RP["RealtimeProvider"]
     P --> TP["ThemeProvider"]
     P --> GS["GlobalSearchProvider (lazy)"]
     P --> SW["ServiceWorkerProvider (lazy)"]
     P --> GT["GlobalTagCreateModal (lazy)"]
-`} />
+`}
+/>
 
 ## キャッシュ戦略
 
@@ -95,8 +94,9 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
         TU["tagUsage<br/>stale: 1min, gc: 5min"]
     end
 
-    RT["Realtime"] -.->|"invalidate"| E
-    RT -.->|"invalidate"| T
+    WF["refetchOnWindowFocus"] -.->|"stale時 再取得"| E
+    WF -.->|"stale時 再取得"| T
+
 `} />
 
 ## Feature 間の依存（Composition Layer）
@@ -140,6 +140,7 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
     SHELL --> TAG
     SHELL --> NOTIF
     SHELL --> SEARCH
+
 `} />
 
 ---
@@ -177,12 +178,10 @@ const createPlan = api.plans.create.useMutation({
 入力バリデーションと認証チェック。ルーターは薄く保つ。
 
 ```typescript
-create: protectedProcedure
-  .input(createPlanSchema)
-  .mutation(async ({ ctx, input }) => {
-    const service = createPlanService(ctx.supabase);
-    return service.create({ userId: ctx.userId, ...input });
-  });
+create: protectedProcedure.input(createPlanSchema).mutation(async ({ ctx, input }) => {
+  const service = createPlanService(ctx.supabase);
+  return service.create({ userId: ctx.userId, ...input });
+});
 ```
 
 ### 4. Service Layer
@@ -204,11 +203,7 @@ class PlanService {
 ### 5. Supabase Client
 
 ```typescript
-const { data, error } = await this.supabase
-  .from('plans')
-  .insert(planData)
-  .select()
-  .single();
+const { data, error } = await this.supabase.from('plans').insert(planData).select().single();
 ```
 
 ### 6. PostgreSQL + RLS
@@ -227,12 +222,12 @@ USING (auth.uid() = user_id);
 
 ## 状態管理の使い分け
 
-| 状態の種類 | 管理方法 | 例 |
-|-----------|---------|-----|
-| **サーバーデータ** | TanStack Query | プラン一覧、タグ |
-| **UI状態（グローバル）** | Zustand | サイドバー開閉、選択中のアイテム |
-| **UI状態（ローカル）** | useState | フォームの入力値、モーダルの開閉 |
-| **URL状態** | Next.js Router | 現在のページ、クエリパラメータ |
+| 状態の種類               | 管理方法       | 例                               |
+| ------------------------ | -------------- | -------------------------------- |
+| **サーバーデータ**       | TanStack Query | プラン一覧、タグ                 |
+| **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
+| **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
+| **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |
 
 詳細は [状態管理](?path=/docs/docs-architecture-state-management--docs) を参照。
 
