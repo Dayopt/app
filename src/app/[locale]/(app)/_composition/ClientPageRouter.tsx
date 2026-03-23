@@ -112,19 +112,22 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
-  // ブラウザ戻る/進む時: pathname と clientPage を同期
+  // ブラウザ戻る/進む時: popstate イベントで clientPage を同期
+  // pathname の useEffect ではなく popstate を直接リスンすることで、
+  // pushState による遷移（PageSwitcher）と区別し race condition を防ぐ
   useEffect(() => {
-    if (clientPage === null) return;
-
-    const currentPageType = getPageType(pathname);
-    if (currentPageType !== clientPage) {
-      if (currentPageType === 'calendar' || currentPageType === 'stats') {
-        switchToPage(currentPageType);
+    const handlePopState = () => {
+      const pageType = getPageType(window.location.pathname);
+      if (pageType === 'calendar' || pageType === 'stats') {
+        switchToPage(pageType);
       } else {
         resetToServer();
       }
-    }
-  }, [pathname, clientPage, switchToPage, resetToServer]);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [switchToPage, resetToServer]);
 
   if (clientPage === 'calendar') {
     return <CalendarClientView pathname={pathname} />;
