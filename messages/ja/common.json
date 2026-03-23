@@ -151,8 +151,6 @@
       "warning": "警告",
       "info": "情報",
       "offline": "オフラインです。変更は接続復帰後に同期されます。",
-      "realtimeDisconnected": "リアルタイム接続が切断されました。ページをリロードしてください。",
-      "realtimeReconnected": "リアルタイム接続が復旧しました。",
       "syncing": "{count}件の変更を同期中...",
       "syncComplete": "同期完了しました。"
     },

@@ -151,8 +151,6 @@
       "warning": "Warning",
       "info": "Info",
       "offline": "You are offline. Changes will sync when connection is restored.",
-      "realtimeDisconnected": "Real-time connection lost. Please reload the page.",
-      "realtimeReconnected": "Real-time connection restored.",
       "syncing": "Syncing {count} change(s)...",
       "syncComplete": "Sync complete."
     },
