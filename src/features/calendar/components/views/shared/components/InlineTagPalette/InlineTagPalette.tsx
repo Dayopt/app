@@ -41,7 +41,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
 
-  const { createEntry } = useEntryMutations({ suppressCreateToast: true });
+  const { createEntry } = useEntryMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
   const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
@@ -162,12 +162,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const formatTime = (h: number, m: number) =>
     `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
   const timeLabel = `${formatTime(startHour, startMinute)} – ${formatTime(endHour, endMinute)}`;
-
-  const totalMinutes = endMinutes - startMinutes;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const durationText =
-    hours > 0 ? (minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`) : `${minutes}m`;
 
   // ホバー中タグの色を解決
   const accentColor = hoveredTag

@@ -16,7 +16,7 @@ export function CreateTagButton() {
     <HoverTooltip content={t('calendar.filter.createTag')} side="top">
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 items-center justify-center rounded"
+        className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded"
         onClick={() => openTagCreateModal()}
         aria-label={t('calendar.filter.createTag')}
       >
