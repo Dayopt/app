@@ -34,6 +34,15 @@ export {
   snapToGrid,
 } from './machine';
 
+// Time math
+export {
+  addMinutesToTime,
+  formatTimeString,
+  parseTimeString,
+  pixelsToTime,
+  timeToPixels,
+} from './time-math';
+
 // Pointer tracker
 export { clientYToGridY, constrainToRect, getPointerPoint, isTouchEvent } from './pointer-tracker';
 

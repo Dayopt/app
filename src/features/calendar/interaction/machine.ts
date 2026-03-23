@@ -5,6 +5,7 @@
  * テスト: expect(interactionReducer(state, action, ctx)).toEqual(...)
  */
 
+import { DEFAULT_SNAP_INTERVAL, snapToGrid } from './time-math';
 import type {
   InteractionAction,
   InteractionContext,
@@ -14,6 +15,9 @@ import type {
   Point,
   TimeRange,
 } from './types';
+
+// Re-export for consumers that import from machine.ts
+export { snapToGrid } from './time-math';
 
 // ========================================
 // Constants
@@ -31,8 +35,6 @@ export const LONGPRESS_DELAY_MS = 500;
 /** グリッド選択のロングプレス遅延（ms） */
 export const SELECTION_LONGPRESS_DELAY_MS = 300;
 
-const DEFAULT_SNAP_INTERVAL = 15;
-
 /** アイドル状態の初期値 */
 export const IDLE: InteractionState = { mode: 'idle' };
 
@@ -42,27 +44,6 @@ export const IDLE: InteractionState = { mode: 'idle' };
 
 function maxAbsDelta(a: Point, b: Point): number {
   return Math.max(Math.abs(a.clientX - b.clientX), Math.abs(a.clientY - b.clientY));
-}
-
-/** ピクセルY座標を最寄りのグリッドインターバルにスナップする */
-export function snapToGrid(
-  yPx: number,
-  hourHeight: number,
-  intervalMin: number = DEFAULT_SNAP_INTERVAL,
-): { snappedTop: number; hour: number; minute: number } {
-  const clampedY = Math.max(0, yPx);
-  const hourDecimal = clampedY / hourHeight;
-  let hour = Math.floor(Math.min(23, hourDecimal));
-  const minuteFraction = (hourDecimal - hour) * 60;
-  let minute = Math.round(minuteFraction / intervalMin) * intervalMin;
-
-  if (minute >= 60) {
-    minute = 0;
-    hour = Math.min(23, hour + 1);
-  }
-
-  const snappedTop = (hour + minute / 60) * hourHeight;
-  return { snappedTop, hour, minute };
 }
 
 /** Build a TimeRange from hour/minute + duration */
