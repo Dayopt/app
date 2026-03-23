@@ -14,7 +14,7 @@ import { api } from '@/platform/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { clearNew, markNew, replaceNew } from '../lib/new-entry-tracker';
+import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
 import { createListQueryPredicate, createTempId } from './mutations/mutationUtils';
@@ -23,9 +23,6 @@ import { createListQueryPredicate, createTempId } from './mutations/mutationUtil
  * entries.list クエリキーにマッチする predicate
  */
 const isEntriesListQuery = createListQueryPredicate('entries');
-
-/** アニメーションクリーンアップの遅延（アニメーション450ms + バッファ） */
-const ANIMATION_CLEANUP_DELAY = 600;
 
 /**
  * Entry Mutations Hook
@@ -102,10 +99,9 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     onSuccess: (newEntry, input, context) => {
       logger.debug('[mutation:create] onSuccess', { id: newEntry.id });
 
-      // 新規作成アニメーション: tempId → 本番IDに切替
+      // 新規作成アニメーション: tempIdのマークをクリア（アニメーションは楽観的更新時に1回だけ発火）
       if (context?.tempId) {
-        replaceNew(context.tempId, newEntry.id);
-        setTimeout(() => clearNew(newEntry.id), ANIMATION_CLEANUP_DELAY);
+        clearNew(context.tempId);
       }
       // 一時エントリを本来のエントリに置換（全キャッシュ対象）
       // entries.create はタグなし EntryRow を返すため、tagId を補完して EntryWithTags に昇格

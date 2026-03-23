@@ -21,9 +21,3 @@ export function isNewEntry(id: string): boolean {
 export function clearNew(id: string): void {
   newIds.delete(id);
 }
-
-/** 一時IDを本番IDに置換（楽観的更新 → サーバー応答時） */
-export function replaceNew(oldId: string, newId: string): void {
-  newIds.delete(oldId);
-  newIds.add(newId);
-}

@@ -276,6 +276,24 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       tabIndex={0}
       aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
+      {/* 花びらパーティクル（新規作成アニメーション時のみ表示） */}
+      {className?.includes('animate-entry-pop') && (
+        <div
+          className="entry-petals"
+          aria-hidden
+          style={{ '--petal-color': accentColor } as React.CSSProperties}
+        >
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+        </div>
+      )}
+
       {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
       <div
         className={cn('relative shrink-0', isActiveEntry && 'animate-pulse')}
@@ -345,14 +363,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             aria-hidden="true"
             className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
             style={{ height: `${overlay.bottomHeight}px` }}
-          />
-        )}
-
-        {/* 新規作成アニメーション: 斜めシャイン（アイテム取得風） */}
-        {className?.includes('animate-entry-pop') && (
-          <div
-            aria-hidden="true"
-            className="animate-entry-shine pointer-events-none absolute inset-0"
           />
         )}
 

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-import { EntryCard } from '@/features/entry';
+import { EntryCard, isNewEntry } from '@/features/entry';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, useEntryStyles } from '../../shared';
@@ -266,7 +266,11 @@ export const WeekContent = React.memo(function WeekContent({
                   isActive={isInspectorOpen && inspectorEntryId === entry.id}
                   previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={cn(
+                    'h-full w-full',
+                    entryDragging ? 'cursor-grabbing' : 'cursor-grab',
+                    isNewEntry(entry.id) && 'animate-entry-pop',
+                  )}
                 />
               </div>
             </div>

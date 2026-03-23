@@ -95,8 +95,14 @@ export function useDragSelection({
   const pixelsToTime = useCallback(
     (y: number) => {
       const totalMinutes = (y / hourHeight) * 60;
-      const hour = Math.floor(totalMinutes / 60);
-      const minute = Math.floor((totalMinutes % 60) / 15) * 15;
+      let minute = Math.round((totalMinutes % 60) / 15) * 15;
+      let hour = Math.floor(totalMinutes / 60);
+
+      // 四捨五入で60分に繰り上がった場合
+      if (minute >= 60) {
+        minute = 0;
+        hour += 1;
+      }
 
       if (hour >= 24) {
         return { hour: 23, minute: 45 };
