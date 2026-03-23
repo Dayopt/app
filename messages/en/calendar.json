@@ -65,13 +65,7 @@
     },
     "contextMenu": {
       "title": "Entry actions",
-      "edit": "Edit",
-      "completeWithRecord": "Complete & Copy Record",
-      "duplicate": "Duplicate",
-      "copy": "Copy",
-      "copyLink": "Copy Link",
-      "addTag": "Add Tag",
-      "moveToDate": "Change Date",
+      "addToPalette": "Add to Palette",
       "delete": "Delete"
     },
     "toast": {

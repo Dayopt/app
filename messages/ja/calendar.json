@@ -65,13 +65,7 @@
     },
     "contextMenu": {
       "title": "エントリ操作",
-      "edit": "編集",
-      "completeWithRecord": "完了&Recordコピー",
-      "duplicate": "複製",
-      "copy": "コピー",
-      "copyLink": "リンクをコピー",
-      "addTag": "タグを追加",
-      "moveToDate": "日付を変更",
+      "addToPalette": "パレットに追加",
       "delete": "削除"
     },
     "toast": {

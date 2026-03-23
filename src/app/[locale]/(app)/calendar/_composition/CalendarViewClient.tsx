@@ -124,9 +124,8 @@ export function CalendarViewClient({ view, initialDate, translations }: Calendar
           onUpdateEntry={composition.onUpdatePlan}
           onDeleteEntry={composition.onDeletePlan}
           onRestoreEntry={composition.onRestorePlan}
-          onEditEntry={composition.onEditPlan}
+          getAddToPaletteHandler={composition.getAddToPaletteHandler}
           onDeleteEntryConfirm={composition.onDeletePlanConfirm}
-          onCopyEntry={composition.onCopyPlan}
           onNavigate={composition.onNavigate}
           onViewChange={composition.onViewChange}
           onNavigatePrev={composition.onNavigatePrev}

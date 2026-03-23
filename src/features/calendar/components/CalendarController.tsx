@@ -66,9 +66,8 @@ export interface CalendarControllerProps {
   onRestoreEntry: (entry: CalendarEvent) => Promise<void>;
 
   // --- Context menu actions ---
-  onEditEntry: (entry: CalendarEvent) => void;
+  getAddToPaletteHandler?: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
-  onCopyEntry: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -104,9 +103,8 @@ export function CalendarController({
   onUpdateEntry,
   onDeleteEntry,
   onRestoreEntry,
-  onEditEntry,
+  getAddToPaletteHandler,
   onDeleteEntryConfirm,
-  onCopyEntry,
   onNavigate,
   onViewChange,
   onNavigatePrev,
@@ -203,9 +201,8 @@ export function CalendarController({
           entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
-          onEdit={onEditEntry}
+          onAddToPalette={getAddToPaletteHandler?.(contextMenuEvent)}
           onDelete={onDeleteEntryConfirm}
-          onCopy={onCopyEntry}
         />
       ) : null}
 

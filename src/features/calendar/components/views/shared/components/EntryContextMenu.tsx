@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Calendar, ClipboardCopy, Edit2, Link, Tag, Trash2 } from 'lucide-react';
+import { Palette, Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -12,12 +12,8 @@ interface EntryContextMenuProps {
   entry: CalendarEvent;
   position: { x: number; y: number };
   onClose: () => void;
-  onEdit?: (entry: CalendarEvent) => void;
-  onDelete?: (entry: CalendarEvent) => void;
-  onCopy?: (entry: CalendarEvent) => void;
-  onCopyLink?: (entry: CalendarEvent) => void;
-  onAddTag?: (entry: CalendarEvent) => void;
-  onMoveToDate?: (entry: CalendarEvent) => void;
+  onAddToPalette?: ((entry: CalendarEvent) => void) | undefined;
+  onDelete?: ((entry: CalendarEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */
@@ -25,12 +21,8 @@ export const EventContextMenu = ({
   entry,
   position,
   onClose,
-  onEdit,
+  onAddToPalette,
   onDelete,
-  onCopy,
-  onCopyLink,
-  onAddTag,
-  onMoveToDate,
 }: EntryContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -114,34 +106,10 @@ export const EventContextMenu = ({
 
   const menuItems = [
     {
-      icon: Edit2,
-      label: t('calendar.contextMenu.edit'),
-      action: () => onEdit?.(entry),
-      available: !!onEdit,
-    },
-    {
-      icon: ClipboardCopy,
-      label: t('calendar.contextMenu.copy'),
-      action: () => onCopy?.(entry),
-      available: !!onCopy,
-    },
-    {
-      icon: Link,
-      label: t('calendar.contextMenu.copyLink'),
-      action: () => onCopyLink?.(entry),
-      available: !!onCopyLink,
-    },
-    {
-      icon: Tag,
-      label: t('calendar.contextMenu.addTag'),
-      action: () => onAddTag?.(entry),
-      available: !!onAddTag,
-    },
-    {
-      icon: Calendar,
-      label: t('calendar.contextMenu.moveToDate'),
-      action: () => onMoveToDate?.(entry),
-      available: !!onMoveToDate,
+      icon: Palette,
+      label: t('calendar.contextMenu.addToPalette'),
+      action: () => onAddToPalette?.(entry),
+      available: !!onAddToPalette,
     },
     {
       icon: Trash2,

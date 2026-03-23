@@ -79,53 +79,20 @@ function ContextMenuTrigger({
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** 全アクション（編集・コピー・リンクコピー・タグ・移動・削除）。 */
+/** パレットに追加 + 削除（全アクション）。 */
 export const AllActions: Story = {
   render: () => (
     <ContextMenuTrigger
       entry={sampleEntry}
       menuProps={{
-        onEdit: fn(),
-        onCopy: fn(),
-        onCopyLink: fn(),
-        onAddTag: fn(),
-        onMoveToDate: fn(),
+        onAddToPalette: fn(),
         onDelete: fn(),
       }}
     />
   ),
 };
 
-/** 編集・削除のみ（最小構成）。 */
-export const MinimalActions: Story = {
-  render: () => (
-    <ContextMenuTrigger
-      entry={sampleEntry}
-      menuProps={{
-        onEdit: fn(),
-        onDelete: fn(),
-      }}
-    />
-  ),
-};
-
-/** 削除なし（読み取り専用のエントリ）。 */
-export const NoDelete: Story = {
-  render: () => (
-    <ContextMenuTrigger
-      entry={sampleEntry}
-      menuProps={{
-        onEdit: fn(),
-        onCopy: fn(),
-        onCopyLink: fn(),
-        onAddTag: fn(),
-        onMoveToDate: fn(),
-      }}
-    />
-  ),
-};
-
-/** 削除のみ。 */
+/** 削除のみ（パレット登録済み）。 */
 export const DeleteOnly: Story = {
   render: () => (
     <ContextMenuTrigger
@@ -145,11 +112,7 @@ export const DirectDisplay: Story = {
         entry={sampleEntry}
         position={{ x: 20, y: 20 }}
         onClose={fn()}
-        onEdit={fn()}
-        onCopy={fn()}
-        onCopyLink={fn()}
-        onAddTag={fn()}
-        onMoveToDate={fn()}
+        onAddToPalette={fn()}
         onDelete={fn()}
       />
     </div>
@@ -159,31 +122,26 @@ export const DirectDisplay: Story = {
 /** 全パターン一覧（直接表示で各構成を確認）。 */
 export const AllPatterns: Story = {
   render: () => (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col items-start gap-6">
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">全アクション</span>
-        <div className="relative" style={{ height: 220 }}>
+        <span className="text-muted-foreground text-xs">パレットに追加 + 削除</span>
+        <div className="relative" style={{ height: 120 }}>
           <EventContextMenu
             entry={sampleEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
-            onEdit={fn()}
-            onCopy={fn()}
-            onCopyLink={fn()}
-            onAddTag={fn()}
-            onMoveToDate={fn()}
+            onAddToPalette={fn()}
             onDelete={fn()}
           />
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">最小構成（編集・削除のみ）</span>
-        <div className="relative" style={{ height: 100 }}>
+        <span className="text-muted-foreground text-xs">削除のみ（パレット登録済み）</span>
+        <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
             entry={sampleEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
-            onEdit={fn()}
             onDelete={fn()}
           />
         </div>
