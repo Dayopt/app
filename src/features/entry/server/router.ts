@@ -243,12 +243,10 @@ export const entriesCoreRouter = createTRPCRouter({
     .input(bulkDeleteEntrySchema)
     .mutation(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
-      const { data, error } = await supabase
-        .from('entries')
-        .update({ deleted_at: new Date().toISOString() })
-        .in('id', input.ids)
-        .eq('user_id', userId)
-        .select('id');
+      const { data, error } = await supabase.rpc('bulk_soft_delete_entries', {
+        p_entry_ids: input.ids,
+        p_user_id: userId,
+      });
 
       if (error) {
         throw new TRPCError({
@@ -256,8 +254,9 @@ export const entriesCoreRouter = createTRPCRouter({
           message: `Failed to bulk delete entries: ${error.message}`,
         });
       }
-      captureBusinessEvent('entry.bulk_deleted', { count: data.length });
-      return { success: true, count: data.length };
+      const count = data ?? 0;
+      captureBusinessEvent('entry.bulk_deleted', { count });
+      return { success: true, count };
     }),
 
   /** 複数エントリにタグを一括設定（1エントリ1タグ、delete+insert） */

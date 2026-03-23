@@ -232,8 +232,11 @@ export class EntryService {
     const oldData = await this.getExistingEntry(entryId, userId);
 
     // 楽観的ロック: 他タブ/デバイスでの変更を検出
+    // Date比較で形式差異（+00:00 vs Z、マイクロ秒精度の違い等）を吸収
     if (expectedUpdatedAt && oldData?.updated_at) {
-      if (oldData.updated_at !== expectedUpdatedAt) {
+      const expected = new Date(expectedUpdatedAt).getTime();
+      const actual = new Date(oldData.updated_at).getTime();
+      if (expected !== actual) {
         throw new EntryServiceError(
           'CONFLICT',
           'このエントリは他の場所で更新されています。最新データをリロードしてください。',
@@ -300,18 +303,17 @@ export class EntryService {
   /**
    * エントリをソフト削除（deleted_at を設定）
    *
-   * RLS の SELECT ポリシーが deleted_at IS NULL でフィルタするため、
-   * ソフト削除後はクエリ結果から自動的に除外される。
-   * UPDATE ポリシーは deleted_at をチェックしないため、restore() で復元可能。
+   * SECURITY DEFINER の RPC 関数でRLSをバイパス。
+   * SELECT ポリシーの deleted_at IS NULL が UPDATE の WITH CHECK に
+   * 適用されるため、直接 UPDATE では RLS 違反になる。
    */
   async delete(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
-    const { error } = await this.supabase
-      .from('entries')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', entryId)
-      .eq('user_id', userId);
+    const { error } = await this.supabase.rpc('soft_delete_entry', {
+      p_entry_id: entryId,
+      p_user_id: userId,
+    });
 
     if (error) {
       throw new EntryServiceError('DELETE_FAILED', `Failed to delete entry: ${error.message}`);
@@ -323,17 +325,15 @@ export class EntryService {
   /**
    * ソフト削除されたエントリを復元（Undo用）
    *
-   * UPDATE RLS ポリシーは user_id のみチェックするため、
-   * deleted_at が設定されたエントリにもアクセス可能。
+   * SECURITY DEFINER の RPC 関数でRLSをバイパス。
    */
   async restore(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
-    const { error } = await this.supabase
-      .from('entries')
-      .update({ deleted_at: null })
-      .eq('id', entryId)
-      .eq('user_id', userId);
+    const { error } = await this.supabase.rpc('restore_entry', {
+      p_entry_id: entryId,
+      p_user_id: userId,
+    });
 
     if (error) {
       throw new EntryServiceError('RESTORE_FAILED', `Failed to restore entry: ${error.message}`);
