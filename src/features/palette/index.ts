@@ -5,10 +5,9 @@
  * サイドバーに表示し、ワンタップで現在時刻にエントリを作成する。
  */
 
+// Components
 export { Palette } from './components/Palette';
 
-// Types (re-exported from shared component)
-export type { BlockDragData as PaletteDragData } from '@/shell/components/sidebar';
-
 // Hooks
-export { usePaletteMutations } from './hooks/usePaletteMutations';
+export { usePaletteItems, usePaletteMutations } from './hooks';
+export type { PaletteItem } from './hooks';

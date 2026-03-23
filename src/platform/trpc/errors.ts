@@ -74,6 +74,10 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== Tag並び替え関連 =====
   REORDER_FAILED: 'INTERNAL_SERVER_ERROR',
 
+  // ===== Palette関連 =====
+  PIN_FAILED: 'INTERNAL_SERVER_ERROR',
+  UNPIN_FAILED: 'INTERNAL_SERVER_ERROR',
+
   // ===== Entry/Plan関連 =====
   TAG_FILTER_FAILED: 'INTERNAL_SERVER_ERROR',
   TIME_OVERLAP: 'BAD_REQUEST',

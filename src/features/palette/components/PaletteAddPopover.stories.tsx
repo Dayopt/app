@@ -2,7 +2,7 @@
  * PaletteAddPopover Stories
  *
  * パレットへのピン追加ポップオーバー（タグ選択 + duration 選択）。
- * tRPC で tags.list / palette.pin をモック。
+ * pinnedItems は props 経由。tRPC で tags.list / palette.pin をモック。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -89,7 +89,6 @@ function createMockLink(): TRPCLink<AppRouter> {
         if (op.type === 'query') {
           const responseMap: Record<string, unknown> = {
             'tags.list': MOCK_TAGS,
-            'palette.list': MOCK_PINNED_ITEMS,
           };
           const result = op.path in responseMap ? responseMap[op.path] : [];
           observer.next({ result: { type: 'data', data: result } });
@@ -144,10 +143,13 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────
 
 /** 閉じた状態（+ ボタンのみ）。 */
-export const Default: Story = {};
+export const Default: Story = {
+  args: { pinnedItems: MOCK_PINNED_ITEMS },
+};
 
 /** ポップオーバーが開いた状態。 */
 export const Opened: Story = {
+  args: { pinnedItems: MOCK_PINNED_ITEMS },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const trigger = canvas.getByRole('button', { name: /パレットに追加|Add to palette/i });
@@ -157,12 +159,13 @@ export const Opened: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  render: () => (
+  args: { pinnedItems: MOCK_PINNED_ITEMS },
+  render: (args) => (
     <div className="flex items-start gap-12">
       <div>
         <p className="text-muted-foreground mb-3 text-center text-xs">Closed</p>
         <MockProvider>
-          <PaletteAddPopover />
+          <PaletteAddPopover {...args} />
         </MockProvider>
       </div>
     </div>

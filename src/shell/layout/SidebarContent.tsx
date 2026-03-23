@@ -21,9 +21,11 @@ import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
+import { SidebarSection } from '@/shell/components/sidebar';
 
 /** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルター・パレットを組み立てる Composition Layer） */
 export function SidebarContent() {
+  const t = useTranslations();
   const pathname = usePathname();
   const navigation = useCalendarNavigation();
   const { pinItem } = usePaletteMutations();
@@ -44,13 +46,17 @@ export function SidebarContent() {
   return (
     <>
       {/* ミニカレンダー（PCのみ） */}
-      <MiniCalendar
-        selectedDate={miniCalendarDate}
-        onDateSelect={(date) => {
-          if (date) handleDateSelect(date);
-        }}
-        className="hidden w-full bg-transparent md:block"
-      />
+      <div className="hidden px-2 md:block">
+        <SidebarSection title={t('sidebar.calendar.title')} defaultOpen>
+          <MiniCalendar
+            selectedDate={miniCalendarDate}
+            onDateSelect={(date) => {
+              if (date) handleDateSelect(date);
+            }}
+            className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+          />
+        </SidebarSection>
+      </div>
 
       {/* ビュー切り替え・フィルター */}
       <div className="flex min-w-0 flex-col overflow-hidden px-2">

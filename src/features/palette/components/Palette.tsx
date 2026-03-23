@@ -13,18 +13,22 @@ import { useTranslations } from 'next-intl';
 
 import { useBlockPlace } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
-import { api } from '@/platform/trpc';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
+import { usePaletteMutations } from '../hooks/usePaletteMutations';
+import { usePaletteItems } from '../hooks/usePaletteQuery';
+
 import { PaletteAddPopover } from './PaletteAddPopover';
+import { PaletteItemMenu } from './PaletteItemMenu';
 
 /** Palette — サイドバーのピン留めブロック配置セクション */
 export function Palette() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const { placeBlockNow } = useBlockPlace();
+  const { unpinItem, updateDuration } = usePaletteMutations();
 
-  const { data: pinnedItems } = api.palette.list.useQuery();
+  const { data: pinnedItems } = usePaletteItems();
 
   const pinnedWithTags = useMemo(
     () =>
@@ -40,7 +44,11 @@ export function Palette() {
 
   return (
     <div className="w-full min-w-0 overflow-hidden px-2">
-      <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={<PaletteAddPopover />}>
+      <SidebarSection
+        title={t('sidebar.palette.title')}
+        defaultOpen
+        action={<PaletteAddPopover pinnedItems={pinnedItems ?? []} />}
+      >
         {pinnedWithTags.length === 0 && (
           <div className="text-muted-foreground space-y-2 px-2 py-3 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
@@ -58,6 +66,14 @@ export function Palette() {
               tagColor={item.tag.color}
               durationMinutes={item.duration_minutes}
               onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
+              menuSlot={
+                <PaletteItemMenu
+                  itemId={item.id}
+                  currentDuration={item.duration_minutes}
+                  onChangeDuration={updateDuration}
+                  onRemove={unpinItem}
+                />
+              }
             />
           ) : null,
         )}

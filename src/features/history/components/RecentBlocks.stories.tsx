@@ -69,6 +69,7 @@ const meta = {
   title: 'Features/History/RecentBlocks',
   component: RecentBlocksStory,
   parameters: { layout: 'padded' },
+  tags: ['autodocs'],
 } satisfies Meta<typeof RecentBlocksStory>;
 
 export default meta;
@@ -107,6 +108,39 @@ export const WithPinButton: Story = {
     ],
     onPinItem: fn(),
   },
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  args: { items: [] },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs">With Items</p>
+        <RecentBlocksStory
+          items={[
+            { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+            { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+            { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+          ]}
+        />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs">Empty</p>
+        <RecentBlocksStory items={[]} />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs">With Pin Button</p>
+        <RecentBlocksStory
+          items={[
+            { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+            { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+          ]}
+          onPinItem={fn()}
+        />
+      </div>
+    </div>
+  ),
 };
 
 /** 多数の履歴（最大8件） */

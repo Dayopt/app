@@ -1,13 +1,13 @@
 {
   "sidebar": {
+    "calendar": {
+      "title": "カレンダー"
+    },
     "palette": {
       "title": "パレット",
       "empty": "よく使うブロックを登録しておくと毎朝すばやく配置できます",
       "emptyHint": "履歴から追加もできます",
       "add": "パレットに追加",
-      "addToNow": "現在時刻に追加",
-      "pin": "ピン留め",
-      "unpin": "ピン解除",
       "tagLabel": "タグ",
       "tagPlaceholder": "タグを選択",
       "durationLabel": "時間",
@@ -15,6 +15,9 @@
       "duplicateError": "この組み合わせは既に登録済みです",
       "pinFailed": "ピン留めに失敗しました",
       "unpinFailed": "ピン解除に失敗しました",
+      "updateFailed": "更新に失敗しました",
+      "remove": "削除",
+      "changeDuration": "時間を変更",
       "tagAssignFailed": "タグの割り当てに失敗しました"
     },
     "recentBlocks": {

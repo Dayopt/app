@@ -2,7 +2,7 @@
  * BlockItem Stories
  *
  * ブロックアイテム（Palette・RecentBlocks 共通）。
- * タグカラードット + タグ名 + duration + ホバー時メニューアイコン。
+ * タグカラードット + タグ名 + duration。menuSlot でホバー時メニューを注入可能。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
