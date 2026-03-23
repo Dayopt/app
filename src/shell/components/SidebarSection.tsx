@@ -27,7 +27,7 @@ interface SidebarSectionProps {
  *
  * **デザイン仕様（8pxグリッド準拠）**:
  * - ヘッダー高さ: 32px（h-8）
- * - 左右パディング: 8px（px-2）
+ * - 左パディング: 16px（pl-4）、右パディング: 8px（pr-2）
  * - 上下パディング: 8px（py-2）
  * - ホバー: bg-state-hover（Material Design 3準拠）
  * - 角丸: rounded（4px - 内部小要素用）
@@ -50,7 +50,7 @@ export function SidebarSection({
   action,
 }: SidebarSectionProps) {
   return (
-    <Collapsible defaultOpen={defaultOpen} className="w-full min-w-0 overflow-hidden">
+    <Collapsible defaultOpen={defaultOpen} className="w-full min-w-0 overflow-hidden px-2">
       <CollapsibleTrigger asChild>
         <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded px-2 transition-colors">
           <div className="text-muted-foreground flex h-8 min-w-0 items-center text-left text-xs font-bold">

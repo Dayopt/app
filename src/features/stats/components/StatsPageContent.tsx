@@ -5,11 +5,11 @@ import { Suspense, useCallback, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 
-import { AppHeader } from '@/components/AppHeader';
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
+import { AppHeader } from '@/shell/components/AppHeader';
 
 import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';

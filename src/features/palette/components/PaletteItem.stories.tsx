@@ -20,6 +20,7 @@ const meta = {
   parameters: { layout: 'padded' },
   args: {
     onClick: fn(),
+    tooltipContent: 'Add at current time',
   },
   decorators: [
     (Story) => (
@@ -79,17 +80,39 @@ export const ShortDuration: Story = {
 
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
-  args: { tagName: '', tagColor: null, durationMinutes: 0, isPinned: false, onClick: fn() },
+  args: {
+    tagName: '',
+    tagColor: null,
+    durationMinutes: 0,
+    isPinned: false,
+    onClick: fn(),
+    tooltipContent: 'Add at current time',
+  },
   render: () => (
     <div className="w-64 space-y-1">
-      <PaletteItem tagName="仕事" tagColor="blue" durationMinutes={60} isPinned onClick={fn()} />
-      <PaletteItem tagName="勉強" tagColor="green" durationMinutes={30} isPinned onClick={fn()} />
+      <PaletteItem
+        tagName="仕事"
+        tagColor="blue"
+        durationMinutes={60}
+        isPinned
+        onClick={fn()}
+        tooltipContent="Add at current time"
+      />
+      <PaletteItem
+        tagName="勉強"
+        tagColor="green"
+        durationMinutes={30}
+        isPinned
+        onClick={fn()}
+        tooltipContent="Add at current time"
+      />
       <PaletteItem
         tagName="運動"
         tagColor="amber"
         durationMinutes={45}
         isPinned={false}
         onClick={fn()}
+        tooltipContent="Add at current time"
       />
       <PaletteItem
         tagName="プロジェクト管理・定例ミーティング準備"
@@ -97,6 +120,7 @@ export const AllPatterns: Story = {
         durationMinutes={90}
         isPinned={false}
         onClick={fn()}
+        tooltipContent="Add at current time"
       />
       <PaletteItem
         tagName="休憩"
@@ -104,6 +128,7 @@ export const AllPatterns: Story = {
         durationMinutes={15}
         isPinned={false}
         onClick={fn()}
+        tooltipContent="Add at current time"
       />
     </div>
   ),

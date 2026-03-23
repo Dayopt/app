@@ -2,7 +2,7 @@
  * Palette Router
  *
  * よく使うブロック（タグ + duration）の管理。
- * ピン留め（手動）と自動集計の2種類。
+ * ピン留め（手動管理）のCRUD。自動集計は history feature に移管。
  */
 
 import { TRPCError } from '@trpc/server';
@@ -43,60 +43,6 @@ const list = protectedProcedure
     }
 
     return data;
-  });
-
-/** エントリ使用頻度から自動集計（ピン留め済みを除外） */
-const getFrequentBlocks = protectedProcedure
-  .meta({ description: '使用頻度の高いブロックを自動集計' })
-  .query(async ({ ctx }) => {
-    // ピン留め済みの tag_id + duration の組み合わせを取得
-    const { data: pinned } = await ctx.supabase
-      .from('palette_items')
-      .select('tag_id, duration_minutes')
-      .eq('user_id', ctx.userId)
-      .eq('is_pinned', true);
-
-    const pinnedSet = new Set((pinned ?? []).map((p) => `${p.tag_id}:${p.duration_minutes}`));
-
-    // entry_tags + entries を結合して tag_id + duration_minutes を集計
-    const { data, error } = await ctx.supabase
-      .from('entry_tags')
-      .select('tag_id, entries!inner(duration_minutes, deleted_at)')
-      .eq('user_id', ctx.userId);
-
-    if (error) {
-      return handlePaletteError('getFrequentBlocks', error);
-    }
-
-    // 集計
-    const counts = new Map<string, { tagId: string; durationMinutes: number; count: number }>();
-    for (const row of data ?? []) {
-      const entry = row.entries as unknown as {
-        duration_minutes: number | null;
-        deleted_at: string | null;
-      };
-      if (entry.deleted_at) continue;
-      if (!entry.duration_minutes) continue;
-      const key = `${row.tag_id}:${entry.duration_minutes}`;
-      if (pinnedSet.has(key)) continue;
-
-      const existing = counts.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        counts.set(key, {
-          tagId: row.tag_id,
-          durationMinutes: entry.duration_minutes,
-          count: 1,
-        });
-      }
-    }
-
-    // 使用回数が2回以上のものを上位8件
-    return Array.from(counts.values())
-      .filter((item) => item.count >= 2)
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
   });
 
 /** ピン留め追加 */
@@ -189,7 +135,6 @@ const reorder = protectedProcedure
 
 export const paletteRouter = createTRPCRouter({
   list,
-  getFrequentBlocks,
   pin,
   unpin,
   reorder,

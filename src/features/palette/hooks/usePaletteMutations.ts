@@ -58,7 +58,7 @@ export function usePaletteMutations() {
 
     onSettled: () => {
       void utils.palette.list.invalidate();
-      void utils.palette.getFrequentBlocks.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -85,7 +85,7 @@ export function usePaletteMutations() {
 
     onSettled: () => {
       void utils.palette.list.invalidate();
-      void utils.palette.getFrequentBlocks.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 

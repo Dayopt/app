@@ -11,6 +11,10 @@
       "tagPlaceholder": "Select tag",
       "durationLabel": "Duration",
       "durationPlaceholder": "Select duration"
+    },
+    "recentBlocks": {
+      "title": "Recent",
+      "empty": "No recent blocks"
     }
   }
 }

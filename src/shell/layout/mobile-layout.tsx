@@ -4,9 +4,9 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef } from 'react';
 
-import { AppHeader } from '@/components/AppHeader';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { isCalendarViewPath } from '@/features/calendar';
+import { AppHeader } from '@/shell/components/AppHeader';
 import { Sidebar } from '@/shell/components/Sidebar';
 import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
 import { useLayoutStore } from '@/stores/useLayoutStore';

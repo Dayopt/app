@@ -11,6 +11,10 @@
       "tagPlaceholder": "タグを選択",
       "durationLabel": "時間",
       "durationPlaceholder": "時間を選択"
+    },
+    "recentBlocks": {
+      "title": "履歴",
+      "empty": "まだ履歴がありません"
     }
   }
 }

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
+import { RecentBlocks } from '@/features/history';
 import { Palette } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
@@ -41,7 +42,7 @@ export function SidebarContent() {
 
   return (
     <>
-      {/* ミニカレンダー（PCのみ）- サイドバー上部 */}
+      {/* ミニカレンダー（PCのみ）- ラッパーでパディング管理、他セクションと幅統一 */}
       <div className="hidden shrink-0 md:block">
         <MiniCalendar
           selectedDate={miniCalendarDate}
@@ -61,8 +62,11 @@ export function SidebarContent() {
         <CalendarFilterList />
       </div>
 
-      {/* パレット（よく使うブロックのクイック配置） */}
+      {/* パレット（ピン留めブロックのクイック配置） */}
       <Palette />
+
+      {/* 履歴（頻度×鮮度ベースの自動集計） */}
+      <RecentBlocks />
 
       {/* テーマ切替 */}
       <SidebarUtilities />
