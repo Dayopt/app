@@ -13,7 +13,6 @@ import { useMemo } from 'react';
 
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { DnDProvider } from '../providers/DnDProvider';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
@@ -183,7 +182,7 @@ export function CalendarController({
   // Render
   // =========================================================================
   return (
-    <DnDProvider>
+    <>
       <CalendarLayout
         className={className}
         viewType={viewType}
@@ -215,6 +214,6 @@ export function CalendarController({
 
       {/* モバイル操作ヒント（初回のみ表示） */}
       <MobileTouchHint />
-    </DnDProvider>
+    </>
   );
 }

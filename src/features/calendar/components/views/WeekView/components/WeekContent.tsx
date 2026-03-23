@@ -155,6 +155,7 @@ export const WeekContent = React.memo(function WeekContent({
     >
       <CalendarDragSelection
         date={date}
+        dayIndex={dayIndex}
         className="absolute inset-0 z-10"
         onTimeRangeSelect={(selection) => {
           onTimeRangeSelect?.(selection);

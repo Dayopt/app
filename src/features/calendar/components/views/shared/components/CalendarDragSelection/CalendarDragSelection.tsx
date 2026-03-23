@@ -22,6 +22,7 @@ import { useDragSelection } from './useDragSelection';
 /** カレンダー列のドラッグ選択・ダブルクリックによる時間範囲選択コンポーネント */
 export const CalendarDragSelection = ({
   date,
+  dayIndex,
   className,
   onTimeRangeSelect,
   onDoubleClick,
@@ -44,6 +45,7 @@ export const CalendarDragSelection = ({
     droppableData,
   } = useDragSelection({
     date,
+    dayIndex,
     disabled,
     onTimeRangeSelect,
     onDoubleClick,
@@ -52,7 +54,7 @@ export const CalendarDragSelection = ({
   });
 
   // ドロップ可能エリアとして設定
-  const { setNodeRef, isOver: dndIsOver } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: droppableId,
     data: droppableData,
   });
@@ -65,7 +67,7 @@ export const CalendarDragSelection = ({
         (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
         setNodeRef(node);
       }}
-      className={cn('relative', className, dndIsOver && 'bg-primary-state-hover')}
+      className={cn('relative', className)}
       aria-label="Calendar time grid"
       onMouseDown={(e) => {
         // Googleカレンダー互換: クリックした日付を記憶（Cmd+Vでペーストする日付として使用）

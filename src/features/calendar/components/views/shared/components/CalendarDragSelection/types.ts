@@ -21,6 +21,8 @@ export interface DateTimeSelection extends TimeRange {
 export interface CalendarDragSelectionProps {
   /** 必須：この列が担当する日付 */
   date: Date;
+  /** この列の日付インデックス（DnDProvider → store 連携用） */
+  dayIndex?: number | undefined;
   className?: string | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   /** ダブルクリック専用ハンドラー（オプション、未指定時はonTimeRangeSelectが呼ばれる） */

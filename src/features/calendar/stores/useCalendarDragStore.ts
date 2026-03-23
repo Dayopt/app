@@ -39,6 +39,8 @@ export interface CalendarDragState {
   previewTime: { start: Date; end: Date } | null;
   /** スナップされた位置（top, height） */
   snappedPosition: { top: number; height?: number } | null;
+  /** ドラッグ中のプレビューが既存エントリと重複しているか */
+  isOverlapping: boolean;
 }
 
 interface CalendarDragActions {
@@ -70,6 +72,7 @@ const initialState: CalendarDragState = {
   isDragging: false,
   previewTime: null,
   snappedPosition: null,
+  isOverlapping: false,
 };
 
 /** カレンダーのドラッグ状態を管理するZustandストア */

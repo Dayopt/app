@@ -21,6 +21,8 @@ import { useSelectionEvents } from './useSelectionEvents';
 
 interface UseDragSelectionOptions {
   date: Date;
+  /** この列の日付インデックス（DnDProvider → store 連携用） */
+  dayIndex?: number | undefined;
   disabled?: boolean | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
@@ -51,7 +53,7 @@ interface UseDragSelectionReturn {
   // Utilities
   formatTime: (hour: number, minute: number) => string;
   droppableId: string;
-  droppableData: { date: Date; time: string | null };
+  droppableData: { date: Date; time: string | null; dayIndex: number };
 }
 
 /**
@@ -59,6 +61,7 @@ interface UseDragSelectionReturn {
  */
 export function useDragSelection({
   date,
+  dayIndex = 0,
   disabled = false,
   onTimeRangeSelect,
   onDoubleClick: onDoubleClickProp,
@@ -72,6 +75,8 @@ export function useDragSelection({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Drop state
+  // dropTimeRef: pointermoveで同期的に更新（RAF待ちなし）→ dnd-kitがドロップ時に即座に最新値を取得
+  const dropTimeRef = useRef<string | null>(null);
   const [dropTime, setDropTime] = useState<string | null>(null);
   const [isOver, setIsOver] = useState(false);
 
@@ -81,8 +86,15 @@ export function useDragSelection({
   }, []);
 
   // Droppable ID and data
+  // getter で常に最新の ref 値を返す（React state の遅延を回避）
   const droppableId = `calendar-droppable-${format(date, 'yyyy-MM-dd')}`;
-  const droppableData = { date, time: dropTime };
+  const droppableData = {
+    date,
+    get time() {
+      return dropTimeRef.current;
+    },
+    dayIndex,
+  };
 
   // Helper: 時間をフォーマット
   const formatTime = useCallback((hour: number, minute: number): string => {
@@ -133,38 +145,57 @@ export function useDragSelection({
     checkOverlap,
   });
 
-  // Effect: マウスムーブ時にドロップ時刻を更新（rAFスロットル）
+  // Effect: ポインタムーブ時にドロップ時刻を更新（rAFスロットル）
+  // pointermove は mouse + touch 統一で、タッチドラッグにも対応
   useEffect(() => {
     if (!containerRef.current) return;
 
     let rafId: number | null = null;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (!containerRef.current) return;
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!containerRef.current) return;
 
-        const rect = containerRef.current.getBoundingClientRect();
-        const y = e.clientY - rect.top;
+      const rect = containerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
 
-        if (y >= 0 && y <= rect.height) {
-          const time = pixelsToTime(y);
-          const timeString = formatTime(time.hour, time.minute);
-          setDropTime(timeString);
-          setIsOver(true);
-        } else {
-          setDropTime(null);
-          setIsOver(false);
+      if (y >= 0 && y <= rect.height) {
+        const time = pixelsToTime(y);
+        const timeString = formatTime(time.hour, time.minute);
+        // ref を同期的に更新 → dnd-kit の droppableData.time getter が即座に最新値を返す
+        dropTimeRef.current = timeString;
+        // state は描画用（RAF スロットル）
+        if (rafId === null) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            setDropTime(dropTimeRef.current);
+            setIsOver(true);
+          });
         }
-      });
+      } else {
+        dropTimeRef.current = null;
+        if (rafId === null) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            setDropTime(null);
+            setIsOver(false);
+          });
+        }
+      }
     };
 
-    containerRef.current.addEventListener('mousemove', handleMouseMove);
+    const handlePointerLeave = () => {
+      dropTimeRef.current = null;
+      setDropTime(null);
+      setIsOver(false);
+    };
+
+    containerRef.current.addEventListener('pointermove', handlePointerMove);
+    containerRef.current.addEventListener('pointerleave', handlePointerLeave);
     const ref = containerRef.current;
 
     return () => {
-      ref?.removeEventListener('mousemove', handleMouseMove);
+      ref?.removeEventListener('pointermove', handlePointerMove);
+      ref?.removeEventListener('pointerleave', handlePointerLeave);
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, [pixelsToTime, formatTime]);

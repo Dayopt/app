@@ -91,6 +91,7 @@ export const DayContent = ({
       {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
       <CalendarDragSelection
         date={date}
+        dayIndex={0}
         className="absolute inset-0"
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}

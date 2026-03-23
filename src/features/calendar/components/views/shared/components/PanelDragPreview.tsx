@@ -32,6 +32,7 @@ export const PanelDragPreview = memo(function PanelDragPreview({
   const snappedPosition = useCalendarDragStore((s) => s.snappedPosition);
   const previewTime = useCalendarDragStore((s) => s.previewTime);
   const planData = useCalendarDragStore((s) => s.draggedPlanData);
+  const isOverlapping = useCalendarDragStore((s) => s.isOverlapping);
 
   const timezone = useCalendarSettingsStore((s) => s.timezone);
 
@@ -53,6 +54,7 @@ export const PanelDragPreview = memo(function PanelDragPreview({
         'pointer-events-none absolute left-0 w-full',
         'border-l-indicator rounded-r-lg',
         'after:bg-state-selected after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit]',
+        isOverlapping && 'ring-destructive ring-2',
       )}
       style={{
         top: `${snappedPosition.top}px`,
