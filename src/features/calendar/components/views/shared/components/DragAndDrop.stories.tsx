@@ -301,6 +301,7 @@ function PanelDragPreviewStory() {
       snappedPosition: { top: 0, height: 72 },
       previewTime: { start, end },
       isDragging: true,
+      isOverlapping: false,
       draggedPlanData: {
         id: 'panel-plan-1',
         title: 'Panel Drag Preview',
@@ -340,6 +341,130 @@ export const PanelDragPreviewStoryExport: Story = {
       </DocsNote>
       <Label>Panel → Calendar ドラッグ中のドロップ先プレビュー</Label>
       <PanelDragPreviewStory />
+    </div>
+  ),
+};
+
+/** DragOverlay のカード再現。DnDProvider.tsx の DragOverlay 内レンダリングと同じスタイル。 */
+function DragOverlayCard({
+  tagName,
+  tagColor,
+  time,
+}: {
+  tagName: string;
+  tagColor: string;
+  time: string;
+}) {
+  return (
+    <div
+      className="surface-raised border-l-indicator flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90"
+      style={{
+        borderLeftColor: `var(--tag-${tagColor})`,
+        backgroundColor: `color-mix(in oklch, var(--tag-${tagColor}) 12%, var(--background))`,
+      }}
+    >
+      <span className="text-foreground truncate text-sm font-normal">{tagName}</span>
+      <span className="text-muted-foreground text-xs tabular-nums">{time}</span>
+    </div>
+  );
+}
+
+/** PanelDragPreview — 通常状態 + 重複状態の2パターン。 */
+function PanelDragPreviewPair() {
+  useEffect(() => {
+    const start = new Date('2024-01-15T10:00:00');
+    const end = new Date('2024-01-15T11:00:00');
+
+    // 通常状態（dayIndex=1）
+    useCalendarDragStore.setState({
+      dragSource: 'panel',
+      targetDateIndex: 1,
+      snappedPosition: { top: 0, height: 72 },
+      previewTime: { start, end },
+      isDragging: true,
+      isOverlapping: false,
+      draggedPlanData: {
+        id: 'panel-plan-pair',
+        title: 'Design Review',
+      },
+    });
+
+    return () => {
+      useCalendarDragStore.getState().endDrag();
+    };
+  }, []);
+
+  return (
+    <div className="flex gap-8">
+      {/* 通常 */}
+      <div className="flex flex-col gap-2">
+        <Label>通常（空きスロットにドロップ）</Label>
+        <DragOverlayCard tagName="Design Review" tagColor="blue" time="10:00 – 11:00" />
+        <Slot>
+          <PanelDragPreview dayIndex={1} />
+        </Slot>
+      </div>
+      {/* 重複 */}
+      <div className="flex flex-col gap-2">
+        <Label>重複（既存エントリと重複）</Label>
+        <DragOverlayCard tagName="Design Review" tagColor="blue" time="10:00 – 11:00" />
+        <PanelDragPreviewOverlappingSlot />
+      </div>
+    </div>
+  );
+}
+
+/** isOverlapping=true の PanelDragPreview を描画するスロット。 */
+function PanelDragPreviewOverlappingSlot() {
+  useEffect(() => {
+    const start = new Date('2024-01-15T10:00:00');
+    const end = new Date('2024-01-15T11:00:00');
+
+    useCalendarDragStore.setState({
+      dragSource: 'panel',
+      targetDateIndex: 2,
+      snappedPosition: { top: 0, height: 72 },
+      previewTime: { start, end },
+      isDragging: true,
+      isOverlapping: true,
+      draggedPlanData: {
+        id: 'panel-plan-overlap',
+        title: 'Design Review',
+      },
+    });
+
+    return () => {
+      useCalendarDragStore.getState().endDrag();
+    };
+  }, []);
+
+  return (
+    <Slot>
+      <PanelDragPreview dayIndex={2} />
+    </Slot>
+  );
+}
+
+/**
+ * パネルからのドラッグ中に表示される2つの要素:
+ * 1. **DragOverlay**: マウスに追従するカード（surface-raised + タグ色）
+ * 2. **PanelDragPreview**: カレンダーグリッド上のドロップ先プレビュー
+ *
+ * 重複時は PanelDragPreview に ring-destructive が付与される。
+ */
+export const PanelDragPreviewOverlapping: Story = {
+  name: 'PanelDragPreview (Overlapping)',
+  render: () => (
+    <div className="flex flex-col gap-2">
+      <DocsNote>
+        <strong>Panel → Calendar ドラッグ時の表示要素</strong>
+        <p className="mt-1">
+          ドラッグ中は2つの要素が同時に表示される。マウスに追従する DragOverlay（上）と、
+          カレンダーグリッド上のドロップ先プレビュー（下）。重複時はプレビューに ring-destructive
+          が付与される。
+        </p>
+      </DocsNote>
+      <PanelDragPreviewPair />
     </div>
   ),
 };
@@ -455,7 +580,12 @@ export const AllStates: Story = {
       </section>
 
       <section>
-        <Label>6. TimeSelection — 空き領域ドラッグで時間選択</Label>
+        <Label>6. PanelDragPreview (Overlapping) — DragOverlay + ドロップ先プレビュー</Label>
+        <PanelDragPreviewPair />
+      </section>
+
+      <section>
+        <Label>7. TimeSelection — 空き領域ドラッグで時間選択</Label>
         <Slot>
           <DragSelectionPreview
             selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
@@ -465,7 +595,7 @@ export const AllStates: Story = {
       </section>
 
       <section>
-        <Label>7. TimeSelectionOverlap — 時間選択（重複エラー）</Label>
+        <Label>8. TimeSelectionOverlap — 時間選択（重複エラー）</Label>
         <Slot>
           <DragSelectionPreview
             selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}

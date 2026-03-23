@@ -2,8 +2,12 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
+import { getTagColorClasses } from '@/lib/tag-colors';
+
 import { Checkbox } from './checkbox';
 import { Label } from './label';
+
+const greenColor = getTagColorClasses('green');
 
 const meta = {
   title: 'Components/UI/Checkbox',
@@ -83,7 +87,6 @@ export const WithLabel: Story = {
 export const WithCustomColor: Story = {
   render: function CustomColorCheckbox() {
     const [checked, setChecked] = useState(true);
-    const tagColor = '#10b981';
 
     return (
       <div className="flex items-center gap-2">
@@ -92,8 +95,8 @@ export const WithCustomColor: Story = {
           checked={checked}
           onCheckedChange={(c) => setChecked(c === true)}
           style={{
-            borderColor: tagColor,
-            backgroundColor: checked ? tagColor : 'transparent',
+            borderColor: greenColor.cssVar,
+            backgroundColor: checked ? greenColor.cssVar : 'transparent',
           }}
         />
         <Label htmlFor="tag-filter">タグフィルター（カスタムカラー）</Label>
@@ -106,7 +109,6 @@ export const AllPatterns: Story = {
   render: function AllPatternsStory() {
     const [checked1, setChecked1] = useState(false);
     const [checked2, setChecked2] = useState(true);
-    const tagColor = '#10b981';
 
     return (
       <div className="flex flex-col items-start gap-6">
@@ -145,8 +147,8 @@ export const AllPatterns: Story = {
             checked={checked2}
             onCheckedChange={(c) => setChecked2(c === true)}
             style={{
-              borderColor: tagColor,
-              backgroundColor: checked2 ? tagColor : 'transparent',
+              borderColor: greenColor.cssVar,
+              backgroundColor: checked2 ? greenColor.cssVar : 'transparent',
             }}
           />
           <Label htmlFor="tag">仕事</Label>
