@@ -91,6 +91,8 @@ const eslintConfig = defineConfig([
           { group: ['@/features/stats', '@/features/stats/**'], message: '上位層featureのimport禁止。' },
           { group: ['@/features/ai', '@/features/ai/**'], message: '上位層featureのimport禁止。' },
           { group: ['@/features/search', '@/features/search/**'], message: '上位層featureのimport禁止。' },
+          { group: ['@/features/history', '@/features/history/**'], message: '上位層featureのimport禁止。' },
+          { group: ['@/features/palette', '@/features/palette/**'], message: '上位層featureのimport禁止。' },
           // Cross-cutting・Independent禁止
           { group: ['@/features/settings', '@/features/settings/**'], message: 'settingsのimport禁止。' },
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
@@ -103,12 +105,14 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Layer 2 (calendar, stats, search): Layer 0+1 barrel のみ許可
+  // Layer 2 (calendar, stats, search, history, palette): Layer 0+1 barrel のみ許可
   {
     files: [
       'src/features/calendar/**/*.{ts,tsx}',
       'src/features/stats/**/*.{ts,tsx}',
       'src/features/search/**/*.{ts,tsx}',
+      'src/features/history/**/*.{ts,tsx}',
+      'src/features/palette/**/*.{ts,tsx}',
     ],
     rules: {
       'no-restricted-imports': ['error', {
@@ -118,6 +122,8 @@ const eslintConfig = defineConfig([
           { group: ['@/features/stats', '@/features/stats/**'], message: '同層featureのimport禁止。' },
           { group: ['@/features/search', '@/features/search/**'], message: '同層featureのimport禁止。' },
           { group: ['@/features/ai', '@/features/ai/**'], message: '同層featureのimport禁止。' },
+          { group: ['@/features/history', '@/features/history/**'], message: '同層featureのimport禁止。' },
+          { group: ['@/features/palette', '@/features/palette/**'], message: '同層featureのimport禁止。' },
           // Cross-cutting・Independent禁止
           { group: ['@/features/settings', '@/features/settings/**'], message: 'settingsのimport禁止。' },
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
@@ -143,6 +149,8 @@ const eslintConfig = defineConfig([
           { group: ['@/features/stats', '@/features/stats/**'], message: '同層featureのimport禁止。' },
           { group: ['@/features/search', '@/features/search/**'], message: '同層featureのimport禁止。' },
           { group: ['@/features/ai', '@/features/ai/**'], message: '自己import禁止。' },
+          { group: ['@/features/history', '@/features/history/**'], message: '同層featureのimport禁止。' },
+          { group: ['@/features/palette', '@/features/palette/**'], message: '同層featureのimport禁止。' },
           // Cross-cutting・Independent禁止
           { group: ['@/features/settings', '@/features/settings/**'], message: 'settingsのimport禁止。' },
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
