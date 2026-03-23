@@ -165,7 +165,7 @@ export const entriesCoreRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         data: updateEntrySchema,
-        expectedUpdatedAt: z.string().datetime().optional(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
