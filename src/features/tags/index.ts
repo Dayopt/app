@@ -28,8 +28,6 @@ export {
   useTag,
   // Operations
   useTagOperations,
-  // Realtime
-  useTagRealtime,
   // Tags CRUD
   useTags,
   useTagsMap,

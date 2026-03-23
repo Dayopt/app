@@ -43,7 +43,6 @@ export { useEntries, useEntry, useEntryCreate, useEntryMutations } from './hooks
 // =============================================================================
 // Stores
 // =============================================================================
-export { useEntryCacheStore } from './stores/useEntryCacheStore';
 export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 export type { AnchorRect } from './stores/useEntryInspectorStore';
 
