@@ -144,11 +144,30 @@ export const entriesCoreRouter = createTRPCRouter({
 
       const service = createEntryService(ctx.supabase);
       try {
+        const { tagId, ...entryInput } = input;
         const result = await service.create({
           userId: ctx.userId,
-          input,
+          input: entryInput,
           preventOverlappingEntries: true,
         });
+
+        // タグ指定時: エントリ作成と同時にタグを関連付け
+        if (tagId && result.id) {
+          const { error: tagError } = await ctx.supabase.from('entry_tags').insert({
+            user_id: ctx.userId,
+            entry_id: result.id,
+            tag_id: tagId,
+          });
+          if (tagError) {
+            // タグ関連付け失敗はエントリ作成を巻き戻さない（ベストエフォート）
+            captureBusinessEvent('entry.tag_attach_failed', {
+              entryId: result.id,
+              tagId,
+              error: tagError.message,
+            });
+          }
+        }
+
         captureBusinessEvent('entry.created', {
           entryType: input.origin ?? 'plan',
         });

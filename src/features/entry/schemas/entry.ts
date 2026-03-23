@@ -38,7 +38,12 @@ const baseEntrySchema = z.object({
 });
 
 /** エントリ作成スキーマ */
-export const createEntrySchema = baseEntrySchema.superRefine(timeOrderRefine);
+export const createEntrySchema = baseEntrySchema
+  .extend({
+    /** 作成と同時にタグを関連付け（1トランザクション） */
+    tagId: z.string().uuid().optional(),
+  })
+  .superRefine(timeOrderRefine);
 
 /** エントリ更新スキーマ（全フィールド任意） */
 export const updateEntrySchema = baseEntrySchema.partial().superRefine(timeOrderRefine);

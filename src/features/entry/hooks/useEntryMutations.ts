@@ -44,7 +44,8 @@ const ANIMATION_CLEANUP_DELAY = 600;
  * deleteEntry.mutate({ id: '123' })
  * ```
  */
-export function useEntryMutations() {
+export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
+  const suppressCreateToast = options?.suppressCreateToast ?? false;
   const t = useTranslations();
   const queryClient = useQueryClient();
   const utils = api.useUtils();
@@ -84,7 +85,7 @@ export function useEntryMutations() {
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        tagId: null,
+        tagId: input.tagId ?? null,
       };
 
       // 新規作成アニメーション用にマーク（キャッシュ更新前に設定 → 再レンダー時に即反映）
@@ -98,7 +99,7 @@ export function useEntryMutations() {
 
       return { previousEntriesList, tempId };
     },
-    onSuccess: (newEntry, _input, context) => {
+    onSuccess: (newEntry, input, context) => {
       logger.debug('[mutation:create] onSuccess', { id: newEntry.id });
 
       // 新規作成アニメーション: tempId → 本番IDに切替
@@ -110,7 +111,7 @@ export function useEntryMutations() {
       // entries.create はタグなし EntryRow を返すため、tagId を補完して EntryWithTags に昇格
       const newEntryWithTagId: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         ...newEntry,
-        tagId: null,
+        tagId: input.tagId ?? null,
       };
       type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
 
@@ -128,7 +129,7 @@ export function useEntryMutations() {
 
       if (isFirstEntry) {
         openInspector(newEntry.id);
-      } else {
+      } else if (!suppressCreateToast) {
         const displayTitle = newEntry.title || t('entry.untitled');
         toast.success(t('plan.toast.created', { title: displayTitle }), {
           action: {
@@ -141,7 +142,10 @@ export function useEntryMutations() {
       }
 
       // 個別エントリのキャッシュを設定
-      utils.entries.getById.setData({ id: newEntry.id }, { ...newEntry, tagId: null });
+      utils.entries.getById.setData(
+        { id: newEntry.id },
+        { ...newEntry, tagId: input.tagId ?? null },
+      );
     },
     onError: (error, _input, context) => {
       logger.error('[mutation:create] onError', error);
@@ -171,6 +175,7 @@ export function useEntryMutations() {
     },
     onSettled: () => {
       void utils.entries.list.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -332,6 +337,7 @@ export function useEntryMutations() {
     },
     onSettled: async () => {
       void utils.entries.list.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -392,6 +398,7 @@ export function useEntryMutations() {
       logger.debug('[mutation:delete] onSuccess', { id });
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
+      void utils.history.getRecentBlocks.invalidate();
     },
     onError: (error, { id }, context) => {
       logger.error('[mutation:delete] onError', error);

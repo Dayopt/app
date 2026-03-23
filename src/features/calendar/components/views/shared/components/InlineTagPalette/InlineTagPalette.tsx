@@ -15,10 +15,11 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { useEntryMutations } from '@/features/entry';
+import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
-import { resolveTagColor } from '@/lib/tag-colors';
+import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
@@ -40,16 +41,25 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
 
-  const { createEntry, bulkAddTags } = useEntryMutations();
+  const { createEntry } = useEntryMutations({ suppressCreateToast: true });
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
+  const [hoveredTag, setHoveredTag] = useState<HoveredTagInfo | null>(null);
+  const lockedRef = useRef(false);
   const highlightRef = useRef<HTMLDivElement>(null);
+
+  // 選択後はホバークリアを無視（mouseLeaveでちらつかないように）
+  const handleTagHover = useCallback((tag: HoveredTagInfo | null) => {
+    if (tag === null && lockedRef.current) return;
+    setHoveredTag(tag);
+  }, []);
 
   // エントリ作成ハンドラー（タグ必須、タグ名をタイトルに設定）
   const handleCreate = useCallback(
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
 
+      lockedRef.current = true;
       setIsCreating(true);
 
       const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
@@ -80,30 +90,23 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         title: tagName,
       });
 
+      // ハイライトを即座に消す（pendingSelectionの値は既にローカル変数に展開済み）
+      clearPendingSelection();
+
       createEntry.mutate(
         {
           title: tagName,
           start_time: utcStart.toISOString(),
           end_time: utcEnd.toISOString(),
+          tagId,
         },
         {
-          onSuccess: (result) => {
-            if (result?.id) {
-              bulkAddTags.mutate({
-                entryIds: [result.id],
-                tagId,
-              });
-            }
-            clearPendingSelection();
-            setIsCreating(false);
-          },
-          onError: () => {
-            setIsCreating(false);
-          },
+          onSuccess: () => setIsCreating(false),
+          onError: () => setIsCreating(false),
         },
       );
     },
-    [pendingSelection, isCreating, timezone, createEntry, bulkAddTags, clearPendingSelection],
+    [pendingSelection, isCreating, timezone, createEntry, clearPendingSelection],
   );
 
   // 新規タグ作成 → エントリ作成
@@ -166,6 +169,15 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const durationText =
     hours > 0 ? (minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`) : `${minutes}m`;
 
+  // ホバー中タグの色を解決
+  const accentColor = hoveredTag
+    ? getTagColorClasses(hoveredTag.color).cssVar
+    : 'var(--entry-default)';
+  const tintColor = hoveredTag
+    ? getTagColorClasses(hoveredTag.color).cssVarTint
+    : 'color-mix(in oklch, var(--entry-default) 12%, var(--background))';
+  const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
+
   return (
     <>
       {/* 選択範囲ハイライト（カレンダーグリッド上） */}
@@ -180,33 +192,34 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           style={{
             top: selectionTop,
             height: selectionHeight,
+            transition: 'background-color 150ms ease',
           }}
         >
           {/* 左アクセントストリップ */}
           <div
-            className="shrink-0"
+            className="shrink-0 transition-colors duration-150"
             style={{
               width: '3px',
-              backgroundColor: 'var(--entry-default)',
+              backgroundColor: accentColor,
             }}
           />
           {/* カード本体 */}
           <div
-            className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
+            className="min-w-0 flex-1 overflow-hidden rounded-r-lg transition-colors duration-150"
             style={{
-              backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
+              backgroundColor: tintColor,
             }}
           >
             {selectionHeight < 40 ? (
               <div className="flex h-full items-center px-2">
-                <span className="text-muted-foreground truncate text-xs tabular-nums">
-                  {timeLabel}
+                <span className="text-foreground truncate text-xs font-normal">
+                  {hoveredTag ? displayName : timeLabel}
                 </span>
               </div>
             ) : (
               <div className="flex h-full flex-col gap-1 p-2">
-                <span className="text-muted-foreground text-sm leading-tight font-normal">
-                  {tCalendar('event.selectTag')}
+                <span className="text-foreground text-sm leading-tight font-normal">
+                  {displayName}
                 </span>
                 <span className="text-muted-foreground text-xs leading-tight tabular-nums">
                   {timeLabel}
@@ -223,6 +236,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         onOpenChange={handleOpenChange}
         onSelect={handleCreate}
         onCreateAndSelect={handleCreateAndSelect}
+        onTagHover={handleTagHover}
         anchorRef={highlightRef}
       />
     </>

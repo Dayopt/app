@@ -47,7 +47,7 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
 
-  const displayLabel = tagName || t('common.tags.add');
+  const displayLabel = tagName || plan.title || t('common.tags.add');
 
   if (isCompact) {
     return (
