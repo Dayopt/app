@@ -9,7 +9,6 @@ import type { CalendarViewType } from '@/features/calendar';
 import { isCalendarViewPath } from '@/features/calendar';
 import type { StatsTab } from '@/features/stats';
 import { StatsPageContent } from '@/features/stats';
-import { PageSwitcher } from '@/shell/layout/PageSwitcher';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
@@ -85,7 +84,7 @@ function extractStatsTab(pathname: string): StatsTab {
 
 function StatsClientView({ pathname }: { pathname: string }) {
   const tab = extractStatsTab(pathname);
-  return <StatsPageContent tab={tab} headerSlot={<PageSwitcher />} />;
+  return <StatsPageContent tab={tab} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +99,7 @@ interface ClientPageRouterProps {
  * クライアントサイドページ切り替え
  *
  * 初回ロード / リロード時は Next.js が SSR した {children} をそのまま表示。
- * PageSwitcher が pushState + useClientRouterStore.switchToPage() を呼ぶと、
+ * PageNav が pushState + useClientRouterStore.switchToPage() を呼ぶと、
  * CalendarViewClient / StatsPageContent をクライアントサイドで直接レンダリングする。
  *
  * これにより router.push() のサーバーラウンドトリップを回避し、
@@ -114,7 +113,7 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
 
   // ブラウザ戻る/進む時: popstate イベントで clientPage を同期
   // pathname の useEffect ではなく popstate を直接リスンすることで、
-  // pushState による遷移（PageSwitcher）と区別し race condition を防ぐ
+  // pushState による遷移（PageNav）と区別し race condition を防ぐ
   useEffect(() => {
     const handlePopState = () => {
       const pageType = getPageType(window.location.pathname);

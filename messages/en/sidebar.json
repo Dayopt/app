@@ -1,5 +1,9 @@
 {
   "sidebar": {
+    "pageNav": {
+      "calendar": "Calendar",
+      "stats": "Stats"
+    },
     "calendar": {
       "title": "Calendar"
     },

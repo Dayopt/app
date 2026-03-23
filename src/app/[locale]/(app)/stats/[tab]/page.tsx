@@ -7,8 +7,6 @@ import type { StatsTab } from '@/features/stats';
 import { StatsPageContent, prefetchStatsData } from '@/features/stats';
 import type { Locale } from '@/platform/i18n/routing';
 import { HydrationBoundary } from '@/platform/trpc/server';
-import { PageSwitcher } from '@/shell/layout/PageSwitcher';
-
 import StatsTabLoading from './loading';
 
 const VALID_TABS: StatsTab[] = ['review', 'progress', 'insights'];
@@ -37,7 +35,7 @@ async function StatsTabContent({ tab }: { tab: StatsTab }) {
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <StatsPageContent tab={tab} headerSlot={<PageSwitcher />} />
+      <StatsPageContent tab={tab} />
     </HydrationBoundary>
   );
 }

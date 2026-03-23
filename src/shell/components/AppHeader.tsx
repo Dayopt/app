@@ -15,7 +15,7 @@ interface AppHeaderProps {
   children: React.ReactNode;
   /** デスクトップ: 左コンテンツ後のコントロール群（DateNavigator + ViewSwitcher等） */
   controls?: React.ReactNode;
-  /** デスクトップ右側スロット: PageSwitcher等 */
+  /** デスクトップ右側スロット */
   rightSlot?: React.ReactNode;
   /** モバイル右側コンテンツ: 検索/Todayボタン等 */
   mobileRightSlot?: React.ReactNode;

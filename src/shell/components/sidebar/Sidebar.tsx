@@ -17,20 +17,21 @@ import { UserMenu } from './UserMenu';
 interface SidebarProps {
   /** Sidebarのコンテンツ（composition layerから注入） */
   children: ReactNode;
+  /** ヘッダー直下に配置するページナビゲーション（composition layerから注入） */
+  pageNav?: ReactNode;
   /** フッターに配置するアクション（通知アイコン等） */
   footerActions?: ReactNode;
   /** ランドマークのアクセシブルネーム */
   'aria-label'?: string;
 }
 
-/**
- * サイドバーコンテナ
- *
- * ヘッダー: Dayoptロゴ + 閉じるボタン
- * コンテンツ: composition layerから注入
- * フッター: UserMenu + アクション
- */
-export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
+/** サイドバーコンテナ（ヘッダー + PageNav + スクロール領域 + フッター） */
+export function Sidebar({
+  children,
+  pageNav,
+  footerActions,
+  'aria-label': ariaLabel,
+}: SidebarProps) {
   const user = useAuthStore((state) => state.user);
   const closeSidebar = useLayoutStore.use.closeSidebar();
   const { open: openSearch } = useGlobalSearch();
@@ -84,6 +85,9 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
           </HoverTooltip>
         </div>
       </div>
+
+      {/* Page Navigation */}
+      {pageNav && <div className="shrink-0 px-2 pb-2">{pageNav}</div>}
 
       {/* Content */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">

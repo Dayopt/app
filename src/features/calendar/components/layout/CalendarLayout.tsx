@@ -45,7 +45,7 @@ export interface CalendarLayoutProps {
   // Settings persistence callback
   onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
 
-  // Header right slot (PageSwitcher など)
+  // Header right slot
   rightSlot?: React.ReactNode | undefined;
 }
 

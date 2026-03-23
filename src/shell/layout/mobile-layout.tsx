@@ -13,6 +13,7 @@ import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
+import { SidebarPageNav } from './SidebarPageNav';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -73,7 +74,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
           showCloseButton={false}
           aria-label={tAria('navigationMenu')}
         >
-          <Sidebar>
+          <Sidebar pageNav={<SidebarPageNav />}>
             <SidebarContent />
           </Sidebar>
         </SheetContent>

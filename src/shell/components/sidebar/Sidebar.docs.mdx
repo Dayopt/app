@@ -14,6 +14,7 @@ Composition Layer パターンで各 feature を組み立てる。
 ```
 Sidebar (Container)
 ├── Header           Dayoptロゴ + 検索 + 閉じるボタン
+├── PageNav          [📅 カレンダー │ 📊 統計] セグメントコントロール
 ├── ScrollArea       gap-4 (16px) で各セクションを配置
 │   ├── SidebarSection "カレンダー"
 │   │   └── MiniCalendar     月カレンダー（PCのみ）
@@ -34,13 +35,14 @@ Sidebar (Container)
 
 ## ファイル構成
 
-| ファイル             | 役割                                                              |
-| -------------------- | ----------------------------------------------------------------- |
-| `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + スクロール領域 + フッター        |
-| `SidebarSection.tsx` | 折りたたみセクション（Collapsible + title + action スロット）     |
-| `BlockItem.tsx`      | パレット/履歴共通のブロックアイテム（ドット + タグ名 + duration） |
-| `UserMenu.tsx`       | フッターのユーザーアバター/名前                                   |
-| `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て               |
+| ファイル             | 役割                                                                 |
+| -------------------- | -------------------------------------------------------------------- |
+| `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + PageNav + スクロール領域 + フッター |
+| `PageNav.tsx`        | Calendar / Stats セグメントコントロール（pushState + Zustand）       |
+| `SidebarSection.tsx` | 折りたたみセクション（Collapsible + title + action スロット）        |
+| `BlockItem.tsx`      | パレット/履歴共通のブロックアイテム（ドット + タグ名 + duration）    |
+| `UserMenu.tsx`       | フッターのユーザーアバター/名前                                      |
+| `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て                  |
 
 ---
 

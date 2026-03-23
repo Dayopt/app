@@ -32,7 +32,7 @@ function StubControls() {
   );
 }
 
-/** 右スロットのスタブ（PageSwitcher等の代替） */
+/** 右スロットのスタブ */
 function StubRightSlot() {
   return (
     <div className="flex items-center gap-1">
@@ -112,7 +112,7 @@ export const WithControls: Story = {
 /**
  * rightSlotあり（デスクトップのみ表示）
  *
- * PageSwitcher など右端に配置するUIを rightSlot に注入するパターン。
+ * 右端に配置するUIを rightSlot に注入するパターン。
  */
 export const WithRightSlot: Story = {
   render: () => (

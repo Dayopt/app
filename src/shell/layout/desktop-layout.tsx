@@ -13,6 +13,7 @@ import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
+import { SidebarPageNav } from './SidebarPageNav';
 
 interface DesktopLayoutProps {
   children: React.ReactNode;
@@ -52,7 +53,10 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
             )}
           >
             <div className="h-full w-64">
-              <Sidebar footerActions={<NotificationDropdown size="sm" />}>
+              <Sidebar
+                footerActions={<NotificationDropdown size="sm" />}
+                pageNav={<SidebarPageNav />}
+              >
                 <SidebarContent />
               </Sidebar>
             </div>

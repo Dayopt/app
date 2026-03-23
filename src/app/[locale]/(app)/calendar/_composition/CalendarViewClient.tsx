@@ -20,8 +20,6 @@ import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import type { CalendarViewType } from '@/features/calendar';
 import { CalendarController, useCalendarLayout, useCalendarNavigation } from '@/features/calendar';
 import { logger } from '@/lib/logger';
-import { PageSwitcher } from '@/shell/layout/PageSwitcher';
-
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -138,7 +136,6 @@ export function CalendarViewClient({ view, initialDate, translations }: Calendar
           onToggleWeekends={composition.onToggleWeekends}
           onSettingsChange={composition.onSettingsChange}
           onDateSelect={composition.onDateSelect}
-          rightSlot={<PageSwitcher />}
         />
       </FeatureErrorBoundary>
     </div>

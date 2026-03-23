@@ -45,8 +45,6 @@ const ProgressView = dynamic(
 interface StatsPageContentProps {
   /** URL から決定されたアクティブタブ */
   tab: StatsTab;
-  /** ヘッダー右側のカスタムスロット（PageSwitcher など） */
-  headerSlot?: React.ReactNode;
 }
 
 const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
@@ -61,7 +59,7 @@ const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
  *
  * Review / Progress / Insights の3タブ構成。タブはURLベースで切り替え。
  */
-export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
+export function StatsPageContent({ tab }: StatsPageContentProps) {
   const t = useTranslations();
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<StatsTab>(tab);
@@ -101,7 +99,6 @@ export function StatsPageContent({ tab, headerSlot }: StatsPageContentProps) {
             )}
           </>
         }
-        rightSlot={headerSlot}
       >
         <StatsDateDisplay currentDate={currentDate} granularity={granularity} />
       </AppHeader>
