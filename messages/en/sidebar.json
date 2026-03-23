@@ -23,6 +23,7 @@
       "remove": "Remove",
       "changeDuration": "Change duration",
       "tagAssignFailed": "Failed to assign tag",
+      "placed": "Added {name} at {time}",
       "reorderMode": "Reorder mode",
       "normalMode": "Normal mode"
     },

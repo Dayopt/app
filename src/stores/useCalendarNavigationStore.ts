@@ -10,15 +10,21 @@ import { create } from 'zustand';
 interface CalendarNavigationStore {
   /** ナビゲーション待ちの日付 */
   pendingDate: Date | null;
+  /** カレンダーが現在表示している日付（CalendarNavigationContext から同期） */
+  viewedDate: Date;
   /** 日付ナビゲーションを要求 */
   navigateTo: (date: Date) => void;
   /** 要求をクリア（カレンダー側が消費後に呼ぶ） */
   clearPending: () => void;
+  /** 表示日付を同期（CalendarNavigationContext → store） */
+  setViewedDate: (date: Date) => void;
 }
 
 /** カレンダーの日付ナビゲーションを仲介するZustandストア */
 export const useCalendarNavigationStore = create<CalendarNavigationStore>()((set) => ({
   pendingDate: null,
+  viewedDate: new Date(),
   navigateTo: (date) => set({ pendingDate: date }),
   clearPending: () => set({ pendingDate: null }),
+  setViewedDate: (date) => set({ viewedDate: date }),
 }));

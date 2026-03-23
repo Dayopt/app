@@ -23,6 +23,7 @@
       "remove": "削除",
       "changeDuration": "時間を変更",
       "tagAssignFailed": "タグの割り当てに失敗しました",
+      "placed": "{name} を {time} に追加しました",
       "reorderMode": "並び替えモード",
       "normalMode": "通常モード"
     },
