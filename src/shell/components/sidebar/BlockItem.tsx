@@ -11,6 +11,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { useMemo } from 'react';
 
+import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 /** ブロックアイテムのドラッグデータ（DnDProvider で識別に使用） */
@@ -32,6 +33,8 @@ interface BlockItemProps {
   tagId?: string;
   /** メニュートリガーのスロット（DropdownMenu等を渡す） */
   menuSlot?: React.ReactNode;
+  /** ドットの表示バリアント: solid=塗り（デフォルト）, outline=中抜き */
+  dotVariant?: 'solid' | 'outline';
 }
 
 function formatDuration(minutes: number): string {
@@ -50,6 +53,7 @@ export function BlockItem({
   className,
   tagId,
   menuSlot,
+  dotVariant = 'solid',
 }: BlockItemProps) {
   const dragData = useMemo<BlockDragData>(
     () => ({ type: 'palette-item', tagId: tagId ?? '', tagName, tagColor, durationMinutes }),
@@ -61,6 +65,8 @@ export function BlockItem({
     data: dragData,
     disabled: !tagId,
   });
+
+  const colorClasses = getTagColorClasses(tagColor);
 
   return (
     <div
@@ -79,12 +85,17 @@ export function BlockItem({
         onClick={onClick}
         className="flex min-w-0 flex-1 items-center gap-2 px-2"
       >
-        {/* タグカラードット */}
+        {/* タグカラードット — チェックボックスと同じインラインstyle方式で統一 */}
         <span
           className={cn(
-            'size-2.5 shrink-0 rounded-full',
-            tagColor ? `bg-tag-${tagColor}` : 'bg-muted',
+            'shrink-0 rounded-full',
+            dotVariant === 'outline' ? 'size-3 border-2 bg-transparent' : 'size-2.5',
           )}
+          style={
+            dotVariant === 'outline'
+              ? { borderColor: colorClasses.cssVar }
+              : { backgroundColor: colorClasses.cssVar }
+          }
           aria-hidden="true"
         />
 

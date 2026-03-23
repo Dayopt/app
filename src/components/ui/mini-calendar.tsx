@@ -241,7 +241,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 rounded"
             onClick={handlePrevMonth}
             aria-label={tActions('previousMonth')}
           >
@@ -288,7 +288,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -mr-0.5 rounded"
             onClick={handleNextMonth}
             aria-label={tActions('nextMonth')}
           >

@@ -18,7 +18,9 @@
       "updateFailed": "更新に失敗しました",
       "remove": "削除",
       "changeDuration": "時間を変更",
-      "tagAssignFailed": "タグの割り当てに失敗しました"
+      "tagAssignFailed": "タグの割り当てに失敗しました",
+      "reorderMode": "並び替えモード",
+      "normalMode": "通常モード"
     },
     "recentBlocks": {
       "title": "履歴",

@@ -18,7 +18,9 @@
       "updateFailed": "Failed to update",
       "remove": "Remove",
       "changeDuration": "Change duration",
-      "tagAssignFailed": "Failed to assign tag"
+      "tagAssignFailed": "Failed to assign tag",
+      "reorderMode": "Reorder mode",
+      "normalMode": "Normal mode"
     },
     "recentBlocks": {
       "title": "Recent",

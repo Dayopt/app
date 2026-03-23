@@ -86,7 +86,7 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
       </div>
 
       {/* Content */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
         {children}
       </div>
 
