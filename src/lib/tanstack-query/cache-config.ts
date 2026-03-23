@@ -2,22 +2,22 @@
  * TanStack Queryのキャッシュ戦略設定
  *
  * 機能ごとに適切なstaleTime/gcTimeを定義
+ * データ同期は refetchOnWindowFocus（タブ切り替え時）+ mutation後のinvalidate で実現
  *
  * @see https://tanstack.com/query/latest/docs/framework/react/guides/caching
  */
 
 /**
- * リアルタイム性が重要なデータ
- * - イベント（カレンダー表示）
- * - カレンダー（同期重要）
+ * アクティブデータ（頻繁にUIに表示されるデータ）
+ * - エントリ（カレンダー表示）
+ * - プラン・レコード
  *
- * Supabase Realtime購読により常に最新データを保持
- * staleTime=5分: Realtime経由の更新は即座に反映されるため、長めに設定して再フェッチを抑制
+ * staleTime=30秒: タブ切り替え時に30秒以上経過していれば自動再取得
  * gcTime=10分: ナビゲーション時のキャッシュ活用のため長めに設定
  */
-export const realtimeCache = {
-  staleTime: 5 * 60 * 1000, // 5分（Realtime購読で更新されるため長めでOK）
-  gcTime: 10 * 60 * 1000, // 10分（前後の期間をキャッシュ保持）
+export const activeCache = {
+  staleTime: 30 * 1000, // 30秒
+  gcTime: 10 * 60 * 1000, // 10分
 };
 
 /**
@@ -54,22 +54,22 @@ export const shortTermCache = {
  * 機能別のキャッシュ戦略マトリクス
  */
 export const cacheStrategies = {
-  events: realtimeCache,
-  calendars: realtimeCache,
-  calendarViewState: standardCache, // ビュー状態はリアルタイム不要
+  events: activeCache,
+  calendars: activeCache,
+  calendarViewState: standardCache, // ビュー状態は頻繁に変更されない
   tags: standardCache,
   tagGroups: standardCache, // タググループは頻繁に変更されない
   itemTags: standardCache,
   tagStats: standardCache,
   tagUsage: shortTermCache, // タグ使用数は頻繁に更新される
   userSettings: staticCache,
-  plans: realtimeCache, // プランはリアルタイム性が重要
+  plans: activeCache, // プランはカレンダー表示で重要
   planActivities: shortTermCache, // アクティビティ履歴は少し遅れてもOK
   recordActivities: shortTermCache, // レコードアクティビティ履歴
-  records: realtimeCache, // レコードもリアルタイム性が重要（カレンダー表示）
-  entries: realtimeCache, // エントリ（plans+records統合）もリアルタイム性が重要
-  sessions: realtimeCache, // セッションもリアルタイム性が重要
-  notifications: shortTermCache, // 通知はリアルタイム性が重要だが、短期キャッシュで十分
+  records: activeCache, // レコードもカレンダー表示で重要
+  entries: activeCache, // エントリ（plans+records統合）もカレンダー表示で重要
+  sessions: activeCache,
+  notifications: shortTermCache, // 通知は短期キャッシュで十分
   profile: staticCache, // プロフィールはめったに変更されない
 } as const;
 
