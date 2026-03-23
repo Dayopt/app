@@ -1,6 +1,11 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '12.2.3 (519615d)';
+  };
   graphql_public: {
     Tables: {
       [_ in never]: never;
@@ -17,29 +22,6 @@ export type Database = {
           variables?: Json;
         };
         Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-  pgbouncer: {
-    Tables: {
-      [_ in never]: never;
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      get_auth: {
-        Args: { p_usename: string };
-        Returns: {
-          password: string;
-          username: string;
-        }[];
       };
     };
     Enums: {
@@ -254,32 +236,66 @@ export type Database = {
       };
       email_suppressions: {
         Row: {
-          id: string;
+          created_at: string;
           email: string;
+          id: string;
           reason: string;
           source_event_id: string | null;
-          created_at: string;
         };
         Insert: {
-          id?: string;
+          created_at?: string;
           email: string;
+          id?: string;
           reason: string;
           source_event_id?: string | null;
-          created_at?: string;
         };
         Update: {
-          id?: string;
+          created_at?: string;
           email?: string;
+          id?: string;
           reason?: string;
           source_event_id?: string | null;
-          created_at?: string;
+        };
+        Relationships: [];
+      };
+      entity_types: {
+        Row: {
+          created_at: string | null;
+          description: string | null;
+          display_name: string;
+          display_name_ja: string;
+          enabled: boolean | null;
+          icon: string | null;
+          sort_order: number | null;
+          type: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          created_at?: string | null;
+          description?: string | null;
+          display_name: string;
+          display_name_ja: string;
+          enabled?: boolean | null;
+          icon?: string | null;
+          sort_order?: number | null;
+          type: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          created_at?: string | null;
+          description?: string | null;
+          display_name?: string;
+          display_name_ja?: string;
+          enabled?: boolean | null;
+          icon?: string | null;
+          sort_order?: number | null;
+          type?: string;
+          updated_at?: string | null;
         };
         Relationships: [];
       };
       entries: {
         Row: {
-          actual_end_time: string | null;
-          actual_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -288,9 +304,6 @@ export type Database = {
           fulfillment_score: number | null;
           id: string;
           origin: string;
-          recurrence_end_date: string | null;
-          recurrence_rule: string | null;
-          recurrence_type: string | null;
           reminder_at: string | null;
           reminder_minutes: number | null;
           reminder_sent: boolean;
@@ -301,8 +314,6 @@ export type Database = {
           user_id: string;
         };
         Insert: {
-          actual_end_time?: string | null;
-          actual_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
@@ -311,9 +322,6 @@ export type Database = {
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
-          recurrence_end_date?: string | null;
-          recurrence_rule?: string | null;
-          recurrence_type?: string | null;
           reminder_at?: string | null;
           reminder_minutes?: number | null;
           reminder_sent?: boolean;
@@ -324,8 +332,6 @@ export type Database = {
           user_id: string;
         };
         Update: {
-          actual_end_time?: string | null;
-          actual_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
@@ -334,9 +340,6 @@ export type Database = {
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
-          recurrence_end_date?: string | null;
-          recurrence_rule?: string | null;
-          recurrence_type?: string | null;
           reminder_at?: string | null;
           reminder_minutes?: number | null;
           reminder_sent?: boolean;
@@ -389,65 +392,8 @@ export type Database = {
           {
             foreignKeyName: 'plan_activities_plan_id_fkey';
             columns: ['entry_id'];
+            isOneToOne: false;
             referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      entry_instances: {
-        Row: {
-          created_at: string;
-          description: string | null;
-          entry_id: string;
-          exception_type: string | null;
-          id: string;
-          instance_date: string;
-          instance_end: string | null;
-          instance_start: string | null;
-          original_date: string | null;
-          title: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          description?: string | null;
-          entry_id: string;
-          exception_type?: string | null;
-          id?: string;
-          instance_date: string;
-          instance_end?: string | null;
-          instance_start?: string | null;
-          original_date?: string | null;
-          title?: string | null;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          description?: string | null;
-          entry_id?: string;
-          exception_type?: string | null;
-          id?: string;
-          instance_date?: string;
-          instance_end?: string | null;
-          instance_start?: string | null;
-          original_date?: string | null;
-          title?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'plan_instances_plan_id_fkey';
-            columns: ['entry_id'];
-            referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'entry_instances_user_id_fkey';
-            columns: ['user_id'];
-            referencedRelation: 'users';
             referencedColumns: ['id'];
           },
         ];
@@ -478,12 +424,14 @@ export type Database = {
           {
             foreignKeyName: 'plan_tags_plan_id_fkey';
             columns: ['entry_id'];
+            isOneToOne: true;
             referencedRelation: 'entries';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'plan_tags_tag_id_fkey';
             columns: ['tag_id'];
+            isOneToOne: false;
             referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
@@ -579,47 +527,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      palette_items: {
-        Row: {
-          id: string;
-          user_id: string;
-          tag_id: string;
-          duration_minutes: number;
-          sort_order: number;
-          is_pinned: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          tag_id: string;
-          duration_minutes: number;
-          sort_order?: number;
-          is_pinned?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          tag_id?: string;
-          duration_minutes?: number;
-          sort_order?: number;
-          is_pinned?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'palette_items_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       notifications: {
         Row: {
           created_at: string;
@@ -658,13 +565,56 @@ export type Database = {
           {
             foreignKeyName: 'notifications_reflection_id_fkey';
             columns: ['reflection_id'];
+            isOneToOne: false;
             referencedRelation: 'reflections';
             referencedColumns: ['id'];
           },
           {
             foreignKeyName: 'notifications_related_plan_id_fkey';
             columns: ['entry_id'];
+            isOneToOne: false;
             referencedRelation: 'entries';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      palette_items: {
+        Row: {
+          created_at: string;
+          duration_minutes: number;
+          id: string;
+          is_pinned: boolean;
+          sort_order: number;
+          tag_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          duration_minutes: number;
+          id?: string;
+          is_pinned?: boolean;
+          sort_order?: number;
+          tag_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          duration_minutes?: number;
+          id?: string;
+          is_pinned?: boolean;
+          sort_order?: number;
+          tag_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'palette_items_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
         ];
@@ -677,6 +627,9 @@ export type Database = {
           full_name: string | null;
           id: string;
           onboarding_completed_at: string | null;
+          stripe_customer_id: string | null;
+          subscription_id: string | null;
+          subscription_status: string;
           updated_at: string;
           username: string | null;
         };
@@ -687,6 +640,9 @@ export type Database = {
           full_name?: string | null;
           id: string;
           onboarding_completed_at?: string | null;
+          stripe_customer_id?: string | null;
+          subscription_id?: string | null;
+          subscription_status?: string;
           updated_at?: string;
           username?: string | null;
         };
@@ -697,6 +653,9 @@ export type Database = {
           full_name?: string | null;
           id?: string;
           onboarding_completed_at?: string | null;
+          stripe_customer_id?: string | null;
+          subscription_id?: string | null;
+          subscription_status?: string;
           updated_at?: string;
           username?: string | null;
         };
@@ -756,11 +715,100 @@ export type Database = {
         };
         Relationships: [];
       };
+      stripe_webhook_events: {
+        Row: {
+          event_id: string;
+          event_type: string;
+          id: string;
+          processed_at: string;
+        };
+        Insert: {
+          event_id: string;
+          event_type: string;
+          id?: string;
+          processed_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          event_type?: string;
+          id?: string;
+          processed_at?: string;
+        };
+        Relationships: [];
+      };
+      tag_operation_logs: {
+        Row: {
+          affected_tag_ids: string[] | null;
+          created_at: string | null;
+          details: Json | null;
+          id: string;
+          operation_type: string;
+          user_id: string;
+        };
+        Insert: {
+          affected_tag_ids?: string[] | null;
+          created_at?: string | null;
+          details?: Json | null;
+          id?: string;
+          operation_type: string;
+          user_id: string;
+        };
+        Update: {
+          affected_tag_ids?: string[] | null;
+          created_at?: string | null;
+          details?: Json | null;
+          id?: string;
+          operation_type?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      tag_relations: {
+        Row: {
+          created_at: string | null;
+          entity_id: string;
+          entity_type: string;
+          id: string;
+          tag_id: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          entity_id: string;
+          entity_type: string;
+          id?: string;
+          tag_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          entity_id?: string;
+          entity_type?: string;
+          id?: string;
+          tag_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tag_relations_entity_type_fkey';
+            columns: ['entity_type'];
+            isOneToOne: false;
+            referencedRelation: 'entity_types';
+            referencedColumns: ['type'];
+          },
+          {
+            foreignKeyName: 'tag_relations_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       tags: {
         Row: {
           color: string | null;
           created_at: string | null;
-          description: string | null;
           id: string;
           is_active: boolean;
           name: string;
@@ -771,7 +819,6 @@ export type Database = {
         Insert: {
           color?: string | null;
           created_at?: string | null;
-          description?: string | null;
           id?: string;
           is_active?: boolean;
           name: string;
@@ -782,7 +829,6 @@ export type Database = {
         Update: {
           color?: string | null;
           created_at?: string | null;
-          description?: string | null;
           id?: string;
           is_active?: boolean;
           name?: string;
@@ -807,6 +853,9 @@ export type Database = {
           created_at: string;
           date_format: string;
           default_duration: number;
+          default_view: string;
+          hour_height_density: string;
+          ical_feed_token: string | null;
           id: string;
           personalization_ranked_values: Json | null;
           personalization_values: Json | null;
@@ -837,6 +886,9 @@ export type Database = {
           created_at?: string;
           date_format?: string;
           default_duration?: number;
+          default_view?: string;
+          hour_height_density?: string;
+          ical_feed_token?: string | null;
           id?: string;
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
@@ -867,6 +919,9 @@ export type Database = {
           created_at?: string;
           date_format?: string;
           default_duration?: number;
+          default_view?: string;
+          hour_height_density?: string;
+          ical_feed_token?: string | null;
           id?: string;
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
@@ -887,15 +942,75 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      tag_relations_stats: {
+        Row: {
+          entity_type: string | null;
+          last_used_at: string | null;
+          tag_id: string | null;
+          unique_entities: number | null;
+          usage_count: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'tag_relations_entity_type_fkey';
+            columns: ['entity_type'];
+            isOneToOne: false;
+            referencedRelation: 'entity_types';
+            referencedColumns: ['type'];
+          },
+          {
+            foreignKeyName: 'tag_relations_tag_id_fkey';
+            columns: ['tag_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Functions: {
+      auto_shrink_neighbors: {
+        Args: {
+          p_actual_end: string;
+          p_actual_start: string;
+          p_entry_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          created_at: string | null;
+          deleted_at: string | null;
+          description: string | null;
+          duration_minutes: number | null;
+          end_time: string | null;
+          fulfillment_score: number | null;
+          id: string;
+          origin: string;
+          reminder_at: string | null;
+          reminder_minutes: number | null;
+          reminder_sent: boolean;
+          reviewed_at: string | null;
+          start_time: string | null;
+          title: string;
+          updated_at: string | null;
+          user_id: string;
+        }[];
+        SetofOptions: {
+          from: '*';
+          to: 'entries';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       batch_rename_tags: {
-        Args: { p_user_id: string; p_tag_ids: string[]; p_new_names: string[] };
+        Args: { p_new_names: string[]; p_tag_ids: string[]; p_user_id: string };
         Returns: number;
       };
       batch_reorder_tags: {
-        Args: { p_user_id: string; p_tag_ids: string[]; p_sort_orders: number[] };
+        Args: {
+          p_sort_orders: number[];
+          p_tag_ids: string[];
+          p_user_id: string;
+        };
         Returns: number;
       };
       cleanup_old_auth_audit_logs: { Args: never; Returns: undefined };
@@ -905,7 +1020,20 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: number;
       };
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json };
       delete_old_notifications: { Args: never; Returns: undefined };
+      delete_tag_completely: {
+        Args: { p_tag_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      delete_tag_promote_children: {
+        Args: { p_tag_id: string; p_user_id: string };
+        Returns: Json;
+      };
+      delete_tag_with_replacement: {
+        Args: { p_tag_id: string; p_target_tag_id: string; p_user_id: string };
+        Returns: Json;
+      };
       get_active_dates: {
         Args: { p_since: string; p_user_id: string };
         Returns: {
@@ -923,46 +1051,68 @@ export type Database = {
           user_id: string;
         }[];
       };
+      get_avg_fulfillment: {
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Returns: Json;
+      };
       get_blank_rate: {
         Args: {
-          p_end_date: string;
+          p_end_date?: string;
           p_sleep_hour?: number;
-          p_start_date: string;
+          p_start_date?: string;
           p_user_id: string;
           p_wake_hour?: number;
         };
         Returns: Json;
       };
       get_context_switches: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Returns: Json;
+      };
+      get_cumulative_time: {
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: Json;
       };
       get_daily_hours: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
           date: string;
           hours: number;
         }[];
       };
       get_dow_distribution: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
           dow: number;
           hours: number;
         }[];
       };
-      get_energy_map: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
-        Returns: {
-          avg_fulfillment: number;
-          dow: number;
-          entry_count: number;
-          hour: number;
-          total_minutes: number;
-        }[];
-      };
+      get_energy_map:
+        | {
+            Args: { p_end: string; p_start: string; p_user_id: string };
+            Returns: {
+              avg_score: number;
+              dow: number;
+              entry_count: number;
+              hour: number;
+            }[];
+          }
+        | {
+            Args: {
+              p_end_date?: string;
+              p_start_date?: string;
+              p_user_id: string;
+            };
+            Returns: {
+              avg_fulfillment: number;
+              dow: number;
+              entry_count: number;
+              hour: number;
+              total_minutes: number;
+            }[];
+          };
       get_estimation_accuracy: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
           avg_actual_minutes: number;
           avg_deviation_minutes: number;
@@ -974,32 +1124,42 @@ export type Database = {
         }[];
       };
       get_fulfillment_trend: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
           avg_score: number;
-          count: number;
           date: string;
+          entry_count: number;
         }[];
       };
       get_hourly_distribution: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
           hour: number;
           hours: number;
         }[];
       };
       get_monthly_hours: {
-        Args: { p_start_date: string; p_user_id: string };
+        Args: { p_since: string; p_user_id: string };
         Returns: {
           hours: number;
           month: string;
         }[];
       };
       get_plan_rate: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: Json;
       };
       get_plan_summary: { Args: { p_user_id: string }; Returns: Json };
+      get_stats_kpi_summary: {
+        Args: {
+          p_end_date?: string;
+          p_sleep_hour?: number;
+          p_start_date?: string;
+          p_user_id: string;
+          p_wake_hour?: number;
+        };
+        Returns: Json;
+      };
       get_tag_stats: {
         Args: { p_user_id: string };
         Returns: {
@@ -1008,22 +1168,29 @@ export type Database = {
           tag_id: string;
         }[];
       };
+      get_time_by_tag: {
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Returns: {
+          hours: number;
+          tag_color: string;
+          tag_id: string;
+          tag_name: string;
+        }[];
+      };
       get_timeboxing_adherence: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: Json;
       };
       get_total_time: { Args: { p_user_id: string }; Returns: Json };
+      get_vault_secret: { Args: { p_name: string }; Returns: string };
       get_weekly_focus_score: {
         Args: { p_user_id: string; p_weeks?: number };
         Returns: {
+          entry_count: number;
           focus_score: number;
-          total_minutes: number;
+          unique_tags: number;
           week_start: string;
         }[];
-      };
-      get_weekly_reflection_data: {
-        Args: { p_user_id: string; p_week_start: string };
-        Returns: Json;
       };
       increment_ai_usage: {
         Args: { p_month: string; p_user_id: string };
@@ -1032,6 +1199,10 @@ export type Database = {
       increment_tag_sort_orders: {
         Args: { p_user_id: string };
         Returns: undefined;
+      };
+      invoke_edge_function: {
+        Args: { p_body?: Json; p_function_name: string };
+        Returns: number;
       };
       merge_tags:
         | {
@@ -1060,551 +1231,32 @@ export type Database = {
         Returns: string;
       };
       rename_tag_group: {
-        Args: { p_user_id: string; p_old_prefix: string; p_new_prefix: string };
+        Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
         Returns: {
-          id: string;
-          user_id: string;
-          name: string;
           color: string | null;
+          created_at: string | null;
+          id: string;
           is_active: boolean;
+          name: string;
           sort_order: number;
-          created_at: string;
-          updated_at: string;
+          updated_at: string | null;
+          user_id: string;
         }[];
+        SetofOptions: {
+          from: '*';
+          to: 'tags';
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       use_recovery_code: {
         Args: { p_code_hash: string; p_user_id: string };
         Returns: boolean;
       };
+      vault_secret_exists: { Args: { p_name: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null;
-          avif_autodetection: boolean | null;
-          created_at: string | null;
-          file_size_limit: number | null;
-          id: string;
-          name: string;
-          owner: string | null;
-          owner_id: string | null;
-          public: boolean | null;
-          type: Database['storage']['Enums']['buckettype'];
-          updated_at: string | null;
-        };
-        Insert: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id: string;
-          name: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string | null;
-        };
-        Update: {
-          allowed_mime_types?: string[] | null;
-          avif_autodetection?: boolean | null;
-          created_at?: string | null;
-          file_size_limit?: number | null;
-          id?: string;
-          name?: string;
-          owner?: string | null;
-          owner_id?: string | null;
-          public?: boolean | null;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      buckets_analytics: {
-        Row: {
-          created_at: string;
-          deleted_at: string | null;
-          format: string;
-          id: string;
-          name: string;
-          type: Database['storage']['Enums']['buckettype'];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          format?: string;
-          id?: string;
-          name: string;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          deleted_at?: string | null;
-          format?: string;
-          id?: string;
-          name?: string;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      buckets_vectors: {
-        Row: {
-          created_at: string;
-          id: string;
-          type: Database['storage']['Enums']['buckettype'];
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          id: string;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          type?: Database['storage']['Enums']['buckettype'];
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      iceberg_namespaces: {
-        Row: {
-          bucket_name: string;
-          catalog_id: string;
-          created_at: string;
-          id: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        };
-        Insert: {
-          bucket_name: string;
-          catalog_id: string;
-          created_at?: string;
-          id?: string;
-          metadata?: Json;
-          name: string;
-          updated_at?: string;
-        };
-        Update: {
-          bucket_name?: string;
-          catalog_id?: string;
-          created_at?: string;
-          id?: string;
-          metadata?: Json;
-          name?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'iceberg_namespaces_catalog_id_fkey';
-            columns: ['catalog_id'];
-            referencedRelation: 'buckets_analytics';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      iceberg_tables: {
-        Row: {
-          bucket_name: string;
-          catalog_id: string;
-          created_at: string;
-          id: string;
-          location: string;
-          name: string;
-          namespace_id: string;
-          remote_table_id: string | null;
-          shard_id: string | null;
-          shard_key: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          bucket_name: string;
-          catalog_id: string;
-          created_at?: string;
-          id?: string;
-          location: string;
-          name: string;
-          namespace_id: string;
-          remote_table_id?: string | null;
-          shard_id?: string | null;
-          shard_key?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          bucket_name?: string;
-          catalog_id?: string;
-          created_at?: string;
-          id?: string;
-          location?: string;
-          name?: string;
-          namespace_id?: string;
-          remote_table_id?: string | null;
-          shard_id?: string | null;
-          shard_key?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'iceberg_tables_catalog_id_fkey';
-            columns: ['catalog_id'];
-            referencedRelation: 'buckets_analytics';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'iceberg_tables_namespace_id_fkey';
-            columns: ['namespace_id'];
-            referencedRelation: 'iceberg_namespaces';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      migrations: {
-        Row: {
-          executed_at: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
-        Insert: {
-          executed_at?: string | null;
-          hash: string;
-          id: number;
-          name: string;
-        };
-        Update: {
-          executed_at?: string | null;
-          hash?: string;
-          id?: number;
-          name?: string;
-        };
-        Relationships: [];
-      };
-      objects: {
-        Row: {
-          bucket_id: string | null;
-          created_at: string | null;
-          id: string;
-          last_accessed_at: string | null;
-          metadata: Json | null;
-          name: string | null;
-          owner: string | null;
-          owner_id: string | null;
-          path_tokens: string[] | null;
-          updated_at: string | null;
-          user_metadata: Json | null;
-          version: string | null;
-        };
-        Insert: {
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
-        Update: {
-          bucket_id?: string | null;
-          created_at?: string | null;
-          id?: string;
-          last_accessed_at?: string | null;
-          metadata?: Json | null;
-          name?: string | null;
-          owner?: string | null;
-          owner_id?: string | null;
-          path_tokens?: string[] | null;
-          updated_at?: string | null;
-          user_metadata?: Json | null;
-          version?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'objects_bucketId_fkey';
-            columns: ['bucket_id'];
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          id: string;
-          in_progress_size: number;
-          key: string;
-          owner_id: string | null;
-          upload_signature: string;
-          user_metadata: Json | null;
-          version: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          id: string;
-          in_progress_size?: number;
-          key: string;
-          owner_id?: string | null;
-          upload_signature: string;
-          user_metadata?: Json | null;
-          version: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          id?: string;
-          in_progress_size?: number;
-          key?: string;
-          owner_id?: string | null;
-          upload_signature?: string;
-          user_metadata?: Json | null;
-          version?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 's3_multipart_uploads_bucket_id_fkey';
-            columns: ['bucket_id'];
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          etag: string;
-          id: string;
-          key: string;
-          owner_id: string | null;
-          part_number: number;
-          size: number;
-          upload_id: string;
-          version: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          etag: string;
-          id?: string;
-          key: string;
-          owner_id?: string | null;
-          part_number: number;
-          size?: number;
-          upload_id: string;
-          version: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          etag?: string;
-          id?: string;
-          key?: string;
-          owner_id?: string | null;
-          part_number?: number;
-          size?: number;
-          upload_id?: string;
-          version?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 's3_multipart_uploads_parts_bucket_id_fkey';
-            columns: ['bucket_id'];
-            referencedRelation: 'buckets';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 's3_multipart_uploads_parts_upload_id_fkey';
-            columns: ['upload_id'];
-            referencedRelation: 's3_multipart_uploads';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      vector_indexes: {
-        Row: {
-          bucket_id: string;
-          created_at: string;
-          data_type: string;
-          dimension: number;
-          distance_metric: string;
-          id: string;
-          metadata_configuration: Json | null;
-          name: string;
-          updated_at: string;
-        };
-        Insert: {
-          bucket_id: string;
-          created_at?: string;
-          data_type: string;
-          dimension: number;
-          distance_metric: string;
-          id?: string;
-          metadata_configuration?: Json | null;
-          name: string;
-          updated_at?: string;
-        };
-        Update: {
-          bucket_id?: string;
-          created_at?: string;
-          data_type?: string;
-          dimension?: number;
-          distance_metric?: string;
-          id?: string;
-          metadata_configuration?: Json | null;
-          name?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'vector_indexes_bucket_id_fkey';
-            columns: ['bucket_id'];
-            referencedRelation: 'buckets_vectors';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      can_insert_object: {
-        Args: { bucketid: string; metadata: Json; name: string; owner: string };
-        Returns: undefined;
-      };
-      extension: { Args: { name: string }; Returns: string };
-      filename: { Args: { name: string }; Returns: string };
-      foldername: { Args: { name: string }; Returns: string[] };
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string };
-        Returns: string;
-      };
-      get_size_by_bucket: {
-        Args: never;
-        Returns: {
-          bucket_id: string;
-          size: number;
-        }[];
-      };
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string;
-          delimiter_param: string;
-          max_keys?: number;
-          next_key_token?: string;
-          next_upload_token?: string;
-          prefix_param: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-        }[];
-      };
-      list_objects_with_delimiter: {
-        Args: {
-          _bucket_id: string;
-          delimiter_param: string;
-          max_keys?: number;
-          next_token?: string;
-          prefix_param: string;
-          sort_order?: string;
-          start_after?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      operation: { Args: never; Returns: string };
-      search: {
-        Args: {
-          bucketname: string;
-          levels?: number;
-          limits?: number;
-          offsets?: number;
-          prefix: string;
-          search?: string;
-          sortcolumn?: string;
-          sortorder?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      search_by_timestamp: {
-        Args: {
-          p_bucket_id: string;
-          p_level: number;
-          p_limit: number;
-          p_prefix: string;
-          p_sort_column: string;
-          p_sort_column_after: string;
-          p_sort_order: string;
-          p_start_after: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-      search_v2: {
-        Args: {
-          bucket_name: string;
-          levels?: number;
-          limits?: number;
-          prefix: string;
-          sort_column?: string;
-          sort_column_after?: string;
-          sort_order?: string;
-          start_after?: string;
-        };
-        Returns: {
-          created_at: string;
-          id: string;
-          key: string;
-          last_accessed_at: string;
-          metadata: Json;
-          name: string;
-          updated_at: string;
-        }[];
-      };
-    };
-    Enums: {
-      buckettype: 'STANDARD' | 'ANALYTICS' | 'VECTOR';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1731,15 +1383,7 @@ export const Constants = {
   graphql_public: {
     Enums: {},
   },
-  pgbouncer: {
-    Enums: {},
-  },
   public: {
     Enums: {},
-  },
-  storage: {
-    Enums: {
-      buckettype: ['STANDARD', 'ANALYTICS', 'VECTOR'],
-    },
   },
 } as const;

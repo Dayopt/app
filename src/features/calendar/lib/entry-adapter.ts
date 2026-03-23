@@ -22,8 +22,6 @@ export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null
 
   const startDate = new Date(entry.start_time);
   const endDate = new Date(entry.end_time);
-  const actualStartDate = entry.actual_start_time ? new Date(entry.actual_start_time) : null;
-  const actualEndDate = entry.actual_end_time ? new Date(entry.actual_end_time) : null;
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
   const entryState = getEntryState(entry);
@@ -55,8 +53,8 @@ export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null
     origin: entry.origin,
     entryState,
     fulfillmentScore: entry.fulfillment_score,
-    actualStartDate,
-    actualEndDate,
+    actualStartDate: null,
+    actualEndDate: null,
   };
 }
 

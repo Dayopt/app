@@ -154,7 +154,7 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
-      // entry_tags → entry_activities → entry_instances → entries の順で削除
+      // entry_tags → entry_activities → entries の順で削除
       // RLSがuser_idで制約しているため、他ユーザーのデータは影響しない
       const { error: tagError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
       if (tagError) {
@@ -172,17 +172,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         throw new UserServiceError(
           'DELETE_DATA_FAILED',
           `entry_activities deletion failed: ${actError.message}`,
-        );
-      }
-
-      const { error: instError } = await supabase
-        .from('entry_instances')
-        .delete()
-        .eq('user_id', userId);
-      if (instError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_instances deletion failed: ${instError.message}`,
         );
       }
 
@@ -224,17 +213,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         throw new UserServiceError(
           'DELETE_DATA_FAILED',
           `entry_activities deletion failed: ${eaError.message}`,
-        );
-      }
-
-      const { error: eiError } = await supabase
-        .from('entry_instances')
-        .delete()
-        .eq('user_id', userId);
-      if (eiError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_instances deletion failed: ${eiError.message}`,
         );
       }
 

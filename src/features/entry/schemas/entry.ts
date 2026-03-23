@@ -13,8 +13,6 @@ const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
   const d = data as {
     start_time?: string | null;
     end_time?: string | null;
-    actual_start_time?: string | null;
-    actual_end_time?: string | null;
   };
   if (d.start_time && d.end_time) {
     if (new Date(d.end_time) < new Date(d.start_time)) {
@@ -22,15 +20,6 @@ const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
         code: z.ZodIssueCode.custom,
         message: 'validation.time.endBeforeStart',
         path: ['end_time'],
-      });
-    }
-  }
-  if (d.actual_start_time && d.actual_end_time) {
-    if (new Date(d.actual_end_time) < new Date(d.actual_start_time)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'validation.actualTime.endBeforeStart',
-        path: ['actual_end_time'],
       });
     }
   }
@@ -43,8 +32,6 @@ const baseEntrySchema = z.object({
   origin: entryOriginSchema.optional(), // 省略時はサーバー側で時間位置から判定
   start_time: z.string().datetime().nullable().optional(),
   end_time: z.string().datetime().nullable().optional(),
-  actual_start_time: z.string().datetime().nullable().optional(),
-  actual_end_time: z.string().datetime().nullable().optional(),
   duration_minutes: z.number().int().min(1).nullable().optional(),
   fulfillment_score: fulfillmentScoreSchema.nullable().optional(),
   reminder_minutes: z.literal(0).nullable().optional(),

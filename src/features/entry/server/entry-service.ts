@@ -224,9 +224,6 @@ export class EntryService {
 
   /**
    * エントリを更新
-   *
-   * actual_start_time / actual_end_time の変更時は、隣接エントリの記録時間を
-   * 自動調整（auto-shrink）し、adjustedEntries に含めて返す。
    */
   async update(options: UpdateEntryOptions): Promise<UpdateEntryResult> {
     const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt } = options;
@@ -297,24 +294,6 @@ export class EntryService {
       throw new EntryServiceError('UPDATE_FAILED', `Failed to update entry: ${error.message}`);
     }
 
-    // actual_* 変更時: 隣接エントリの記録時間を自動調整
-    const typedInput = input as {
-      actual_start_time?: string | null;
-      actual_end_time?: string | null;
-    };
-    const hasActualTimeChange =
-      typedInput.actual_start_time !== undefined || typedInput.actual_end_time !== undefined;
-
-    if (hasActualTimeChange) {
-      const adjustedEntries = await this.autoShrinkNeighbors({
-        userId,
-        entryId,
-        actualStart: data.actual_start_time ?? data.start_time,
-        actualEnd: data.actual_end_time ?? data.end_time,
-      });
-      return { ...data, adjustedEntries };
-    }
-
     return { ...data, adjustedEntries: [] };
   }
 
@@ -366,53 +345,6 @@ export class EntryService {
   // ========================================
   // プライベートメソッド
   // ========================================
-
-  /**
-   * 隣接エントリの記録時間を自動調整（auto-shrink）
-   *
-   * 記録時間は「事実の修正」なので、変更されたエントリ側が正として
-   * 隣接エントリの記録時間を引き戻す/押し出す。
-   *
-   * - 左隣（開始が自分より前、終了が自分の開始に食い込む）→ actual_end_time を引き戻す
-   * - 右隣（開始が自分の終了に食い込む、終了が自分より後）→ actual_start_time を押し出す
-   *
-   * PostgreSQL RPC で検索+バッチ更新を1クエリに統合。
-   */
-  private async autoShrinkNeighbors(options: {
-    userId: string;
-    entryId: string;
-    actualStart: string | null;
-    actualEnd: string | null;
-  }): Promise<EntryRow[]> {
-    const { userId, entryId, actualStart, actualEnd } = options;
-    if (!actualStart || !actualEnd) return [];
-
-    const myStart = new Date(actualStart);
-    const myEnd = new Date(actualEnd);
-    if (isNaN(myStart.getTime()) || isNaN(myEnd.getTime())) return [];
-
-    // RPC関数は生成型に未反映のため rpc() を型アサーションで呼び出し
-    // supabase gen types 実行後にアサーション不要になる
-    const { data, error } = await (
-      this.supabase.rpc as unknown as (
-        fn: string,
-        params: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: { message: string } | null }>
-    )('auto_shrink_neighbors', {
-      p_user_id: userId,
-      p_entry_id: entryId,
-      p_actual_start: actualStart,
-      p_actual_end: actualEnd,
-    });
-
-    if (error) {
-      // RPC失敗時はログのみ（auto-shrinkは補助機能のため、エラーで本体を止めない）
-      logger.warn('auto_shrink_neighbors RPC failed', { error: error.message, entryId });
-      return [];
-    }
-
-    return (data as EntryRow[] | null) ?? [];
-  }
 
   /**
    * PostgreSQL exclusion constraint violation (23P01) を判定

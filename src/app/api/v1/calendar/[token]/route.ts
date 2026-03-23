@@ -72,7 +72,9 @@ async function getEntriesForFeed(userId: string) {
 
   // entry_tagsリレーションからタグ名を抽出
   return (entries ?? []).map((entry) => {
-    const entryTags = entry.entry_tags as Array<{ tags: { name: string } | null }> | undefined;
+    const entryTags = entry.entry_tags as unknown as
+      | Array<{ tags: { name: string } | null }>
+      | undefined;
     const tagName = entryTags?.[0]?.tags?.name ?? null;
     return {
       id: entry.id,

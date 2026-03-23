@@ -153,8 +153,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
           supabase.rpc('get_daily_hours', {
             p_user_id: userId,
-            p_start_date: startDate.toISOString(),
-            p_end_date: endDate.toISOString(),
+            p_start: startDate.toISOString(),
+            p_end: endDate.toISOString(),
           }),
         );
 
@@ -185,8 +185,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_hourly_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
+              p_start: input?.startDate,
+              p_end: input?.endDate,
             }),
           ),
         );
@@ -233,8 +233,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_dow_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
+              p_start: input?.startDate,
+              p_end: input?.endDate,
             }),
           ),
         );
@@ -278,7 +278,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
           supabase.rpc('get_monthly_hours', {
             p_user_id: userId,
-            p_start_date: startDate.toISOString(),
+            p_since: startDate.toISOString(),
           }),
         );
 
