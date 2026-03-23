@@ -4,19 +4,14 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { trpc } from '@/platform/trpc/client';
-import { useTagCacheStore } from '../stores/useTagCacheStore';
 
 /** タグマージフック（楽観的更新付き）。ソースタグの関連付けをターゲットに移行して削除する */
 export function useMergeTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.merge.useMutation({
     onMutate: async ({ sourceTagId, targetTagId }) => {
-      incrementMutation();
-
       await utils.tags.list.cancel();
       await utils.tags.getById.cancel({ id: sourceTagId });
       await utils.tags.getById.cancel({ id: targetTagId });
@@ -65,7 +60,6 @@ export function useMergeTag() {
       toast.error(t('merge.failed'));
     },
     onSettled: (_data, _err, input) => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.tags.getById.invalidate({ id: input.sourceTagId });
       void utils.tags.getById.invalidate({ id: input.targetTagId });

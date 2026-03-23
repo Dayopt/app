@@ -283,6 +283,16 @@ export function useEntryMutations() {
         return updated;
       });
 
+      // entries.getById キャッシュも最新データで更新（楽観的ロック用 updated_at を含む）
+      utils.entries.getById.setData({ id: variables.id }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+      utils.entries.getById.setData({ id: variables.id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+
       // 自動保存（title、description、日時など）はtoast非表示
     },
     onError: (err, _variables, context) => {

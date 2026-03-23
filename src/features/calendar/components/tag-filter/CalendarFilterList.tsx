@@ -41,17 +41,16 @@ export function CalendarFilterList() {
   const getGroupVisibility = useCalendarFilterStore((s) => s.getGroupVisibility);
 
   // タグミューテーション状態を監視（Race Condition防止）
-  const mutationCount = useTagCacheStore((state) => state.mutationCount);
   const isSettling = useTagCacheStore((state) => state.isSettling);
 
-  // タグ一覧取得後に初期化（mutation中・settling中は競合防止のためスキップ）
+  // タグ一覧取得後に初期化（settling中は競合防止のためスキップ）
   useEffect(() => {
-    if (mutationCount > 0 || isSettling) return;
+    if (isSettling) return;
 
     if (tags && tags.length > 0) {
       initializeWithTags(tags.map((tag) => tag.id));
     }
-  }, [tags, initializeWithTags, mutationCount, isSettling]);
+  }, [tags, initializeWithTags, isSettling]);
 
   const isLoading = tagsLoading;
 
