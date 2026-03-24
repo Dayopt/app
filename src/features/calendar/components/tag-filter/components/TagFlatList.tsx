@@ -485,6 +485,7 @@ function SortableTagItem({
         className={cn(isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
         {...attributes}
         {...listeners}
+        role="listitem"
       >
         {/* グループ先頭タグの場合、GroupHeader を描画 */}
         {isFirstInGroup && (
@@ -518,6 +519,7 @@ function SortableTagItem({
             <Checkbox
               checked={checked}
               onCheckedChange={onToggle}
+              aria-label={tag.name}
               className="ml-2 shrink-0 cursor-pointer"
               style={{
                 borderColor: getTagColorClasses(displayColor).cssVar,

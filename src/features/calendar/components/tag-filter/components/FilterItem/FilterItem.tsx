@@ -131,6 +131,7 @@ export function FilterItem({
         checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
+        aria-label={label}
         className="ml-2 shrink-0 cursor-pointer"
         style={checkboxColorStyle}
       />

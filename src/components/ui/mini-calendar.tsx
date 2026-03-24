@@ -254,6 +254,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
               <SelectTrigger
                 size="sm"
                 className="border-border hover:bg-state-hover focus-visible:ring-ring h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-2"
+                aria-label={tActions('selectMonth')}
               >
                 <SelectValue />
               </SelectTrigger>
@@ -270,6 +271,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
               <SelectTrigger
                 size="sm"
                 className="border-border hover:bg-state-hover focus-visible:ring-ring h-7 gap-1 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-2"
+                aria-label={tActions('selectYear')}
               >
                 <SelectValue />
               </SelectTrigger>

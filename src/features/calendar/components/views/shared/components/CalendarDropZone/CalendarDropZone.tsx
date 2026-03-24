@@ -103,7 +103,6 @@ export function CalendarDropZone({
       className={cn('relative', className)}
       data-droppable-id={droppableId}
       data-calendar-day-index={dayIndex}
-      aria-label="Calendar time grid"
     >
       {children}
     </div>
