@@ -10,7 +10,7 @@ import { TagCreateModal } from './tag-create-modal';
 
 /** TagCreateModal - タグ作成モーダル */
 const meta = {
-  title: 'Features/Tags/TagCreateModal',
+  title: 'Features/Tags/CreateModal',
   parameters: {
     layout: 'centered',
   },

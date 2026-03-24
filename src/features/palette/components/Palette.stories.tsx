@@ -138,7 +138,7 @@ function MockProvider({
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Palette/Palette',
+  title: 'Features/Palette/Overview',
   component: Palette,
   parameters: { layout: 'padded' },
   decorators: [

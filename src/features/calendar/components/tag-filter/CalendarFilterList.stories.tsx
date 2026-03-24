@@ -161,7 +161,7 @@ function MockProvider({
 
 /** CalendarFilterList — カレンダーフィルターサイドバー（タグ表示切替） */
 const meta = {
-  title: 'Features/Calendar/CalendarFilterList',
+  title: 'Features/Calendar/FilterList',
   component: CalendarFilterList,
   parameters: {
     layout: 'padded',

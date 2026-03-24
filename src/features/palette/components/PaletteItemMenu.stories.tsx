@@ -12,7 +12,7 @@ import { BlockItem } from '@/shell/components/sidebar';
 import { PaletteItemMenu } from './PaletteItemMenu';
 
 const meta = {
-  title: 'Features/Palette/PaletteItemMenu',
+  title: 'Features/Palette/ItemMenu',
   component: PaletteItemMenu,
   parameters: { layout: 'padded' },
   args: {

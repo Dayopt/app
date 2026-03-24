@@ -10,7 +10,7 @@ import { TagRadioItem } from './TagRadioItem';
  * 選択状態では インジケーターをタグカラーで塗りつぶし、チェックアイコンを表示。
  */
 const meta = {
-  title: 'Features/Tags/TagRadioItem',
+  title: 'Features/Tags/RadioItem',
   parameters: {
     layout: 'padded',
   },

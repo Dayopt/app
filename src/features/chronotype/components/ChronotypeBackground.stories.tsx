@@ -102,7 +102,7 @@ function AllTypesComparison() {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Chronotype/ChronotypeBackground',
+  title: 'Features/Chronotype/Background',
   component: ChronotypeBackgroundDemo,
   parameters: {
     layout: 'padded',

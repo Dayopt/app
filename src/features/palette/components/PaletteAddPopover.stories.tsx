@@ -147,7 +147,7 @@ function PaletteAddDemo({ pinnedItems }: { pinnedItems?: typeof MOCK_PINNED_ITEM
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Palette/PaletteAddPopover',
+  title: 'Features/Palette/AddPopover',
   component: PaletteAddDemo,
   parameters: { layout: 'centered' },
   decorators: [

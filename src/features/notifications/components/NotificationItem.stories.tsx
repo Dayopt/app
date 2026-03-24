@@ -8,7 +8,7 @@ const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
 const meta = {
-  title: 'Features/Notifications/NotificationItem',
+  title: 'Features/Notifications/Item',
   component: NotificationItem,
   parameters: {
     layout: 'padded',

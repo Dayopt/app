@@ -8,7 +8,7 @@ import { CalendarViewSkeleton } from './CalendarViewSkeleton';
  * 時間ラベル列 + グリッド本体 + ダミーイベントスロット。
  */
 const meta = {
-  title: 'Features/Calendar/CalendarViewSkeleton',
+  title: 'Features/Calendar/ViewSkeleton',
   component: CalendarViewSkeleton,
   tags: ['autodocs'],
   parameters: {

@@ -182,7 +182,7 @@ function ChronotypeSettingsLoadingDemo() {
 // ─────────────────────────────────────────────────────────
 
 const meta = {
-  title: 'Features/Chronotype/ChronotypeSettings',
+  title: 'Features/Chronotype/Settings',
   parameters: {
     layout: 'padded',
     // button-name: SelectTrigger without explicit label in LabeledRow component

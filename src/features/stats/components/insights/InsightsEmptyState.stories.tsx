@@ -4,7 +4,7 @@ import { InsightsEmptyState } from './InsightsEmptyState';
 
 /** InsightsEmptyState — Insights タブの空状態（3段階: no_records / insufficient_data / pending） */
 const meta = {
-  title: 'Features/Stats/Insights/InsightsEmptyState',
+  title: 'Features/Stats/Insights/EmptyState',
   component: InsightsEmptyState,
   parameters: { layout: 'padded' },
   tags: ['autodocs'],

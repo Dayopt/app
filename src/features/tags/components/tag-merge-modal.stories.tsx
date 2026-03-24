@@ -175,7 +175,7 @@ function InteractiveTagMerge({ tags = MOCK_TAGS }: { tags?: typeof MOCK_TAGS }) 
  * @see GlobalTagMergeModal — useModalStore と接続するラッパー
  */
 const meta = {
-  title: 'Features/Tags/TagMergeModal',
+  title: 'Features/Tags/MergeModal',
   parameters: {
     layout: 'fullscreen',
   },

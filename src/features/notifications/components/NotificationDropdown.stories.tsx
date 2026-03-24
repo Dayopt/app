@@ -133,7 +133,7 @@ const mockResponseMap = {
 
 /** 通知ドロップダウン。ベルアイコン・未読バッジ・日付グループ化リストを含む。 */
 const meta = {
-  title: 'Features/Notifications/NotificationDropdown',
+  title: 'Features/Notifications/Dropdown',
   component: NotificationDropdown,
   parameters: {
     layout: 'padded',
