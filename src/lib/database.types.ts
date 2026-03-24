@@ -235,6 +235,8 @@ export type Database = {
       };
       entries: {
         Row: {
+          actual_end_time: string | null;
+          actual_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -253,6 +255,8 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          actual_end_time?: string | null;
+          actual_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
@@ -271,6 +275,8 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          actual_end_time?: string | null;
+          actual_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;

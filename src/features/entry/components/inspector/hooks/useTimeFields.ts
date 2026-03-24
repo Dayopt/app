@@ -72,8 +72,20 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       }
 
       setReminderMinutes(entry.reminder_minutes ?? null);
-      setActualStartTime(null);
-      setActualEndTime(null);
+
+      if (entry.actual_start_time) {
+        const actualStart = parseISOToUserTimezone(entry.actual_start_time, timezone);
+        setActualStartTime(toHHMM(actualStart));
+      } else {
+        setActualStartTime(null);
+      }
+
+      if (entry.actual_end_time) {
+        const actualEnd = parseISOToUserTimezone(entry.actual_end_time, timezone);
+        setActualEndTime(toHHMM(actualEnd));
+      } else {
+        setActualEndTime(null);
+      }
     } else if (!entry) {
       setScheduleDate(undefined);
       setStartTime('');

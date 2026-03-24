@@ -109,7 +109,7 @@ describe('createEntrySchema — timeOrderRefine バリデーション', () => {
       if (!result.success) {
         const issue = result.error.issues.find((i) => i.path.includes('actual_end_time'));
         expect(issue).toBeDefined();
-        expect(issue?.message).toBe('validation.actualTime.endBeforeStart');
+        expect(issue?.message).toBe('validation.time.endBeforeStart');
       }
     });
 

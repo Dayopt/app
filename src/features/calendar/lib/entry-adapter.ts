@@ -53,8 +53,8 @@ export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null
     origin: entry.origin,
     entryState,
     fulfillmentScore: entry.fulfillment_score,
-    actualStartDate: null,
-    actualEndDate: null,
+    actualStartDate: entry.actual_start_time ? new Date(entry.actual_start_time) : null,
+    actualEndDate: entry.actual_end_time ? new Date(entry.actual_end_time) : null,
   };
 }
 

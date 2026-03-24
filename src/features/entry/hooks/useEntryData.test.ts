@@ -11,6 +11,8 @@ const createMockEntry = (overrides: Partial<PlanWithTagIds> = {}): PlanWithTagId
   origin: 'planned',
   start_time: null,
   end_time: null,
+  actual_start_time: null,
+  actual_end_time: null,
   duration_minutes: null,
   fulfillment_score: null,
   reminder_minutes: null,

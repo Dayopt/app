@@ -72,6 +72,8 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         origin,
         start_time: input.start_time ?? null,
         end_time: input.end_time ?? null,
+        actual_start_time: null,
+        actual_end_time: null,
         duration_minutes: input.duration_minutes ?? null,
         fulfillment_score: input.fulfillment_score ?? null,
         reminder_minutes: input.reminder_minutes ?? null,
@@ -196,6 +198,9 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
 
       if (data.start_time !== undefined) updateData.start_time = data.start_time;
       if (data.end_time !== undefined) updateData.end_time = data.end_time;
+      if (data.actual_start_time !== undefined)
+        updateData.actual_start_time = data.actual_start_time;
+      if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.reminder_minutes !== undefined) updateData.reminder_minutes = data.reminder_minutes;
