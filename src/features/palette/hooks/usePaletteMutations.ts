@@ -52,6 +52,7 @@ export function usePaletteMutations() {
 
     onSettled: () => {
       void utils.palette.list.invalidate();
+      // ピン状態変更は RecentBlocks のスコアリング（ピン済みを除外）に影響するため、履歴キャッシュも無効化する
       void utils.history.getRecentBlocks.invalidate();
     },
   });
@@ -79,6 +80,7 @@ export function usePaletteMutations() {
 
     onSettled: () => {
       void utils.palette.list.invalidate();
+      // ピン解除は RecentBlocks のスコアリング（ピン済みを除外）に影響するため、履歴キャッシュも無効化する
       void utils.history.getRecentBlocks.invalidate();
     },
   });

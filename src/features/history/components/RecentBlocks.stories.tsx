@@ -20,7 +20,7 @@ function RecentBlocksStory({
   items,
   onPinItem,
 }: {
-  items: { tagName: string; tagColor: string; durationMinutes: number }[];
+  items: { tagId: string; tagName: string; tagColor: string; durationMinutes: number }[];
   onPinItem?: (tagId: string, durationMinutes: number) => void;
 }) {
   return (
@@ -31,7 +31,7 @@ function RecentBlocksStory({
         ) : (
           items.map((item) => (
             <BlockItem
-              key={`${item.tagName}-${item.durationMinutes}`}
+              key={`${item.tagId}-${item.durationMinutes}`}
               tagName={item.tagName}
               tagColor={item.tagColor}
               durationMinutes={item.durationMinutes}
@@ -44,7 +44,7 @@ function RecentBlocksStory({
                       className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onPinItem(item.tagName, item.durationMinutes);
+                        onPinItem(item.tagId, item.durationMinutes);
                       }}
                       aria-label="パレットに追加"
                     >
@@ -83,10 +83,10 @@ type Story = StoryObj<typeof meta>;
 export const WithItems: Story = {
   args: {
     items: [
-      { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-      { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-      { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
-      { tagName: '読書', tagColor: 'indigo', durationMinutes: 30 },
+      { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+      { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+      { tagId: 'tag-exercise', tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+      { tagId: 'tag-reading', tagName: '読書', tagColor: 'indigo', durationMinutes: 30 },
     ],
   },
 };
@@ -102,9 +102,9 @@ export const Empty: Story = {
 export const WithPinButton: Story = {
   args: {
     items: [
-      { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-      { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-      { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+      { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+      { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+      { tagId: 'tag-exercise', tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
     ],
     onPinItem: fn(),
   },
@@ -119,9 +119,9 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs">With Items</p>
         <RecentBlocksStory
           items={[
-            { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-            { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-            { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+            { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+            { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+            { tagId: 'tag-exercise', tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
           ]}
         />
       </div>
@@ -133,8 +133,8 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs">With Pin Button</p>
         <RecentBlocksStory
           items={[
-            { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-            { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+            { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+            { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
           ]}
           onPinItem={fn()}
         />
@@ -147,18 +147,19 @@ export const AllPatterns: Story = {
 export const ManyItems: Story = {
   args: {
     items: [
-      { tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-      { tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-      { tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
-      { tagName: '読書', tagColor: 'indigo', durationMinutes: 30 },
-      { tagName: 'ミーティング', tagColor: 'red', durationMinutes: 60 },
-      { tagName: '休憩', tagColor: 'orange', durationMinutes: 15 },
+      { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
+      { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
+      { tagId: 'tag-exercise', tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
+      { tagId: 'tag-reading', tagName: '読書', tagColor: 'indigo', durationMinutes: 30 },
+      { tagId: 'tag-meeting', tagName: 'ミーティング', tagColor: 'red', durationMinutes: 60 },
+      { tagId: 'tag-break', tagName: '休憩', tagColor: 'orange', durationMinutes: 15 },
       {
+        tagId: 'tag-pm',
         tagName: 'プロジェクト管理・定例ミーティング準備',
         tagColor: 'purple',
         durationMinutes: 90,
       },
-      { tagName: '昼食', tagColor: 'lime', durationMinutes: 60 },
+      { tagId: 'tag-lunch', tagName: '昼食', tagColor: 'lime', durationMinutes: 60 },
     ],
     onPinItem: fn(),
   },
