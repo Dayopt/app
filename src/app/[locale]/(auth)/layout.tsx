@@ -11,12 +11,22 @@
  * 2. AuthClientLayout → PublicProviders（Theme, Tooltip のみ）
  * 3. AuthLayout（認証UI用レイアウト）
  */
+import type { Metadata } from 'next';
+
 import { IntlProvider } from '@/platform/i18n';
 
 import { AuthClientLayout } from './client-layout';
 
 /** 認証ページで必要なnamespace */
 const AUTH_NAMESPACES = ['common', 'auth', 'error', 'notification'];
+
+/** 認証ページはクロール不要（noindex） */
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AuthRootLayout({ children }: { children: React.ReactNode }) {
   return (
