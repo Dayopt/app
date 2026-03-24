@@ -22,22 +22,27 @@ export async function prefetchStatsData() {
     endDate: endOfWeek(prevWeek).toISOString(),
   };
 
-  await Promise.all([
-    // Overview charts
-    helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
-    helpers.entries.getTimeByTag.prefetch(dateRange),
-    helpers.entries.getHourlyDistribution.prefetch(dateRange),
-    helpers.entries.getDayOfWeekDistribution.prefetch(dateRange),
-    helpers.entries.getMonthlyTrend.prefetch({ months: 3 }),
-    // KPI unified（現在 + 前期間 = 2 RPC、旧: 14 RPC）
-    helpers.entries.getStatsOverview.prefetch(dateRange),
-    helpers.entries.getStatsOverview.prefetch(prevDateRange),
-    // 個別クエリ（統合に含められないもの）
-    helpers.entries.getEstimationAccuracy.prefetch(dateRange),
-    helpers.entries.getEstimationAccuracy.prefetch(prevDateRange),
-    helpers.entries.getEnergyMap.prefetch(dateRange),
-    helpers.entries.getEnergyMap.prefetch(prevDateRange),
-  ]);
+  try {
+    await Promise.all([
+      // Overview charts
+      helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
+      helpers.entries.getTimeByTag.prefetch(dateRange),
+      helpers.entries.getHourlyDistribution.prefetch(dateRange),
+      helpers.entries.getDayOfWeekDistribution.prefetch(dateRange),
+      helpers.entries.getMonthlyTrend.prefetch({ months: 3 }),
+      // KPI unified（現在 + 前期間 = 2 RPC、旧: 14 RPC）
+      helpers.entries.getStatsOverview.prefetch(dateRange),
+      helpers.entries.getStatsOverview.prefetch(prevDateRange),
+      // 個別クエリ（統合に含められないもの）
+      helpers.entries.getEstimationAccuracy.prefetch(dateRange),
+      helpers.entries.getEstimationAccuracy.prefetch(prevDateRange),
+      helpers.entries.getEnergyMap.prefetch(dateRange),
+      helpers.entries.getEnergyMap.prefetch(prevDateRange),
+    ]);
+  } catch {
+    // 認証エラー等の場合はprefetchをスキップ（白ページ防止）
+    // クライアント側のtRPCがリトライ or 認証リダイレクトを処理する
+  }
 
   return { helpers, dehydratedState: dehydrate(helpers.queryClient) };
 }
