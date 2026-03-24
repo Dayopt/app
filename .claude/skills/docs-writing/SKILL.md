@@ -180,8 +180,7 @@ app側の技術ドキュメント・ADR・APIドキュメントもこのスキ�
 
 ## 参考ファイル
 
-| ファイル                                           | 用途                          |
-| -------------------------------------------------- | ----------------------------- |
-| `~/Desktop/web/content/docs/features/calendar.mdx` | 模範例（Feature Doc）         |
-| `~/Desktop/web/content/CLAUDE.md`                  | Frontmatterスキーマの正式定義 |
-| `~/Desktop/web/src/lib/navigation.ts`              | ナビゲーション構造            |
+| ファイル                                              | 用途                          |
+| ----------------------------------------------------- | ----------------------------- |
+| `~/Desktop/web/content/docs/ja/features/calendar.mdx` | 模範例（Feature Doc）         |
+| `~/Desktop/web/content/CLAUDE.md`                     | Frontmatterスキーマの正式定義 |

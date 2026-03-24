@@ -32,7 +32,7 @@ disallowedTools: Write
 - `protectedProcedure` を使用しているか
 - `ctx.userId` でデータアクセスを制限しているか
 
-**Dayoptの正しいパターン** (`src/server/api/routers/tags.ts`参照):
+**Dayoptの正しいパターン** (`src/features/tags/server/router.ts`参照):
 
 ```typescript
 // ✅ Dayoptパターン

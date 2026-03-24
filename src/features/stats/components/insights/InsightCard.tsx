@@ -89,8 +89,8 @@ function SuggestionItem({ suggestion }: { suggestion: InsightSuggestion }) {
 }
 
 const COMPARISON_STYLES: Record<InsightComparison['direction'], string> = {
-  improving: 'text-emerald-600 dark:text-emerald-400',
-  declining: 'text-red-500',
+  improving: 'text-success',
+  declining: 'text-destructive',
   stable: 'text-muted-foreground',
 };
 

@@ -34,8 +34,8 @@ AppError に正規化
 ## グローバルエラーハンドラー
 
 ```typescript
-import { handleError, handleWithRecovery } from '@/lib/error-handler';
-import { ERROR_CODES } from '@/config/error-patterns';
+import { handleError, handleWithRecovery } from '@/lib/errors';
+import { ERROR_CODES } from '@/lib/errors/error-codes';
 
 // シンプルなエラー処理
 try {
@@ -63,7 +63,7 @@ if (result.success) {
 
 ## エラーコード
 
-主要なエラーコードは `@/config/error-patterns` で定義：
+主要なエラーコードは `@/lib/errors/error-codes` で定義：
 
 | カテゴリ   | コード例                             | 用途       |
 | ---------- | ------------------------------------ | ---------- |
@@ -96,8 +96,8 @@ if (result.success) {
 'use client';
 
 import { Component, ReactNode } from 'react';
-import { handleError } from '@/lib/error-handler';
-import { ERROR_CODES } from '@/config/error-patterns';
+import { handleError } from '@/lib/errors';
+import { ERROR_CODES } from '@/lib/errors/error-codes';
 
 interface Props {
   children: ReactNode;
@@ -219,9 +219,9 @@ const mutation = api.tags.create.useMutation({
 ## Sentry連携
 
 ```typescript
-// lib/sentry/integration.ts
+// platform/sentry/integration.ts
 import * as Sentry from '@sentry/nextjs';
-import { AppError } from '@/config/error-patterns';
+import { AppError } from '@/lib/errors';
 
 export function captureAppError(error: AppError) {
   Sentry.captureException(error, {
@@ -301,10 +301,10 @@ ErrorBoundary配置時：
 ## 関連ファイル
 
 ```
-src/lib/error-handler.ts         # グローバルエラーハンドラー
-src/config/error-patterns/       # エラーコード定義
-src/lib/sentry/                  # Sentry連携
-src/lib/tanstack-query/error-handler.ts  # TanStack Query用
+src/lib/errors/                  # エラーコード・パターン定義
+src/platform/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
+src/platform/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
+src/lib/tanstack-query/          # TanStack Queryキャッシュ・楽観的更新
 ```
 
 ## 関連スキル

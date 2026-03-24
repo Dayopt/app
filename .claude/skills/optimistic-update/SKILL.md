@@ -254,10 +254,10 @@ export function useCreateEntity() {
 
 ```
 src/features/tags/hooks/
-├── useCreateTag.ts      # 作成の楽観的更新
-├── useUpdateTag.ts      # 更新の楽観的更新
-├── useDeleteTag.ts      # 削除の楽観的更新
-└── useMergeTags.ts      # 複雑な操作の楽観的更新
+├── useTagCrudMutations.ts   # CRUD楽観的更新（作成・更新・削除を統合）
+├── useTagMergeMutation.ts   # マージ操作の楽観的更新
+├── useTagsOptimistic.ts     # キャッシュ操作ヘルパー
+└── useTagOperations.ts      # 高レベル操作（UI連携）
 ```
 
 ## 関連スキル

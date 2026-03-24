@@ -136,18 +136,7 @@ export const useDialogStore = create<UIState>()(
 );
 ```
 
-### 3. 選択ストア（ファクトリーパターン）
-
-```typescript
-import { createTableSelectionStore } from '@/features/table';
-
-// 既存のファクトリーを使用
-export const useEntitySelectionStore = createTableSelectionStore({
-  storeName: 'entity-selection-store',
-});
-```
-
-### 4. フィルター/ソートストア
+### 3. フィルター/ソートストア
 
 ```typescript
 import { create } from 'zustand';
@@ -216,12 +205,12 @@ export const useEntityFilterStore = create<FilterState>()(
 
 ```
 src/features/tags/stores/
-├── useTagStore.ts           # CRUD操作
-├── useTagSelectionStore.ts  # 選択（ファクトリー使用）
-├── useTagSortStore.ts       # ソート
-├── useTagSearchStore.ts     # 検索
-├── useTagPaginationStore.ts # ページネーション
-└── index.ts                 # バレル
+└── useTagCacheStore.ts      # Realtime競合防止フラグ（isMutating）
+
+src/features/calendar/stores/
+├── useCalendarFilterStore.ts  # フィルター
+├── useCalendarScrollStore.ts  # スクロール位置
+└── useCalendarDragStore.ts    # ドラッグ状態
 ```
 
 ## 関連スキル
