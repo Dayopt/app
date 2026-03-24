@@ -1,7 +1,7 @@
 'use client';
 
 import { useLocale, useTranslations } from 'next-intl';
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback, useState, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
 
@@ -64,6 +64,10 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
   const locale = useLocale();
   const [activeTab, setActiveTab] = useState<StatsTab>(tab);
 
+  // recharts等の重いコンポーネント切替をtransitionとしてマーク
+  // タブ切替中もUIが応答的に保たれる
+  const [, startTransition] = useTransition();
+
   // URL searchParams ↔ Zustand store の双方向同期
   useStatsFilterSync();
 
@@ -77,10 +81,12 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
   const handleTabChange = useCallback(
     (value: string) => {
       const newTab = value as StatsTab;
-      setActiveTab(newTab);
+      startTransition(() => {
+        setActiveTab(newTab);
+      });
       window.history.pushState(null, '', `/${locale}/stats/${newTab}`);
     },
-    [locale],
+    [locale, startTransition],
   );
 
   return (

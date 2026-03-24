@@ -1,6 +1,14 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import { usePathname } from 'next/navigation';
 
@@ -14,6 +22,8 @@ import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 interface CalendarNavigationContextValue {
   currentDate: Date;
   viewType: CalendarViewType;
+  /** ナビゲーション中（日付変更・ビュー切替）のトランジション状態 */
+  isPending: boolean;
   navigateToDate: (date: Date, updateUrl?: boolean) => void;
   changeView: (view: CalendarViewType) => void;
   navigateRelative: (direction: 'prev' | 'next' | 'today') => void;
@@ -34,6 +44,10 @@ export const CalendarNavigationProvider = ({
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
+
+  // カレンダー再描画が重いため、日付・ビュー変更をtransitionとしてマーク
+  // UIスレッドをブロックせず、ユーザー入力（スクロール等）を優先する
+  const [isPending, startTransition] = useTransition();
 
   // useRefで最新値を保持し、コールバックの依存配列を安定化
   const currentDateRef = useRef(currentDate);
@@ -67,7 +81,9 @@ export const CalendarNavigationProvider = ({
   }, [initialView]);
 
   const navigateToDate = useCallback((date: Date, updateUrl = false) => {
-    setCurrentDate(date);
+    startTransition(() => {
+      setCurrentDate(date);
+    });
 
     if (updateUrl) {
       const dateString = format(date, 'yyyy-MM-dd');
@@ -81,7 +97,9 @@ export const CalendarNavigationProvider = ({
   }, []);
 
   const changeView = useCallback((view: CalendarViewType) => {
-    setViewType(view);
+    startTransition(() => {
+      setViewType(view);
+    });
     const dateString = format(currentDateRef.current, 'yyyy-MM-dd');
     // 既存のquery paramを保持しつつdateのみ更新
     const params = new URLSearchParams(window.location.search);
@@ -132,11 +150,12 @@ export const CalendarNavigationProvider = ({
     () => ({
       currentDate,
       viewType,
+      isPending,
       navigateToDate,
       changeView,
       navigateRelative,
     }),
-    [currentDate, viewType, navigateToDate, changeView, navigateRelative],
+    [currentDate, viewType, isPending, navigateToDate, changeView, navigateRelative],
   );
 
   return (
