@@ -58,6 +58,27 @@ export const DayContent = ({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
+  // ドラッグゴースト描画コールバック
+  const renderGhost = useCallback(
+    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
+      const entry = events?.find((e) => e.id === entryId);
+      if (!entry) return null;
+      const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      return (
+        <EntryCard
+          entry={entry}
+          tagName={tag?.name ?? null}
+          tagColor={tag?.color ?? null}
+          isMobile={isMobile}
+          position={{ top: 0, left: 0, width: 100, height: 9999 }}
+          previewTime={previewTime}
+          style={{ position: 'relative', height: '100%' }}
+        />
+      );
+    },
+    [events, getTagById, isMobile],
+  );
+
   // エントリ右クリックハンドラー
   const handleEntryContextMenu = useCallback(
     (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
@@ -190,7 +211,7 @@ export const DayContent = ({
       </div>
 
       {/* React Portal ゴースト（DOM clone廃止） */}
-      <GhostRenderer state={state} />
+      <GhostRenderer state={state} renderGhost={renderGhost} />
     </div>
   );
 };
