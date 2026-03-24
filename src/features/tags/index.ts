@@ -47,6 +47,9 @@ export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-
 // Constants - Colors
 export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '@/lib/tag-colors';
 
+// Server (Service layer — for server-side consumers like ai feature)
+export { TagService } from './server/tag-service';
+
 // Types
 export type {
   CreateTagInput,

@@ -137,10 +137,9 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Layer 2 (ai): サーバー合成層（ai/server）は例外
+  // Layer 2 (ai)
   {
     files: ['src/features/ai/**/*.{ts,tsx}'],
-    ignores: ['src/features/ai/server/**'],  // サーバー合成層は全feature import可
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
