@@ -131,11 +131,10 @@ export function TimeSelect({
               id="time-listbox"
               ref={listRef}
               role="listbox"
-              className="scrollbar-thin max-h-52 overflow-y-auto overscroll-contain px-1 py-1"
+              className="scrollbar-thin max-h-52 touch-pan-y overflow-y-auto overscroll-contain px-1 py-1"
               style={{
                 scrollbarColor:
                   'color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent',
-                touchAction: 'pan-y',
               }}
             >
               {options.map((option, index) => (
