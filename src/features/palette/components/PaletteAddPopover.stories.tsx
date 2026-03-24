@@ -182,6 +182,34 @@ export const Opened: Story = {
   },
 };
 
+/** 重複エラー状態（既にピン済みのタグ+duration を選択）。 */
+export const DuplicateError: Story = {
+  render: () => <PaletteAddDemo pinnedItems={MOCK_PINNED_ITEMS} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // パネルを開く
+    await userEvent.click(canvas.getByRole('button', { name: /パレットに追加/i }));
+    // タグ選択: 「仕事」（tag-work）
+    const tagTrigger =
+      document.querySelector<HTMLElement>('[aria-label="タグ"]') ??
+      document.querySelectorAll('[role="combobox"]')[0];
+    if (tagTrigger) {
+      await userEvent.click(tagTrigger);
+      const workOption = await within(document.body).findByText('仕事');
+      await userEvent.click(workOption);
+    }
+    // Duration 選択: 1h (60min) — ピン済みと一致
+    const durationTrigger =
+      document.querySelectorAll('[role="combobox"]')[1] ??
+      document.querySelector<HTMLElement>('[aria-label="時間"]');
+    if (durationTrigger) {
+      await userEvent.click(durationTrigger);
+      const oneHourOption = await within(document.body).findByText('1h');
+      await userEvent.click(oneHourOption);
+    }
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (

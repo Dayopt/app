@@ -73,23 +73,9 @@ const unpin = protectedProcedure
     }
   });
 
-/** 並び替え */
-const reorder = protectedProcedure
-  .meta({ description: 'パレットアイテムの並び替え' })
-  .input(z.object({ ids: z.array(z.string().uuid()).min(1).max(50) }))
-  .mutation(async ({ ctx, input }) => {
-    try {
-      const service = createPaletteService(ctx.supabase);
-      return await service.reorder(ctx.userId, input.ids);
-    } catch (error) {
-      handleServiceError(error);
-    }
-  });
-
 export const paletteRouter = createTRPCRouter({
   list,
   pin,
   updateDuration,
   unpin,
-  reorder,
 });

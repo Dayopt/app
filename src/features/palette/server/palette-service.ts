@@ -13,12 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  */
 export class PaletteServiceError extends Error {
   constructor(
-    public readonly code:
-      | 'FETCH_FAILED'
-      | 'PIN_FAILED'
-      | 'UNPIN_FAILED'
-      | 'UPDATE_FAILED'
-      | 'REORDER_FAILED',
+    public readonly code: 'FETCH_FAILED' | 'PIN_FAILED' | 'UNPIN_FAILED' | 'UPDATE_FAILED',
     message: string,
   ) {
     super(message);
@@ -108,25 +103,6 @@ export class PaletteService {
 
     if (error) {
       throw new PaletteServiceError('UPDATE_FAILED', error.message);
-    }
-
-    return { success: true as const };
-  }
-
-  /** 並び替え */
-  async reorder(userId: string, ids: string[]) {
-    const updates = ids.map((id, index) =>
-      this.supabase
-        .from('palette_items')
-        .update({ sort_order: index })
-        .eq('id', id)
-        .eq('user_id', userId),
-    );
-
-    const results = await Promise.all(updates);
-    const firstError = results.find((r) => r.error);
-    if (firstError?.error) {
-      throw new PaletteServiceError('REORDER_FAILED', firstError.error.message);
     }
 
     return { success: true as const };

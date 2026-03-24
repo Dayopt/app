@@ -25,9 +25,7 @@
       "changeDuration": "時間を変更",
       "tagAssignFailed": "タグの割り当てに失敗しました",
       "placed": "{name} を {time} に追加しました",
-      "overlapError": "{time} は既存のブロックと重複しています",
-      "reorderMode": "並び替えモード",
-      "normalMode": "通常モード"
+      "overlapError": "{time} は既存のブロックと重複しています"
     },
     "recentBlocks": {
       "title": "履歴",
