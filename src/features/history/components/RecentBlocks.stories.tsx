@@ -10,7 +10,7 @@ import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 // ─────────────────────────────────────────────────────────
 // Helper Component
@@ -25,8 +25,10 @@ function RecentBlocksStory({
 }) {
   return (
     <div className="w-64 min-w-0 overflow-hidden">
+      {/* 実キー: sidebar.recentBlocks.title */}
       <SidebarSection title="履歴" defaultOpen>
         {items.length === 0 ? (
+          /* 実キー: sidebar.recentBlocks.empty */
           <p className="text-muted-foreground px-2 py-3 text-xs">まだ履歴がありません</p>
         ) : (
           items.map((item) => (
@@ -35,13 +37,15 @@ function RecentBlocksStory({
               tagName={item.tagName}
               tagColor={item.tagColor}
               durationMinutes={item.durationMinutes}
+              dotVariant="outline"
               onClick={fn()}
               menuSlot={
                 onPinItem ? (
+                  /* 実キー: sidebar.palette.add */
                   <HoverTooltip content="パレットに追加">
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+                      className={blockMenuButtonCn}
                       onClick={(e) => {
                         e.stopPropagation();
                         onPinItem(item.tagId, item.durationMinutes);
@@ -143,7 +147,7 @@ export const AllPatterns: Story = {
   ),
 };
 
-/** 多数の履歴（最大8件） */
+/** 多数の履歴アイテム */
 export const ManyItems: Story = {
   args: {
     items: [
