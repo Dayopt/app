@@ -244,12 +244,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       'before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:transition-colors hover:before:bg-state-hover',
     isDraft &&
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-state-selected',
-    // 選択/アクティブ状態
-    !isDraft && (isSelected || isActive) && 'brightness-110',
+    // 選択/アクティブ状態（ホバーが継続しているような見た目）
+    !isDraft && (isSelected || isActive) && 'after:!bg-state-hover',
     // ホバーオーバーレイ
     !isDraft &&
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:transition-colors hover:after:bg-state-hover',
-    isSelected && 'ring-2 ring-primary',
     'text-foreground',
     isDragging && 'opacity-30',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',

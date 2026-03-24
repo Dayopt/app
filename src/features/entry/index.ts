@@ -84,7 +84,6 @@ export type { EntryCardPosition, EntryCardProps } from './components/card';
 // Components
 // =============================================================================
 export { EntryInspector } from './components/inspector/EntryInspector';
-export { EntryCreateTrigger } from './components/shared/EntryCreateTrigger';
 export { LoadingState } from './components/shared/LoadingState';
 
 // Inspector hooks

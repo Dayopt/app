@@ -4,9 +4,9 @@ import type { CalendarEvent } from '@/types/calendar-event';
 
 import { EntryCard } from './EntryCard';
 
-/** エントリーカード。カレンダーグリッド上の表示ブロック。タグカラー・状態・origin によるバリエーション。 */
+/** エントリーカード。カレンダーグリッド上の表示ブロック。タグカラー・レイアウト・インタラクション状態によるバリエーション。 */
 const meta = {
-  title: 'Features/Entry/EntryCard',
+  title: 'Features/Entry/Card',
   parameters: {
     layout: 'padded',
   },
@@ -64,44 +64,6 @@ export const Draft: Story = {
         entry={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
         position={basePosition}
       />
-    </Slot>
-  ),
-};
-
-// ---------------------------------------------------------------------------
-// エントリ状態（entryState）
-// ---------------------------------------------------------------------------
-
-/** 過去エントリ。左アクセントは斜線パターン、ドラッグ・リサイズ不可。 */
-export const PastEntry: Story = {
-  render: () => (
-    <Slot>
-      <EntryCard entry={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
-    </Slot>
-  ),
-};
-
-/** アクティブ（実行中）エントリ。 */
-export const ActiveEntry: Story = {
-  render: () => (
-    <Slot>
-      <EntryCard entry={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
-    </Slot>
-  ),
-};
-
-// ---------------------------------------------------------------------------
-// オリジン（origin）
-// ---------------------------------------------------------------------------
-
-/**
- * Planned エントリ。origin='planned' で予定として登録されたエントリ。
- * origin 未設定（undefined）の場合はタイムブロック記録として扱われる。
- */
-export const PlannedEntry: Story = {
-  render: () => (
-    <Slot>
-      <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
     </Slot>
   ),
 };
@@ -286,7 +248,7 @@ export const AllPatterns: Story = {
   parameters: { a11y: { test: 'todo' } },
   render: () => (
     <div className="flex flex-col gap-8">
-      {/* --- 表示モード --- */}
+      {/* --- Draft --- */}
       <section>
         <p className="text-muted-foreground mb-2 text-xs">Draft（未保存プレビュー）</p>
         <Slot>
@@ -294,28 +256,6 @@ export const AllPatterns: Story = {
             entry={{ ...baseEntry, id: '__draft__', title: '', isDraft: true }}
             position={basePosition}
           />
-        </Slot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-2 text-xs">Past（過去エントリ）</p>
-        <Slot>
-          <EntryCard entry={{ ...baseEntry, entryState: 'past' }} position={basePosition} />
-        </Slot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-2 text-xs">Active（実行中）</p>
-        <Slot>
-          <EntryCard entry={{ ...baseEntry, entryState: 'active' }} position={basePosition} />
-        </Slot>
-      </section>
-
-      {/* --- Origin --- */}
-      <section>
-        <p className="text-muted-foreground mb-2 text-xs">Planned（origin=&apos;planned&apos;）</p>
-        <Slot>
-          <EntryCard entry={{ ...baseEntry, origin: 'planned' }} position={basePosition} />
         </Slot>
       </section>
 
