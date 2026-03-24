@@ -8,6 +8,7 @@
  * Palette・RecentBlocks の両方で使用。
  */
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -79,7 +80,7 @@ export function BlockItem({
         />
 
         {/* タグ名 */}
-        <span className="text-foreground min-w-0 truncate">{tagName}</span>
+        <ColonTagLabel name={tagName} className="text-foreground min-w-0" />
 
         {/* duration（タグ名の隣） */}
         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">

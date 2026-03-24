@@ -152,6 +152,15 @@ export const SolidVsOutline: Story = {
   ),
 };
 
+/** コロンタグ（separator 表示）。prefix が薄字 + › + suffix。 */
+export const ColonTag: Story = {
+  args: {
+    tagName: '開発:API',
+    tagColor: 'blue',
+    durationMinutes: 60,
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: {
@@ -164,6 +173,8 @@ export const AllPatterns: Story = {
       <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={fn()} />
       <BlockItem tagName="勉強" tagColor="green" durationMinutes={30} onClick={fn()} />
       <BlockItem tagName="運動" tagColor="amber" durationMinutes={45} onClick={fn()} />
+      <BlockItem tagName="開発:API" tagColor="indigo" durationMinutes={60} onClick={fn()} />
+      <BlockItem tagName="仕事:定例MTG" tagColor="blue" durationMinutes={30} onClick={fn()} />
       <BlockItem
         tagName="プロジェクト管理・定例ミーティング準備"
         tagColor="indigo"

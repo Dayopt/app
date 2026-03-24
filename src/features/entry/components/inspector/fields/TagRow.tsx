@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ChevronDown, Plus, Star, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { TagQuickSelector } from '@/features/tags';
 import type { TagColorEntry } from '@/lib/tag-colors';
@@ -89,7 +90,7 @@ export function TagRow({
                 )}
                 aria-hidden
               />
-              <span className="text-foreground">{tagName}</span>
+              <ColonTagLabel name={tagName} className="text-foreground" />
               <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
             </>
           ) : (
