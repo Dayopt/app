@@ -27,6 +27,7 @@
     "types:generate:staging": "supabase gen types typescript --project-id yvglwblxrnrenfifsnje > src/lib/database.types.ts",
     "types:generate:local": "supabase gen types typescript --local > src/lib/database.types.ts",
     "lint:i18n": "tsx scripts/check-i18n-integrity.ts",
+    "i18n:add-locale": "tsx scripts/add-locale.ts",
     "docs:check": "tsx scripts/validate-doc-references.ts",
     "api:spec": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx scripts/generate-api-spec.ts",
     "api:spec:check": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx scripts/generate-api-spec.ts --check",
