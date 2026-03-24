@@ -4,13 +4,14 @@ Dayoptプロジェクトの主要な設計判断を文書化したADRインデ�
 
 ## 一覧
 
-| ID      | タイトル                                                               | 日付       | ステータス |
-| ------- | ---------------------------------------------------------------------- | ---------- | ---------- |
-| ADR-001 | [統合ブロックモデル](ADR-001-unified-block-model.md)                   | 2026-03-05 | accepted   |
-| ADR-002 | [Feature-Slicedアーキテクチャ](ADR-002-feature-sliced-architecture.md) | 2026-02-26 | accepted   |
-| ADR-003 | [MCP統合](ADR-003-mcp-integration.md)                                  | 2026-02-26 | accepted   |
-| ADR-004 | [3層AIアーキテクチャ](ADR-004-ai-architecture-layers.md)               | 2026-03-02 | accepted   |
-| ADR-005 | [時間不変原則](ADR-005-time-immutability-principle.md)                 | 2026-03-10 | accepted   |
+| ID      | タイトル                                                                  | 日付       | ステータス |
+| ------- | ------------------------------------------------------------------------- | ---------- | ---------- |
+| ADR-001 | [統合ブロックモデル](ADR-001-unified-block-model.md)                      | 2026-03-05 | accepted   |
+| ADR-002 | [Feature-Slicedアーキテクチャ](ADR-002-feature-sliced-architecture.md)    | 2026-02-26 | accepted   |
+| ADR-003 | [MCP統合](ADR-003-mcp-integration.md)                                     | 2026-02-26 | accepted   |
+| ADR-004 | [3層AIアーキテクチャ](ADR-004-ai-architecture-layers.md)                  | 2026-03-02 | accepted   |
+| ADR-005 | [時間不変原則](ADR-005-time-immutability-principle.md)                    | 2026-03-10 | accepted   |
+| ADR-006 | [CI品質ゲート段階的導入ロードマップ](ADR-006-ci-quality-gates-roadmap.md) | 2026-03-19 | proposed   |
 
 ## 依存関係
 
@@ -21,6 +22,8 @@ ADR-001（データモデル）
 ADR-002（Feature境界）
   ├── ADR-003（MCPはfeature境界を前提に外部ツール層を構成）
   └── ADR-004（AI層はfeature境界に沿ったrules/skillsを定義）
+
+ADR-006（CI品質ゲート）— 独立（他ADRへの依存なし）
 ```
 
 ## ADRの追加方法

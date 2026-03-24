@@ -1,62 +1,223 @@
 'use client';
 
 /**
- * ドラッグ選択ロジックを管理するカスタムフック（オーケストレーション）
+ * カレンダードラッグ選択ロジック
  *
- * 責務をサブフックに分割:
- * - useSelectionEvents: マウス・タッチイベントハンドラー、グローバルイベント管理
+ * 責務: 時間範囲のドラッグ選択・ダブルクリック・タッチ操作。
+ * ドロップゾーン管理は CalendarDropZone に移管済み。
+ *
+ * useSelectionEvents を統合し、useReducer でシンプルに状態管理。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-
-import { format } from 'date-fns';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
+import {
+  formatTimeString,
+  pixelsToTime as pixelsToTimeRaw,
+} from '../../../../../interaction/time-math';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
 import type { CalendarEvent } from '../../../../../types/calendar.types';
 import type { DateTimeSelection, TimeRange } from './types';
-import { useSelectionEvents } from './useSelectionEvents';
+import { DRAG_CONSTANTS } from './types';
+
+// ========================================
+// Types
+// ========================================
 
 interface UseDragSelectionOptions {
   date: Date;
+  dayIndex?: number | undefined;
   disabled?: boolean | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   onDoubleClick?: ((selection: DateTimeSelection) => void) | undefined;
-  /** 重複チェック用のプラン一覧 */
   plans?: CalendarEvent[] | undefined;
-  /** 1時間あたりの高さ（px） */
   hourHeight?: number | undefined;
 }
 
 interface UseDragSelectionReturn {
-  // State
   isSelecting: boolean;
   selection: TimeRange | null;
   showSelectionPreview: boolean;
-  dropTime: string | null;
-  isOver: boolean;
-  /** 選択範囲が既存プランと重複しているか */
   isOverlapping: boolean;
-
-  // Refs
   containerRef: React.RefObject<HTMLDivElement | null>;
-
-  // Handlers
   handleMouseDown: (e: React.MouseEvent) => void;
   handleDoubleClick: (e: React.MouseEvent) => void;
   handleTouchStart: (e: React.TouchEvent) => void;
-
-  // Utilities
   formatTime: (hour: number, minute: number) => string;
-  droppableId: string;
-  droppableData: { date: Date; time: string | null };
 }
 
-/**
- * カレンダードラッグ選択のロジックを管理
- */
+// ========================================
+// Reducer
+// ========================================
+
+type SelectionMode =
+  | { type: 'idle' }
+  | {
+      type: 'mouse-selecting';
+      start: { hour: number; minute: number };
+      startPixelY: number;
+      hasDragged: boolean;
+      selection: TimeRange;
+      isOverlapping: boolean;
+    }
+  | {
+      type: 'touch-pending';
+      startPixelY: number;
+      startPos: { x: number; y: number };
+      startTime: { hour: number; minute: number };
+    }
+  | {
+      type: 'touch-selecting';
+      start: { hour: number; minute: number };
+      startPixelY: number;
+      hasDragged: boolean;
+      selection: TimeRange;
+      isOverlapping: boolean;
+    }
+  | {
+      type: 'show-external';
+      selection: TimeRange;
+    };
+
+type SelectionAction =
+  | { type: 'MOUSE_DOWN'; start: { hour: number; minute: number }; startPixelY: number }
+  | { type: 'MOUSE_MOVE'; selection: TimeRange; hasDragged: boolean; isOverlapping: boolean }
+  | { type: 'MOUSE_UP' }
+  | {
+      type: 'TOUCH_START';
+      startTime: { hour: number; minute: number };
+      startPixelY: number;
+      startPos: { x: number; y: number };
+    }
+  | { type: 'LONGPRESS_FIRED'; start: { hour: number; minute: number }; startPixelY: number }
+  | { type: 'TOUCH_MOVE'; selection: TimeRange; hasDragged: boolean; isOverlapping: boolean }
+  | { type: 'TOUCH_END' }
+  | { type: 'CANCEL' }
+  | { type: 'SHOW_EXTERNAL'; selection: TimeRange };
+
+const IDLE: SelectionMode = { type: 'idle' };
+
+function selectionReducer(state: SelectionMode, action: SelectionAction): SelectionMode {
+  switch (action.type) {
+    case 'MOUSE_DOWN':
+      return {
+        type: 'mouse-selecting',
+        start: action.start,
+        startPixelY: action.startPixelY,
+        hasDragged: false,
+        selection: {
+          startHour: action.start.hour,
+          startMinute: action.start.minute,
+          endHour: action.start.hour,
+          endMinute: action.start.minute + 15,
+        },
+        isOverlapping: false,
+      };
+    case 'MOUSE_MOVE':
+      if (state.type !== 'mouse-selecting') return state;
+      return {
+        ...state,
+        selection: action.selection,
+        hasDragged: action.hasDragged,
+        isOverlapping: action.isOverlapping,
+      };
+    case 'MOUSE_UP':
+    case 'TOUCH_END':
+    case 'CANCEL':
+      return IDLE;
+    case 'TOUCH_START':
+      return {
+        type: 'touch-pending',
+        startPixelY: action.startPixelY,
+        startPos: action.startPos,
+        startTime: action.startTime,
+      };
+    case 'LONGPRESS_FIRED':
+      return {
+        type: 'touch-selecting',
+        start: action.start,
+        startPixelY: action.startPixelY,
+        hasDragged: false,
+        selection: {
+          startHour: action.start.hour,
+          startMinute: action.start.minute,
+          endHour: action.start.hour,
+          endMinute: action.start.minute + 15,
+        },
+        isOverlapping: false,
+      };
+    case 'TOUCH_MOVE':
+      if (state.type !== 'touch-selecting') return state;
+      return {
+        ...state,
+        selection: action.selection,
+        hasDragged: action.hasDragged,
+        isOverlapping: action.isOverlapping,
+      };
+    case 'SHOW_EXTERNAL':
+      return { type: 'show-external', selection: action.selection };
+    default:
+      return state;
+  }
+}
+
+// ========================================
+// Helpers
+// ========================================
+
+/** 開始時刻と現在時刻から選択範囲を計算（最低15分保証） */
+function calculateSelection(
+  start: { hour: number; minute: number },
+  current: { hour: number; minute: number },
+): TimeRange {
+  const startMin = start.hour * 60 + start.minute;
+  const currentMin = current.hour * 60 + current.minute;
+
+  let s: number, e: number;
+  if (currentMin < startMin) {
+    s = currentMin;
+    e = startMin;
+  } else {
+    s = startMin;
+    e = currentMin;
+  }
+
+  // 最低15分
+  if (e <= s) e = s + 15;
+
+  const startHour = Math.max(0, Math.floor(s / 60));
+  const startMinute = Math.max(0, s % 60);
+  const endHour = Math.min(23, Math.floor(e / 60));
+  const endMinute = Math.min(59, e % 60);
+
+  return { startHour, startMinute, endHour, endMinute };
+}
+
+/** defaultDuration を使った即時選択範囲を作成 */
+function createInstantSelection(
+  time: { hour: number; minute: number },
+  date: Date,
+  defaultDuration: number,
+): DateTimeSelection {
+  const startTotal = time.hour * 60 + time.minute;
+  const endTotal = Math.min(startTotal + defaultDuration, 24 * 60 - 1);
+  return {
+    date,
+    startHour: time.hour,
+    startMinute: time.minute,
+    endHour: Math.floor(endTotal / 60),
+    endMinute: endTotal % 60,
+  };
+}
+
+// ========================================
+// Hook
+// ========================================
+
 export function useDragSelection({
   date,
   disabled = false,
@@ -65,117 +226,350 @@ export function useDragSelection({
   plans: _plans = [],
   hourHeight = HOUR_HEIGHT,
 }: UseDragSelectionOptions): UseDragSelectionReturn {
-  // 設定からデフォルト時間を取得
   const defaultDuration = useCalendarSettingsStore((state) => state.defaultDuration);
+  const { tap } = useHapticFeedback();
 
-  // Refs
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafId = useRef<number | null>(null);
+  const lastSnapRef = useRef<{ startMin: number; endMin: number } | null>(null);
 
-  // Drop state
-  const [dropTime, setDropTime] = useState<string | null>(null);
-  const [isOver, setIsOver] = useState(false);
+  const [mode, dispatch] = useReducer(selectionReducer, IDLE);
 
-  // 重複チェック関数（無効化済み）
-  const checkOverlap = useCallback((_sel: TimeRange): boolean => {
-    return false;
-  }, []);
-
-  // Droppable ID and data
-  const droppableId = `calendar-droppable-${format(date, 'yyyy-MM-dd')}`;
-  const droppableData = { date, time: dropTime };
-
-  // Helper: 時間をフォーマット
-  const formatTime = useCallback((hour: number, minute: number): string => {
-    const h = hour.toString().padStart(2, '0');
-    const m = minute.toString().padStart(2, '0');
-    return `${h}:${m}`;
-  }, []);
-
-  // Helper: 座標から時間を計算
-  const pixelsToTime = useCallback(
-    (y: number) => {
-      const totalMinutes = (y / hourHeight) * 60;
-      const hour = Math.floor(totalMinutes / 60);
-      const minute = Math.floor((totalMinutes % 60) / 15) * 15;
-
-      if (hour >= 24) {
-        return { hour: 23, minute: 45 };
-      }
-
-      return { hour: Math.max(0, hour), minute: Math.max(0, minute) };
-    },
-    [hourHeight],
-  );
-
-  // --- サブフック: イベントハンドラー ---
-  const {
-    isSelecting,
-    selection,
-    showSelectionPreview,
-    isOverlapping,
-    handleMouseDown,
-    handleDoubleClick,
-    handleTouchStart,
-  } = useSelectionEvents({
+  // Stable refs for latest props (global event handlers 用)
+  const propsRef = useRef({
     date,
     disabled,
     defaultDuration,
-    containerRef,
     onTimeRangeSelect,
-    onDoubleClick: onDoubleClickProp,
-    pixelsToTime,
-    checkOverlap,
+    onDoubleClickProp,
+    hourHeight,
+    tap,
   });
+  // eslint-disable-next-line react-hooks/refs -- ref mirrors: レンダー中に同期し、イベントハンドラーでのみ読み取る
+  propsRef.current = {
+    date,
+    disabled,
+    defaultDuration,
+    onTimeRangeSelect,
+    onDoubleClickProp,
+    hourHeight,
+    tap,
+  };
 
-  // Effect: マウスムーブ時にドロップ時刻を更新（rAFスロットル）
+  const pixelsToTime = useCallback((y: number) => pixelsToTimeRaw(y, hourHeight), [hourHeight]);
+
+  const formatTime = useCallback((hour: number, minute: number): string => {
+    return formatTimeString(hour, minute);
+  }, []);
+
+  const clearTimer = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  // ---- React event handlers ----
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (disabled || e.button !== 0) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const time = pixelsToTime(e.clientY - rect.top);
+      const handler = onDoubleClickProp || onTimeRangeSelect;
+      if (handler) {
+        handler(createInstantSelection(time, date, defaultDuration));
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [pixelsToTime, disabled, onDoubleClickProp, onTimeRangeSelect, date, defaultDuration],
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      if (disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const start = pixelsToTime(y);
+      dispatch({ type: 'MOUSE_DOWN', start, startPixelY: y });
+      lastSnapRef.current = null;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [pixelsToTime, disabled],
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (disabled) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = touch.clientY - rect.top;
+      const startTime = pixelsToTime(y);
+
+      dispatch({
+        type: 'TOUCH_START',
+        startTime,
+        startPixelY: y,
+        startPos: { x: touch.clientX, y: touch.clientY },
+      });
+      lastSnapRef.current = null;
+
+      clearTimer();
+      longPressTimer.current = setTimeout(() => {
+        dispatch({ type: 'LONGPRESS_FIRED', start: startTime, startPixelY: y });
+        propsRef.current.tap();
+      }, DRAG_CONSTANTS.LONG_PRESS_DURATION);
+    },
+    [pixelsToTime, disabled, clearTimer],
+  );
+
+  // ---- Global event listeners ----
+
+  const isActive =
+    mode.type === 'mouse-selecting' ||
+    mode.type === 'touch-selecting' ||
+    mode.type === 'touch-pending';
+
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!isActive) return;
 
-    let rafId: number | null = null;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
+    const onMouseMove = (e: MouseEvent) => {
+      if (rafId.current !== null) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
         if (!containerRef.current) return;
+        if (mode.type !== 'mouse-selecting') return;
 
         const rect = containerRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
+        const current = pixelsToTimeRaw(y, propsRef.current.hourHeight);
+        const sel = calculateSelection(mode.start, current);
 
-        if (y >= 0 && y <= rect.height) {
-          const time = pixelsToTime(y);
-          const timeString = formatTime(time.hour, time.minute);
-          setDropTime(timeString);
-          setIsOver(true);
-        } else {
-          setDropTime(null);
-          setIsOver(false);
+        const hasDragged =
+          mode.hasDragged || Math.abs(y - mode.startPixelY) > DRAG_CONSTANTS.MIN_DRAG_DISTANCE;
+
+        // ハプティック
+        const startMin = sel.startHour * 60 + sel.startMinute;
+        const endMin = sel.endHour * 60 + sel.endMinute;
+        if (
+          lastSnapRef.current &&
+          (startMin !== lastSnapRef.current.startMin || endMin !== lastSnapRef.current.endMin)
+        ) {
+          propsRef.current.tap();
         }
+        lastSnapRef.current = { startMin, endMin };
+
+        dispatch({ type: 'MOUSE_MOVE', selection: sel, hasDragged, isOverlapping: false });
       });
     };
 
-    containerRef.current.addEventListener('mousemove', handleMouseMove);
-    const ref = containerRef.current;
+    const onMouseUp = () => {
+      const p = propsRef.current;
+      if (p.disabled) {
+        dispatch({ type: 'CANCEL' });
+        return;
+      }
+      if (
+        mode.type === 'mouse-selecting' &&
+        mode.hasDragged &&
+        !mode.isOverlapping &&
+        p.onTimeRangeSelect
+      ) {
+        const sel = mode.selection;
+        p.onTimeRangeSelect({ date: p.date, ...sel });
+      }
+      dispatch({ type: 'MOUSE_UP' });
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      // touch-pending: 長押し前に動いたらキャンセル
+      if (mode.type === 'touch-pending') {
+        const dx = Math.abs(touch.clientX - mode.startPos.x);
+        const dy = Math.abs(touch.clientY - mode.startPos.y);
+        if (
+          dx > DRAG_CONSTANTS.LONG_PRESS_MOVE_THRESHOLD ||
+          dy > DRAG_CONSTANTS.LONG_PRESS_MOVE_THRESHOLD
+        ) {
+          clearTimer();
+          dispatch({ type: 'CANCEL' });
+        }
+        return;
+      }
+
+      if (mode.type !== 'touch-selecting' || !containerRef.current) return;
+
+      // スクロール抑制（ドラッグ中のみ）
+      const rect = containerRef.current.getBoundingClientRect();
+      const y = touch.clientY - rect.top;
+      if (Math.abs(y - mode.startPixelY) > DRAG_CONSTANTS.MIN_DRAG_DISTANCE) {
+        e.preventDefault();
+      }
+
+      if (rafId.current !== null) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        if (!containerRef.current || mode.type !== 'touch-selecting') return;
+
+        const touchRect = containerRef.current.getBoundingClientRect();
+        const touchY = touch.clientY - touchRect.top;
+        const current = pixelsToTimeRaw(touchY, propsRef.current.hourHeight);
+        const sel = calculateSelection(mode.start, current);
+
+        const hasDragged =
+          mode.hasDragged || Math.abs(touchY - mode.startPixelY) > DRAG_CONSTANTS.MIN_DRAG_DISTANCE;
+
+        const startMin = sel.startHour * 60 + sel.startMinute;
+        const endMin = sel.endHour * 60 + sel.endMinute;
+        if (
+          lastSnapRef.current &&
+          (startMin !== lastSnapRef.current.startMin || endMin !== lastSnapRef.current.endMin)
+        ) {
+          propsRef.current.tap();
+        }
+        lastSnapRef.current = { startMin, endMin };
+
+        dispatch({ type: 'TOUCH_MOVE', selection: sel, hasDragged, isOverlapping: false });
+      });
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      clearTimer();
+      const p = propsRef.current;
+      const handler = p.onDoubleClickProp || p.onTimeRangeSelect;
+
+      // touch-pending: シングルタップ → 即時選択
+      if (mode.type === 'touch-pending') {
+        const touch = e.changedTouches[0];
+        if (touch && handler && containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const y = touch.clientY - rect.top;
+          const tapTime = pixelsToTimeRaw(y, p.hourHeight);
+          p.tap();
+          handler(createInstantSelection(tapTime, p.date, p.defaultDuration));
+        }
+        dispatch({ type: 'TOUCH_END' });
+        return;
+      }
+
+      if (mode.type !== 'touch-selecting') {
+        dispatch({ type: 'CANCEL' });
+        return;
+      }
+      if (p.disabled) {
+        dispatch({ type: 'CANCEL' });
+        return;
+      }
+
+      const sel = mode.selection;
+      if (mode.hasDragged && !mode.isOverlapping && p.onTimeRangeSelect) {
+        p.onTimeRangeSelect({ date: p.date, ...sel });
+      } else if (handler) {
+        handler(
+          createInstantSelection(
+            { hour: sel.startHour, minute: sel.startMinute },
+            p.date,
+            p.defaultDuration,
+          ),
+        );
+      }
+      dispatch({ type: 'TOUCH_END' });
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        clearTimer();
+        dispatch({ type: 'CANCEL' });
+      }
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('keydown', onKeyDown);
 
     return () => {
-      ref?.removeEventListener('mousemove', handleMouseMove);
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('keydown', onKeyDown);
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+        rafId.current = null;
+      }
     };
-  }, [pixelsToTime, formatTime]);
+  }, [isActive, mode, clearTimer]);
+
+  // Custom events: calendar-drag-cancel / calendar-show-selection
+  useEffect(() => {
+    const onCancel = () => {
+      clearTimer();
+      dispatch({ type: 'CANCEL' });
+    };
+    const onShowSelection = (e: CustomEvent) => {
+      const { date: eventDate, startHour, startMinute, endHour, endMinute } = e.detail;
+      if (new Date(eventDate).toDateString() === date.toDateString()) {
+        dispatch({
+          type: 'SHOW_EXTERNAL',
+          selection: { startHour, startMinute, endHour, endMinute },
+        });
+      }
+    };
+    window.addEventListener('calendar-drag-cancel', onCancel);
+    window.addEventListener('calendar-show-selection', onShowSelection as EventListener);
+    return () => {
+      window.removeEventListener('calendar-drag-cancel', onCancel);
+      window.removeEventListener('calendar-show-selection', onShowSelection as EventListener);
+    };
+  }, [date, clearTimer]);
+
+  // Derived state
+  const selection =
+    mode.type === 'mouse-selecting' || mode.type === 'touch-selecting'
+      ? mode.selection
+      : mode.type === 'show-external'
+        ? mode.selection
+        : null;
+
+  const showSelectionPreview =
+    (mode.type === 'mouse-selecting' && mode.hasDragged) ||
+    (mode.type === 'touch-selecting' && mode.hasDragged) ||
+    mode.type === 'show-external';
+
+  const isOverlapping =
+    mode.type === 'mouse-selecting' || mode.type === 'touch-selecting' ? mode.isOverlapping : false;
 
   return {
-    isSelecting,
+    isSelecting: isActive,
     selection,
     showSelectionPreview,
-    dropTime,
-    isOver,
     isOverlapping,
     containerRef,
     handleMouseDown,
     handleDoubleClick,
     handleTouchStart,
     formatTime,
-    droppableId,
-    droppableData,
   };
 }

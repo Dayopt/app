@@ -52,7 +52,6 @@ async function getEntriesForFeed(userId: string) {
       description,
       start_time,
       end_time,
-      recurrence_rule,
       created_at,
       updated_at,
       entry_tags(tags(name))
@@ -73,7 +72,9 @@ async function getEntriesForFeed(userId: string) {
 
   // entry_tagsリレーションからタグ名を抽出
   return (entries ?? []).map((entry) => {
-    const entryTags = entry.entry_tags as Array<{ tags: { name: string } | null }> | undefined;
+    const entryTags = entry.entry_tags as unknown as
+      | Array<{ tags: { name: string } | null }>
+      | undefined;
     const tagName = entryTags?.[0]?.tags?.name ?? null;
     return {
       id: entry.id,
@@ -81,7 +82,6 @@ async function getEntriesForFeed(userId: string) {
       description: entry.description,
       start_time: entry.start_time,
       end_time: entry.end_time,
-      recurrence_rule: entry.recurrence_rule,
       created_at: entry.created_at,
       updated_at: entry.updated_at,
       tag_name: tagName,

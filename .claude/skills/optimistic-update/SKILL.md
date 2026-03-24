@@ -1,6 +1,8 @@
 ---
 name: optimistic-update
 description: tRPC mutationの楽観的更新スキル。キャッシュ操作、ロールバック、Realtime競合対策を支援。
+effort: medium
+maxTurns: 15
 ---
 
 # 楽観的更新スキル
@@ -92,9 +94,7 @@ export function useUpdateEntity() {
       utils.entity.list.setData(undefined, (old) => {
         if (!old) return old;
         return old.map((item) =>
-          item.id === id
-            ? { ...item, ...data, updated_at: new Date().toISOString() }
-            : item
+          item.id === id ? { ...item, ...data, updated_at: new Date().toISOString() } : item,
         );
       });
 

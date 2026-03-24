@@ -4,13 +4,13 @@
 
 'use client';
 
-import { Bell, Repeat } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { formatTimeRange } from '@/lib/date';
-import { cn } from '@/lib/utils';
 import type { CalendarEvent } from '@/types/calendar-event';
 
 interface EntryCardContentProps {
@@ -34,7 +34,7 @@ function parseEndDate(plan: CalendarEvent): Date | null {
   return null;
 }
 
-/** エントリカードの内部コンテンツ（タグ名・時間範囲・繰り返し/リマインダーアイコン） */
+/** エントリカードの内部コンテンツ（タグ名・時間範囲・リマインダーアイコン） */
 export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardContent({
   plan,
   tagName,
@@ -48,14 +48,21 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
 
-  const displayLabel = tagName || t('common.tags.add');
+  const fallbackLabel = plan.title || t('common.tags.add');
 
   if (isCompact) {
     return (
       <div className="flex h-full items-center gap-1">
-        <span className="text-foreground truncate text-sm leading-tight font-normal">
-          {displayLabel}
-        </span>
+        {tagName ? (
+          <ColonTagLabel
+            name={tagName}
+            className="text-foreground text-sm leading-tight font-normal"
+          />
+        ) : (
+          <span className="text-foreground truncate text-sm leading-tight font-normal">
+            {fallbackLabel}
+          </span>
+        )}
       </div>
     );
   }
@@ -63,7 +70,11 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   return (
     <div className="relative flex h-full flex-col gap-1 overflow-hidden">
       <div className="flex flex-shrink-0 items-baseline gap-1 text-sm leading-tight font-normal">
-        <span className="text-foreground line-clamp-2">{displayLabel}</span>
+        {tagName ? (
+          <ColonTagLabel name={tagName} className="text-foreground" />
+        ) : (
+          <span className="text-foreground line-clamp-2">{fallbackLabel}</span>
+        )}
       </div>
 
       {showTime != null && (
@@ -75,12 +86,6 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
                 ? formatTimeRange(planStart, planEnd, timeFormat)
                 : t('calendar.event.noTimeSet')}
           </span>
-          {plan.isRecurring && (
-            <Repeat
-              className={cn('text-muted-foreground size-3 flex-shrink-0')}
-              aria-label={t('common.aria.recurring')}
-            />
-          )}
           {plan.reminder_minutes != null && (
             <Bell className="size-3 flex-shrink-0" aria-label={t('calendar.event.reminderSet')} />
           )}

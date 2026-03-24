@@ -7,11 +7,8 @@ import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
-import {
-  EntryDeleteConfirmDialog,
-  EntryInspector,
-  RecurringEditConfirmDialog,
-} from '@/features/entry/components';
+import { EntryInspector } from '@/features/entry/components';
+import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 import { TourOrchestrator } from '@/features/tour';
 import { useContactStore } from '@/shell/stores/useContactStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -68,6 +65,28 @@ export function GlobalOverlays() {
     }
   }, [settingsOpen, contactOpen, closeInspector]);
 
+  // Inspector → パレット連携（feature 間の接続は Composition Layer で行う）
+  const { pinItem } = usePaletteMutations();
+  const { data: paletteItems } = usePaletteItems();
+
+  const handlePinToPalette = useCallback(
+    (tagId: string, durationMinutes: number) => {
+      pinItem(tagId, durationMinutes);
+      toast.success(t('common.actions.addedToPalette'));
+    },
+    [pinItem, t],
+  );
+
+  const checkIsPinned = useCallback(
+    (tagId: string, durationMinutes: number) => {
+      if (!paletteItems) return false;
+      return paletteItems.some(
+        (item) => item.tag_id === tagId && item.duration_minutes === durationMinutes,
+      );
+    },
+    [paletteItems],
+  );
+
   return (
     <>
       <ContactDialog
@@ -77,9 +96,7 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <EntryInspector />
-      <EntryDeleteConfirmDialog />
-      <RecurringEditConfirmDialog />
+      <EntryInspector onPinToPalette={handlePinToPalette} isPinnedInPalette={checkIsPinned} />
       <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>

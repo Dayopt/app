@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-import { Clock, Flag } from 'lucide-react';
+import { CheckIcon, Clock, Flag } from 'lucide-react';
 
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
@@ -136,7 +136,6 @@ export function TimeSelect({
                 scrollbarColor:
                   'color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent',
                 touchAction: 'pan-y',
-                scrollSnapType: 'y mandatory',
               }}
             >
               {options.map((option, index) => (
@@ -153,20 +152,20 @@ export function TimeSelect({
                         ? 'bg-state-active/10 text-state-active-foreground font-medium'
                         : '',
                   )}
-                  style={{ scrollSnapAlign: 'center' }}
                   onClick={() => handleOptionClick(option)}
                   onMouseEnter={() => handleOptionHover(index)}
                 >
-                  {durationLabels ? (
+                  <span className="flex w-full items-center justify-between gap-2">
                     <span className="flex items-center gap-2">
                       <span className="tabular-nums">{option}</span>
-                      <span className="text-muted-foreground text-xs tabular-nums">
-                        {durationLabels.get(option)}
-                      </span>
+                      {durationLabels && (
+                        <span className="text-muted-foreground text-xs tabular-nums">
+                          {durationLabels.get(option)}
+                        </span>
+                      )}
                     </span>
-                  ) : (
-                    <span className="tabular-nums">{option}</span>
-                  )}
+                    {option === value && <CheckIcon className="text-primary size-4 shrink-0" />}
+                  </span>
                 </button>
               ))}
             </div>

@@ -28,9 +28,6 @@ entries:
   fulfillment_score INT CHECK (fulfillment_score BETWEEN 1 AND 3)
   -- 1: 微妙, 2: 普通, 3: 良い
 
-  recurrence_type TEXT
-  recurrence_end_date DATE
-  recurrence_rule TEXT
   reminder_minutes INT
 
   reviewed_at TIMESTAMPTZ
@@ -55,14 +52,13 @@ function getEntryState(entry: Entry): 'upcoming' | 'active' | 'past' {
 
 ### リネーム対象
 
-| 旧名 | 新名 | FKカラム |
-|-------|------|----------|
-| `plans` | `entries` | — |
-| `plan_tags` | `entry_tags` | `plan_id` → `entry_id` |
-| `plan_activities` | `entry_activities` | `plan_id` → `entry_id` |
-| `plan_instances` | `entry_instances` | `plan_id` → `entry_id` |
-| `plan_templates` | `entry_templates` | — |
-| `notifications.plan_id` | `notifications.entry_id` | FK参照先も変更 |
+| 旧名                    | 新名                     | FKカラム               |
+| ----------------------- | ------------------------ | ---------------------- |
+| `plans`                 | `entries`                | —                      |
+| `plan_tags`             | `entry_tags`             | `plan_id` → `entry_id` |
+| `plan_activities`       | `entry_activities`       | `plan_id` → `entry_id` |
+| `plan_templates`        | `entry_templates`        | —                      |
+| `notifications.plan_id` | `notifications.entry_id` | FK参照先も変更         |
 
 ### 既存チャット機能
 
@@ -71,6 +67,7 @@ function getEntryState(entry: Entry): 'upcoming' | 'active' | 'past' {
 ### 価値観データ
 
 既存（変更不要）:
+
 - `user_settings.personalization_values` (JSONB)
 - `user_settings.personalization_ranked_values` (JSONB)
 - `prompt-builder.ts` が `rankedValues` をプロンプトに含めている
@@ -144,7 +141,7 @@ ALTER TABLE plan_activities DROP CONSTRAINT IF EXISTS plan_activities_action_typ
 ALTER TABLE plan_activities ADD CONSTRAINT plan_activities_action_type_check
   CHECK (action_type IN (
     'created', 'updated', 'status_changed', 'title_changed',
-    'description_changed', 'time_changed', 'recurrence_changed',
+    'description_changed', 'time_changed',
     'tag_added', 'tag_removed', 'deleted', 'fulfillment_changed'
   ));
 
@@ -165,8 +162,6 @@ ALTER TABLE plan_tags RENAME TO entry_tags;
 ALTER TABLE plan_tags RENAME COLUMN plan_id TO entry_id;
 ALTER TABLE plan_activities RENAME TO entry_activities;
 ALTER TABLE plan_activities RENAME COLUMN plan_id TO entry_id;
-ALTER TABLE plan_instances RENAME TO entry_instances;
-ALTER TABLE plan_instances RENAME COLUMN plan_id TO entry_id;
 ALTER TABLE plan_templates RENAME TO entry_templates;
 ALTER TABLE notifications RENAME COLUMN plan_id TO entry_id;
 
@@ -181,16 +176,17 @@ DROP TABLE records;
 
 ### 型定義の変更
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/core/types/plan.ts` → `entry.ts` | Plan→Entry、origin/fulfillment_score/duration_minutes/reviewed_at追加、status/completed_at/plan_number削除 |
-| `src/core/types/record.ts` | FulfillmentScore: 1\|2\|3 に変更、RecordRow等は不要（Entryに統合） |
-| `src/schemas/plans/` → `src/schemas/entries/` | createEntrySchema（origin, fulfillment_score追加）|
-| `src/lib/database.types.ts` | `supabase gen types` で再生成 |
+| ファイル                                      | 変更内容                                                                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `src/core/types/plan.ts` → `entry.ts`         | Plan→Entry、origin/fulfillment_score/duration_minutes/reviewed_at追加、status/completed_at/plan_number削除 |
+| `src/core/types/record.ts`                    | FulfillmentScore: 1\|2\|3 に変更、RecordRow等は不要（Entryに統合）                                         |
+| `src/schemas/plans/` → `src/schemas/entries/` | createEntrySchema（origin, fulfillment_score追加）                                                         |
+| `src/lib/database.types.ts`                   | `supabase gen types` で再生成                                                                              |
 
 **新規:** `src/lib/entry-status.ts` — `getEntryState()`, `isEntryPast()`
 
 ### 検証
+
 - `npm run typecheck` パス
 - Staging: `SELECT count(*) FROM entries WHERE origin = 'unplanned'` = 旧records数
 
@@ -202,14 +198,14 @@ DROP TABLE records;
 
 ### リネーム・統合
 
-| 旧 | 新 |
-|----|-----|
-| `src/server/services/plans/plan-service.ts` | `src/server/services/entries/entry-service.ts` |
-| `src/server/services/plans/types.ts` | `src/server/services/entries/types.ts` |
-| `src/server/services/records/record-service.ts` | **削除**（entry-serviceに吸収） |
-| `src/server/services/records/types.ts` | **削除** |
-| `src/server/api/routers/plans/` | `src/server/api/routers/entries/` |
-| `src/server/api/routers/records/` | **削除** |
+| 旧                                              | 新                                             |
+| ----------------------------------------------- | ---------------------------------------------- |
+| `src/server/services/plans/plan-service.ts`     | `src/server/services/entries/entry-service.ts` |
+| `src/server/services/plans/types.ts`            | `src/server/services/entries/types.ts`         |
+| `src/server/services/records/record-service.ts` | **削除**（entry-serviceに吸収）                |
+| `src/server/services/records/types.ts`          | **削除**                                       |
+| `src/server/api/routers/plans/`                 | `src/server/api/routers/entries/`              |
+| `src/server/api/routers/records/`               | **削除**                                       |
 
 ### EntryService拡張
 
@@ -229,13 +225,14 @@ entries: entriesRouter,   // plans + records を統合
 
 ### AI関連の変更
 
-| ファイル | 変更 |
-|----------|------|
+| ファイル                                    | 変更                                                       |
+| ------------------------------------------- | ---------------------------------------------------------- |
 | `src/server/services/ai/context-service.ts` | `from('records')` → `from('entries')` + 時間ベースフィルタ |
-| `src/server/services/ai/tools.ts` | `searchRecords` → `searchPastEntries` |
-| `src/server/api/routers/plans/statsView.ts` | plansとrecordsの別クエリ → entriesのみに簡素化 |
+| `src/server/services/ai/tools.ts`           | `searchRecords` → `searchPastEntries`                      |
+| `src/server/api/routers/plans/statsView.ts` | plansとrecordsの別クエリ → entriesのみに簡素化             |
 
 ### 検証
+
 - `npm run typecheck` パス
 - `npm run lint && npm run lint:boundaries` パス
 - Grep: `from('plans')` と `from('records')` がサーバーコードにゼロ
@@ -430,19 +427,20 @@ ALTER TABLE notifications ADD COLUMN reflection_id UUID REFERENCES reflections(i
 
 ## リスクと軽減策
 
-| リスク | 影響 | 軽減策 |
-|--------|------|--------|
-| テーブルリネーム+統合でデータ損失 | 高 | マイグレーション前にpg_dump、record→entry ID対応テーブル保持 |
-| status廃止による既存ロジック破壊 | 高 | `getEntryState()` で全箇所を統一置換 |
-| 充実度5→3変換の情報損失 | 低 | 既存データは少量、CASE文で最善マッピング |
-| Edge Function AI呼び出しのタイムアウト | 中 | バッチサイズ制限（10ユーザー/回） |
-| records系のDATE+TIME→TIMESTAMPTZ変換 | 中 | マイグレーションで `(worked_at || 'T' || start_time)::timestamptz` |
+| リスク                                 | 影響 | 軽減策                                                       |
+| -------------------------------------- | ---- | ------------------------------------------------------------ | --- | --- | --- | ------------------------- |
+| テーブルリネーム+統合でデータ損失      | 高   | マイグレーション前にpg_dump、record→entry ID対応テーブル保持 |
+| status廃止による既存ロジック破壊       | 高   | `getEntryState()` で全箇所を統一置換                         |
+| 充実度5→3変換の情報損失                | 低   | 既存データは少量、CASE文で最善マッピング                     |
+| Edge Function AI呼び出しのタイムアウト | 中   | バッチサイズ制限（10ユーザー/回）                            |
+| records系のDATE+TIME→TIMESTAMPTZ変換   | 中   | マイグレーションで `(worked_at                               |     | 'T' |     | start_time)::timestamptz` |
 
 ---
 
 ## 検証チェックリスト
 
 **セッション1.1-1.2完了時:**
+
 - [ ] `npm run typecheck` パス
 - [ ] `npm run lint && npm run lint:boundaries` パス
 - [ ] Grep: `from('plans')` と `from('records')` がサーバーコードにゼロ
@@ -450,11 +448,13 @@ ALTER TABLE notifications ADD COLUMN reflection_id UUID REFERENCES reflections(i
 - [ ] Staging: `records` テーブルが存在しない
 
 **セッション2.1-2.3完了時:**
+
 - [ ] reflectionsテーブル作成・CRUD動作
 - [ ] 集計DB関数がStaging上で正常動作
 - [ ] AI振り返り生成が tRPC経由で動作
 
 **セッション2.5-2.7完了時:**
+
 - [ ] Edge Function がpg_cronで実行
 - [ ] AI通知が notifications テーブルに保存
 - [ ] 異常検知が閾値超過時に burnout_warning を生成
@@ -463,20 +463,20 @@ ALTER TABLE notifications ADD COLUMN reflection_id UUID REFERENCES reflections(i
 
 ## クリティカルファイル一覧
 
-| ファイル | 変更内容 | セッション |
-|----------|----------|-----------|
-| `src/core/types/plan.ts` → `entry.ts` | Plan→Entry、origin等追加、status等削除 | 1.1 |
-| `src/core/types/record.ts` | FulfillmentScore 1\|2\|3、RecordRow削除 | 1.1 |
-| `src/lib/entry-status.ts` | **新規**: getEntryState(), isEntryPast() | 1.1 |
-| `supabase/migrations/` | entries統合マイグレーション | 1.1 |
-| `src/server/services/plans/` → `entries/` | EntryService（RecordService吸収） | 1.2 |
-| `src/server/api/routers/plans/` → `entries/` | ルーター統合 | 1.2 |
-| `src/server/services/records/` | **削除** | 1.2 |
-| `src/server/api/routers/records/` | **削除** | 1.2 |
-| `src/server/services/ai/context-service.ts` | records→entries参照 | 1.2 |
-| `src/server/api/routers/plans/statsView.ts` | 単一テーブルに簡素化 | 1.2 |
-| `src/server/services/reflections/` | **新規**: reflection-service, data-aggregation, generation, prompt-template | 2.1-2.3 |
-| `src/server/api/routers/reflections.ts` | **新規**: reflectionsルーター | 2.1 |
-| `src/server/services/gamification/` | **新規**: gamification-service, data-readiness-service | 2.2-2.3 |
-| `supabase/functions/generate-reflections/` | **新規**: Edge Function | 2.5 |
-| `src/server/services/ai/anomaly-service.ts` | **新規**: 異常検知 | 2.7 |
+| ファイル                                     | 変更内容                                                                    | セッション |
+| -------------------------------------------- | --------------------------------------------------------------------------- | ---------- |
+| `src/core/types/plan.ts` → `entry.ts`        | Plan→Entry、origin等追加、status等削除                                      | 1.1        |
+| `src/core/types/record.ts`                   | FulfillmentScore 1\|2\|3、RecordRow削除                                     | 1.1        |
+| `src/lib/entry-status.ts`                    | **新規**: getEntryState(), isEntryPast()                                    | 1.1        |
+| `supabase/migrations/`                       | entries統合マイグレーション                                                 | 1.1        |
+| `src/server/services/plans/` → `entries/`    | EntryService（RecordService吸収）                                           | 1.2        |
+| `src/server/api/routers/plans/` → `entries/` | ルーター統合                                                                | 1.2        |
+| `src/server/services/records/`               | **削除**                                                                    | 1.2        |
+| `src/server/api/routers/records/`            | **削除**                                                                    | 1.2        |
+| `src/server/services/ai/context-service.ts`  | records→entries参照                                                         | 1.2        |
+| `src/server/api/routers/plans/statsView.ts`  | 単一テーブルに簡素化                                                        | 1.2        |
+| `src/server/services/reflections/`           | **新規**: reflection-service, data-aggregation, generation, prompt-template | 2.1-2.3    |
+| `src/server/api/routers/reflections.ts`      | **新規**: reflectionsルーター                                               | 2.1        |
+| `src/server/services/gamification/`          | **新規**: gamification-service, data-readiness-service                      | 2.2-2.3    |
+| `supabase/functions/generate-reflections/`   | **新規**: Edge Function                                                     | 2.5        |
+| `src/server/services/ai/anomaly-service.ts`  | **新規**: 異常検知                                                          | 2.7        |

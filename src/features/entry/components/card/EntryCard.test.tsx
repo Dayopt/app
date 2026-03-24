@@ -21,7 +21,6 @@ describe('EntryCard', () => {
     displayEndDate: new Date('2025-01-15T11:00:00'),
     duration: 60,
     isMultiDay: false,
-    isRecurring: false,
   };
 
   const mockPosition = {

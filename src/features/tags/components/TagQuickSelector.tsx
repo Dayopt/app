@@ -39,11 +39,20 @@ const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName }> = [
   { nameKey: 'meal', color: 'orange' },
 ];
 
+/** ホバー中のタグ情報 */
+export interface HoveredTagInfo {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface TagQuickSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (tagId: string, tagName: string) => void;
   onCreateAndSelect: (name: string, color?: string | null) => void;
+  /** タグホバー時のコールバック（プレビュー用） */
+  onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
   /** PC: アンカー要素の横にパネルを配置する */
   anchorRef?: React.RefObject<HTMLDivElement | HTMLButtonElement | null>;
 }
@@ -54,9 +63,11 @@ interface TagQuickSelectorProps {
 function TagQuickSelectorContent({
   onSelect,
   onCreateAndSelect,
+  onTagHover,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
   onCreateAndSelect: (name: string, color?: string | null) => void;
+  onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
@@ -133,6 +144,10 @@ function TagQuickSelectorContent({
     },
     [handleCreateSubmit],
   );
+
+  const handleHover = useCallback((tag: HoveredTagInfo) => onTagHover?.(tag), [onTagHover]);
+
+  const handleHoverEnd = useCallback(() => onTagHover?.(null), [onTagHover]);
 
   const hasResults = filteredTags.length > 0;
   const isTagZero = sortedTags.length === 0;
@@ -222,6 +237,8 @@ function TagQuickSelectorContent({
                     onCreateAndSelect(prefix, displayTag.color);
                   }
                 }}
+                onHover={handleHover}
+                onHoverEnd={handleHoverEnd}
               />
 
               {/* Children */}
@@ -237,6 +254,8 @@ function TagQuickSelectorContent({
                       setSelectedId(tag.id);
                       handleSelect(tag.id, tag.name);
                     }}
+                    onHover={handleHover}
+                    onHoverEnd={handleHoverEnd}
                     indented
                   />
                 );
@@ -256,6 +275,8 @@ function TagQuickSelectorContent({
               setSelectedId(tag.id);
               handleSelect(tag.id, tag.name);
             }}
+            onHover={handleHover}
+            onHoverEnd={handleHoverEnd}
           />
         ))}
       </div>
@@ -313,6 +334,7 @@ export function TagQuickSelector({
   onOpenChange,
   onSelect,
   onCreateAndSelect,
+  onTagHover,
   anchorRef,
 }: TagQuickSelectorProps) {
   const t = useTranslations('calendar');
@@ -363,6 +385,30 @@ export function TagQuickSelector({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, isMobile, onOpenChange]);
 
+  // PC: 背景コンテンツを inert にしてポインタイベントのリークを防止
+  const backdropRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || isMobile) return;
+
+    const backdrop = backdropRef.current;
+    if (!backdrop) return;
+
+    const inerted: Element[] = [];
+    for (const child of document.body.children) {
+      if (child === backdrop || child === backdrop.parentElement) continue;
+      if (!child.hasAttribute('inert')) {
+        child.setAttribute('inert', '');
+        inerted.push(child);
+      }
+    }
+
+    return () => {
+      for (const el of inerted) {
+        el.removeAttribute('inert');
+      }
+    };
+  }, [open, isMobile]);
+
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
       if (panelRef.current?.contains(e.target as Node)) return;
@@ -381,7 +427,11 @@ export function TagQuickSelector({
           <DrawerHeader>
             <DrawerTitle>{t('tagSelector.title')}</DrawerTitle>
           </DrawerHeader>
-          <TagQuickSelectorContent onSelect={onSelect} onCreateAndSelect={onCreateAndSelect} />
+          <TagQuickSelectorContent
+            onSelect={onSelect}
+            onCreateAndSelect={onCreateAndSelect}
+            onTagHover={onTagHover}
+          />
         </DrawerContent>
       </Drawer>
     );
@@ -391,7 +441,11 @@ export function TagQuickSelector({
   if (!open) return null;
 
   const panel = (
-    <div className="z-overlay-popover fixed inset-0" onClick={handleBackdropClick}>
+    <div
+      ref={backdropRef}
+      className="z-overlay-popover fixed inset-0"
+      onClick={handleBackdropClick}
+    >
       <div
         ref={panelRef}
         role="dialog"
@@ -418,7 +472,11 @@ export function TagQuickSelector({
           </button>
         </div>
 
-        <TagQuickSelectorContent onSelect={onSelect} onCreateAndSelect={onCreateAndSelect} />
+        <TagQuickSelectorContent
+          onSelect={onSelect}
+          onCreateAndSelect={onCreateAndSelect}
+          onTagHover={onTagHover}
+        />
       </div>
     </div>
   );

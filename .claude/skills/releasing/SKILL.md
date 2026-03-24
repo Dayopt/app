@@ -1,6 +1,8 @@
 ---
 name: releasing
 description: Dayoptのリリース作業をエンドツーエンドで実行。状態を自動判定し、version bump→タグ→デプロイ→リリースノートの全プロセスを支援。
+effort: high
+maxTurns: 25
 ---
 
 # Releasing Skill

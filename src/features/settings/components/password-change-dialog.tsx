@@ -17,8 +17,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { logger } from '@/lib/logger';
+import { getDisplayName } from '@/lib/user';
 import { checkPasswordPwned } from '@/platform/auth/pwned-password';
 import { createClient } from '@/platform/supabase/client';
+import { api } from '@/platform/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 interface PasswordChangeDialogProps {
@@ -35,6 +37,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
   const user = useAuthStore((state) => state.user);
   const t = useTranslations();
   const supabase = createClient();
+  const { mutate: sendPasswordChangedEmail } = api.email.sendPasswordChanged.useMutation();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -112,6 +115,12 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
         // Step 4: Sign out other sessions
         await supabase.auth.signOut({ scope: 'others' });
 
+        // Step 5: Send password changed notification email (fire-and-forget)
+        sendPasswordChangedEmail({
+          email: user.email,
+          userName: getDisplayName(user, 'there'),
+        });
+
         setSuccess(true);
       } catch (err) {
         logger.error('Password update error:', err);
@@ -122,7 +131,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
         setIsLoading(false);
       }
     },
-    [currentPassword, newPassword, confirmPassword, user?.email, t, supabase],
+    [currentPassword, newPassword, confirmPassword, user, t, supabase, sendPasswordChangedEmail],
   );
 
   return (

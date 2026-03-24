@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 
 import { format } from 'date-fns';
 
+import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
+
 import type { CalendarViewType } from '../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 
@@ -44,9 +46,12 @@ export const CalendarNavigationProvider = ({
   // concurrent mode安全: render中のref代入ではなくuseEffectで同期
   React.useEffect(() => {
     currentDateRef.current = currentDate;
+    // グローバルストアに同期（Palette等がカレンダー表示日を参照するため）
+    useCalendarNavigationStore.getState().setViewedDate(currentDate);
   }, [currentDate]);
   React.useEffect(() => {
     viewTypeRef.current = viewType;
+    useCalendarNavigationStore.getState().setViewType(viewType);
   }, [viewType]);
   React.useEffect(() => {
     localeRef.current = locale;

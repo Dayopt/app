@@ -11,7 +11,7 @@ import { EntryCardContent } from './EntryCardContent';
  * EntryCard の内側で使われるが、独立してテスト可能な純粋コンポーネント。
  */
 const meta = {
-  title: 'Features/Entry/EntryCardContent',
+  title: 'Features/Entry/CardContent',
   parameters: {
     layout: 'padded',
   },
@@ -38,7 +38,6 @@ const baseEntry: CalendarEvent = {
   displayEndDate: new Date('2024-01-15T11:00:00'),
   duration: 60,
   isMultiDay: false,
-  isRecurring: false,
 };
 
 /** カード幅を固定するラッパー */
@@ -90,19 +89,6 @@ export const Compact: Story = {
   ),
 };
 
-/** 繰り返しエントリ。Repeat アイコンが時刻の後ろに表示される。 */
-export const Recurring: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent
-        plan={{ ...baseEntry, isRecurring: true }}
-        tagName="朝会"
-        timeFormat="24h"
-      />
-    </CardSlot>
-  ),
-};
-
 /** リマインダー設定あり。Bell アイコンが表示される。 */
 export const WithReminder: Story = {
   render: () => (
@@ -110,19 +96,6 @@ export const WithReminder: Story = {
       <EntryCardContent
         plan={{ ...baseEntry, reminder_minutes: 15 }}
         tagName="締め切り確認"
-        timeFormat="24h"
-      />
-    </CardSlot>
-  ),
-};
-
-/** 繰り返し + リマインダーの両方。 */
-export const RecurringWithReminder: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent
-        plan={{ ...baseEntry, isRecurring: true, reminder_minutes: 10 }}
-        tagName="週次レビュー"
         timeFormat="24h"
       />
     </CardSlot>
@@ -159,6 +132,24 @@ export const NoTime: Story = {
   ),
 };
 
+/** コロンタグ（separator 表示）。prefix が薄字 + › + suffix。 */
+export const ColonTag: Story = {
+  render: () => (
+    <CardSlot>
+      <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
+    </CardSlot>
+  ),
+};
+
+/** コロンタグ・コンパクト。 */
+export const ColonTagCompact: Story = {
+  render: () => (
+    <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
+      <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
+    </div>
+  ),
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -192,26 +183,9 @@ export const AllPatterns: Story = {
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-1 text-xs">Recurring（繰り返しアイコン）</p>
-        <CardSlot>
-          <EntryCardContent plan={{ ...baseEntry, isRecurring: true }} tagName="朝会" />
-        </CardSlot>
-      </section>
-
-      <section>
         <p className="text-muted-foreground mb-1 text-xs">WithReminder（ベルアイコン）</p>
         <CardSlot>
           <EntryCardContent plan={{ ...baseEntry, reminder_minutes: 15 }} tagName="締め切り確認" />
-        </CardSlot>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-1 text-xs">繰り返し + リマインダー</p>
-        <CardSlot>
-          <EntryCardContent
-            plan={{ ...baseEntry, isRecurring: true, reminder_minutes: 10 }}
-            tagName="週次レビュー"
-          />
         </CardSlot>
       </section>
 
@@ -238,6 +212,20 @@ export const AllPatterns: Story = {
             tagName="メモ"
           />
         </CardSlot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-1 text-xs">コロンタグ（separator 表示）</p>
+        <CardSlot>
+          <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
+        </CardSlot>
+      </section>
+
+      <section>
+        <p className="text-muted-foreground mb-1 text-xs">コロンタグ・Compact</p>
+        <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
+          <EntryCardContent plan={baseEntry} tagName="開発:API" isCompact />
+        </div>
       </section>
     </div>
   ),

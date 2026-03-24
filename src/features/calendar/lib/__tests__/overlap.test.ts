@@ -13,7 +13,7 @@ function createEvent(
     displayEndDate: overrides.endDate,
     duration: 60,
     isMultiDay: false,
-    isRecurring: false,
+
     status: 'open',
     color: '',
     createdAt: new Date(),

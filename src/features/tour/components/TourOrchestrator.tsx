@@ -39,8 +39,18 @@ export function TourOrchestrator({ stepValidators, onValidationFail }: TourOrche
   // プレチョイス画面の表示状態
   const [showPreChoice, setShowPreChoice] = useState(false);
 
+  // persist hydration 完了を待ってからツアー表示判定
+  // hydration 前の初期値（completed: false）で誤判定しないようにする
+  const [hydrated, setHydrated] = useState(useTourStore.persist.hasHydrated());
+
+  useEffect(() => {
+    if (hydrated) return;
+    return useTourStore.persist.onFinishHydration(() => setHydrated(true));
+  }, [hydrated]);
+
   // カレンダーページで未完了の場合、プレチョイスを表示
   useEffect(() => {
+    if (!hydrated) return;
     if (!isCalendarPage || snapshot.status !== 'idle') return;
 
     // completed フラグをチェック（persist された状態）
@@ -52,7 +62,7 @@ export function TourOrchestrator({ stepValidators, onValidationFail }: TourOrche
     }, TOUR_START_DELAY);
 
     return () => clearTimeout(timer);
-  }, [isCalendarPage, snapshot.status]);
+  }, [hydrated, isCalendarPage, snapshot.status]);
 
   const handlePreChoiceStart = useCallback(() => {
     setShowPreChoice(false);

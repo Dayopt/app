@@ -95,12 +95,12 @@ export function FilterItem({
     [tagId, onShowOnlyThis, disabled],
   );
 
-  // Checkbox style
+  // Checkbox color — inline style で border/bg を直接上書き（CSS変数上書きでは効かないため）
   const colorClasses = getTagColorClasses(displayColor);
-  const checkboxStyle = {
+  const checkboxColorStyle: React.CSSProperties = {
     borderColor: colorClasses.cssVar,
-    backgroundColor: checked ? colorClasses.cssVar : 'transparent',
-  } as React.CSSProperties;
+    backgroundColor: checked ? colorClasses.cssVar : undefined,
+  };
 
   // 行クリックでチェック切り替え
   const handleRowClick = useCallback(
@@ -131,8 +131,9 @@ export function FilterItem({
         checked={checked}
         onCheckedChange={onCheckedChange}
         disabled={disabled}
+        aria-label={label}
         className="ml-2 shrink-0 cursor-pointer"
-        style={checkboxStyle}
+        style={checkboxColorStyle}
       />
       {icon && <span className="text-muted-foreground ml-2 shrink-0">{icon}</span>}
       <HoverTooltip

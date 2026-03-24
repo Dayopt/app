@@ -1,6 +1,8 @@
 ---
 name: test
 description: テスト作成スキル。新機能実装後、バグ修正後に自動発動。Vitest + Testing Libraryでのテストパターンを支援。
+effort: medium
+maxTurns: 15
 ---
 
 # テスト作成スキル

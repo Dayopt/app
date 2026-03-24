@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { cn } from '@/lib/utils';
@@ -13,6 +15,7 @@ interface TimezoneOffsetProps {
 
 /** タイムゾーンを選択するドロップダウンコンポーネント（UTC オフセット表示） */
 export function TimezoneOffset({ className }: TimezoneOffsetProps) {
+  const tActions = useTranslations('calendar.actions');
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
   const updateMutation = api.userSettings.update.useMutation();
@@ -59,6 +62,7 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
     <Select value={timezone} onValueChange={handleTimezoneChange}>
       <SelectTrigger
         variant="ghost"
+        aria-label={tActions('selectTimezone')}
         className={cn(
           'text-muted-foreground h-auto justify-center px-1 py-0.5 text-xs [&_svg]:hidden',
           className,

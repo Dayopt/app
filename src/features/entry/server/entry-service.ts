@@ -224,9 +224,6 @@ export class EntryService {
 
   /**
    * エントリを更新
-   *
-   * actual_start_time / actual_end_time の変更時は、隣接エントリの記録時間を
-   * 自動調整（auto-shrink）し、adjustedEntries に含めて返す。
    */
   async update(options: UpdateEntryOptions): Promise<UpdateEntryResult> {
     const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt } = options;
@@ -235,8 +232,11 @@ export class EntryService {
     const oldData = await this.getExistingEntry(entryId, userId);
 
     // 楽観的ロック: 他タブ/デバイスでの変更を検出
+    // Date比較で形式差異（+00:00 vs Z、マイクロ秒精度の違い等）を吸収
     if (expectedUpdatedAt && oldData?.updated_at) {
-      if (oldData.updated_at !== expectedUpdatedAt) {
+      const expected = new Date(expectedUpdatedAt).getTime();
+      const actual = new Date(oldData.updated_at).getTime();
+      if (expected !== actual) {
         throw new EntryServiceError(
           'CONFLICT',
           'このエントリは他の場所で更新されています。最新データをリロードしてください。',
@@ -297,42 +297,23 @@ export class EntryService {
       throw new EntryServiceError('UPDATE_FAILED', `Failed to update entry: ${error.message}`);
     }
 
-    // actual_* 変更時: 隣接エントリの記録時間を自動調整
-    const typedInput = input as {
-      actual_start_time?: string | null;
-      actual_end_time?: string | null;
-    };
-    const hasActualTimeChange =
-      typedInput.actual_start_time !== undefined || typedInput.actual_end_time !== undefined;
-
-    if (hasActualTimeChange) {
-      const adjustedEntries = await this.autoShrinkNeighbors({
-        userId,
-        entryId,
-        actualStart: data.actual_start_time ?? data.start_time,
-        actualEnd: data.actual_end_time ?? data.end_time,
-      });
-      return { ...data, adjustedEntries };
-    }
-
     return { ...data, adjustedEntries: [] };
   }
 
   /**
    * エントリをソフト削除（deleted_at を設定）
    *
-   * RLS の SELECT ポリシーが deleted_at IS NULL でフィルタするため、
-   * ソフト削除後はクエリ結果から自動的に除外される。
-   * UPDATE ポリシーは deleted_at をチェックしないため、restore() で復元可能。
+   * SECURITY DEFINER の RPC 関数でRLSをバイパス。
+   * SELECT ポリシーの deleted_at IS NULL が UPDATE の WITH CHECK に
+   * 適用されるため、直接 UPDATE では RLS 違反になる。
    */
   async delete(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
-    const { error } = await this.supabase
-      .from('entries')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', entryId)
-      .eq('user_id', userId);
+    const { error } = await this.supabase.rpc('soft_delete_entry', {
+      p_entry_id: entryId,
+      p_user_id: userId,
+    });
 
     if (error) {
       throw new EntryServiceError('DELETE_FAILED', `Failed to delete entry: ${error.message}`);
@@ -344,17 +325,15 @@ export class EntryService {
   /**
    * ソフト削除されたエントリを復元（Undo用）
    *
-   * UPDATE RLS ポリシーは user_id のみチェックするため、
-   * deleted_at が設定されたエントリにもアクセス可能。
+   * SECURITY DEFINER の RPC 関数でRLSをバイパス。
    */
   async restore(options: DeleteEntryOptions): Promise<{ success: boolean }> {
     const { userId, entryId } = options;
 
-    const { error } = await this.supabase
-      .from('entries')
-      .update({ deleted_at: null })
-      .eq('id', entryId)
-      .eq('user_id', userId);
+    const { error } = await this.supabase.rpc('restore_entry', {
+      p_entry_id: entryId,
+      p_user_id: userId,
+    });
 
     if (error) {
       throw new EntryServiceError('RESTORE_FAILED', `Failed to restore entry: ${error.message}`);
@@ -366,53 +345,6 @@ export class EntryService {
   // ========================================
   // プライベートメソッド
   // ========================================
-
-  /**
-   * 隣接エントリの記録時間を自動調整（auto-shrink）
-   *
-   * 記録時間は「事実の修正」なので、変更されたエントリ側が正として
-   * 隣接エントリの記録時間を引き戻す/押し出す。
-   *
-   * - 左隣（開始が自分より前、終了が自分の開始に食い込む）→ actual_end_time を引き戻す
-   * - 右隣（開始が自分の終了に食い込む、終了が自分より後）→ actual_start_time を押し出す
-   *
-   * PostgreSQL RPC で検索+バッチ更新を1クエリに統合。
-   */
-  private async autoShrinkNeighbors(options: {
-    userId: string;
-    entryId: string;
-    actualStart: string | null;
-    actualEnd: string | null;
-  }): Promise<EntryRow[]> {
-    const { userId, entryId, actualStart, actualEnd } = options;
-    if (!actualStart || !actualEnd) return [];
-
-    const myStart = new Date(actualStart);
-    const myEnd = new Date(actualEnd);
-    if (isNaN(myStart.getTime()) || isNaN(myEnd.getTime())) return [];
-
-    // RPC関数は生成型に未反映のため rpc() を型アサーションで呼び出し
-    // supabase gen types 実行後にアサーション不要になる
-    const { data, error } = await (
-      this.supabase.rpc as unknown as (
-        fn: string,
-        params: Record<string, unknown>,
-      ) => Promise<{ data: unknown; error: { message: string } | null }>
-    )('auto_shrink_neighbors', {
-      p_user_id: userId,
-      p_entry_id: entryId,
-      p_actual_start: actualStart,
-      p_actual_end: actualEnd,
-    });
-
-    if (error) {
-      // RPC失敗時はログのみ（auto-shrinkは補助機能のため、エラーで本体を止めない）
-      logger.warn('auto_shrink_neighbors RPC failed', { error: error.message, entryId });
-      return [];
-    }
-
-    return (data as EntryRow[] | null) ?? [];
-  }
 
   /**
    * PostgreSQL exclusion constraint violation (23P01) を判定

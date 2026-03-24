@@ -1,0 +1,37 @@
+{
+  "sidebar": {
+    "pageNav": {
+      "calendar": "カレンダー",
+      "stats": "統計"
+    },
+    "calendar": {
+      "title": "カレンダー"
+    },
+    "palette": {
+      "title": "パレット",
+      "empty": "よく使うブロックを登録しておくと毎朝すばやく配置できます",
+      "emptyHint": "履歴から追加もできます",
+      "add": "パレットに追加",
+      "tagLabel": "タグ",
+      "tagPlaceholder": "タグを選択",
+      "durationLabel": "時間",
+      "durationPlaceholder": "時間を選択",
+      "duplicateError": "この組み合わせは既に登録済みです",
+      "pinFailed": "ピン留めに失敗しました",
+      "unpinFailed": "ピン解除に失敗しました",
+      "updateFailed": "更新に失敗しました",
+      "remove": "削除",
+      "tagDeleted": "タグが削除されました",
+      "changeDuration": "時間を変更",
+      "tagAssignFailed": "タグの割り当てに失敗しました",
+      "placed": "{name} を {time} に追加しました",
+      "overlapError": "{time} は既存のブロックと重複しています"
+    },
+    "recentBlocks": {
+      "title": "履歴",
+      "empty": "まだ履歴がありません",
+      "emptyHint": "カレンダーにブロックを追加すると自動で表示されます",
+      "pinned": "パレットに追加しました"
+    }
+  }
+}

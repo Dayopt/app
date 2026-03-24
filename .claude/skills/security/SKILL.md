@@ -1,6 +1,9 @@
 ---
 name: security
 description: セキュリティ監査スキル。認証/認可、APIエンドポイント、ユーザー入力処理、外部データ取得の実装時に自動発動。OWASP Top 10観点でのチェックを実施。
+effort: high
+maxTurns: 25
+disallowedTools: Write
 ---
 
 # セキュリティ監査スキル

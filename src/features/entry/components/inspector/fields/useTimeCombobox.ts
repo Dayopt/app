@@ -94,48 +94,57 @@ export function useTimeCombobox({
 
   // ─── Effects ─────────────────────────────────
 
-  // スクロール位置管理
+  // スクロール位置管理（開いたとき、値 or 現在時刻を中央に表示）
   useEffect(() => {
     if (isOpen && !hasScrolledRef.current) {
+      // Popoverのマウント完了を待つため二重rAF
       requestAnimationFrame(() => {
-        if (!listRef.current) return;
+        requestAnimationFrame(() => {
+          if (!listRef.current) return;
 
-        if (minTime) {
-          listRef.current.scrollTop = 0;
-          hasScrolledRef.current = true;
-          return;
-        }
+          // 表示対象のリスト（minTimeがあればフィルタ済み）
+          const targetOptions = minTime ? options : timeOptions;
+          let targetIndex = -1;
 
-        let targetIndex = -1;
-
-        if (value) {
-          targetIndex = timeOptions.indexOf(value);
-          if (targetIndex === -1) {
-            const [hours, minutes] = value.split(':').map(Number);
-            if (!isNaN(hours!) && !isNaN(minutes!)) {
-              const roundedMinutes = Math.floor(minutes! / SNAP_MINUTES) * SNAP_MINUTES;
-              targetIndex = timeOptions.indexOf(formatTime(hours!, roundedMinutes));
+          if (value) {
+            targetIndex = targetOptions.indexOf(value);
+            if (targetIndex === -1) {
+              const [hours, minutes] = value.split(':').map(Number);
+              if (!isNaN(hours!) && !isNaN(minutes!)) {
+                const roundedMinutes = Math.floor(minutes! / SNAP_MINUTES) * SNAP_MINUTES;
+                targetIndex = targetOptions.indexOf(formatTime(hours!, roundedMinutes));
+              }
             }
           }
-        } else {
-          const now = new Date();
-          const roundedMinutes = Math.floor(now.getMinutes() / SNAP_MINUTES) * SNAP_MINUTES;
-          targetIndex = timeOptions.indexOf(formatTime(now.getHours(), roundedMinutes));
-        }
 
-        if (targetIndex !== -1) {
-          const itemHeight = 32;
-          const containerHeight = 200;
-          listRef.current.scrollTop =
-            targetIndex * itemHeight - containerHeight / 2 + itemHeight / 2;
+          // 値がない or 見つからない場合は現在時刻を基準にする
+          if (targetIndex === -1) {
+            const now = new Date();
+            const roundedMinutes = Math.floor(now.getMinutes() / SNAP_MINUTES) * SNAP_MINUTES;
+            const nowTime = formatTime(now.getHours(), roundedMinutes);
+            targetIndex = targetOptions.indexOf(nowTime);
+            // フィルタ済みリストで現在時刻が含まれない場合、最も近い時刻を探す
+            if (targetIndex === -1 && minTime) {
+              const nowMinutes = timeToMinutes(nowTime);
+              targetIndex = targetOptions.findIndex((t) => timeToMinutes(t) >= nowMinutes);
+              if (targetIndex === -1) targetIndex = 0;
+            }
+          }
+
+          if (targetIndex !== -1) {
+            const itemHeight = 40;
+            const containerHeight = 208;
+            listRef.current.scrollTop =
+              targetIndex * itemHeight - containerHeight / 2 + itemHeight / 2;
+          }
           hasScrolledRef.current = true;
-        }
+        });
       });
     }
     if (!isOpen) {
       hasScrolledRef.current = false;
     }
-  }, [isOpen, value, timeOptions, minTime]);
+  }, [isOpen, value, timeOptions, options, minTime]);
 
   // ─── Handlers ────────────────────────────────
 

@@ -184,7 +184,7 @@ export const ScrollableCalendarLayout = ({
         {/* 時間軸列 */}
         {showTimeColumn && (
           <div
-            className="bg-background border-border sticky left-0 z-10 shrink-0 border-r"
+            className="border-border bg-background sticky left-0 z-10 shrink-0 border-r"
             style={{ width: timeColumnWidth }}
           >
             <div className="relative h-full overflow-hidden">
@@ -205,6 +205,7 @@ export const ScrollableCalendarLayout = ({
                     transform: 'translateY(-50%)',
                     backgroundColor: currentTimeLineColor || 'var(--primary)',
                   }}
+                  aria-hidden="true"
                 >
                   {formattedCurrentTime}
                 </div>
@@ -216,7 +217,9 @@ export const ScrollableCalendarLayout = ({
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
           {/* メインコンテンツ（flex で横並びを維持） */}
-          <div className="relative flex h-full">{children}</div>
+          <div className="relative flex h-full" role={enableKeyboardNavigation ? 'row' : undefined}>
+            {children}
+          </div>
 
           {/* 縦の区切り線 */}
           {displayDates && displayDates.length > 1 && (

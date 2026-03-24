@@ -4,10 +4,7 @@
  * Inspector フォーム（Level 2）
  *
  * useEntryForm() で全状態を取得し、フラットにフィールドを描画する。
- * props は entry + onDelete のみ。
- *
- * 旧 EntryInspectorContent + EntryInspectorDetailsTab + InspectorDetailsLayout +
- * InspectorTimeSection を統合。
+ * onPinToPalette は Composition Layer（GlobalOverlays）から注入される。
  */
 
 import { useCallback, useMemo } from 'react';
@@ -21,14 +18,12 @@ import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
-import { getEntryState } from '../../lib/entry-status';
-import type { FulfillmentScore, RecurrenceType } from '../../types/entry';
+import type { FulfillmentScore } from '../../types/entry';
 
 import {
   DateRow,
   FulfillmentRow,
   NoteSection,
-  RecurrenceRow,
   ReminderRow,
   TagRow,
   TimeConflictAlert,
@@ -37,8 +32,20 @@ import {
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
 
+/** 15分単位にスナップ（パレット登録用） */
+function snapToQuarter(minutes: number): number {
+  return Math.round(minutes / 15) * 15 || 15;
+}
+
+interface EntryInspectorFormProps {
+  /** パレットへのピン留めコールバック（Composition Layer から注入） */
+  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレット登録済みチェック関数（Composition Layer から注入） */
+  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
+}
+
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
-export function EntryInspectorForm() {
+export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -63,7 +70,7 @@ export function EntryInspectorForm() {
     autoSave,
   } = handlers;
   const { timeConflictError } = state;
-  const { updateEntry: updateEntryMutation, handleDelete } = actions;
+  const { handleDelete } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -104,33 +111,6 @@ export function EntryInspectorForm() {
     [entryId, updateEntry],
   );
 
-  // 繰り返し（TanStack Query の楽観的更新で即座に反映）
-  const recurrenceRule = entry?.recurrence_rule ?? null;
-  const recurrenceType: RecurrenceType | null =
-    (entry?.recurrence_type as RecurrenceType | null) ?? null;
-
-  const handleRepeatTypeChange = useCallback(
-    (type: string) => {
-      if (!entryId) return;
-      updateEntryMutation.mutate({
-        id: entryId,
-        data: {
-          recurrence_type: (type || 'none') as RecurrenceType,
-          recurrence_rule: null,
-        },
-      });
-    },
-    [entryId, updateEntryMutation],
-  );
-
-  const handleRecurrenceRuleChange = useCallback(
-    (rrule: string | null) => {
-      if (!entryId) return;
-      updateEntryMutation.mutate({ id: entryId, data: { recurrence_rule: rrule } });
-    },
-    [entryId, updateEntryMutation],
-  );
-
   // 予定行の自動調整
   const {
     handleStartTimeChange: autoPlannedStartChange,
@@ -151,17 +131,27 @@ export function EntryInspectorForm() {
   const effectiveActualStart = actualStartTime ?? startTime;
   const effectiveActualEnd = actualEndTime ?? endTime;
 
-  // Duration / diff
+  // Duration
   const plannedDuration = useMemo(() => computeDuration(startTime, endTime), [startTime, endTime]);
+
+  // パレット登録ハンドラ + 登録済みチェック
+  const snappedDuration = plannedDuration > 0 ? snapToQuarter(plannedDuration) : 0;
+
+  const handlePinToPalette = useCallback(() => {
+    if (!selectedTagId || snappedDuration <= 0 || !onPinToPalette) return;
+    onPinToPalette(selectedTagId, snappedDuration);
+  }, [selectedTagId, snappedDuration, onPinToPalette]);
+
+  const isPinned =
+    !!isPinnedInPalette && !!selectedTagId && snappedDuration > 0
+      ? isPinnedInPalette(selectedTagId, snappedDuration)
+      : false;
+
+  // Duration diff
   const actualDuration = useMemo(
     () => computeDuration(effectiveActualStart, effectiveActualEnd),
     [effectiveActualStart, effectiveActualEnd],
   );
-
-  // past エントリのみ記録行・充実度を表示（upcoming/active では非表示）
-  const isPastEntry = entry
-    ? getEntryState({ start_time: entry.start_time, end_time: entry.end_time }) === 'past'
-    : false;
 
   if (!entry) return null;
 
@@ -174,13 +164,16 @@ export function EntryInspectorForm() {
         tagColorClasses={selectedTagColorClasses}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
+        onPinToPalette={
+          onPinToPalette && selectedTagId && snappedDuration > 0 ? handlePinToPalette : undefined
+        }
+        isPinnedInPalette={isPinned}
         onDelete={handleDelete}
       />
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
-        className="mt-2 grid transition-[grid-template-rows] duration-200"
-        style={{ gridTemplateRows: timeConflictError ? '1fr' : '0fr' }}
+        className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
@@ -210,43 +203,36 @@ export function EntryInspectorForm() {
             hasError={timeConflictError}
           />
 
-          {/* 記録行（past エントリのみ表示 — upcoming/active では actual time 設定不可） */}
-          {isPastEntry && (
-            <TimeRow
-              label={t('plan.inspector.time.actual')}
-              icon={Play}
-              startTime={effectiveActualStart}
-              endTime={effectiveActualEnd}
-              onStartChange={(time) => handleActualStartChange(time)}
-              onEndChange={(time) => handleActualEndChange(time)}
-            />
-          )}
+          {/* 記録行 */}
+          <TimeRow
+            label={t('plan.inspector.time.actual')}
+            icon={Play}
+            startTime={effectiveActualStart}
+            endTime={effectiveActualEnd}
+            onStartChange={(time) => handleActualStartChange(time)}
+            onEndChange={(time) => handleActualEndChange(time)}
+          />
 
           {/* プログレスバー + 差分バッジ */}
-          {isPastEntry && plannedDuration > 0 && (
+          {plannedDuration > 0 && (
             <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
           )}
 
-          {/* 充実度（past エントリのみ表示） */}
-          {isPastEntry && (
-            <FulfillmentRow
-              label={t('plan.inspector.time.fulfillment')}
-              score={fulfillmentScore ?? null}
-              onScoreChange={handleFulfillmentChange}
-              scoreLabels={{
-                low: t('plan.inspector.time.fulfillmentLow'),
-                medium: t('plan.inspector.time.fulfillmentMedium'),
-                high: t('plan.inspector.time.fulfillmentHigh'),
-              }}
-            />
-          )}
-
-          {/* 繰り返し */}
-          <RecurrenceRow
-            recurrenceRule={recurrenceRule}
-            recurrenceType={recurrenceType}
-            onRepeatTypeChange={handleRepeatTypeChange}
-            onRecurrenceRuleChange={handleRecurrenceRuleChange}
+          {/* 充実度 */}
+          <FulfillmentRow
+            label={t('plan.inspector.time.fulfillment')}
+            score={fulfillmentScore ?? null}
+            onScoreChange={handleFulfillmentChange}
+            scoreLabels={{
+              low: t('plan.inspector.time.fulfillmentLow'),
+              medium: t('plan.inspector.time.fulfillmentMedium'),
+              high: t('plan.inspector.time.fulfillmentHigh'),
+            }}
+            tooltipLabels={{
+              low: t('plan.inspector.time.fulfillmentTooltipLow'),
+              medium: t('plan.inspector.time.fulfillmentTooltipMedium'),
+              high: t('plan.inspector.time.fulfillmentTooltipHigh'),
+            }}
           />
 
           {/* リマインダー */}

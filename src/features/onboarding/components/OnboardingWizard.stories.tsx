@@ -49,7 +49,7 @@ function StoreReset({
 
 /** OnboardingWizard - 2ステップウィザード全体 */
 const meta = {
-  title: 'Features/Onboarding/OnboardingWizard',
+  title: 'Features/Onboarding/Wizard',
   component: OnboardingWizard,
   parameters: {
     layout: 'centered',

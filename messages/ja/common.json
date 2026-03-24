@@ -92,7 +92,10 @@
       "archiving": "アーカイブ中...",
       "restoring": "復元中...",
       "clear": "クリア",
-      "options": "オプション"
+      "options": "オプション",
+      "addToPalette": "パレットに追加",
+      "addedToPalette": "パレットに追加しました",
+      "alreadyInPalette": "パレットに登録済み"
     },
     "confirm": {
       "delete": {
@@ -109,14 +112,6 @@
       "bulkDelete": {
         "title": "{count}件を削除しますか？",
         "description": "選択した{count}件のアイテムを完全に削除します。この操作は取り消せません。"
-      },
-      "recurring": {
-        "editTitle": "繰り返しイベントを編集",
-        "deleteTitle": "繰り返しイベントを削除",
-        "thisOnly": "このイベントのみ",
-        "thisAndFuture": "このイベント以降すべて",
-        "allEvents": "すべてのイベント",
-        "apply": "適用"
       }
     },
     "aria": {
@@ -150,8 +145,7 @@
       "navigationMenu": "ナビゲーションメニュー",
       "pageNavigation": "ページナビゲーション",
       "calendar": "カレンダー",
-      "stats": "統計",
-      "recurring": "繰り返し"
+      "stats": "統計"
     },
     "status": {
       "loading": "読み込み中...",
@@ -160,8 +154,6 @@
       "warning": "警告",
       "info": "情報",
       "offline": "オフラインです。変更は接続復帰後に同期されます。",
-      "realtimeDisconnected": "リアルタイム接続が切断されました。ページをリロードしてください。",
-      "realtimeReconnected": "リアルタイム接続が復旧しました。",
       "syncing": "{count}件の変更を同期中...",
       "syncComplete": "同期完了しました。"
     },
@@ -181,18 +173,10 @@
       "hoursAgo": "{count}時間前"
     },
     "reminder": {
-      "label": "リマインダー",
+      "label": "開始時通知",
       "none": "通知しない",
       "add": "通知を追加",
-      "atStart": "開始時刻",
-      "min5": "5分前",
-      "min10": "10分前",
-      "min15": "15分前",
-      "min30": "30分前",
-      "hour1": "1時間前",
-      "day1": "1日前",
-      "week1": "1週間前",
-      "custom": "カスタム"
+      "atStart": "開始時に通知"
     },
     "note": {
       "edit": "メモを編集",
@@ -207,41 +191,6 @@
     },
     "schedule": {
       "datePlaceholder": "日付..."
-    },
-    "recurrence": {
-      "label": "繰り返し",
-      "none": "繰り返さない",
-      "daily": "毎日",
-      "weekly": "毎週",
-      "monthly": "毎月",
-      "yearly": "毎年",
-      "weekdays": "平日",
-      "custom": "カスタム",
-      "dialog": {
-        "title": "繰り返し",
-        "interval": "間隔",
-        "pattern": "パターン",
-        "period": "期間",
-        "endNever": "終了日未定",
-        "endUntil": "終了日：",
-        "endCount": "回 実施",
-        "perDay": "日ごと",
-        "perWeek": "週間ごと",
-        "perMonth": "ヶ月ごと",
-        "perYear": "年ごと",
-        "everyMonth": "毎月 {day} 日",
-        "everyNthWeekday": "毎月 第{nth}{weekday}曜日",
-        "everyLastWeekday": "毎月 最終{weekday}曜日",
-        "weekdaysShort": {
-          "0": "日",
-          "1": "月",
-          "2": "火",
-          "3": "水",
-          "4": "木",
-          "5": "金",
-          "6": "土"
-        }
-      }
     },
     "language": {
       "current": "現在の言語",

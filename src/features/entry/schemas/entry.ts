@@ -5,16 +5,6 @@ import { z } from 'zod';
 /** エントリ発生源スキーマ（"planned" のみ許可） */
 export const entryOriginSchema = z.literal('planned');
 
-/** 繰り返しタイプスキーマ */
-export const recurrenceTypeSchema = z.enum([
-  'none',
-  'daily',
-  'weekly',
-  'monthly',
-  'yearly',
-  'weekdays',
-]);
-
 /** 充実度スコアスキーマ（3段階: 1=微妙, 2=普通, 3=良い） */
 export const fulfillmentScoreSchema = z.number().int().min(1).max(3);
 
@@ -39,7 +29,7 @@ const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
     if (new Date(d.actual_end_time) < new Date(d.actual_start_time)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'validation.actualTime.endBeforeStart',
+        message: 'validation.time.endBeforeStart',
         path: ['actual_end_time'],
       });
     }
@@ -53,18 +43,20 @@ const baseEntrySchema = z.object({
   origin: entryOriginSchema.optional(), // 省略時はサーバー側で時間位置から判定
   start_time: z.string().datetime().nullable().optional(),
   end_time: z.string().datetime().nullable().optional(),
+  duration_minutes: z.number().int().min(1).nullable().optional(),
   actual_start_time: z.string().datetime().nullable().optional(),
   actual_end_time: z.string().datetime().nullable().optional(),
-  duration_minutes: z.number().int().min(1).nullable().optional(),
   fulfillment_score: fulfillmentScoreSchema.nullable().optional(),
-  recurrence_type: recurrenceTypeSchema.optional(),
-  recurrence_end_date: z.string().nullable().optional(),
-  recurrence_rule: z.string().nullable().optional(),
-  reminder_minutes: z.number().int().min(0).nullable().optional(),
+  reminder_minutes: z.literal(0).nullable().optional(),
 });
 
 /** エントリ作成スキーマ */
-export const createEntrySchema = baseEntrySchema.superRefine(timeOrderRefine);
+export const createEntrySchema = baseEntrySchema
+  .extend({
+    /** 作成と同時にタグを関連付け（1トランザクション） */
+    tagId: z.string().uuid().optional(),
+  })
+  .superRefine(timeOrderRefine);
 
 /** エントリ更新スキーマ（全フィールド任意） */
 export const updateEntrySchema = baseEntrySchema.partial().superRefine(timeOrderRefine);

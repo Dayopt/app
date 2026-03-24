@@ -244,12 +244,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       'before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:transition-colors hover:before:bg-state-hover',
     isDraft &&
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-state-selected',
-    // 選択/アクティブ状態
-    !isDraft && (isSelected || isActive) && 'brightness-110',
+    // 選択/アクティブ状態（ホバーが継続しているような見た目）
+    !isDraft && (isSelected || isActive) && 'after:!bg-state-hover',
     // ホバーオーバーレイ
     !isDraft &&
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:transition-colors hover:after:bg-state-hover',
-    isSelected && 'ring-2 ring-primary',
     'text-foreground',
     isDragging && 'opacity-30',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
@@ -276,6 +275,24 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       tabIndex={0}
       aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
+      {/* 花びらパーティクル（新規作成アニメーション時のみ表示） */}
+      {className?.includes('animate-entry-pop') && (
+        <div
+          className="entry-petals"
+          aria-hidden
+          style={{ '--petal-color': accentColor } as React.CSSProperties}
+        >
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+          <div className="entry-petal" />
+        </div>
+      )}
+
       {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
       <div
         className={cn('relative shrink-0', isActiveEntry && 'animate-pulse')}
@@ -349,10 +366,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         )}
 
         {/* 下端リサイズハンドル（Draft/Past は非表示）
-             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保 */}
+             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。
+             短いカード（< 40px）はハンドルを縮小してクリック領域を確保 */}
         {!isDraft && !isPast && (
           <div
-            className="focus:ring-ring absolute right-0 bottom-[-12px] left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
             role="slider"
             tabIndex={0}
             aria-label="Resize entry duration"
@@ -364,7 +382,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             onTouchStart={handleBottomResizeTouchStart}
             onKeyDown={handleResizeKeyDown}
             style={{
-              height: '32px',
+              height: safePosition.height < 40 ? '16px' : '32px',
+              bottom: safePosition.height < 40 ? '-4px' : '-12px',
               zIndex: 10,
             }}
             title={t('calendar.event.adjustEndTime')}

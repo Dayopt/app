@@ -14,7 +14,6 @@ import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import type { CalendarEvent } from '../../shared/types/base.types';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
@@ -59,6 +58,27 @@ export const DayContent = ({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
+  // ドラッグゴースト描画コールバック
+  const renderGhost = useCallback(
+    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
+      const entry = events?.find((e) => e.id === entryId);
+      if (!entry) return null;
+      const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      return (
+        <EntryCard
+          entry={entry}
+          tagName={tag?.name ?? null}
+          tagColor={tag?.color ?? null}
+          isMobile={isMobile}
+          position={{ top: 0, left: 0, width: 100, height: 9999 }}
+          previewTime={previewTime}
+          style={{ position: 'relative', height: '100%' }}
+        />
+      );
+    },
+    [events, getTagById, isMobile],
+  );
+
   // エントリ右クリックハンドラー
   const handleEntryContextMenu = useCallback(
     (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
@@ -91,6 +111,7 @@ export const DayContent = ({
       {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
       <CalendarDragSelection
         date={date}
+        dayIndex={0}
         className="absolute inset-0"
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}
@@ -104,8 +125,6 @@ export const DayContent = ({
 
       {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={0} />
-
         {events?.map((entry) => {
           const style = eventStyles?.[entry.id];
           if (!style) return null;
@@ -192,7 +211,7 @@ export const DayContent = ({
       </div>
 
       {/* React Portal ゴースト（DOM clone廃止） */}
-      <GhostRenderer state={state} />
+      <GhostRenderer state={state} renderGhost={renderGhost} />
     </div>
   );
 };

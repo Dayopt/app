@@ -63,6 +63,14 @@ const config: StorybookConfig = {
       // Storybook 10: @storybook/blocks は @storybook/addon-docs/blocks に統合
       '@storybook/blocks': '@storybook/addon-docs/blocks',
     };
+    // サーバー専用モジュール（crypto等）をブラウザバンドルから除外
+    config.build = {
+      ...config.build,
+      rollupOptions: {
+        ...config.build?.rollupOptions,
+        external: [...((config.build?.rollupOptions?.external as string[]) || []), 'crypto'],
+      },
+    };
     // React自動JSXランタイム設定
     config.esbuild = {
       ...config.esbuild,

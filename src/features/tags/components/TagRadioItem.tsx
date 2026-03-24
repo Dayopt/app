@@ -10,6 +10,8 @@ interface TagRadioItemProps {
   label: string;
   isSelected: boolean;
   onSelect: () => void;
+  onHover?: ((tag: { id: string; name: string; color: string | null }) => void) | undefined;
+  onHoverEnd?: (() => void) | undefined;
   indented?: boolean;
   disabled?: boolean;
 }
@@ -24,6 +26,8 @@ export function TagRadioItem({
   label,
   isSelected,
   onSelect,
+  onHover,
+  onHoverEnd,
   indented,
   disabled,
 }: TagRadioItemProps) {
@@ -33,6 +37,10 @@ export function TagRadioItem({
     <button
       type="button"
       onClick={onSelect}
+      onMouseEnter={
+        onHover ? () => onHover({ id: tag.id, name: label, color: tag.color }) : undefined
+      }
+      onMouseLeave={onHoverEnd}
       disabled={disabled}
       className={cn(
         'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',

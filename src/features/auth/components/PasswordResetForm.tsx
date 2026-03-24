@@ -79,7 +79,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
                 src="/images/placeholder.svg"
                 alt="Decorative background"
                 fill
-                priority
+                loading="lazy"
                 sizes="(min-width: 768px) 50vw, 0vw"
                 className="object-cover dark:brightness-[0.2] dark:grayscale"
               />
@@ -148,7 +148,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
               src="/images/placeholder.svg"
               alt="Decorative background"
               fill
-              priority
+              loading="lazy"
               sizes="(min-width: 768px) 50vw, 0vw"
               className="object-cover dark:brightness-[0.2] dark:grayscale"
             />

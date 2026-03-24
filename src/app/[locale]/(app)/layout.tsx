@@ -30,8 +30,10 @@ const APP_NAMESPACES = [
   'navigation',
   'notification',
   'settings',
+  'sidebar',
   'error',
   'contact',
+  'tour',
 ];
 
 interface AppLayoutProps {

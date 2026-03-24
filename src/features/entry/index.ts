@@ -16,8 +16,6 @@ export type {
   EntryState,
   EntryWithTags,
   FulfillmentScore,
-  RecurrenceConfig,
-  RecurrenceType,
   UpdateEntryInput,
 } from './types/entry';
 
@@ -33,7 +31,6 @@ export {
   entryOriginSchema,
   fulfillmentScoreSchema,
   getEntryByIdSchema,
-  recurrenceTypeSchema,
   updateEntrySchema,
 } from './schemas/entry';
 export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
@@ -42,19 +39,17 @@ export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 // Hooks
 // =============================================================================
 export {
+  useBlockPlace,
   useEntries,
   useEntry,
   useEntryCreate,
-  useEntryInstanceMutations,
-  useEntryInstances,
   useEntryMutations,
-  useRecurringScopeMutations,
+  useEntryTags,
 } from './hooks';
 
 // =============================================================================
 // Stores
 // =============================================================================
-export { useEntryCacheStore } from './stores/useEntryCacheStore';
 export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 export type { AnchorRect } from './stores/useEntryInspectorStore';
 
@@ -70,22 +65,14 @@ export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 export { getEntryState, isEntryPast } from './lib/entry-status';
 
 // =============================================================================
-// Lib (recurrence utilities)
+// Lib (iCal export)
 // =============================================================================
-export {
-  expandRecurrence,
-  getEntryRecurrenceConfig,
-  isRecurringEntry,
-} from './lib/entry-recurrence';
-export type { EntryInstanceException, ExpandedOccurrence } from './lib/entry-recurrence';
 export { entriesToICal } from './lib/entry-to-ical';
-export { configToRRule, configToReadable, ruleToConfig } from './lib/rrule';
 
 // =============================================================================
-// Lib (instance-id utilities)
+// Lib (new entry animation tracker)
 // =============================================================================
-export { decodeInstanceId, encodeInstanceId, getInstanceRef } from './lib/instance-id';
-export type { InstanceRefSource, RecurrenceInstanceRef } from './lib/instance-id';
+export { isNewEntry } from './lib/new-entry-tracker';
 
 // =============================================================================
 // Components (EntryCard)
@@ -96,11 +83,7 @@ export type { EntryCardPosition, EntryCardProps } from './components/card';
 // =============================================================================
 // Components
 // =============================================================================
-export { EntryDeleteConfirmDialog } from './components/EntryDeleteConfirmDialog';
 export { EntryInspector } from './components/inspector/EntryInspector';
-export { RecurringEditConfirmDialog } from './components/RecurringEditConfirmDialog';
-export type { RecurringEditScope } from './components/RecurringEditConfirmDialog';
-export { EntryCreateTrigger } from './components/shared/EntryCreateTrigger';
 export { LoadingState } from './components/shared/LoadingState';
 
 // Inspector hooks

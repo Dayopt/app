@@ -25,8 +25,6 @@ interface EntryInspectorState {
   isOpen: boolean;
   /** 対象エントリのID */
   entryId: string | null;
-  /** 繰り返しエントリの特定インスタンス日付（YYYY-MM-DD形式） */
-  instanceDate: string | null;
   /** クリックされた要素の位置（Inspector の配置に使用） */
   anchorRect: AnchorRect | null;
 }
@@ -36,12 +34,7 @@ interface EntryInspectorState {
  */
 interface EntryInspectorActions {
   /** Inspector を開く */
-  openInspector: (
-    entryId: string,
-    options?: {
-      instanceDate?: string;
-    },
-  ) => void;
+  openInspector: (entryId: string) => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
   /** アンカー位置を設定（PlanCard クリック時に呼ぶ） */
@@ -59,15 +52,13 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
     (set) => ({
       isOpen: false,
       entryId: null,
-      instanceDate: null,
       anchorRect: null,
 
-      openInspector: (entryId, options) =>
+      openInspector: (entryId) =>
         set(
           {
             isOpen: true,
             entryId,
-            instanceDate: options?.instanceDate ?? null,
           },
           false,
           'openInspector',
@@ -82,7 +73,6 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
           {
             isOpen: false,
             entryId: null,
-            instanceDate: null,
             anchorRect: null,
           },
           false,

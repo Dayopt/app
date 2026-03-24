@@ -15,21 +15,21 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 
 ### コアビジネス（6テーブル）
 
-| テーブル           | 役割                              | 主要カラム                                                                |
-| ------------------ | --------------------------------- | ------------------------------------------------------------------------- |
-| **plans**          | タスク/プラン（タイムボクシング） | title, status(open/closed), start_time, end_time, recurrence_*            |
-| **records**        | 実績時間記録                      | worked_at, start_time, end_time, duration_minutes, fulfillment_score(1-5) |
-| **tags**           | 階層タグ（親子1階層）             | name, color, parent_id, level, sort_order, is_active                      |
-| **plan_tags**      | Plans↔Tags中間テーブル           | plan_id, tag_id                                                           |
-| **record_tags**    | Records↔Tags中間テーブル         | record_id, tag_id                                                         |
-| **plan_instances** | 繰り返しプランの個別インスタンス  | plan_id, instance_date, exception_type, title, description, instance_start, instance_end |
+| テーブル           | 役割                                 | 主要カラム                                                                               |
+| ------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| **plans**          | タスク/プラン（タイムボクシング）    | title, status(open/closed), start_time, end_time                                         |
+| **records**        | 実績時間記録                         | worked_at, start_time, end_time, duration_minutes, fulfillment_score(1-5)                |
+| **tags**           | 階層タグ（親子1階層）                | name, color, parent_id, level, sort_order, is_active                                     |
+| **plan_tags**      | Plans↔Tags中間テーブル              | plan_id, tag_id                                                                          |
+| **record_tags**    | Records↔Tags中間テーブル            | record_id, tag_id                                                                        |
+| **plan_instances** | プランの個別インスタンス（レガシー） | plan_id, instance_date, exception_type, title, description, instance_start, instance_end |
 
 ### ユーザー設定（3テーブル）
 
 | テーブル                     | 役割                                    | 主要カラム                                                                  |
 | ---------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
 | **profiles**                 | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
-| **user_settings**            | 表示設定                                | timezone, theme, time_format, chronotype_*, snap_interval, business_hours_*  |
+| **user_settings**            | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
 | **notification_preferences** | 通知設定                                | enable_browser/email/push_notifications, default_reminder_minutes           |
 
 ### 通知（1テーブル）
@@ -88,7 +88,7 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 │ user_id (FK)      │  │ user_id (FK)      │  │ user_id (FK)     │
 │ title, status     │  │ name, color       │  │ type, title      │
 │ start/end_time    │  │ parent_id (FK→    │  │ related_plan_id  │
-│ recurrence_*      │  │   self, max 1階層) │  │ is_read          │
+│ reminder_*        │  │   self, max 1階層) │  │ is_read          │
 └───────┬──────────┘  └───────┬──────────┘  └──────────────────┘
         │                     │
    ┌────┼────┐           ┌────┘

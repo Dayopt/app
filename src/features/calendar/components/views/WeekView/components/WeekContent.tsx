@@ -11,12 +11,11 @@ import { cn } from '@/lib/utils';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-import { EntryCard } from '@/features/entry';
+import { EntryCard, isNewEntry } from '@/features/entry';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, useEntryStyles } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 import type { WeekEntryPosition } from '../WeekView.types';
@@ -102,6 +101,27 @@ export const WeekContent = React.memo(function WeekContent({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
+  // ドラッグゴースト描画コールバック
+  const renderGhost = useCallback(
+    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return null;
+      const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      return (
+        <EntryCard
+          entry={entry}
+          tagName={tag?.name ?? null}
+          tagColor={tag?.color ?? null}
+          isMobile={isMobile}
+          position={{ top: 0, left: 0, width: 100, height: 9999 }}
+          previewTime={previewTime}
+          style={{ position: 'relative', height: '100%' }}
+        />
+      );
+    },
+    [entries, getTagById, isMobile],
+  );
+
   // この日のエントリ位置
   const dayEntryPositions = React.useMemo(() => {
     return entryPositions
@@ -110,8 +130,8 @@ export const WeekContent = React.memo(function WeekContent({
         plan: pos.plan,
         top: pos.top,
         height: pos.height,
-        left: 2,
-        width: 96,
+        left: 0,
+        width: 100,
         zIndex: pos.zIndex,
         column: pos.column,
         totalColumns: pos.totalColumns,
@@ -155,6 +175,7 @@ export const WeekContent = React.memo(function WeekContent({
     >
       <CalendarDragSelection
         date={date}
+        dayIndex={dayIndex}
         className="absolute inset-0 z-10"
         onTimeRangeSelect={(selection) => {
           onTimeRangeSelect?.(selection);
@@ -169,8 +190,6 @@ export const WeekContent = React.memo(function WeekContent({
       </CalendarDragSelection>
 
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={dayIndex} />
-
         {entries.map((entry) => {
           const style = entryStyles[entry.id];
           if (!style) return null;
@@ -266,7 +285,11 @@ export const WeekContent = React.memo(function WeekContent({
                   isActive={isInspectorOpen && inspectorEntryId === entry.id}
                   previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={cn(
+                    'h-full w-full',
+                    entryDragging ? 'cursor-grabbing' : 'cursor-grab',
+                    isNewEntry(entry.id) && 'animate-entry-pop',
+                  )}
                 />
               </div>
             </div>
@@ -277,7 +300,7 @@ export const WeekContent = React.memo(function WeekContent({
       </div>
 
       {/* React Portal ゴースト */}
-      <GhostRenderer state={state} />
+      <GhostRenderer state={state} renderGhost={renderGhost} />
     </div>
   );
 });

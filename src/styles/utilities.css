@@ -107,6 +107,21 @@
 }
 
 /* ============================================
+ * Grid Row アニメーション
+ *
+ * CLS を防ぎつつ高さアニメーションを実現するため
+ * grid-template-rows: 0fr ↔ 1fr を切り替える。
+ * アラート表示・非表示等に使用。
+ * ============================================ */
+@utility grid-rows-collapsed {
+  grid-template-rows: 0fr;
+}
+
+@utility grid-rows-expanded {
+  grid-template-rows: 1fr;
+}
+
+/* ============================================
  * Physical Elevation ユーティリティ
  *
  * 3段階のサーフェスロール（物理照明ベース）。

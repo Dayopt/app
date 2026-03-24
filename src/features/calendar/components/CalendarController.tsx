@@ -13,7 +13,6 @@ import { useMemo } from 'react';
 
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
-import { DnDProvider } from '../providers/DnDProvider';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
 import { CalendarViewRenderer } from './controller/components';
@@ -67,10 +66,8 @@ export interface CalendarControllerProps {
   onRestoreEntry: (entry: CalendarEvent) => Promise<void>;
 
   // --- Context menu actions ---
-  onEditEntry: (entry: CalendarEvent) => void;
+  getAddToPaletteHandler?: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
-  onDuplicateEntry: (entry: CalendarEvent) => void;
-  onCopyEntry: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -106,10 +103,8 @@ export function CalendarController({
   onUpdateEntry,
   onDeleteEntry,
   onRestoreEntry,
-  onEditEntry,
+  getAddToPaletteHandler,
   onDeleteEntryConfirm,
-  onDuplicateEntry,
-  onCopyEntry,
   onNavigate,
   onViewChange,
   onNavigatePrev,
@@ -183,7 +178,7 @@ export function CalendarController({
   // Render
   // =========================================================================
   return (
-    <DnDProvider>
+    <>
       <CalendarLayout
         className={className}
         viewType={viewType}
@@ -206,15 +201,13 @@ export function CalendarController({
           entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
-          onEdit={onEditEntry}
+          onAddToPalette={getAddToPaletteHandler?.(contextMenuEvent)}
           onDelete={onDeleteEntryConfirm}
-          onDuplicate={onDuplicateEntry}
-          onCopy={onCopyEntry}
         />
       ) : null}
 
       {/* モバイル操作ヒント（初回のみ表示） */}
       <MobileTouchHint />
-    </DnDProvider>
+    </>
   );
 }

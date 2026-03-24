@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import Script from 'next/script';
 
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
@@ -148,11 +147,10 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <div data-locale={validLocale} data-direction={direction}>
       {/* SEO: JSON-LD構造化データ */}
-      <Script
+      <script
         id="json-ld"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        strategy="afterInteractive"
       />
       {children}
     </div>

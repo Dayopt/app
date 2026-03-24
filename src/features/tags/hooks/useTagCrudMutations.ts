@@ -13,7 +13,6 @@ import {
 } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/platform/trpc/client';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
-import { useTagCacheStore } from '../stores/useTagCacheStore';
 
 import type { Tag } from '../types';
 
@@ -34,13 +33,9 @@ export type UpdateTagInput = TrpcTagUpdateInput;
 export function useCreateTag({ showToast = true }: { showToast?: boolean } = {}) {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.create.useMutation({
     onMutate: async (input) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
 
       const tempId = generateTempId('tag');
@@ -82,9 +77,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       if (context?.tempId) useCalendarFilterStore.getState().removeTag(context.tempId);
       if (showToast) toast.error(t('toast.createFailed'));
     },
-    onSettled: () => {
-      decrementMutation();
-    },
+    onSettled: () => {},
   });
 }
 
@@ -92,13 +85,9 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
 export function useUpdateTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   const mutation = trpc.tags.update.useMutation({
     onMutate: async (newData) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
       const detailSnapshot = await snapshotQuery(utils.tags.getById, { id: newData.id });
 
@@ -134,7 +123,6 @@ export function useUpdateTag() {
       }
     },
     onSettled: (_data, _err, input) => {
-      decrementMutation();
       void utils.entries.list.invalidate();
       void utils.tags.list.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
@@ -156,13 +144,9 @@ export function useUpdateTag() {
 export function useDeleteTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.delete.useMutation({
     onMutate: async ({ id }) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
       const detailSnapshot = await snapshotQuery(utils.tags.getById, { id });
 
@@ -193,7 +177,6 @@ export function useDeleteTag() {
       toast.error(t('errors.deleteFailed'));
     },
     onSettled: (_data, _err, input) => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
@@ -206,13 +189,9 @@ export function useDeleteTag() {
 export function useRenameTag() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.update.useMutation({
     onMutate: async (input) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
       const detailSnapshot = await snapshotQuery(utils.tags.getById, { id: input.id });
 
@@ -236,7 +215,6 @@ export function useRenameTag() {
       }
     },
     onSettled: (_data, _err, input) => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
@@ -247,13 +225,9 @@ export function useRenameTag() {
 /** タグ色変更フック（楽観的更新付き）。エラー時はキャッシュをロールバック */
 export function useUpdateTagColor() {
   const utils = trpc.useUtils();
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.update.useMutation({
     onMutate: async (input) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
       const detailSnapshot = await snapshotQuery(utils.tags.getById, { id: input.id });
 
@@ -270,7 +244,6 @@ export function useUpdateTagColor() {
       context?.detailSnapshot?.restore();
     },
     onSettled: (_data, _err, input) => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
@@ -282,13 +255,9 @@ export function useUpdateTagColor() {
 export function useRenameGroup() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.renameGroup.useMutation({
     onMutate: async ({ oldPrefix, newPrefix }) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
 
       // 楽観的更新: キャッシュ内の全該当タグの name を一括置換
@@ -323,7 +292,6 @@ export function useRenameGroup() {
       }
     },
     onSettled: () => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.entries.list.invalidate();
     },
@@ -334,13 +302,9 @@ export function useRenameGroup() {
 export function useUngroupTags() {
   const utils = trpc.useUtils();
   const t = useTranslations('calendar');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.ungroupTags.useMutation({
     onMutate: async ({ prefix, mergeConflicts }) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
 
       const prefixPattern = `${prefix}:`;
@@ -406,7 +370,6 @@ export function useUngroupTags() {
       toast.error(t('filter.ungroupTagsFailed'));
     },
     onSettled: () => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.entries.list.invalidate();
     },
@@ -417,13 +380,9 @@ export function useUngroupTags() {
 export function useDeleteGroup() {
   const utils = trpc.useUtils();
   const t = useTranslations('calendar');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.deleteGroup.useMutation({
     onMutate: async ({ prefix }) => {
-      incrementMutation();
-
       const listSnapshot = await snapshotQuery(utils.tags.list);
 
       // 楽観的更新: prefix: で始まるタグをキャッシュから除去
@@ -452,7 +411,6 @@ export function useDeleteGroup() {
       toast.error(t('filter.deleteGroup.failed'));
     },
     onSettled: () => {
-      decrementMutation();
       void utils.tags.list.invalidate();
       void utils.entries.list.invalidate();
       void utils.entries.getTagStats.invalidate();
@@ -470,13 +428,9 @@ export interface ReorderTagInput {
 export function useReorderTags() {
   const utils = trpc.useUtils();
   const t = useTranslations('tags');
-  const incrementMutation = useTagCacheStore((state) => state.incrementMutation);
-  const decrementMutation = useTagCacheStore((state) => state.decrementMutation);
 
   return trpc.tags.reorder.useMutation({
     onMutate: async ({ updates }) => {
-      incrementMutation();
-
       await utils.tags.list.cancel();
 
       const previousData = utils.tags.list.getData();
@@ -505,7 +459,6 @@ export function useReorderTags() {
       toast.error(t('errors.updateFailed'));
     },
     onSettled: () => {
-      decrementMutation();
       void utils.tags.list.invalidate();
     },
   });

@@ -2,6 +2,7 @@
 // Component exports - individually exported to avoid conflicts
 export { AuthLayout } from './components/AuthLayout';
 export { LoginForm } from './components/LoginForm';
+export { MFAVerifyForm } from './components/MFAVerifyForm';
 export { PasswordResetForm } from './components/PasswordResetForm';
 export { ResetPasswordForm } from './components/ResetPasswordForm';
 export { SessionMonitorProvider } from './components/SessionMonitorProvider';

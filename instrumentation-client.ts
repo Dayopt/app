@@ -105,11 +105,7 @@ function initSentry(dsn: string) {
         enableInp: true,
       }),
 
-      // Session Replay（個人情報保護設定）
-      Sentry.replayIntegration({
-        maskAllText: true, // テキストをマスク
-        blockAllMedia: true, // メディアをブロック
-      }),
+      // Session Replay は init 後に動的読み込み（下記参照）
 
       // Supabase操作（auth, DB）の自動計測
       ...(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -123,6 +119,17 @@ function initSentry(dsn: string) {
           ]
         : []),
     ],
+  });
+
+  // Session Replay を動的読み込み（初期バンドルから-127KB削減）
+  // replaysOnErrorSampleRate/replaysSessionSampleRate は init で設定済み
+  import('@sentry/nextjs').then((lazyLoadedSentry) => {
+    Sentry.addIntegration(
+      lazyLoadedSentry.replayIntegration({
+        maskAllText: true,
+        blockAllMedia: true,
+      }),
+    );
   });
 
   // プラットフォームタグ: PWA（standalone）か通常ブラウザかを識別

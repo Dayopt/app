@@ -2,7 +2,7 @@
  * オンボーディングページ用Providers
  *
  * フルProvidersの軽量版。tRPC + Auth + Theme のみ提供。
- * RealtimeProvider, GlobalSearchProvider, ServiceWorkerProvider は不要。
+ * GlobalSearchProvider, ServiceWorkerProvider は不要。
  *
  * @see src/shell/providers.tsx - フルProviders定義
  */

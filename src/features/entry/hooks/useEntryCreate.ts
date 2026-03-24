@@ -11,6 +11,7 @@
 import { useCallback } from 'react';
 
 import { logger } from '@/lib/logger';
+import { snapToNextInterval } from '@/lib/time-utils';
 import { api } from '@/platform/trpc';
 import { useEntryMutations } from './useEntryMutations';
 
@@ -19,19 +20,6 @@ import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
 interface UseEntryCreateOptions {
   /** 作成後のコールバック */
   onSuccess?: (() => void) | undefined;
-}
-
-/** 次の15分単位の時刻を取得 */
-function getNextQuarterHour(date: Date): Date {
-  const result = new Date(date);
-  const minutes = result.getMinutes();
-  const nextQuarter = Math.ceil(minutes / 15) * 15;
-  result.setMinutes(nextQuarter, 0, 0);
-  if (nextQuarter >= 60) {
-    result.setHours(result.getHours() + 1);
-    result.setMinutes(0);
-  }
-  return result;
 }
 
 /** エントリ作成フローを統合したフック（空きスロット検索→作成→Inspectorオープン）
@@ -62,7 +50,7 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
   /** 空き時間を探す（最大2時間先まで、15分刻み） */
   const findAvailableSlot = useCallback(
     (baseTime: Date): { start: Date; end: Date } => {
-      let start = getNextQuarterHour(baseTime);
+      let start = snapToNextInterval(baseTime);
       let end = new Date(start.getTime() + 60 * 60 * 1000);
 
       for (let i = 0; i < 8; i++) {
@@ -74,8 +62,8 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
       }
 
       return {
-        start: getNextQuarterHour(baseTime),
-        end: new Date(getNextQuarterHour(baseTime).getTime() + 60 * 60 * 1000),
+        start: snapToNextInterval(baseTime),
+        end: new Date(snapToNextInterval(baseTime).getTime() + 60 * 60 * 1000),
       };
     },
     [checkOverlap],

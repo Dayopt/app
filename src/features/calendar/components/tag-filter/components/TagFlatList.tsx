@@ -39,7 +39,7 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
-import { resolveTagColor } from '@/lib/tag-colors';
+import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -485,6 +485,7 @@ function SortableTagItem({
         className={cn(isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
         {...attributes}
         {...listeners}
+        role="listitem"
       >
         {/* グループ先頭タグの場合、GroupHeader を描画 */}
         {isFirstInGroup && (
@@ -518,10 +519,11 @@ function SortableTagItem({
             <Checkbox
               checked={checked}
               onCheckedChange={onToggle}
+              aria-label={tag.name}
               className="ml-2 shrink-0 cursor-pointer"
               style={{
-                borderColor: displayColor,
-                backgroundColor: checked ? displayColor : 'transparent',
+                borderColor: getTagColorClasses(displayColor).cssVar,
+                backgroundColor: checked ? getTagColorClasses(displayColor).cssVar : 'transparent',
               }}
             />
             <HoverTooltip

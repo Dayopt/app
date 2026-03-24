@@ -57,8 +57,7 @@
 
 | 対象 | 操作 | 理由 |
 |------|------|------|
-| `content/docs/features/plans.mdx` | 更新 | 繰り返し予定の新オプションを追記 |
-| `content/blog/recurring-plans-tips.mdx` | 新規 | ユーザー向けに活用方法を紹介 |
+| `content/docs/features/plans.mdx` | 更新 | 機能の変更内容を反映 |
 
 `/write-docs` コマンドで執筆を開始できます。
 

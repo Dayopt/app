@@ -3,7 +3,7 @@
 /**
  * サイドバーコンテンツ（Composition Layer）
  *
- * ミニカレンダー + ビュー切り替え + フィルターを組み立てる。
+ * ミニカレンダー + ビュー切り替え + フィルター + パレットを組み立てる。
  * features の組み合わせはこの composition layer で行う。
  */
 
@@ -12,18 +12,24 @@ import { useCallback } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
+import { RecentBlocks } from '@/features/history';
+import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useTheme } from '@/hooks/useTheme';
+import { SidebarSection } from '@/shell/components/sidebar';
 
-/** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルターを組み立てる Composition Layer） */
+/** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルター・パレットを組み立てる Composition Layer） */
 export function SidebarContent() {
+  const t = useTranslations();
   const pathname = usePathname();
   const navigation = useCalendarNavigation();
+  const { pinItem } = usePaletteMutations();
 
   const isStatsPage = pathname?.includes('/stats') ?? false;
   const statsCurrentDate = useStatsFilterStore((s) => s.currentDate);
@@ -38,27 +44,45 @@ export function SidebarContent() {
     }
   };
 
+  // 履歴からのピン留め — 成功時にtoastで通知
+  const handlePinFromHistory = useCallback(
+    (tagId: string, durationMinutes: number) => {
+      pinItem(tagId, durationMinutes, {
+        onSuccess: () => toast.success(t('sidebar.recentBlocks.pinned')),
+      });
+    },
+    [pinItem, t],
+  );
+
   return (
     <>
-      {/* ミニカレンダー（PCのみ）- サイドバー上部 */}
-      <div className="hidden shrink-0 md:block">
-        <MiniCalendar
-          selectedDate={miniCalendarDate}
-          onDateSelect={(date) => {
-            if (date) handleDateSelect(date);
-          }}
-          className="w-full bg-transparent"
-        />
+      {/* ミニカレンダー（PCのみ） */}
+      <div className="hidden px-2 md:block">
+        <SidebarSection title={t('sidebar.calendar.title')} defaultOpen>
+          <MiniCalendar
+            selectedDate={miniCalendarDate}
+            onDateSelect={(date) => {
+              if (date) handleDateSelect(date);
+            }}
+            className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+          />
+        </SidebarSection>
       </div>
 
       {/* ビュー切り替え・フィルター */}
-      <div className="flex min-w-0 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-col overflow-hidden px-2">
         {/* ビュー切り替え（モバイルのみ） */}
         <ViewSwitcherList />
 
         {/* カレンダーフィルター */}
         <CalendarFilterList />
       </div>
+
+      {/* パレット（ピン留めブロックのクイック配置） */}
+      <Palette />
+
+      {/* 履歴（頻度×鮮度ベースの自動集計） */}
+      <RecentBlocks onPinItem={handlePinFromHistory} />
 
       {/* テーマ切替 */}
       <SidebarUtilities />

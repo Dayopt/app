@@ -6,11 +6,6 @@ import { createFilterStore } from './createFilterStore';
 type EntryStatus = 'open' | 'closed';
 
 /**
- * 繰り返しフィルタータイプ
- */
-export type RecurrenceFilter = 'all' | 'yes' | 'no';
-
-/**
  * リマインダーフィルタータイプ
  */
 export type ReminderFilter = 'all' | 'yes' | 'no';
@@ -31,7 +26,6 @@ interface EntryFilterState extends BaseFilterState {
   tags: string[];
   search: string;
   assignee: string;
-  recurrence: RecurrenceFilter;
   reminder: ReminderFilter;
   schedule: ScheduleFilter;
   createdAt: DateRangeFilter;
@@ -52,7 +46,6 @@ export const useEntryFilterStore = createFilterStore<EntryFilterState>({
     tags: [],
     search: '',
     assignee: '',
-    recurrence: 'all',
     reminder: 'all',
     schedule: 'all',
     createdAt: 'all',

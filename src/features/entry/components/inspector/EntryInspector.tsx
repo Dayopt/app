@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useModalStore } from '@/stores/useModalStore';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
@@ -39,8 +38,15 @@ function InspectorURLSyncHandler() {
 /** モバイル Drawer のスナップポイント */
 const SNAP_POINTS = [1] as const;
 
+interface EntryInspectorProps {
+  /** パレットへのピン留めコールバック（Composition Layer から注入） */
+  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレット登録済みチェック関数（Composition Layer から注入） */
+  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
+}
+
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
-export function EntryInspector() {
+export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery('(max-width: 767px)');
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
@@ -61,10 +67,7 @@ export function EntryInspector() {
   });
   const entry: EntryWithTags | null = (planData ?? null) as EntryWithTags | null;
 
-  // 繰り返しダイアログが開いている間は Inspector を閉じない
   const handleClose = useCallback(() => {
-    const modal = useModalStore.getState().modal;
-    if (modal?.type === 'recurringEdit') return;
     closeInspector();
   }, [closeInspector]);
 
@@ -106,16 +109,23 @@ export function EntryInspector() {
       </div>
     );
   } else {
-    content = <EntryInspectorForm />;
+    content = (
+      <EntryInspectorForm onPinToPalette={onPinToPalette} isPinnedInPalette={isPinnedInPalette} />
+    );
   }
 
-  if (!isOpen) return null;
+  // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
+  const urlSyncElement = (
+    <Suspense fallback={null}>
+      <InspectorURLSyncHandler />
+    </Suspense>
+  );
+
+  if (!isOpen) return urlSyncElement;
 
   return (
     <>
-      <Suspense fallback={null}>
-        <InspectorURLSyncHandler />
-      </Suspense>
+      {urlSyncElement}
 
       {isMobile ? (
         <Drawer

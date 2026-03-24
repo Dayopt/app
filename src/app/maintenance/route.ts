@@ -5,7 +5,7 @@
  * locale プレフィックスなしでアクセス可能（/maintenance）
  *
  * Route Handlerとして実装することで、ルートレイアウトの
- * Providers（RealtimeProvider等）をバイパスし、
+ * Providersをバイパスし、
  * CSP違反を防止する
  */
 

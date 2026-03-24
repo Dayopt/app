@@ -11,7 +11,6 @@ export function createMockTag(overrides: Partial<TagRow> = {}): TagRow {
     id: crypto.randomUUID(),
     user_id: 'test-user-id',
     name: 'Test Tag',
-    description: null,
     color: 'blue',
     is_active: true,
     sort_order: 0,

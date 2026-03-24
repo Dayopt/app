@@ -10,12 +10,11 @@ import type { EntryFilter } from '../schemas/entry';
  * @param options - React Query オプション
  *
  * @remarks
- * リアルタイム性を最優先した設定:
- * - staleTime: 5分 → Realtime購読で更新されるため、ページ遷移時の再フェッチを抑制
+ * - staleTime: 30秒 → タブ切り替え時に30秒以上経過していれば自動再取得
  * - refetchOnWindowFocus: true（グローバル設定で有効）→ タブ切り替え時に再フェッチ
  * - gcTime: 10分 → メモリからの削除は遅らせてローディング状態を回避
  *
- * @see {@link cacheStrategies.entries} - realtimeCache設定を使用
+ * @see {@link cacheStrategies.entries} - activeCache設定を使用
  */
 /** エントリ一覧を取得するフック（フィルター・ソート・ページネーション対応）
  * @param filters - フィルター条件（origin, search, tagId, 日付範囲など）
@@ -23,7 +22,7 @@ import type { EntryFilter } from '../schemas/entry';
  */
 export function useEntries(filters?: EntryFilter, options?: { enabled?: boolean }) {
   return api.entries.list.useQuery(filters, {
-    ...cacheStrategies.entries, // staleTime: 5分, gcTime: 10分
+    ...cacheStrategies.entries, // staleTime: 30秒, gcTime: 10分
     retry: 1,
     ...options,
   });

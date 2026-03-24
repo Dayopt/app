@@ -119,9 +119,12 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
       className={`${inter.variable} ${notoSansJP.variable}`}
     >
       <head>
-        {/* LCP改善: Supabase API への早期接続確立 */}
+        {/* LCP改善: Supabase API への早期接続確立（preconnect + dns-prefetch） */}
         {process.env.NEXT_PUBLIC_SUPABASE_URL && (
-          <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+          <>
+            <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+            <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+          </>
         )}
         {/*
          * iOS スプラッシュスクリーン（apple-touch-startup-image）

@@ -8,13 +8,12 @@ import { api } from '@/platform/trpc';
  * @param options - オプション（tags: true でタグも取得）
  *
  * @remarks
- * リアルタイム性を重視した設定（業界標準準拠）:
  * - staleTime: 30秒 → 30秒以内のタブ切り替えでは再フェッチをスキップ（UX向上）
  * - refetchOnWindowFocus: true（グローバル設定で有効）→ staleなデータのみ再フェッチ
- * - gcTime: 2分 → メモリからの削除は遅らせてローディング状態を回避
- * - placeholderData: plans.list キャッシュから即座にデータを表示（UX大幅向上）
+ * - gcTime: 10分 → メモリからの削除は遅らせてローディング状態を回避
+ * - placeholderData: entries.list キャッシュから即座にデータを表示（UX大幅向上）
  *
- * @see {@link cacheStrategies.plans} - realtimeCache設定を使用
+ * @see {@link cacheStrategies.plans} - activeCache設定を使用
  */
 /** 単一エントリをIDで取得するフック（タグ情報含む・キャッシュからプレースホルダー表示）
  * @param id - エントリID

@@ -1,7 +1,7 @@
 /**
  * Entries Core Router
  *
- * CRUD, bulk operations, instances, recurrence, tags
+ * CRUD, bulk operations, tags
  *
  * 統計系は statistics.ts に分離。
  */
@@ -89,7 +89,7 @@ const setTagInputSchema = z.object({
 // Router
 // =============================================================================
 
-/** エントリCRUD・一括操作・インスタンス・繰り返し・タグ操作を担うコアtRPCルーター */
+/** エントリCRUD・一括操作・タグ操作を担うコアtRPCルーター */
 export const entriesCoreRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
   // CRUD
@@ -144,11 +144,30 @@ export const entriesCoreRouter = createTRPCRouter({
 
       const service = createEntryService(ctx.supabase);
       try {
+        const { tagId, ...entryInput } = input;
         const result = await service.create({
           userId: ctx.userId,
-          input,
+          input: entryInput,
           preventOverlappingEntries: true,
         });
+
+        // タグ指定時: エントリ作成と同時にタグを関連付け
+        if (tagId && result.id) {
+          const { error: tagError } = await ctx.supabase.from('entry_tags').insert({
+            user_id: ctx.userId,
+            entry_id: result.id,
+            tag_id: tagId,
+          });
+          if (tagError) {
+            // タグ関連付け失敗はエントリ作成を巻き戻さない（ベストエフォート）
+            captureBusinessEvent('entry.tag_attach_failed', {
+              entryId: result.id,
+              tagId,
+              error: tagError.message,
+            });
+          }
+        }
+
         captureBusinessEvent('entry.created', {
           entryType: input.origin ?? 'plan',
         });
@@ -165,7 +184,7 @@ export const entriesCoreRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         data: updateEntrySchema,
-        expectedUpdatedAt: z.string().datetime().optional(),
+        expectedUpdatedAt: z.string().datetime({ offset: true }).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -243,12 +262,10 @@ export const entriesCoreRouter = createTRPCRouter({
     .input(bulkDeleteEntrySchema)
     .mutation(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
-      const { data, error } = await supabase
-        .from('entries')
-        .update({ deleted_at: new Date().toISOString() })
-        .in('id', input.ids)
-        .eq('user_id', userId)
-        .select('id');
+      const { data, error } = await supabase.rpc('bulk_soft_delete_entries', {
+        p_entry_ids: input.ids,
+        p_user_id: userId,
+      });
 
       if (error) {
         throw new TRPCError({
@@ -256,8 +273,9 @@ export const entriesCoreRouter = createTRPCRouter({
           message: `Failed to bulk delete entries: ${error.message}`,
         });
       }
-      captureBusinessEvent('entry.bulk_deleted', { count: data.length });
-      return { success: true, count: data.length };
+      const count = data ?? 0;
+      captureBusinessEvent('entry.bulk_deleted', { count });
+      return { success: true, count };
     }),
 
   /** 複数エントリにタグを一括設定（1エントリ1タグ、delete+insert） */
@@ -298,223 +316,6 @@ export const entriesCoreRouter = createTRPCRouter({
         });
       }
       return { success: true, count: count ?? entryIds.length };
-    }),
-
-  // ---------------------------------------------------------------------------
-  // Instances (recurring entry exceptions)
-  // ---------------------------------------------------------------------------
-
-  /** Get exception info for specified entry IDs */
-  getInstances: protectedProcedure
-    .meta({ description: '繰り返しエントリの例外情報取得（バッチ）' })
-    .input(
-      z.object({
-        entryIds: z.array(z.string().uuid()).max(100),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryIds, startDate, endDate } = input;
-
-      if (entryIds.length === 0) return [];
-
-      const { data: userEntries, error: entriesError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('user_id', userId)
-        .in('id', entryIds);
-
-      if (entriesError) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch entries: ${entriesError.message}`,
-        });
-      }
-
-      const validEntryIds = userEntries.map((e) => e.id);
-      if (validEntryIds.length === 0) return [];
-
-      let query = supabase.from('entry_instances').select('*').in('entry_id', validEntryIds);
-      if (startDate) query = query.gte('instance_date', startDate);
-      if (endDate) query = query.lte('instance_date', endDate);
-
-      const { data, error } = await query;
-
-      if (error) {
-        if (error.message.includes('does not exist')) return [];
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch exception info: ${error.message}`,
-        });
-      }
-      return data ?? [];
-    }),
-
-  /** Create entry instance (exception) */
-  createInstance: protectedProcedure
-    .meta({ description: '繰り返しエントリの例外作成（変更/キャンセル/移動）' })
-    .input(
-      z.object({
-        entryId: z.string().uuid(),
-        instanceDate: z.string(),
-        exceptionType: z.enum(['modified', 'cancelled', 'moved']),
-        title: z.string().optional(),
-        description: z.string().optional(),
-        instanceStart: z.string().optional(),
-        instanceEnd: z.string().optional(),
-        originalDate: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('id', input.entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (entryError || !entry) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Entry not found or access denied',
-        });
-      }
-
-      const { data, error } = await supabase
-        .from('entry_instances')
-        .upsert(
-          {
-            entry_id: input.entryId,
-            user_id: ctx.userId,
-            instance_date: input.instanceDate,
-            exception_type: input.exceptionType,
-            title: input.title ?? null,
-            description: input.description ?? null,
-            instance_start: input.instanceStart ?? null,
-            instance_end: input.instanceEnd ?? null,
-            original_date: input.originalDate ?? null,
-          },
-          { onConflict: 'entry_id,instance_date' },
-        )
-        .select()
-        .single();
-
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to create exception: ${error.message}`,
-        });
-      }
-      return data;
-    }),
-
-  /** Delete entry instance (exception) */
-  deleteInstance: protectedProcedure
-    .meta({ description: '繰り返しエントリの例外削除' })
-    .input(
-      z.object({
-        entryId: z.string().uuid(),
-        instanceDate: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .select('id')
-        .eq('id', input.entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (entryError || !entry) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Entry not found or access denied',
-        });
-      }
-
-      const { error } = await supabase
-        .from('entry_instances')
-        .delete()
-        .eq('entry_id', input.entryId)
-        .eq('instance_date', input.instanceDate)
-        .eq('user_id', userId);
-
-      if (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to delete exception: ${error.message}`,
-        });
-      }
-      return { success: true };
-    }),
-
-  // ---------------------------------------------------------------------------
-  // Recurrence
-  // ---------------------------------------------------------------------------
-
-  /**
-   * 繰り返しエントリを分割
-   *
-   * 「この日以降」編集/削除時に使用。
-   * DB側の split_recurrence RPC 関数で全操作をトランザクション内で実行し、
-   * 部分的な失敗による不整合を防止する。
-   */
-  splitRecurrence: protectedProcedure
-    .meta({ description: '繰り返しエントリ分割（この日以降を別エントリに）' })
-    .input(
-      z.object({
-        entryId: z.string().uuid(),
-        splitDate: z.string(),
-        overrides: z
-          .object({
-            title: z.string().optional(),
-            description: z.string().nullable().optional(),
-            start_time: z.string().optional(),
-            end_time: z.string().optional(),
-          })
-          .optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { supabase, userId } = ctx;
-      const { entryId, splitDate, overrides } = input;
-
-      // split_recurrence は新規 RPC 関数のため database.types.ts に未反映
-      // 次回の型生成 (supabase gen types) で解消される
-      const { data, error } = await supabase.rpc(
-        'split_recurrence' as never,
-        {
-          p_user_id: userId,
-          p_entry_id: entryId,
-          p_split_date: splitDate,
-          p_new_start_time: overrides?.start_time ?? null,
-          p_new_end_time: overrides?.end_time ?? null,
-          p_new_title: overrides?.title ?? null,
-          p_new_description: overrides?.description ?? null,
-        } as never,
-      );
-
-      if (error) {
-        if (error.message.includes('Entry not found')) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found or access denied' });
-        }
-        if (error.message.includes('not a recurring entry')) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Entry is not a recurring entry' });
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to split recurrence: ${error.message}`,
-        });
-      }
-
-      const result = data as { parentEntryId: string; newEntryId: string; splitDate: string };
-      return result;
     }),
 
   // ---------------------------------------------------------------------------

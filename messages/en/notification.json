@@ -54,8 +54,8 @@
       "saveError": "Failed to save settings: {message}",
       "tip": "Browser notifications only work when the app is open. Enable email or push notifications to stay informed anytime.",
       "defaultReminder": {
-        "label": "Default reminder",
-        "description": "Automatically set for new plans"
+        "label": "Default start notification",
+        "description": "Automatically enable start notification for new plans"
       }
     }
   }

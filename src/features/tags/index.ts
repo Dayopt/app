@@ -13,6 +13,7 @@ export {
   TagDeleteStrategyDialog,
 } from './components';
 export { TagQuickSelector } from './components/TagQuickSelector';
+export type { HoveredTagInfo } from './components/TagQuickSelector';
 export { TagRadioItem } from './components/TagRadioItem';
 
 // Hooks
@@ -28,8 +29,6 @@ export {
   useTag,
   // Operations
   useTagOperations,
-  // Realtime
-  useTagRealtime,
   // Tags CRUD
   useTags,
   useTagsMap,

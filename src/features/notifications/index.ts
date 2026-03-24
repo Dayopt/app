@@ -15,7 +15,6 @@ export { NotificationItem } from './components/NotificationItem';
 // Hooks
 // =============================================================================
 export { useNotificationPreferences } from './hooks/useNotificationPreferences';
-export { useNotificationRealtime } from './hooks/useNotificationRealtime';
 export { useNotifications } from './hooks/useNotifications';
 
 // =============================================================================

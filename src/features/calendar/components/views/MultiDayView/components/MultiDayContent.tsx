@@ -15,7 +15,6 @@ import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { PanelDragPreview } from '../../shared/components/PanelDragPreview';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
 
@@ -99,6 +98,27 @@ export function MultiDayContent({
   const isDragging = state.mode === 'dragging';
   const isResizing = state.mode === 'resizing';
 
+  // ドラッグゴースト描画コールバック
+  const renderGhost = useCallback(
+    ({ entryId, previewTime }: { entryId: string; previewTime: { start: Date; end: Date } }) => {
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return null;
+      const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      return (
+        <EntryCard
+          entry={entry}
+          tagName={tag?.name ?? null}
+          tagColor={tag?.color ?? null}
+          isMobile={isMobile}
+          position={{ top: 0, left: 0, width: 100, height: 9999 }}
+          previewTime={previewTime}
+          style={{ position: 'relative', height: '100%' }}
+        />
+      );
+    },
+    [entries, getTagById, isMobile],
+  );
+
   const handleEntryContextMenu = useCallback(
     (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
       if (isDragging || isResizing) return;
@@ -138,8 +158,6 @@ export function MultiDayContent({
       </CalendarDragSelection>
 
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
-        <PanelDragPreview dayIndex={dayIndex} />
-
         {entries.map((entry) => {
           const style = entryStyles[entry.id];
           if (!style) return null;
@@ -244,7 +262,7 @@ export function MultiDayContent({
       </div>
 
       {/* React Portal ゴースト */}
-      <GhostRenderer state={state} />
+      <GhostRenderer state={state} renderGhost={renderGhost} />
     </div>
   );
 }

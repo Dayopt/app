@@ -46,18 +46,11 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
 
-  // 合計時間
-  const totalMinutes = endMinutes - startMinutes;
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const durationText =
-    hours > 0 ? (minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`) : `${minutes}m`;
-
   // 重複時は赤背景でエラー表示
   if (isOverlapping) {
     return (
       <div
-        className="bg-destructive border-destructive/50 pointer-events-none absolute right-0 left-0 rounded border"
+        className="bg-destructive border-destructive/50 pointer-events-none absolute right-2 left-0 rounded border"
         style={{ top, height, zIndex: 1000 }}
       >
         <div className="flex items-center gap-1 px-2 py-1">
@@ -70,23 +63,47 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
     );
   }
 
-  // 通常時: PlanCardと同じデザイン（左ボーダーアクセント + 右角丸）
+  // 通常時: EntryCardと同じデザイン（左アクセント + 右角丸 + タグ名 + 時間）
+  const isCompact = height < 40;
+
   return (
     <div
-      className="border-l-indicator pointer-events-none absolute right-0 left-0 rounded-r-lg"
+      className="pointer-events-none absolute right-2 left-0 flex rounded-r-lg"
       style={{
         top,
         height,
         zIndex: 1000,
-        borderLeftColor: 'var(--entry-default)',
-        backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
       }}
     >
-      <div className="flex h-full flex-col justify-between p-2">
-        <span className="text-foreground text-sm font-semibold tabular-nums">{timeLabel}</span>
-        <span className="text-muted-foreground text-sm font-medium tabular-nums">
-          {durationText}
-        </span>
+      {/* 左アクセントストリップ */}
+      <div
+        className="shrink-0"
+        style={{
+          width: '3px',
+          backgroundColor: 'var(--entry-default)',
+        }}
+      />
+      {/* カード本体 */}
+      <div
+        className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
+        style={{
+          backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
+        }}
+      >
+        {isCompact ? (
+          <div className="flex h-full items-center px-2">
+            <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col gap-1 p-2">
+            <span className="text-muted-foreground text-sm leading-tight font-normal">
+              {t('event.selectTag')}
+            </span>
+            <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+              {timeLabel}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

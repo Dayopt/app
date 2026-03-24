@@ -11,6 +11,11 @@
 export { CalendarController } from './components/CalendarController';
 
 // =============================================================================
+// Providers
+// =============================================================================
+export { DnDProvider } from './providers/DnDProvider';
+
+// =============================================================================
 // Layout Components
 // =============================================================================
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
@@ -55,7 +60,6 @@ export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarPlanKeyboa
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
 export { usePlanContextActions } from './hooks/operations/usePlanContextActions';
 export { usePlanOperations } from './hooks/operations/usePlanOperations';
-export { useRecurringPlanDrag } from './hooks/operations/useRecurringPlanDrag';
 
 // =============================================================================
 // Lib / Utils

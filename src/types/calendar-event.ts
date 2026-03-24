@@ -19,7 +19,6 @@ export interface CalendarEvent {
   displayEndDate: Date;
   duration: number; // minutes
   isMultiDay: boolean;
-  isRecurring: boolean;
   // === Entry 統合フィールド ===
   /** エントリの起源（常に planned） */
   origin?: EntryOrigin | undefined;
@@ -36,12 +35,6 @@ export interface CalendarEvent {
   location?: string | undefined; // 場所
   url?: string | undefined; // 関連URL
   priority?: 'urgent' | 'important' | 'necessary' | 'delegate' | 'optional' | undefined; // 優先度
-  calendarId?: string | undefined; // カレンダーID（繰り返しの場合は親エントリID）
-  // 繰り返し例外情報
-  isException?: boolean | undefined; // 例外インスタンスかどうか
-  exceptionType?: 'modified' | 'cancelled' | 'moved' | undefined; // 例外タイプ
-  originalEntryId?: string | undefined; // 繰り返しインスタンスの親エントリID
-  instanceDate?: string | undefined; // インスタンス日付（YYYY-MM-DD）
   // ドラフト状態（未保存のプレビュー）
   isDraft?: boolean | undefined;
 }

@@ -22,11 +22,11 @@ import {
   useCalendarNavigationHandlers,
   usePlanContextActions,
   usePlanOperations,
-  useRecurringPlanDrag,
   useWeekendToggleShortcut,
 } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
+import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
 import { getCurrentTimezone, setUserTimezone, useUserSettings } from '@/features/settings';
@@ -84,11 +84,8 @@ export interface CalendarCompositionResult {
   onRestorePlan: (plan: CalendarEvent) => Promise<void>;
 
   // === Context menu actions ===
-  onEditPlan: (plan: CalendarEvent) => void;
+  getAddToPaletteHandler: (plan: CalendarEvent) => ((plan: CalendarEvent) => void) | undefined;
   onDeletePlanConfirm: (plan: CalendarEvent) => void;
-  onDuplicatePlan: (plan: CalendarEvent) => void;
-  onCopyPlan: (plan: CalendarEvent) => void;
-  onCompleteWithRecord: (plan: CalendarEvent) => void;
 
   // === Navigation handlers ===
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -192,25 +189,45 @@ export function useCalendarComposition({
   // =========================================================================
   // Plan Operations（CRUD）
   // =========================================================================
-  const { handlePlanDelete: deletePlan, handlePlanRestore } = usePlanOperations();
-
-  // =========================================================================
-  // Recurring Plan Drag（ダイアログ付きドラッグ処理）
-  // =========================================================================
-  const { handleUpdatePlan } = useRecurringPlanDrag({
-    plans: allCalendarEvents,
-  });
+  const {
+    handlePlanDelete: deletePlan,
+    handlePlanRestore,
+    handleUpdatePlan: handlePlanUpdate,
+  } = usePlanOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
   // =========================================================================
-  const {
-    handleDeletePlan: handleDeletePlanConfirm,
-    handleEditPlan,
-    handleDuplicatePlan,
-    handleCopyPlan,
-    handleCompleteWithRecord,
-  } = usePlanContextActions();
+  const { handleDeletePlan: handleDeletePlanConfirm } = usePlanContextActions();
+
+  // =========================================================================
+  // Palette Pin（コンテキストメニューから「パレットに追加」）
+  // =========================================================================
+  const { data: paletteItems } = usePaletteItems();
+  const { pinItem } = usePaletteMutations();
+
+  const handleAddToPalette = useCallback(
+    (plan: CalendarEvent) => {
+      if (!plan.tagId || !plan.duration) return;
+      pinItem(plan.tagId, plan.duration);
+    },
+    [pinItem],
+  );
+
+  /** エントリのtag+durationがパレットに登録済みかを判定し、未登録時のみコールバックを返す */
+  const getAddToPaletteHandler = useCallback(
+    (plan: CalendarEvent) => {
+      // タグなし or duration なし → パレット追加不可
+      if (!plan.tagId || !plan.duration) return undefined;
+      // 既にパレットに登録済み → 非表示
+      const isPinned = paletteItems?.some(
+        (item) => item.tag_id === plan.tagId && item.duration_minutes === plan.duration,
+      );
+      if (isPinned) return undefined;
+      return handleAddToPalette;
+    },
+    [paletteItems, handleAddToPalette],
+  );
 
   // =========================================================================
   // Navigation Handlers
@@ -351,16 +368,13 @@ export function useCalendarComposition({
       onTimeRangeSelect: handleDateTimeRangeSelect,
 
       // Plan CRUD
-      onUpdatePlan: handleUpdatePlan,
+      onUpdatePlan: handlePlanUpdate,
       onDeletePlan: deletePlan,
       onRestorePlan: handlePlanRestore,
 
       // Context menu actions
-      onEditPlan: handleEditPlan,
+      getAddToPaletteHandler,
       onDeletePlanConfirm: handleDeletePlanConfirm,
-      onDuplicatePlan: handleDuplicatePlan,
-      onCopyPlan: handleCopyPlan,
-      onCompleteWithRecord: handleCompleteWithRecord,
 
       // Navigation handlers
       onNavigate: handleNavigate,
@@ -380,14 +394,11 @@ export function useCalendarComposition({
       disabledPlanId,
       handlePlanClick,
       handleDateTimeRangeSelect,
-      handleUpdatePlan,
+      handlePlanUpdate,
       deletePlan,
       handlePlanRestore,
-      handleEditPlan,
+      getAddToPaletteHandler,
       handleDeletePlanConfirm,
-      handleDuplicatePlan,
-      handleCopyPlan,
-      handleCompleteWithRecord,
       handleNavigate,
       handleViewChange,
       handleNavigatePrev,

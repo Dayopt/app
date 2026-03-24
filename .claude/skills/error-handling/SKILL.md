@@ -1,6 +1,8 @@
 ---
 name: error-handling
 description: エラーハンドリングスキル。エラー処理、Sentry連携、ユーザー通知の実装時に自動発動。ErrorBoundary配置とAppErrorパターンを支援。
+effort: low
+maxTurns: 10
 ---
 
 # エラーハンドリングスキル

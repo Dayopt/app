@@ -23,7 +23,6 @@ function makePlan(id: string, startDate: Date | null): CalendarEvent {
     displayEndDate: startDate ? new Date(startDate.getTime() + 3600000) : new Date(),
     duration: 60,
     isMultiDay: false,
-    isRecurring: false,
   };
 }
 

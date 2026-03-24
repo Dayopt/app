@@ -39,6 +39,3 @@ export { useOptimisticTagUpdate } from './useTagsOptimistic';
 
 // Tag Operations
 export { useTagOperations } from './useTagOperations';
-
-// Realtime
-export { useTagRealtime } from './useTagRealtime';

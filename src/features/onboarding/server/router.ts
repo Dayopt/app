@@ -12,7 +12,7 @@ import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
-import { generateSamplePlans } from '../lib/sample-plans';
+import { PRESET_TAGS, generateSamplePlans } from '../lib/sample-plans';
 
 import type { PresetChronotypeType } from '@/types/chronotype';
 
@@ -150,7 +150,12 @@ export const onboardingRouter = createTRPCRouter({
 /**
  * サンプルプランを作成する（オンボーディング完了時）
  *
- * entriesテーブルに直接挿入する（feature boundary制約のため entry service は使わない）
+ * 1. プリセットタグ5個を tags テーブルに挿入
+ * 2. サンプルエントリ7個を entries テーブルに挿入
+ * 3. entry_tags でエントリとタグを紐付け
+ *
+ * feature boundary制約のため entry/tag service は使わず直接挿入する。
+ * 失敗してもオンボーディング完了を妨げない（logger.error のみ）。
  */
 async function createSamplePlansForUser(
   supabase: SupabaseClient<Database>,
@@ -160,21 +165,67 @@ async function createSamplePlansForUser(
   const today = new Date();
   const plans = generateSamplePlans(chronotypeType, today);
 
-  const rows = plans.map((plan) => ({
+  // ── Step 1: プリセットタグ作成 ──
+  const tagEntries = Object.entries(PRESET_TAGS) as [
+    keyof typeof PRESET_TAGS,
+    (typeof PRESET_TAGS)[keyof typeof PRESET_TAGS],
+  ][];
+  const tagRows = tagEntries.map(([, tag], i) => ({
+    user_id: userId,
+    name: tag.name,
+    color: tag.color,
+    sort_order: i,
+  }));
+
+  const { data: insertedTags, error: tagsError } = await supabase
+    .from('tags')
+    .insert(tagRows as never)
+    .select('id, name');
+
+  if (tagsError || !insertedTags) {
+    logger.error('Preset tags insert error:', tagsError);
+    return;
+  }
+
+  // tagKey → tagId マッピング（name で照合）
+  const tagNameToId = new Map(insertedTags.map((t) => [t.name, t.id as string]));
+
+  // ── Step 2: サンプルエントリ作成 ──
+  const entryRows = plans.map((plan) => ({
     user_id: userId,
     title: plan.title,
     origin: 'planned' as const,
     start_time: plan.startTime,
     end_time: plan.endTime,
-    description: '__onboarding_sample__',
+    description: plan.description ?? '__onboarding_sample__',
+    reminder_minutes: plan.reminderMinutes,
   }));
 
-  const { error } = await supabase
+  const { data: insertedEntries, error: entriesError } = await supabase
     .from('entries')
-    .insert(rows as never)
-    .select();
+    .insert(entryRows as never)
+    .select('id');
 
-  if (error) {
-    logger.error('Sample plans insert error:', error);
+  if (entriesError || !insertedEntries) {
+    logger.error('Sample entries insert error:', entriesError);
+    return;
+  }
+
+  // ── Step 3: entry_tags 紐付け ──
+  const entryTagRows = plans
+    .map((plan, i) => {
+      const entryId = (insertedEntries[i] as { id: string }).id;
+      const tagId = tagNameToId.get(PRESET_TAGS[plan.tagKey].name);
+      if (!entryId || !tagId) return null;
+      return { entry_id: entryId, tag_id: tagId };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  if (entryTagRows.length > 0) {
+    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows as never);
+
+    if (linkError) {
+      logger.error('Entry-tag link insert error:', linkError);
+    }
   }
 }

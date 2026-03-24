@@ -50,8 +50,8 @@ ai:
 ---
 version: 'v0.16.0'
 date: '2026-02-19'
-title: 'Recurring Plans & Bulk Operations'
-description: 'Added support for recurring plan patterns and bulk edit/delete operations for plans and records.'
+title: 'Bulk Operations'
+description: 'Added support for bulk edit/delete operations for plans and records.'
 tags: ['new-features', 'improvements']
 breaking: false
 featured: true
@@ -62,7 +62,6 @@ authorAvatar: '/avatars/dayopt-team.jpg'
 ai:
   relatedQuestions:
     - "What's new in v0.16.0?"
-    - 'How do recurring plans work?'
   chunkStrategy: 'h2'
   searchable: true
   difficulty: 'beginner'
@@ -109,11 +108,10 @@ ai:
 ### リリースノートの本文構造
 
 ```mdx
-# v0.16.0 - Recurring Plans & Bulk Operations
+# v0.16.0 - Bulk Operations
 
 ## New Features
 
-- **Recurring Plans**: Set up daily, weekly, or monthly recurring plans
 - **Bulk Operations**: Select and edit/delete multiple plans at once
 
 ## Improvements

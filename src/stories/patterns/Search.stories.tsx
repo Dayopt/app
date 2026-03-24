@@ -291,7 +291,7 @@ function GlobalSearchEmpty() {
     { name: 'Dev:API', color: 'bg-tag-green' },
     { name: 'Dev:Frontend', color: 'bg-tag-green' },
     { name: 'Design', color: 'bg-tag-blue' },
-    { name: 'Meeting', color: 'bg-tag-purple' },
+    { name: 'Meeting', color: 'bg-tag-violet' },
     { name: 'Learning', color: 'bg-tag-orange' },
   ];
 

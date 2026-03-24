@@ -30,6 +30,8 @@ const MultiDayView = React.lazy(() =>
 );
 /** モバイルでは列数が多すぎると狭くなるため、最大3日にフォールバック */
 const MOBILE_MAX_DAYS = 3;
+/** タブレット（サイドバー込み512px幅）では5日まで */
+const TABLET_MAX_DAYS = 5;
 
 /** CalendarViewRenderer コンポーネントのプロパティ */
 interface CalendarViewRendererProps {
@@ -50,13 +52,16 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
   commonProps,
 }: CalendarViewRendererProps) {
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const isTablet = useMediaQuery(MEDIA_QUERIES.tablet);
 
   // LCP改善: ビューをメモ化して不要な再生成を防止
   const viewContent = useMemo(() => {
+    // デバイス別の最大列数を決定
+    const maxDays = isMobile ? MOBILE_MAX_DAYS : isTablet ? TABLET_MAX_DAYS : Infinity;
+
     if (isMultiDayView(viewType)) {
-      // モバイルでは列数が多すぎる場合、自動的に3日ビューにフォールバック
       const requestedDays = getMultiDayCount(viewType);
-      const dayCount = isMobile ? Math.min(requestedDays, MOBILE_MAX_DAYS) : requestedDays;
+      const dayCount = Math.min(requestedDays, maxDays);
       return (
         <Suspense fallback={<CalendarViewSkeleton />}>
           <MultiDayView dayCount={dayCount} {...commonProps} />
@@ -72,11 +77,11 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
       case 'week':
-        // モバイル（< 640px）では7列が狭すぎるため3-dayビューにフォールバック
-        if (isMobile) {
+        // モバイル/タブレットでは7列が狭すぎるためMultiDayViewにフォールバック
+        if (isMobile || isTablet) {
           return (
             <Suspense fallback={<CalendarViewSkeleton />}>
-              <MultiDayView dayCount={MOBILE_MAX_DAYS} {...commonProps} />
+              <MultiDayView dayCount={maxDays} {...commonProps} />
             </Suspense>
           );
         }
@@ -92,7 +97,7 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
           </Suspense>
         );
     }
-  }, [viewType, commonProps, isMobile]);
+  }, [viewType, commonProps, isMobile, isTablet]);
 
   // 各ビューが個別にSuspenseでラップ済みのため、外側の二重Suspenseは不要（CLS回避）
   return viewContent;

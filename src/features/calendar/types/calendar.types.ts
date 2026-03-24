@@ -22,6 +22,5 @@ export interface CalendarFilter {
   status?: string[];
   priority?: string[];
   tags?: string[];
-  includeRecurring?: boolean;
   includeAllDay?: boolean;
 }

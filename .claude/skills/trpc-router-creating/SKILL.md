@@ -1,6 +1,8 @@
 ---
 name: trpc-router-creating
 description: DayoptのtRPC v11ルーターを作成。サービス層分離、Zodバリデーション、エラーハンドリングを適用。
+effort: medium
+maxTurns: 15
 ---
 
 # tRPC Router Creating Skill

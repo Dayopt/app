@@ -92,7 +92,10 @@
       "archiving": "Archiving...",
       "restoring": "Restoring...",
       "clear": "Clear",
-      "options": "Options"
+      "options": "Options",
+      "addToPalette": "Add to palette",
+      "addedToPalette": "Added to palette",
+      "alreadyInPalette": "Already in palette"
     },
     "confirm": {
       "delete": {
@@ -109,14 +112,6 @@
       "bulkDelete": {
         "title": "Delete {count} items?",
         "description": "This will permanently delete {count} selected items. This action cannot be undone."
-      },
-      "recurring": {
-        "editTitle": "Edit recurring event",
-        "deleteTitle": "Delete recurring event",
-        "thisOnly": "This event only",
-        "thisAndFuture": "This and future events",
-        "allEvents": "All events",
-        "apply": "Apply"
       }
     },
     "aria": {
@@ -150,8 +145,7 @@
       "navigationMenu": "Navigation menu",
       "pageNavigation": "Page navigation",
       "calendar": "Calendar",
-      "stats": "Stats",
-      "recurring": "Recurring"
+      "stats": "Stats"
     },
     "status": {
       "loading": "Loading...",
@@ -160,8 +154,6 @@
       "warning": "Warning",
       "info": "Info",
       "offline": "You are offline. Changes will sync when connection is restored.",
-      "realtimeDisconnected": "Real-time connection lost. Please reload the page.",
-      "realtimeReconnected": "Real-time connection restored.",
       "syncing": "Syncing {count} change(s)...",
       "syncComplete": "Sync complete."
     },
@@ -181,18 +173,10 @@
       "hoursAgo": "{count, plural, one {1h ago} other {#h ago}}"
     },
     "reminder": {
-      "label": "Reminder",
-      "none": "No reminder",
-      "add": "Add reminder",
-      "atStart": "At start time",
-      "min5": "5 minutes before",
-      "min10": "10 minutes before",
-      "min15": "15 minutes before",
-      "min30": "30 minutes before",
-      "hour1": "1 hour before",
-      "day1": "1 day before",
-      "week1": "1 week before",
-      "custom": "Custom"
+      "label": "Start notification",
+      "none": "No notification",
+      "add": "Add notification",
+      "atStart": "Notify at start"
     },
     "note": {
       "edit": "Edit note",
@@ -207,41 +191,6 @@
     },
     "schedule": {
       "datePlaceholder": "Date..."
-    },
-    "recurrence": {
-      "label": "Repeat",
-      "none": "Don't repeat",
-      "daily": "Daily",
-      "weekly": "Weekly",
-      "monthly": "Monthly",
-      "yearly": "Yearly",
-      "weekdays": "Weekdays",
-      "custom": "Custom",
-      "dialog": {
-        "title": "Repeat",
-        "interval": "Interval",
-        "pattern": "Pattern",
-        "period": "Period",
-        "endNever": "No end date",
-        "endUntil": "End date:",
-        "endCount": "occurrences",
-        "perDay": "days",
-        "perWeek": "weeks",
-        "perMonth": "months",
-        "perYear": "years",
-        "everyMonth": "Monthly on day {day}",
-        "everyNthWeekday": "Monthly on the {nth}{weekday}",
-        "everyLastWeekday": "Monthly on the last {weekday}",
-        "weekdaysShort": {
-          "0": "Sun",
-          "1": "Mon",
-          "2": "Tue",
-          "3": "Wed",
-          "4": "Thu",
-          "5": "Fri",
-          "6": "Sat"
-        }
-      }
     },
     "language": {
       "current": "Current Language",

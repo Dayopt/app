@@ -10,13 +10,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| 階層 | 2レベルまで（親 → 子） |
-| カラー | 50+ カラーパレット |
-| 紐付け | Plans / Records と多対多 |
-| 並べ替え | dnd-kit によるドラッグ&ドロップ |
-| マージ | ソースタグ → ターゲットタグに統合 |
+| 項目     | 値                                |
+| -------- | --------------------------------- |
+| 階層     | 2レベルまで（親 → 子）            |
+| カラー   | 50+ カラーパレット                |
+| 紐付け   | Plans / Records と多対多          |
+| 並べ替え | dnd-kit によるドラッグ&ドロップ   |
+| マージ   | ソースタグ → ターゲットタグに統合 |
 
 ---
 
@@ -41,11 +41,11 @@ GlobalTagMergeModal             グローバルモーダルラッパー
 
 ### Zustand Stores
 
-| Store | 用途 | persist |
-|-------|------|---------|
-| `useTagCreateModalStore` | 作成モーダル状態 | No |
-| `useTagMergeModalStore` | マージモーダル状態 | No |
-| `useTagCacheStore` | mutation参照カウント、競合防止 | No |
+| Store                    | 用途                           | persist |
+| ------------------------ | ------------------------------ | ------- |
+| `useTagCreateModalStore` | 作成モーダル状態               | No      |
+| `useTagMergeModalStore`  | マージモーダル状態             | No      |
+| `useTagCacheStore`       | mutation参照カウント、競合防止 | No      |
 
 ---
 
@@ -53,47 +53,46 @@ GlobalTagMergeModal             グローバルモーダルラッパー
 
 ### Query
 
-| Hook | 用途 |
-|------|------|
-| `useTags()` | 全タグ取得（staleTime: 5min） |
-| `useTag(id)` | 単一タグ取得 |
+| Hook           | 用途                            |
+| -------------- | ------------------------------- |
+| `useTags()`    | 全タグ取得（staleTime: 5min）   |
+| `useTag(id)`   | 単一タグ取得                    |
 | `useTagsMap()` | タグ配列 → Map 変換（高速検索） |
 
 ### Mutation（全て楽観的更新付き）
 
-| Hook | 用途 |
-|------|------|
-| `useCreateTag()` | タグ作成 |
-| `useUpdateTag()` | タグ更新 |
+| Hook                  | 用途           |
+| --------------------- | -------------- |
+| `useCreateTag()`      | タグ作成       |
+| `useUpdateTag()`      | タグ更新       |
 | `useUpdateTagColor()` | カラーのみ更新 |
-| `useDeleteTag()` | タグ削除 |
-| `useMergeTag()` | タグマージ |
-| `useRenameTag()` | リネーム |
-| `useMoveTag()` | 親変更 |
-| `useReorderTags()` | 一括並べ替え |
+| `useDeleteTag()`      | タグ削除       |
+| `useMergeTag()`       | タグマージ     |
+| `useRenameTag()`      | リネーム       |
+| `useMoveTag()`        | 親変更         |
+| `useReorderTags()`    | 一括並べ替え   |
 
 ### その他
 
-| Hook | 用途 |
-|------|------|
+| Hook                 | 用途                       |
+| -------------------- | -------------------------- |
 | `useTagOperations()` | 一元化された CRUD ロジック |
-| `useTagRealtime()` | Supabase Realtime 購読 |
 
 ---
 
 ## tRPC ルーター
 
-| エンドポイント | タイプ | 説明 |
-|-------------|-------|------|
-| `tags.list` | query | 全タグ（フラット） |
-| `tags.listHierarchy` | query | 階層構造 |
-| `tags.getById` | query | 単一タグ |
-| `tags.create` | mutation | 作成 |
-| `tags.update` | mutation | 更新 |
-| `tags.merge` | mutation | マージ |
-| `tags.delete` | mutation | 削除 |
-| `tags.reorder` | mutation | 並べ替え |
-| `tags.getStats` | query | 利用統計 |
+| エンドポイント       | タイプ   | 説明               |
+| -------------------- | -------- | ------------------ |
+| `tags.list`          | query    | 全タグ（フラット） |
+| `tags.listHierarchy` | query    | 階層構造           |
+| `tags.getById`       | query    | 単一タグ           |
+| `tags.create`        | mutation | 作成               |
+| `tags.update`        | mutation | 更新               |
+| `tags.merge`         | mutation | マージ             |
+| `tags.delete`        | mutation | 削除               |
+| `tags.reorder`       | mutation | 並べ替え           |
+| `tags.getStats`      | query    | 利用統計           |
 
 ---
 
@@ -128,17 +127,17 @@ Parent Tag (level=0, depth=1)
 
 ### tags テーブル
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `id` | UUID | PK |
-| `user_id` | UUID | FK → auth.users |
-| `name` | TEXT | タグ名 |
-| `color` | TEXT | HEXカラー |
-| `description` | TEXT | 説明 |
-| `parent_id` | UUID | FK → tags（自己参照） |
-| `sort_order` | INT | 並び順 |
-| `level` | SMALLINT | 0=親, 1=子 |
-| `is_active` | BOOLEAN | アクティブ状態 |
+| カラム        | 型       | 説明                  |
+| ------------- | -------- | --------------------- |
+| `id`          | UUID     | PK                    |
+| `user_id`     | UUID     | FK → auth.users       |
+| `name`        | TEXT     | タグ名                |
+| `color`       | TEXT     | HEXカラー             |
+| `description` | TEXT     | 説明                  |
+| `parent_id`   | UUID     | FK → tags（自己参照） |
+| `sort_order`  | INT      | 並び順                |
+| `level`       | SMALLINT | 0=親, 1=子            |
+| `is_active`   | BOOLEAN  | アクティブ状態        |
 
 - **RLS**: `auth.uid() = user_id`
 - **トリガー**: `check_tag_hierarchy()`, `enforce_tag_no_children_as_child`
@@ -153,6 +152,7 @@ Parent Tag (level=0, depth=1)
 ## カレンダーフィルター連携
 
 `useCalendarFilterStore` と連携:
+
 - `isTypeVisible()`: Plan / Record の表示切替
 - `isPlanVisible()`: タグベースのフィルタリング
 - 未タグアイテムの表示トグル

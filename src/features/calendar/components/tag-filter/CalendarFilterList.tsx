@@ -6,10 +6,10 @@ import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
-import { SidebarSection } from '@/components/SidebarSection';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TagDeleteStrategyDialog, useDeleteTag, useTagCacheStore, useTags } from '@/features/tags';
 import { api } from '@/platform/trpc';
+import { SidebarSection } from '@/shell/components/sidebar';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
 
 import { CreateTagButton } from './components/CreateTagButton';
@@ -41,17 +41,16 @@ export function CalendarFilterList() {
   const getGroupVisibility = useCalendarFilterStore((s) => s.getGroupVisibility);
 
   // タグミューテーション状態を監視（Race Condition防止）
-  const mutationCount = useTagCacheStore((state) => state.mutationCount);
   const isSettling = useTagCacheStore((state) => state.isSettling);
 
-  // タグ一覧取得後に初期化（mutation中・settling中は競合防止のためスキップ）
+  // タグ一覧取得後に初期化（settling中は競合防止のためスキップ）
   useEffect(() => {
-    if (mutationCount > 0 || isSettling) return;
+    if (isSettling) return;
 
     if (tags && tags.length > 0) {
       initializeWithTags(tags.map((tag) => tag.id));
     }
-  }, [tags, initializeWithTags, mutationCount, isSettling]);
+  }, [tags, initializeWithTags, isSettling]);
 
   const isLoading = tagsLoading;
 
@@ -103,7 +102,7 @@ export function CalendarFilterList() {
 
   return (
     <>
-      <div className="w-full min-w-0 space-y-2 overflow-hidden p-2">
+      <div className="w-full min-w-0 space-y-2 overflow-hidden">
         {/* タグ */}
         <SidebarSection
           title={t('calendar.filter.tags')}

@@ -3215,18 +3215,6 @@
             "maximum": 3,
             "nullable": true
           },
-          "recurrence_type": {
-            "type": "string",
-            "enum": ["none", "daily", "weekly", "monthly", "yearly", "weekdays"]
-          },
-          "recurrence_end_date": {
-            "type": "string",
-            "nullable": true
-          },
-          "recurrence_rule": {
-            "type": "string",
-            "nullable": true
-          },
           "reminder_minutes": {
             "type": "integer",
             "minimum": 0,
@@ -3287,18 +3275,6 @@
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 3,
-                "nullable": true
-              },
-              "recurrence_type": {
-                "type": "string",
-                "enum": ["none", "daily", "weekly", "monthly", "yearly", "weekdays"]
-              },
-              "recurrence_end_date": {
-                "type": "string",
-                "nullable": true
-              },
-              "recurrence_rule": {
-                "type": "string",
                 "nullable": true
               },
               "reminder_minutes": {
@@ -3395,18 +3371,6 @@
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 3,
-                "nullable": true
-              },
-              "recurrence_type": {
-                "type": "string",
-                "enum": ["none", "daily", "weekly", "monthly", "yearly", "weekdays"]
-              },
-              "recurrence_end_date": {
-                "type": "string",
-                "nullable": true
-              },
-              "recurrence_rule": {
-                "type": "string",
                 "nullable": true
               },
               "reminder_minutes": {

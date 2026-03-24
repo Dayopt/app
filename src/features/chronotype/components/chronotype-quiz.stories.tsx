@@ -5,7 +5,7 @@ import { ChronotypeQuiz } from './chronotype-quiz';
 
 /** ChronotypeQuiz — クロノタイプ診断クイズ（6問 + 結果サマリー） */
 const meta = {
-  title: 'Features/Chronotype/ChronotypeQuiz',
+  title: 'Features/Chronotype/Quiz',
   component: ChronotypeQuiz,
   parameters: {
     layout: 'centered',

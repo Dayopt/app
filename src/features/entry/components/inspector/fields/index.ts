@@ -11,9 +11,8 @@ export type { TimeIconType } from './TimeSelect';
 
 // スコア・設定
 export { FulfillmentRow } from './FulfillmentRow';
-export { RecurrenceRow } from './RecurrenceRow';
 export { ReminderRow } from './ReminderRow';
-export { ReminderSelect } from './ReminderSelect';
+export { ReminderToggle } from './ReminderToggle';
 
 // タグ・メモ・アラート
 export { NoteSection } from './NoteSection';

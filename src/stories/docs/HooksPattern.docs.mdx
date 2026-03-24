@@ -53,24 +53,24 @@ export function useItemMutations() {
 
 ## チェックリスト
 
-| 項目 | 説明 |
-|------|------|
+| 項目               | 説明                         |
+| ------------------ | ---------------------------- |
 | `api` クライアント | `trpc` ではなく `api` を使用 |
-| `cacheStrategies` | キャッシュ戦略を適用 |
-| `retry: 1` | リトライを1回に設定 |
-| JSDoc | パラメータと戻り値を説明 |
-| `void` | Promiseを明示的に無視 |
+| `cacheStrategies`  | キャッシュ戦略を適用         |
+| `retry: 1`         | リトライを1回に設定          |
+| JSDoc              | パラメータと戻り値を説明     |
+| `void`             | Promiseを明示的に無視        |
 
 ---
 
 ## キャッシュ戦略
 
-| データ種別 | 戦略 | staleTime |
-|-----------|------|-----------|
-| リアルタイム性が重要 | `realtimeCache` | 30秒 |
-| 通常のデータ | `standardCache` | 5分 |
-| 短期キャッシュ | `shortTermCache` | 1分 |
-| 静的データ | `staticCache` | 1時間 |
+| データ種別       | 戦略             | staleTime |
+| ---------------- | ---------------- | --------- |
+| アクティブデータ | `activeCache`    | 30秒      |
+| 通常のデータ     | `standardCache`  | 5分       |
+| 短期キャッシュ   | `shortTermCache` | 1分       |
+| 静的データ       | `staticCache`    | 1時間     |
 
 ---
 

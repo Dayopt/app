@@ -1,6 +1,8 @@
 ---
 name: docs-writing
 description: ドキュメント執筆スキル。web側（~/Desktop/web/content/）へのユーザー向けドキュメント・ブログ・リリースノート作成、およびapp側（docs/）の技術ドキュメント・ADR作成時に自動発動。
+effort: high
+maxTurns: 25
 ---
 
 # ユーザー向けドキュメント執筆スキル

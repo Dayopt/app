@@ -129,7 +129,7 @@ function TagsMockProvider({ children, tags = [] }: TagsMockProviderProps) {
 
 /** TagQuickSelector — タグ選択フローティングパネル */
 const meta = {
-  title: 'Features/Tags/TagQuickSelector',
+  title: 'Features/Tags/QuickSelector',
   component: TagQuickSelector,
   parameters: {
     layout: 'fullscreen',

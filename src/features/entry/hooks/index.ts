@@ -1,8 +1,7 @@
 // Custom Hooks
+export { useBlockPlace } from './useBlockPlace';
 export { useEntries } from './useEntries';
 export { useEntry } from './useEntry';
 export { useEntryCreate } from './useEntryCreate';
-export { useEntryInstanceMutations, useEntryInstances } from './useEntryInstances';
 export { useEntryMutations } from './useEntryMutations';
 export { useEntryTags } from './useEntryTags';
-export { useRecurringScopeMutations } from './useRecurringScopeMutations';

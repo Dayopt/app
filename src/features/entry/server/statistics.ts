@@ -185,8 +185,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_hourly_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
+              p_start: input?.startDate,
+              p_end: input?.endDate,
             }),
           ),
         );
@@ -233,8 +233,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_dow_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate,
-              p_end_date: input?.endDate,
+              p_start: input?.startDate,
+              p_end: input?.endDate,
             }),
           ),
         );

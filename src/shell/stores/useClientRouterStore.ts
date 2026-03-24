@@ -12,7 +12,7 @@ interface ClientRouterState {
 /**
  * クライアントサイドページ切り替え用ストア
  *
- * PageSwitcher が pushState + switchToPage() でページ遷移を行い、
+ * PageNav が pushState + switchToPage() でページ遷移を行い、
  * ClientPageRenderer がこのストアを読んで Calendar / Stats を
  * クライアントサイドでレンダリングする。
  *

@@ -67,13 +67,15 @@ export function useInspectorURLSync() {
 
     if (isOpen && entryId) {
       // 既存エントリでインスペクタが開いている場合
+      // push で履歴エントリを追加 → 戻る/進むで復元可能にする
       if (currentEntryParam !== entryId) {
         const params = new URLSearchParams(searchParams.toString());
         params.set(ENTRY_PARAM, entryId);
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
       }
     } else {
       // インスペクタが閉じている、またはドラフトモード
+      // replace で履歴を汚さない（閉じるたびに履歴が増えるのを防止）
       if (currentEntryParam !== null) {
         const params = new URLSearchParams(searchParams.toString());
         params.delete(ENTRY_PARAM);

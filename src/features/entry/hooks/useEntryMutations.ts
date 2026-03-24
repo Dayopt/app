@@ -14,8 +14,8 @@ import { api } from '@/platform/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
-import { useEntryCacheStore } from '../stores/useEntryCacheStore';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
 import { createListQueryPredicate, createTempId } from './mutations/mutationUtils';
 
@@ -41,13 +41,13 @@ const isEntriesListQuery = createListQueryPredicate('entries');
  * deleteEntry.mutate({ id: '123' })
  * ```
  */
-export function useEntryMutations() {
+export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
+  const suppressCreateToast = options?.suppressCreateToast ?? false;
   const t = useTranslations();
   const queryClient = useQueryClient();
   const utils = api.useUtils();
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
-  const startMutating = useEntryCacheStore((s) => s.startMutating);
 
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
@@ -76,9 +76,6 @@ export function useEntryMutations() {
         actual_end_time: null,
         duration_minutes: input.duration_minutes ?? null,
         fulfillment_score: input.fulfillment_score ?? null,
-        recurrence_type: input.recurrence_type ?? null,
-        recurrence_rule: input.recurrence_rule ?? null,
-        recurrence_end_date: null,
         reminder_minutes: input.reminder_minutes ?? null,
         reminder_at: null,
         reminder_sent: false,
@@ -87,8 +84,11 @@ export function useEntryMutations() {
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        tagId: null,
+        tagId: input.tagId ?? null,
       };
+
+      // 新規作成アニメーション用にマーク（キャッシュ更新前に設定 → 再レンダー時に即反映）
+      markNew(tempId);
 
       // 楽観的にキャッシュを更新（日付フィルター付きキャッシュも含む全て）
       queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
@@ -98,13 +98,18 @@ export function useEntryMutations() {
 
       return { previousEntriesList, tempId };
     },
-    onSuccess: (newEntry, _input, context) => {
+    onSuccess: (newEntry, input, context) => {
       logger.debug('[mutation:create] onSuccess', { id: newEntry.id });
+
+      // 新規作成アニメーション: tempIdのマークをクリア（アニメーションは楽観的更新時に1回だけ発火）
+      if (context?.tempId) {
+        clearNew(context.tempId);
+      }
       // 一時エントリを本来のエントリに置換（全キャッシュ対象）
       // entries.create はタグなし EntryRow を返すため、tagId を補完して EntryWithTags に昇格
       const newEntryWithTagId: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         ...newEntry,
-        tagId: null,
+        tagId: input.tagId ?? null,
       };
       type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
 
@@ -122,7 +127,7 @@ export function useEntryMutations() {
 
       if (isFirstEntry) {
         openInspector(newEntry.id);
-      } else {
+      } else if (!suppressCreateToast) {
         const displayTitle = newEntry.title || t('entry.untitled');
         toast.success(t('plan.toast.created', { title: displayTitle }), {
           action: {
@@ -135,10 +140,18 @@ export function useEntryMutations() {
       }
 
       // 個別エントリのキャッシュを設定
-      utils.entries.getById.setData({ id: newEntry.id }, { ...newEntry, tagId: null });
+      utils.entries.getById.setData(
+        { id: newEntry.id },
+        { ...newEntry, tagId: input.tagId ?? null },
+      );
     },
     onError: (error, _input, context) => {
       logger.error('[mutation:create] onError', error);
+
+      // 新規作成アニメーションをクリア
+      if (context?.tempId) {
+        clearNew(context.tempId);
+      }
 
       // エラー時: 全ての entries.list キャッシュをロールバック
       if (context?.previousEntriesList) {
@@ -160,6 +173,7 @@ export function useEntryMutations() {
     },
     onSettled: () => {
       void utils.entries.list.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -167,8 +181,6 @@ export function useEntryMutations() {
   const updateEntry = api.entries.update.useMutation({
     onMutate: async ({ id, data }) => {
       logger.debug('[mutation:update] onMutate', { id, fields: Object.keys(data) });
-      // 0. mutation開始（Realtime二重更新防止、タイムアウト自動解除付き）
-      const endMutating = startMutating();
 
       // 1. 進行中のクエリをキャンセル（競合回避）
       await utils.entries.list.cancel();
@@ -184,10 +196,11 @@ export function useEntryMutations() {
       // 3. 楽観的更新: TanStack Queryキャッシュを更新
       const updateData: UpdateEntryInput = {};
 
-      if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type;
-      if (data.recurrence_rule !== undefined) updateData.recurrence_rule = data.recurrence_rule;
       if (data.start_time !== undefined) updateData.start_time = data.start_time;
       if (data.end_time !== undefined) updateData.end_time = data.end_time;
+      if (data.actual_start_time !== undefined)
+        updateData.actual_start_time = data.actual_start_time;
+      if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.reminder_minutes !== undefined) updateData.reminder_minutes = data.reminder_minutes;
@@ -195,9 +208,6 @@ export function useEntryMutations() {
         updateData.fulfillment_score = data.fulfillment_score;
       if (data.duration_minutes !== undefined) updateData.duration_minutes = data.duration_minutes;
       if (data.origin !== undefined) updateData.origin = data.origin;
-      if (data.actual_start_time !== undefined)
-        updateData.actual_start_time = data.actual_start_time;
-      if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
 
       // 4. TanStack Queryキャッシュを楽観的に更新
       // キャッシュ間移動対応: エントリが存在するキャッシュからフルデータを取得
@@ -239,7 +249,7 @@ export function useEntryMutations() {
         return Object.assign({}, oldData, updateData);
       });
 
-      return { id, previousEntriesList, previousEntry, endMutating };
+      return { id, previousEntriesList, previousEntry };
     },
     onSuccess: (result, variables) => {
       logger.debug('[mutation:update] onSuccess', { id: variables.id });
@@ -279,6 +289,16 @@ export function useEntryMutations() {
         return updated;
       });
 
+      // entries.getById キャッシュも最新データで更新（楽観的ロック用 updated_at を含む）
+      utils.entries.getById.setData({ id: variables.id }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+      utils.entries.getById.setData({ id: variables.id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+
       // 自動保存（title、description、日時など）はtoast非表示
     },
     onError: (err, _variables, context) => {
@@ -316,9 +336,9 @@ export function useEntryMutations() {
         utils.entries.getById.setData({ id: context.id }, context.previousEntry);
       }
     },
-    onSettled: async (_data, _error, _variables, context) => {
-      context?.endMutating();
+    onSettled: async () => {
       void utils.entries.list.invalidate();
+      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -340,7 +360,6 @@ export function useEntryMutations() {
   const deleteEntry = api.entries.delete.useMutation({
     onMutate: async ({ id }) => {
       logger.debug('[mutation:delete] onMutate', { id });
-      const endMutating = startMutating();
 
       await utils.entries.list.cancel();
       await utils.entries.getById.cancel({ id });
@@ -374,12 +393,13 @@ export function useEntryMutations() {
 
       closeInspector();
 
-      return { id, previousEntriesList, previousEntry, endMutating };
+      return { id, previousEntriesList, previousEntry };
     },
     onSuccess: (_, { id }) => {
       logger.debug('[mutation:delete] onSuccess', { id });
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
+      void utils.history.getRecentBlocks.invalidate();
     },
     onError: (error, { id }, context) => {
       logger.error('[mutation:delete] onError', error);
@@ -395,19 +415,12 @@ export function useEntryMutations() {
         utils.entries.getById.setData({ id }, context.previousEntry);
       }
     },
-    onSettled: (_data, _error, _variables, context) => {
-      // 削除は Realtime が追いつくまで少し待つ
-      setTimeout(() => {
-        context?.endMutating();
-      }, 500);
-    },
   });
 
   // 一括更新
   const bulkUpdateEntries = api.entries.bulkUpdate.useMutation({
     onMutate: async ({ ids, data }) => {
       logger.debug('[mutation:bulkUpdate] onMutate', { count: ids.length });
-      const endMutating = startMutating();
       await utils.entries.list.cancel();
 
       // スナップショット（全キャッシュ対象）
@@ -434,7 +447,7 @@ export function useEntryMutations() {
         });
       });
 
-      return { previousEntriesList, endMutating };
+      return { previousEntriesList };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkUpdated', { count: result.count }));
@@ -448,16 +461,12 @@ export function useEntryMutations() {
         }
       }
     },
-    onSettled: (_data, _error, _variables, context) => {
-      context?.endMutating();
-    },
   });
 
   // 一括削除
   const bulkDeleteEntries = api.entries.bulkDelete.useMutation({
     onMutate: async ({ ids }) => {
       logger.debug('[mutation:bulkDelete] onMutate', { count: ids.length });
-      const endMutating = startMutating();
       await utils.entries.list.cancel();
 
       // スナップショット（全キャッシュ対象）
@@ -471,7 +480,7 @@ export function useEntryMutations() {
         return oldData.filter((entry) => !ids.includes(entry.id));
       });
 
-      return { previousEntriesList, endMutating };
+      return { previousEntriesList };
     },
     onSuccess: (result) => {
       toast.success(t('plan.toast.bulkDeleted', { count: result.count }));
@@ -485,9 +494,6 @@ export function useEntryMutations() {
           queryClient.setQueryData(queryKey, data);
         }
       }
-    },
-    onSettled: (_data, _error, _variables, context) => {
-      context?.endMutating();
     },
   });
 
