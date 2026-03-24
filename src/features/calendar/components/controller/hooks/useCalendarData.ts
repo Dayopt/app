@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useDeferredValue, useEffect, useMemo } from 'react';
 
 import { addDays, subDays } from 'date-fns';
 
@@ -98,7 +98,9 @@ export function useCalendarData({
   // フィルター関数と状態を取得（ストアに統一）
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
   // タグフィルタ変更時に useMemo を再実行させるためのリアクティブ依存
-  const visibleTagIds = useCalendarFilterStore((state) => state.visibleTagIds);
+  // useDeferredValue でフィルター変更時のカレンダー再描画を遅延し、
+  // チェックボックスUIの即時応答を維持する
+  const visibleTagIds = useDeferredValue(useCalendarFilterStore((state) => state.visibleTagIds));
 
   // 全エントリをCalendarEvent型に変換
   const allCalendarEvents = useMemo(() => {

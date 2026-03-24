@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { MoreHorizontal } from 'lucide-react';
+
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import {
   DndContext,
@@ -259,31 +261,112 @@ export function TagFlatList({
     [tags],
   );
 
+  // 表示対象のアイテム（折りたたみ非表示を除外）のインデックスを事前計算
+  const visibleIndices = useMemo(() => {
+    return tagDisplayInfos
+      .map((info, i) => ({ info, i }))
+      .filter(({ info }) => {
+        const isHiddenByCollapse =
+          info.isGrouped && !info.isFirstInGroup && collapsedGroups.has(info.prefix);
+        return !isHiddenByCollapse;
+      })
+      .map(({ i }) => i);
+  }, [tagDisplayInfos, collapsedGroups]);
+
+  // 仮想スクロール: 表示アイテムが多い場合のみ有効化
+  const VIRTUALIZATION_THRESHOLD = 30;
+  const shouldVirtualize = visibleIndices.length > VIRTUALIZATION_THRESHOLD;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // アイテム高さ推定: GroupHeader付き = 60px, 通常 = 32px
+  const TAG_ROW_HEIGHT = 32;
+  const GROUP_HEADER_HEIGHT = 28;
+
+  // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizerの返り値はこのコンポーネント内でのみ使用し、子へのメモ化伝播は不要
+  const virtualizer = useVirtualizer({
+    count: visibleIndices.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: (index) => {
+      const realIndex = visibleIndices[index];
+      if (realIndex === undefined) return TAG_ROW_HEIGHT;
+      const info = tagDisplayInfos[realIndex];
+      if (!info) return TAG_ROW_HEIGHT;
+      return info.isFirstInGroup ? TAG_ROW_HEIGHT + GROUP_HEADER_HEIGHT : TAG_ROW_HEIGHT;
+    },
+    overscan: 5,
+    enabled: shouldVirtualize,
+  });
+
+  const renderItem = (info: TagDisplayInfo) => (
+    <SortableTagItem
+      key={info.tag.id}
+      tag={info.tag}
+      allTags={tags}
+      checked={visibleTagIds.has(info.tag.id)}
+      groupOptions={groupOptions}
+      isGrouped={info.isGrouped}
+      isFirstInGroup={info.isFirstInGroup}
+      groupTagIds={info.groupTagIds}
+      groupCount={info.groupCount}
+      groupVisibility={info.isGrouped ? getGroupVisibility(info.groupTagIds) : 'none'}
+      collapsed={collapsedGroups.has(info.prefix)}
+      onToggle={() => onToggleTag(info.tag.id)}
+      onDeleteTag={() => onDeleteTag(info.tag.id, info.tag.name)}
+      onToggleGroupTags={onToggleGroupTags}
+      onShowOnlyGroupTags={onShowOnlyGroupTags}
+      onToggleCollapse={() => toggleGroupCollapse(info.prefix)}
+      getUngroupConflicts={getUngroupConflicts}
+      findTagByName={findTagByName}
+    />
+  );
+
+  // 仮想化が不要な場合は従来通りの描画
+  if (!shouldVirtualize) {
+    return (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
+          {tagDisplayInfos.map((info) => renderItem(info))}
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
+  // 仮想化モード: 表示範囲のアイテムのみレンダリング
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-        {tagDisplayInfos.map((info) => (
-          <SortableTagItem
-            key={info.tag.id}
-            tag={info.tag}
-            allTags={tags}
-            checked={visibleTagIds.has(info.tag.id)}
-            groupOptions={groupOptions}
-            isGrouped={info.isGrouped}
-            isFirstInGroup={info.isFirstInGroup}
-            groupTagIds={info.groupTagIds}
-            groupCount={info.groupCount}
-            groupVisibility={info.isGrouped ? getGroupVisibility(info.groupTagIds) : 'none'}
-            collapsed={collapsedGroups.has(info.prefix)}
-            onToggle={() => onToggleTag(info.tag.id)}
-            onDeleteTag={() => onDeleteTag(info.tag.id, info.tag.name)}
-            onToggleGroupTags={onToggleGroupTags}
-            onShowOnlyGroupTags={onShowOnlyGroupTags}
-            onToggleCollapse={() => toggleGroupCollapse(info.prefix)}
-            getUngroupConflicts={getUngroupConflicts}
-            findTagByName={findTagByName}
-          />
-        ))}
+        <div ref={scrollContainerRef} className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              position: 'relative',
+              width: '100%',
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const realIndex = visibleIndices[virtualRow.index];
+              if (realIndex === undefined) return null;
+              const info = tagDisplayInfos[realIndex];
+              if (!info) return null;
+              return (
+                <div
+                  key={info.tag.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {renderItem(info)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </SortableContext>
     </DndContext>
   );
