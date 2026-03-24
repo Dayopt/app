@@ -60,7 +60,7 @@ export function CreateActionSheet({ open, onOpenChange, onSelect }: CreateAction
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="pb-safe-area-inset-bottom">
+      <DrawerContent className="pb-safe">
         <DrawerHeader className="text-center">
           <DrawerTitle>{t('common.createSheet.title')}</DrawerTitle>
           <DrawerDescription>{t('common.createSheet.description')}</DrawerDescription>

@@ -13,7 +13,6 @@ import { OfflineIndicator } from '@/shell/providers/OfflineIndicator';
 
 import { DesktopLayout } from './desktop-layout';
 import { MobileLayout } from './mobile-layout';
-import { MobileFAB } from './MobileFAB';
 
 interface BaseLayoutContentProps {
   children: React.ReactNode;
@@ -25,7 +24,6 @@ interface BaseLayoutContentProps {
  * レイアウトのオーケストレーションのみを担当：
  * - デスクトップ/モバイルレイアウトの切り替え
  * - カレンダープロバイダーのラップ
- * - モバイルFABの配置
  */
 export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
   const pathname = usePathname() || '/';
@@ -64,8 +62,6 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
         ) : (
           <DesktopLayout locale={localeFromPath}>{children}</DesktopLayout>
         )}
-
-        {isMobile ? <MobileFAB /> : null}
       </div>
     </CalendarNavigationProvider>
   );

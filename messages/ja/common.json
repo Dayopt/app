@@ -277,18 +277,6 @@
       "loadError": "読み込みに失敗しました",
       "noResults": "候補なし"
     },
-    "createSheet": {
-      "title": "何を追加しますか？",
-      "description": "追加するアイテムの種類を選択してください",
-      "entry": "エントリ",
-      "entryDescription": "新しいエントリを作成します",
-      "plan": "予定",
-      "planDescription": "新しい予定を作成します",
-      "record": "記録",
-      "recordDescription": "実際に行ったことを記録します",
-      "history": "履歴から作成",
-      "historyDescription": "最近使った項目から再度作成します"
-    },
     "validation": {
       "required": "この項目は必須です",
       "invalidUuid": "正しいIDを指定してください",
