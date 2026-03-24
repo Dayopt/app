@@ -56,10 +56,14 @@ function SelectContent({
   align = 'center',
   side = 'bottom',
   sideOffset = 8,
+  container,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & {
+  /** ポータル先のコンテナ要素。省略時は document.body。カスタムポータル内で使用する場合に指定 */
+  container?: Element | null | undefined;
+}) {
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(

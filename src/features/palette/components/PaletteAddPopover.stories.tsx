@@ -1,7 +1,7 @@
 /**
  * PaletteAddPopover Stories
  *
- * パレットへのピン追加ポップオーバー（タグ選択 + duration 選択）。
+ * パレットへのピン追加フローティングパネル（タグ選択 + duration 選択）。
  * pinnedItems は props 経由。tRPC で tags.list / palette.pin をモック。
  */
 
@@ -10,8 +10,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TRPCLink } from '@trpc/client';
 import { observable } from '@trpc/server/observable';
 import type { ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { userEvent, within } from 'storybook/test';
 
+import { Button } from '@/components/ui/button';
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
@@ -118,12 +120,35 @@ function MockProvider({ children }: { children: ReactNode }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Wrapper（トリガーボタン + ポップオーバーを一緒に描画）
+// ─────────────────────────────────────────────────────────
+
+function PaletteAddDemo({ pinnedItems }: { pinnedItems?: typeof MOCK_PINNED_ITEMS }) {
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <Button ref={buttonRef} variant="outline" onClick={() => setOpen(true)}>
+        パレットに追加
+      </Button>
+      <PaletteAddPopover
+        open={open}
+        onOpenChange={setOpen}
+        anchorRef={buttonRef}
+        pinnedItems={pinnedItems}
+      />
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 // Meta
 // ─────────────────────────────────────────────────────────
 
 const meta = {
   title: 'Features/Palette/PaletteAddPopover',
-  component: PaletteAddPopover,
+  component: PaletteAddDemo,
   parameters: { layout: 'centered' },
   decorators: [
     (Story) => (
@@ -133,7 +158,7 @@ const meta = {
     ),
   ],
   tags: ['autodocs'],
-} satisfies Meta<typeof PaletteAddPopover>;
+} satisfies Meta<typeof PaletteAddDemo>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -142,31 +167,28 @@ type Story = StoryObj<typeof meta>;
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** 閉じた状態（+ ボタンのみ）。 */
+/** トリガーボタン + フローティングパネルの基本表示。 */
 export const Default: Story = {
-  args: { pinnedItems: MOCK_PINNED_ITEMS },
+  render: () => <PaletteAddDemo pinnedItems={MOCK_PINNED_ITEMS} />,
 };
 
-/** ポップオーバーが開いた状態。 */
+/** ボタンクリックでパネルが開いた状態。 */
 export const Opened: Story = {
-  args: { pinnedItems: MOCK_PINNED_ITEMS },
+  render: () => <PaletteAddDemo pinnedItems={MOCK_PINNED_ITEMS} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const trigger = canvas.getByRole('button', { name: /パレットに追加|Add to palette/i });
+    const trigger = canvas.getByRole('button', { name: /パレットに追加/i });
     await userEvent.click(trigger);
   },
 };
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  args: { pinnedItems: MOCK_PINNED_ITEMS },
-  render: (args) => (
+  render: () => (
     <div className="flex items-start gap-12">
       <div>
-        <p className="text-muted-foreground mb-3 text-center text-xs">Closed</p>
-        <MockProvider>
-          <PaletteAddPopover {...args} />
-        </MockProvider>
+        <p className="text-muted-foreground mb-3 text-center text-xs">Trigger</p>
+        <PaletteAddDemo pinnedItems={MOCK_PINNED_ITEMS} />
       </div>
     </div>
   ),

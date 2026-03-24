@@ -7,10 +7,12 @@
  * ピン留め（手動管理）のみ。自動集計は history feature に移管。
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { Button } from '@/components/ui/button';
 import { useBlockPlace } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
@@ -46,13 +48,30 @@ export function Palette() {
     [pinnedItems, getTagById],
   );
 
+  // PaletteAddPopover: trigger + open state をここで管理
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleAddClick = useCallback(() => {
+    setAddPopoverOpen(true);
+  }, []);
+
+  const addTrigger = (
+    <Button
+      ref={addButtonRef}
+      variant="ghost"
+      icon
+      className="size-8"
+      aria-label={t('sidebar.palette.add')}
+      onClick={handleAddClick}
+    >
+      <Plus className="size-4" />
+    </Button>
+  );
+
   return (
     <div className="w-full min-w-0 overflow-hidden px-2">
-      <SidebarSection
-        title={t('sidebar.palette.title')}
-        defaultOpen
-        action={<PaletteAddPopover pinnedItems={pinnedItems ?? []} />}
-      >
+      <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={addTrigger}>
         {pinnedWithTags.length === 0 && (
           <div className="text-muted-foreground space-y-2 px-2 py-3 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
@@ -81,6 +100,13 @@ export function Palette() {
           ) : null,
         )}
       </SidebarSection>
+
+      <PaletteAddPopover
+        open={addPopoverOpen}
+        onOpenChange={setAddPopoverOpen}
+        anchorRef={addButtonRef}
+        pinnedItems={pinnedItems ?? []}
+      />
     </div>
   );
 }

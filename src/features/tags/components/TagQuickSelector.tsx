@@ -385,6 +385,30 @@ export function TagQuickSelector({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, isMobile, onOpenChange]);
 
+  // PC: 背景コンテンツを inert にしてポインタイベントのリークを防止
+  const backdropRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || isMobile) return;
+
+    const backdrop = backdropRef.current;
+    if (!backdrop) return;
+
+    const inerted: Element[] = [];
+    for (const child of document.body.children) {
+      if (child === backdrop || child === backdrop.parentElement) continue;
+      if (!child.hasAttribute('inert')) {
+        child.setAttribute('inert', '');
+        inerted.push(child);
+      }
+    }
+
+    return () => {
+      for (const el of inerted) {
+        el.removeAttribute('inert');
+      }
+    };
+  }, [open, isMobile]);
+
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
       if (panelRef.current?.contains(e.target as Node)) return;
@@ -417,7 +441,11 @@ export function TagQuickSelector({
   if (!open) return null;
 
   const panel = (
-    <div className="z-overlay-popover fixed inset-0" onClick={handleBackdropClick}>
+    <div
+      ref={backdropRef}
+      className="z-overlay-popover fixed inset-0"
+      onClick={handleBackdropClick}
+    >
       <div
         ref={panelRef}
         role="dialog"
