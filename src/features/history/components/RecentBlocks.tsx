@@ -48,7 +48,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
         {itemsWithTags.length === 0 ? (
           <div className="px-2 py-3">
             <p className="text-muted-foreground text-xs">{t('sidebar.recentBlocks.empty')}</p>
-            <p className="text-muted-foreground/60 mt-1 text-xs">
+            <p className="text-muted-foreground mt-1 text-xs">
               {t('sidebar.recentBlocks.emptyHint')}
             </p>
           </div>

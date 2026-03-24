@@ -119,7 +119,7 @@ function PaletteAddContent({
         <Field>
           <FieldLabel>{t('sidebar.palette.tagLabel')}</FieldLabel>
           <Select value={selectedTagId} onValueChange={setSelectedTagId}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-label={t('sidebar.palette.tagLabel')}>
               <SelectValue placeholder={t('sidebar.palette.tagPlaceholder')} />
             </SelectTrigger>
             <SelectContent container={selectContainer}>
@@ -145,7 +145,7 @@ function PaletteAddContent({
         <Field>
           <FieldLabel>{t('sidebar.palette.durationLabel')}</FieldLabel>
           <Select value={selectedDuration} onValueChange={setSelectedDuration}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-label={t('sidebar.palette.durationLabel')}>
               <SelectValue placeholder={t('sidebar.palette.durationPlaceholder')} />
             </SelectTrigger>
             <SelectContent container={selectContainer}>

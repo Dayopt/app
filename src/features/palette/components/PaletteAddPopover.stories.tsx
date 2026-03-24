@@ -89,10 +89,11 @@ function createMockLink(): TRPCLink<AppRouter> {
     ({ op }) =>
       observable((observer) => {
         if (op.type === 'query') {
+          // useTags() accesses query.data?.data, so tags.list must return { data: [...] }
           const responseMap: Record<string, unknown> = {
-            'tags.list': MOCK_TAGS,
+            'tags.list': { data: MOCK_TAGS },
           };
-          const result = op.path in responseMap ? responseMap[op.path] : [];
+          const result = op.path in responseMap ? responseMap[op.path] : undefined;
           observer.next({ result: { type: 'data', data: result } });
         }
         if (op.type === 'mutation') {

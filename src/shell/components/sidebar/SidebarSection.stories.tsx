@@ -54,6 +54,7 @@ function TagRow({
     <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm">
       <Checkbox
         checked={checked}
+        aria-label={name}
         className="ml-2 shrink-0 cursor-pointer"
         style={{
           borderColor: colorClasses.cssVar,

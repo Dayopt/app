@@ -31,7 +31,7 @@ function RecentBlocksStory({
           /* 実キー: sidebar.recentBlocks.empty + sidebar.recentBlocks.emptyHint */
           <div className="px-2 py-3">
             <p className="text-muted-foreground text-xs">まだ履歴がありません</p>
-            <p className="text-muted-foreground/60 mt-1 text-xs">
+            <p className="text-muted-foreground mt-1 text-xs">
               カレンダーにブロックを追加すると自動で表示されます
             </p>
           </div>

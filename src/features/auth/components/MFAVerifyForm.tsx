@@ -89,6 +89,7 @@ export function MFAVerifyForm({
                       value={verificationCode}
                       onChange={onVerificationCodeChange}
                       onComplete={onVerifyTotp}
+                      aria-label={t('auth.mfaVerify.verificationCode')}
                     >
                       <InputOTPGroup>
                         <InputOTPSlot index={0} />
