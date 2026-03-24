@@ -6,7 +6,7 @@
  *       '@/platform/trpc/server' から直接インポートしてください
  */
 
-import { AppRouter } from '@/platform/trpc/root';
+import type { AppRouter } from '@/platform/trpc/root';
 import { createTRPCReact } from '@trpc/react-query';
 
 /**
