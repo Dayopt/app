@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
@@ -43,6 +44,16 @@ export function SidebarContent() {
     }
   };
 
+  // 履歴からのピン留め — 成功時にtoastで通知
+  const handlePinFromHistory = useCallback(
+    (tagId: string, durationMinutes: number) => {
+      pinItem(tagId, durationMinutes, {
+        onSuccess: () => toast.success(t('sidebar.recentBlocks.pinned')),
+      });
+    },
+    [pinItem, t],
+  );
+
   return (
     <>
       {/* ミニカレンダー（PCのみ） */}
@@ -71,7 +82,7 @@ export function SidebarContent() {
       <Palette />
 
       {/* 履歴（頻度×鮮度ベースの自動集計） */}
-      <RecentBlocks onPinItem={pinItem} />
+      <RecentBlocks onPinItem={handlePinFromHistory} />
 
       {/* テーマ切替 */}
       <SidebarUtilities />

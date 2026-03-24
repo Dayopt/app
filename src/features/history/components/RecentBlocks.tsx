@@ -46,9 +46,12 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
     <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.recentBlocks.title')} defaultOpen>
         {itemsWithTags.length === 0 ? (
-          <p className="text-muted-foreground px-2 py-3 text-xs">
-            {t('sidebar.recentBlocks.empty')}
-          </p>
+          <div className="px-2 py-3">
+            <p className="text-muted-foreground text-xs">{t('sidebar.recentBlocks.empty')}</p>
+            <p className="text-muted-foreground/60 mt-1 text-xs">
+              {t('sidebar.recentBlocks.emptyHint')}
+            </p>
+          </div>
         ) : (
           itemsWithTags.map((item) =>
             item ? (

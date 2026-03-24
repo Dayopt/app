@@ -29,7 +29,9 @@
     },
     "recentBlocks": {
       "title": "Recent",
-      "empty": "No recent blocks"
+      "empty": "No recent blocks",
+      "emptyHint": "Will appear automatically when you add blocks to the calendar",
+      "pinned": "Added to palette"
     }
   }
 }
