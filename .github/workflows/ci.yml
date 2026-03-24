@@ -43,6 +43,9 @@ jobs:
       - name: License check
         run: npm run license:check
 
+      - name: Dead code check
+        run: npx knip --no-exit-code 2>&1 | tee /dev/stderr | head -3 >> "$GITHUB_STEP_SUMMARY"
+
   typecheck:
     name: "\U0001F524 TypeScript"
     runs-on: ubuntu-latest

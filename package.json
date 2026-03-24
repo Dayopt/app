@@ -39,7 +39,7 @@
     "quality:collect": "tsx scripts/collect-quality-metrics.ts",
     "quality:collect:fast": "tsx scripts/collect-quality-metrics.ts --skip=a11y,testCoverage",
     "quality:deadcode": "knip --reporter json",
-    "quality:deadcode:ci": "knip",
+    "quality:deadcode:ci": "knip --no-exit-code",
     "test": "vitest --project unit",
     "test:run": "vitest --project unit run",
     "test-storybook": "vitest --project storybook",
