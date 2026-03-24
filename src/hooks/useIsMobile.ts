@@ -1,5 +1,7 @@
 'use client';
 
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
+
 import { useMediaQuery } from './useMediaQuery';
 
 /**
@@ -10,8 +12,8 @@ import { useMediaQuery } from './useMediaQuery';
  * - タブレット縦向き: モバイル扱い
  */
 export function useIsMobile(): boolean {
-  // 画面幅768px未満をモバイルとみなす
-  const isSmallScreen = useMediaQuery('(max-width: 767px)');
+  // 画面幅768px未満をモバイルとみなす（MEDIA_QUERIES.mobile = max-width: 767px）
+  const isSmallScreen = useMediaQuery(MEDIA_QUERIES.mobile);
 
   // タッチデバイス判定（pointer: coarse = タッチスクリーン）
   const isTouchDevice = useMediaQuery('(pointer: coarse)');

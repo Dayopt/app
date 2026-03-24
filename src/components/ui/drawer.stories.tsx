@@ -64,7 +64,7 @@ export const AllPatterns: Story = {
           <DrawerTrigger asChild>
             <Button>作成メニューを開く</Button>
           </DrawerTrigger>
-          <DrawerContent className="pb-safe-area-inset-bottom">
+          <DrawerContent className="pb-safe">
             <DrawerHeader className="text-center">
               <DrawerTitle>新規作成</DrawerTitle>
               <DrawerDescription>作成するアイテムを選択してください</DrawerDescription>

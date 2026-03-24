@@ -78,6 +78,8 @@ interface TagFlatListProps {
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
+  /** モバイル時: DnD無効・メニュー簡略化 */
+  isMobile?: boolean;
 }
 
 /**
@@ -96,6 +98,7 @@ export function TagFlatList({
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
+  isMobile,
 }: TagFlatListProps) {
   // グループ折りたたみ状態
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -310,6 +313,7 @@ export function TagFlatList({
       groupCount={info.groupCount}
       groupVisibility={info.isGrouped ? getGroupVisibility(info.groupTagIds) : 'none'}
       collapsed={collapsedGroups.has(info.prefix)}
+      isMobile={isMobile ?? false}
       onToggle={() => onToggleTag(info.tag.id)}
       onDeleteTag={() => onDeleteTag(info.tag.id, info.tag.name)}
       onToggleGroupTags={onToggleGroupTags}
@@ -319,6 +323,11 @@ export function TagFlatList({
       findTagByName={findTagByName}
     />
   );
+
+  // モバイル: DnDなしの素のリスト描画
+  if (isMobile) {
+    return <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>;
+  }
 
   // 仮想化が不要な場合は従来通りの描画
   if (!shouldVirtualize) {
@@ -383,6 +392,7 @@ function SortableTagItem({
   groupCount,
   groupVisibility,
   collapsed,
+  isMobile,
   onToggle,
   onDeleteTag,
   onToggleGroupTags,
@@ -401,6 +411,7 @@ function SortableTagItem({
   groupCount: number;
   groupVisibility: 'all' | 'none' | 'some';
   collapsed: boolean;
+  isMobile?: boolean;
   onToggle: () => void;
   onDeleteTag: () => void;
   onToggleGroupTags: (tagIds: string[]) => void;
@@ -552,10 +563,12 @@ function SortableTagItem({
   // 表示名: グループ内ならsuffix部分のみ
   const displayLabel = getTagDisplayLabel(tag.name, isGrouped);
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
+  const style = isMobile
+    ? undefined
+    : {
+        transform: CSS.Translate.toString(transform),
+        transition,
+      };
 
   // 折りたたみ時: グループ先頭以外は非表示
   const isHiddenByCollapse = isGrouped && !isFirstInGroup && collapsed;
@@ -565,9 +578,8 @@ function SortableTagItem({
       <div
         ref={setNodeRef}
         style={style}
-        className={cn(isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
-        {...attributes}
-        {...listeners}
+        className={cn(!isMobile && isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
+        {...(isMobile ? {} : { ...attributes, ...listeners })}
         role="listitem"
       >
         {/* グループ先頭タグの場合、GroupHeader を描画 */}
@@ -578,6 +590,7 @@ function SortableTagItem({
             indeterminate={groupVisibility === 'some'}
             collapsed={collapsed}
             displayColor={displayColor}
+            isMobile={isMobile ?? false}
             onCheckedChange={() => onToggleGroupTags(groupTagIds)}
             onToggleCollapse={onToggleCollapse}
             onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
@@ -593,8 +606,9 @@ function SortableTagItem({
         {!(isFirstInGroup && collapsed) && (
           <div
             className={cn(
-              'group/item flex h-8 items-center rounded text-sm',
-              'hover:bg-state-hover cursor-grab active:cursor-grabbing',
+              'group/item flex items-center rounded text-sm',
+              isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
+              'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
               isGrouped && 'pl-3',
             )}
@@ -636,6 +650,7 @@ function SortableTagItem({
                 currentGroup={suffix !== null ? currentGroup : null}
                 groupOptions={groupOptions}
                 isGrouped={isGrouped}
+                isMobile={isMobile ?? false}
                 onOpenRenameDialog={() => setShowRenameDialog(true)}
                 onColorChange={handleColorChange}
                 onChangeGroup={handleChangeGroup}

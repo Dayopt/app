@@ -10,13 +10,13 @@ Material Design 3 Window Size Classes に基づくレスポンシブデザイン
 
 ## ブレークポイント（Tailwind v4 デフォルト）
 
-| Prefix | Min Width | M3 対応 | 用途 |
-|--------|-----------|---------|------|
-| `sm:` | 640px | Compact/Medium 境界 | タブレット縦 |
-| `md:` | 768px | Medium | タブレット縦 |
-| `lg:` | 1024px | Expanded | デスクトップ |
-| `xl:` | 1280px | Large | ワイドスクリーン |
-| `2xl:` | 1536px | Extra-large | 超ワイド |
+| Prefix | Min Width | M3 対応             | 用途             |
+| ------ | --------- | ------------------- | ---------------- |
+| `sm:`  | 640px     | Compact/Medium 境界 | タブレット縦     |
+| `md:`  | 768px     | Medium              | タブレット縦     |
+| `lg:`  | 1024px    | Expanded            | デスクトップ     |
+| `xl:`  | 1280px    | Large               | ワイドスクリーン |
+| `2xl:` | 1536px    | Extra-large         | 超ワイド         |
 
 ---
 
@@ -24,12 +24,12 @@ Material Design 3 Window Size Classes に基づくレスポンシブデザイン
 
 `src/config/ui/breakpoints.ts` で定義。
 
-| クエリ | 値 |
-|--------|----|
-| `MEDIA_QUERIES.mobile` | `(max-width: 639px)` |
-| `MEDIA_QUERIES.tablet` | `(min-width: 640px) and (max-width: 1023px)` |
-| `MEDIA_QUERIES.desktop` | `(min-width: 1024px)` |
-| `MEDIA_QUERIES.touch` | `(hover: none) and (pointer: coarse)` |
+| クエリ                  | 値                                           |
+| ----------------------- | -------------------------------------------- |
+| `MEDIA_QUERIES.mobile`  | `(max-width: 767px)`                         |
+| `MEDIA_QUERIES.tablet`  | `(min-width: 768px) and (max-width: 1023px)` |
+| `MEDIA_QUERIES.desktop` | `(min-width: 1024px)`                        |
+| `MEDIA_QUERIES.touch`   | `(hover: none) and (pointer: coarse)`        |
 
 ---
 
@@ -51,11 +51,11 @@ Material Design 3 Window Size Classes に基づくレスポンシブデザイン
 
 Material Design 3 / Apple HIG アクセシビリティ準拠。
 
-| サイズ | Tailwind | ピクセル | 用途 |
-|--------|----------|---------|------|
-| minimum | `h-11 w-11` | 44px | WCAG 2.5.5 最小 |
-| standard | `h-12 w-12` | 48px | M3 推奨（標準） |
-| large | `h-14 w-14` | 56px | FAB、重要アクション |
+| サイズ   | Tailwind    | ピクセル | 用途                |
+| -------- | ----------- | -------- | ------------------- |
+| minimum  | `h-11 w-11` | 44px     | WCAG 2.5.5 最小     |
+| standard | `h-12 w-12` | 48px     | M3 推奨（標準）     |
+| large    | `h-14 w-14` | 56px     | FAB、重要アクション |
 
 ### レスポンシブタッチターゲット
 

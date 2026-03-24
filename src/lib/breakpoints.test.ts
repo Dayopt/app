@@ -15,11 +15,11 @@ describe('breakpoints', () => {
 
   describe('MEDIA_QUERIES', () => {
     it('モバイルクエリが正しい', () => {
-      expect(MEDIA_QUERIES.mobile).toBe('(max-width: 639px)');
+      expect(MEDIA_QUERIES.mobile).toBe('(max-width: 767px)');
     });
 
     it('タブレットクエリが正しい', () => {
-      expect(MEDIA_QUERIES.tablet).toBe('(min-width: 640px) and (max-width: 1023px)');
+      expect(MEDIA_QUERIES.tablet).toBe('(min-width: 768px) and (max-width: 1023px)');
     });
 
     it('デスクトップクエリが正しい', () => {
@@ -49,15 +49,15 @@ describe('breakpoints', () => {
   });
 
   describe('getDeviceType', () => {
-    it('640px未満はmobile', () => {
+    it('768px未満はmobile', () => {
       expect(getDeviceType(0)).toBe('mobile');
       expect(getDeviceType(320)).toBe('mobile');
-      expect(getDeviceType(639)).toBe('mobile');
+      expect(getDeviceType(767)).toBe('mobile');
     });
 
-    it('640px-1023pxはtablet', () => {
-      expect(getDeviceType(640)).toBe('tablet');
+    it('768px-1023pxはtablet', () => {
       expect(getDeviceType(768)).toBe('tablet');
+      expect(getDeviceType(900)).toBe('tablet');
       expect(getDeviceType(1023)).toBe('tablet');
     });
 
@@ -68,9 +68,9 @@ describe('breakpoints', () => {
     });
 
     it('境界値が正しく判定される', () => {
-      // sm境界 (640px)
-      expect(getDeviceType(639)).toBe('mobile');
-      expect(getDeviceType(640)).toBe('tablet');
+      // md境界 (768px)
+      expect(getDeviceType(767)).toBe('mobile');
+      expect(getDeviceType(768)).toBe('tablet');
 
       // lg境界 (1024px)
       expect(getDeviceType(1023)).toBe('tablet');

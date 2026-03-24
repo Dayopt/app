@@ -75,7 +75,7 @@ export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: Ap
 
           {/* モバイル右側コンテンツ */}
           {mobileRightSlot && (
-            <div className="flex items-center gap-1 md:hidden">{mobileRightSlot}</div>
+            <div className="flex items-center gap-2 md:hidden">{mobileRightSlot}</div>
           )}
 
           {/* デスクトップ右側スロット */}

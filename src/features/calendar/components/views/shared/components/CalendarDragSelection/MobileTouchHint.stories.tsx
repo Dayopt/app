@@ -37,7 +37,7 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * `window.matchMedia` を差し替えて `(max-width: 639px)` を true として返す。
+ * `window.matchMedia` を差し替えて `(max-width: 767px)` を true として返す。
  * @returns 元の matchMedia を復元するクリーンアップ関数
  */
 function stubMatchMediaAsMobile(): () => void {
@@ -46,7 +46,7 @@ function stubMatchMediaAsMobile(): () => void {
   const stub = (query: string): MediaQueryList => {
     const mql = original(query);
     // モバイルクエリのみ matches を true に差し替える
-    if (query === '(max-width: 639px)') {
+    if (query === '(max-width: 767px)') {
       return {
         ...mql,
         matches: true,

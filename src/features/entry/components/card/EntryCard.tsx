@@ -91,8 +91,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // hourHeightProp がない or 外部調整済み = WeekContent等 → EntryCard内での位置調整は不要
   const applyPositionAdjust = hourHeightProp !== undefined && !overlayPositionApplied;
 
-  // 左アクセントの幅（モバイル: 2px、デスクトップ: 3px）
-  const accentWidth = isMobile ? 2 : 3;
+  // 左アクセントの幅（統一: 3px = --border-indicator トークン相当）
+  const accentWidth = 3;
 
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
@@ -332,10 +332,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
           safePosition.height < 40
             ? isMobile
-              ? 'flex items-center px-1.5 text-xs'
+              ? 'flex items-center px-2 text-xs'
               : 'flex items-center px-2 text-xs'
             : isMobile
-              ? 'flex items-start gap-1 px-2 pt-2 text-xs'
+              ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
               : 'p-2 text-sm',
         )}
         style={{ backgroundColor: accentTint }}

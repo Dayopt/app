@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
@@ -35,8 +36,8 @@ function InspectorURLSyncHandler() {
   return null;
 }
 
-/** モバイル Drawer のスナップポイント */
-const SNAP_POINTS = [1] as const;
+/** モバイル Drawer のスナップポイント（55%: 半開き、100%: フル展開） */
+const SNAP_POINTS = [0.55, 1] as const;
 
 interface EntryInspectorProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
@@ -48,7 +49,7 @@ interface EntryInspectorProps {
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
 export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
   const t = useTranslations();
-  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
@@ -134,12 +135,12 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
           snapPoints={SNAP_POINTS as unknown as (number | string)[]}
           activeSnapPoint={snap}
           setActiveSnapPoint={setSnap}
-          fadeFromIndex={1}
+          fadeFromIndex={0}
         >
-          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-none p-0 [&>div:first-child]:hidden">
+          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-xl p-0 [&>div:first-child]:hidden">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
-              <div className="bg-border h-1.5 w-12 rounded-full" />
+              <div className="bg-border h-1.5 w-16 rounded-full" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
           </DrawerContent>

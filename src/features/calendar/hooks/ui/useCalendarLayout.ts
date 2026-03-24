@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
+
 import type { CalendarViewType } from '../../types/calendar.types';
 
 /** カレンダーのレイアウトモード */
@@ -94,8 +96,8 @@ export function useCalendarLayout(options?: {
     if (typeof window === 'undefined') return 'desktop';
 
     const width = window.innerWidth;
-    if (width < 768) return 'mobile';
-    if (width < 1024) return 'tablet';
+    if (width < BREAKPOINT_VALUES.md) return 'mobile';
+    if (width < BREAKPOINT_VALUES.lg) return 'tablet';
     return 'desktop';
   }, []);
 
