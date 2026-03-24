@@ -9,10 +9,6 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp@latest"],
       "env": {}
-    },
-    "storybook-mcp": {
-      "type": "http",
-      "url": "http://localhost:6006/mcp"
     }
   }
 }
