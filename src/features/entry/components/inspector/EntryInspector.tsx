@@ -114,13 +114,18 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
     );
   }
 
-  if (!isOpen) return null;
+  // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
+  const urlSyncElement = (
+    <Suspense fallback={null}>
+      <InspectorURLSyncHandler />
+    </Suspense>
+  );
+
+  if (!isOpen) return urlSyncElement;
 
   return (
     <>
-      <Suspense fallback={null}>
-        <InspectorURLSyncHandler />
-      </Suspense>
+      {urlSyncElement}
 
       {isMobile ? (
         <Drawer
