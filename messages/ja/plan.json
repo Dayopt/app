@@ -95,7 +95,10 @@
         "fulfillment": "充実度",
         "fulfillmentLow": "充実度: 低",
         "fulfillmentMedium": "充実度: 中",
-        "fulfillmentHigh": "充実度: 高"
+        "fulfillmentHigh": "充実度: 高",
+        "fulfillmentTooltipLow": "いまいち",
+        "fulfillmentTooltipMedium": "ふつう",
+        "fulfillmentTooltipHigh": "充実した"
       },
       "note": {
         "label": "メモ",

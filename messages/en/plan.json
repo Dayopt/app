@@ -95,7 +95,10 @@
         "fulfillment": "Fulfillment",
         "fulfillmentLow": "Fulfillment: Low",
         "fulfillmentMedium": "Fulfillment: Medium",
-        "fulfillmentHigh": "Fulfillment: High"
+        "fulfillmentHigh": "Fulfillment: High",
+        "fulfillmentTooltipLow": "Not great",
+        "fulfillmentTooltipMedium": "Okay",
+        "fulfillmentTooltipHigh": "Fulfilling"
       },
       "note": {
         "label": "Note",

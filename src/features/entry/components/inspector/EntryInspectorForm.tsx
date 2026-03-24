@@ -228,6 +228,11 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
               medium: t('plan.inspector.time.fulfillmentMedium'),
               high: t('plan.inspector.time.fulfillmentHigh'),
             }}
+            tooltipLabels={{
+              low: t('plan.inspector.time.fulfillmentTooltipLow'),
+              medium: t('plan.inspector.time.fulfillmentTooltipMedium'),
+              high: t('plan.inspector.time.fulfillmentTooltipHigh'),
+            }}
           />
 
           {/* リマインダー */}

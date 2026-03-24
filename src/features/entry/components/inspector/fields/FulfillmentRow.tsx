@@ -10,6 +10,7 @@
 import { Frown, Meh, Smile } from 'lucide-react';
 import { useCallback } from 'react';
 
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 import type { FulfillmentScore } from '../../../types/entry';
@@ -30,6 +31,7 @@ interface FulfillmentRowProps {
   onScoreChange: (value: FulfillmentScore | null) => void;
   disabled?: boolean;
   scoreLabels?: Record<'low' | 'medium' | 'high', string>;
+  tooltipLabels?: Record<'low' | 'medium' | 'high', string>;
 }
 
 const DEFAULT_SCORE_LABELS: Record<'low' | 'medium' | 'high', string> = {
@@ -45,6 +47,7 @@ export function FulfillmentRow({
   onScoreChange,
   disabled = false,
   scoreLabels = DEFAULT_SCORE_LABELS,
+  tooltipLabels,
 }: FulfillmentRowProps) {
   const handleToggle = useCallback(
     (value: FulfillmentScore) => {
@@ -62,7 +65,7 @@ export function FulfillmentRow({
       <div className="flex items-center gap-1">
         {SCORE_OPTIONS.map(({ score: value, icon: Icon, labelKey }) => {
           const isSelected = score === value;
-          return (
+          const button = (
             <button
               key={value}
               type="button"
@@ -82,6 +85,16 @@ export function FulfillmentRow({
               <Icon className="size-4" />
             </button>
           );
+
+          if (tooltipLabels) {
+            return (
+              <HoverTooltip key={value} content={tooltipLabels[labelKey]} side="bottom">
+                {button}
+              </HoverTooltip>
+            );
+          }
+
+          return button;
         })}
       </div>
     </div>
