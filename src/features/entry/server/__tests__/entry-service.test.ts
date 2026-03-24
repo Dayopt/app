@@ -239,14 +239,10 @@ describe('EntryService.update', () => {
 
 describe('EntryService.delete', () => {
   it('エントリ削除が成功する', async () => {
-    const mock = createChainableMock(null);
     const { service, mockSupabase } = createService();
-    mockSupabase.from.mockReturnValue(mock);
 
-    // delete の末端は then (not single)
-    mock.then = vi
-      .fn()
-      .mockImplementation((resolve: (v: unknown) => void) => resolve({ data: null, error: null }));
+    // delete は rpc('soft_delete_entry') を使用する
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await service.delete({
       userId: USER_ID,
@@ -257,16 +253,13 @@ describe('EntryService.delete', () => {
   });
 
   it('削除失敗時に DELETE_FAILED を返す', async () => {
-    const mock = createChainableMock(null, { message: 'delete failed' });
     const { service, mockSupabase } = createService();
-    mockSupabase.from.mockReturnValue(mock);
 
-    // delete チェーンはsingleを呼ばない → thenが呼ばれる
-    mock.then = vi
-      .fn()
-      .mockImplementation((resolve: (v: unknown) => void) =>
-        resolve({ data: null, error: { message: 'delete failed', code: 'PGRST116' } }),
-      );
+    // delete は rpc('soft_delete_entry') を使用する
+    mockSupabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'delete failed', code: 'PGRST116' },
+    });
 
     try {
       await service.delete({ userId: USER_ID, entryId: 'entry-1' });
