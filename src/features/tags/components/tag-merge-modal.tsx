@@ -191,8 +191,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
 
       {/* Tag list */}
       <div
-        className="overflow-y-auto px-1 py-2"
-        style={{ maxHeight: '50vh' }}
+        className="max-h-[50vh] overflow-y-auto px-1 py-2"
         role="radiogroup"
         aria-label={t('calendar.filter.mergeTag.title')}
       >

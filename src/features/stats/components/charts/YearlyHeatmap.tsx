@@ -133,16 +133,16 @@ export function YearlyHeatmap() {
           fill: var(--color-muted);
         }
         .yearly-heatmap .react-calendar-heatmap .color-scale-1 {
-          fill: oklch(from var(--primary) l c h / 20%);
+          fill: var(--heatmap-scale-1);
         }
         .yearly-heatmap .react-calendar-heatmap .color-scale-2 {
-          fill: oklch(from var(--primary) l c h / 40%);
+          fill: var(--heatmap-scale-2);
         }
         .yearly-heatmap .react-calendar-heatmap .color-scale-3 {
-          fill: oklch(from var(--primary) l c h / 60%);
+          fill: var(--heatmap-scale-3);
         }
         .yearly-heatmap .react-calendar-heatmap .color-scale-4 {
-          fill: oklch(from var(--primary) l c h / 80%);
+          fill: var(--heatmap-scale-4);
         }
         .yearly-heatmap .react-calendar-heatmap rect:hover {
           stroke: var(--foreground);
