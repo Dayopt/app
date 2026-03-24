@@ -21,6 +21,7 @@
       "unpinFailed": "ピン解除に失敗しました",
       "updateFailed": "更新に失敗しました",
       "remove": "削除",
+      "tagDeleted": "タグが削除されました",
       "changeDuration": "時間を変更",
       "tagAssignFailed": "タグの割り当てに失敗しました",
       "placed": "{name} を {time} に追加しました",

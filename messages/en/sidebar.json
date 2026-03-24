@@ -26,7 +26,8 @@
       "placed": "Added {name} at {time}",
       "overlapError": "{time} overlaps with an existing block",
       "reorderMode": "Reorder mode",
-      "normalMode": "Normal mode"
+      "normalMode": "Normal mode",
+      "tagDeleted": "Tag deleted"
     },
     "recentBlocks": {
       "title": "Recent",

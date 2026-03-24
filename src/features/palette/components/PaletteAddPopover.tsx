@@ -97,10 +97,13 @@ function PaletteAddContent({
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit || isPinning) return;
-    pinItem(selectedTagId, Number(selectedDuration));
-    setSelectedTagId('');
-    setSelectedDuration('');
-    onClose();
+    pinItem(selectedTagId, Number(selectedDuration), {
+      onSuccess: () => {
+        setSelectedTagId('');
+        setSelectedDuration('');
+        onClose();
+      },
+    });
   }, [canSubmit, isPinning, pinItem, selectedTagId, selectedDuration, onClose]);
 
   const handleClose = useCallback(() => {

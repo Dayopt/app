@@ -15,12 +15,14 @@ interface BlockItemProps {
   tagName: string;
   tagColor: string | null;
   durationMinutes: number;
-  onClick: () => void;
+  onClick?: (() => void) | undefined;
   className?: string;
   /** メニュートリガーのスロット（DropdownMenu等を渡す） */
   menuSlot?: React.ReactNode;
   /** ドットの表示バリアント: solid=塗り（デフォルト）, outline=中抜き */
   dotVariant?: 'solid' | 'outline';
+  /** 無効状態（削除済みタグ等） */
+  disabled?: boolean | undefined;
 }
 
 function formatDuration(minutes: number): string {
@@ -39,13 +41,15 @@ export function BlockItem({
   className,
   menuSlot,
   dotVariant = 'solid',
+  disabled = false,
 }: BlockItemProps) {
   const colorClasses = getTagColorClasses(tagColor);
 
   return (
     <div
       className={cn(
-        'group/block hover:bg-state-hover flex h-8 w-full items-center rounded text-sm transition-colors',
+        'group/block flex h-8 w-full items-center rounded text-sm transition-colors',
+        disabled ? 'opacity-50' : 'hover:bg-state-hover',
         className,
       )}
     >
@@ -53,6 +57,7 @@ export function BlockItem({
       <button
         type="button"
         onClick={onClick}
+        disabled={disabled}
         className="flex min-w-0 flex-1 items-center gap-2 px-2"
       >
         {/* タグカラードット — チェックボックスと同じインラインstyle方式で統一 */}

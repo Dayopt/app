@@ -146,8 +146,18 @@ export function usePaletteMutations() {
   });
 
   const pinItem = useCallback(
-    (tagId: string, durationMinutes: number) => {
-      pinMutation.mutate({ tagId, durationMinutes });
+    (
+      tagId: string,
+      durationMinutes: number,
+      callbacks?: { onSuccess?: () => void; onError?: () => void },
+    ) => {
+      pinMutation.mutate(
+        { tagId, durationMinutes },
+        {
+          ...(callbacks?.onSuccess ? { onSuccess: callbacks.onSuccess } : {}),
+          ...(callbacks?.onError ? { onError: callbacks.onError } : {}),
+        },
+      );
     },
     [pinMutation],
   );

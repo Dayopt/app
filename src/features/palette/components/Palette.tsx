@@ -9,10 +9,11 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
@@ -36,17 +37,35 @@ export function Palette() {
 
   const { data: pinnedItems } = usePaletteItems();
 
-  const pinnedWithTags = useMemo(
-    () =>
-      (pinnedItems ?? [])
-        .map((item) => {
-          const tag = getTagById(item.tag_id);
-          if (!tag) return null;
-          return { ...item, tag };
-        })
-        .filter(Boolean),
-    [pinnedItems, getTagById],
-  );
+  // タグが存在するアイテムと、削除済みタグの孤立アイテムを分離
+  const { validItems, orphanItems } = useMemo(() => {
+    const valid: {
+      id: string;
+      tag_id: string;
+      duration_minutes: number;
+      sort_order: number;
+      is_pinned: boolean;
+      tag: { id: string; name: string; color: string };
+    }[] = [];
+    const orphans: {
+      id: string;
+      tag_id: string;
+      duration_minutes: number;
+      sort_order: number;
+      is_pinned: boolean;
+    }[] = [];
+
+    for (const item of pinnedItems ?? []) {
+      const tag = getTagById(item.tag_id);
+      if (tag) {
+        valid.push({ ...item, tag });
+      } else {
+        orphans.push(item);
+      }
+    }
+
+    return { validItems: valid, orphanItems: orphans };
+  }, [pinnedItems, getTagById]);
 
   // PaletteAddPopover: trigger + open state をここで管理
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
@@ -69,36 +88,59 @@ export function Palette() {
     </Button>
   );
 
+  const hasItems = validItems.length > 0 || orphanItems.length > 0;
+
   return (
     <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={addTrigger}>
-        {pinnedWithTags.length === 0 && (
+        {!hasItems && (
           <div className="text-muted-foreground space-y-2 px-2 py-3 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
             <p>{t('sidebar.palette.emptyHint')}</p>
           </div>
         )}
 
-        {pinnedWithTags.map((item) =>
-          item ? (
-            <div key={item.id}>
-              <BlockItem
-                tagName={item.tag.name}
-                tagColor={item.tag.color}
-                durationMinutes={item.duration_minutes}
-                onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
-                menuSlot={
-                  <PaletteItemMenu
-                    itemId={item.id}
-                    currentDuration={item.duration_minutes}
-                    onChangeDuration={updateDuration}
-                    onRemove={unpinItem}
-                  />
-                }
-              />
-            </div>
-          ) : null,
-        )}
+        {validItems.map((item) => (
+          <div key={item.id}>
+            <BlockItem
+              tagName={item.tag.name}
+              tagColor={item.tag.color}
+              durationMinutes={item.duration_minutes}
+              onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
+              menuSlot={
+                <PaletteItemMenu
+                  itemId={item.id}
+                  currentDuration={item.duration_minutes}
+                  onChangeDuration={updateDuration}
+                  onRemove={unpinItem}
+                />
+              }
+            />
+          </div>
+        ))}
+
+        {orphanItems.map((item) => (
+          <div key={item.id}>
+            <BlockItem
+              tagName={t('sidebar.palette.tagDeleted')}
+              tagColor="gray"
+              durationMinutes={item.duration_minutes}
+              disabled
+              menuSlot={
+                <HoverTooltip content={t('sidebar.palette.remove')}>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-destructive flex size-6 shrink-0 items-center justify-center rounded transition-colors"
+                    onClick={() => unpinItem(item.id)}
+                    aria-label={t('sidebar.palette.remove')}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </HoverTooltip>
+              }
+            />
+          </div>
+        ))}
       </SidebarSection>
 
       <PaletteAddPopover
