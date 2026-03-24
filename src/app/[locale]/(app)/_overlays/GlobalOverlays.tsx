@@ -7,9 +7,7 @@ import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
-import { EntryInspector } from '@/features/entry/components';
 import { usePaletteItems, usePaletteMutations } from '@/features/palette';
-import { TourOrchestrator } from '@/features/tour';
 import { useContactStore } from '@/shell/stores/useContactStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 
@@ -27,6 +25,22 @@ const SettingsDialog = dynamic(
   () =>
     import('@/features/settings/components/SettingsDialog').then((m) => ({
       default: m.SettingsDialog,
+    })),
+  { ssr: false },
+);
+
+const EntryInspector = dynamic(
+  () =>
+    import('@/features/entry/components/inspector/EntryInspector').then((m) => ({
+      default: m.EntryInspector,
+    })),
+  { ssr: false },
+);
+
+const TourOrchestrator = dynamic(
+  () =>
+    import('@/features/tour/components/TourOrchestrator').then((m) => ({
+      default: m.TourOrchestrator,
     })),
   { ssr: false },
 );
