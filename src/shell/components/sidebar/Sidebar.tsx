@@ -65,7 +65,7 @@ export function Sidebar({
             <Button
               variant="ghost"
               icon
-              className="size-8"
+              size="sm"
               onClick={() => openSearch()}
               aria-label={t('navigation.sidebar.navigation.search')}
             >
@@ -76,7 +76,7 @@ export function Sidebar({
             <Button
               variant="ghost"
               icon
-              className="size-8"
+              size="sm"
               onClick={closeSidebar}
               aria-label={t('navigation.sidebar.closeSidebar')}
             >
