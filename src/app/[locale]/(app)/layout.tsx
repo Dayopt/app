@@ -33,6 +33,7 @@ const APP_NAMESPACES = [
   'sidebar',
   'error',
   'contact',
+  'tour',
 ];
 
 interface AppLayoutProps {

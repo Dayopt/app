@@ -1,5 +1,8 @@
 {
   "calendar": {
+    "aside": {
+      "search": "検索"
+    },
     "meta": {
       "description": "タイムボクシングでスケジュールを計画。日・週・月単位で予定を確認・管理できます。"
     },
@@ -102,7 +105,10 @@
       "close": "閉じる",
       "openCalendar": "カレンダーを開く",
       "previousMonth": "前の月",
-      "nextMonth": "次の月"
+      "nextMonth": "次の月",
+      "selectMonth": "月を選択",
+      "selectYear": "年を選択",
+      "selectTimezone": "タイムゾーンを選択"
     },
     "errors": {
       "loadFailed": "カレンダーの読み込みに失敗しました",

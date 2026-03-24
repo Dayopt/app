@@ -1,5 +1,8 @@
 {
   "calendar": {
+    "aside": {
+      "search": "Search"
+    },
     "meta": {
       "description": "Plan your schedule with time boxing. View and manage your plans by day, week, or month."
     },
@@ -102,7 +105,10 @@
       "close": "Close",
       "openCalendar": "Open calendar",
       "previousMonth": "Previous month",
-      "nextMonth": "Next month"
+      "nextMonth": "Next month",
+      "selectMonth": "Select month",
+      "selectYear": "Select year",
+      "selectTimezone": "Select timezone"
     },
     "errors": {
       "loadFailed": "Failed to load calendar",
