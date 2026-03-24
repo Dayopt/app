@@ -28,7 +28,18 @@ Zustand でグローバル、useState でローカル。セレクタで必要な
 
 ## tRPC実装パターン
 
-Router → Service → Supabase の3層構造。詳細: `.claude/skills/trpc-router-creating/SKILL.md`
+Router → Service → Supabase の3層構造。feature-colocated で配置。
+
+```
+src/features/{feature}/server/
+├── router.ts              # ルーター（Zodバリデーション + エラーハンドリング）
+├── {feature}-service.ts   # サービス層（ビジネスロジック）
+└── __tests__/
+```
+
+- ルーター集約: `src/platform/trpc/root.ts`
+- 共通: `@/platform/trpc/procedures`（createTRPCRouter, protectedProcedure）、`@/platform/trpc/errors`（handleServiceError）
+- 詳細: `.claude/skills/trpc-router-creating/SKILL.md`
 
 ## 楽観的更新
 

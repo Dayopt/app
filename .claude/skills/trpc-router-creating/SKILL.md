@@ -18,88 +18,64 @@ DayoptプロジェクトのtRPC v11ルーターを規約に沿って作成する
 - 「バックエンド実装」
 - 「CRUD API」
 
-## ルーター構造
+## ルーター構造（feature-colocated）
 
 ```
-src/server/api/routers/{entity}/
-├── index.ts        # ルーターのマージ・エクスポート
-├── crud.ts         # 基本CRUD操作
-├── bulk.ts         # バルク操作（optional）
-├── statistics.ts   # 統計（optional）
+src/features/{feature}/server/
+├── router.ts              # ルーター定義
+├── {feature}-service.ts   # ビジネスロジック
+├── types.ts               # feature内の型定義（optional）
 └── __tests__/
-    └── crud.test.ts
+    └── router.test.ts
+```
+
+大規模featureの場合（例: entry）:
+
+```
+src/features/entry/server/
+├── router.ts              # 個別ルーター
+├── router-index.ts        # ルーターのマージ・エクスポート
+├── entry-service.ts       # メインサービス
+├── service-index.ts       # サービスのマージ
+├── statistics.ts          # 統計（optional）
+├── types.ts
+└── __tests__/
 ```
 
 ## 作成手順
 
-### 1. スキーマ定義（Zod）
+### 1. サービス層（ビジネスロジック）
 
 ```typescript
-// src/schemas/{entity}.ts
-import { z } from 'zod'
+// src/features/{feature}/server/{feature}-service.ts
+import type { Database } from '@/lib/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export const {entity}IdSchema = z.object({
-  id: z.string().uuid(),
-})
+type Db{Entity}Row = Database['public']['Tables']['{entities}']['Row'];
 
-export const create{Entity}Schema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().optional(),
-  // other fields
-})
-
-export const update{Entity}Schema = create{Entity}Schema.partial()
-
-export const {entity}FilterSchema = z.object({
-  search: z.string().optional(),
-  limit: z.number().min(1).max(100).default(50),
-  offset: z.number().min(0).default(0),
-})
-```
-
-### 2. サービス層（ビジネスロジック）
-
-```typescript
-// src/server/services/{entity}/index.ts
-import { SupabaseClient } from '@supabase/supabase-js'
-
-export class {Entity}ServiceError extends Error {
-  constructor(
-    public code: string,
-    message: string
-  ) {
-    super(message)
-    this.name = '{Entity}ServiceError'
-  }
-}
-
-export function create{Entity}Service(supabase: SupabaseClient) {
+export function create{Entity}Service(supabase: SupabaseClient<Database>) {
   return {
     async list(params: { userId: string; limit?: number; offset?: number }) {
       const { data, error } = await supabase
         .from('{entities}')
         .select('*')
         .eq('user_id', params.userId)
-        .range(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 50) - 1)
+        .range(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 50) - 1);
 
-      if (error) {
-        throw new {Entity}ServiceError('FETCH_FAILED', error.message)
-      }
-      return data
+      if (error) throw error;
+      return data;
     },
 
-    async getById(params: { userId: string; {entity}Id: string }) {
+    async getById(params: { userId: string; id: string }) {
       const { data, error } = await supabase
         .from('{entities}')
         .select('*')
-        .eq('id', params.{entity}Id)
+        .eq('id', params.id)
         .eq('user_id', params.userId)
-        .single()
+        .single();
 
-      if (error) {
-        throw new {Entity}ServiceError('NOT_FOUND', error.message)
-      }
-      return data
+      if (error) throw error;
+      return data;
     },
 
     async create(params: { userId: string; input: Create{Entity}Input }) {
@@ -107,144 +83,129 @@ export function create{Entity}Service(supabase: SupabaseClient) {
         .from('{entities}')
         .insert({ ...params.input, user_id: params.userId })
         .select()
-        .single()
+        .single();
 
-      if (error) {
-        throw new {Entity}ServiceError('CREATE_FAILED', error.message)
-      }
-      return data
+      if (error) throw error;
+      return data;
     },
 
-    async update(params: { userId: string; {entity}Id: string; input: Update{Entity}Input }) {
+    async update(params: { userId: string; id: string; input: Update{Entity}Input }) {
       const { data, error } = await supabase
         .from('{entities}')
         .update(params.input)
-        .eq('id', params.{entity}Id)
+        .eq('id', params.id)
         .eq('user_id', params.userId)
         .select()
-        .single()
+        .single();
 
-      if (error) {
-        throw new {Entity}ServiceError('UPDATE_FAILED', error.message)
-      }
-      return data
+      if (error) throw error;
+      return data;
     },
 
-    async delete(params: { userId: string; {entity}Id: string }) {
+    async delete(params: { userId: string; id: string }) {
       const { error } = await supabase
         .from('{entities}')
         .delete()
-        .eq('id', params.{entity}Id)
-        .eq('user_id', params.userId)
+        .eq('id', params.id)
+        .eq('user_id', params.userId);
 
-      if (error) {
-        throw new {Entity}ServiceError('DELETE_FAILED', error.message)
-      }
-      return { success: true }
+      if (error) throw error;
+      return { success: true };
     },
-  }
+  };
 }
 ```
 
-### 3. CRUDルーター
+### 2. ルーター定義
 
 ```typescript
-// src/server/api/routers/{entity}/crud.ts
-import { z } from 'zod'
+// src/features/{feature}/server/router.ts
+import { z } from 'zod';
 
-import { create{Entity}Schema, {entity}IdSchema, update{Entity}Schema } from '@/schemas/{entity}'
-import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc'
-import { handleServiceError } from '@/server/services/errors'
-import { create{Entity}Service } from '@/server/services/{entity}'
+import { logger } from '@/lib/logger';
+import { handleServiceError } from '@/platform/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { create{Entity}Service } from './{feature}-service';
 
-// handleServiceErrorは共通モジュールを使用
-// 新しいエラーコードが必要な場合は src/server/services/errors.ts の ERROR_CODE_MAP に追加
-
-export const {entity}CrudRouter = createTRPCRouter({
+export const {feature}Router = createTRPCRouter({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const service = create{Entity}Service(ctx.supabase)
+    const service = create{Entity}Service(ctx.supabase);
     try {
-      return await service.list({ userId: ctx.userId })
+      return await service.list({ userId: ctx.userId });
     } catch (error) {
-      handleServiceError(error)
+      handleServiceError(error);
     }
   }),
 
-  getById: protectedProcedure.input({entity}IdSchema).query(async ({ ctx, input }) => {
-    const service = create{Entity}Service(ctx.supabase)
-    try {
-      return await service.getById({ userId: ctx.userId, {entity}Id: input.id })
-    } catch (error) {
-      handleServiceError(error)
-    }
-  }),
-
-  create: protectedProcedure.input(create{Entity}Schema).mutation(async ({ ctx, input }) => {
-    const service = create{Entity}Service(ctx.supabase)
-    try {
-      return await service.create({ userId: ctx.userId, input })
-    } catch (error) {
-      handleServiceError(error)
-    }
-  }),
-
-  update: protectedProcedure
-    .input(z.object({ id: z.string().uuid(), data: update{Entity}Schema }))
-    .mutation(async ({ ctx, input }) => {
-      const service = create{Entity}Service(ctx.supabase)
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const service = create{Entity}Service(ctx.supabase);
       try {
-        return await service.update({
-          userId: ctx.userId,
-          {entity}Id: input.id,
-          input: input.data,
-        })
+        return await service.getById({ userId: ctx.userId, id: input.id });
       } catch (error) {
-        handleServiceError(error)
+        handleServiceError(error);
       }
     }),
 
-  delete: protectedProcedure.input({entity}IdSchema).mutation(async ({ ctx, input }) => {
-    const service = create{Entity}Service(ctx.supabase)
-    try {
-      return await service.delete({ userId: ctx.userId, {entity}Id: input.id })
-    } catch (error) {
-      handleServiceError(error)
-    }
-  }),
-})
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(100),
+      // other fields
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const service = create{Entity}Service(ctx.supabase);
+      try {
+        return await service.create({ userId: ctx.userId, input });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      data: z.object({ name: z.string().min(1).max(100) }).partial(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const service = create{Entity}Service(ctx.supabase);
+      try {
+        return await service.update({ userId: ctx.userId, id: input.id, input: input.data });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const service = create{Entity}Service(ctx.supabase);
+      try {
+        return await service.delete({ userId: ctx.userId, id: input.id });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+});
 ```
 
-### 4. ルーターのマージ
+### 3. メインルーターに登録
 
 ```typescript
-// src/server/api/routers/{entity}/index.ts
-import { mergeRouters } from '@/server/api/trpc'
-import { {entity}CrudRouter } from './crud'
-// import { {entity}BulkRouter } from './bulk'  // optional
-
-export const {entity}Router = mergeRouters(
-  {entity}CrudRouter,
-  // {entity}BulkRouter,
-)
-```
-
-### 5. メインルーターに追加
-
-```typescript
-// src/server/api/root.ts
-import { {entity}Router } from './routers/{entity}'
+// src/platform/trpc/root.ts
+import { {feature}Router } from '@/features/{feature}/server/router';
 
 export const appRouter = createTRPCRouter({
   // existing routers...
-  {entity}: {entity}Router,
-})
+  {feature}: {feature}Router,
+});
 ```
 
 ## アーキテクチャ
 
 ```
 ┌─────────────────────┐
-│   tRPC Router       │  ← 入力バリデーション + エラーハンドリング
+│   tRPC Router       │  ← Zodバリデーション + エラーハンドリング
 ├─────────────────────┤
 │   Service Layer     │  ← ビジネスロジック
 ├─────────────────────┤
@@ -252,28 +213,34 @@ export const appRouter = createTRPCRouter({
 └─────────────────────┘
 ```
 
+## 重要なインポートパス
+
+```typescript
+import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/platform/trpc/errors';
+import { logger } from '@/lib/logger';
+import type { Database } from '@/lib/database.types';
+```
+
 ## チェックリスト
 
-- [ ] Zodスキーマを `src/schemas/` に作成
-- [ ] サービス層を `src/server/services/` に作成
+- [ ] サービス層を `src/features/{feature}/server/{feature}-service.ts` に作成
+- [ ] ルーターを `src/features/{feature}/server/router.ts` に作成
 - [ ] `protectedProcedure` を使用（認証必須）
-- [ ] エラーハンドリングで `TRPCError` を使用
+- [ ] `handleServiceError` でエラーハンドリング
 - [ ] `user_id` でフィルタリング（マルチテナント）
 - [ ] テストファイル作成
-- [ ] メインルーターに登録
+- [ ] `src/platform/trpc/root.ts` に登録
 
 ## 既存ルーター参考
 
 ```
-src/server/api/routers/
-├── plans/           # 最も完成度が高い例
-│   ├── index.ts
-│   ├── crud.ts
-│   ├── bulk.ts
-│   ├── statistics.ts
-│   └── __tests__/
-├── profile.ts       # シンプルな例
-└── notifications.ts
+src/features/
+├── entry/server/      # 最も大規模な例（router-index + service-index）
+├── tags/server/       # 標準的なCRUD例
+├── auth/server/       # ユーザー管理
+├── settings/server/   # billing-router含む複数ルーター
+└── notifications/server/  # email-router, preferences-router含む
 ```
 
 ## 関連スキル

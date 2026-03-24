@@ -2,17 +2,15 @@
 
 import React, { useCallback } from 'react';
 
-import { useEntryInspectorStore } from '@/features/entry';
+import { EntryCard, computeActualTimeDiffOverlay, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
-import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
-import type { CalendarEvent } from '../../../../types/calendar.types';
-
-import { EntryCard } from '@/features/entry';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
+import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
+import type { CalendarEvent } from '../../../../types/calendar.types';
 import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
 import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
@@ -172,10 +170,24 @@ export function MultiDayContent({
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
+          // 予定 vs 記録の差分オーバーレイ（wrapper側で位置調整）
+          const overlay = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
+
           const adjustedStyle = getAdjustedStyle(style, entry.id, state);
+          // overlay の topShift/heightDelta を wrapper に反映
+          const overlayAdjustedStyle = {
+            ...adjustedStyle,
+            top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
+            height: `${parseFloat(adjustedStyle.height?.toString() || '20') + overlay.heightDelta}px`,
+          };
           const finalStyle = isMovingToOtherDate
-            ? { ...adjustedStyle, opacity: 0.3 }
-            : adjustedStyle;
+            ? { ...overlayAdjustedStyle, opacity: 0.3 }
+            : overlayAdjustedStyle;
+
+          const overlayAdjustedHeight =
+            entryResizing && state.mode === 'resizing'
+              ? state.snappedHeight
+              : currentHeight + overlay.heightDelta;
 
           return (
             <div
@@ -226,10 +238,7 @@ export function MultiDayContent({
                     top: 0,
                     left: 0,
                     width: 100,
-                    height:
-                      entryResizing && state.mode === 'resizing'
-                        ? state.snappedHeight
-                        : currentHeight,
+                    height: overlayAdjustedHeight,
                   }}
                   onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
                     handleEntryContextMenu(p, e)
@@ -251,6 +260,7 @@ export function MultiDayContent({
                   isActive={isInspectorOpen && inspectorEntryId === entry.id}
                   previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
+                  overlayPositionApplied
                   className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 />
               </div>

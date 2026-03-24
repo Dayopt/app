@@ -10,11 +10,13 @@ paths:
 ## 階層モデル（DAG）
 
 ```
-Layer 0 (基盤):    tags, chronotype       ← 他featureに依存しない
-Layer 1 (中核):    entry                  ← Layer 0 の barrel を使える
-Layer 2 (体験):    calendar, stats, ai, search ← Layer 0+1 を使える
-Cross-cutting:     settings               ← 全feature の barrel を使える
-Independent:       auth, notifications    ← 他featureに依存しない
+Layer 0 (基盤):    tags, chronotype             ← 他featureに依存しない
+Layer 1 (中核):    entry                        ← Layer 0 の barrel を使える
+Layer 2 (体験):    calendar, stats, ai, search, ← Layer 0+1 を使える
+                   history, palette
+Cross-cutting:     settings                     ← 全feature の barrel を使える
+Independent:       auth, notifications,         ← 他featureに依存しない
+                   contact, onboarding, tour
 ```
 
 ## 依存ルール（ESLint `error` で強制）
