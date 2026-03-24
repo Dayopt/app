@@ -1,0 +1,169 @@
+'use client';
+
+import { format } from 'date-fns';
+import { BarChart3, Bell, CalendarDays, UserCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCallback, useMemo } from 'react';
+
+import { useCalendarNavigation } from '@/features/calendar';
+import { useUnreadCount } from '@/features/notifications';
+import { cn } from '@/lib/utils';
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
+
+type TabId = 'calendar' | 'stats' | 'notifications' | 'account';
+
+function getActiveTabFromPath(pathname: string): TabId {
+  const segments = pathname.split('/');
+  const pathWithoutLocale =
+    segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
+      ? '/' + segments.slice(2).join('/')
+      : pathname;
+
+  if (pathWithoutLocale.startsWith('/settings')) return 'account';
+  if (pathWithoutLocale.startsWith('/notifications')) return 'notifications';
+  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  return 'calendar';
+}
+
+/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Notifications / Account） */
+export function BottomTabBar() {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const router = useRouter();
+  const calendarNav = useCalendarNavigation();
+  const switchToPage = useClientRouterStore((s) => s.switchToPage);
+  const clientPage = useClientRouterStore((s) => s.clientPage);
+  const { data: unreadCount = 0 } = useUnreadCount();
+
+  const locale = useMemo(() => {
+    const segments = pathname?.split('/') ?? [];
+    if (segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')) {
+      return segments[1];
+    }
+    return 'ja';
+  }, [pathname]);
+
+  // clientPage（Zustand）を優先、null時は pathname から判定
+  const activeTab: TabId = useMemo(() => {
+    if (clientPage) return clientPage;
+    return getActiveTabFromPath(pathname ?? '/');
+  }, [clientPage, pathname]);
+
+  const handleCalendarClick = useCallback(() => {
+    if (activeTab === 'calendar') return;
+
+    const viewType = calendarNav?.viewType ?? 'day';
+    const currentDate = calendarNav?.currentDate;
+    const params = new URLSearchParams();
+    if (currentDate) {
+      params.set('date', format(currentDate, 'yyyy-MM-dd'));
+    }
+    const query = params.size > 0 ? `?${params.toString()}` : '';
+    window.history.pushState(null, '', `/${locale}/calendar/${viewType}${query}`);
+    switchToPage('calendar');
+  }, [activeTab, calendarNav, locale, switchToPage]);
+
+  const handleStatsClick = useCallback(() => {
+    if (activeTab === 'stats') return;
+
+    window.history.pushState(null, '', `/${locale}/stats/review`);
+    switchToPage('stats');
+  }, [activeTab, locale, switchToPage]);
+
+  const handleNotificationsClick = useCallback(() => {
+    router.push(`/${locale}/notifications`);
+  }, [router, locale]);
+
+  const handleAccountClick = useCallback(() => {
+    router.push(`/${locale}/settings`);
+  }, [router, locale]);
+
+  const tabs: Array<{
+    id: TabId;
+    label: string;
+    icon: typeof CalendarDays;
+    onClick: () => void;
+    badge?: number;
+  }> = useMemo(
+    () => [
+      {
+        id: 'calendar',
+        label: t('navigation.bottomTab.calendar'),
+        icon: CalendarDays,
+        onClick: handleCalendarClick,
+      },
+      {
+        id: 'stats',
+        label: t('navigation.bottomTab.stats'),
+        icon: BarChart3,
+        onClick: handleStatsClick,
+      },
+      {
+        id: 'notifications',
+        label: t('navigation.bottomTab.notifications'),
+        icon: Bell,
+        onClick: handleNotificationsClick,
+        badge: unreadCount,
+      },
+      {
+        id: 'account',
+        label: t('navigation.bottomTab.account'),
+        icon: UserCircle,
+        onClick: handleAccountClick,
+      },
+    ],
+    [
+      t,
+      handleCalendarClick,
+      handleStatsClick,
+      handleNotificationsClick,
+      handleAccountClick,
+      unreadCount,
+    ],
+  );
+
+  return (
+    <nav
+      className="bg-background surface-raised z-bottom-tab pb-safe fixed inset-x-0 bottom-0"
+      role="tablist"
+      aria-label={t('common.aria.pageNavigation')}
+    >
+      <div className="flex h-14 items-center justify-around">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              onClick={tab.onClick}
+              className={cn(
+                'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
+                isActive ? 'text-primary' : 'text-muted-foreground',
+              )}
+            >
+              {/* アクティブ時はピル型背景でアイコンを囲む（M3スタイル） */}
+              <span
+                className={cn(
+                  'relative flex items-center justify-center rounded-full px-4 py-1 transition-colors',
+                  isActive && 'bg-primary/10',
+                )}
+              >
+                <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                {/* 未読バッジ */}
+                {tab.badge != null && tab.badge > 0 && (
+                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                    {tab.badge > 9 ? '9+' : tab.badge}
+                  </span>
+                )}
+              </span>
+              <span className={cn('text-xs', isActive && 'font-semibold')}>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

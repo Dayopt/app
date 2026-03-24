@@ -25,6 +25,12 @@
         "notifications": "通知"
       }
     },
+    "bottomTab": {
+      "calendar": "カレンダー",
+      "stats": "統計",
+      "notifications": "通知",
+      "account": "アカウント"
+    },
     "navUser": {
       "myAccount": "マイアカウント",
       "account": "アカウント",
