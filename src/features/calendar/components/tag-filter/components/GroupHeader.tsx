@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { TagColorName } from '@/lib/tag-colors';
+import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface GroupHeaderProps {
@@ -107,8 +108,9 @@ export function GroupHeader({
         onCheckedChange={onCheckedChange}
         className="ml-2 shrink-0 cursor-pointer"
         style={{
-          borderColor: displayColor,
-          backgroundColor: checked || indeterminate ? displayColor : 'transparent',
+          borderColor: getTagColorClasses(displayColor).cssVar,
+          backgroundColor:
+            checked || indeterminate ? getTagColorClasses(displayColor).cssVar : 'transparent',
         }}
       />
       <span className="ml-1 min-w-0 truncate">{label}</span>
