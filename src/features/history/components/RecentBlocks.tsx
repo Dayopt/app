@@ -16,7 +16,7 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { api } from '@/platform/trpc';
-import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 interface RecentBlocksProps {
   onPinItem?: (tagId: string, durationMinutes: number) => void;
@@ -64,7 +64,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                     <HoverTooltip content={t('sidebar.palette.add')}>
                       <button
                         type="button"
-                        className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+                        className={blockMenuButtonCn}
                         onClick={(e) => {
                           e.stopPropagation();
                           onPinItem(item.tagId, item.durationMinutes);

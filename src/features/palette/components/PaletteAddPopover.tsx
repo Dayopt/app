@@ -267,7 +267,11 @@ export function PaletteAddPopover({
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
-  }, [onOpenChange]);
+    // フォーカスをアンカー要素に返却
+    requestAnimationFrame(() => {
+      anchorRef?.current?.focus();
+    });
+  }, [onOpenChange, anchorRef]);
 
   if (!mounted) return null;
 

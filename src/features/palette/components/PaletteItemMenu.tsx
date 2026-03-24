@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { blockMenuButtonCn } from '@/shell/components/sidebar';
 
 import { DURATION_PRESETS } from '../constants';
 
@@ -42,7 +43,7 @@ export function PaletteItemMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100"
+          className={blockMenuButtonCn}
           aria-label={t('common.actions.options')}
           onClick={(e) => e.stopPropagation()}
         >

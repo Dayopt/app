@@ -189,5 +189,7 @@ export function usePaletteMutations() {
     updateDuration,
     reorderItems,
     isPinning: pinMutation.isPending,
+    isUnpinning: unpinMutation.isPending,
+    isUpdatingDuration: updateDurationMutation.isPending,
   };
 }

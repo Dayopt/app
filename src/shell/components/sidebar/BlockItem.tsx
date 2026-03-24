@@ -11,6 +11,10 @@
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
+/** BlockItem の menuSlot 内ボタンに共通適用するクラス（ホバー時のみ表示） */
+export const blockMenuButtonCn =
+  'text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100';
+
 interface BlockItemProps {
   tagName: string;
   tagColor: string | null;
