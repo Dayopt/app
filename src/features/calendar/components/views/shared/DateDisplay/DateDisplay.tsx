@@ -109,7 +109,10 @@ const DateMainDisplay = ({
   <div className="flex items-center gap-1">
     {dayName ? (
       <div
-        className={cn('text-base font-normal', today ? 'text-primary' : 'text-muted-foreground')}
+        className={cn(
+          'text-base font-normal',
+          today ? 'text-foreground font-semibold' : 'text-muted-foreground',
+        )}
       >
         {dayName}
       </div>
