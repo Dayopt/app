@@ -8,7 +8,7 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { SyncStatusIndicator } from '@/shell/components/SyncStatusIndicator';
 import { useLayoutStore } from '@/stores/useLayoutStore';
 
-import { MobileMenuButton } from './MobileMenuButton';
+import { MobileFilterButton } from './MobileFilterButton';
 
 interface AppHeaderProps {
   /** 左コンテンツ: 日付表示、ページタイトル等 */
@@ -19,6 +19,8 @@ interface AppHeaderProps {
   rightSlot?: React.ReactNode;
   /** モバイル右側コンテンツ: 検索/Todayボタン等 */
   mobileRightSlot?: React.ReactNode;
+  /** モバイル左のフィルターボタンを非表示にする */
+  hideMobileFilterButton?: boolean | undefined;
 }
 
 /**
@@ -33,7 +35,13 @@ interface AppHeaderProps {
  * - コンテナ: 32px（h-8）
  * - 8pxグリッドシステム準拠
  */
-export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: AppHeaderProps) {
+export function AppHeader({
+  children,
+  controls,
+  rightSlot,
+  mobileRightSlot,
+  hideMobileFilterButton,
+}: AppHeaderProps) {
   const t = useTranslations();
   const isSidebarOpen = useLayoutStore.use.sidebarOpen();
   const openSidebar = useLayoutStore.use.openSidebar();
@@ -41,7 +49,7 @@ export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: Ap
   return (
     <header className="bg-background relative h-12 px-4 py-2">
       <div className="flex h-8 items-center justify-between">
-        {/* 左側: メニュー + コンテンツ + コントロール群 */}
+        {/* 左側: フィルター + コンテンツ + コントロール群 */}
         <div className="flex items-center gap-2">
           {/* サイドバー開くボタン（PCのみ、サイドバーが閉じている時のみ表示） */}
           {!isSidebarOpen && (
@@ -58,8 +66,8 @@ export function AppHeader({ children, controls, rightSlot, mobileRightSlot }: Ap
             </HoverTooltip>
           )}
 
-          {/* モバイルメニューボタン */}
-          <MobileMenuButton className="md:hidden" />
+          {/* モバイル: フィルター・パレットシート開閉ボタン */}
+          {!hideMobileFilterButton && <MobileFilterButton />}
 
           {/* ページ固有の左コンテンツ（日付表示、タイトル等） */}
           {children}
