@@ -73,7 +73,7 @@ function scrollCalendarToTime(hour: number, minute: number) {
   const targetY = (hour + minute / 60) * hourHeight;
   const containerHeight = container.clientHeight;
   container.scrollTo({
-    top: Math.max(0, targetY - containerHeight / 3),
+    top: Math.max(0, targetY - containerHeight / 2),
     behavior: 'smooth',
   });
 }
