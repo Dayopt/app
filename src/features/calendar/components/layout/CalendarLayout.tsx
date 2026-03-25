@@ -127,27 +127,23 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
         {/* デスクトップ: 現行AppHeader（変更なし） */}
         <div className="hidden md:block">
-          <AppHeader
-            rightSlot={
-              <div className="flex items-center gap-2">
-                <DateNavigator onNavigate={handleNavigate} arrowSize="md" />
-                <ViewSwitcher
-                  className="ml-4"
-                  currentView={viewType}
-                  onChange={(view) => onViewChange(view as CalendarViewType)}
-                  onSettingsChange={onSettingsChange}
-                />
-                {rightSlot}
-              </div>
-            }
-          >
-            <DateRangeDisplay
-              date={currentDate}
-              viewType={viewType}
-              showWeekNumber={showWeekNumbers}
-              clickable={false}
-              displayRange={displayRange}
-            />
+          <AppHeader rightSlot={rightSlot}>
+            <div className="flex items-center gap-2">
+              <DateRangeDisplay
+                date={currentDate}
+                viewType={viewType}
+                showWeekNumber={showWeekNumbers}
+                clickable={false}
+                displayRange={displayRange}
+              />
+              <DateNavigator onNavigate={handleNavigate} arrowSize="md" />
+              <ViewSwitcher
+                className="ml-2"
+                currentView={viewType}
+                onChange={(view) => onViewChange(view as CalendarViewType)}
+                onSettingsChange={onSettingsChange}
+              />
+            </div>
           </AppHeader>
         </div>
 
