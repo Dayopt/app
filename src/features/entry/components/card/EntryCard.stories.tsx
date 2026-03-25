@@ -205,15 +205,6 @@ export const OverlayOvertime: Story = {
 // 状態バリエーション
 // ---------------------------------------------------------------------------
 
-/** リマインダー設定あり。ベルアイコンが表示される。 */
-export const WithReminder: Story = {
-  render: () => (
-    <Slot>
-      <EntryCard entry={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
-    </Slot>
-  ),
-};
-
 // ---------------------------------------------------------------------------
 // サイズバリエーション
 // ---------------------------------------------------------------------------
@@ -300,14 +291,6 @@ export const AllPatterns: Story = {
             position={basePosition}
             isDragging
           />
-        </Slot>
-      </section>
-
-      {/* --- 状態バリエーション --- */}
-      <section>
-        <p className="text-muted-foreground mb-2 text-xs">Reminder（ベルアイコン）</p>
-        <Slot>
-          <EntryCard entry={{ ...baseEntry, reminder_minutes: 15 }} position={basePosition} />
         </Slot>
       </section>
 
