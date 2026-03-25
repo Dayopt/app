@@ -698,6 +698,16 @@
         "ossCredits": "オープンソースライセンス"
       }
     },
+    "accountPage": {
+      "helpAndSupport": "ヘルプ & サポート",
+      "releaseNotes": "リリースノート",
+      "documentation": "ドキュメント",
+      "termsOfService": "利用規約",
+      "privacyPolicy": "プライバシーポリシー",
+      "tokushoho": "特定商取引法に基づく表記",
+      "security": "セキュリティ",
+      "contact": "お問い合わせ"
+    },
     "billing": {
       "cancelPlan": "プランキャンセル",
       "cancelPlanDescription": "現在のサブスクリプションプランを解約します",

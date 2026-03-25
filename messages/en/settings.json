@@ -698,6 +698,16 @@
         "ossCredits": "Open Source Licenses"
       }
     },
+    "accountPage": {
+      "helpAndSupport": "Help & Support",
+      "releaseNotes": "Release Notes",
+      "documentation": "Documentation",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "tokushoho": "Commercial Disclosure",
+      "security": "Security",
+      "contact": "Contact Us"
+    },
     "billing": {
       "cancelPlan": "Cancel Plan",
       "cancelPlanDescription": "Cancel your current subscription plan",
