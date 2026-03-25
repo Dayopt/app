@@ -110,23 +110,21 @@ function ChronotypeSettingsDemo({
   return (
     <div className="max-w-2xl space-y-8">
       <SectionCard title="Chronotype">
-        <div className="space-y-0">
-          <LabeledRow label="Chronotype">
-            <Select value={selectValue} onValueChange={handleTypeSelect}>
-              <SelectTrigger variant="ghost">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_VALUE}>Not selected</SelectItem>
-                {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {CHRONOTYPE_EMOJI[type]} {CHRONOTYPE_PRESETS[type].name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-        </div>
+        <LabeledRow label="Chronotype">
+          <Select value={selectValue} onValueChange={handleTypeSelect}>
+            <SelectTrigger variant="ghost">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_VALUE}>Not selected</SelectItem>
+              {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {CHRONOTYPE_EMOJI[type]} {CHRONOTYPE_PRESETS[type].name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </LabeledRow>
       </SectionCard>
 
       {selectedProfile ? (
