@@ -74,6 +74,7 @@ function CreateTagFormView({
   onCreateAndSelect: (name: string, color?: string | null) => void;
 }) {
   const t = useTranslations('calendar');
+  const tCommon = useTranslations('common');
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState<TagColorName>('blue');
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
@@ -201,10 +202,10 @@ function CreateTagFormView({
         {/* フッター */}
         <ActionFooter>
           <Button variant="outline" onClick={onBack}>
-            {t('common.actions.cancel')}
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {t('common.actions.create')}
+            {tCommon('actions.create')}
           </Button>
         </ActionFooter>
       </div>

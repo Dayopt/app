@@ -82,9 +82,10 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
   const [view, setView] = useState<GridView>({ type: 'grid' });
 
   // コロン記法でグルーピング
-  const { parentTags, childrenByPrefix } = useMemo(() => {
+  const { topLevelTags, childrenByPrefix } = useMemo(() => {
     const childMap = new Map<string, Tag[]>();
     const flatTags: Tag[] = [];
+    const flatNames = new Set<string>();
 
     for (const tag of tags) {
       const { prefix, suffix } = parseColonTag(tag.name);
@@ -94,10 +95,24 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
         childMap.set(prefix, existing);
       } else {
         flatTags.push(tag);
+        flatNames.add(tag.name);
       }
     }
 
-    return { parentTags: flatTags, childrenByPrefix: childMap };
+    // 子タグのみ存在するprefix（対応する親タグがない）をトップレベルに追加
+    // 最初の子タグの色・アイコンを継承した仮想親エントリとして表示
+    for (const [prefix, children] of childMap) {
+      if (!flatNames.has(prefix) && children.length > 0) {
+        const first = children[0]!;
+        flatTags.push({
+          ...first,
+          id: `__virtual_${prefix}`,
+          name: prefix,
+        });
+      }
+    }
+
+    return { topLevelTags: flatTags, childrenByPrefix: childMap };
   }, [tags]);
 
   const handleSelect = useCallback(
@@ -110,7 +125,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
   // ドリルダウン画面
   if (view.type === 'drill') {
     const children = childrenByPrefix.get(view.prefix) ?? [];
-    const parentTag = parentTags.find((t) => t.name === view.prefix);
+    const parentTag = topLevelTags.find((t) => t.name === view.prefix);
 
     return (
       <div className="flex flex-col">
@@ -126,7 +141,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
         </button>
 
         <div className="grid grid-cols-3 gap-2 px-4 py-3">
-          {parentTag && (
+          {parentTag && !parentTag.id.startsWith('__virtual_') && (
             <TagGridCell
               tag={parentTag}
               isSelected={selectedId === parentTag.id}
@@ -149,7 +164,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
   // メイングリッド
   return (
     <div className="grid grid-cols-3 gap-2">
-      {parentTags.map((tag) => {
+      {topLevelTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (
           <TagGridCell
