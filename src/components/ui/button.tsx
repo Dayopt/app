@@ -65,7 +65,7 @@ const buttonVariants = cva(
       variant: {
         // 主要CTA - 最も強調されるボタン
         primary:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-hover',
+          'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-hover',
         // 副次アクション - ボーダー付きの控えめなボタン
         outline: [
           'border border-border text-foreground',
@@ -75,7 +75,7 @@ const buttonVariants = cva(
         ghost: 'text-foreground hover:bg-state-hover active:bg-state-hover',
         // 破壊的アクション - 削除、解除など
         destructive: [
-          'bg-destructive text-destructive-foreground shadow-sm',
+          'bg-destructive text-destructive-foreground',
           'hover:bg-destructive-hover active:bg-destructive-hover',
           'focus-visible:outline-destructive',
           'dark:bg-destructive/60',

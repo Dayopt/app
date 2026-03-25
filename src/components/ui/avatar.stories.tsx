@@ -61,10 +61,10 @@ export const AllPatterns: Story = {
               <Avatar size={size}>
                 <AvatarFallback className="bg-foreground text-background">T</AvatarFallback>
               </Avatar>
-              <span className="text-muted-foreground text-[10px]">
+              <span className="text-muted-foreground text-xs">
                 {size} {label}
               </span>
-              <span className="text-muted-foreground text-[10px]">{desc}</span>
+              <span className="text-muted-foreground text-xs">{desc}</span>
             </div>
           ))}
         </div>

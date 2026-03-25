@@ -61,7 +61,7 @@ export const calendarStyles: CalendarStyles = {
     },
 
     // 最小高さ（8pxグリッドに合わせて）
-    minHeight: 'min-h-[32px]', // 32px = 8px * 4
+    minHeight: 'min-h-8', // 32px = 8px * 4
 
     // 影（フローティング状態のみ使用）
     shadow: {
