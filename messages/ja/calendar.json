@@ -98,7 +98,9 @@
       "hoursBefore": "{hours}時間前",
       "minutesBefore": "{minutes}分前",
       "dropInvalid": "ドロップ先が無効です",
-      "dropFailed": "ドロップに失敗しました"
+      "dropFailed": "ドロップに失敗しました",
+      "weekendsShown": "週末を表示",
+      "weekendsHidden": "週末を非表示"
     },
     "actions": {
       "goToToday": "今日へ移動",
@@ -174,6 +176,12 @@
       "searchPlaceholder": "タグを検索...",
       "noResults": "タグが見つかりません",
       "createPlaceholder": "例: 仕事、勉強、運動...",
+      "new": "新規",
+      "create": "作成",
+      "color": "色",
+      "icon": "アイコン",
+      "group": "グループ",
+      "noGroup": "なし",
       "emptyTitle": "タグで時間を分類しよう",
       "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
       "sampleTags": {

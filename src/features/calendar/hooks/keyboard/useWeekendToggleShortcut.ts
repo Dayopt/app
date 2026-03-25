@@ -1,5 +1,8 @@
 import { useCallback, useEffect } from 'react';
 
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
@@ -11,6 +14,7 @@ export function useWeekendToggleShortcut(
 ) {
   const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+  const t = useTranslations('calendar.toast');
 
   const persistSettings = useCallback(
     (settings: Partial<CalendarSettings>) => {
@@ -47,10 +51,11 @@ export function useWeekendToggleShortcut(
       if (hasOpenModal) return;
 
       // 週末表示を切り替え
-      persistSettings({ showWeekends: !showWeekends });
+      const newState = !showWeekends;
+      persistSettings({ showWeekends: newState });
 
-      // 成功フィードバック（短時間のトースト風通知）
-      showToggleFeedback(!showWeekends);
+      // 成功フィードバック
+      toast(newState ? t('weekendsShown') : t('weekendsHidden'));
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -58,79 +63,12 @@ export function useWeekendToggleShortcut(
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showWeekends, persistSettings]);
+  }, [showWeekends, persistSettings, t]);
 
   return {
     showWeekends,
     toggleWeekends: () => persistSettings({ showWeekends: !showWeekends }),
   };
-}
-
-/**
- * 切り替え時のフィードバック表示
- * XSS対策: innerHTML を使用せず、DOM API で安全に要素を構築
- */
-function showToggleFeedback(newState: boolean) {
-  // 既存の通知があれば削除
-  const existingNotification = document.getElementById('weekend-toggle-feedback');
-  if (existingNotification) {
-    existingNotification.remove();
-  }
-
-  // 通知要素を作成
-  const notification = document.createElement('div');
-  notification.id = 'weekend-toggle-feedback';
-  notification.className = [
-    'fixed top-4 right-4 z-[300]',
-    'bg-card',
-    'border border-border',
-    'rounded-2xl shadow-lg',
-    'px-4 py-3',
-    'flex items-center gap-3',
-    'transform transition-all duration-300 ease-out',
-    'translate-x-full opacity-0',
-  ].join(' ');
-
-  // 内容を安全に構築（DOM API を使用）
-  const contentWrapper = document.createElement('div');
-  contentWrapper.className = 'flex items-center gap-2';
-
-  const indicator = document.createElement('div');
-  indicator.className = `w-2 h-2 rounded-full ${newState ? 'bg-primary' : 'bg-muted-foreground'}`;
-
-  const label = document.createElement('span');
-  label.className = 'text-sm font-normal text-foreground';
-  label.textContent = `週末表示: ${newState ? 'ON' : 'OFF'}`;
-
-  contentWrapper.appendChild(indicator);
-  contentWrapper.appendChild(label);
-
-  const shortcutHint = document.createElement('div');
-  shortcutHint.className = 'text-xs text-muted-foreground';
-  shortcutHint.textContent = 'Cmd/Ctrl + W';
-
-  notification.appendChild(contentWrapper);
-  notification.appendChild(shortcutHint);
-
-  document.body.appendChild(notification);
-
-  // アニメーションで表示
-  setTimeout(() => {
-    notification.classList.remove('translate-x-full', 'opacity-0');
-    notification.classList.add('translate-x-0', 'opacity-100');
-  }, 10);
-
-  // 2秒後にフェードアウト
-  setTimeout(() => {
-    notification.classList.add('translate-x-full', 'opacity-0');
-
-    // アニメーション完了後に削除
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 2000);
 }
 
 /** 週末表示切り替えショートカットのヘルプ情報 */

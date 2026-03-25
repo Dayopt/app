@@ -98,7 +98,9 @@
       "hoursBefore": "{hours} hours before",
       "minutesBefore": "{minutes} minutes before",
       "dropInvalid": "Invalid drop target",
-      "dropFailed": "Drop failed"
+      "dropFailed": "Drop failed",
+      "weekendsShown": "Weekends shown",
+      "weekendsHidden": "Weekends hidden"
     },
     "actions": {
       "goToToday": "Go to today",
@@ -174,6 +176,12 @@
       "searchPlaceholder": "Search tags...",
       "noResults": "No tags found",
       "createPlaceholder": "e.g. Work, Study, Exercise...",
+      "new": "New",
+      "create": "Create",
+      "color": "Color",
+      "icon": "Icon",
+      "group": "Group",
+      "noGroup": "None",
       "emptyTitle": "Tags categorize your time",
       "emptyDescription": "Pick one to get started, or create your own below",
       "sampleTags": {
