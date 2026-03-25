@@ -12,14 +12,12 @@ import { useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { APP_VERSION } from '@/lib/app-info';
 import { api } from '@/platform/trpc';
 
 import { collectEnvironment } from '../lib/collect-environment';
 import type { ContactCategory } from '../types';
 import { ContactDialogContent } from './ContactDialogContent';
-
-/** package.json の version を Next.js 経由で取得 */
-const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? 'unknown';
 
 interface ContactDialogProps {
   open: boolean;

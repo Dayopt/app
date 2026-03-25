@@ -21,7 +21,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SETTINGS_CATEGORIES } from '@/features/settings';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { useLogout } from '@/shell/hooks/useLogout';
@@ -36,6 +38,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
  * Mobile: Instagram風アカウント概要ページ
  */
 export default function SettingsPage() {
+  const hasMounted = useHasMounted();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const t = useTranslations();
   const router = useRouter();
@@ -52,13 +55,13 @@ export default function SettingsPage() {
 
   // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
-    if (!isMobile) {
+    if (hasMounted && !isMobile) {
       openSettings('profile');
       router.replace('/');
     }
-  }, [isMobile, openSettings, router]);
+  }, [hasMounted, isMobile, openSettings, router]);
 
-  if (!isMobile) {
+  if (!hasMounted || !isMobile) {
     return null;
   }
 
@@ -71,7 +74,7 @@ export default function SettingsPage() {
   }> = [
     {
       labelKey: 'settings.accountPage.releaseNotes',
-      href: 'https://github.com/t3-nico/dayopt/releases',
+      href: APP_RELEASES_URL,
       icon: Megaphone,
       external: true,
     },
@@ -239,7 +242,9 @@ export default function SettingsPage() {
         </button>
 
         {/* バージョン表示 */}
-        <p className="text-muted-foreground mt-2 px-4 text-xs">Dayopt v0.22.0</p>
+        <p className="text-muted-foreground mt-2 px-4 text-xs">
+          {APP_NAME} v{APP_VERSION}
+        </p>
       </div>
     </ScrollArea>
   );

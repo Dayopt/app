@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Link, useRouter } from '@/platform/i18n/navigation';
@@ -22,6 +23,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
  */
 export default function SettingsCategoryPage() {
   const params = useParams<{ category: string }>();
+  const hasMounted = useHasMounted();
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const router = useRouter();
@@ -32,18 +34,18 @@ export default function SettingsCategoryPage() {
 
   // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
-    if (!isMobile && isValid) {
+    if (hasMounted && !isMobile && isValid) {
       openSettings(category);
       router.replace('/');
     }
-  }, [isMobile, isValid, category, openSettings, router]);
+  }, [hasMounted, isMobile, isValid, category, openSettings, router]);
 
   if (!isValid) {
     return null;
   }
 
   // PC: リダイレクト中は何も表示しない
-  if (!isMobile) {
+  if (!hasMounted || !isMobile) {
     return null;
   }
 
