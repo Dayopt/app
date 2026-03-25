@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 
-import * as Sentry from '@sentry/nextjs';
 import { isSameDay } from 'date-fns';
 
+import { calculateEntryLayouts, type EntryLayout } from '../../../../lib/layout';
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
@@ -14,11 +14,14 @@ import type {
   WeekEntryPosition,
 } from '../WeekView.types';
 
+const ENTRY_PADDING = 2; // エントリ間のパディング
+const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
+
 /**
  * 週ビューでのエントリ位置計算専用フック
  *
  * @description
- * - エントリの重なり検出
+ * - エントリの重なり検出（共有layoutエンジン使用）
  * - 位置とサイズの計算
  * - 最大同時エントリ数の算出
  */
@@ -75,13 +78,11 @@ export function useWeekEntries({
     return sortEventsByDateKeys(grouped);
   }, [weekDates, tzEntries]);
 
-  // エントリの位置情報を計算
+  // エントリの位置情報を計算（共有layoutエンジン使用）
   const entryPositions = useMemo(() => {
-    const layoutStart = performance.now();
     const positions: WeekEntryPosition[] = [];
 
     const dayColumnWidth = weekDates.length > 0 ? 100 / weekDates.length : 100;
-    let totalEntryCount = 0;
 
     weekDates.forEach((date, dayIndex) => {
       const dateKey = getDateKey(date);
@@ -90,32 +91,35 @@ export function useWeekEntries({
           ? entriesByDate[dateKey]
           : null) || [];
 
-      totalEntryCount += dayEntries.length;
+      // CalendarEventをTimedEntry形式に変換（calculateEntryLayouts用）
+      const timedEntries = dayEntries
+        .filter((entry) => !!entry.displayStartDate)
+        .map((entry) => ({
+          ...entry,
+          start: entry.displayStartDate,
+          end: entry.displayEndDate || new Date(entry.displayStartDate.getTime() + 60 * 60 * 1000),
+        }));
 
-      // その日のエントリの重なりを検出
-      const entryColumns = calculateEntryColumns(dayEntries);
+      // 共有layoutエンジンでカラム配置を計算
+      const layouts = calculateEntryLayouts(timedEntries);
 
-      dayEntries.forEach((entry, entryIndex) => {
-        if (!entry.displayStartDate) return;
+      // EntryLayoutをWeekEntryPositionに変換
+      layouts.forEach((layout: EntryLayout, index: number) => {
+        const entry = layout.entry as CalendarEvent;
+        const startDate = new Date(layout.entry.start);
+        const endDate = new Date(layout.entry.end);
 
-        // 時刻からピクセル位置を計算（displayStartDateでTZ対応）
-        const startHour = entry.displayStartDate.getHours();
-        const startMinute = entry.displayStartDate.getMinutes();
-        const top = (startHour + startMinute / 60) * hourHeight;
+        const startHour = startDate.getHours() + startDate.getMinutes() / 60;
+        const endHour = endDate.getHours() + endDate.getMinutes() / 60;
+        const duration = Math.max(endHour - startHour, 0.25); // 最小15分
 
-        // 終了時刻から高さを計算
-        let height = hourHeight; // デフォルト1時間
-        if (entry.displayEndDate) {
-          const endHour = entry.displayEndDate.getHours();
-          const endMinute = entry.displayEndDate.getMinutes();
-          const duration = endHour + endMinute / 60 - (startHour + startMinute / 60);
-          height = Math.max(20, duration * hourHeight); // 最小20px
-        }
+        // 位置計算
+        const top = startHour * hourHeight;
+        const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
 
-        // 重なりがある場合の列計算
-        const columnInfo = entryColumns[entryIndex] ?? { column: 0, totalColumns: 1 };
-        const columnWidth = dayColumnWidth / columnInfo.totalColumns;
-        const left = dayIndex * dayColumnWidth + columnInfo.column * columnWidth;
+        // 日列内でのleft/widthを計算（dayColumnWidth内でlayout.left/widthを適用）
+        const columnWidth = dayColumnWidth / layout.totalColumns;
+        const left = dayIndex * dayColumnWidth + layout.column * columnWidth;
         const width = columnWidth * 0.95; // 少し余白を作る
 
         positions.push({
@@ -125,131 +129,25 @@ export function useWeekEntries({
           height,
           left,
           width,
-          zIndex: 20 + columnInfo.column,
-          column: columnInfo.column,
-          totalColumns: columnInfo.totalColumns,
+          zIndex: 20 + index,
+          column: layout.column,
+          totalColumns: layout.totalColumns,
         });
       });
     });
 
-    const layoutDuration = performance.now() - layoutStart;
-    if (layoutDuration > 16) {
-      Sentry.addBreadcrumb({
-        category: 'performance',
-        message: `WeekView layout calculation took ${layoutDuration.toFixed(1)}ms`,
-        level: 'warning',
-        data: {
-          duration: layoutDuration,
-          totalEntryCount,
-          positionCount: positions.length,
-        },
-      });
-    }
-
     return positions;
   }, [weekDates, entriesByDate, hourHeight]);
 
-  // 最大同時エントリ数を計算（sweep-line O(n log n)）
+  // 最大同時エントリ数を計算（layoutエンジンの結果から導出）
   const maxConcurrentEntries = useMemo(() => {
-    let maxConcurrent = 0;
-
-    Object.values(entriesByDate).forEach((dayEntries) => {
-      if (dayEntries.length <= 1) return;
-
-      // sweep-line: 開始/終了イベントを時刻順に処理
-      const timePoints: { time: number; type: 'start' | 'end' }[] = [];
-
-      dayEntries.forEach((entry) => {
-        if (!entry.displayStartDate) return;
-
-        const start = entry.displayStartDate.getHours() + entry.displayStartDate.getMinutes() / 60;
-        const end = entry.displayEndDate
-          ? entry.displayEndDate.getHours() + entry.displayEndDate.getMinutes() / 60
-          : start + 1;
-
-        timePoints.push({ time: start, type: 'start' });
-        timePoints.push({ time: end, type: 'end' });
-      });
-
-      timePoints.sort((a, b) => {
-        const timeDiff = a.time - b.time;
-        if (timeDiff !== 0) return timeDiff;
-        // 同時刻の場合、endを先に処理
-        return a.type === 'end' ? -1 : 1;
-      });
-
-      let current = 0;
-      timePoints.forEach((point) => {
-        if (point.type === 'start') {
-          current++;
-          maxConcurrent = Math.max(maxConcurrent, current);
-        } else {
-          current--;
-        }
-      });
-    });
-
-    return maxConcurrent;
-  }, [entriesByDate]);
+    if (entryPositions.length === 0) return 0;
+    return Math.max(0, ...entryPositions.map((pos) => pos.totalColumns));
+  }, [entryPositions]);
 
   return {
     entriesByDate,
     entryPositions,
     maxConcurrentEntries,
   };
-}
-
-/**
- * エントリの重なりを検出して列配置を計算
- */
-function calculateEntryColumns(
-  entries: CalendarEvent[],
-): Array<{ column: number; totalColumns: number }> {
-  if (entries.length === 0) return [];
-
-  // 時間順にソート済みと仮定
-  const columns: Array<{ column: number; totalColumns: number }> = [];
-  const occupiedColumns: Array<{ end: number }> = [];
-
-  entries.forEach((entry) => {
-    if (!entry.displayStartDate) {
-      columns.push({ column: 0, totalColumns: 1 });
-      return;
-    }
-
-    const start = entry.displayStartDate.getHours() + entry.displayStartDate.getMinutes() / 60;
-    const end = entry.displayEndDate
-      ? entry.displayEndDate.getHours() + entry.displayEndDate.getMinutes() / 60
-      : start + 1;
-
-    // 利用可能な列を探す
-    let columnIndex = 0;
-    while (columnIndex < occupiedColumns.length) {
-      const col = occupiedColumns[columnIndex];
-      if (!col || col.end <= start) break;
-      columnIndex++;
-    }
-
-    // 列を占有
-    if (columnIndex >= occupiedColumns.length) {
-      occupiedColumns.push({ end });
-    } else {
-      const col = occupiedColumns[columnIndex];
-      if (col) {
-        col.end = end;
-      }
-    }
-
-    columns.push({
-      column: columnIndex,
-      totalColumns: Math.max(occupiedColumns.length, 1),
-    });
-  });
-
-  // すべてのエントリの totalColumns を統一
-  const maxColumns = Math.max(...columns.map((col) => col.totalColumns), 1);
-  return columns.map((col) => ({
-    ...col,
-    totalColumns: maxColumns,
-  }));
 }
