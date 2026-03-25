@@ -36,6 +36,8 @@ interface GroupHeaderProps {
   indeterminate: boolean;
   collapsed: boolean;
   displayColor: string;
+  /** モバイル時: メニュー項目を簡略化（このグループだけ表示のみ） */
+  isMobile?: boolean;
   onCheckedChange: () => void;
   onToggleCollapse: () => void;
   onShowOnlyGroup: () => void;
@@ -57,6 +59,7 @@ export function GroupHeader({
   indeterminate,
   collapsed,
   displayColor,
+  isMobile,
   onCheckedChange,
   onToggleCollapse,
   onShowOnlyGroup,
@@ -97,7 +100,8 @@ export function GroupHeader({
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm font-medium',
+        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded text-sm font-medium',
+        isMobile ? 'h-11' : 'h-8',
         menuOpen && 'bg-state-selected',
       )}
       onClick={handleRowClick}
@@ -137,44 +141,56 @@ export function GroupHeader({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
-          {onAddTagToGroup && (
-            <DropdownMenuItem onClick={onAddTagToGroup}>
-              <Plus className="mr-2 size-4" />
-              {t('calendar.filter.addTagToGroup')}
+          {isMobile ? (
+            <DropdownMenuItem onClick={onShowOnlyGroup}>
+              <Eye className="mr-2 size-4" />
+              {t('calendar.filter.showOnlyThis')}
             </DropdownMenuItem>
-          )}
-          {onRenameGroup && (
-            <DropdownMenuItem onClick={onRenameGroup}>
-              <Pencil className="mr-2 size-4" />
-              {t('calendar.filter.rename')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Palette className="mr-2 size-4" />
-              {t('calendar.filter.changeColor')}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
-              <ColorPaletteMenuItems selectedColor={displayColor} onColorSelect={onColorChange} />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          {onUngroupTags && (
-            <DropdownMenuItem onClick={onUngroupTags}>
-              <Unlink className="mr-2 size-4" />
-              {t('calendar.filter.ungroupTags')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={onShowOnlyGroup}>
-            <Eye className="mr-2 size-4" />
-            {t('calendar.filter.showOnlyThis')}
-          </DropdownMenuItem>
-          {onDeleteGroup && (
+          ) : (
             <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
-                <Trash2 className="mr-2 size-4" />
-                {t('calendar.filter.deleteGroup.label')}
+              {onAddTagToGroup && (
+                <DropdownMenuItem onClick={onAddTagToGroup}>
+                  <Plus className="mr-2 size-4" />
+                  {t('calendar.filter.addTagToGroup')}
+                </DropdownMenuItem>
+              )}
+              {onRenameGroup && (
+                <DropdownMenuItem onClick={onRenameGroup}>
+                  <Pencil className="mr-2 size-4" />
+                  {t('calendar.filter.rename')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Palette className="mr-2 size-4" />
+                  {t('calendar.filter.changeColor')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+                  <ColorPaletteMenuItems
+                    selectedColor={displayColor}
+                    onColorSelect={onColorChange}
+                  />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {onUngroupTags && (
+                <DropdownMenuItem onClick={onUngroupTags}>
+                  <Unlink className="mr-2 size-4" />
+                  {t('calendar.filter.ungroupTags')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={onShowOnlyGroup}>
+                <Eye className="mr-2 size-4" />
+                {t('calendar.filter.showOnlyThis')}
               </DropdownMenuItem>
+              {onDeleteGroup && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    {t('calendar.filter.deleteGroup.label')}
+                  </DropdownMenuItem>
+                </>
+              )}
             </>
           )}
         </DropdownMenuContent>

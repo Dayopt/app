@@ -30,6 +30,8 @@ interface FilterItemMenuProps {
   groupOptions?: GroupOption[] | undefined;
   /** グループに属するタグか（色変更はグループ単位のため個別無効） */
   isGrouped?: boolean | undefined;
+  /** モバイル時: メニュー項目を簡略化（このタグだけ表示 + 削除のみ） */
+  isMobile?: boolean | undefined;
 
   // Handlers
   onOpenRenameDialog: () => void;
@@ -46,6 +48,7 @@ export function FilterItemMenu({
   currentGroup,
   groupOptions,
   isGrouped,
+  isMobile,
   onOpenRenameDialog,
   onColorChange,
   onChangeGroup,
@@ -54,6 +57,27 @@ export function FilterItemMenu({
   onDeleteTag,
 }: FilterItemMenuProps) {
   const t = useTranslations();
+
+  // モバイル: 「このタグだけ表示」+「削除」のみ。管理系は設定画面へ委譲
+  if (isMobile) {
+    return (
+      <DropdownMenuContent align="start" side="right">
+        <DropdownMenuItem onClick={onShowOnlyTag}>
+          <Eye className="mr-2 size-4" />
+          {t('calendar.filter.showOnlyThis')}
+        </DropdownMenuItem>
+        {onDeleteTag && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDeleteTag}>
+              <Trash2 className="mr-2 size-4" />
+              {t('common.actions.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    );
+  }
 
   return (
     <DropdownMenuContent align="start" side="right">
