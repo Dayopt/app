@@ -9,7 +9,7 @@
 
 import { useMemo } from 'react';
 
-import { Plus } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
@@ -74,7 +74,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                         }}
                         aria-label={t('sidebar.palette.add')}
                       >
-                        <Plus className="size-3.5" />
+                        <Star className="size-3.5" />
                       </button>
                     </HoverTooltip>
                   ) : undefined
