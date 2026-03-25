@@ -14,6 +14,8 @@ import { usePathname } from 'next/navigation';
 
 import { format } from 'date-fns';
 
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
 import type { CalendarViewType } from '../../types/calendar.types';
@@ -45,6 +47,10 @@ export const CalendarNavigationProvider = ({
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
 
+  // モバイル判定（day view固定に使用）
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const isMobileRef = useRef(isMobile);
+
   // カレンダー再描画が重いため、日付・ビュー変更をtransitionとしてマーク
   // UIスレッドをブロックせず、ユーザー入力（スクロール等）を優先する
   const [isPending, startTransition] = useTransition();
@@ -70,6 +76,28 @@ export const CalendarNavigationProvider = ({
   React.useEffect(() => {
     localeRef.current = locale;
   }, [locale]);
+  React.useEffect(() => {
+    isMobileRef.current = isMobile;
+  }, [isMobile]);
+
+  // モバイルでday以外のビューが設定された場合、強制的にdayに切替
+  // （URL直アクセスやブラウザ戻る/進むでweek URLに遷移した場合のガード）
+  React.useEffect(() => {
+    if (isMobile && viewType !== 'day') {
+      startTransition(() => {
+        setViewType('day');
+      });
+      // URLもday viewに更新
+      const dateString = format(currentDateRef.current, 'yyyy-MM-dd');
+      const params = new URLSearchParams(window.location.search);
+      params.set('date', dateString);
+      window.history.replaceState(
+        null,
+        '',
+        `/${localeRef.current}/calendar/day?${params.toString()}`,
+      );
+    }
+  }, [isMobile, viewType]);
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
@@ -97,6 +125,9 @@ export const CalendarNavigationProvider = ({
   }, []);
 
   const changeView = useCallback((view: CalendarViewType) => {
+    // モバイルではday viewのみ許可
+    if (isMobileRef.current && view !== 'day') return;
+
     startTransition(() => {
       setViewType(view);
     });

@@ -17,6 +17,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
@@ -61,6 +63,7 @@ export function ViewSwitcher({
   className,
 }: ViewSwitcherProps) {
   const t = useTranslations();
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
   const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
   const hourHeightDensity = useCalendarSettingsStore((s) => s.hourHeightDensity);
@@ -98,9 +101,10 @@ export function ViewSwitcher({
 
   const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
 
-  // キーボードショートカット: D, W, A, 0-9
+  // キーボードショートカット: D, W, A, 0-9（モバイルでは無効）
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (isMobile) return;
       if (event.ctrlKey || event.altKey || event.metaKey) return;
 
       const { activeElement } = document;
@@ -150,7 +154,7 @@ export function ViewSwitcher({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, onChange]);
+  }, [currentView, onChange, isMobile]);
 
   return (
     <DropdownMenu>
