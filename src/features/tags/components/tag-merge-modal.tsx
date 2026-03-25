@@ -180,7 +180,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -222,7 +222,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         )}
 
         {hasResults && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {topLevelTags.map((tag) => {
               const hasChildren = childrenByPrefix.has(tag.name);
               return (

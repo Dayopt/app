@@ -371,7 +371,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -397,7 +397,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
 
   // メイン画面: 親タググリッド
   return (
-    <div className="grid grid-cols-3 gap-2 px-4 py-3">
+    <div className="grid grid-cols-4 gap-2 px-4 py-3">
       {parentTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (
@@ -497,7 +497,7 @@ export const GridWithChildren: Story = {
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
-          <div className="grid grid-cols-3 gap-2 px-4 py-3">
+          <div className="grid grid-cols-4 gap-2 px-4 py-3">
             <TagGridCell
               tag={{ id: '1', name: '仕事', color: 'blue', icon: 'briefcase' }}
               isSelected={selected === '1'}
@@ -651,7 +651,7 @@ export const AllPatterns: Story = {
                 <TagIcon icon="briefcase" color="blue" size="sm" />
                 <span className="text-foreground font-semibold">仕事</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 px-4 py-3">
+              <div className="grid grid-cols-4 gap-2 px-4 py-3">
                 <TagGridCell
                   tag={{ id: 'p-0', name: '仕事', color: 'blue', icon: 'briefcase' }}
                   onSelect={fn()}
