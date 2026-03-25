@@ -92,7 +92,7 @@ export function TagRow({
               <TagIcon
                 icon={tagIcon ?? null}
                 color={tagColor ?? colorClasses?.cssVar}
-                size="sm"
+                size="md"
                 className="flex-shrink-0"
               />
               <ColonTagLabel name={tagName} className="text-foreground" />

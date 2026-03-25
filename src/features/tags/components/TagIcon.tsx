@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils';
 import { CURATED_ICONS, kebabToPascal } from '../lib/curated-icons';
 
 const SIZE_MAP = {
-  sm: { icon: 'size-3', dot: 'size-2.5' },
-  md: { icon: 'size-4', dot: 'size-3' },
+  sm: { icon: 'size-4', dot: 'size-3' },
+  md: { icon: 'size-5', dot: 'size-3.5' },
   lg: { icon: 'size-8', dot: 'size-8' },
 } as const;
 
@@ -29,7 +29,7 @@ interface TagIconProps {
   icon: string | null | undefined;
   /** タグカラー名または旧HEX値 */
   color: string | null | undefined;
-  /** サイズ: sm=12px, md=16px, lg=32px */
+  /** サイズ: sm=16px, md=20px, lg=32px */
   size?: TagIconSize;
   /** 追加className */
   className?: string;
