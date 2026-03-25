@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useGlobalSearch } from '@/hooks/use-global-search';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useTranslations } from 'next-intl';
 
 import { UserMenu } from './UserMenu';
@@ -33,7 +33,7 @@ export function Sidebar({
   'aria-label': ariaLabel,
 }: SidebarProps) {
   const user = useAuthStore((state) => state.user);
-  const closeSidebar = useLayoutStore.use.closeSidebar();
+  const closeSidebar = useShellStore.use.closeSidebar();
   const { open: openSearch } = useGlobalSearch();
   const t = useTranslations();
 
