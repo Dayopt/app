@@ -159,7 +159,7 @@ export function BottomTabBar() {
                 {tab.id === 'account' ? (
                   <Avatar className="size-6">
                     {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                       {getInitials(displayName)}
                     </AvatarFallback>
                   </Avatar>
@@ -168,7 +168,7 @@ export function BottomTabBar() {
                 )}
                 {/* 未読バッジ */}
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-bold">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 )}
