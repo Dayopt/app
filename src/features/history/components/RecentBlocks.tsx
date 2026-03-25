@@ -9,12 +9,12 @@
 
 import { useMemo } from 'react';
 
-import { Plus } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
-import { useTagsMap } from '@/features/tags';
+import { TagIcon, useTagsMap } from '@/features/tags';
 import { api } from '@/platform/trpc';
 import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
@@ -60,7 +60,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                 tagName={item.tag.name}
                 tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
-                dotVariant="outline"
+                iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
                 onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}
                 menuSlot={
                   onPinItem ? (
@@ -74,7 +74,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                         }}
                         aria-label={t('sidebar.palette.add')}
                       >
-                        <Plus className="size-3.5" />
+                        <Star className="size-3.5" />
                       </button>
                     </HoverTooltip>
                   ) : undefined

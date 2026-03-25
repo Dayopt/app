@@ -284,11 +284,9 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
 
       {/* 同期設定 */}
       <SectionCard title={t('settings.integrations.sync.title')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.integrations.sync.enableLabel')}>
-            <Switch checked={syncEnabled} onCheckedChange={handleSyncChange} />
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.integrations.sync.enableLabel')}>
+          <Switch checked={syncEnabled} onCheckedChange={handleSyncChange} />
+        </LabeledRow>
         {syncEnabled && (
           <div className="bg-card border-border mt-4 rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">

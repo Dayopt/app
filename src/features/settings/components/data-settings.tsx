@@ -78,7 +78,7 @@ function entriesToCsv(entries: Record<string, unknown>[]): string {
  */
 export function DataSettings() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <ExportSection />
       <RestoreSection />
       <McpApiSection />
@@ -152,60 +152,55 @@ function ExportSection() {
   return (
     <SectionCard title={t('title')}>
       <p className="text-muted-foreground mb-2 text-sm">{t('description')}</p>
-
-      <div className="space-y-0">
-        <LabeledRow label={t('format')}>
-          <Select value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
-            <SelectTrigger variant="ghost">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="json">{t('formatJson')}</SelectItem>
-              <SelectItem value="csv">{t('formatCsv')}</SelectItem>
-            </SelectContent>
-          </Select>
+      <LabeledRow label={t('format')}>
+        <Select value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
+          <SelectTrigger variant="ghost">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="json">{t('formatJson')}</SelectItem>
+            <SelectItem value="csv">{t('formatCsv')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </LabeledRow>
+      <LabeledRow label={t('range')}>
+        <Select value={range} onValueChange={(v) => setRange(v as ExportRange)}>
+          <SelectTrigger variant="ghost">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('rangeAll')}</SelectItem>
+            <SelectItem value="custom">{t('rangeCustom')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </LabeledRow>
+      {range === 'custom' && (
+        <LabeledRow label={t('startDate')}>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-32 sm:w-36"
+              aria-label={t('startDate')}
+            />
+            <span className="text-muted-foreground">—</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-32 sm:w-36"
+              aria-label={t('endDate')}
+            />
+          </div>
         </LabeledRow>
-
-        <LabeledRow label={t('range')}>
-          <Select value={range} onValueChange={(v) => setRange(v as ExportRange)}>
-            <SelectTrigger variant="ghost">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('rangeAll')}</SelectItem>
-              <SelectItem value="custom">{t('rangeCustom')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </LabeledRow>
-
-        {range === 'custom' && (
-          <LabeledRow label={t('startDate')}>
-            <div className="flex items-center gap-2">
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-32 sm:w-36"
-                aria-label={t('startDate')}
-              />
-              <span className="text-muted-foreground">—</span>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-32 sm:w-36"
-                aria-label={t('endDate')}
-              />
-            </div>
-          </LabeledRow>
-        )}
-        <LabeledRow label={t('exportButton')}>
-          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-            <Download className="mr-2 h-4 w-4" />
-            {isExporting ? t('exporting') : t('exportButton')}
-          </Button>
-        </LabeledRow>
-      </div>
+      )}
+      <LabeledRow label={t('exportButton')}>
+        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+          <Download className="mr-2 h-4 w-4" />
+          {isExporting ? t('exporting') : t('exportButton')}
+        </Button>
+      </LabeledRow>
     </SectionCard>
   );
 }
@@ -289,47 +284,43 @@ function McpApiSection() {
   return (
     <SectionCard title={t('title')}>
       <p className="text-muted-foreground mb-2 text-sm">{t('description')}</p>
-
-      <div className="space-y-0">
-        {/* Server URL */}
-        <LabeledRow label={t('serverUrl')}>
+      {/* Server URL */}
+      <LabeledRow label={t('serverUrl')}>
+        <div className="flex items-center gap-2">
+          <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
+          <CopyButton
+            copied={copied === 'url'}
+            onClick={() => handleCopy(mcpServerUrl, 'url')}
+            label="Copy URL"
+          />
+        </div>
+      </LabeledRow>
+      {/* API Key */}
+      <LabeledRow label={t('apiKey')}>
+        {apiKey ? (
           <div className="flex items-center gap-2">
-            <code className="text-muted-foreground font-mono text-sm">{mcpServerUrl}</code>
+            <code className="text-muted-foreground font-mono text-sm">{apiKey}</code>
             <CopyButton
-              copied={copied === 'url'}
-              onClick={() => handleCopy(mcpServerUrl, 'url')}
-              label="Copy URL"
+              copied={copied === 'key'}
+              onClick={() => handleCopy(apiKey, 'key')}
+              label="Copy API key"
             />
-          </div>
-        </LabeledRow>
-
-        {/* API Key */}
-        <LabeledRow label={t('apiKey')}>
-          {apiKey ? (
-            <div className="flex items-center gap-2">
-              <code className="text-muted-foreground font-mono text-sm">{apiKey}</code>
-              <CopyButton
-                copied={copied === 'key'}
-                onClick={() => handleCopy(apiKey, 'key')}
-                label="Copy API key"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                aria-label={t('regenerateKey')}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" size="sm">
-              <Key className="mr-2 h-4 w-4" />
-              {t('generateKey')}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label={t('regenerateKey')}
+            >
+              <RefreshCw className="h-4 w-4" />
             </Button>
-          )}
-        </LabeledRow>
-      </div>
+          </div>
+        ) : (
+          <Button variant="outline" size="sm">
+            <Key className="mr-2 h-4 w-4" />
+            {t('generateKey')}
+          </Button>
+        )}
+      </LabeledRow>
 
       {/* Connection guide */}
       <InfoBox className="mt-4 p-3">
@@ -414,21 +405,18 @@ function DeletionSection() {
 
   return (
     <SectionCard title={t('title')}>
-      <div className="space-y-0">
-        <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
-          <Button variant="outline" size="sm" onClick={() => setTarget('blocks')}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('deleteBlocks')}
-          </Button>
-        </LabeledRow>
-
-        <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
-          <Button variant="outline" size="sm" onClick={() => setTarget('all')}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('deleteAllData')}
-          </Button>
-        </LabeledRow>
-      </div>
+      <LabeledRow label={t('deleteBlocks')} description={t('deleteBlocksDesc')}>
+        <Button variant="outline" size="sm" onClick={() => setTarget('blocks')}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          {t('deleteBlocks')}
+        </Button>
+      </LabeledRow>
+      <LabeledRow label={t('deleteAllData')} description={t('deleteAllDataDesc')}>
+        <Button variant="outline" size="sm" onClick={() => setTarget('all')}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          {t('deleteAllData')}
+        </Button>
+      </LabeledRow>
 
       <ConfirmDialog
         open={target !== null}

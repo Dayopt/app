@@ -107,11 +107,9 @@ export const DataExportSettings = memo(function DataExportSettings() {
 
       {/* 自動バックアップ */}
       <SectionCard title={t('settings.dataControls.backup.title')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.dataControls.backup.enableLabel')}>
-            <Switch checked={autoBackup} onCheckedChange={handleAutoBackupChange} disabled />
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.dataControls.backup.enableLabel')}>
+          <Switch checked={autoBackup} onCheckedChange={handleAutoBackupChange} disabled />
+        </LabeledRow>
         {autoBackup && (
           <div className="bg-card border-border mt-4 rounded-lg border p-4">
             <div className="flex items-center gap-2">

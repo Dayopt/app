@@ -107,7 +107,7 @@ export function TimeSelect({
               placeholder="--:--"
               size={5}
               className={cn(
-                'flex h-8 cursor-pointer rounded-lg bg-transparent text-sm tabular-nums outline-none',
+                'flex h-8 cursor-pointer rounded-lg bg-transparent text-base tabular-nums outline-none',
                 'disabled:cursor-default disabled:opacity-50',
                 showIcon ? 'w-auto' : 'px-2 text-right',
                 value ? 'text-foreground' : 'text-muted-foreground',
@@ -131,11 +131,10 @@ export function TimeSelect({
               id="time-listbox"
               ref={listRef}
               role="listbox"
-              className="scrollbar-thin max-h-52 overflow-y-auto overscroll-contain px-1 py-1"
+              className="scrollbar-thin max-h-52 touch-pan-y overflow-y-auto overscroll-contain px-1 py-1"
               style={{
                 scrollbarColor:
                   'color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent',
-                touchAction: 'pan-y',
               }}
             >
               {options.map((option, index) => (

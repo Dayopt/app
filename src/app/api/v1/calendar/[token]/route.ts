@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { entriesToICal } from '@/features/entry';
 import { logger } from '@/lib/logger';
+import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 
 /**
@@ -97,16 +98,15 @@ function isValidUUID(str: string): boolean {
 }
 
 /**
- * per-token レート制限（メモリベース、10 req/min）
+ * per-token インメモリレート制限（Upstash未設定時のフォールバック）
  *
  * Vercel Serverless では関数インスタンスが再利用される間だけ有効。
- * 完璧ではないが、無制限よりはるかに安全。
  */
 const TOKEN_RATE_LIMIT = 10;
 const TOKEN_RATE_WINDOW_MS = 60 * 1000;
 const tokenRequestLog = new Map<string, number[]>();
 
-function isRateLimited(token: string): boolean {
+function isRateLimitedInMemory(token: string): boolean {
   const now = Date.now();
   const timestamps = tokenRequestLog.get(token) ?? [];
   const recent = timestamps.filter((t) => now - t < TOKEN_RATE_WINDOW_MS);
@@ -125,6 +125,47 @@ function isRateLimited(token: string): boolean {
   return recent.length > TOKEN_RATE_LIMIT;
 }
 
+/**
+ * Upstash優先 → インメモリフォールバックのレート制限チェック
+ */
+async function checkRateLimit(token: string): Promise<{
+  limited: boolean;
+  retryAfter?: string;
+  headers?: Record<string, string>;
+}> {
+  // Upstash が有効な場合はそちらを使用
+  if (icalFeedRateLimit) {
+    try {
+      const { success, limit, remaining, reset } = await icalFeedRateLimit.limit(`ical:${token}`);
+      if (!success) {
+        const retryAfter = Math.ceil((reset - Date.now()) / 1000).toString();
+        return {
+          limited: true,
+          retryAfter,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': reset.toString(),
+            'Retry-After': retryAfter,
+          },
+        };
+      }
+      return { limited: false };
+    } catch (error) {
+      // Redis障害時はインメモリにフォールバック（可用性優先）
+      logger.warn('[iCal Feed] Upstash rate limit failed, falling back to in-memory', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // インメモリフォールバック
+  if (isRateLimitedInMemory(token)) {
+    return { limited: true, retryAfter: '60' };
+  }
+  return { limited: false };
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
@@ -139,11 +180,15 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
   }
 
-  // per-token レート制限
-  if (isRateLimited(token)) {
+  // per-token レート制限（Upstash優先、インメモリフォールバック）
+  const rateLimit = await checkRateLimit(token);
+  if (rateLimit.limited) {
     return NextResponse.json(
       { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': '60' } },
+      {
+        status: 429,
+        headers: rateLimit.headers ?? { 'Retry-After': rateLimit.retryAfter ?? '60' },
+      },
     );
   }
 

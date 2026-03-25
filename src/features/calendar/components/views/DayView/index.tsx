@@ -8,5 +8,4 @@ export type * from './DayView.types';
 export { useDayEntries, useDayEntries as useDayEvents } from './hooks/useDayEntries';
 export { useDayView } from './hooks/useDayView';
 
-// サブコンポーネント
-export { DayContent } from './components/DayContent';
+// サブコンポーネント（CalendarGridContent に統合済み）

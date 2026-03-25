@@ -1,1 +1,1 @@
-export { MultiDayContent } from './MultiDayContent';
+// MultiDayView components - now uses shared CalendarGridContent

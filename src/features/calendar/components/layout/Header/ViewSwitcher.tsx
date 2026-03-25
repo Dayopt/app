@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
+import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
 
@@ -45,6 +47,8 @@ const MAIN_VIEW_OPTIONS: MainViewOption[] = [
 ];
 
 const DAY_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
 
 /**
  * ビュー切り替えドロップダウン（Google Calendar風サブメニュー構造）
@@ -96,61 +100,65 @@ export function ViewSwitcher({
     persistSettings({ showWeekNumbers: !showWeekNumbers });
   }, [showWeekNumbers, persistSettings]);
 
-  const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
-
-  // キーボードショートカット: D, W, A, 0-9
+  // キーボードショートカット: D, W, 0-9（レジストリ経由、モバイルガードはuseShortcutRegistryで実施）
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.altKey || event.metaKey) return;
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
-      const { activeElement } = document;
-      if (
-        activeElement &&
-        (activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.getAttribute('contenteditable') === 'true')
-      ) {
-        return;
-      }
+  useEffect(() => {
+    const shortcuts: ShortcutDef[] = [
+      // D → Day View
+      {
+        key: 'D',
+        description: 'Day View に切り替え（D）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('day');
+        },
+      },
+      // W → Week View
+      {
+        key: 'W',
+        description: 'Week View に切り替え（W）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('week');
+        },
+      },
+      // 1 → Day View
+      {
+        key: '1',
+        description: 'Day View に切り替え（1）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('day');
+        },
+      },
+      // 0 → Week View
+      {
+        key: '0',
+        description: 'Week View に切り替え（0）',
+        handler: (e) => {
+          e.preventDefault();
+          onChangeRef.current('week');
+        },
+      },
+      // 2-9 → N-day View
+      ...([2, 3, 4, 5, 6, 7, 8, 9] as const).map(
+        (n): ShortcutDef => ({
+          key: String(n),
+          description: `${n}-Day View に切り替え`,
+          handler: (e) => {
+            e.preventDefault();
+            onChangeRef.current(`${n}day` as CalendarViewType);
+          },
+        }),
+      ),
+    ];
 
-      const key = event.key;
-
-      // D, W, A ショートカット
-      const upperKey = key.toUpperCase();
-      const mainOption = MAIN_VIEW_OPTIONS.find((opt) => opt.shortcut === upperKey);
-      if (mainOption && mainOption.value !== currentView) {
-        event.preventDefault();
-        onChange(mainOption.value);
-        return;
-      }
-
-      // 数字キー 1 = day, 0 = week, 2-9 = Nday
-      if (key === '1') {
-        if (currentView !== 'day') {
-          event.preventDefault();
-          onChange('day');
-        }
-        return;
-      }
-      if (key === '0') {
-        if (currentView !== 'week') {
-          event.preventDefault();
-          onChange('week');
-        }
-        return;
-      }
-      if (key >= '2' && key <= '9') {
-        const view = `${key}day` as CalendarViewType;
-        if (view !== currentView) {
-          event.preventDefault();
-          onChange(view);
-        }
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentView, onChange]);
+    return registerShortcuts(shortcuts);
+  }, []);
 
   return (
     <DropdownMenu>

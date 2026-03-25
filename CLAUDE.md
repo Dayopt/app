@@ -13,11 +13,29 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 ## コマンド
 
 ```bash
-npm run dev          # 開発サーバー（AIは実行しない）
-npm run storybook    # Storybook（AIは実行しない）
-npm run typecheck    # 型チェック（AI必須：コード変更後）
-npm run lint         # コード品質（AI必須：コミット前）
-npm run lint:boundaries  # feature境界チェック（AI必須：コミット前）
+# 開発（AIは実行しない）
+npm run dev              # 開発サーバー
+npm run storybook        # Storybook
+
+# 検証（AI必須：コード変更後）
+npm run typecheck        # 型チェック
+npm run lint             # コード品質
+npm run lint:boundaries  # feature境界チェック
+npm run lint:tokens      # デザイントークン検証（トークン変更時）
+npm run lint:i18n        # i18n整合性チェック（翻訳キー変更時）
+
+# テスト
+npm run test:run         # ユニットテスト（ロジック変更後）
+npm run test:integration # 統合テスト
+npm run test:e2e:smoke   # E2Eスモークテスト
+
+# 型生成・DB
+npm run types:generate:staging  # Supabase型生成（staging）
+npm run migration:create        # マイグレーション作成
+npm run db:fresh                # ローカルDB初期化+シード
+
+# 品質
+npm run quality:deadcode # 未使用コード検出（knip）
 ```
 
 ## 絶対禁止
@@ -36,11 +54,33 @@ npm run lint:boundaries  # feature境界チェック（AI必須：コミット�
 2. **Plan**: 実装戦略を策定（`think hard`〜`ultrathink`で検討）
 3. **Code**: CLAUDE.md + rules/ 準拠で実装
 4. **Commit**: typecheck → lint → lint:boundaries → コミット
+   - トークン変更時: `lint:tokens` も実行
+   - 翻訳キー変更時: `lint:i18n` も実行
 
 ### コミットメッセージ
 
 - **日本語で記述する**
 - Conventional Commits形式: `feat(scope): 説明`, `fix(scope): 説明`
+
+## ルール体系
+
+詳細ルールは `.claude/rules/` に分離。CLAUDE.md は概要のみ記載。
+
+| ファイル                  | 内容                                         |
+| ------------------------- | -------------------------------------------- |
+| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応 |
+| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成         |
+| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準       |
+| `design-system.md`        | セマンティックトークン、elevation、spacing   |
+| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer         |
+| `quality.md`              | テスト優先度、A11y、パフォーマンス基準       |
+| `temporal-constraints.md` | 過去ブロックの編集制約                       |
+
+## スキル
+
+`.claude/skills/` に11スキルが自動発動で利用可能:
+
+error-handling / storybook / test / security / store-creating / docs-writing / trpc-router-creating / supabase / i18n / releasing / optimistic-update
 
 ## デプロイ
 

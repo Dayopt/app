@@ -101,90 +101,86 @@ export function GeneralSettings() {
     <div className="space-y-8">
       {/* Language & Theme */}
       <SectionCard title={t('settings.preferences.languageAndTheme')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.preferences.language')}>
-            <Select value={locale} onValueChange={handleLanguageChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.preferences.selectLanguage')} />
-              </SelectTrigger>
-              <SelectContent>
-                {routing.locales.map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {loc === 'ja' ? '日本語' : 'English'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-          <LabeledRow label={t('settings.preferences.themeLabel')}>
-            <Select value={theme} onValueChange={handleThemeChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.preferences.selectTheme')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">{t('settings.preferences.themeSystem')}</SelectItem>
-                <SelectItem value="light">{t('settings.preferences.themeLight')}</SelectItem>
-                <SelectItem value="dark">{t('settings.preferences.themeDark')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.preferences.language')}>
+          <Select value={locale} onValueChange={handleLanguageChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.preferences.selectLanguage')} />
+            </SelectTrigger>
+            <SelectContent>
+              {routing.locales.map((loc) => (
+                <SelectItem key={loc} value={loc}>
+                  {loc === 'ja' ? '日本語' : 'English'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow label={t('settings.preferences.themeLabel')}>
+          <Select value={theme} onValueChange={handleThemeChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.preferences.selectTheme')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="system">{t('settings.preferences.themeSystem')}</SelectItem>
+              <SelectItem value="light">{t('settings.preferences.themeLight')}</SelectItem>
+              <SelectItem value="dark">{t('settings.preferences.themeDark')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
       </SectionCard>
 
       {/* Region & Format */}
       <SectionCard title={t('settings.calendar.timeAndTimezone')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.calendar.timezone')}>
-            <Select value={settings.timezone} onValueChange={handleTimezoneChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectTimezone')} />
-              </SelectTrigger>
-              <SelectContent>
-                {getTimeZones().map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-          <LabeledRow label={t('settings.calendar.timeFormat')}>
-            <Select value={settings.timeFormat} onValueChange={handleTimeFormatChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectTimeFormat')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="24h">{t('settings.calendar.timeFormat24h')}</SelectItem>
-                <SelectItem value="12h">{t('settings.calendar.timeFormat12h')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-          <LabeledRow label={t('settings.calendar.dateFormat')}>
-            <Select value={settings.dateFormat} onValueChange={handleDateFormatChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectDateFormat')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="yyyy/MM/dd">{t('settings.calendar.dateFormatJapan')}</SelectItem>
-                <SelectItem value="MM/dd/yyyy">{t('settings.calendar.dateFormatUS')}</SelectItem>
-                <SelectItem value="dd/MM/yyyy">{t('settings.calendar.dateFormatEU')}</SelectItem>
-                <SelectItem value="yyyy-MM-dd">{t('settings.calendar.dateFormatISO')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-          <LabeledRow label={t('settings.calendar.weekStartsOn')}>
-            <Select value={String(settings.weekStartsOn)} onValueChange={handleWeekStartsOnChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectStartDay')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">{t('settings.calendar.sunday')}</SelectItem>
-                <SelectItem value="1">{t('settings.calendar.monday')}</SelectItem>
-                <SelectItem value="6">{t('settings.calendar.saturday')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.calendar.timezone')}>
+          <Select value={settings.timezone} onValueChange={handleTimezoneChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectTimezone')} />
+            </SelectTrigger>
+            <SelectContent>
+              {getTimeZones().map((tz) => (
+                <SelectItem key={tz.value} value={tz.value}>
+                  {tz.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow label={t('settings.calendar.timeFormat')}>
+          <Select value={settings.timeFormat} onValueChange={handleTimeFormatChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectTimeFormat')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="24h">{t('settings.calendar.timeFormat24h')}</SelectItem>
+              <SelectItem value="12h">{t('settings.calendar.timeFormat12h')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow label={t('settings.calendar.dateFormat')}>
+          <Select value={settings.dateFormat} onValueChange={handleDateFormatChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectDateFormat')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="yyyy/MM/dd">{t('settings.calendar.dateFormatJapan')}</SelectItem>
+              <SelectItem value="MM/dd/yyyy">{t('settings.calendar.dateFormatUS')}</SelectItem>
+              <SelectItem value="dd/MM/yyyy">{t('settings.calendar.dateFormatEU')}</SelectItem>
+              <SelectItem value="yyyy-MM-dd">{t('settings.calendar.dateFormatISO')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow label={t('settings.calendar.weekStartsOn')}>
+          <Select value={String(settings.weekStartsOn)} onValueChange={handleWeekStartsOnChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectStartDay')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t('settings.calendar.sunday')}</SelectItem>
+              <SelectItem value="1">{t('settings.calendar.monday')}</SelectItem>
+              <SelectItem value="6">{t('settings.calendar.saturday')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
       </SectionCard>
     </div>
   );

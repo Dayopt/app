@@ -57,7 +57,7 @@ export function FulfillmentRow({
   );
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex min-h-11 items-center justify-between">
       <div className="flex items-center gap-2">
         <Smile className="text-muted-foreground size-4 flex-shrink-0" />
         <span className="text-muted-foreground text-sm">{label}</span>
@@ -74,7 +74,7 @@ export function FulfillmentRow({
               aria-label={scoreLabels[labelKey]}
               aria-pressed={isSelected}
               className={cn(
-                'flex size-8 items-center justify-center rounded-lg transition-colors',
+                'flex size-10 items-center justify-center rounded-lg transition-colors',
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
                 'disabled:pointer-events-none disabled:opacity-50',
                 isSelected
@@ -82,7 +82,7 @@ export function FulfillmentRow({
                   : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
               )}
             >
-              <Icon className="size-4" />
+              <Icon className="size-5" />
             </button>
           );
 

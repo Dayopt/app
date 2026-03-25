@@ -66,7 +66,7 @@ export const CalendarDateHeader = ({
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
 
   return (
-    <div className="border-border flex h-12 shrink-0 flex-col justify-end border-b">
+    <div className="flex h-12 shrink-0 flex-col justify-end">
       <div className="flex items-end">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (

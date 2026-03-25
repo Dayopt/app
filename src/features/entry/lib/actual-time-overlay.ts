@@ -38,20 +38,15 @@ function toMinutesOfDay(date: Date): number {
 /**
  * 予定時間と実績時間の差分からオーバーレイ情報を計算
  *
- * 対象: entryState === 'past' で
- * actualStartDate または actualEndDate が1つ以上ある場合
+ * 対象: actualStartDate または actualEndDate が1つ以上入力されている場合
+ * （entryState に依存しない — actual time が入力されていれば常に差分を表示）
  * 未設定の方は予定通り（差分なし）として扱う
  */
 export function computeActualTimeDiffOverlay(
   plan: CalendarEvent,
   hourHeight: number,
 ): ActualTimeDiffOverlay {
-  if (
-    plan.entryState !== 'past' ||
-    (!plan.actualStartDate && !plan.actualEndDate) ||
-    !plan.startDate ||
-    !plan.endDate
-  ) {
+  if ((!plan.actualStartDate && !plan.actualEndDate) || !plan.startDate || !plan.endDate) {
     return NO_OVERLAY;
   }
 

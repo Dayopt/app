@@ -8,6 +8,7 @@ import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { TagDeleteStrategyDialog, useDeleteTag, useTagCacheStore, useTags } from '@/features/tags';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { api } from '@/platform/trpc';
 import { SidebarSection } from '@/shell/components/sidebar';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
@@ -24,6 +25,7 @@ import { TagFlatList } from './components/TagFlatList';
  */
 export function CalendarFilterList() {
   const t = useTranslations();
+  const isMobile = useIsMobile();
   const { data: tags, isLoading: tagsLoading } = useTags();
   const { data: tagStats } = api.entries.getTagStats.useQuery();
 
@@ -127,6 +129,7 @@ export function CalendarFilterList() {
               onToggleGroupTags={toggleGroupTags}
               onShowOnlyGroupTags={showOnlyGroupTags}
               getGroupVisibility={getGroupVisibility}
+              isMobile={isMobile}
             />
           ) : (
             <div className="text-muted-foreground px-2 py-2 text-xs">

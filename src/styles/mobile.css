@@ -55,7 +55,7 @@
   margin-top: env(safe-area-inset-top);
 }
 
-/* Fixed Bottom要素用（ボトムナビ、FAB等） */
+/* Fixed Bottom要素用（ボトムナビ等） */
 .bottom-safe {
   bottom: env(safe-area-inset-bottom);
 }

@@ -47,7 +47,7 @@ export {
 // Hooks
 // =============================================================================
 export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
-export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
+export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
@@ -64,6 +64,7 @@ export { usePlanOperations } from './hooks/operations/usePlanOperations';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
+export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
 export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
 

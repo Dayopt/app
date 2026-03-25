@@ -13,7 +13,6 @@ import { OfflineIndicator } from '@/shell/providers/OfflineIndicator';
 
 import { DesktopLayout } from './desktop-layout';
 import { MobileLayout } from './mobile-layout';
-import { MobileFAB } from './MobileFAB';
 
 interface BaseLayoutContentProps {
   children: React.ReactNode;
@@ -25,7 +24,6 @@ interface BaseLayoutContentProps {
  * レイアウトのオーケストレーションのみを担当：
  * - デスクトップ/モバイルレイアウトの切り替え
  * - カレンダープロバイダーのラップ
- * - モバイルFABの配置
  */
 export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
   const pathname = usePathname() || '/';
@@ -37,7 +35,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
     return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
   }, [pathname]);
 
-  const { calendarProviderProps } = useCalendarProviderProps(
+  const { isCalendarPage, calendarProviderProps } = useCalendarProviderProps(
     pathname,
     searchParams || new URLSearchParams(),
   );
@@ -46,7 +44,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
     // CalendarNavigationProvider を常にレンダリングしてツリー構造を安定化。
     // ルート切替時にProvider の付け外しによるリマウントを防ぎ、
     // Sidebar が静止したままメインコンテンツだけが変わる体験を実現する。
-    <CalendarNavigationProvider {...(calendarProviderProps ?? {})}>
+    <CalendarNavigationProvider isCalendarPage={isCalendarPage} {...(calendarProviderProps ?? {})}>
       <div className="flex h-screen flex-col">
         {/* オフラインインジケーター */}
         <OfflineIndicator />
@@ -64,8 +62,6 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
         ) : (
           <DesktopLayout locale={localeFromPath}>{children}</DesktopLayout>
         )}
-
-        {isMobile ? <MobileFAB /> : null}
       </div>
     </CalendarNavigationProvider>
   );

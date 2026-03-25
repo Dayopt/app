@@ -165,7 +165,7 @@ export function BillingSettings() {
   // ローディング状態（P0-2）
   if (overview.isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {[0, 1].map((i) => (
           <SectionCard key={i}>
             <div className="space-y-4">
@@ -181,7 +181,7 @@ export function BillingSettings() {
   // エラー状態（P1-6）
   if (overview.isError) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         <SectionCard>
           <div className="flex flex-col items-center gap-4 py-8">
             <AlertTriangle className="text-muted-foreground h-8 w-8" />
@@ -200,7 +200,7 @@ export function BillingSettings() {
   const invoicesData = overview.data?.invoices ?? [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* 現在のプラン */}
       <SectionCard title={t('settings.subscription.currentPlan')}>
         <div className="flex items-center gap-4 py-2">

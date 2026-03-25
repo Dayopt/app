@@ -69,13 +69,3 @@ export function expandEntriesToCalendarEvents(entries: EntryWithTags[]): Calenda
     .map(entryToCalendarEvent)
     .filter((event): event is CalendarEvent => event !== null);
 }
-
-/**
- * 複数のEntryをCalendarEvent型に変換
- * start_time/end_time がないEntryはスキップされる
- */
-export function entriesToCalendarEvents(entries: EntryWithTags[]): CalendarEvent[] {
-  return entries
-    .map(entryToCalendarEvent)
-    .filter((event): event is CalendarEvent => event !== null);
-}

@@ -12,6 +12,7 @@
 import { useMemo } from 'react';
 
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
+import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
@@ -63,7 +64,6 @@ export interface CalendarControllerProps {
     updates?: { startTime: Date; endTime: Date },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
-  onRestoreEntry: (entry: CalendarEvent) => Promise<void>;
 
   // --- Context menu actions ---
   getAddToPaletteHandler?: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
@@ -83,6 +83,7 @@ export interface CalendarControllerProps {
 
   // --- Slots ---
   className?: string;
+  leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
 }
 
@@ -102,7 +103,6 @@ export function CalendarController({
   onTimeRangeSelect,
   onUpdateEntry,
   onDeleteEntry,
-  onRestoreEntry,
   getAddToPaletteHandler,
   onDeleteEntryConfirm,
   onNavigate,
@@ -114,11 +114,15 @@ export function CalendarController({
   onSettingsChange,
   onDateSelect,
   className,
+  leftSlot,
   rightSlot,
 }: CalendarControllerProps) {
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
+
+  // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
+  useShortcutRegistry();
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
@@ -147,7 +151,6 @@ export function CalendarController({
       onEntryContextMenu: handleEventContextMenu,
       onUpdateEntry,
       onDeleteEntry,
-      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -165,7 +168,6 @@ export function CalendarController({
       handleEventContextMenu,
       onUpdateEntry,
       onDeleteEntry,
-      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -191,6 +193,7 @@ export function CalendarController({
           end: viewDateRange.end,
         }}
         onSettingsChange={onSettingsChange}
+        leftSlot={leftSlot}
         rightSlot={rightSlot}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />

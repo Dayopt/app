@@ -103,6 +103,7 @@ export const tagsRouter = createTRPCRouter({
             'gray',
           ])
           .optional(),
+        icon: z.string().max(50).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -113,6 +114,7 @@ export const tagsRouter = createTRPCRouter({
           input: {
             name: input.name,
             color: input.color,
+            icon: input.icon,
           },
         });
 
@@ -153,6 +155,7 @@ export const tagsRouter = createTRPCRouter({
             'gray',
           ])
           .optional(),
+        icon: z.string().max(50).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -164,6 +167,7 @@ export const tagsRouter = createTRPCRouter({
           updates: {
             name: input.name,
             color: input.color,
+            icon: input.icon,
           },
         });
 

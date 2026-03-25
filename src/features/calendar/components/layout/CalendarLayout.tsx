@@ -1,15 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { memo, useCallback } from 'react';
-
-import { Search } from 'lucide-react';
+import { memo, useCallback, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import type { NavigationDirection } from '@/components/common/DateNavigator';
 import { DateNavigator } from '@/components/common/DateNavigator';
-import { Button } from '@/components/ui/button';
-import { useGlobalSearch } from '@/hooks/use-global-search';
 import { AppHeader } from '@/shell/components/AppHeader';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
@@ -17,6 +14,7 @@ import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
 import { DateRangeDisplay } from './Header/DateRangeDisplay';
+import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
 /** CalendarLayout コンポーネントのプロパティ */
@@ -27,7 +25,7 @@ export interface CalendarLayoutProps {
   // Header props
   viewType: CalendarViewType;
   currentDate: Date;
-  onNavigate: (direction: 'prev' | 'next' | 'today') => void;
+  onNavigate: (direction: NavigationDirection) => void;
   onViewChange: (view: CalendarViewType) => void;
 
   // Date selection for mini calendar
@@ -45,7 +43,8 @@ export interface CalendarLayoutProps {
   // Settings persistence callback
   onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
 
-  // Header right slot
+  // Header slots
+  leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
 }
 
@@ -72,82 +71,83 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Settings persistence
     onSettingsChange,
 
-    // Header right slot
+    // Header slots
+    leftSlot,
     rightSlot,
   }) => {
     const t = useTranslations('calendar');
-    const { open: openSearch } = useGlobalSearch();
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+
+    // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
+    const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
+      key: 0,
+      direction: null,
+    });
+
+    // onNavigateをラップして方向を記録
+    const handleNavigate = useCallback(
+      (direction: NavigationDirection) => {
+        if (direction === 'prev' || direction === 'next') {
+          setSlide((prev) => ({ key: prev.key + 1, direction }));
+        }
+        onNavigate(direction);
+      },
+      [onNavigate],
+    );
 
     // スワイプで前後の期間に移動
     const handleSwipeLeft = useCallback(() => {
-      onNavigate('next');
-    }, [onNavigate]);
+      handleNavigate('next');
+    }, [handleNavigate]);
 
     const handleSwipeRight = useCallback(() => {
-      onNavigate('prev');
-    }, [onNavigate]);
+      handleNavigate('prev');
+    }, [handleNavigate]);
 
     // タッチイベントのみで動作（タッチイベントが発生 = タッチデバイス）
     const { handlers, ref } = useSwipeGesture(handleSwipeLeft, handleSwipeRight);
+
+    const slideClass =
+      slide.direction === 'next'
+        ? 'calendar-slide-next'
+        : slide.direction === 'prev'
+          ? 'calendar-slide-prev'
+          : '';
 
     return (
       <div className={cn('calendar-layout bg-background flex h-full flex-col', className)}>
         {/* スクリーンリーダー用のページタイトル */}
         <h1 className="sr-only">{t('title')}</h1>
 
-        <AppHeader
-          controls={
-            <>
-              <DateNavigator onNavigate={onNavigate} arrowSize="md" />
+        {/* モバイル: インライン展開ミニカレンダー */}
+        <MobileCalendarHeader
+          currentDate={currentDate}
+          onNavigate={handleNavigate}
+          onDateSelect={onDateSelect}
+          displayRange={displayRange}
+        />
+
+        {/* デスクトップ: 現行AppHeader（変更なし） */}
+        <div className="hidden md:block">
+          <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
+            <div className="flex items-center gap-2">
+              <DateRangeDisplay
+                date={currentDate}
+                viewType={viewType}
+                showWeekNumber={showWeekNumbers}
+                clickable={false}
+                displayRange={displayRange}
+              />
+              <DateNavigator onNavigate={handleNavigate} arrowSize="md" />
               <ViewSwitcher
-                className="ml-4"
+                className="ml-2"
                 currentView={viewType}
                 onChange={(view) => onViewChange(view as CalendarViewType)}
                 onSettingsChange={onSettingsChange}
               />
-            </>
-          }
-          rightSlot={rightSlot}
-          mobileRightSlot={
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={openSearch}
-                aria-label={t('aside.search')}
-              >
-                <Search className="size-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => onNavigate('today')}
-                aria-label={t('actions.goToToday')}
-              >
-                <div className="relative flex size-6 flex-col">
-                  <div className="h-1.5 w-full border-b-2 border-current" />
-                  <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-bold">{new Date().getDate()}</span>
-                  </div>
-                </div>
-              </Button>
             </div>
-          }
-        >
-          <DateRangeDisplay
-            date={currentDate}
-            viewType={viewType}
-            showWeekNumber={showWeekNumbers}
-            clickable={true}
-            onDateSelect={onDateSelect ? (date) => date && onDateSelect(date) : undefined}
-            displayRange={displayRange}
-          />
-        </AppHeader>
+          </AppHeader>
+        </div>
 
         {/* カレンダーコンテンツ（スワイプ対応） */}
         <div
@@ -158,7 +158,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           onTouchMove={handlers.onTouchMove}
           onTouchEnd={handlers.onTouchEnd}
         >
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-col', slideClass)}>
+            {children}
+          </div>
         </div>
       </div>
     );

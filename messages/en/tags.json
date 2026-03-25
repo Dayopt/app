@@ -138,7 +138,18 @@
       "required": "*",
       "parentTagNote": "Parent Tag:",
       "icon": "Icon",
-      "selectColor": "Select color: {color}"
+      "selectColor": "Select color: {color}",
+      "selectIcon": "Select icon",
+      "noIcon": "No icon",
+      "iconCategories": {
+        "work": "Work",
+        "study": "Study",
+        "health": "Health",
+        "life": "Life",
+        "hobby": "Hobby",
+        "food": "Food",
+        "social": "Social"
+      }
     },
     "search": {
       "noTags": "No tags found",

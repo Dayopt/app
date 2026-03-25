@@ -53,6 +53,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   style = {},
   previewTime = null,
   hourHeight: hourHeightProp,
+  overlayPositionApplied = false,
 }) {
   const t = useTranslations();
 
@@ -86,21 +87,21 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     [position],
   );
 
-  // hourHeightProp がある = DayColumn（グリッド相対配置）→ 位置調整を適用
-  // hourHeightProp がない = WeekContent等（ラッパー相対配置）→ 位置調整は不要
-  const applyPositionAdjust = hourHeightProp !== undefined;
+  // hourHeightProp がある && 外部未調整 = DayColumn（グリッド相対配置）→ 位置調整を適用
+  // hourHeightProp がない or 外部調整済み = WeekContent等 → EntryCard内での位置調整は不要
+  const applyPositionAdjust = hourHeightProp !== undefined && !overlayPositionApplied;
 
-  // 左アクセントの幅（モバイル: 2px、デスクトップ: 3px）
-  const accentWidth = isMobile ? 2 : 3;
+  // 左アクセントの幅（統一: 3px = --border-indicator トークン相当）
+  const accentWidth = 3;
 
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
       position: 'absolute' as const,
-      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
+      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0) + 1}px`,
       left: `${safePosition.left}%`,
       width: `calc(${safePosition.width}% - 8px)`,
-      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
+      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0) - 2, MIN_EVENT_HEIGHT)}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
@@ -331,10 +332,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
           safePosition.height < 40
             ? isMobile
-              ? 'flex items-center px-1.5 text-xs'
+              ? 'flex items-center px-2 text-xs'
               : 'flex items-center px-2 text-xs'
             : isMobile
-              ? 'flex items-start gap-1 px-2 pt-2 text-xs'
+              ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
               : 'p-2 text-sm',
         )}
         style={{ backgroundColor: accentTint }}
@@ -347,7 +348,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           previewTime={previewTime}
         />
 
-        {/* 予定 vs 記録: 上部 — 未実行は控えめな斜線 */}
+        {/* 予定 vs 記録: 上部 — 未実行は斜線、超過はwarning斜線 */}
         {overlay.topKind === 'unexecuted' && (
           <div
             aria-hidden="true"
@@ -355,12 +356,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             style={{ height: `${overlay.topHeight}px` }}
           />
         )}
+        {overlay.topKind === 'overtime' && (
+          <div
+            aria-hidden="true"
+            className="pattern-overtime pointer-events-none absolute top-0 right-0 left-0"
+            style={{ height: `${overlay.topHeight}px` }}
+          />
+        )}
 
-        {/* 予定 vs 記録: 下部 — 未実行は控えめな斜線 */}
+        {/* 予定 vs 記録: 下部 — 未実行は斜線、超過はwarning斜線 */}
         {overlay.bottomKind === 'unexecuted' && (
           <div
             aria-hidden="true"
             className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
+            style={{ height: `${overlay.bottomHeight}px` }}
+          />
+        )}
+        {overlay.bottomKind === 'overtime' && (
+          <div
+            aria-hidden="true"
+            className="pattern-overtime pointer-events-none absolute right-0 bottom-0 left-0"
             style={{ height: `${overlay.bottomHeight}px` }}
           />
         )}

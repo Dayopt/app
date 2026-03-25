@@ -15,8 +15,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-/** max-h-20 = 5rem = 80px（Tailwind クラスと同期） */
-const TEXTAREA_MAX_HEIGHT = 80;
+/** max-h-40 = 10rem = 160px（Tailwind クラスと同期） */
+const TEXTAREA_MAX_HEIGHT = 160;
 
 /** HTML タグを除去してプレーンテキストに変換 */
 function stripHtml(html: string): string {
@@ -98,8 +98,7 @@ export function NoteSection({
         disabled={disabled}
         maxLength={maxLength}
         rows={1}
-        style={{ overflowY: 'hidden' }}
-        className="bg-input text-foreground placeholder:text-muted-foreground surface-sunken focus-visible:ring-ring max-h-20 min-h-8 resize-none rounded-lg border border-transparent px-4 py-2 text-sm leading-normal outline-none focus-visible:ring-2"
+        className="bg-input text-foreground placeholder:text-muted-foreground surface-sunken focus-visible:ring-ring max-h-40 min-h-8 resize-none overflow-y-hidden rounded-lg border border-transparent px-4 py-2 text-sm leading-normal outline-none focus-visible:ring-2"
       />
     </div>
   );

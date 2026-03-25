@@ -10,6 +10,7 @@ import {
   endOfWeek,
   format,
   getMonth,
+  getWeek,
   getYear,
   isBefore,
   isSameDay,
@@ -99,6 +100,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
     const tCommon = useTranslations('common');
     const tActions = useTranslations('calendar.actions');
     const weekStartsOn = useCalendarSettingsStore((state) => state.weekStartsOn);
+    const showWeekNumbers = useCalendarSettingsStore((state) => state.showWeekNumbers);
     const isMounted = useHasMounted();
     const [open, setOpen] = useState(false);
     const [viewMonth, setViewMonth] = useState(() => month ?? selectedDate ?? new Date());
@@ -232,6 +234,8 @@ export const MiniCalendar = memo<MiniCalendarProps>(
       return null;
     }
 
+    const gridCols = showWeekNumbers ? 'grid-cols-[auto_repeat(7,1fr)]' : 'grid-cols-7';
+
     const renderCalendar = () => (
       <div className={cn('p-2 select-none', className)}>
         {/* ヘッダー: ナビゲーション + 月・年選択 */}
@@ -299,7 +303,8 @@ export const MiniCalendar = memo<MiniCalendarProps>(
         </div>
 
         {/* 曜日ヘッダー */}
-        <div className="mb-1 grid grid-cols-7">
+        <div className={cn('mb-1 grid', gridCols)}>
+          {showWeekNumbers && <div className="w-6" />}
           {weekdays.map((day) => (
             <div
               key={day}
@@ -313,7 +318,12 @@ export const MiniCalendar = memo<MiniCalendarProps>(
         {/* カレンダーグリッド */}
         <div className="grid gap-0">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7">
+            <div key={weekIndex} className={cn('grid', gridCols)}>
+              {showWeekNumbers && (
+                <div className="text-muted-foreground flex h-8 w-6 items-center justify-center text-xs">
+                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn: 1 }) : null}
+                </div>
+              )}
               {week.map((date) => {
                 const { isToday, isSelected, isCurrentMonth, isDisabled } = getDayState(date);
 

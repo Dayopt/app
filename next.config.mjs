@@ -205,6 +205,11 @@ const nextConfig = {
 
   // 実験的機能
   experimental: {
+    // React Compiler: 現在無効化
+    // next-intlのコンテキスト伝播と干渉するため、互換性が解決されるまで無効化
+    // @see https://github.com/amannn/next-intl/issues
+    // reactCompiler: true,
+
     // Partial Prerendering（PPR）- 現在無効化
     // Next.js canary版でのみ利用可能なため、stable版では無効化
     // TODO: Next.js 16以降でstableになったら再有効化を検討

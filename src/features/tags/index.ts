@@ -12,9 +12,11 @@ export {
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';
+export { IconPicker } from './components/IconPicker';
+export { TagGridPicker } from './components/TagGridPicker';
+export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
 export type { HoveredTagInfo } from './components/TagQuickSelector';
-export { TagRadioItem } from './components/TagRadioItem';
 
 // Hooks
 export {
@@ -46,6 +48,9 @@ export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-
 
 // Constants - Colors
 export { DEFAULT_TAG_COLOR, TAG_COLOR_PALETTE } from '@/lib/tag-colors';
+
+// Server (Service layer — for server-side consumers like ai feature)
+export { TagService } from './server/tag-service';
 
 // Types
 export type {

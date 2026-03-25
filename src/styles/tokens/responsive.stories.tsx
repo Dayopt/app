@@ -85,11 +85,11 @@ export const Breakpoints: Story = {
           <div className="bg-container space-y-2 rounded-lg p-4 font-mono text-sm">
             <div>
               <span className="text-muted-foreground">MEDIA_QUERIES.mobile:</span> &apos;(max-width:
-              639px)&apos;
+              767px)&apos;
             </div>
             <div>
               <span className="text-muted-foreground">MEDIA_QUERIES.tablet:</span> &apos;(min-width:
-              640px) and (max-width: 1023px)&apos;
+              768px) and (max-width: 1023px)&apos;
             </div>
             <div>
               <span className="text-muted-foreground">MEDIA_QUERIES.desktop:</span>{' '}

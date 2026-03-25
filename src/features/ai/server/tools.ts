@@ -11,8 +11,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
-import { EntryService } from '@/features/entry/server/entry-service';
-import { TagService } from '@/features/tags/server/tag-service';
+import { EntryService } from '@/features/entry';
+import { TagService } from '@/features/tags';
 import { MS_PER_HOUR, MS_PER_MINUTE } from '@/lib/date';
 import { logger } from '@/lib/logger';
 

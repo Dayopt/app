@@ -18,17 +18,9 @@ import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useTags } from '@/features/tags';
+import { TagGridPicker, useTags } from '@/features/tags';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { DURATION_PRESETS } from '../constants';
@@ -69,12 +61,9 @@ function calcAnchoredPosition(anchorRect: DOMRect, panelWidth: number) {
 function PaletteAddContent({
   pinnedItems,
   onClose,
-  selectContainer,
 }: {
   pinnedItems?: PaletteItem[] | undefined;
   onClose: () => void;
-  /** Select ドロップダウンのポータル先（カスタムポータル内ではパネル要素を指定） */
-  selectContainer?: Element | null | undefined;
 }) {
   const t = useTranslations();
   const { data: tags } = useTags();
@@ -82,6 +71,14 @@ function PaletteAddContent({
 
   const [selectedTagId, setSelectedTagId] = useState<string>('');
   const [selectedDuration, setSelectedDuration] = useState<string>('');
+
+  const activeTags = useMemo(
+    () =>
+      (tags ?? [])
+        .filter((tag) => tag.is_active)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    [tags],
+  );
 
   const pinnedSet = useMemo(
     () => new Set((pinnedItems ?? []).map((p) => `${p.tag_id}:${p.duration_minutes}`)),
@@ -115,47 +112,36 @@ function PaletteAddContent({
   return (
     <div className="px-4 pt-2 pb-4">
       <FieldGroup className="mb-6">
-        {/* タグ選択 */}
+        {/* タグ選択（グリッド） */}
         <Field>
           <FieldLabel>{t('sidebar.palette.tagLabel')}</FieldLabel>
-          <Select value={selectedTagId} onValueChange={setSelectedTagId}>
-            <SelectTrigger className="w-full" aria-label={t('sidebar.palette.tagLabel')}>
-              <SelectValue placeholder={t('sidebar.palette.tagPlaceholder')} />
-            </SelectTrigger>
-            <SelectContent container={selectContainer}>
-              {(tags ?? [])
-                .filter((tag) => tag.is_active)
-                .map((tag) => (
-                  <SelectItem key={tag.id} value={tag.id}>
-                    <span className="flex items-center gap-2">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: getTagColorClasses(tag.color).cssVar }}
-                        aria-hidden="true"
-                      />
-                      {tag.name}
-                    </span>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <TagGridPicker
+            tags={activeTags}
+            selectedId={selectedTagId}
+            onSelect={(id) => setSelectedTagId(id)}
+          />
         </Field>
 
-        {/* Duration 選択 */}
+        {/* Duration 選択（チップ） */}
         <Field>
           <FieldLabel>{t('sidebar.palette.durationLabel')}</FieldLabel>
-          <Select value={selectedDuration} onValueChange={setSelectedDuration}>
-            <SelectTrigger className="w-full" aria-label={t('sidebar.palette.durationLabel')}>
-              <SelectValue placeholder={t('sidebar.palette.durationPlaceholder')} />
-            </SelectTrigger>
-            <SelectContent container={selectContainer}>
-              {DURATION_PRESETS.map((preset) => (
-                <SelectItem key={preset.value} value={String(preset.value)}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-1.5">
+            {DURATION_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                onClick={() => setSelectedDuration(String(preset.value))}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                  selectedDuration === String(preset.value)
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border hover:bg-state-hover text-foreground',
+                )}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </Field>
 
         {/* 重複エラー */}
@@ -185,10 +171,8 @@ export function PaletteAddPopover({
   const isMobile = useIsMobile();
   const mounted = useHasMounted();
   const panelRef = useRef<HTMLDivElement>(null);
-  const [panelEl, setPanelEl] = useState<HTMLDivElement | null>(null);
   const panelCallbackRef = useCallback((node: HTMLDivElement | null) => {
     panelRef.current = node;
-    setPanelEl(node);
   }, []);
 
   // PC: アンカー横に配置する位置を計算
@@ -325,11 +309,7 @@ export function PaletteAddPopover({
           </button>
         </div>
 
-        <PaletteAddContent
-          pinnedItems={pinnedItems}
-          onClose={handleClose}
-          selectContainer={panelEl}
-        />
+        <PaletteAddContent pinnedItems={pinnedItems} onClose={handleClose} />
       </div>
     </div>
   );

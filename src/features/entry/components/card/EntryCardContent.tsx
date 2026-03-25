@@ -4,7 +4,6 @@
 
 'use client';
 
-import { Bell } from 'lucide-react';
 import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
@@ -86,9 +85,6 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
                 ? formatTimeRange(planStart, planEnd, timeFormat)
                 : t('calendar.event.noTimeSet')}
           </span>
-          {plan.reminder_minutes != null && (
-            <Bell className="size-3 flex-shrink-0" aria-label={t('calendar.event.reminderSet')} />
-          )}
         </div>
       )}
     </div>

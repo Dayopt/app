@@ -3,7 +3,7 @@
 /**
  * エントリ作成フロー統合 hook
  *
- * EntryCreateTrigger と MobileFAB の共通ロジック:
+ * EntryCreateTrigger の共通ロジック:
  * - 空きスロット検索（15分単位、最大2時間先）
  * - エントリ作成 → Inspector を開く
  */

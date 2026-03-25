@@ -116,6 +116,19 @@ export const entryCreateRateLimit =
     : null;
 
 /**
+ * iCalフィード用レート制限
+ * 10リクエスト / 1分 per token（外部カレンダーアプリからの購読用）
+ */
+export const icalFeedRateLimit =
+  isUpstashEnabled && redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(10, '1 m'),
+        prefix: 'ratelimit:ical-feed',
+      })
+    : null;
+
+/**
  * 汎用レート制限ミドルウェア
  *
  * @example

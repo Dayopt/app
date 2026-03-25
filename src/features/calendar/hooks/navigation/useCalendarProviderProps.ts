@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { parseCalendarDateParam } from '../../lib/date-param';
 import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 
@@ -58,13 +59,7 @@ export function useCalendarProviderProps(
     // ビュータイプが有効でない場合は 'day' をデフォルトにする
     const view: CalendarViewType = isValidViewType(lastSegment) ? lastSegment : 'day';
 
-    let initialDate: Date | undefined;
-    if (dateParam) {
-      const parsedDate = new Date(dateParam);
-      if (!isNaN(parsedDate.getTime())) {
-        initialDate = parsedDate;
-      }
-    }
+    const initialDate = parseCalendarDateParam(dateParam);
 
     return {
       isCalendarPage,

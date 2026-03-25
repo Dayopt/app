@@ -150,6 +150,9 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
   // Timer ref
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cached day-column NodeList — populated at drag-start, cleared on drag-end
+  const dayColumnsRef = useRef<NodeListOf<HTMLElement> | null>(null);
+
   // ---- Build context for the reducer ----
   function buildContext(r: typeof latestRef.current): InteractionContext {
     return {
@@ -245,6 +248,10 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
         case 'DRAG_STORE_START': {
           const plan = r.events.find((e) => e.id === effect.entryId);
           if (plan) r.startDragStore(effect.entryId, plan, effect.dateIndex);
+          // Cache day-column elements once at drag-start
+          dayColumnsRef.current = document.querySelectorAll<HTMLElement>(
+            '[data-calendar-day-index]',
+          );
           break;
         }
 
@@ -257,6 +264,8 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
         case 'DRAG_STORE_END':
           r.endDragStore();
+          // Clear cached day-column elements
+          dayColumnsRef.current = null;
           break;
       }
     }
@@ -306,7 +315,10 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       let targetDateIndex: number | undefined;
       const r = latestRef.current;
       if (r.viewMode !== 'day' && r.displayDates && r.displayDates.length > 1) {
-        const columns = document.querySelectorAll<HTMLElement>('[data-calendar-day-index]');
+        // Use cached NodeList during drag to avoid querySelectorAll on every pointermove
+        const columns =
+          dayColumnsRef.current ??
+          document.querySelectorAll<HTMLElement>('[data-calendar-day-index]');
         for (const col of columns) {
           const rect = col.getBoundingClientRect();
           if (point.clientX >= rect.left && point.clientX < rect.right) {

@@ -17,14 +17,14 @@
  * ## Tailwind CSSとの対応
  * | M3          | Tailwind | ピクセル値 |
  * |-------------|----------|-----------|
- * | Compact     | (default)| < 640px   |
+ * | Compact     | (default)| < 768px   |
  * | Medium      | sm:      | ≥ 640px   |
  * | Expanded    | md:      | ≥ 768px   |
  * | Large       | lg:      | ≥ 1024px  |
  * | Extra-large | xl:      | ≥ 1280px  |
  *
  * Note: Tailwind v4のデフォルトブレークポイントを使用
- * M3の600dp/840dpとは若干異なるが、実用上問題なし
+ * モバイル判定は md: (768px) を境界とし、Tailwindの md:hidden 等と統一
  */
 
 /**
@@ -58,10 +58,10 @@ export const BREAKPOINT_VALUES = {
  * ```
  */
 export const MEDIA_QUERIES = {
-  /** モバイル: < 640px (M3 Compact相当) */
-  mobile: `(max-width: ${BREAKPOINT_VALUES.sm - 1}px)`,
-  /** タブレット: 640px - 1023px (M3 Medium/Expanded相当) */
-  tablet: `(min-width: ${BREAKPOINT_VALUES.sm}px) and (max-width: ${BREAKPOINT_VALUES.lg - 1}px)`,
+  /** モバイル: < 768px (Tailwind md: 未満) */
+  mobile: `(max-width: ${BREAKPOINT_VALUES.md - 1}px)`,
+  /** タブレット: 768px - 1023px (M3 Medium/Expanded相当) */
+  tablet: `(min-width: ${BREAKPOINT_VALUES.md}px) and (max-width: ${BREAKPOINT_VALUES.lg - 1}px)`,
   /** デスクトップ: ≥ 1024px (M3 Large相当) */
   desktop: `(min-width: ${BREAKPOINT_VALUES.lg}px)`,
   /** タッチデバイス判定 */
@@ -132,7 +132,7 @@ export type DeviceType = 'mobile' | 'tablet' | 'desktop';
  * @returns デバイスタイプ
  */
 export function getDeviceType(width: number): DeviceType {
-  if (width < BREAKPOINT_VALUES.sm) return 'mobile';
+  if (width < BREAKPOINT_VALUES.md) return 'mobile';
   if (width < BREAKPOINT_VALUES.lg) return 'tablet';
   return 'desktop';
 }

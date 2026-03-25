@@ -277,18 +277,6 @@
       "loadError": "Failed to load",
       "noResults": "No results"
     },
-    "createSheet": {
-      "title": "What would you like to add?",
-      "description": "Choose the type of item to add",
-      "entry": "Entry",
-      "entryDescription": "Create a new time entry",
-      "plan": "Plan",
-      "planDescription": "Create a new plan",
-      "record": "Record",
-      "recordDescription": "Log what you actually did",
-      "history": "Create from History",
-      "historyDescription": "Recreate from recently used items"
-    },
     "validation": {
       "required": "This field is required",
       "invalidUuid": "Please enter a valid ID",

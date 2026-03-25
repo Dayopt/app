@@ -12,9 +12,8 @@ import {
 } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useEntries, useEntryInspectorStore } from '@/features/entry';
-import { useTags } from '@/features/tags';
+import { TagIcon, useTags } from '@/features/tags';
 import { formatDateShort, formatTimeRange } from '@/lib/date/format';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
@@ -124,22 +123,19 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             {/* Tags */}
             {filteredTags.length > 0 && (
               <CommandGroup heading={t('tagsGroup')}>
-                {filteredTags.map((tag) => {
-                  const colorClasses = getTagColorClasses(tag.color);
-                  return (
-                    <CommandItem
-                      key={`tag-${tag.id}`}
-                      value={tag.name}
-                      onSelect={() => handleTagSelect(tag.id)}
-                      className="flex items-center gap-2"
-                    >
-                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorClasses.dot}`} />
-                      <span className="truncate">
-                        <HighlightedText text={tag.name} query={query} />
-                      </span>
-                    </CommandItem>
-                  );
-                })}
+                {filteredTags.map((tag) => (
+                  <CommandItem
+                    key={`tag-${tag.id}`}
+                    value={tag.name}
+                    onSelect={() => handleTagSelect(tag.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
+                    <span className="truncate">
+                      <HighlightedText text={tag.name} query={query} />
+                    </span>
+                  </CommandItem>
+                ))}
               </CommandGroup>
             )}
 
@@ -148,7 +144,6 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
               <CommandGroup heading={t('blocksGroup')}>
                 {filteredEntries.map((entry) => {
                   const tag = entry.tagId ? tags.find((t) => t.id === entry.tagId) : null;
-                  const colorClasses = getTagColorClasses(tag?.color);
                   const startDate = entry.start_time ? new Date(entry.start_time) : null;
                   const endDate = entry.end_time ? new Date(entry.end_time) : null;
 
@@ -159,7 +154,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                       onSelect={() => handleEntrySelect(entry.id, entry.start_time)}
                       className="flex items-center gap-2"
                     >
-                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${colorClasses.dot}`} />
+                      <TagIcon icon={tag?.icon} color={tag?.color} size="sm" className="shrink-0" />
                       <div className="flex min-w-0 flex-1 flex-col">
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           {tag && (

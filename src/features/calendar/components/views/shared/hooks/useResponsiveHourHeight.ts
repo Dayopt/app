@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { HOUR_HEIGHT, HOUR_HEIGHT_DENSITIES } from '../constants/grid.constants';
@@ -19,9 +20,9 @@ export function useResponsiveHourHeight(): number {
     const updateHourHeight = () => {
       const width = window.innerWidth;
 
-      if (width < 768) {
+      if (width < BREAKPOINT_VALUES.md) {
         setHourHeight(config.mobile);
-      } else if (width < 1024) {
+      } else if (width < BREAKPOINT_VALUES.lg) {
         setHourHeight(config.tablet);
       } else {
         setHourHeight(config.desktop);

@@ -21,6 +21,7 @@ import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/f
 import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { useTheme } from '@/hooks/useTheme';
 import { SidebarSection } from '@/shell/components/sidebar';
 
@@ -28,6 +29,7 @@ import { SidebarSection } from '@/shell/components/sidebar';
 export function SidebarContent() {
   const t = useTranslations();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
   const navigation = useCalendarNavigation();
   const { pinItem } = usePaletteMutations();
 
@@ -81,8 +83,8 @@ export function SidebarContent() {
       {/* パレット（ピン留めブロックのクイック配置） */}
       <Palette />
 
-      {/* 履歴（頻度×鮮度ベースの自動集計） */}
-      <RecentBlocks onPinItem={handlePinFromHistory} />
+      {/* 履歴（頻度×鮮度ベースの自動集計） — モバイルでは非表示 */}
+      {!isMobile && <RecentBlocks onPinItem={handlePinFromHistory} />}
 
       {/* テーマ切替 */}
       <SidebarUtilities />

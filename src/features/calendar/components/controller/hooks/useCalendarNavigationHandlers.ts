@@ -38,7 +38,7 @@ export function useCalendarNavigationHandlers({
       navigateToDate,
     });
 
-  // Navigation handlers using useCalendarLayout
+  // Navigation handlers using CalendarNavigationContext
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next' | 'today') => {
       logger.log(

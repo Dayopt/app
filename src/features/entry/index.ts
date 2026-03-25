@@ -88,3 +88,8 @@ export { LoadingState } from './components/shared/LoadingState';
 
 // Inspector hooks
 export { useInspectorKeyboard } from './components/inspector/hooks';
+
+// =============================================================================
+// Server (Service layer — for server-side consumers like ai feature)
+// =============================================================================
+export { EntryService } from './server/entry-service';

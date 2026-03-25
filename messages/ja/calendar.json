@@ -98,7 +98,9 @@
       "hoursBefore": "{hours}時間前",
       "minutesBefore": "{minutes}分前",
       "dropInvalid": "ドロップ先が無効です",
-      "dropFailed": "ドロップに失敗しました"
+      "dropFailed": "ドロップに失敗しました",
+      "weekendsShown": "週末を表示",
+      "weekendsHidden": "週末を非表示"
     },
     "actions": {
       "goToToday": "今日へ移動",
@@ -108,7 +110,8 @@
       "nextMonth": "次の月",
       "selectMonth": "月を選択",
       "selectYear": "年を選択",
-      "selectTimezone": "タイムゾーンを選択"
+      "selectTimezone": "タイムゾーンを選択",
+      "closeMiniCalendar": "ミニカレンダーを閉じる"
     },
     "errors": {
       "loadFailed": "カレンダーの読み込みに失敗しました",
@@ -128,6 +131,7 @@
       "addTagToGroup": "タグを追加",
       "rename": "名前を変更",
       "changeColor": "カラーを変更",
+      "changeIcon": "アイコンを変更",
       "editNote": "ノートを編集",
       "noteLabel": "ノート",
       "noteHint": "ツールチップに表示されます",
@@ -135,6 +139,8 @@
       "changeGroup": "グループを変更",
       "merge": "他のタグに統合",
       "showOnlyThis": "このタグだけ表示",
+      "hide": "カレンダーから非表示",
+      "show": "カレンダーに表示",
       "noGroup": "グループなし",
       "deleteTag": {
         "title": "「{name}」を削除",
@@ -173,6 +179,12 @@
       "searchPlaceholder": "タグを検索...",
       "noResults": "タグが見つかりません",
       "createPlaceholder": "例: 仕事、勉強、運動...",
+      "new": "新規",
+      "create": "作成",
+      "color": "色",
+      "icon": "アイコン",
+      "group": "グループ",
+      "noGroup": "なし",
       "emptyTitle": "タグで時間を分類しよう",
       "emptyDescription": "タップで選ぶか、下の入力欄から自由に作成",
       "sampleTags": {

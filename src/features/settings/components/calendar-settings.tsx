@@ -85,72 +85,66 @@ export function CalendarSettings() {
     <div className="space-y-8">
       {/* Default View Section */}
       <SectionCard title={t('settings.calendar.defaultViewSection')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.calendar.defaultView')}>
-            <Select value={settings.defaultView} onValueChange={handleDefaultViewChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectDefaultView')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="day">{t('settings.calendar.viewDay')}</SelectItem>
-                <SelectItem value="3day">{t('settings.calendar.view3Day')}</SelectItem>
-                <SelectItem value="5day">{t('settings.calendar.view5Day')}</SelectItem>
-                <SelectItem value="week">{t('settings.calendar.viewWeek')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.calendar.defaultView')}>
+          <Select value={settings.defaultView} onValueChange={handleDefaultViewChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectDefaultView')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">{t('settings.calendar.viewDay')}</SelectItem>
+              <SelectItem value="3day">{t('settings.calendar.view3Day')}</SelectItem>
+              <SelectItem value="5day">{t('settings.calendar.view5Day')}</SelectItem>
+              <SelectItem value="week">{t('settings.calendar.viewWeek')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
       </SectionCard>
 
       {/* Display Section */}
       <SectionCard title={t('settings.calendar.weekAndCalendar')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.calendar.showWeekNumbers')}>
-            <Switch
-              checked={settings.showWeekNumbers}
-              onCheckedChange={handleShowWeekNumbersChange}
-            />
-          </LabeledRow>
-          <LabeledRow label={t('settings.calendar.showWeekends')}>
-            <Switch checked={settings.showWeekends} onCheckedChange={handleShowWeekendsChange} />
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.calendar.showWeekNumbers')}>
+          <Switch
+            checked={settings.showWeekNumbers}
+            onCheckedChange={handleShowWeekNumbersChange}
+          />
+        </LabeledRow>
+        <LabeledRow label={t('settings.calendar.showWeekends')}>
+          <Switch checked={settings.showWeekends} onCheckedChange={handleShowWeekendsChange} />
+        </LabeledRow>
       </SectionCard>
 
       {/* Default Task Settings Section */}
       <SectionCard title={t('settings.calendar.defaultTaskSettings')}>
-        <div className="space-y-0">
-          <LabeledRow label={t('settings.calendar.defaultDuration')}>
-            <Select
-              value={String(settings.defaultDuration)}
-              onValueChange={handleDefaultDurationChange}
-            >
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectDuration')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">{t('settings.calendar.duration15min')}</SelectItem>
-                <SelectItem value="30">{t('settings.calendar.duration30min')}</SelectItem>
-                <SelectItem value="60">{t('settings.calendar.duration1hour')}</SelectItem>
-                <SelectItem value="90">{t('settings.calendar.duration1hour30min')}</SelectItem>
-                <SelectItem value="120">{t('settings.calendar.duration2hours')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-          <LabeledRow label={t('settings.calendar.snapInterval')}>
-            <Select value={String(settings.snapInterval)} onValueChange={handleSnapIntervalChange}>
-              <SelectTrigger variant="ghost">
-                <SelectValue placeholder={t('settings.calendar.selectInterval')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">{t('settings.calendar.interval5min')}</SelectItem>
-                <SelectItem value="10">{t('settings.calendar.interval10min')}</SelectItem>
-                <SelectItem value="15">{t('settings.calendar.interval15min')}</SelectItem>
-                <SelectItem value="30">{t('settings.calendar.interval30min')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </LabeledRow>
-        </div>
+        <LabeledRow label={t('settings.calendar.defaultDuration')}>
+          <Select
+            value={String(settings.defaultDuration)}
+            onValueChange={handleDefaultDurationChange}
+          >
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectDuration')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="15">{t('settings.calendar.duration15min')}</SelectItem>
+              <SelectItem value="30">{t('settings.calendar.duration30min')}</SelectItem>
+              <SelectItem value="60">{t('settings.calendar.duration1hour')}</SelectItem>
+              <SelectItem value="90">{t('settings.calendar.duration1hour30min')}</SelectItem>
+              <SelectItem value="120">{t('settings.calendar.duration2hours')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow label={t('settings.calendar.snapInterval')}>
+          <Select value={String(settings.snapInterval)} onValueChange={handleSnapIntervalChange}>
+            <SelectTrigger variant="ghost">
+              <SelectValue placeholder={t('settings.calendar.selectInterval')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">{t('settings.calendar.interval5min')}</SelectItem>
+              <SelectItem value="10">{t('settings.calendar.interval10min')}</SelectItem>
+              <SelectItem value="15">{t('settings.calendar.interval15min')}</SelectItem>
+              <SelectItem value="30">{t('settings.calendar.interval30min')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
       </SectionCard>
     </div>
   );

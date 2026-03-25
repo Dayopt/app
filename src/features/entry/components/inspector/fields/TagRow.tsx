@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { TagQuickSelector } from '@/features/tags';
+import { TagIcon, TagQuickSelector } from '@/features/tags';
 import type { TagColorEntry } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,10 @@ interface TagRowProps {
   tagName?: string | undefined;
   /** 解決済みのタグ色クラス（tagId が null なら undefined） */
   tagColorClasses?: TagColorEntry | undefined;
+  /** 解決済みのタグアイコン名（tagId が null なら undefined） */
+  tagIcon?: string | null | undefined;
+  /** 解決済みのタグ色名（tagIcon表示に使用） */
+  tagColor?: string | null | undefined;
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
   onCreateAndSelect: (name: string, color?: string | null) => void;
@@ -43,6 +47,8 @@ export function TagRow({
   tagId,
   tagName,
   tagColorClasses: colorClasses,
+  tagIcon,
+  tagColor,
   onTagChange,
   onCreateAndSelect,
   onPinToPalette,
@@ -78,17 +84,16 @@ export function TagRow({
           ref={buttonRef}
           type="button"
           onClick={() => setSelectorOpen(true)}
-          className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-base font-semibold transition-colors"
+          className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-lg font-semibold transition-colors"
           aria-label={hasTag ? `${t('common.tags.change')}: ${tagName}` : t('common.tags.add')}
         >
           {hasTag ? (
             <>
-              <span
-                className={cn(
-                  'inline-block size-2.5 flex-shrink-0 rounded-full',
-                  colorClasses?.dot ?? 'bg-muted-foreground',
-                )}
-                aria-hidden
+              <TagIcon
+                icon={tagIcon ?? null}
+                color={tagColor ?? colorClasses?.cssVar}
+                size="sm"
+                className="flex-shrink-0"
               />
               <ColonTagLabel name={tagName} className="text-foreground" />
               <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
@@ -117,7 +122,7 @@ export function TagRow({
                 type="button"
                 onClick={isPinnedInPalette ? undefined : onPinToPalette}
                 className={cn(
-                  'flex size-8 items-center justify-center rounded-lg transition-colors',
+                  'flex size-10 items-center justify-center rounded-lg transition-colors',
                   isPinnedInPalette
                     ? 'text-warning cursor-default'
                     : 'text-muted-foreground hover:text-foreground hover:bg-state-hover',
@@ -125,7 +130,7 @@ export function TagRow({
                 aria-label={t('common.actions.addToPalette')}
                 aria-pressed={isPinnedInPalette}
               >
-                <Star className={cn('size-4', isPinnedInPalette && 'fill-current')} />
+                <Star className={cn('size-5', isPinnedInPalette && 'fill-current')} />
               </button>
             </HoverTooltip>
           )}
@@ -133,10 +138,10 @@ export function TagRow({
             <button
               type="button"
               onClick={onDelete}
-              className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-8 items-center justify-center rounded-lg transition-colors"
+              className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
               aria-label={t('common.actions.delete')}
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-5" />
             </button>
           )}
         </div>

@@ -19,6 +19,7 @@
       "displayNameDesc": "Name shown to other users",
       "displayNamePlaceholder": "Enter display name",
       "email": "Email Address",
+      "noEmail": "Not set",
       "emailDesc": "Email address associated with your account",
       "emailPlaceholder": "Enter email address",
       "emailChange": {
@@ -697,6 +698,17 @@
         "cookies": "Cookie Settings",
         "ossCredits": "Open Source Licenses"
       }
+    },
+    "accountPage": {
+      "helpAndSupport": "Help & Support",
+      "releaseNotes": "Release Notes",
+      "documentation": "Documentation",
+      "termsOfService": "Terms of Service",
+      "privacyPolicy": "Privacy Policy",
+      "tokushoho": "Commercial Disclosure",
+      "security": "Security",
+      "contact": "Contact Us",
+      "legal": "Legal"
     },
     "billing": {
       "cancelPlan": "Cancel Plan",

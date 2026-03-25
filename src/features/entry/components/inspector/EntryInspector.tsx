@@ -11,8 +11,6 @@
  * content の重複なし: EntryInspectorForm を一度だけ描画。
  */
 
-import { useState } from 'react';
-
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
@@ -21,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
 import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
@@ -35,9 +34,6 @@ function InspectorURLSyncHandler() {
   return null;
 }
 
-/** モバイル Drawer のスナップポイント */
-const SNAP_POINTS = [1] as const;
-
 interface EntryInspectorProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
   onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
@@ -48,8 +44,7 @@ interface EntryInspectorProps {
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
 export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
   const t = useTranslations();
-  const isMobile = useMediaQuery('(max-width: 767px)');
-  const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
+  const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
@@ -128,18 +123,11 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
       {urlSyncElement}
 
       {isMobile ? (
-        <Drawer
-          open={isOpen}
-          onOpenChange={(open) => !open && handleClose()}
-          snapPoints={SNAP_POINTS as unknown as (number | string)[]}
-          activeSnapPoint={snap}
-          setActiveSnapPoint={setSnap}
-          fadeFromIndex={1}
-        >
-          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-none p-0 [&>div:first-child]:hidden">
+        <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-xl p-0 [&>div:first-child]:hidden">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
-              <div className="bg-border h-1.5 w-12 rounded-full" />
+              <div className="bg-border h-1.5 w-16 rounded-full" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
           </DrawerContent>

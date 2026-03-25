@@ -37,7 +37,7 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 1. **UIコンポーネント使用前に確認**: `*.stories.tsx` を読んで使用可能なパターンを確認
 2. **Storyにないパターンは提案しない**: コンポーネントが技術的に対応していても、Storyにないものは使わない
 3. **新パターンが必要な場合**: 先にStoryを追加してからコードで使用する
-4. **デザイントークン確認**: `src/stories/tokens/` のStoryで色・タイポグラフィ・余白の使用パターンを確認
+4. **デザイントークン確認**: `src/styles/tokens/` のStoryで色・タイポグラフィ・余白の使用パターンを確認
 
 ---
 
@@ -48,10 +48,9 @@ Storybookの公式ベストプラクティスに基づいたStory作成ガイド
 ```
 コンポーネントの場所は？
 │
-├── src/stories/tokens/          → Foundations  → templates/foundations.md
+├── src/styles/tokens/            → Foundations  → templates/foundations.md
 ├── src/components/ui/           → Components  → templates/components.md
 ├── src/components/common/       → Components  → templates/components.md
-├── src/core/components/         → Components  → templates/components.md
 ├── src/shell/components/        → Components  → templates/components.md
 ├── src/features/*/components/   → Components  → templates/components.md
 └── src/stories/patterns/        → Patterns    → templates/patterns.md

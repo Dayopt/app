@@ -62,23 +62,23 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
   }, [t, router]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* メールアドレス */}
       <SectionCard title={t('settings.account.email')}>
-        <LabeledRow label={email}>
-          <Button variant="outline" onClick={() => setShowEmailDialog(true)}>
-            {t('common.change')}
-          </Button>
-        </LabeledRow>
+        <LabeledRow
+          label={email || t('settings.account.noEmail')}
+          variant="navigate"
+          onClick={() => setShowEmailDialog(true)}
+        />
       </SectionCard>
 
       {/* パスワード */}
       <SectionCard title={t('settings.account.password')}>
-        <LabeledRow label="••••••••">
-          <Button variant="outline" onClick={() => setShowPasswordDialog(true)}>
-            {t('common.change')}
-          </Button>
-        </LabeledRow>
+        <LabeledRow
+          label="••••••••"
+          variant="navigate"
+          onClick={() => setShowPasswordDialog(true)}
+        />
       </SectionCard>
 
       {/* 2段階認証 */}

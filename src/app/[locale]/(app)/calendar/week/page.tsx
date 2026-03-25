@@ -33,11 +33,7 @@ async function WeekPageContent({ locale, date }: { locale: Locale; date: string 
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <CalendarViewClient
-        view="week"
-        initialDate={initialDate ?? null}
-        translations={translations}
-      />
+      <CalendarViewClient translations={translations} />
     </HydrationBoundary>
   );
 }

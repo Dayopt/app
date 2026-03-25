@@ -8,6 +8,9 @@
 // Components
 export { Palette } from './components/Palette';
 
+// Constants
+export { DURATION_PRESETS } from './constants';
+
 // Hooks
 export { usePaletteItems, usePaletteMutations } from './hooks';
 export type { PaletteItem } from './hooks';

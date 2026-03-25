@@ -7,7 +7,7 @@ import { EntryCardContent } from './EntryCardContent';
 /**
  * EntryCardContent — カードの内部コンテンツ。
  *
- * タグ名・時間帯・繰り返しアイコン・リマインダーアイコンを表示する。
+ * タグ名・時間帯を表示する。
  * EntryCard の内側で使われるが、独立してテスト可能な純粋コンポーネント。
  */
 const meta = {
@@ -89,19 +89,6 @@ export const Compact: Story = {
   ),
 };
 
-/** リマインダー設定あり。Bell アイコンが表示される。 */
-export const WithReminder: Story = {
-  render: () => (
-    <CardSlot>
-      <EntryCardContent
-        plan={{ ...baseEntry, reminder_minutes: 15 }}
-        tagName="締め切り確認"
-        timeFormat="24h"
-      />
-    </CardSlot>
-  ),
-};
-
 /** プレビュー時刻（ドラッグ中の仮表示）。実際の plan の時刻ではなく previewTime が使われる。 */
 export const WithPreviewTime: Story = {
   render: () => (
@@ -180,13 +167,6 @@ export const AllPatterns: Story = {
         <div className="bg-card relative h-7 w-48 overflow-hidden rounded-r-lg px-2 text-xs">
           <EntryCardContent plan={baseEntry} tagName="仕事" isCompact />
         </div>
-      </section>
-
-      <section>
-        <p className="text-muted-foreground mb-1 text-xs">WithReminder（ベルアイコン）</p>
-        <CardSlot>
-          <EntryCardContent plan={{ ...baseEntry, reminder_minutes: 15 }} tagName="締め切り確認" />
-        </CardSlot>
       </section>
 
       <section>

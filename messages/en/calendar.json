@@ -98,7 +98,9 @@
       "hoursBefore": "{hours} hours before",
       "minutesBefore": "{minutes} minutes before",
       "dropInvalid": "Invalid drop target",
-      "dropFailed": "Drop failed"
+      "dropFailed": "Drop failed",
+      "weekendsShown": "Weekends shown",
+      "weekendsHidden": "Weekends hidden"
     },
     "actions": {
       "goToToday": "Go to today",
@@ -108,7 +110,8 @@
       "nextMonth": "Next month",
       "selectMonth": "Select month",
       "selectYear": "Select year",
-      "selectTimezone": "Select timezone"
+      "selectTimezone": "Select timezone",
+      "closeMiniCalendar": "Close mini calendar"
     },
     "errors": {
       "loadFailed": "Failed to load calendar",
@@ -128,6 +131,7 @@
       "addTagToGroup": "Add tag to group",
       "rename": "Rename",
       "changeColor": "Change color",
+      "changeIcon": "Change icon",
       "editNote": "Edit note",
       "noteLabel": "Note",
       "noteHint": "Displayed in tooltip",
@@ -135,6 +139,8 @@
       "changeGroup": "Change group",
       "merge": "Merge into another tag",
       "showOnlyThis": "Show only this",
+      "hide": "Hide from calendar",
+      "show": "Show in calendar",
       "noGroup": "No group",
       "deleteTag": {
         "title": "Delete \"{name}\"",
@@ -173,6 +179,12 @@
       "searchPlaceholder": "Search tags...",
       "noResults": "No tags found",
       "createPlaceholder": "e.g. Work, Study, Exercise...",
+      "new": "New",
+      "create": "Create",
+      "color": "Color",
+      "icon": "Icon",
+      "group": "Group",
+      "noGroup": "None",
       "emptyTitle": "Tags categorize your time",
       "emptyDescription": "Pick one to get started, or create your own below",
       "sampleTags": {

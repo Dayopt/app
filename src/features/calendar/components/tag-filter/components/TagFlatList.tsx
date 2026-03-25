@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
+
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import {
   DndContext,
@@ -21,13 +23,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslations } from 'next-intl';
 
-import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import type { Tag } from '@/features/tags';
 import {
   TagDeleteStrategyDialog,
+  TagIcon,
   buildColonTagName,
   getTagDisplayLabel,
   parseColonTag,
@@ -39,7 +41,7 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
-import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
+import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -76,6 +78,8 @@ interface TagFlatListProps {
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
+  /** モバイル時: DnD無効・メニュー簡略化 */
+  isMobile?: boolean;
 }
 
 /**
@@ -94,6 +98,7 @@ export function TagFlatList({
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
+  isMobile,
 }: TagFlatListProps) {
   // グループ折りたたみ状態
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -259,31 +264,118 @@ export function TagFlatList({
     [tags],
   );
 
+  // 表示対象のアイテム（折りたたみ非表示を除外）のインデックスを事前計算
+  const visibleIndices = useMemo(() => {
+    return tagDisplayInfos
+      .map((info, i) => ({ info, i }))
+      .filter(({ info }) => {
+        const isHiddenByCollapse =
+          info.isGrouped && !info.isFirstInGroup && collapsedGroups.has(info.prefix);
+        return !isHiddenByCollapse;
+      })
+      .map(({ i }) => i);
+  }, [tagDisplayInfos, collapsedGroups]);
+
+  // 仮想スクロール: 表示アイテムが多い場合のみ有効化
+  const VIRTUALIZATION_THRESHOLD = 30;
+  const shouldVirtualize = visibleIndices.length > VIRTUALIZATION_THRESHOLD;
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // アイテム高さ推定: GroupHeader付き = 60px, 通常 = 32px
+  const TAG_ROW_HEIGHT = 32;
+  const GROUP_HEADER_HEIGHT = 28;
+
+  // eslint-disable-next-line react-hooks/incompatible-library -- useVirtualizerの返り値はこのコンポーネント内でのみ使用し、子へのメモ化伝播は不要
+  const virtualizer = useVirtualizer({
+    count: visibleIndices.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: (index) => {
+      const realIndex = visibleIndices[index];
+      if (realIndex === undefined) return TAG_ROW_HEIGHT;
+      const info = tagDisplayInfos[realIndex];
+      if (!info) return TAG_ROW_HEIGHT;
+      return info.isFirstInGroup ? TAG_ROW_HEIGHT + GROUP_HEADER_HEIGHT : TAG_ROW_HEIGHT;
+    },
+    overscan: 5,
+    enabled: shouldVirtualize,
+  });
+
+  const renderItem = (info: TagDisplayInfo) => (
+    <SortableTagItem
+      key={info.tag.id}
+      tag={info.tag}
+      allTags={tags}
+      checked={visibleTagIds.has(info.tag.id)}
+      groupOptions={groupOptions}
+      isGrouped={info.isGrouped}
+      isFirstInGroup={info.isFirstInGroup}
+      groupTagIds={info.groupTagIds}
+      groupCount={info.groupCount}
+      groupVisibility={info.isGrouped ? getGroupVisibility(info.groupTagIds) : 'none'}
+      collapsed={collapsedGroups.has(info.prefix)}
+      isMobile={isMobile ?? false}
+      onToggle={() => onToggleTag(info.tag.id)}
+      onDeleteTag={() => onDeleteTag(info.tag.id, info.tag.name)}
+      onToggleGroupTags={onToggleGroupTags}
+      onShowOnlyGroupTags={onShowOnlyGroupTags}
+      onToggleCollapse={() => toggleGroupCollapse(info.prefix)}
+      getUngroupConflicts={getUngroupConflicts}
+      findTagByName={findTagByName}
+    />
+  );
+
+  // モバイル: DnDなしの素のリスト描画
+  if (isMobile) {
+    return <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>;
+  }
+
+  // 仮想化が不要な場合は従来通りの描画
+  if (!shouldVirtualize) {
+    return (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
+          {tagDisplayInfos.map((info) => renderItem(info))}
+        </SortableContext>
+      </DndContext>
+    );
+  }
+
+  // 仮想化モード: 表示範囲のアイテムのみレンダリング
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-        {tagDisplayInfos.map((info) => (
-          <SortableTagItem
-            key={info.tag.id}
-            tag={info.tag}
-            allTags={tags}
-            checked={visibleTagIds.has(info.tag.id)}
-            groupOptions={groupOptions}
-            isGrouped={info.isGrouped}
-            isFirstInGroup={info.isFirstInGroup}
-            groupTagIds={info.groupTagIds}
-            groupCount={info.groupCount}
-            groupVisibility={info.isGrouped ? getGroupVisibility(info.groupTagIds) : 'none'}
-            collapsed={collapsedGroups.has(info.prefix)}
-            onToggle={() => onToggleTag(info.tag.id)}
-            onDeleteTag={() => onDeleteTag(info.tag.id, info.tag.name)}
-            onToggleGroupTags={onToggleGroupTags}
-            onShowOnlyGroupTags={onShowOnlyGroupTags}
-            onToggleCollapse={() => toggleGroupCollapse(info.prefix)}
-            getUngroupConflicts={getUngroupConflicts}
-            findTagByName={findTagByName}
-          />
-        ))}
+        <div ref={scrollContainerRef} className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              position: 'relative',
+              width: '100%',
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const realIndex = visibleIndices[virtualRow.index];
+              if (realIndex === undefined) return null;
+              const info = tagDisplayInfos[realIndex];
+              if (!info) return null;
+              return (
+                <div
+                  key={info.tag.id}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {renderItem(info)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </SortableContext>
     </DndContext>
   );
@@ -300,6 +392,7 @@ function SortableTagItem({
   groupCount,
   groupVisibility,
   collapsed,
+  isMobile,
   onToggle,
   onDeleteTag,
   onToggleGroupTags,
@@ -318,6 +411,7 @@ function SortableTagItem({
   groupCount: number;
   groupVisibility: 'all' | 'none' | 'some';
   collapsed: boolean;
+  isMobile?: boolean;
   onToggle: () => void;
   onDeleteTag: () => void;
   onToggleGroupTags: (tagIds: string[]) => void;
@@ -337,7 +431,7 @@ function SortableTagItem({
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
-  const { displayColor, handleColorChange } = useFilterItemEdit({
+  const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
   });
@@ -466,13 +560,26 @@ function SortableTagItem({
     [groupTagIds, updateTagMutation],
   );
 
+  // グループ親タグのアイコン変更（吸収された親タグのIDで更新）
+  const parentTag = findTagByName(currentGroup);
+  const handleParentIconChange = useCallback(
+    (icon: string | null) => {
+      const targetId = parentTag?.id;
+      if (!targetId) return;
+      updateTagMutation.mutate({ id: targetId, icon });
+    },
+    [parentTag?.id, updateTagMutation],
+  );
+
   // 表示名: グループ内ならsuffix部分のみ
   const displayLabel = getTagDisplayLabel(tag.name, isGrouped);
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
+  const style = isMobile
+    ? undefined
+    : {
+        transform: CSS.Translate.toString(transform),
+        transition,
+      };
 
   // 折りたたみ時: グループ先頭以外は非表示
   const isHiddenByCollapse = isGrouped && !isFirstInGroup && collapsed;
@@ -482,9 +589,8 @@ function SortableTagItem({
       <div
         ref={setNodeRef}
         style={style}
-        className={cn(isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
-        {...attributes}
-        {...listeners}
+        className={cn(!isMobile && isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
+        {...(isMobile ? {} : { ...attributes, ...listeners })}
         role="listitem"
       >
         {/* グループ先頭タグの場合、GroupHeader を描画 */}
@@ -495,10 +601,13 @@ function SortableTagItem({
             indeterminate={groupVisibility === 'some'}
             collapsed={collapsed}
             displayColor={displayColor}
+            isMobile={isMobile ?? false}
             onCheckedChange={() => onToggleGroupTags(groupTagIds)}
             onToggleCollapse={onToggleCollapse}
             onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
             onColorChange={handleGroupColorChange}
+            onIconChange={parentTag ? handleParentIconChange : undefined}
+            currentIcon={parentTag?.icon ?? tag.icon}
             onAddTagToGroup={() => openTagCreateModal(currentGroup)}
             onRenameGroup={() => setShowGroupRenameDialog(true)}
             onUngroupTags={handleUngroupTags}
@@ -510,30 +619,45 @@ function SortableTagItem({
         {!(isFirstInGroup && collapsed) && (
           <div
             className={cn(
-              'group/item flex h-8 items-center rounded text-sm',
-              'hover:bg-state-hover cursor-grab active:cursor-grabbing',
+              'group/item flex items-center rounded text-sm',
+              isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
+              'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
               isGrouped && 'pl-3',
+              !checked && 'opacity-50',
             )}
           >
-            <Checkbox
-              checked={checked}
-              onCheckedChange={onToggle}
-              aria-label={tag.name}
-              className="ml-2 shrink-0 cursor-pointer"
-              style={{
-                borderColor: getTagColorClasses(displayColor).cssVar,
-                backgroundColor: checked ? getTagColorClasses(displayColor).cssVar : 'transparent',
-              }}
-            />
+            {/* タグアイコン */}
+            <span className="ml-2 shrink-0">
+              <TagIcon icon={tag.icon} color={displayColor} size="sm" />
+            </span>
+
             <HoverTooltip
               content={tag.name}
               side="top"
               disabled={menuOpen}
-              wrapperClassName="ml-1 min-w-0 flex-1"
+              wrapperClassName="ml-1.5 min-w-0 flex-1"
             >
               <span className="min-w-0 truncate">{displayLabel}</span>
             </HoverTooltip>
+
+            {/* 👁 フィルタートグル */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
+              className={cn(
+                'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+                checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+                isMobile && 'opacity-100',
+              )}
+            >
+              {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+            </button>
 
             {/* Menu */}
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -541,7 +665,7 @@ function SortableTagItem({
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-['']"
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -550,11 +674,14 @@ function SortableTagItem({
               </DropdownMenuTrigger>
               <FilterItemMenu
                 displayColor={displayColor}
+                currentIcon={tag.icon}
                 currentGroup={suffix !== null ? currentGroup : null}
                 groupOptions={groupOptions}
                 isGrouped={isGrouped}
+                isMobile={isMobile ?? false}
                 onOpenRenameDialog={() => setShowRenameDialog(true)}
                 onColorChange={handleColorChange}
+                onIconChange={handleIconChange}
                 onChangeGroup={handleChangeGroup}
                 onOpenMergeModal={() =>
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })

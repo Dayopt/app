@@ -21,7 +21,7 @@ export function ReminderRow({ value, onChange }: ReminderRowProps) {
   const t = useTranslations();
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex min-h-11 items-center justify-between">
       <div className="flex items-center gap-2">
         <Bell className="text-muted-foreground size-4 flex-shrink-0" />
         <span className="text-muted-foreground text-sm">{t('common.reminder.label')}</span>

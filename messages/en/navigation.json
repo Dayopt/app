@@ -25,6 +25,12 @@
         "notifications": "Notifications"
       }
     },
+    "bottomTab": {
+      "calendar": "Calendar",
+      "stats": "Stats",
+      "notifications": "Notifications",
+      "account": "Account"
+    },
     "navUser": {
       "myAccount": "My Account",
       "account": "Account",

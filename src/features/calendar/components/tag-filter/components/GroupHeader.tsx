@@ -5,16 +5,17 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ChevronRight,
   Eye,
+  EyeOff,
   MoreHorizontal,
   Palette,
   Pencil,
   Plus,
+  Smile,
   Trash2,
   Unlink,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Checkbox } from '@/components/ui/checkbox';
 import { ColorPaletteMenuItems } from '@/components/ui/color-palette-picker';
 import {
   DropdownMenu,
@@ -26,8 +27,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { IconPicker, TagIcon } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface GroupHeaderProps {
@@ -36,10 +37,14 @@ interface GroupHeaderProps {
   indeterminate: boolean;
   collapsed: boolean;
   displayColor: string;
+  /** モバイル時: メニュー項目を簡略化（このグループだけ表示のみ） */
+  isMobile?: boolean;
   onCheckedChange: () => void;
   onToggleCollapse: () => void;
   onShowOnlyGroup: () => void;
   onColorChange: (color: TagColorName) => void;
+  onIconChange?: ((icon: string | null) => void) | undefined;
+  currentIcon?: string | null | undefined;
   onAddTagToGroup?: (() => void) | undefined;
   onRenameGroup?: (() => void) | undefined;
   onUngroupTags?: (() => void) | undefined;
@@ -57,10 +62,13 @@ export function GroupHeader({
   indeterminate,
   collapsed,
   displayColor,
+  isMobile,
   onCheckedChange,
   onToggleCollapse,
   onShowOnlyGroup,
   onColorChange,
+  onIconChange,
+  currentIcon,
   onAddTagToGroup,
   onRenameGroup,
   onUngroupTags,
@@ -97,23 +105,19 @@ export function GroupHeader({
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm font-medium',
+        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded text-sm font-medium',
+        isMobile ? 'h-11' : 'h-8',
         menuOpen && 'bg-state-selected',
+        !checked && !indeterminate && 'opacity-50',
       )}
       onClick={handleRowClick}
       onContextMenu={handleContextMenu}
     >
-      <Checkbox
-        checked={indeterminate ? 'indeterminate' : checked}
-        onCheckedChange={onCheckedChange}
-        className="ml-2 shrink-0 cursor-pointer"
-        style={{
-          borderColor: getTagColorClasses(displayColor).cssVar,
-          backgroundColor:
-            checked || indeterminate ? getTagColorClasses(displayColor).cssVar : 'transparent',
-        }}
-      />
-      <span className="ml-1 min-w-0 truncate">{label}</span>
+      {/* グループアイコン */}
+      <span className="ml-2 shrink-0">
+        <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
+      </span>
+      <span className="ml-1.5 min-w-0 truncate">{label}</span>
       <ChevronRight
         className={cn(
           'text-muted-foreground ml-1 size-4 shrink-0 transition-transform',
@@ -122,6 +126,23 @@ export function GroupHeader({
       />
 
       <div className="flex-1" />
+
+      {/* 👁 フィルタートグル */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCheckedChange();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={cn(
+          'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+          checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+          isMobile && 'opacity-100',
+        )}
+      >
+        {checked || indeterminate ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+      </button>
 
       {/* Menu */}
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
@@ -137,44 +158,74 @@ export function GroupHeader({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
-          {onAddTagToGroup && (
-            <DropdownMenuItem onClick={onAddTagToGroup}>
-              <Plus className="mr-2 size-4" />
-              {t('calendar.filter.addTagToGroup')}
+          {isMobile ? (
+            <DropdownMenuItem onClick={onShowOnlyGroup}>
+              <Eye className="mr-2 size-4" />
+              {t('calendar.filter.showOnlyThis')}
             </DropdownMenuItem>
-          )}
-          {onRenameGroup && (
-            <DropdownMenuItem onClick={onRenameGroup}>
-              <Pencil className="mr-2 size-4" />
-              {t('calendar.filter.rename')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <Palette className="mr-2 size-4" />
-              {t('calendar.filter.changeColor')}
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
-              <ColorPaletteMenuItems selectedColor={displayColor} onColorSelect={onColorChange} />
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-          {onUngroupTags && (
-            <DropdownMenuItem onClick={onUngroupTags}>
-              <Unlink className="mr-2 size-4" />
-              {t('calendar.filter.ungroupTags')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={onShowOnlyGroup}>
-            <Eye className="mr-2 size-4" />
-            {t('calendar.filter.showOnlyThis')}
-          </DropdownMenuItem>
-          {onDeleteGroup && (
+          ) : (
             <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
-                <Trash2 className="mr-2 size-4" />
-                {t('calendar.filter.deleteGroup.label')}
+              {onAddTagToGroup && (
+                <DropdownMenuItem onClick={onAddTagToGroup}>
+                  <Plus className="mr-2 size-4" />
+                  {t('calendar.filter.addTagToGroup')}
+                </DropdownMenuItem>
+              )}
+              {onRenameGroup && (
+                <DropdownMenuItem onClick={onRenameGroup}>
+                  <Pencil className="mr-2 size-4" />
+                  {t('calendar.filter.rename')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Palette className="mr-2 size-4" />
+                  {t('calendar.filter.changeColor')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+                  <ColorPaletteMenuItems
+                    selectedColor={displayColor}
+                    onColorSelect={onColorChange}
+                  />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {onIconChange && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Smile className="mr-2 size-4" />
+                    {t('calendar.filter.changeIcon')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent
+                    className="max-h-80 w-72 overflow-y-auto p-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconPicker
+                      value={currentIcon ?? null}
+                      onChange={onIconChange}
+                      color={displayColor}
+                    />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+              {onUngroupTags && (
+                <DropdownMenuItem onClick={onUngroupTags}>
+                  <Unlink className="mr-2 size-4" />
+                  {t('calendar.filter.ungroupTags')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={onShowOnlyGroup}>
+                <Eye className="mr-2 size-4" />
+                {t('calendar.filter.showOnlyThis')}
               </DropdownMenuItem>
+              {onDeleteGroup && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    {t('calendar.filter.deleteGroup.label')}
+                  </DropdownMenuItem>
+                </>
+              )}
             </>
           )}
         </DropdownMenuContent>

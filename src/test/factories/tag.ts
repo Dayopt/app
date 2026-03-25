@@ -12,6 +12,7 @@ export function createMockTag(overrides: Partial<TagRow> = {}): TagRow {
     user_id: 'test-user-id',
     name: 'Test Tag',
     color: 'blue',
+    icon: null,
     is_active: true,
     sort_order: 0,
     created_at: now,

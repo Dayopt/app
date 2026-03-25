@@ -164,15 +164,7 @@ export const CurrentTimeLineForColumn = memo<{
     >
       {/* ドット（今日の場合のみ、列の左端） */}
       {showDot && isToday && (
-        <div
-          className="border-background bg-primary absolute rounded-full border-2 shadow-sm"
-          style={{
-            left: `-4px`,
-            top: `-4px`,
-            width: '8px',
-            height: '8px',
-          }}
-        />
+        <div className="border-background bg-primary absolute -top-1 -left-1 size-2 rounded-full border-2 shadow-sm" />
       )}
 
       {/* 時刻線 - 今日は濃く、他の日は薄く */}

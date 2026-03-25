@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { PanelLeft } from 'lucide-react';
+
 import { DnDProvider, isCalendarViewPath } from '@/features/calendar';
 import { NotificationDropdown } from '@/features/notifications';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ interface DesktopLayoutProps {
 export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const pathname = usePathname();
   const isSidebarOpen = useLayoutStore.use.sidebarOpen();
+  const toggleSidebar = useLayoutStore.use.toggleSidebar();
   const title = usePageTitleStore((state) => state.title);
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
@@ -40,6 +43,18 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
     const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
     return isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/stats');
   }, [pathname, locale]);
+
+  // サイドバーが閉じているときに表示するトグルボタン
+  const sidebarToggle = !isSidebarOpen ? (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      aria-label="Open sidebar"
+    >
+      <PanelLeft className="size-4" />
+    </button>
+  ) : null;
 
   return (
     <DnDProvider>
@@ -66,7 +81,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
             {!hasOwnHeader && (
-              <AppHeader>
+              <AppHeader leftSlot={sidebarToggle}>
                 {title && <h1 className="truncate text-lg leading-8 font-bold">{title}</h1>}
               </AppHeader>
             )}

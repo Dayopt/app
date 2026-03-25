@@ -32,6 +32,7 @@ function transformDbTag(dbTag: DbTagRow): Tag {
     name: dbTag.name,
     user_id: dbTag.user_id,
     color: dbTag.color,
+    icon: dbTag.icon,
     is_active: dbTag.is_active,
     sort_order: dbTag.sort_order,
     created_at: dbTag.created_at,
@@ -65,12 +66,14 @@ async function callMergeTagsRpc(
 export interface CreateTagInput {
   name: string;
   color?: string | undefined;
+  icon?: string | undefined;
 }
 
 /** タグ更新入力 */
 export interface UpdateTagInput {
   name?: string | undefined;
   color?: string | undefined;
+  icon?: string | null | undefined;
 }
 
 /** タグ一覧取得オプション */
@@ -218,6 +221,7 @@ export class TagService {
       user_id: userId,
       name: input.name.trim(),
       color: input.color || 'blue',
+      icon: input.icon ?? null,
       is_active: true,
       sort_order: 0,
     };
@@ -260,6 +264,7 @@ export class TagService {
     const updateData: Database['public']['Tables']['tags']['Update'] = {};
     if (updates.name !== undefined) updateData.name = updates.name.trim();
     if (updates.color !== undefined) updateData.color = updates.color;
+    if (updates.icon !== undefined) updateData.icon = updates.icon;
 
     const { data, error } = await this.supabase
       .from('tags')
@@ -724,7 +729,7 @@ export class TagService {
     // タグ基本情報を取得
     const { data: tags, error: tagsError } = await this.supabase
       .from('tags')
-      .select('id, name, color')
+      .select('id, name, color, icon')
       .eq('user_id', userId)
       .eq('is_active', true);
 
@@ -761,6 +766,7 @@ export class TagService {
         id: tag.id,
         name: tag.name,
         color: tag.color,
+        icon: tag.icon,
         entry_count: entryCount,
         last_used_at: stats?.last_used ?? null,
       };
@@ -779,6 +785,7 @@ export interface TagStatsRow {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
   entry_count: number;
   last_used_at: string | null;
 }
