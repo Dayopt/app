@@ -706,7 +706,8 @@
       "privacyPolicy": "プライバシーポリシー",
       "tokushoho": "特定商取引法に基づく表記",
       "security": "セキュリティ",
-      "contact": "お問い合わせ"
+      "contact": "お問い合わせ",
+      "legal": "法的情報"
     },
     "billing": {
       "cancelPlan": "プランキャンセル",

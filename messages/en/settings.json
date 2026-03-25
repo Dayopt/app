@@ -706,7 +706,8 @@
       "privacyPolicy": "Privacy Policy",
       "tokushoho": "Commercial Disclosure",
       "security": "Security",
-      "contact": "Contact Us"
+      "contact": "Contact Us",
+      "legal": "Legal"
     },
     "billing": {
       "cancelPlan": "Cancel Plan",

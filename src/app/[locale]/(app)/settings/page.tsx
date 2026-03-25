@@ -1,18 +1,18 @@
 'use client';
 
 import { Link, useRouter } from '@/platform/i18n/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   Book,
-  Building,
+  ChevronDown,
   ChevronRight,
   ExternalLink,
   FileText,
   LogOut,
   Megaphone,
   MessageSquare,
-  Shield,
+  Scale,
   Sparkles,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const { logout, isLoggingOut } = useLogout();
   const openContact = useContactStore((s) => s.open);
+  const [legalOpen, setLegalOpen] = useState(false);
 
   const displayName = getDisplayName(user, t('navigation.navUser.account'));
   const avatarUrl = getAvatarUrl(user);
@@ -78,30 +79,6 @@ export default function SettingsPage() {
       external: true,
     },
     {
-      labelKey: 'settings.accountPage.termsOfService',
-      href: `https://dayopt.app/${locale}/legal/terms`,
-      icon: FileText,
-      external: true,
-    },
-    {
-      labelKey: 'settings.accountPage.privacyPolicy',
-      href: `https://dayopt.app/${locale}/legal/privacy`,
-      icon: FileText,
-      external: true,
-    },
-    {
-      labelKey: 'settings.accountPage.tokushoho',
-      href: `https://dayopt.app/${locale}/legal/tokushoho`,
-      icon: Building,
-      external: true,
-    },
-    {
-      labelKey: 'settings.accountPage.security',
-      href: `https://dayopt.app/${locale}/legal/security`,
-      icon: Shield,
-      external: true,
-    },
-    {
       labelKey: 'settings.accountPage.contact',
       href: '#',
       icon: MessageSquare,
@@ -109,34 +86,56 @@ export default function SettingsPage() {
     },
   ];
 
+  const legalLinks: Array<{
+    labelKey: string;
+    href: string;
+  }> = [
+    {
+      labelKey: 'settings.accountPage.termsOfService',
+      href: `https://dayopt.app/${locale}/legal/terms`,
+    },
+    {
+      labelKey: 'settings.accountPage.privacyPolicy',
+      href: `https://dayopt.app/${locale}/legal/privacy`,
+    },
+    {
+      labelKey: 'settings.accountPage.tokushoho',
+      href: `https://dayopt.app/${locale}/legal/tokushoho`,
+    },
+    {
+      labelKey: 'settings.accountPage.security',
+      href: `https://dayopt.app/${locale}/legal/security`,
+    },
+  ];
+
   // Mobile: Instagram風アカウント概要ページ
   return (
     <ScrollArea className="flex-1">
-      {/* ヒーローエリア */}
-      <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-6">
-        <Avatar size="xl">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-          <AvatarFallback className="bg-foreground text-background text-xl">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="text-center">
-          <p className="text-lg font-semibold">{displayName}</p>
-          {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
+      {/* B. ヒーローエリア（タップでプロフィール遷移） */}
+      <Link href="/settings/profile" className="block">
+        <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-6">
+          <Avatar size="xl">
+            {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+            <AvatarFallback className="bg-foreground text-background text-xl">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="text-center">
+            <p className="text-lg font-semibold">{displayName}</p>
+            {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
+          </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-1"
-          onClick={() => router.push('/settings/billing')}
-        >
+      </Link>
+      {/* Upgrade ボタンはリンク外 */}
+      <div className="flex justify-center pb-6">
+        <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>
           <Sparkles className="size-4" />
           {t('navigation.navUser.upgradePlan')}
         </Button>
       </div>
 
       {/* 設定カテゴリ */}
-      <nav className="flex flex-col gap-1 p-2">
+      <nav className="flex flex-col p-2">
         {SETTINGS_CATEGORIES.map((category) => {
           const Icon = category.icon;
           return (
@@ -145,7 +144,8 @@ export default function SettingsPage() {
               href={`/settings/${category.id}`}
               className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
             >
-              <Icon className="size-5 shrink-0" />
+              {/* C. カテゴリアイコン色 */}
+              <Icon className="text-muted-foreground size-5 shrink-0" />
               <span className="flex-1 font-normal">{t(category.labelKey)}</span>
               <ChevronRight className="text-muted-foreground size-4" />
             </Link>
@@ -154,11 +154,8 @@ export default function SettingsPage() {
       </nav>
 
       {/* ヘルプ & サポート */}
-      <div className="border-border border-t px-2 pt-2">
-        <h2 className="text-muted-foreground px-4 py-2 text-xs font-medium">
-          {t('settings.accountPage.helpAndSupport')}
-        </h2>
-        <nav className="flex flex-col gap-1">
+      <div className="border-border border-t px-2 pt-1">
+        <nav className="flex flex-col">
           {helpLinks.map((link) => {
             const Icon = link.icon;
             if (link.onPress) {
@@ -167,9 +164,10 @@ export default function SettingsPage() {
                   key={link.labelKey}
                   type="button"
                   onClick={link.onPress}
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
                 >
-                  <Icon className="size-5 shrink-0" />
+                  {/* C. アイコン色 */}
+                  <Icon className="text-muted-foreground size-5 shrink-0" />
                   <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                 </button>
               );
@@ -180,28 +178,65 @@ export default function SettingsPage() {
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
               >
-                <Icon className="size-5 shrink-0" />
+                {/* C. アイコン色 + D. py-3 */}
+                <Icon className="text-muted-foreground size-5 shrink-0" />
                 <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                 {link.external && <ExternalLink className="text-muted-foreground size-3.5" />}
               </a>
             );
           })}
+
+          {/* E. 法的情報の折りたたみ */}
+          <button
+            type="button"
+            onClick={() => setLegalOpen((prev) => !prev)}
+            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+          >
+            <Scale className="text-muted-foreground size-5 shrink-0" />
+            <span className="flex-1 font-normal">{t('settings.accountPage.legal')}</span>
+            <ChevronDown
+              className={`text-muted-foreground size-4 transition-transform ${legalOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div
+            className={`grid transition-[grid-template-rows] duration-200 ${legalOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+          >
+            <div className="overflow-hidden">
+              {legalLinks.map((link) => (
+                <a
+                  key={link.labelKey}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-3 pr-4 pl-13 text-left text-sm transition-colors"
+                >
+                  <span className="flex-1 font-normal">{t(link.labelKey)}</span>
+                  <ExternalLink className="text-muted-foreground size-3.5" />
+                </a>
+              ))}
+            </div>
+          </div>
         </nav>
       </div>
 
       {/* ログアウト */}
-      <div className="border-border border-t p-4">
-        <Button
-          variant="ghost"
-          className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start gap-3"
+      <div className="border-border border-t px-2 pt-1 pb-16">
+        <button
+          type="button"
           onClick={logout}
           disabled={isLoggingOut}
+          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
         >
-          <LogOut className="size-5" />
-          {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
-        </Button>
+          <LogOut className="text-destructive size-5 shrink-0" />
+          <span className="flex-1 font-normal">
+            {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
+          </span>
+        </button>
+
+        {/* バージョン表示 */}
+        <p className="text-muted-foreground mt-2 px-4 text-xs">Dayopt v0.22.0</p>
       </div>
     </ScrollArea>
   );
