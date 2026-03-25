@@ -108,7 +108,8 @@
       "nextMonth": "Next month",
       "selectMonth": "Select month",
       "selectYear": "Select year",
-      "selectTimezone": "Select timezone"
+      "selectTimezone": "Select timezone",
+      "closeMiniCalendar": "Close mini calendar"
     },
     "errors": {
       "loadFailed": "Failed to load calendar",

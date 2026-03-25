@@ -205,9 +205,10 @@ const nextConfig = {
 
   // 実験的機能
   experimental: {
-    // React Compiler: useMemo/useCallbackを自動最適化
-    // 既存の手動メモ化（158ファイル・678箇所）と共存し、段階的に不要化できる
-    reactCompiler: true,
+    // React Compiler: 現在無効化
+    // next-intlのコンテキスト伝播と干渉するため、互換性が解決されるまで無効化
+    // @see https://github.com/amannn/next-intl/issues
+    // reactCompiler: true,
 
     // Partial Prerendering（PPR）- 現在無効化
     // Next.js canary版でのみ利用可能なため、stable版では無効化

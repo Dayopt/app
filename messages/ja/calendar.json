@@ -108,7 +108,8 @@
       "nextMonth": "次の月",
       "selectMonth": "月を選択",
       "selectYear": "年を選択",
-      "selectTimezone": "タイムゾーンを選択"
+      "selectTimezone": "タイムゾーンを選択",
+      "closeMiniCalendar": "ミニカレンダーを閉じる"
     },
     "errors": {
       "loadFailed": "カレンダーの読み込みに失敗しました",

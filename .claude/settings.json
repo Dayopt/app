@@ -1,48 +1,6 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/post-tool-format.sh",
-            "statusMessage": "Prettier でフォーマット中..."
-          }
-        ]
-      },
-      {
-        "matcher": "Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/post-tool-format.sh",
-            "statusMessage": "Prettier でフォーマット中..."
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/notification.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/stop-failure.sh",
-            "async": true
-          }
-        ]
-      }
-    ]
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
     "allow": [
@@ -120,7 +78,9 @@
       "WebSearch",
       "WebFetch",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(grep -r \"border-b\\\\|border-border\\\\|h-12\\\\|h-14\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/notifications/page.tsx)",
+      "Bash(grep -r \"h-12\\\\|h-14\\\\|border\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -144,8 +104,50 @@
       "Bash(wget:*)"
     ]
   },
-  "alwaysThinkingEnabled": true,
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  }
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-tool-format.sh",
+            "statusMessage": "Prettier でフォーマット中..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/post-tool-format.sh",
+            "statusMessage": "Prettier でフォーマット中..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/notification.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop-failure.sh",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": true
 }
