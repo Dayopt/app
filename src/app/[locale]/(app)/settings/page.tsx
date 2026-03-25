@@ -111,103 +111,98 @@ export default function SettingsPage() {
 
   // Mobile: Instagram風アカウント概要ページ
   return (
-    <>
-      <header className="border-border flex h-14 shrink-0 items-center border-b px-4">
-        <h1 className="text-lg font-bold">{t('navigation.navUser.myAccount')}</h1>
-      </header>
-      <ScrollArea className="flex-1">
-        {/* ヒーローエリア */}
-        <div className="flex flex-col items-center gap-3 px-4 py-6">
-          <Avatar size="xl">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-            <AvatarFallback className="bg-foreground text-background text-xl">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="text-center">
-            <p className="text-lg font-semibold">{displayName}</p>
-            {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-1"
-            onClick={() => router.push('/settings/billing')}
-          >
-            <Sparkles className="size-4" />
-            {t('navigation.navUser.upgradePlan')}
-          </Button>
+    <ScrollArea className="flex-1">
+      {/* ヒーローエリア */}
+      <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-6">
+        <Avatar size="xl">
+          {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+          <AvatarFallback className="bg-foreground text-background text-xl">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="text-center">
+          <p className="text-lg font-semibold">{displayName}</p>
+          {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-1"
+          onClick={() => router.push('/settings/billing')}
+        >
+          <Sparkles className="size-4" />
+          {t('navigation.navUser.upgradePlan')}
+        </Button>
+      </div>
 
-        {/* 設定カテゴリ */}
-        <nav className="flex flex-col gap-1 p-2">
-          {SETTINGS_CATEGORIES.map((category) => {
-            const Icon = category.icon;
-            return (
-              <Link
-                key={category.id}
-                href={`/settings/${category.id}`}
-                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
-              >
-                <Icon className="size-5 shrink-0" />
-                <span className="flex-1 font-normal">{t(category.labelKey)}</span>
-                <ChevronRight className="text-muted-foreground size-4" />
-              </Link>
-            );
-          })}
-        </nav>
+      {/* 設定カテゴリ */}
+      <nav className="flex flex-col gap-1 p-2">
+        {SETTINGS_CATEGORIES.map((category) => {
+          const Icon = category.icon;
+          return (
+            <Link
+              key={category.id}
+              href={`/settings/${category.id}`}
+              className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+            >
+              <Icon className="size-5 shrink-0" />
+              <span className="flex-1 font-normal">{t(category.labelKey)}</span>
+              <ChevronRight className="text-muted-foreground size-4" />
+            </Link>
+          );
+        })}
+      </nav>
 
-        {/* ヘルプ & サポート */}
-        <div className="border-border border-t px-2 pt-2">
-          <h2 className="text-muted-foreground px-4 py-2 text-xs font-medium">
-            {t('settings.accountPage.helpAndSupport')}
-          </h2>
-          <nav className="flex flex-col gap-1">
-            {helpLinks.map((link) => {
-              const Icon = link.icon;
-              if (link.onPress) {
-                return (
-                  <button
-                    key={link.labelKey}
-                    type="button"
-                    onClick={link.onPress}
-                    className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
-                  >
-                    <Icon className="size-5 shrink-0" />
-                    <span className="flex-1 font-normal">{t(link.labelKey)}</span>
-                  </button>
-                );
-              }
+      {/* ヘルプ & サポート */}
+      <div className="border-border border-t px-2 pt-2">
+        <h2 className="text-muted-foreground px-4 py-2 text-xs font-medium">
+          {t('settings.accountPage.helpAndSupport')}
+        </h2>
+        <nav className="flex flex-col gap-1">
+          {helpLinks.map((link) => {
+            const Icon = link.icon;
+            if (link.onPress) {
               return (
-                <a
+                <button
                   key={link.labelKey}
-                  href={link.href}
-                  target={link.external ? '_blank' : undefined}
-                  rel={link.external ? 'noopener noreferrer' : undefined}
+                  type="button"
+                  onClick={link.onPress}
                   className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
                 >
                   <Icon className="size-5 shrink-0" />
                   <span className="flex-1 font-normal">{t(link.labelKey)}</span>
-                  {link.external && <ExternalLink className="text-muted-foreground size-3.5" />}
-                </a>
+                </button>
               );
-            })}
-          </nav>
-        </div>
+            }
+            return (
+              <a
+                key={link.labelKey}
+                href={link.href}
+                target={link.external ? '_blank' : undefined}
+                rel={link.external ? 'noopener noreferrer' : undefined}
+                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+              >
+                <Icon className="size-5 shrink-0" />
+                <span className="flex-1 font-normal">{t(link.labelKey)}</span>
+                {link.external && <ExternalLink className="text-muted-foreground size-3.5" />}
+              </a>
+            );
+          })}
+        </nav>
+      </div>
 
-        {/* ログアウト */}
-        <div className="border-border border-t p-4">
-          <Button
-            variant="ghost"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start gap-3"
-            onClick={logout}
-            disabled={isLoggingOut}
-          >
-            <LogOut className="size-5" />
-            {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
-          </Button>
-        </div>
-      </ScrollArea>
-    </>
+      {/* ログアウト */}
+      <div className="border-border border-t p-4">
+        <Button
+          variant="ghost"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start gap-3"
+          onClick={logout}
+          disabled={isLoggingOut}
+        >
+          <LogOut className="size-5" />
+          {isLoggingOut ? t('navigation.navUser.loggingOut') : t('navigation.navUser.logout')}
+        </Button>
+      </div>
+    </ScrollArea>
   );
 }

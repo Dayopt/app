@@ -9,6 +9,7 @@ import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
 import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';
+import { MobileCreateSheet } from './MobileCreateSheet';
 import { MobileFilterSheet } from './MobileFilterSheet';
 
 interface MobileLayoutProps {
@@ -35,7 +36,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
     return (
       isCalendarViewPath(pathWithoutLocale) ||
       pathWithoutLocale.startsWith('/stats') ||
-      pathWithoutLocale.startsWith('/notifications')
+      pathWithoutLocale.startsWith('/notifications') ||
+      pathWithoutLocale === '/settings' ||
+      pathWithoutLocale.startsWith('/settings/')
     );
   }, [pathname, locale]);
 
@@ -53,6 +56,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
         {/* Main Content（BottomTabBar分の余白をpb-14で確保） */}
         <MainContentWrapper className="pb-14">{children}</MainContentWrapper>
       </div>
+
+      {/* 作成ボトムシート（Palette + RecentBlocks） */}
+      <MobileCreateSheet />
 
       {/* フィルター・パレットボトムシート */}
       <MobileFilterSheet />
