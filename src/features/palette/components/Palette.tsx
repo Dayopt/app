@@ -28,8 +28,13 @@ import { PaletteItemMenu } from './PaletteItemMenu';
 // Palette
 // ─────────────────────────────────────────────────────────
 
+interface PaletteProps {
+  /** 外部で追加フローを制御する場合のコールバック（モバイルシート内ビュー切り替え等） */
+  onAddClick?: (() => void) | undefined;
+}
+
 /** Palette — サイドバーのピン留めブロック配置セクション */
-export function Palette() {
+export function Palette({ onAddClick }: PaletteProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const { placeBlockNow } = useBlockPlace();
@@ -72,15 +77,19 @@ export function Palette() {
   const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleAddClick = useCallback(() => {
-    setAddPopoverOpen(true);
-  }, []);
+    if (onAddClick) {
+      onAddClick();
+    } else {
+      setAddPopoverOpen(true);
+    }
+  }, [onAddClick]);
 
   const addTrigger = (
     <Button
       ref={addButtonRef}
       variant="ghost"
       icon
-      className="size-8"
+      className="size-6"
       aria-label={t('sidebar.palette.add')}
       onClick={handleAddClick}
     >
