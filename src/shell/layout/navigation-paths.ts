@@ -11,7 +11,7 @@ export function getLocaleFromPathname(pathname: string | null | undefined): 'ja'
 export function buildCalendarPath(params: {
   locale: string;
   viewType: CalendarViewType;
-  currentDate?: Date | null;
+  currentDate?: Date | null | undefined;
 }): string {
   const searchParams = new URLSearchParams();
 
