@@ -1,10 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import type { NavigationDirection } from '@/components/common/DateNavigator';
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { AppHeader } from '@/shell/components/AppHeader';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
@@ -24,7 +25,7 @@ export interface CalendarLayoutProps {
   // Header props
   viewType: CalendarViewType;
   currentDate: Date;
-  onNavigate: (direction: 'prev' | 'next' | 'today') => void;
+  onNavigate: (direction: NavigationDirection) => void;
   onViewChange: (view: CalendarViewType) => void;
 
   // Date selection for mini calendar
@@ -75,17 +76,41 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const t = useTranslations('calendar');
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
 
+    // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
+    const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
+      key: 0,
+      direction: null,
+    });
+
+    // onNavigateをラップして方向を記録
+    const handleNavigate = useCallback(
+      (direction: NavigationDirection) => {
+        if (direction === 'prev' || direction === 'next') {
+          setSlide((prev) => ({ key: prev.key + 1, direction }));
+        }
+        onNavigate(direction);
+      },
+      [onNavigate],
+    );
+
     // スワイプで前後の期間に移動
     const handleSwipeLeft = useCallback(() => {
-      onNavigate('next');
-    }, [onNavigate]);
+      handleNavigate('next');
+    }, [handleNavigate]);
 
     const handleSwipeRight = useCallback(() => {
-      onNavigate('prev');
-    }, [onNavigate]);
+      handleNavigate('prev');
+    }, [handleNavigate]);
 
     // タッチイベントのみで動作（タッチイベントが発生 = タッチデバイス）
     const { handlers, ref } = useSwipeGesture(handleSwipeLeft, handleSwipeRight);
+
+    const slideClass =
+      slide.direction === 'next'
+        ? 'calendar-slide-next'
+        : slide.direction === 'prev'
+          ? 'calendar-slide-prev'
+          : '';
 
     return (
       <div className={cn('calendar-layout bg-background flex h-full flex-col', className)}>
@@ -95,7 +120,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         {/* モバイル: インライン展開ミニカレンダー */}
         <MobileCalendarHeader
           currentDate={currentDate}
-          onNavigate={onNavigate}
+          onNavigate={handleNavigate}
           onDateSelect={onDateSelect}
           displayRange={displayRange}
         />
@@ -105,7 +130,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           <AppHeader
             rightSlot={
               <div className="flex items-center gap-2">
-                <DateNavigator onNavigate={onNavigate} arrowSize="md" />
+                <DateNavigator onNavigate={handleNavigate} arrowSize="md" />
                 <ViewSwitcher
                   className="ml-4"
                   currentView={viewType}
@@ -135,7 +160,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           onTouchMove={handlers.onTouchMove}
           onTouchEnd={handlers.onTouchEnd}
         >
-          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+          <div key={slide.key} className={cn('flex min-h-0 flex-1 flex-col', slideClass)}>
+            {children}
+          </div>
         </div>
       </div>
     );

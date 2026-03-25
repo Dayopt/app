@@ -36,6 +36,40 @@
   }
 }
 
+/* 日付ナビゲーション: 次へ（コンテンツが右から入ってくる） */
+@keyframes calendar-slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(6%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 日付ナビゲーション: 前へ（コンテンツが左から入ってくる） */
+@keyframes calendar-slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-6%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.calendar-slide-next {
+  animation: calendar-slide-from-right 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.calendar-slide-prev {
+  animation: calendar-slide-from-left 0.2s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  will-change: transform, opacity;
+}
+
 .calendar-zoom-in {
   animation: calendar-zoom-in 0.2s ease-out forwards;
 }
@@ -262,7 +296,9 @@
 @media (prefers-reduced-motion: reduce) {
   .calendar-zoom-in,
   .calendar-zoom-out,
-  .calendar-slide-in {
+  .calendar-slide-in,
+  .calendar-slide-next,
+  .calendar-slide-prev {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
