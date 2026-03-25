@@ -5,25 +5,22 @@ import { createPortal } from 'react-dom';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
-import { COLOR_DISPLAY_NAMES, ColorPaletteMenuItems } from '@/components/ui/color-palette-picker';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { COLOR_DISPLAY_NAMES } from '@/components/ui/color-palette-picker';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSupportText } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useSubmitShortcut } from '@/hooks/useSubmitShortcut';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { DEFAULT_TAG_ICON } from '../lib/curated-icons';
 import { buildColonTagName, parseColonTag } from '../lib/tag-colon';
 
 import {
   DEFAULT_TAG_COLOR,
-  TAG_COLOR_MAP,
+  TAG_COLOR_NAMES,
   TAG_NAME_MAX_LENGTH,
   getTagColorClasses,
   resolveTagColor,
@@ -32,6 +29,8 @@ import {
 import type { TagColorName } from '@/lib/tag-colors';
 
 import type { CreateTagInput, Tag } from '../types';
+import { IconPicker } from './IconPicker';
+import { TagIcon } from './TagIcon';
 
 interface TagCreateModalProps {
   isOpen: boolean;
@@ -59,31 +58,31 @@ export function TagCreateModal({
   const t = useTranslations();
   const [name, setName] = useState('');
   const [color, setColor] = useState<TagColorName>(DEFAULT_TAG_COLOR);
+  const [icon, setIcon] = useState<string | null>(DEFAULT_TAG_ICON);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isGroupDropdownOpen, setIsGroupDropdownOpen] = useState(false);
   const mounted = useHasMounted();
 
   // 既存タグからグループ候補を算出
   const groupOptions = useMemo(() => {
-    const prefixes = new Map<string, string | null>(); // prefix → color
+    const prefixes = new Map<string, { color: string | null; icon: string | null }>(); // prefix → { color, icon }
     for (const tag of existingTags) {
       const { prefix, suffix } = parseColonTag(tag.name);
       if (suffix !== null) {
         // コロン付きタグのプレフィックス
         if (!prefixes.has(prefix)) {
-          prefixes.set(prefix, tag.color);
+          prefixes.set(prefix, { color: tag.color, icon: tag.icon });
         }
       } else {
         // 独立タグも親候補に（ただし既にプレフィックスとして存在する場合はスキップ）
         if (!prefixes.has(tag.name)) {
-          prefixes.set(tag.name, tag.color);
+          prefixes.set(tag.name, { color: tag.color, icon: tag.icon });
         }
       }
     }
     return Array.from(prefixes.entries())
-      .map(([name, groupColor]) => ({ name, color: groupColor }))
+      .map(([name, meta]) => ({ name, color: meta.color, icon: meta.icon }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [existingTags]);
 
@@ -102,9 +101,9 @@ export function TagCreateModal({
     if (isOpen) {
       setName('');
       setColor(DEFAULT_TAG_COLOR);
+      setIcon(DEFAULT_TAG_ICON);
       setSelectedGroup(defaultGroup ?? null);
       setError('');
-      setIsGroupDropdownOpen(false);
     }
   }, [isOpen, defaultGroup]);
 
@@ -122,24 +121,6 @@ export function TagCreateModal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isLoading, onClose]);
 
-  // グループドロップダウン外クリックで閉じる
-  useEffect(() => {
-    if (!isGroupDropdownOpen) return;
-
-    const handleClickOutside = () => {
-      setIsGroupDropdownOpen(false);
-    };
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [isGroupDropdownOpen]);
-
   const handleSubmit = useCallback(async () => {
     setError('');
 
@@ -156,6 +137,7 @@ export function TagCreateModal({
       await onSave({
         name: fullName,
         color: effectiveColor,
+        ...(icon ? { icon } : {}),
       });
       onClose();
     } catch (err) {
@@ -177,7 +159,7 @@ export function TagCreateModal({
     } finally {
       setIsLoading(false);
     }
-  }, [name, selectedGroup, effectiveColor, onSave, onClose, t]);
+  }, [name, selectedGroup, effectiveColor, icon, onSave, onClose, t]);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -205,8 +187,6 @@ export function TagCreateModal({
     checkDisabled: () => !name.trim(),
     onSubmit: handleSubmit,
   });
-
-  const selectedGroupOption = groupOptions.find((g) => g.name === selectedGroup);
 
   if (!mounted || !isOpen) return null;
 
@@ -270,26 +250,37 @@ export function TagCreateModal({
           {!inheritedColor && (
             <Field>
               <FieldLabel>{t('tags.form.color')}</FieldLabel>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="border-border bg-container hover:bg-state-hover flex h-9 w-full items-center gap-2 rounded-lg border px-4 text-sm"
-                  >
-                    <span
-                      className={cn('size-4 rounded-full', TAG_COLOR_MAP[color].dot)}
-                      aria-hidden
-                    />
-                    <span>{COLOR_DISPLAY_NAMES[color] || color}</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <ColorPaletteMenuItems
-                    selectedColor={color}
-                    onColorSelect={(c) => setColor(c as TagColorName)}
-                  />
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex flex-wrap gap-2">
+                {TAG_COLOR_NAMES.map((c) => {
+                  const classes = getTagColorClasses(c);
+                  const isActive = color === c;
+                  return (
+                    <HoverTooltip key={c} content={COLOR_DISPLAY_NAMES[c]} side="top">
+                      <button
+                        type="button"
+                        onClick={() => setColor(c)}
+                        className={cn(
+                          'flex size-9 items-center justify-center rounded-full transition-all',
+                          isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
+                        )}
+                        style={{ backgroundColor: classes.cssVar }}
+                        aria-label={COLOR_DISPLAY_NAMES[c]}
+                        aria-pressed={isActive}
+                      >
+                        {isActive && <Check className="size-4 text-white" />}
+                      </button>
+                    </HoverTooltip>
+                  );
+                })}
+              </div>
+            </Field>
+          )}
+
+          {/* アイコン（グループ選択時は非表示） */}
+          {!inheritedColor && (
+            <Field>
+              <FieldLabel>{t('tags.labels.selectIcon')}</FieldLabel>
+              <IconPicker value={icon} onChange={setIcon} color={effectiveColor} />
             </Field>
           )}
 
@@ -298,57 +289,35 @@ export function TagCreateModal({
             <Field>
               <FieldLabel>{t('tags.form.group')}</FieldLabel>
               <FieldSupportText>{t('tags.form.groupSupportText')}</FieldSupportText>
-              <div className="relative">
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsGroupDropdownOpen(!isGroupDropdownOpen);
-                  }}
-                  className="border-border bg-container hover:bg-state-hover flex h-9 w-full items-center justify-between rounded-lg border px-4 text-sm"
+                  onClick={() => setSelectedGroup(null)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-sm transition-colors',
+                    !selectedGroup
+                      ? 'border-primary bg-primary/10 text-foreground font-medium'
+                      : 'border-border hover:bg-state-hover text-muted-foreground',
+                  )}
                 >
-                  <span
-                    className={selectedGroupOption ? 'text-foreground' : 'text-muted-foreground'}
-                  >
-                    {selectedGroupOption ? selectedGroupOption.name : t('tags.form.noGroup')}
-                  </span>
-                  <ChevronDown className="text-muted-foreground size-4" />
+                  {t('tags.form.noGroup')}
                 </button>
-
-                {isGroupDropdownOpen && (
-                  <div className="bg-card border-border surface-raised absolute top-full z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedGroup(null);
-                        setIsGroupDropdownOpen(false);
-                      }}
-                      className="hover:bg-state-hover w-full px-4 py-2 text-left text-sm"
-                    >
-                      {t('tags.form.noGroup')}
-                    </button>
-                    {groupOptions.map((group) => (
-                      <button
-                        key={group.name}
-                        type="button"
-                        onClick={() => {
-                          setSelectedGroup(group.name);
-                          setIsGroupDropdownOpen(false);
-                        }}
-                        className="hover:bg-state-hover flex w-full items-center gap-2 px-4 py-2 text-left text-sm"
-                      >
-                        <span
-                          className={cn(
-                            'size-3 shrink-0 rounded-full',
-                            getTagColorClasses(group.color).dot,
-                          )}
-                          aria-hidden
-                        />
-                        {group.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {groupOptions.map((group) => (
+                  <button
+                    key={group.name}
+                    type="button"
+                    onClick={() => setSelectedGroup(group.name)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                      selectedGroup === group.name
+                        ? 'border-primary bg-primary/10 text-foreground font-medium'
+                        : 'border-border hover:bg-state-hover text-muted-foreground',
+                    )}
+                  >
+                    <TagIcon icon={group.icon} color={group.color} size="sm" className="shrink-0" />
+                    {group.name}
+                  </button>
+                ))}
               </div>
             </Field>
           )}

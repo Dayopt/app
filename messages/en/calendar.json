@@ -131,6 +131,7 @@
       "addTagToGroup": "Add tag to group",
       "rename": "Rename",
       "changeColor": "Change color",
+      "changeIcon": "Change icon",
       "editNote": "Edit note",
       "noteLabel": "Note",
       "noteHint": "Displayed in tooltip",
@@ -138,6 +139,8 @@
       "changeGroup": "Change group",
       "merge": "Merge into another tag",
       "showOnlyThis": "Show only this",
+      "hide": "Hide from calendar",
+      "show": "Show in calendar",
       "noGroup": "No group",
       "deleteTag": {
         "title": "Delete \"{name}\"",

@@ -25,10 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useTags } from '@/features/tags';
+import { TagIcon, useTags } from '@/features/tags';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { DURATION_PRESETS } from '../constants';
@@ -128,11 +127,7 @@ function PaletteAddContent({
                 .map((tag) => (
                   <SelectItem key={tag.id} value={tag.id}>
                     <span className="flex items-center gap-2">
-                      <span
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: getTagColorClasses(tag.color).cssVar }}
-                        aria-hidden="true"
-                      />
+                      <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                       {tag.name}
                     </span>
                   </SelectItem>

@@ -162,6 +162,8 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
         tagId={selectedTagId}
         tagName={selectedTagName}
         tagColorClasses={selectedTagColorClasses}
+        tagIcon={selectedTag?.icon}
+        tagColor={selectedTag?.color}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
         onPinToPalette={

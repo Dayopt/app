@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
-import { MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -23,13 +23,13 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslations } from 'next-intl';
 
-import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import type { Tag } from '@/features/tags';
 import {
   TagDeleteStrategyDialog,
+  TagIcon,
   buildColonTagName,
   getTagDisplayLabel,
   parseColonTag,
@@ -41,7 +41,7 @@ import {
   useUpdateTag,
 } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
-import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
+import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -431,7 +431,7 @@ function SortableTagItem({
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
-  const { displayColor, handleColorChange } = useFilterItemEdit({
+  const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
   });
@@ -560,6 +560,17 @@ function SortableTagItem({
     [groupTagIds, updateTagMutation],
   );
 
+  // グループ親タグのアイコン変更（吸収された親タグのIDで更新）
+  const parentTag = findTagByName(currentGroup);
+  const handleParentIconChange = useCallback(
+    (icon: string | null) => {
+      const targetId = parentTag?.id;
+      if (!targetId) return;
+      updateTagMutation.mutate({ id: targetId, icon });
+    },
+    [parentTag?.id, updateTagMutation],
+  );
+
   // 表示名: グループ内ならsuffix部分のみ
   const displayLabel = getTagDisplayLabel(tag.name, isGrouped);
 
@@ -595,6 +606,8 @@ function SortableTagItem({
             onToggleCollapse={onToggleCollapse}
             onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
             onColorChange={handleGroupColorChange}
+            onIconChange={parentTag ? handleParentIconChange : undefined}
+            currentIcon={parentTag?.icon ?? tag.icon}
             onAddTagToGroup={() => openTagCreateModal(currentGroup)}
             onRenameGroup={() => setShowGroupRenameDialog(true)}
             onUngroupTags={handleUngroupTags}
@@ -611,26 +624,40 @@ function SortableTagItem({
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
               isGrouped && 'pl-3',
+              !checked && 'opacity-50',
             )}
           >
-            <Checkbox
-              checked={checked}
-              onCheckedChange={onToggle}
-              aria-label={tag.name}
-              className="ml-2 shrink-0 cursor-pointer"
-              style={{
-                borderColor: getTagColorClasses(displayColor).cssVar,
-                backgroundColor: checked ? getTagColorClasses(displayColor).cssVar : 'transparent',
-              }}
-            />
+            {/* タグアイコン */}
+            <span className="ml-2 shrink-0">
+              <TagIcon icon={tag.icon} color={displayColor} size="sm" />
+            </span>
+
             <HoverTooltip
               content={tag.name}
               side="top"
               disabled={menuOpen}
-              wrapperClassName="ml-1 min-w-0 flex-1"
+              wrapperClassName="ml-1.5 min-w-0 flex-1"
             >
               <span className="min-w-0 truncate">{displayLabel}</span>
             </HoverTooltip>
+
+            {/* 👁 フィルタートグル */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
+              className={cn(
+                'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+                checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+                isMobile && 'opacity-100',
+              )}
+            >
+              {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+            </button>
 
             {/* Menu */}
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
@@ -638,7 +665,7 @@ function SortableTagItem({
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-['']"
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -647,12 +674,14 @@ function SortableTagItem({
               </DropdownMenuTrigger>
               <FilterItemMenu
                 displayColor={displayColor}
+                currentIcon={tag.icon}
                 currentGroup={suffix !== null ? currentGroup : null}
                 groupOptions={groupOptions}
                 isGrouped={isGrouped}
                 isMobile={isMobile ?? false}
                 onOpenRenameDialog={() => setShowRenameDialog(true)}
                 onColorChange={handleColorChange}
+                onIconChange={handleIconChange}
                 onChangeGroup={handleChangeGroup}
                 onOpenMergeModal={() =>
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })

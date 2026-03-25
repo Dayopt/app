@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import type { TagColorName } from '@/lib/tag-colors';
 
 import { parseColonTag } from '../lib/tag-colon';
+import { IconPicker } from './IconPicker';
+import { TagIcon } from './TagIcon';
 
 // ─────────────────────────────────────────────────────────
 // Mock Types & Data
@@ -22,41 +24,42 @@ interface MockTag {
   id: string;
   name: string;
   color: TagColorName;
+  icon: string | null;
 }
 
 const MOCK_TAGS: MockTag[] = [
-  { id: '1', name: '仕事', color: 'blue' },
-  { id: '2', name: '仕事:会議', color: 'blue' },
-  { id: '3', name: '仕事:開発', color: 'indigo' },
-  { id: '4', name: '仕事:資料作成', color: 'blue' },
-  { id: '5', name: '勉強', color: 'green' },
-  { id: '6', name: '運動', color: 'teal' },
-  { id: '7', name: '休憩', color: 'amber' },
-  { id: '8', name: '食事', color: 'orange' },
-  { id: '9', name: 'Life', color: 'pink' },
-  { id: '10', name: 'Hobby', color: 'gray' },
+  { id: '1', name: '仕事', color: 'blue', icon: 'briefcase' },
+  { id: '2', name: '仕事:会議', color: 'blue', icon: 'users' },
+  { id: '3', name: '仕事:開発', color: 'indigo', icon: 'code' },
+  { id: '4', name: '仕事:資料作成', color: 'blue', icon: 'file-text' },
+  { id: '5', name: '勉強', color: 'green', icon: 'book-open' },
+  { id: '6', name: '運動', color: 'teal', icon: 'dumbbell' },
+  { id: '7', name: '休憩', color: 'amber', icon: 'coffee' },
+  { id: '8', name: '食事', color: 'orange', icon: 'utensils' },
+  { id: '9', name: 'Life', color: 'pink', icon: 'home' },
+  { id: '10', name: 'Hobby', color: 'gray', icon: null },
 ];
 
 const FEW_TAGS: MockTag[] = [
-  { id: '1', name: '仕事', color: 'blue' },
-  { id: '2', name: '運動', color: 'teal' },
+  { id: '1', name: '仕事', color: 'blue', icon: 'briefcase' },
+  { id: '2', name: '運動', color: 'teal', icon: 'dumbbell' },
 ];
 
 const MANY_TAGS: MockTag[] = [
-  { id: '1', name: '仕事', color: 'blue' },
-  { id: '2', name: '勉強', color: 'green' },
-  { id: '3', name: '運動', color: 'teal' },
-  { id: '4', name: '休憩', color: 'amber' },
-  { id: '5', name: '食事', color: 'orange' },
-  { id: '6', name: 'Life', color: 'pink' },
-  { id: '7', name: 'Hobby', color: 'gray' },
-  { id: '8', name: 'Reading', color: 'indigo' },
-  { id: '9', name: 'Side Project', color: 'violet' },
-  { id: '10', name: 'MTG', color: 'red' },
-  { id: '11', name: 'Design', color: 'blue' },
-  { id: '12', name: 'Planning', color: 'green' },
-  { id: '13', name: 'Admin', color: 'gray' },
-  { id: '14', name: 'Travel', color: 'teal' },
+  { id: '1', name: '仕事', color: 'blue', icon: 'briefcase' },
+  { id: '2', name: '勉強', color: 'green', icon: 'book-open' },
+  { id: '3', name: '運動', color: 'teal', icon: 'dumbbell' },
+  { id: '4', name: '休憩', color: 'amber', icon: 'coffee' },
+  { id: '5', name: '食事', color: 'orange', icon: 'utensils' },
+  { id: '6', name: 'Life', color: 'pink', icon: 'home' },
+  { id: '7', name: 'Hobby', color: 'gray', icon: null },
+  { id: '8', name: 'Reading', color: 'indigo', icon: 'book-open' },
+  { id: '9', name: 'Side Project', color: 'violet', icon: 'laptop' },
+  { id: '10', name: 'MTG', color: 'red', icon: 'users' },
+  { id: '11', name: 'Design', color: 'blue', icon: 'palette' },
+  { id: '12', name: 'Planning', color: 'green', icon: 'lightbulb' },
+  { id: '13', name: 'Admin', color: 'gray', icon: null },
+  { id: '14', name: 'Travel', color: 'teal', icon: 'plane' },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -84,11 +87,8 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
       )}
       style={{ backgroundColor: colorClasses.cssVarTint }}
     >
-      <div className="relative">
-        <span
-          className="block size-8 rounded-full"
-          style={{ backgroundColor: colorClasses.cssVar }}
-        />
+      <div className="relative flex size-8 items-center justify-center">
+        <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
       <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
@@ -134,6 +134,7 @@ interface CreateTagFormProps {
 function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormProps) {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState<TagColorName>('blue');
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [groupOpen, setGroupOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -208,6 +209,12 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
           </div>
         </div>
 
+        {/* アイコン（任意） */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-sm">アイコン</span>
+          <IconPicker value={selectedIcon} onChange={setSelectedIcon} color={selectedColor} />
+        </div>
+
         {/* グループ（任意） */}
         <div className="flex flex-col gap-1.5">
           <span className="text-muted-foreground text-sm">グループ（任意）</span>
@@ -222,13 +229,10 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
             >
               <span className="flex items-center gap-2">
                 {selectedGroup && (
-                  <span
-                    className="size-2.5 rounded-full"
-                    style={{
-                      backgroundColor: getTagColorClasses(
-                        parentTags.find((t) => t.name === selectedGroup)?.color ?? 'gray',
-                      ).cssVar,
-                    }}
+                  <TagIcon
+                    icon={parentTags.find((t) => t.name === selectedGroup)?.icon ?? null}
+                    color={parentTags.find((t) => t.name === selectedGroup)?.color ?? 'gray'}
+                    size="sm"
                   />
                 )}
                 {selectedGroup ?? 'なし'}
@@ -257,29 +261,23 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
                 >
                   なし
                 </button>
-                {parentTags.map((tag) => {
-                  const classes = getTagColorClasses(tag.color);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedGroup(tag.name);
-                        setGroupOpen(false);
-                      }}
-                      className={cn(
-                        'hover:bg-state-hover flex min-h-10 w-full items-center gap-2 px-3 text-sm transition-colors',
-                        selectedGroup === tag.name && 'text-primary font-medium',
-                      )}
-                    >
-                      <span
-                        className="size-2.5 rounded-full"
-                        style={{ backgroundColor: classes.cssVar }}
-                      />
-                      {tag.name}
-                    </button>
-                  );
-                })}
+                {parentTags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGroup(tag.name);
+                      setGroupOpen(false);
+                    }}
+                    className={cn(
+                      'hover:bg-state-hover flex min-h-10 w-full items-center gap-2 px-3 text-sm transition-colors',
+                      selectedGroup === tag.name && 'text-primary font-medium',
+                    )}
+                  >
+                    <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+                    {tag.name}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -358,7 +356,6 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
     const children = childrenByPrefix.get(view.prefix) ?? [];
     const parentTag = parentTags.find((t) => t.name === view.prefix);
     const parentColor = parentTag?.color ?? 'blue';
-    const colorClasses = getTagColorClasses(parentColor);
 
     return (
       <div className="flex flex-col">
@@ -369,7 +366,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
           className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
         >
           <ChevronLeft className="text-muted-foreground size-5" />
-          <span className="size-3 rounded-full" style={{ backgroundColor: colorClasses.cssVar }} />
+          <TagIcon icon={parentTag?.icon ?? null} color={parentColor} size="sm" />
           <span className="text-foreground font-semibold">{view.prefix}</span>
         </button>
 
@@ -495,24 +492,36 @@ export const GridWithChildren: Story = {
           {/* 戻るヘッダー */}
           <div className="flex min-h-11 items-center gap-2 px-4 py-2">
             <ChevronLeft className="text-muted-foreground size-5" />
-            <span
-              className="size-3 rounded-full"
-              style={{ backgroundColor: getTagColorClasses('blue').cssVar }}
-            />
+            <TagIcon icon="briefcase" color="blue" size="sm" />
             <span className="text-foreground font-semibold">仕事</span>
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
           <div className="grid grid-cols-3 gap-2 px-4 py-3">
             <TagGridCell
-              tag={{ id: '1', name: '仕事', color: 'blue' }}
+              tag={{ id: '1', name: '仕事', color: 'blue', icon: 'briefcase' }}
               isSelected={selected === '1'}
               onSelect={() => setSelected('1')}
             />
             {[
-              { id: '2', name: '会議', color: 'blue' as TagColorName },
-              { id: '3', name: '開発', color: 'indigo' as TagColorName },
-              { id: '4', name: '資料作成', color: 'blue' as TagColorName },
+              {
+                id: '2',
+                name: '会議',
+                color: 'blue' as TagColorName,
+                icon: 'users' as string | null,
+              },
+              {
+                id: '3',
+                name: '開発',
+                color: 'indigo' as TagColorName,
+                icon: 'code' as string | null,
+              },
+              {
+                id: '4',
+                name: '資料作成',
+                color: 'blue' as TagColorName,
+                icon: 'file-text' as string | null,
+              },
             ].map((child) => (
               <TagGridCell
                 key={child.id}
@@ -568,9 +577,9 @@ export const GridCreateNew: Story = {
     <SelectorFrame>
       <CreateTagForm
         parentTags={[
-          { id: '1', name: '仕事', color: 'blue' },
-          { id: '5', name: '勉強', color: 'green' },
-          { id: '6', name: '運動', color: 'teal' },
+          { id: '1', name: '仕事', color: 'blue', icon: 'briefcase' },
+          { id: '5', name: '勉強', color: 'green', icon: 'book-open' },
+          { id: '6', name: '運動', color: 'teal', icon: 'dumbbell' },
         ]}
         onBack={fn()}
         onCreateAndSelect={fn()}
@@ -639,18 +648,24 @@ export const AllPatterns: Story = {
             <div className="flex flex-col">
               <div className="flex min-h-11 items-center gap-2 px-4 py-2">
                 <ChevronLeft className="text-muted-foreground size-5" />
-                <span
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: getTagColorClasses('blue').cssVar }}
-                />
+                <TagIcon icon="briefcase" color="blue" size="sm" />
                 <span className="text-foreground font-semibold">仕事</span>
               </div>
               <div className="grid grid-cols-3 gap-2 px-4 py-3">
-                <TagGridCell tag={{ id: 'p-0', name: '仕事', color: 'blue' }} onSelect={fn()} />
-                {(['会議', '開発', '資料作成'] as const).map((name, i) => (
+                <TagGridCell
+                  tag={{ id: 'p-0', name: '仕事', color: 'blue', icon: 'briefcase' }}
+                  onSelect={fn()}
+                />
+                {(
+                  [
+                    { name: '会議', icon: 'users' },
+                    { name: '開発', icon: 'code' },
+                    { name: '資料作成', icon: 'file-text' },
+                  ] as const
+                ).map((child, i) => (
                   <TagGridCell
-                    key={name}
-                    tag={{ id: `c-${i}`, name, color: 'blue' }}
+                    key={child.name}
+                    tag={{ id: `c-${i}`, name: child.name, color: 'blue', icon: child.icon }}
                     onSelect={fn()}
                   />
                 ))}

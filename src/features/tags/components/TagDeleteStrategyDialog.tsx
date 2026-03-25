@@ -8,9 +8,9 @@ import { useTranslations } from 'next-intl';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import type { Tag, TagDeleteStrategy } from '../types';
+import { TagIcon } from './TagIcon';
 
 interface TagDeleteStrategyDialogProps {
   open: boolean;
@@ -114,7 +114,6 @@ export function TagDeleteStrategyDialog({
 
             <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-lg border p-1">
               {filteredTags.map((tag) => {
-                const colorClasses = getTagColorClasses(tag.color);
                 const isSelected = targetTagId === tag.id;
 
                 return (
@@ -129,12 +128,7 @@ export function TagDeleteStrategyDialog({
                         : 'hover:bg-state-hover text-foreground',
                     )}
                   >
-                    <span
-                      className={cn(
-                        'inline-block size-3 flex-shrink-0 rounded-full',
-                        colorClasses.dot,
-                      )}
-                    />
+                    <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                     <span className="truncate">{tag.name}</span>
                   </button>
                 );

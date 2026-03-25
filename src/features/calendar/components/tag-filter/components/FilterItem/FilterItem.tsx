@@ -64,8 +64,8 @@ export function FilterItem({
   // Dialog states
   const [showRenameDialog, setShowRenameDialog] = useState(false);
 
-  // Edit hook (色変更のみ使用)
-  const { displayColor, handleColorChange } = useFilterItemEdit({
+  // Edit hook (色・アイコン変更)
+  const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId,
     initialColor: checkboxColor,
   });
@@ -163,6 +163,7 @@ export function FilterItem({
               displayColor={displayColor}
               onOpenRenameDialog={() => setShowRenameDialog(true)}
               onColorChange={handleColorChange}
+              onIconChange={handleIconChange}
               onOpenMergeModal={() =>
                 openTagMergeModal({ id: tagId, name: label, color: checkboxColor ?? null })
               }

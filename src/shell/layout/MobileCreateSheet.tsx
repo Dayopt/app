@@ -18,8 +18,7 @@ import {
   usePaletteItems,
   usePaletteMutations,
 } from '@/features/palette';
-import { useTags } from '@/features/tags';
-import { getTagColorClasses } from '@/lib/tag-colors';
+import { TagIcon, useTags } from '@/features/tags';
 import { cn } from '@/lib/utils';
 import { useMobileCreateSheetStore } from '@/shell/stores/useMobileCreateSheetStore';
 
@@ -182,11 +181,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
                     : 'text-foreground hover:bg-state-hover',
                 )}
               >
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: getTagColorClasses(tag.color).cssVar }}
-                  aria-hidden="true"
-                />
+                <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                 <ColonTagLabel name={tag.name} className="min-w-0" />
               </button>
             ))}

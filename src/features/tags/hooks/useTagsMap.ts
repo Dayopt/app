@@ -20,6 +20,7 @@ export type TagInfo = {
   id: string;
   name: string;
   color: string;
+  icon: string | null;
 };
 
 /** タグIDからタグ情報へのMapを提供するフック。plan.tagIdからタグ詳細を高速ルックアップできる */
@@ -34,6 +35,7 @@ export function useTagsMap() {
         id: tag.id,
         name: tag.name,
         color: tag.color ?? 'gray',
+        icon: tag.icon,
       });
     });
     return map;

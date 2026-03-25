@@ -17,7 +17,7 @@ import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { HoverTooltip } from '@/components/ui/tooltip';
-import { TagQuickSelector } from '@/features/tags';
+import { TagIcon, TagQuickSelector } from '@/features/tags';
 import type { TagColorEntry } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,10 @@ interface TagRowProps {
   tagName?: string | undefined;
   /** 解決済みのタグ色クラス（tagId が null なら undefined） */
   tagColorClasses?: TagColorEntry | undefined;
+  /** 解決済みのタグアイコン名（tagId が null なら undefined） */
+  tagIcon?: string | null | undefined;
+  /** 解決済みのタグ色名（tagIcon表示に使用） */
+  tagColor?: string | null | undefined;
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
   onCreateAndSelect: (name: string, color?: string | null) => void;
@@ -43,6 +47,8 @@ export function TagRow({
   tagId,
   tagName,
   tagColorClasses: colorClasses,
+  tagIcon,
+  tagColor,
   onTagChange,
   onCreateAndSelect,
   onPinToPalette,
@@ -83,12 +89,11 @@ export function TagRow({
         >
           {hasTag ? (
             <>
-              <span
-                className={cn(
-                  'inline-block size-3 flex-shrink-0 rounded-full',
-                  colorClasses?.dot ?? 'bg-muted-foreground',
-                )}
-                aria-hidden
+              <TagIcon
+                icon={tagIcon ?? null}
+                color={tagColor ?? colorClasses?.cssVar}
+                size="sm"
+                className="flex-shrink-0"
               />
               <ColonTagLabel name={tagName} className="text-foreground" />
               <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />

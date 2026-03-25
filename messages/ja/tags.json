@@ -138,7 +138,18 @@
       "required": "*",
       "parentTagNote": "親タグ:",
       "icon": "アイコン",
-      "selectColor": "色を選択: {color}"
+      "selectColor": "色を選択: {color}",
+      "selectIcon": "アイコンを選択",
+      "noIcon": "アイコンなし",
+      "iconCategories": {
+        "work": "仕事",
+        "study": "学習",
+        "health": "健康",
+        "life": "生活",
+        "hobby": "趣味",
+        "food": "食事",
+        "social": "コミュニケーション"
+      }
     },
     "search": {
       "noTags": "タグが見つかりません",

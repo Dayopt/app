@@ -131,6 +131,7 @@
       "addTagToGroup": "タグを追加",
       "rename": "名前を変更",
       "changeColor": "カラーを変更",
+      "changeIcon": "アイコンを変更",
       "editNote": "ノートを編集",
       "noteLabel": "ノート",
       "noteHint": "ツールチップに表示されます",
@@ -138,6 +139,8 @@
       "changeGroup": "グループを変更",
       "merge": "他のタグに統合",
       "showOnlyThis": "このタグだけ表示",
+      "hide": "カレンダーから非表示",
+      "show": "カレンダーに表示",
       "noGroup": "グループなし",
       "deleteTag": {
         "title": "「{name}」を削除",

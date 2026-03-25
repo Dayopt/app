@@ -8,6 +8,8 @@ export interface Tag {
   name: string;
   user_id: string | null;
   color: string | null;
+  /** Lucideアイコン名（例: "briefcase"）。null = 色ドットにフォールバック */
+  icon: string | null;
   is_active: boolean;
   sort_order?: number | null;
   created_at: string | null;
@@ -18,12 +20,14 @@ export interface Tag {
 export interface CreateTagInput {
   name: string;
   color: TagColorName;
+  icon?: string;
 }
 
 // タグ更新用入力型
 export interface UpdateTagInput {
   name?: string | undefined;
   color?: TagColorName | undefined;
+  icon?: string | null | undefined;
   is_active?: boolean | undefined;
   sort_order?: number | undefined;
 }
@@ -51,5 +55,6 @@ export interface TagOption {
   value: string;
   label: string;
   color: string | null;
+  icon: string | null;
   disabled?: boolean | undefined;
 }

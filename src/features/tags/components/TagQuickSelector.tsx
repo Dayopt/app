@@ -12,31 +12,32 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { Plus, X } from 'lucide-react';
+import { Check, ChevronLeft, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { COLOR_DISPLAY_NAMES } from '@/components/ui/color-palette-picker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
+import { HoverTooltip } from '@/components/ui/tooltip';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
 import { parseColonTag } from '../lib/tag-colon';
+import { IconPicker } from './IconPicker';
+import { TagIcon } from './TagIcon';
 
 import type { TagColorName } from '@/lib/tag-colors';
 
 import type { Tag } from '../types';
 
-import { TagRadioItem } from './TagRadioItem';
-
 /** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
-const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName }> = [
-  { nameKey: 'work', color: 'blue' },
-  { nameKey: 'study', color: 'indigo' },
-  { nameKey: 'exercise', color: 'green' },
-  { nameKey: 'break', color: 'amber' },
-  { nameKey: 'meal', color: 'orange' },
+const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName; icon: string }> = [
+  { nameKey: 'work', color: 'blue', icon: 'briefcase' },
+  { nameKey: 'study', color: 'indigo', icon: 'book-open' },
+  { nameKey: 'exercise', color: 'green', icon: 'dumbbell' },
+  { nameKey: 'break', color: 'amber', icon: 'coffee' },
+  { nameKey: 'meal', color: 'orange', icon: 'utensils' },
 ];
 
 /** ホバー中のタグ情報 */
@@ -57,8 +58,225 @@ interface TagQuickSelectorProps {
   anchorRef?: React.RefObject<HTMLDivElement | HTMLButtonElement | null>;
 }
 
+// ─────────────────────────────────────────────────────────
+// Create Tag Form (2ページ目)
+// ─────────────────────────────────────────────────────────
+
+function CreateTagFormView({
+  parentTags,
+  onBack,
+  onCreateAndSelect,
+}: {
+  parentTags: Tag[];
+  onBack: () => void;
+  onCreateAndSelect: (name: string, color?: string | null) => void;
+}) {
+  const t = useTranslations('calendar');
+  const [name, setName] = useState('');
+  const [selectedColor, setSelectedColor] = useState<TagColorName>('blue');
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
+  const canSubmit = name.trim().length > 0;
+
+  const handleSubmit = useCallback(() => {
+    if (!canSubmit) return;
+    const fullName = selectedGroup ? `${selectedGroup}:${name.trim()}` : name.trim();
+    onCreateAndSelect(fullName, selectedColor);
+  }, [canSubmit, selectedGroup, name, selectedColor, onCreateAndSelect]);
+
+  // グループ選択で色を自動継承
+  const effectiveColor = useMemo(() => {
+    if (!selectedGroup) return selectedColor;
+    const group = parentTags.find((t) => t.name === selectedGroup);
+    return (group?.color as TagColorName) ?? selectedColor;
+  }, [selectedGroup, parentTags, selectedColor]);
+
+  return (
+    <div className="flex flex-col overflow-y-auto" style={{ maxHeight: '60vh' }}>
+      {/* ← 戻るヘッダー */}
+      <button
+        type="button"
+        onClick={onBack}
+        className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
+      >
+        <ChevronLeft className="text-muted-foreground size-5" />
+        <span className="text-foreground font-semibold">{t('tagSelector.new')}</span>
+      </button>
+
+      <div className="flex flex-col gap-5 px-4 py-3">
+        {/* 名前 */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="create-tag-name" className="text-muted-foreground text-sm">
+            {t('tagSelector.createPlaceholder')}
+          </label>
+          <input
+            id="create-tag-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
+            className="border-border bg-container focus:ring-primary min-h-11 w-full rounded-lg border px-3 text-sm outline-none focus:ring-2"
+            autoFocus
+          />
+        </div>
+
+        {/* 色 */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-sm">{t('tagSelector.color')}</span>
+          <div className="flex flex-wrap gap-2">
+            {TAG_COLOR_NAMES.map((color) => {
+              const classes = getTagColorClasses(color);
+              const isActive = effectiveColor === color;
+              return (
+                <HoverTooltip key={color} content={COLOR_DISPLAY_NAMES[color]} side="top">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedColor(color)}
+                    className={cn(
+                      'flex size-9 items-center justify-center rounded-full transition-all',
+                      isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
+                    )}
+                    style={{ backgroundColor: classes.cssVar }}
+                    aria-label={COLOR_DISPLAY_NAMES[color]}
+                    aria-pressed={isActive}
+                  >
+                    {isActive && <Check className="size-4 text-white" />}
+                  </button>
+                </HoverTooltip>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* アイコン */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-sm">{t('tagSelector.icon')}</span>
+          <IconPicker value={selectedIcon} onChange={setSelectedIcon} color={effectiveColor} />
+        </div>
+
+        {/* グループ（任意） */}
+        {parentTags.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground text-sm">{t('tagSelector.group')}</span>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedGroup(null)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-sm transition-colors',
+                  !selectedGroup
+                    ? 'border-primary bg-primary/10 text-foreground font-medium'
+                    : 'border-border hover:bg-state-hover text-muted-foreground',
+                )}
+              >
+                {t('tagSelector.noGroup')}
+              </button>
+              {parentTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => setSelectedGroup(tag.name)}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                    selectedGroup === tag.name
+                      ? 'border-primary bg-primary/10 text-foreground font-medium'
+                      : 'border-border hover:bg-state-hover text-muted-foreground',
+                  )}
+                >
+                  <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+                  {tag.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 作成ボタン */}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          className={cn(
+            'min-h-11 w-full rounded-lg text-sm font-medium transition-colors',
+            canSubmit
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed',
+          )}
+        >
+          {t('tagSelector.create')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// Grid Tag Cell
+// ─────────────────────────────────────────────────────────
+
+function TagGridCell({
+  tag,
+  isSelected = false,
+  hasChildren = false,
+  onSelect,
+  onHover,
+  onHoverEnd,
+}: {
+  tag: Tag;
+  isSelected?: boolean;
+  hasChildren?: boolean;
+  onSelect: () => void;
+  onHover?: ((info: HoveredTagInfo) => void) | undefined;
+  onHoverEnd?: (() => void) | undefined;
+}) {
+  const colorClasses = getTagColorClasses(tag.color);
+  const displayName = parseColonTag(tag.name).suffix ?? tag.name;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      onMouseEnter={
+        onHover ? () => onHover({ id: tag.id, name: tag.name, color: tag.color }) : undefined
+      }
+      onMouseLeave={onHoverEnd}
+      className={cn(
+        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'active:scale-95 active:transition-transform',
+        isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+      )}
+      style={{ backgroundColor: colorClasses.cssVarTint }}
+    >
+      <div className="relative flex size-8 items-center justify-center">
+        <TagIcon icon={tag.icon} color={tag.color} size="lg" />
+        {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
+      </div>
+      <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
+        <span className="truncate">{displayName}</span>
+        {hasChildren && (
+          <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
+        )}
+      </span>
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// Selector View State
+// ─────────────────────────────────────────────────────────
+
+type SelectorView = { type: 'grid' } | { type: 'drill'; prefix: string } | { type: 'create' };
+
 /**
- * 共通コンテンツ部分
+ * グリッド型タグ選択コンテンツ
+ *
+ * 色タイルのグリッドで「色＋アイコンで認識→即タップ」を実現。
+ * 子タグはドリルダウンで2画面目に遷移。
  */
 function TagQuickSelectorContent({
   onSelect,
@@ -71,8 +289,8 @@ function TagQuickSelectorContent({
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
-  const [newTagName, setNewTagName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<SelectorView>({ type: 'grid' });
 
   // アクティブなタグのみ、ソート済み
   const sortedTags = useMemo(() => {
@@ -81,35 +299,23 @@ function TagQuickSelectorContent({
   }, [tags]);
 
   // コロン記法でグルーピング
-  // prefix と完全一致するタグがあれば親タグとして使用
-  const { groups, ungrouped } = useMemo(() => {
-    const prefixMap = new Map<string, { parent: Tag | null; children: Tag[] }>();
-    const noColon: Tag[] = [];
+  const { parentTags, childrenByPrefix } = useMemo(() => {
+    const childMap = new Map<string, Tag[]>();
+    const flatTags: Tag[] = [];
 
-    // 1パス: コロン付きを子としてグルーピング、コロンなしは候補として保持
     for (const tag of sortedTags) {
       const { prefix, suffix } = parseColonTag(tag.name);
       if (suffix !== null) {
-        const existing = prefixMap.get(prefix) ?? { parent: null, children: [] };
-        existing.children.push(tag);
-        prefixMap.set(prefix, existing);
+        const existing = childMap.get(prefix) ?? [];
+        existing.push(tag);
+        childMap.set(prefix, existing);
       } else {
-        noColon.push(tag);
+        flatTags.push(tag);
       }
     }
 
-    // 2パス: noColon の中で prefix と完全一致するタグを親に昇格
-    const ungroupedResult: Tag[] = [];
-    for (const tag of noColon) {
-      const group = prefixMap.get(tag.name);
-      if (group) {
-        group.parent = tag;
-      } else {
-        ungroupedResult.push(tag);
-      }
-    }
-
-    return { groups: prefixMap, ungrouped: ungroupedResult };
+    // 子を持つ/持たないに関わらず、フラットタグを全て親として表示
+    return { parentTags: flatTags, childrenByPrefix: childMap };
   }, [sortedTags]);
 
   const handleSelect = useCallback(
@@ -120,156 +326,142 @@ function TagQuickSelectorContent({
     [onSelect],
   );
 
-  const handleCreateSubmit = useCallback(() => {
-    const trimmed = newTagName.trim();
-    if (!trimmed) return;
-    onCreateAndSelect(trimmed);
-  }, [newTagName, onCreateAndSelect]);
-
-  const handleCreateKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleCreateSubmit();
-      }
-    },
-    [handleCreateSubmit],
-  );
-
-  const handleHover = useCallback((tag: HoveredTagInfo) => onTagHover?.(tag), [onTagHover]);
-
+  const handleHover = useCallback((info: HoveredTagInfo) => onTagHover?.(info), [onTagHover]);
   const handleHoverEnd = useCallback(() => onTagHover?.(null), [onTagHover]);
 
   const isTagZero = sortedTags.length === 0;
 
+  // 作成フォーム画面
+  if (view.type === 'create') {
+    return (
+      <CreateTagFormView
+        parentTags={parentTags}
+        onBack={() => setView({ type: 'grid' })}
+        onCreateAndSelect={(name, color) => {
+          onCreateAndSelect(name, color);
+          setView({ type: 'grid' });
+        }}
+      />
+    );
+  }
+
+  // ドリルダウン画面
+  if (view.type === 'drill') {
+    const children = childrenByPrefix.get(view.prefix) ?? [];
+    const parentTag = parentTags.find((t) => t.name === view.prefix);
+
+    return (
+      <div className="flex flex-col overflow-y-auto" style={{ maxHeight: '50vh' }}>
+        {/* ← 戻るヘッダー */}
+        <button
+          type="button"
+          onClick={() => setView({ type: 'grid' })}
+          className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
+        >
+          <ChevronLeft className="text-muted-foreground size-5" />
+          <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
+          <span className="text-foreground font-semibold">{view.prefix}</span>
+        </button>
+
+        {/* 親タグ自体 + 子タググリッド */}
+        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+          {parentTag && (
+            <TagGridCell
+              tag={parentTag}
+              isSelected={selectedId === parentTag.id}
+              onSelect={() => handleSelect(parentTag.id, parentTag.name)}
+              onHover={handleHover}
+              onHoverEnd={handleHoverEnd}
+            />
+          )}
+          {children.map((child) => (
+            <TagGridCell
+              key={child.id}
+              tag={child}
+              isSelected={selectedId === child.id}
+              onSelect={() => handleSelect(child.id, child.name)}
+              onHover={handleHover}
+              onHoverEnd={handleHoverEnd}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // メイングリッド画面
   return (
-    <>
-      {/* Tag list */}
-      <div
-        className="overflow-y-auto px-1 py-1"
-        style={{ maxHeight: '50vh' }}
-        role="radiogroup"
-        aria-label={t('tagSelector.title')}
-      >
-        {/* タグゼロ時: サンプルタグ候補チップ */}
-        {isTagZero && (
-          <div className="space-y-3 px-3 py-4">
-            <div className="text-center">
-              <p className="text-foreground text-sm font-medium">{t('tagSelector.emptyTitle')}</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t('tagSelector.emptyDescription')}
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {SAMPLE_TAG_CHIPS.map(({ nameKey, color }) => {
-                const name = t(`tagSelector.sampleTags.${nameKey}`);
-                return (
-                  <button
-                    key={nameKey}
-                    type="button"
-                    onClick={() => onCreateAndSelect(name, color)}
-                    className="border-border hover:bg-state-hover flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
-                  >
-                    <span
-                      className="size-2.5 rounded-full"
-                      style={{ backgroundColor: `var(--tag-${color})` }}
-                    />
-                    {name}
-                  </button>
-                );
-              })}
-            </div>
+    <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+      {/* タグゼロ時: サンプルタグ候補チップ */}
+      {isTagZero && (
+        <div className="space-y-3 px-3 py-4">
+          <div className="text-center">
+            <p className="text-foreground text-sm font-medium">{t('tagSelector.emptyTitle')}</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('tagSelector.emptyDescription')}
+            </p>
           </div>
-        )}
+          <div className="flex flex-wrap justify-center gap-2">
+            {SAMPLE_TAG_CHIPS.map(({ nameKey, color, icon }) => {
+              const name = t(`tagSelector.sampleTags.${nameKey}`);
+              return (
+                <button
+                  key={nameKey}
+                  type="button"
+                  onClick={() => onCreateAndSelect(name, color)}
+                  className="border-border hover:bg-state-hover flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
+                >
+                  <TagIcon icon={icon} color={color} size="sm" />
+                  {name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-        {/* Grouped tags */}
-        {[...groups.entries()].map(([prefix, { parent, children }]) => {
-          if (children.length === 0) return null;
-
-          // 表示用タグ: 親タグがあればそれ、なければ先頭子タグの色を使用
-          const displayTag = parent ?? children[0];
-          if (!displayTag) return null;
-
-          return (
-            <div key={prefix} className="mb-1">
-              {/* Group parent — 常にクリック可能 */}
-              <TagRadioItem
-                tag={displayTag}
-                label={prefix}
-                isSelected={parent ? selectedId === parent.id : false}
+      {/* タググリッド */}
+      {!isTagZero && (
+        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+          {parentTags.map((tag) => {
+            const hasChildren = childrenByPrefix.has(tag.name);
+            return (
+              <TagGridCell
+                key={tag.id}
+                tag={tag}
+                isSelected={selectedId === tag.id}
+                hasChildren={hasChildren}
                 onSelect={() => {
-                  if (parent) {
-                    handleSelect(parent.id, parent.name);
+                  if (hasChildren) {
+                    setView({ type: 'drill', prefix: tag.name });
                   } else {
-                    // 子タグの色を引き継いで親タグを作成
-                    onCreateAndSelect(prefix, displayTag.color);
+                    handleSelect(tag.id, tag.name);
                   }
                 }}
                 onHover={handleHover}
                 onHoverEnd={handleHoverEnd}
               />
-
-              {/* Children */}
-              {children.map((tag) => {
-                const { suffix } = parseColonTag(tag.name);
-                return (
-                  <TagRadioItem
-                    key={tag.id}
-                    tag={tag}
-                    label={suffix ?? tag.name}
-                    isSelected={selectedId === tag.id}
-                    onSelect={() => {
-                      setSelectedId(tag.id);
-                      handleSelect(tag.id, tag.name);
-                    }}
-                    onHover={handleHover}
-                    onHoverEnd={handleHoverEnd}
-                    indented
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-
-        {/* Ungrouped tags */}
-        {ungrouped.map((tag) => (
-          <TagRadioItem
-            key={tag.id}
-            tag={tag}
-            label={tag.name}
-            isSelected={selectedId === tag.id}
-            onSelect={() => {
-              setSelectedId(tag.id);
-              handleSelect(tag.id, tag.name);
-            }}
-            onHover={handleHover}
-            onHoverEnd={handleHoverEnd}
-          />
-        ))}
-      </div>
-
-      {/* Create new tag */}
-      <div className="border-border flex items-center gap-2 border-t px-4 py-4">
-        <Input
-          value={newTagName}
-          onChange={(e) => setNewTagName(e.target.value)}
-          onKeyDown={handleCreateKeyDown}
-          placeholder={t('tagSelector.createPlaceholder')}
-          className="min-h-11 flex-1"
-        />
-        <Button
-          icon
-          variant="outline"
-          onClick={handleCreateSubmit}
-          disabled={!newTagName.trim()}
-          className="size-10 shrink-0"
-          aria-label={t('tagSelector.createPlaceholder')}
-        >
-          <Plus className="size-4" />
-        </Button>
-      </div>
-    </>
+            );
+          })}
+          {/* + 新規作成セル */}
+          <button
+            type="button"
+            onClick={() => setView({ type: 'create' })}
+            className={cn(
+              'bg-muted hover:bg-muted/80 flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+              'active:scale-95 active:transition-transform',
+            )}
+          >
+            <span className="bg-muted-foreground/20 flex size-8 items-center justify-center rounded-full">
+              <Plus className="text-muted-foreground size-5" />
+            </span>
+            <span className="text-muted-foreground text-sm font-medium">
+              {t('tagSelector.new')}
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

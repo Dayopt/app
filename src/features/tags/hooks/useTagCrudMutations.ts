@@ -21,6 +21,7 @@ interface TrpcTagUpdateInput {
   id: string;
   name?: string | undefined;
   color?: TagColorName | undefined;
+  icon?: string | null | undefined;
 }
 
 /** タグ更新の入力型 */
@@ -43,6 +44,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
         id: tempId,
         name: input.name,
         color: input.color || DEFAULT_TAG_COLOR,
+        icon: input.icon ?? null,
         sort_order: 0,
         is_active: true,
         user_id: '',
@@ -97,6 +99,7 @@ export function useUpdateTag() {
           ...tag,
           name: newData.name ?? tag.name,
           color: newData.color ?? tag.color,
+          icon: newData.icon !== undefined ? newData.icon : tag.icon,
         };
       };
 
@@ -341,6 +344,7 @@ export function useUngroupTags() {
             id: generateTempId('tag'),
             name: prefix,
             color: representative?.color ?? DEFAULT_TAG_COLOR,
+            icon: representative?.icon ?? null,
             sort_order: 0,
             is_active: true,
             user_id: '',

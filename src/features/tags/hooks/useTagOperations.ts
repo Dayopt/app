@@ -46,6 +46,7 @@ export function useTagOperations(tags: Tag[]) {
           name: data.name,
           user_id: 'current-user',
           color: data.color || DEFAULT_TAG_COLOR,
+          icon: data.icon ?? null,
           is_active: true,
           sort_order: tags.length,
           created_at: new Date().toISOString(),

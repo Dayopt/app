@@ -14,6 +14,7 @@ interface UseFilterItemEditProps {
 interface UseFilterItemEditReturn {
   displayColor: string;
   handleColorChange: (color: TagColorName) => Promise<void>;
+  handleIconChange: (icon: string | null) => Promise<void>;
 }
 
 /**
@@ -52,8 +53,24 @@ export function useFilterItemEdit({
     [tagId, updateTagMutation],
   );
 
+  const handleIconChange = useCallback(
+    async (icon: string | null) => {
+      if (!tagId) return;
+      try {
+        await updateTagMutation.mutateAsync({
+          id: tagId,
+          icon,
+        });
+      } catch {
+        // rollback handled by TanStack Query
+      }
+    },
+    [tagId, updateTagMutation],
+  );
+
   return {
     displayColor,
     handleColorChange,
+    handleIconChange,
   };
 }
