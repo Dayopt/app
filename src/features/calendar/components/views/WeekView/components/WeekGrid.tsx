@@ -13,13 +13,13 @@ import {
   DateDisplay,
   ScrollableCalendarLayout,
   getDateKey,
+  useEntryStyles,
 } from '../../shared';
+import { CalendarGridContent } from '../../shared/components/CalendarGridContent';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useWeekEntries } from '../hooks/useWeekEntries';
 
 import type { WeekGridProps } from '../WeekView.types';
-
-import { WeekContent } from './WeekContent';
 
 /**
  * WeekGrid - 週表示のメイングリッドコンポーネント
@@ -49,17 +49,18 @@ export const WeekGrid = ({
   // レスポンシブな時間高さ
   const hourHeight = useResponsiveHourHeight();
 
-  // onEventUpdate を WeekContent が期待する型に変換
-  const handleEntryUpdate = React.useCallback(
-    async (
-      entryId: string,
-      updates: Partial<import('@/features/calendar/types/calendar.types').CalendarEvent>,
-    ) => {
+  // onEventUpdate を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
+  const handleEventUpdate = React.useCallback(
+    async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
       if (!onEventUpdate) return;
-      const entry = events.find((e) => e.id === entryId);
+      const entry = events.find((e) => e.id === eventId);
       if (!entry) return;
       // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
-      return onEventUpdate({ ...entry, ...updates });
+      return onEventUpdate({
+        ...entry,
+        startDate: updates.startTime,
+        endDate: updates.endTime,
+      });
     },
     [onEventUpdate, events],
   );
@@ -71,6 +72,24 @@ export const WeekGrid = ({
     hourHeight,
     timezone,
   });
+
+  // entryPositions → entryStyles 変換（全日分をまとめて計算）
+  const normalizedPositions = React.useMemo(
+    () =>
+      entryPositions.map((pos) => ({
+        plan: pos.plan,
+        top: pos.top,
+        height: pos.height,
+        left: 0,
+        width: 100,
+        zIndex: pos.zIndex,
+        column: pos.column,
+        totalColumns: pos.totalColumns,
+        opacity: 1.0,
+      })),
+    [entryPositions],
+  );
+  const entryStyles = useEntryStyles(normalizedPositions);
 
   // 週番号を計算（週の最初の日から）
   const weekNumber = React.useMemo(() => {
@@ -129,19 +148,21 @@ export const WeekGrid = ({
               )}
               style={{ width: `${100 / weekDates.length}%` }}
             >
-              <WeekContent
+              <CalendarGridContent
                 date={date}
                 entries={dayEvents}
+                entryStyles={entryStyles}
+                viewMode="week"
+                dayIndex={dayIndex}
+                showChronotypeBackground={true}
                 allEventsForOverlapCheck={events}
-                entryPositions={entryPositions}
+                displayDates={weekDates}
                 onEntryClick={onEventClick}
                 onEntryContextMenu={onEventContextMenu}
-                onEntryUpdate={handleEntryUpdate}
+                onEventUpdate={handleEventUpdate}
                 onTimeRangeSelect={onTimeRangeSelect}
                 disabledEntryId={disabledEntryId}
                 className="h-full"
-                dayIndex={dayIndex}
-                displayDates={weekDates}
               />
             </div>
           );

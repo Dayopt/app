@@ -2,57 +2,92 @@
 
 import React, { useCallback } from 'react';
 
-import { EntryCard, computeActualTimeDiffOverlay, useEntryInspectorStore } from '@/features/entry';
+import { ChronotypeBackground } from '@/features/chronotype';
+import {
+  EntryCard,
+  computeActualTimeDiffOverlay,
+  isNewEntry,
+  useEntryInspectorStore,
+} from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
+
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
-import { CalendarDragSelection, type DateTimeSelection } from '../../shared';
-import { InlineTagPalette } from '../../shared/components/InlineTagPalette';
-import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
-import { getAdjustedStyle, getPreviewTime } from '../../shared/utils/interactionHelpers';
+import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
+import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
+import type { DateTimeSelection } from './CalendarDragSelection';
+import { CalendarDragSelection } from './CalendarDragSelection';
+import { InlineTagPalette } from './InlineTagPalette';
 
-/** MultiDayContent コンポーネントのプロパティ */
-interface MultiDayContentProps {
+// ========================================
+// Types
+// ========================================
+
+/** CalendarGridContent コンポーネントのプロパティ */
+export interface CalendarGridContentProps {
+  /** この列が担当する日付 */
   date: Date;
+  /** 表示するエントリ一覧 */
   entries: CalendarEvent[];
-  allEventsForOverlapCheck?: CalendarEvent[] | undefined;
+  /** 計算済みのエントリスタイル（position/size） */
   entryStyles: Record<string, React.CSSProperties>;
-  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
-  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
-  onEntryUpdate?: ((entryId: string, updates: Partial<CalendarEvent>) => void) | undefined;
-  onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
-  className?: string | undefined;
+  /** ビューモード（useInteraction に渡す） */
+  viewMode?: 'day' | '3day' | '5day' | 'week';
+  /** この列の日付インデックス（DayView=0, Week/MultiDay=列番号） */
   dayIndex: number;
-  displayDates?: Date[] | undefined;
+  /** クロノタイプ背景の表示 */
+  showChronotypeBackground?: boolean;
+  /** 重複チェック用の全イベント（週/複数日ビュー用） */
+  allEventsForOverlapCheck?: CalendarEvent[];
+  /** 表示日付リスト（週/複数日ビュー用） */
+  displayDates?: Date[];
+  /** エントリクリック */
+  onEntryClick?: ((entry: CalendarEvent) => void) | undefined;
+  /** エントリ右クリック */
+  onEntryContextMenu?: ((entry: CalendarEvent, e: React.MouseEvent) => void) | undefined;
+  /** D&D/リサイズ時の更新コールバック */
+  onEventUpdate?:
+    | ((
+        eventId: string,
+        updates: { startTime: Date; endTime: Date },
+      ) => Promise<void | { skipToast: true }> | void)
+    | undefined;
+  /** 時間範囲選択 */
+  onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
+  /** DnDを無効化するエントリID */
   disabledEntryId?: string | null | undefined;
-  viewMode: '3day' | '5day';
+  /** data-tour-target 属性（DayViewのみ） */
+  dataTourTarget?: string | undefined;
+  className?: string | undefined;
 }
 
 // ========================================
 // Component
 // ========================================
 
-/** N日間ビューの1日分のグリッド・エントリ・インタラクションを含むコンポーネント */
-export function MultiDayContent({
+/** カレンダーグリッドの1日分コンテンツ（全ビュー共通） */
+export const CalendarGridContent = React.memo(function CalendarGridContent({
   date,
   entries,
-  allEventsForOverlapCheck,
   entryStyles,
+  viewMode = 'day',
+  dayIndex,
+  showChronotypeBackground = false,
+  allEventsForOverlapCheck,
+  displayDates,
   onEntryClick,
   onEntryContextMenu,
-  onEntryUpdate,
+  onEventUpdate,
   onTimeRangeSelect,
-  className,
-  dayIndex,
-  displayDates,
   disabledEntryId,
-  viewMode,
-}: MultiDayContentProps) {
+  dataTourTarget,
+  className,
+}: CalendarGridContentProps) {
   const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
   const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
@@ -62,24 +97,14 @@ export function MultiDayContent({
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
 
+  // 日付間ドラッグ（day以外のビューで使用）
+  const enableCrossDayDrag = viewMode !== 'day';
   const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
   const globalDraggedEntry = useCalendarDragStore((s) => s.draggedPlan);
   const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
   const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
 
-  // onEntryUpdate → onEventUpdate 変換
-  const handleEventUpdate = useCallback(
-    async (entryId: string, updates: { startTime: Date; endTime: Date }) => {
-      if (!onEntryUpdate) return;
-      return await onEntryUpdate(entryId, {
-        startDate: updates.startTime,
-        endDate: updates.endTime,
-      });
-    },
-    [onEntryUpdate],
-  );
-
-  // 統合インタラクション
+  // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
     date,
     events: entries,
@@ -87,7 +112,7 @@ export function MultiDayContent({
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
-    onEventUpdate: handleEventUpdate,
+    ...(onEventUpdate ? { onEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
     ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
   });
@@ -117,6 +142,7 @@ export function MultiDayContent({
     [entries, getTagById, isMobile],
   );
 
+  // エントリ右クリックハンドラー
   const handleEntryContextMenu = useCallback(
     (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
       if (isDragging || isResizing) return;
@@ -125,6 +151,7 @@ export function MultiDayContent({
     [onEntryContextMenu, isDragging, isResizing],
   );
 
+  // 時間グリッド
   const timeGrid = React.useMemo(
     () =>
       Array.from({ length: 24 }, (_, hour) => (
@@ -139,62 +166,84 @@ export function MultiDayContent({
 
   return (
     <div
-      className={cn('bg-background relative h-full flex-1 overflow-hidden', className)}
+      className={cn(
+        'bg-background relative flex-1',
+        enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
+        // WeekContent/MultiDayContent は h-full を持つ
+        enableCrossDayDrag && 'h-full',
+        className,
+      )}
       data-calendar-grid
       data-calendar-day-index={dayIndex}
+      {...(dataTourTarget ? { 'data-tour-target': dataTourTarget } : {})}
     >
+      {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
       <CalendarDragSelection
         date={date}
-        className="absolute inset-0"
+        dayIndex={dayIndex}
+        className={cn('absolute inset-0', enableCrossDayDrag && 'z-10')}
         onTimeRangeSelect={onTimeRangeSelect}
         disabled={isActive}
         plans={allEventsForOverlapCheck ?? entries}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
+          {showChronotypeBackground && (
+            <ChronotypeBackground startHour={0} endHour={24} hourHeight={HOUR_HEIGHT} />
+          )}
           {timeGrid}
         </div>
       </CalendarDragSelection>
 
+      {/* エントリ表示エリア */}
       <div className="pointer-events-none absolute inset-0 z-20" style={{ height: gridHeight }}>
         {entries.map((entry) => {
           const style = entryStyles[entry.id];
           if (!style) return null;
 
           const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
-          const isMovingToOtherDate =
-            isGlobalDragging &&
-            globalDraggedEntry?.id === entry.id &&
-            globalTargetDateIndex !== globalOriginalDateIndex;
-
           const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
-          // 予定 vs 記録の差分オーバーレイ（wrapper側で位置調整）
-          const overlay = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
-
           const adjustedStyle = getAdjustedStyle(style, entry.id, state);
-          // overlay の topShift/heightDelta を wrapper に反映
-          const overlayAdjustedStyle = {
-            ...adjustedStyle,
-            top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
-            height: `${parseFloat(adjustedStyle.height?.toString() || '20') + overlay.heightDelta}px`,
-          };
-          const finalStyle = isMovingToOtherDate
-            ? { ...overlayAdjustedStyle, opacity: 0.3 }
-            : overlayAdjustedStyle;
 
-          const overlayAdjustedHeight =
-            entryResizing && state.mode === 'resizing'
-              ? state.snappedHeight
-              : currentHeight + overlay.heightDelta;
+          // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
+          let finalStyle: React.CSSProperties = adjustedStyle;
+          let finalHeight: number;
+
+          if (enableCrossDayDrag) {
+            const overlay = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
+            const overlayAdjustedStyle = {
+              ...adjustedStyle,
+              top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
+              height: `${parseFloat(adjustedStyle.height?.toString() || '20') + overlay.heightDelta}px`,
+            };
+
+            // 日付間移動中のエントリは元のカラムで半透明
+            const isMovingToOtherDate =
+              isGlobalDragging &&
+              globalDraggedEntry?.id === entry.id &&
+              globalTargetDateIndex !== globalOriginalDateIndex;
+
+            finalStyle = isMovingToOtherDate
+              ? { ...overlayAdjustedStyle, opacity: 0.3 }
+              : overlayAdjustedStyle;
+
+            finalHeight =
+              entryResizing && state.mode === 'resizing'
+                ? state.snappedHeight
+                : currentHeight + overlay.heightDelta;
+          } else {
+            finalHeight =
+              entryResizing && state.mode === 'resizing' ? state.snappedHeight : currentHeight;
+          }
 
           return (
             <div
               key={entry.id}
               style={finalStyle}
               className="pointer-events-none absolute"
-              data-entry-block="true"
+              data-entry-wrapper="true"
             >
               <div
                 className="pointer-events-auto absolute inset-0 rounded"
@@ -210,7 +259,7 @@ export function MultiDayContent({
                         width: 100,
                         height: currentHeight,
                       },
-                      dayIndex,
+                      enableCrossDayDrag ? dayIndex : undefined,
                     );
                   }
                 }}
@@ -224,7 +273,7 @@ export function MultiDayContent({
                       width: 100,
                       height: currentHeight,
                     },
-                    dayIndex,
+                    enableCrossDayDrag ? dayIndex : undefined,
                   );
                 }}
               >
@@ -238,7 +287,7 @@ export function MultiDayContent({
                     top: 0,
                     left: 0,
                     width: 100,
-                    height: overlayAdjustedHeight,
+                    height: finalHeight,
                   }}
                   onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
                     handleEntryContextMenu(p, e)
@@ -260,19 +309,23 @@ export function MultiDayContent({
                   isActive={isInspectorOpen && inspectorEntryId === entry.id}
                   previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  overlayPositionApplied
-                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
+                  className={cn(
+                    'h-full w-full',
+                    entryDragging ? 'cursor-grabbing' : 'cursor-grab',
+                    isNewEntry(entry.id) && 'animate-entry-pop',
+                  )}
                 />
               </div>
             </div>
           );
         })}
 
-        <InlineTagPalette hourHeight={HOUR_HEIGHT} date={date} />
+        <InlineTagPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
       </div>
 
-      {/* React Portal ゴースト */}
+      {/* React Portal ゴースト（DOM clone廃止） */}
       <GhostRenderer state={state} renderGhost={renderGhost} />
     </div>
   );
-}
+});

@@ -10,8 +10,8 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import { CalendarDateHeader, DateDisplay, ScrollableCalendarLayout } from '../shared';
+import { CalendarGridContent } from '../shared/components/CalendarGridContent';
 
-import { DayContent } from './components/DayContent';
 import type { DayViewProps } from './DayView.types';
 import { useDayView } from './hooks/useDayView';
 
@@ -112,15 +112,19 @@ export const DayView = ({
         {/* スクロール可能コンテンツ */}
         <ScrollableCalendarLayout displayDates={displayDates} viewMode="day">
           {/* 日のコンテンツ */}
-          <DayContent
+          <CalendarGridContent
             date={date}
-            events={dayEvents}
-            eventStyles={eventStyles}
+            entries={dayEvents}
+            entryStyles={eventStyles}
+            viewMode="day"
+            dayIndex={0}
+            showChronotypeBackground={true}
             onEntryClick={onEntryClick}
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}
             onTimeRangeSelect={onTimeRangeSelect}
             disabledEntryId={disabledEntryId}
+            dataTourTarget="grid-drag"
             className="absolute inset-y-0 right-0 left-0"
           />
         </ScrollableCalendarLayout>

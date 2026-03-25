@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 import { format, getWeek, isToday } from 'date-fns';
 
@@ -18,7 +18,7 @@ import {
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
 
-import { MultiDayContent } from './components';
+import { CalendarGridContent } from '../shared/components/CalendarGridContent';
 import { useMultiDayView } from './hooks/useMultiDayView';
 import type { MultiDayViewProps } from './MultiDayView.types';
 
@@ -70,6 +70,22 @@ export function MultiDayView({
 
   const entryStyles = useEntryStyles(entryPositions);
 
+  // onUpdateEntry を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
+  const handleEventUpdate = React.useCallback(
+    async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
+      if (!onUpdateEntry) return;
+      const entry = entries.find((p) => p.id === eventId);
+      if (entry) {
+        return onUpdateEntry({
+          ...entry,
+          startDate: updates.startTime,
+          endDate: updates.endTime,
+        });
+      }
+    },
+    [onUpdateEntry, entries],
+  );
+
   const weekNumber = useMemo(() => {
     return getWeek(displayCenterDate, { weekStartsOn: 1 });
   }, [displayCenterDate]);
@@ -118,29 +134,21 @@ export function MultiDayView({
                 )}
                 style={{ width: `${100 / displayDates.length}%` }}
               >
-                <MultiDayContent
+                <CalendarGridContent
                   date={date}
                   entries={dayEntries}
-                  allEventsForOverlapCheck={entries}
                   entryStyles={entryStyles}
+                  viewMode={viewMode}
+                  dayIndex={dayIndex}
+                  showChronotypeBackground={false}
+                  allEventsForOverlapCheck={entries}
+                  displayDates={displayDates}
                   onEntryClick={onEntryClick}
                   onEntryContextMenu={onEntryContextMenu}
-                  onEntryUpdate={
-                    onUpdateEntry
-                      ? (entryId, updates) => {
-                          const entry = entries.find((p) => p.id === entryId);
-                          if (entry) {
-                            return onUpdateEntry({ ...entry, ...updates });
-                          }
-                        }
-                      : undefined
-                  }
+                  onEventUpdate={handleEventUpdate}
                   onTimeRangeSelect={onTimeRangeSelect}
                   disabledEntryId={disabledEntryId}
                   className="h-full"
-                  dayIndex={dayIndex}
-                  displayDates={displayDates}
-                  viewMode={viewMode}
                 />
               </div>
             );
