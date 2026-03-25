@@ -48,6 +48,8 @@ const MAIN_VIEW_OPTIONS: MainViewOption[] = [
 
 const DAY_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
 
+const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
+
 /**
  * ビュー切り替えドロップダウン（Google Calendar風サブメニュー構造）
  *
@@ -98,8 +100,6 @@ export function ViewSwitcher({
   const handleToggleWeekNumbers = useCallback(() => {
     persistSettings({ showWeekNumbers: !showWeekNumbers });
   }, [showWeekNumbers, persistSettings]);
-
-  const DENSITY_OPTIONS = ['compact', 'default', 'spacious'] as const;
 
   // キーボードショートカット: D, W, A, 0-9（モバイルでは無効）
   useEffect(() => {
