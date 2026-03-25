@@ -47,7 +47,7 @@ export {
 // Hooks
 // =============================================================================
 export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
-export { useCalendarLayout } from './hooks/ui/useCalendarLayout';
+export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
 export { useInlineCreateStore } from './stores/useInlineCreateStore';

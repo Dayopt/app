@@ -10,21 +10,11 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
-import { useCallback, useMemo } from 'react';
-
-import { usePathname } from 'next/navigation';
-
-import { format } from 'date-fns';
-
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
-import type { CalendarViewType } from '@/features/calendar';
-import { CalendarController, useCalendarLayout, useCalendarNavigation } from '@/features/calendar';
-import { logger } from '@/lib/logger';
+import { CalendarController, useCalendarNavigation } from '@/features/calendar';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
-  view: CalendarViewType;
-  initialDate: Date | null;
   translations: {
     errorTitle: string;
     errorMessage: string;
@@ -32,51 +22,20 @@ interface CalendarViewClientProps {
   };
 }
 
-export function CalendarViewClient({ view, initialDate, translations }: CalendarViewClientProps) {
-  const pathname = usePathname();
+export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const calendarNavigation = useCalendarNavigation();
 
-  // 現在のlocaleを取得（例: /ja/day -> ja）
-  const locale = pathname?.split('/')[1] || 'ja';
+  // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
+  // calendarNavigation は常に利用可能。
+  if (!calendarNavigation) {
+    throw new Error(
+      'CalendarViewClient requires CalendarNavigationProvider. ' +
+        'Ensure it is rendered in the component tree.',
+    );
+  }
 
-  const contextAvailable = calendarNavigation !== null;
-
-  // URLを更新する関数
-  const updateURL = useCallback(
-    (newViewType: CalendarViewType, newDate?: Date) => {
-      const dateToUse = newDate || new Date();
-      const dateString = format(dateToUse, 'yyyy-MM-dd');
-      // 既存のquery paramを保持しつつdateのみ更新
-      const params = new URLSearchParams(window.location.search);
-      params.set('date', dateString);
-      const newURL = `/${locale}/calendar/${newViewType}?${params.toString()}`;
-      logger.log('🔗 updateURL called:', { newViewType, dateToUse, newURL });
-      window.history.pushState(null, '', newURL);
-    },
-    [locale],
-  );
-
-  // 初期日付をメモ化
-  const stableInitialDate = useMemo(() => initialDate || new Date(), [initialDate]);
-
-  // フォールバック: CalendarNavigationContextが利用できない場合
-  const layoutHook = useCalendarLayout({
-    initialViewType: view,
-    initialDate: stableInitialDate,
-    onViewChange: contextAvailable ? undefined : (v: CalendarViewType) => updateURL(v),
-    onDateChange: contextAvailable ? undefined : (d: Date) => updateURL(view, d),
-  });
-
-  // ナビゲーション状態を解決（Context優先、フォールバックはlayoutHook）
-  const viewType = contextAvailable ? calendarNavigation.viewType : layoutHook.viewType;
-  const currentDate = contextAvailable ? calendarNavigation.currentDate : layoutHook.currentDate;
-  const navigateRelative = contextAvailable
-    ? calendarNavigation.navigateRelative
-    : layoutHook.navigateRelative;
-  const changeView = contextAvailable ? calendarNavigation.changeView : layoutHook.changeView;
-  const navigateToDate = contextAvailable
-    ? calendarNavigation.navigateToDate
-    : layoutHook.navigateToDate;
+  const { viewType, currentDate, navigateRelative, changeView, navigateToDate } =
+    calendarNavigation;
 
   // Composition: 全cross-featureデータとコールバックを集約
   const composition = useCalendarComposition({

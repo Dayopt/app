@@ -58,11 +58,7 @@ async function MultiDayPageContent({
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <CalendarViewClient
-        view={viewType}
-        initialDate={initialDate ?? null}
-        translations={translations}
-      />
+      <CalendarViewClient translations={translations} />
     </HydrationBoundary>
   );
 }

@@ -5,7 +5,6 @@ import { useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import type { CalendarViewType } from '@/features/calendar';
 import { isCalendarViewPath } from '@/features/calendar';
 import type { StatsTab } from '@/features/stats';
 import { StatsPageContent } from '@/features/stats';
@@ -32,30 +31,12 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   return null;
 }
 
-function extractViewFromPathname(pathname: string): CalendarViewType {
-  const segments = pathname.split('/');
-  const lastSegment = segments[segments.length - 1] ?? '';
-  // query string を除去
-  const clean = lastSegment.split('?')[0] ?? '';
-
-  if (['day', 'week'].includes(clean)) {
-    return clean as CalendarViewType;
-  }
-  const match = clean.match(/^(\d+)day$/);
-  if (match) {
-    const n = parseInt(match[1]!);
-    if (n >= 2 && n <= 9) return clean as CalendarViewType;
-  }
-  return 'day';
-}
-
 // ---------------------------------------------------------------------------
 // Sub-views (client-side rendered)
 // ---------------------------------------------------------------------------
 
-function CalendarClientView({ pathname }: { pathname: string }) {
+function CalendarClientView() {
   const t = useTranslations();
-  const view = extractViewFromPathname(pathname);
 
   const translations = useMemo(
     () => ({
@@ -66,7 +47,7 @@ function CalendarClientView({ pathname }: { pathname: string }) {
     [t],
   );
 
-  return <CalendarViewClient view={view} initialDate={null} translations={translations} />;
+  return <CalendarViewClient translations={translations} />;
 }
 
 const VALID_STATS_TABS: StatsTab[] = ['review', 'progress', 'insights'];
@@ -129,7 +110,7 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
   }, [switchToPage, resetToServer]);
 
   if (clientPage === 'calendar') {
-    return <CalendarClientView pathname={pathname} />;
+    return <CalendarClientView />;
   }
 
   if (clientPage === 'stats') {

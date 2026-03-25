@@ -34,11 +34,7 @@ async function DayPageContent({ locale, date }: { locale: Locale; date: string |
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <CalendarViewClient
-        view="day"
-        initialDate={initialDate ?? null}
-        translations={translations}
-      />
+      <CalendarViewClient translations={translations} />
     </HydrationBoundary>
   );
 }

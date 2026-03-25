@@ -1,10 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
-
-import type { CalendarViewType } from '../../types/calendar.types';
 
 /** カレンダーのレイアウトモード */
 export type LayoutMode = 'default' | 'compact' | 'fullscreen';
@@ -13,55 +11,40 @@ export type SidebarWidth = 'full' | 'collapsed' | 'hidden';
 /** レスポンシブブレークポイント */
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
-interface CalendarLayoutState {
+interface CalendarSidebarLayoutState {
   sidebarOpen: boolean;
   sidebarWidth: SidebarWidth;
   layoutMode: LayoutMode;
   currentBreakpoint: Breakpoint;
   showHeader: boolean;
   showSidebar: boolean;
-
-  // 追加: カレンダー状態
-  viewType: CalendarViewType;
-  currentDate: Date;
 }
 
 /**
- * カレンダーレイアウト状態管理フック
- * サイドバーの開閉、レスポンシブ対応、レイアウトモード管理、日付・ビューナビゲーション
+ * カレンダーサイドバー・レイアウト状態管理フック
+ * サイドバーの開閉、レスポンシブ対応、レイアウトモード管理を担当。
+ * 日付・ビューナビゲーションは CalendarNavigationContext が担う。
  */
-export function useCalendarLayout(options?: {
+export function useCalendarSidebarLayout(options?: {
   sidebarDefaultOpen?: boolean;
   showHeaderDefault?: boolean;
   showSidebarDefault?: boolean;
-
-  // 追加: カレンダー設定
-  initialViewType?: CalendarViewType;
-  initialDate?: Date;
   persistSidebarState?: boolean;
   sidebarStorageKey?: string;
-  onViewChange?: ((viewType: CalendarViewType) => void) | undefined;
-  onDateChange?: ((date: Date) => void) | undefined;
 }) {
   const {
     sidebarDefaultOpen = true,
     showHeaderDefault = true,
     showSidebarDefault = true,
-
-    // カレンダー設定
-    initialViewType = 'week',
-    initialDate = new Date(),
     persistSidebarState = true,
     sidebarStorageKey = 'calendar-sidebar-collapsed',
-    onViewChange,
-    onDateChange,
   } = options || {};
 
   // レスポンシブ対応のブレークポイント判定
   const [currentBreakpoint, setCurrentBreakpoint] = useState<Breakpoint>('desktop');
 
   // サイドバー状態の永続化対応
-  const [state, setState] = useState<CalendarLayoutState>(() => {
+  const [state, setState] = useState<CalendarSidebarLayoutState>(() => {
     const sidebarOpen =
       persistSidebarState && typeof window !== 'undefined'
         ? (() => {
@@ -77,10 +60,6 @@ export function useCalendarLayout(options?: {
       currentBreakpoint: 'desktop',
       showHeader: showHeaderDefault,
       showSidebar: showSidebarDefault,
-
-      // カレンダー状態
-      viewType: initialViewType,
-      currentDate: initialDate,
     };
   });
 
@@ -224,136 +203,6 @@ export function useCalendarLayout(options?: {
     }
   }, [state.sidebarWidth]);
 
-  // カレンダー日付ナビゲーション
-  const navigateToDate = useCallback(
-    (date: Date) => {
-      setState((prev) => ({ ...prev, currentDate: date }));
-      onDateChange?.(date);
-    },
-    [onDateChange],
-  );
-
-  const navigateRelative = useCallback(
-    (direction: 'prev' | 'next' | 'today') => {
-      let newDate: Date;
-
-      if (direction === 'today') {
-        newDate = new Date();
-      } else {
-        const multiplier = direction === 'next' ? 1 : -1;
-
-        switch (state.viewType) {
-          case 'day':
-            newDate = new Date(state.currentDate);
-            newDate.setDate(state.currentDate.getDate() + 1 * multiplier);
-            break;
-
-          case '3day':
-            newDate = new Date(state.currentDate);
-            newDate.setDate(state.currentDate.getDate() + 3 * multiplier);
-            break;
-
-          case '5day':
-            newDate = new Date(state.currentDate);
-            newDate.setDate(state.currentDate.getDate() + 5 * multiplier);
-            break;
-
-          case 'week':
-            newDate = new Date(state.currentDate);
-            newDate.setDate(state.currentDate.getDate() + 7 * multiplier);
-            break;
-
-          default:
-            newDate = new Date(state.currentDate);
-            newDate.setDate(state.currentDate.getDate() + 7 * multiplier);
-        }
-      }
-
-      navigateToDate(newDate);
-    },
-    [state.viewType, state.currentDate, navigateToDate],
-  );
-
-  // ビュー変更
-  const changeView = useCallback(
-    (view: CalendarViewType) => {
-      setState((prev) => ({ ...prev, viewType: view }));
-      onViewChange?.(view);
-    },
-    [onViewChange],
-  );
-
-  // 日付範囲の計算
-  const dateRange = useMemo(() => {
-    const start = new Date(state.currentDate);
-    const end = new Date(state.currentDate);
-
-    switch (state.viewType) {
-      case 'day':
-        break;
-
-      case '3day': {
-        start.setDate(state.currentDate.getDate() - 1);
-        end.setDate(state.currentDate.getDate() + 1);
-        break;
-      }
-
-      case '5day': {
-        start.setDate(state.currentDate.getDate() - 2);
-        end.setDate(state.currentDate.getDate() + 2);
-        break;
-      }
-
-      case 'week': {
-        const dayOfWeek = state.currentDate.getDay();
-        const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        start.setDate(state.currentDate.getDate() - mondayOffset);
-        end.setDate(start.getDate() + 6);
-        break;
-      }
-
-      default: {
-        const dayOfWeek = state.currentDate.getDay();
-        const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        start.setDate(state.currentDate.getDate() - mondayOffset);
-        end.setDate(start.getDate() + 6);
-      }
-    }
-
-    return { start, end };
-  }, [state.currentDate, state.viewType]);
-
-  // 今日判定
-  const isToday = useMemo(() => {
-    const today = new Date();
-    return state.currentDate.toDateString() === today.toDateString();
-  }, [state.currentDate]);
-
-  // 日付範囲表示
-  const formattedDateRange = useMemo(() => {
-    const { start, end } = dateRange;
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    };
-
-    if (state.viewType === 'day') {
-      return state.currentDate.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long',
-      });
-    }
-
-    if (start.getMonth() === end.getMonth()) {
-      return `${start.toLocaleDateString('ja-JP', options)} - ${end.getDate()}日`;
-    } else {
-      return `${start.toLocaleDateString('ja-JP', options)} - ${end.toLocaleDateString('ja-JP', options)}`;
-    }
-  }, [state.currentDate, state.viewType, dateRange]);
-
   // モバイル判定（ドロワー表示用）
   const isMobile = currentBreakpoint === 'mobile';
 
@@ -366,24 +215,12 @@ export function useCalendarLayout(options?: {
     showHeader: state.showHeader,
     showSidebar: state.showSidebar,
 
-    // カレンダー状態
-    viewType: state.viewType,
-    currentDate: state.currentDate,
-    dateRange,
-    isToday,
-    formattedDateRange,
-
     // レイアウトアクション
     toggleSidebar,
     setSidebarOpen,
     setLayoutMode,
     setShowHeader,
     setShowSidebar,
-
-    // カレンダーアクション
-    navigateToDate,
-    navigateRelative,
-    changeView,
 
     // 計算値
     sidebarWidthPx: getSidebarWidthPx(),
