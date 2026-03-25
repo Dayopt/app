@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
-import { useTagsMap } from '@/features/tags';
+import { TagIcon, useTagsMap } from '@/features/tags';
 import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
 
 import { usePaletteMutations } from '../hooks/usePaletteMutations';
@@ -50,7 +50,7 @@ export function Palette({ onAddClick }: PaletteProps) {
       duration_minutes: number;
       sort_order: number;
       is_pinned: boolean;
-      tag: { id: string; name: string; color: string };
+      tag: { id: string; name: string; color: string; icon: string | null };
     }[] = [];
     const orphans: {
       id: string;
@@ -115,6 +115,7 @@ export function Palette({ onAddClick }: PaletteProps) {
               tagName={item.tag.name}
               tagColor={item.tag.color}
               durationMinutes={item.duration_minutes}
+              iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
               onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
               menuSlot={
                 <PaletteItemMenu
