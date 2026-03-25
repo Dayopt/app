@@ -10,6 +10,7 @@ import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/feature
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Link } from '@/platform/i18n/navigation';
+import { AppHeader } from '@/shell/components/AppHeader';
 
 /**
  * 設定カテゴリページ
@@ -33,14 +34,17 @@ export default function SettingsCategoryPage() {
   if (isMobile) {
     return (
       <>
-        <header className="border-border flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <Button variant="ghost" icon asChild>
-            <Link href="/settings" aria-label={t('common.back')}>
-              <ChevronLeft className="size-5" />
-            </Link>
-          </Button>
+        <AppHeader
+          leftSlot={
+            <Button variant="ghost" icon asChild>
+              <Link href="/settings" aria-label={t('common.back')}>
+                <ChevronLeft className="size-5" />
+              </Link>
+            </Button>
+          }
+        >
           <h1 className="text-lg font-bold">{categoryMeta ? t(categoryMeta.labelKey) : ''}</h1>
-        </header>
+        </AppHeader>
         <SettingsContent category={category} />
       </>
     );

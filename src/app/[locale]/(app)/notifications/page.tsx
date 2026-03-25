@@ -15,6 +15,7 @@ import {
   useUnreadCount,
 } from '@/features/notifications';
 import { useRouter } from '@/platform/i18n/navigation';
+import { AppHeader } from '@/shell/components/AppHeader';
 
 import type { NotificationType } from '@/features/notifications';
 
@@ -79,7 +80,18 @@ export default function NotificationsPage() {
   return (
     <>
       {/* ヘッダー */}
-      <header className="border-border flex h-14 shrink-0 items-center justify-between border-b px-4">
+      <AppHeader
+        rightSlot={
+          <button
+            type="button"
+            onClick={handleOpenSettings}
+            className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+            aria-label={t('notification.settings.title')}
+          >
+            <Settings className="size-4" />
+          </button>
+        }
+      >
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold">{t('notification.title')}</h1>
           {unreadCount > 0 && (
@@ -88,15 +100,7 @@ export default function NotificationsPage() {
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleOpenSettings}
-          className="hover:bg-state-hover flex size-10 items-center justify-center rounded-lg transition-colors"
-          aria-label={t('notification.settings.title')}
-        >
-          <Settings className="size-4" />
-        </button>
-      </header>
+      </AppHeader>
 
       {/* コンテンツ */}
       <ScrollArea className="flex-1">

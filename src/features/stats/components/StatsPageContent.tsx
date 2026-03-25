@@ -93,8 +93,8 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
     <div className="bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
       <AppHeader
-        controls={
-          <>
+        rightSlot={
+          <div className="hidden items-center md:flex">
             <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
             {activeTab === 'review' && (
               <StatsGranularitySelector
@@ -103,7 +103,7 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
                 onGranularityChange={setGranularity}
               />
             )}
-          </>
+          </div>
         }
       >
         <StatsDateDisplay currentDate={currentDate} granularity={granularity} />

@@ -1,33 +1,20 @@
 'use client';
 
-import { PanelLeft } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
-import { Button } from '@/components/ui/button';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { SyncStatusIndicator } from '@/shell/components/SyncStatusIndicator';
-import { useLayoutStore } from '@/stores/useLayoutStore';
-
-import { MobileFilterButton } from './MobileFilterButton';
 
 interface AppHeaderProps {
-  /** 左コンテンツ: 日付表示、ページタイトル等 */
+  /** 左スロット: 戻るボタン、MobileCreateButton等 */
+  leftSlot?: React.ReactNode;
+  /** 中央コンテンツ: タイトル、日付表示等 */
   children: React.ReactNode;
-  /** デスクトップ: 左コンテンツ後のコントロール群（DateNavigator + ViewSwitcher等） */
-  controls?: React.ReactNode;
-  /** デスクトップ右側スロット */
+  /** 右スロット: 設定ボタン、Todayボタン、デスクトップコントロール等 */
   rightSlot?: React.ReactNode;
-  /** モバイル右側コンテンツ: 検索/Todayボタン等 */
-  mobileRightSlot?: React.ReactNode;
-  /** モバイル左のフィルターボタンを非表示にする */
-  hideMobileFilterButton?: boolean | undefined;
 }
 
 /**
  * アプリ共通ヘッダーシェル
  *
- * Calendar / Stats / 通常ページで共有する構造的クロム。
- * ページ固有の日付表示やコントロールは slots で注入する。
+ * 高さ・スタイルを統一する薄い枠。中身は各ページが slots で注入する。
  *
  * **デザイン仕様:**
  * - 全体の高さ: 48px固定（h-12）
@@ -35,59 +22,20 @@ interface AppHeaderProps {
  * - コンテナ: 32px（h-8）
  * - 8pxグリッドシステム準拠
  */
-export function AppHeader({
-  children,
-  controls,
-  rightSlot,
-  mobileRightSlot,
-  hideMobileFilterButton,
-}: AppHeaderProps) {
-  const t = useTranslations();
-  const isSidebarOpen = useLayoutStore.use.sidebarOpen();
-  const openSidebar = useLayoutStore.use.openSidebar();
-
+export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
   return (
     <header className="bg-background relative h-12 px-4 py-2">
       <div className="flex h-8 items-center justify-between">
-        {/* 左側: フィルター + コンテンツ + コントロール群 */}
+        {/* 左側: leftSlot + children */}
         <div className="flex items-center gap-2">
-          {/* サイドバー開くボタン（PCのみ、サイドバーが閉じている時のみ表示） */}
-          {!isSidebarOpen && (
-            <HoverTooltip content={t('navigation.sidebar.openSidebar')} side="bottom">
-              <Button
-                variant="ghost"
-                icon
-                className="hidden size-8 md:flex"
-                onClick={openSidebar}
-                aria-label={t('navigation.sidebar.openSidebar')}
-              >
-                <PanelLeft className="size-4" />
-              </Button>
-            </HoverTooltip>
-          )}
-
-          {/* モバイル: フィルター・パレットシート開閉ボタン */}
-          {!hideMobileFilterButton && <MobileFilterButton />}
-
-          {/* ページ固有の左コンテンツ（日付表示、タイトル等） */}
+          {leftSlot}
           {children}
-
-          {/* コントロール群 - PCのみ */}
-          {controls && <div className="ml-2 hidden items-center md:flex">{controls}</div>}
         </div>
 
         {/* 右側 */}
         <div className="flex items-center gap-2">
-          {/* 同期状態インジケーター（オフライン/同期待ち時のみ表示） */}
           <SyncStatusIndicator />
-
-          {/* モバイル右側コンテンツ */}
-          {mobileRightSlot && (
-            <div className="flex items-center gap-2 md:hidden">{mobileRightSlot}</div>
-          )}
-
-          {/* デスクトップ右側スロット */}
-          {rightSlot && <div className="hidden items-center gap-2 md:flex">{rightSlot}</div>}
+          {rightSlot}
         </div>
       </div>
     </header>

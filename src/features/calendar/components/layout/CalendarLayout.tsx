@@ -3,13 +3,9 @@
 import { useTranslations } from 'next-intl';
 import { memo, useCallback } from 'react';
 
-import { Search } from 'lucide-react';
-
 import { cn } from '@/lib/utils';
 
 import { DateNavigator } from '@/components/common/DateNavigator';
-import { Button } from '@/components/ui/button';
-import { useGlobalSearch } from '@/hooks/use-global-search';
 import { AppHeader } from '@/shell/components/AppHeader';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
@@ -17,6 +13,7 @@ import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
 import { DateRangeDisplay } from './Header/DateRangeDisplay';
+import { MobileCalendarHeader } from './Header/MobileCalendarHeader';
 import { ViewSwitcher } from './Header/ViewSwitcher';
 
 /** CalendarLayout コンポーネントのプロパティ */
@@ -76,7 +73,6 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     rightSlot,
   }) => {
     const t = useTranslations('calendar');
-    const { open: openSearch } = useGlobalSearch();
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
 
     // スワイプで前後の期間に移動
@@ -96,58 +92,39 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         {/* スクリーンリーダー用のページタイトル */}
         <h1 className="sr-only">{t('title')}</h1>
 
-        <AppHeader
-          controls={
-            <>
-              <DateNavigator onNavigate={onNavigate} arrowSize="md" />
-              <ViewSwitcher
-                className="ml-4"
-                currentView={viewType}
-                onChange={(view) => onViewChange(view as CalendarViewType)}
-                onSettingsChange={onSettingsChange}
-              />
-            </>
-          }
-          rightSlot={rightSlot}
-          mobileRightSlot={
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={openSearch}
-                aria-label={t('aside.search')}
-              >
-                <Search className="size-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => onNavigate('today')}
-                aria-label={t('actions.goToToday')}
-              >
-                <div className="relative flex size-6 flex-col">
-                  <div className="h-1.5 w-full border-b-2 border-current" />
-                  <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-bold">{new Date().getDate()}</span>
-                  </div>
-                </div>
-              </Button>
-            </div>
-          }
-        >
-          <DateRangeDisplay
-            date={currentDate}
-            viewType={viewType}
-            showWeekNumber={showWeekNumbers}
-            clickable={true}
-            onDateSelect={onDateSelect ? (date) => date && onDateSelect(date) : undefined}
-            displayRange={displayRange}
-          />
-        </AppHeader>
+        {/* モバイル: インライン展開ミニカレンダー */}
+        <MobileCalendarHeader
+          currentDate={currentDate}
+          onNavigate={onNavigate}
+          onDateSelect={onDateSelect}
+          displayRange={displayRange}
+        />
+
+        {/* デスクトップ: 現行AppHeader（変更なし） */}
+        <div className="hidden md:block">
+          <AppHeader
+            rightSlot={
+              <div className="flex items-center gap-2">
+                <DateNavigator onNavigate={onNavigate} arrowSize="md" />
+                <ViewSwitcher
+                  className="ml-4"
+                  currentView={viewType}
+                  onChange={(view) => onViewChange(view as CalendarViewType)}
+                  onSettingsChange={onSettingsChange}
+                />
+                {rightSlot}
+              </div>
+            }
+          >
+            <DateRangeDisplay
+              date={currentDate}
+              viewType={viewType}
+              showWeekNumber={showWeekNumbers}
+              clickable={false}
+              displayRange={displayRange}
+            />
+          </AppHeader>
+        </div>
 
         {/* カレンダーコンテンツ（スワイプ対応） */}
         <div

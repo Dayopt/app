@@ -6,29 +6,15 @@ import { AppHeader } from '@/shell/components/AppHeader';
 // Stub UI Helpers
 // ─────────────────────────────────────────────────────────
 
-/** ヘッダーコントロール群のスタブ（DateNavigator等の代替） */
-function StubControls() {
+/** 左スロットのスタブ（MobileFilterButton等の代替） */
+function StubLeftSlot() {
   return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        className="border-border bg-container hover:bg-state-hover rounded-lg border px-3 py-1 text-xs"
-      >
-        前へ
-      </button>
-      <button
-        type="button"
-        className="border-border bg-container hover:bg-state-hover rounded-lg border px-3 py-1 text-xs"
-      >
-        今日
-      </button>
-      <button
-        type="button"
-        className="border-border bg-container hover:bg-state-hover rounded-lg border px-3 py-1 text-xs"
-      >
-        次へ
-      </button>
-    </div>
+    <button
+      type="button"
+      className="border-border bg-container hover:bg-state-hover rounded-lg border px-2 py-1 text-xs"
+    >
+      フィルタ
+    </button>
   );
 }
 
@@ -83,7 +69,7 @@ export const Default: Story = {
 export const Mobile: Story = {
   render: () => (
     <div className="border-border w-full border">
-      <AppHeader>
+      <AppHeader leftSlot={<StubLeftSlot />}>
         <h1 className="truncate text-lg leading-8 font-bold">Plans</h1>
       </AppHeader>
     </div>
@@ -94,57 +80,26 @@ export const Mobile: Story = {
 };
 
 /**
- * controlsスロットあり（デスクトップのみ表示）
+ * leftSlot + rightSlot パターン
  *
- * DateNavigator / ViewSwitcher など日付ナビゲーション系コントロールを
- * 左コンテンツの右隣に配置するパターン。
+ * モバイルではleftSlotにフィルターボタン等、
+ * デスクトップではrightSlotにコントロール群を配置。
  */
-export const WithControls: Story = {
+export const WithSlots: Story = {
   render: () => (
     <div className="border-border w-full border">
-      <AppHeader controls={<StubControls />}>
+      <AppHeader leftSlot={<StubLeftSlot />} rightSlot={<StubRightSlot />}>
         <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
       </AppHeader>
     </div>
   ),
 };
 
-/**
- * rightSlotあり（デスクトップのみ表示）
- *
- * 右端に配置するUIを rightSlot に注入するパターン。
- */
+/** rightSlotのみ */
 export const WithRightSlot: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader rightSlot={<StubRightSlot />}>
-        <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
-      </AppHeader>
-    </div>
-  ),
-};
-
-/**
- * 全スロット埋め状態
- *
- * children / controls / rightSlot / mobileRightSlot の全スロットに
- * コンテンツを注入した最大構成を示す。
- */
-export const FullyPopulated: Story = {
-  render: () => (
-    <div className="border-border w-full border">
-      <AppHeader
-        controls={<StubControls />}
-        rightSlot={<StubRightSlot />}
-        mobileRightSlot={
-          <button
-            type="button"
-            className="border-border bg-container rounded-lg border px-2 py-1 text-xs"
-          >
-            検索
-          </button>
-        }
-      >
         <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
       </AppHeader>
     </div>
@@ -157,38 +112,22 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <div className="border-border w-full border">
         <AppHeader>
-          <h1 className="truncate text-lg leading-8 font-bold">Plans</h1>
+          <h1 className="truncate text-lg leading-8 font-bold">タイトルのみ</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
-        <AppHeader controls={<StubControls />}>
-          <h1 className="truncate text-lg leading-8 font-bold">カレンダー（controls）</h1>
+        <AppHeader leftSlot={<StubLeftSlot />}>
+          <h1 className="truncate text-lg leading-8 font-bold">leftSlot付き</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
         <AppHeader rightSlot={<StubRightSlot />}>
-          <h1 className="truncate text-lg leading-8 font-bold">カレンダー（rightSlot）</h1>
+          <h1 className="truncate text-lg leading-8 font-bold">rightSlot付き</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
-        <AppHeader
-          controls={<StubControls />}
-          rightSlot={<StubRightSlot />}
-          mobileRightSlot={
-            <button
-              type="button"
-              className="border-border bg-container rounded-lg border px-2 py-1 text-xs"
-            >
-              検索
-            </button>
-          }
-        >
-          <h1 className="truncate text-lg leading-8 font-bold">カレンダー（全スロット）</h1>
-        </AppHeader>
-      </div>
-      <div className="border-border w-full border">
-        <AppHeader>
-          <h1 className="truncate text-lg leading-8 font-bold">Stats</h1>
+        <AppHeader leftSlot={<StubLeftSlot />} rightSlot={<StubRightSlot />}>
+          <h1 className="truncate text-lg leading-8 font-bold">全スロット</h1>
         </AppHeader>
       </div>
     </div>
