@@ -15,6 +15,8 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ActionFooter } from '@/components/ui/action-footer';
+import { Button } from '@/components/ui/button';
 import { COLOR_DISPLAY_NAMES } from '@/components/ui/color-palette-picker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { HoverTooltip } from '@/components/ui/tooltip';
@@ -196,20 +198,15 @@ function CreateTagFormView({
           </div>
         )}
 
-        {/* 作成ボタン */}
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className={cn(
-            'min-h-11 w-full rounded-lg text-sm font-medium transition-colors',
-            canSubmit
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-              : 'bg-muted text-muted-foreground cursor-not-allowed',
-          )}
-        >
-          {t('tagSelector.create')}
-        </button>
+        {/* フッター */}
+        <ActionFooter>
+          <Button variant="outline" onClick={onBack}>
+            {t('common.actions.cancel')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit}>
+            {t('common.actions.create')}
+          </Button>
+        </ActionFooter>
       </div>
     </div>
   );
