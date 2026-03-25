@@ -17,12 +17,13 @@ import {
   CHRONOTYPE_SELECTABLE_TYPES,
   ChronotypeQuiz,
 } from '@/features/chronotype';
-import { OnboardingWizard, useOnboardingStore } from '@/features/onboarding';
+import { OnboardingWizard } from '@/features/onboarding';
 import { logger } from '@/lib/logger';
 import { useRouter } from '@/platform/i18n/navigation';
 import { api } from '@/platform/trpc';
 import { toast } from 'sonner';
 
+import type { QuizCallbacks } from '@/features/onboarding';
 import type { PresetChronotypeType } from '@/types/chronotype';
 
 export default function OnboardingPage() {
@@ -47,15 +48,6 @@ export default function OnboardingPage() {
         emoji: CHRONOTYPE_EMOJI[type],
       })),
     [],
-  );
-
-  // Quiz complete handler
-  const store = useOnboardingStore();
-  const handleQuizComplete = useCallback(
-    (type: PresetChronotypeType) => {
-      store.setChronotypeType(type);
-    },
-    [store],
   );
 
   // Wizard complete handler
@@ -93,12 +85,12 @@ export default function OnboardingPage() {
     [completeMutation, router, t],
   );
 
-  // Quiz component (rendered here in Composition Layer, passed as prop)
-  const quizComponent = useMemo(
-    () => (
-      <ChronotypeQuiz onComplete={handleQuizComplete} onCancel={() => store.setShowQuiz(false)} />
+  // Quiz component factory — receives wizard callbacks so quiz can update wizard state
+  const renderQuiz = useCallback(
+    ({ onChronotypeSelect, onHideQuiz }: QuizCallbacks) => (
+      <ChronotypeQuiz onComplete={onChronotypeSelect} onCancel={onHideQuiz} />
     ),
-    [handleQuizComplete, store],
+    [],
   );
 
   if (isProfileError) {
@@ -116,7 +108,7 @@ export default function OnboardingPage() {
     <OnboardingWizard
       initialName={profile?.full_name ?? ''}
       cardData={cardData}
-      quizComponent={quizComponent}
+      renderQuiz={renderQuiz}
       onComplete={handleComplete}
       isCompleting={completeMutation.isPending}
     />

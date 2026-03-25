@@ -7,7 +7,10 @@ import { useTranslations } from 'next-intl';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { TagDeleteStrategyDialog, useDeleteTag, useTagCacheStore, useTags } from '@/features/tags';
+
+import { useIsFetching } from '@tanstack/react-query';
+
+import { TagDeleteStrategyDialog, tagKeys, useDeleteTag, useTags } from '@/features/tags';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { api } from '@/platform/trpc';
 import { SidebarSection } from '@/shell/components/sidebar';
@@ -42,17 +45,17 @@ export function CalendarFilterList() {
   const showOnlyGroupTags = useCalendarFilterStore((s) => s.showOnlyGroupTags);
   const getGroupVisibility = useCalendarFilterStore((s) => s.getGroupVisibility);
 
-  // タグミューテーション状態を監視（Race Condition防止）
-  const isSettling = useTagCacheStore((state) => state.isSettling);
+  // tags.list フェッチ中はフィルター初期化をスキップ（Race Condition防止）
+  const isTagsFetching = useIsFetching({ queryKey: tagKeys.list() }) > 0;
 
-  // タグ一覧取得後に初期化（settling中は競合防止のためスキップ）
+  // タグ一覧取得後に初期化（フェッチ中は競合防止のためスキップ）
   useEffect(() => {
-    if (isSettling) return;
+    if (isTagsFetching) return;
 
     if (tags && tags.length > 0) {
       initializeWithTags(tags.map((tag) => tag.id));
     }
-  }, [tags, initializeWithTags, isSettling]);
+  }, [tags, initializeWithTags, isTagsFetching]);
 
   const isLoading = tagsLoading;
 

@@ -10,49 +10,53 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| ステップ数 | 2（welcome → chronotype） |
-| 完了条件 | 表示名（必須）+ クロノタイプ（任意、スキップ可） |
-| 完了後の処理 | profiles テーブル更新 + user_settings にクロノタイプ保存 + サンプルプラン生成 |
-| サンプルプラン | クロノタイプのピーク時間帯に4件配置（非ブロッキング） |
-| 完了フラグ | `profiles.onboarding_completed_at`（null = 未完了） |
+| 項目           | 値                                                                            |
+| -------------- | ----------------------------------------------------------------------------- |
+| ステップ数     | 2（welcome → chronotype）                                                     |
+| 完了条件       | 表示名（必須）+ クロノタイプ（任意、スキップ可）                              |
+| 完了後の処理   | profiles テーブル更新 + user_settings にクロノタイプ保存 + サンプルプラン生成 |
+| サンプルプラン | クロノタイプのピーク時間帯に4件配置（非ブロッキング）                         |
+| 完了フラグ     | `profiles.onboarding_completed_at`（null = 未完了）                           |
 
 ---
 
 ## コンポーネント構成
 
 ```
-OnboardingWizard                ウィザード本体（ステップルーティング + store 接続）
+OnboardingWizard                ウィザード本体（ステップルーティング + useReducer で状態管理）
 ├── StepIndicator               ステップ進捗インジケータ（現在ステップをドット表示）
 ├── WelcomeStep                 STEP 1: 表示名入力（Enter キー対応）
 └── ChronotypeStep              STEP 2: クロノタイプ選択
     ├── AnimalCard              タイプ選択カード（lion/bear/wolf/dolphin）
-    └── [quizComponent]         クロノタイプクイズ（Composition Layer 経由で注入）
+    └── [renderQuiz()]          クロノタイプクイズ（Composition Layer 経由で注入）
 ```
 
-`quizComponent` は props 経由で外部から注入される（Composition Layer パターン）。これにより `onboarding` feature が `chronotype` feature を直接 import することを回避している。
+`renderQuiz` は render prop として外部から注入される（Composition Layer パターン）。ウィザードが `QuizCallbacks`（`onChronotypeSelect` / `onHideQuiz`）を渡すことで、クイズの完了・キャンセルがウィザード内部の `useReducer` に反映される。これにより `onboarding` feature が `chronotype` feature を直接 import することを回避している。
 
 ---
 
 ## 状態管理
 
-### Zustand Stores
+### ローカル状態（useReducer）
 
-| Store | 用途 | persist |
-|-------|------|---------|
-| `useOnboardingStore` | currentStep / displayName / chronotypeType / showQuiz を管理 | No |
+`OnboardingWizard` コンポーネント内の `useReducer` で管理。グローバルストアは使用しない。
 
-### ストアアクション
+| 状態             | 型                             | 説明                   |
+| ---------------- | ------------------------------ | ---------------------- |
+| `currentStep`    | `OnboardingStep`               | 現在表示中のステップ   |
+| `displayName`    | `string`                       | 入力された表示名       |
+| `chronotypeType` | `PresetChronotypeType \| null` | 選択されたクロノタイプ |
+| `showQuiz`       | `boolean`                      | クイズ表示フラグ       |
 
-| アクション | 説明 |
-|-----------|------|
-| `setDisplayName(name)` | 表示名を更新 |
-| `setChronotypeType(type)` | クロノタイプを選択（showQuiz を false にリセット） |
-| `setShowQuiz(show)` | クイズ表示フラグを切り替え |
-| `goNext()` | 次のステップへ（ONBOARDING_STEPS 配列で管理） |
-| `goBack()` | 前のステップへ |
-| `reset()` | ストア全体をリセット（マウント時に実行、クロスユーザーの状態漏れを防止） |
+### アクション（Reducer）
+
+| アクション            | 説明                                               |
+| --------------------- | -------------------------------------------------- |
+| `SET_DISPLAY_NAME`    | 表示名を更新                                       |
+| `SET_CHRONOTYPE_TYPE` | クロノタイプを選択（showQuiz を false にリセット） |
+| `SET_SHOW_QUIZ`       | クイズ表示フラグを切り替え                         |
+| `GO_NEXT`             | 次のステップへ（ONBOARDING_STEPS 配列で管理）      |
+| `GO_BACK`             | 前のステップへ                                     |
 
 ---
 
@@ -60,26 +64,26 @@ OnboardingWizard                ウィザード本体（ステップルーティ
 
 ### Query
 
-| Hook | 用途 |
-|------|------|
+| Hook                                   | 用途                                                             |
+| -------------------------------------- | ---------------------------------------------------------------- |
 | `api.onboarding.getProfile.useQuery()` | OAuth で取得済みの名前と完了フラグを取得（名前の事前入力に使用） |
 
 ### Mutation
 
-| Hook | 用途 |
-|------|------|
-| `api.onboarding.complete.useMutation()` | fullName + chronotypeType を送信してオンボーディング完了 |
-| `api.onboarding.reset.useMutation()` | `onboarding_completed_at` を null にリセット（開発・デバッグ用） |
+| Hook                                    | 用途                                                             |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `api.onboarding.complete.useMutation()` | fullName + chronotypeType を送信してオンボーディング完了         |
+| `api.onboarding.reset.useMutation()`    | `onboarding_completed_at` を null にリセット（開発・デバッグ用） |
 
 ---
 
 ## tRPC ルーター
 
-| エンドポイント | タイプ | 説明 |
-|-------------|-------|------|
-| `onboarding.getProfile` | query | profiles + auth.getUser を並列取得。名前未設定時はメールアドレスの@前をフォールバックに使用 |
-| `onboarding.complete` | mutation | プロフィール更新 + クロノタイプ設定 + サンプルプラン生成（非ブロッキング） |
-| `onboarding.reset` | mutation | `onboarding_completed_at` を null に更新 |
+| エンドポイント          | タイプ   | 説明                                                                                        |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| `onboarding.getProfile` | query    | profiles + auth.getUser を並列取得。名前未設定時はメールアドレスの@前をフォールバックに使用 |
+| `onboarding.complete`   | mutation | プロフィール更新 + クロノタイプ設定 + サンプルプラン生成（非ブロッキング）                  |
+| `onboarding.reset`      | mutation | `onboarding_completed_at` を null に更新                                                    |
 
 ---
 
@@ -89,22 +93,22 @@ OnboardingWizard                ウィザード本体（ステップルーティ
 
 ### クロノタイプ別ピーク開始時間
 
-| タイプ | ピーク開始 |
-|--------|---------|
-| lion | 7:00 |
-| bear | 10:00 |
-| wolf | 15:00 |
-| dolphin | 8:00 |
+| タイプ         | ピーク開始               |
+| -------------- | ------------------------ |
+| lion           | 7:00                     |
+| bear           | 10:00                    |
+| wolf           | 15:00                    |
+| dolphin        | 8:00                     |
 | null（未設定） | bear（デフォルト）を使用 |
 
 ### サンプルテンプレート
 
-| タイトル | オフセット | 時間 |
-|--------|---------|------|
-| Focus Work | +0h | 90分 |
-| Email & Messages | +1.5h | 30分 |
-| Break | +2h | 30分 |
-| Afternoon Work | +2.5h | 60分 |
+| タイトル         | オフセット | 時間 |
+| ---------------- | ---------- | ---- |
+| Focus Work       | +0h        | 90分 |
+| Email & Messages | +1.5h      | 30分 |
+| Break            | +2h        | 30分 |
+| Afternoon Work   | +2.5h      | 60分 |
 
 サンプルプランは `entries` テーブルに `description = '__onboarding_sample__'` で挿入される。`createSamplePlansForUser` は `.catch()` で例外をキャプチャし、サンプル生成の失敗がオンボーディング完了を妨げない。
 
@@ -114,9 +118,9 @@ OnboardingWizard                ウィザード本体（ステップルーティ
 
 ### profiles テーブル（関連カラム）
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `full_name` | TEXT | 表示名 |
+| カラム                    | 型          | 説明                      |
+| ------------------------- | ----------- | ------------------------- |
+| `full_name`               | TEXT        | 表示名                    |
 | `onboarding_completed_at` | TIMESTAMPTZ | 完了日時（null = 未完了） |
 
 ---

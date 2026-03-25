@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, type RefObject } from 'react';
 
-import { useCalendarScrollStore } from '../../../../stores';
+import { getScrollPosition, setScrollPosition } from '../../../../stores/calendarScrollStore';
 
 /** スクロール管理に使用するカレンダービューモード */
 export type CalendarViewModeForScroll = 'day' | '3day' | '5day' | 'week';
@@ -35,9 +35,6 @@ export const useScrollableCalendar = ({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const hasRestoredScroll = useRef(false);
 
-  // スクロール位置ストア
-  const { setScrollPosition, getScrollPosition, setLastActiveView } = useCalendarScrollStore();
-
   // 密度変更時のスクロール位置保持
   const prevHourHeight = useRef(hourHeight);
   useEffect(() => {
@@ -50,11 +47,6 @@ export const useScrollableCalendar = ({
     }
     prevHourHeight.current = hourHeight;
   }, [hourHeight]);
-
-  // アクティブビューの更新
-  useEffect(() => {
-    setLastActiveView(viewMode);
-  }, [viewMode, setLastActiveView]);
 
   // 初期スクロール位置の設定（保存された位置を優先、なければ現在時刻を中央に）
   // viewMode変更時のhasRestoredScrollリセットも統合（effect順序のrace回避）
@@ -93,7 +85,7 @@ export const useScrollableCalendar = ({
         behavior: useSmoothScroll ? 'smooth' : 'instant',
       });
     });
-  }, [viewMode, getScrollPosition, hourHeight]);
+  }, [viewMode, hourHeight]);
 
   // スクロールイベントの処理
   const handleScroll = useCallback(() => {
@@ -105,9 +97,9 @@ export const useScrollableCalendar = ({
       onScrollPositionChange(scrollTop);
     }
 
-    // スクロール位置をストアに保存
+    // スクロール位置をモジュールストアに保存
     setScrollPosition(viewMode, scrollTop);
-  }, [onScrollPositionChange, viewMode, setScrollPosition]);
+  }, [onScrollPositionChange, viewMode]);
 
   // スクロールリスナーの設定
   useEffect(() => {
