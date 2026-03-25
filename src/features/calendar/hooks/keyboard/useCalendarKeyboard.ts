@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { CalendarViewType } from '../../types/calendar.types';
+import type { ShortcutDef } from './shortcut-registry';
+import { registerShortcuts } from './shortcut-registry';
 
 /** useCalendarKeyboard フックのプロパティ */
 interface UseCalendarKeyboardProps {
@@ -17,71 +19,94 @@ interface UseCalendarKeyboardProps {
  * - Cmd/Ctrl + ←/→: 前後ナビゲーション
  * - Cmd/Ctrl + T: 今日へ移動
  * - Cmd/Ctrl + 1: Day View
- * - Cmd/Ctrl + 2: Split-Day View
  * - Cmd/Ctrl + 3: 3-Day View
- * - Cmd/Ctrl + 5: Week View (週末なし)
+ * - Cmd/Ctrl + 5: 5-Day View
  * - Cmd/Ctrl + 7: Week View
  * - Cmd/Ctrl + W: 週末表示切り替え
  */
 export const useCalendarKeyboard = ({
-  viewType,
   onNavigate,
   onViewChange,
   onToggleWeekends,
 }: UseCalendarKeyboardProps) => {
+  const onNavigateRef = useRef(onNavigate);
+  const onViewChangeRef = useRef(onViewChange);
+  const onToggleWeekendsRef = useRef(onToggleWeekends);
+
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey) {
-        // input/textarea 内ではショートカットを無効化
-        // (Cmd+A = 全選択, Cmd+←/→ = 行頭/行末 などブラウザ標準操作を妨げない)
-        const { activeElement } = document;
-        if (
-          activeElement &&
-          (activeElement.tagName === 'INPUT' ||
-            activeElement.tagName === 'TEXTAREA' ||
-            activeElement.getAttribute('contenteditable') === 'true')
-        ) {
-          return;
-        }
+    onNavigateRef.current = onNavigate;
+    onViewChangeRef.current = onViewChange;
+    onToggleWeekendsRef.current = onToggleWeekends;
+  }, [onNavigate, onViewChange, onToggleWeekends]);
 
-        switch (e.key) {
-          case 'ArrowLeft':
-            e.preventDefault();
-            onNavigate('prev');
-            break;
-          case 'ArrowRight':
-            e.preventDefault();
-            onNavigate('next');
-            break;
-          case 't':
-            e.preventDefault();
-            onNavigate('today');
-            break;
-          case '1':
-            e.preventDefault();
-            onViewChange('day');
-            break;
-          case '3':
-            e.preventDefault();
-            onViewChange('3day');
-            break;
-          case '5':
-            e.preventDefault();
-            onViewChange('5day');
-            break;
-          case '7':
-            e.preventDefault();
-            onViewChange('week');
-            break;
-          case 'w':
-            e.preventDefault();
-            onToggleWeekends();
-            break;
-        }
-      }
-    };
+  useEffect(() => {
+    const shortcuts: ShortcutDef[] = [
+      {
+        key: 'Cmd+ArrowLeft',
+        description: '前の期間へナビゲーション',
+        handler: (e) => {
+          e.preventDefault();
+          onNavigateRef.current('prev');
+        },
+      },
+      {
+        key: 'Cmd+ArrowRight',
+        description: '次の期間へナビゲーション',
+        handler: (e) => {
+          e.preventDefault();
+          onNavigateRef.current('next');
+        },
+      },
+      {
+        key: 'Cmd+T',
+        description: '今日へ移動',
+        handler: (e) => {
+          e.preventDefault();
+          onNavigateRef.current('today');
+        },
+      },
+      {
+        key: 'Cmd+1',
+        description: 'Day View に切り替え',
+        handler: (e) => {
+          e.preventDefault();
+          onViewChangeRef.current('day');
+        },
+      },
+      {
+        key: 'Cmd+3',
+        description: '3-Day View に切り替え',
+        handler: (e) => {
+          e.preventDefault();
+          onViewChangeRef.current('3day');
+        },
+      },
+      {
+        key: 'Cmd+5',
+        description: '5-Day View に切り替え',
+        handler: (e) => {
+          e.preventDefault();
+          onViewChangeRef.current('5day');
+        },
+      },
+      {
+        key: 'Cmd+7',
+        description: 'Week View に切り替え',
+        handler: (e) => {
+          e.preventDefault();
+          onViewChangeRef.current('week');
+        },
+      },
+      {
+        key: 'Cmd+W',
+        description: '週末表示切り替え（Cmd）',
+        handler: (e) => {
+          e.preventDefault();
+          onToggleWeekendsRef.current();
+        },
+      },
+    ];
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [viewType, onNavigate, onViewChange, onToggleWeekends]);
+    return registerShortcuts(shortcuts);
+  }, []);
 };

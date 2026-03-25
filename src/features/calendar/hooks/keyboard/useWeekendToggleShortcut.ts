@@ -1,10 +1,12 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import type { ShortcutDef } from './shortcut-registry';
+import { registerShortcut } from './shortcut-registry';
 
 /**
  * 週末表示切り替えのキーボードショートカット（Cmd/Ctrl + W）を管理するフック
@@ -24,46 +26,38 @@ export function useWeekendToggleShortcut(
     [updateSettings, onSettingsChange],
   );
 
+  // Ref for latest values in shortcut handler
+  const showWeekendsRef = useRef(showWeekends);
+  const persistSettingsRef = useRef(persistSettings);
+  const tRef = useRef(t);
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Cmd (Mac) または Ctrl (Windows/Linux) + W
-      const isToggleShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w';
-
-      if (!isToggleShortcut) return;
-
-      // デフォルトのブラウザ動作（ウィンドウを閉じる）を防ぐ
-      event.preventDefault();
-      event.stopPropagation();
-
-      // 入力フィールドにフォーカスがある場合は無視
-      const { activeElement } = document;
-      const isInputField =
-        activeElement &&
-        (activeElement.tagName === 'INPUT' ||
-          activeElement.tagName === 'TEXTAREA' ||
-          activeElement.getAttribute('contenteditable') === 'true' ||
-          activeElement.getAttribute('role') === 'textbox');
-
-      if (isInputField) return;
-
-      // モーダルやダイアログが開いている場合は無視
-      const hasOpenModal = document.querySelector('[role="dialog"]') !== null;
-      if (hasOpenModal) return;
-
-      // 週末表示を切り替え
-      const newState = !showWeekends;
-      persistSettings({ showWeekends: newState });
-
-      // 成功フィードバック
-      toast(newState ? t('weekendsShown') : t('weekendsHidden'));
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
+    showWeekendsRef.current = showWeekends;
+    persistSettingsRef.current = persistSettings;
+    tRef.current = t;
   }, [showWeekends, persistSettings, t]);
+
+  useEffect(() => {
+    const def: ShortcutDef = {
+      key: 'Cmd+W',
+      description: '週末表示切り替え',
+      priority: 10, // useCalendarKeyboardのCmd+Wより高い優先度
+      handler: (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        // モーダルやダイアログが開いている場合は無視
+        const hasOpenModal = document.querySelector('[role="dialog"]') !== null;
+        if (hasOpenModal) return;
+
+        const newState = !showWeekendsRef.current;
+        persistSettingsRef.current({ showWeekends: newState });
+        toast(newState ? tRef.current('weekendsShown') : tRef.current('weekendsHidden'));
+      },
+    };
+
+    return registerShortcut(def);
+  }, []);
 
   return {
     showWeekends,

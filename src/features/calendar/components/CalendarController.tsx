@@ -12,6 +12,7 @@
 import { useMemo } from 'react';
 
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
+import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/calendar.types';
 
@@ -117,6 +118,9 @@ export function CalendarController({
   // =========================================================================
   // Calendar-internal hooks
   // =========================================================================
+
+  // ショートカットレジストリのグローバルリスナー（1箇所のみ呼び出し）
+  useShortcutRegistry();
 
   // コンテキストメニュー管理
   const { contextMenuEvent, contextMenuPosition, handleEventContextMenu, handleCloseContextMenu } =
