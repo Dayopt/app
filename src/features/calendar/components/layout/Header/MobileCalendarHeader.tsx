@@ -54,9 +54,9 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       setPrevCurrentDate(currentDate);
     }
 
-    // ヘッダーテキスト: viewMonthの年月を表示
-    const monthYearFormat = tCommon('dates.formats.monthYear');
-    const headerText = format(viewMonth, monthYearFormat, { locale: dateFnsLocale });
+    // ヘッダーテキスト: currentDateの月日を表示（Dayビューのみ）
+    const monthDayFormat = tCommon('dates.formats.monthDay');
+    const headerText = format(currentDate, monthDayFormat, { locale: dateFnsLocale });
 
     const handleToggle = useCallback(() => {
       setIsExpanded((prev) => !prev);
@@ -105,7 +105,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >
-            <h2 className="text-2xl font-normal">{headerText}</h2>
+            <h2 className="text-xl">{headerText}</h2>
             <ChevronIcon className="text-muted-foreground size-4" />
           </button>
         </AppHeader>
