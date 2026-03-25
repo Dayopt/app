@@ -24,16 +24,16 @@ interface AppHeaderProps {
  */
 export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
   return (
-    <header className="bg-background relative h-12 px-4 py-2">
-      <div className="flex h-8 items-center justify-between">
-        {/* 左側: leftSlot + children */}
-        <div className="flex items-center gap-2">
-          {leftSlot}
-          {children}
-        </div>
+    <header className="bg-background h-12 px-4 py-2">
+      <div className="grid h-8 grid-cols-[auto_1fr_auto] items-center">
+        {/* 左側 */}
+        <div className="flex items-center">{leftSlot}</div>
+
+        {/* 中央 */}
+        <div className="flex items-center justify-center">{children}</div>
 
         {/* 右側 */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <SyncStatusIndicator />
           {rightSlot}
         </div>
