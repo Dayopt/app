@@ -6,10 +6,13 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useUnreadCount } from '@/features/notifications';
+import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 type TabId = 'calendar' | 'stats' | 'notifications' | 'account';
 
@@ -35,6 +38,9 @@ export function BottomTabBar() {
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const { data: unreadCount = 0 } = useUnreadCount();
+  const user = useAuthStore((s) => s.user);
+  const avatarUrl = getAvatarUrl(user);
+  const displayName = getDisplayName(user, 'User');
 
   const locale = useMemo(() => {
     const segments = pathname?.split('/') ?? [];
@@ -151,7 +157,17 @@ export function BottomTabBar() {
                   isActive && 'bg-primary/10',
                 )}
               >
-                <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                {/* Accountタブはユーザーアバターを表示 */}
+                {tab.id === 'account' ? (
+                  <Avatar className="size-6">
+                    {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                      {getInitials(displayName)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                )}
                 {/* 未読バッジ */}
                 {tab.badge != null && tab.badge > 0 && (
                   <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">

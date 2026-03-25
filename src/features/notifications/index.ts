@@ -16,6 +16,11 @@ export { NotificationItem } from './components/NotificationItem';
 // =============================================================================
 export { useNotificationPreferences } from './hooks/useNotificationPreferences';
 export { useNotifications } from './hooks/useNotifications';
+export {
+  useNotificationMutations,
+  useNotificationsList,
+  useUnreadCount,
+} from './hooks/useNotificationsData';
 
 // =============================================================================
 // Types
