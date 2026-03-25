@@ -33,7 +33,7 @@ export function DateRow({
   const t = useTranslations();
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex min-h-11 items-center justify-between">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span className="text-muted-foreground text-sm">{label}</span>
