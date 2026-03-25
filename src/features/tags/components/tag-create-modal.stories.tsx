@@ -21,10 +21,50 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // ─────────────────────────────────────────────────────────
+// Mock Data
+// ─────────────────────────────────────────────────────────
+
+const EXISTING_TAGS: Tag[] = [
+  {
+    id: 'tag-1',
+    name: '仕事',
+    user_id: 'user-1',
+    color: 'blue',
+    icon: 'briefcase',
+    is_active: true,
+    sort_order: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'tag-2',
+    name: '仕事:会議',
+    user_id: 'user-1',
+    color: 'blue',
+    icon: 'users',
+    is_active: true,
+    sort_order: 1,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'tag-3',
+    name: '勉強',
+    user_id: 'user-1',
+    color: 'green',
+    icon: 'book-open',
+    is_active: true,
+    sort_order: 2,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+// ─────────────────────────────────────────────────────────
 // Interactive Wrapper
 // ─────────────────────────────────────────────────────────
 
-function TagCreateModalStory() {
+function TagCreateModalStory({ tags = EXISTING_TAGS }: { tags?: Tag[] }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -35,9 +75,9 @@ function TagCreateModalStory() {
         onClose={() => setIsOpen(false)}
         onSave={async (data) => {
           fn()(data);
-          // 擬似的な保存遅延
           await new Promise((resolve) => setTimeout(resolve, 500));
         }}
+        existingTags={tags}
       />
     </>
   );
@@ -72,6 +112,7 @@ export const OpenState: Story = {
       onSave={async () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }}
+      existingTags={EXISTING_TAGS}
     />
   ),
   play: async () => {
@@ -82,46 +123,6 @@ export const OpenState: Story = {
     await expect(body.getByText(/タグ名/i)).toBeInTheDocument();
   },
 };
-
-// ─────────────────────────────────────────────────────────
-// Mock Data
-// ─────────────────────────────────────────────────────────
-
-const EXISTING_TAGS: Tag[] = [
-  {
-    id: 'tag-1',
-    name: '仕事',
-    user_id: 'user-1',
-    color: 'blue',
-    icon: null,
-    is_active: true,
-    sort_order: 0,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-2',
-    name: '仕事:会議',
-    user_id: 'user-1',
-    color: 'blue',
-    icon: null,
-    is_active: true,
-    sort_order: 1,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-3',
-    name: '勉強',
-    user_id: 'user-1',
-    color: 'green',
-    icon: null,
-    is_active: true,
-    sort_order: 2,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-];
 
 /**
  * 既存タグあり状態
@@ -182,6 +183,7 @@ export const AllPatterns: Story = {
           onSave={async () => {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }}
+          existingTags={EXISTING_TAGS}
         />
       </div>
     </div>
