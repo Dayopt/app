@@ -103,7 +103,11 @@ export const tagsRouter = createTRPCRouter({
             'gray',
           ])
           .optional(),
-        icon: z.string().max(50).optional(),
+        icon: z
+          .string()
+          .max(50)
+          .regex(/^[a-z][a-z0-9-]*$/)
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -155,7 +159,12 @@ export const tagsRouter = createTRPCRouter({
             'gray',
           ])
           .optional(),
-        icon: z.string().max(50).nullable().optional(),
+        icon: z
+          .string()
+          .max(50)
+          .regex(/^[a-z][a-z0-9-]*$/)
+          .nullable()
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

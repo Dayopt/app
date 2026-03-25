@@ -25,6 +25,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
+import { DEFAULT_TAG_ICON } from '../lib/curated-icons';
 import { parseColonTag } from '../lib/tag-colon';
 import { IconPicker } from './IconPicker';
 import { TagIcon } from './TagIcon';
@@ -53,7 +54,7 @@ interface TagQuickSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null) => void;
+  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
   /** タグホバー時のコールバック（プレビュー用） */
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
   /** PC: アンカー要素の横にパネルを配置する */
@@ -71,13 +72,13 @@ function CreateTagFormView({
 }: {
   parentTags: Tag[];
   onBack: () => void;
-  onCreateAndSelect: (name: string, color?: string | null) => void;
+  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
 }) {
   const t = useTranslations('calendar');
   const tCommon = useTranslations('common');
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState<TagColorName>('blue');
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(DEFAULT_TAG_ICON);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   const canSubmit = name.trim().length > 0;
@@ -85,8 +86,8 @@ function CreateTagFormView({
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return;
     const fullName = selectedGroup ? `${selectedGroup}:${name.trim()}` : name.trim();
-    onCreateAndSelect(fullName, selectedColor);
-  }, [canSubmit, selectedGroup, name, selectedColor, onCreateAndSelect]);
+    onCreateAndSelect(fullName, selectedColor, selectedIcon);
+  }, [canSubmit, selectedGroup, name, selectedColor, selectedIcon, onCreateAndSelect]);
 
   // グループ選択で色を自動継承
   const effectiveColor = useMemo(() => {
@@ -98,13 +99,11 @@ function CreateTagFormView({
   return (
     <div className="flex flex-col overflow-y-auto" style={{ maxHeight: '60vh' }}>
       {/* ← 戻るヘッダー */}
-      <button
-        type="button"
-        onClick={onBack}
-        className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
-      >
-        <ChevronLeft className="text-muted-foreground size-5" />
-        <span className="text-foreground font-semibold">{t('tagSelector.new')}</span>
+      <button type="button" onClick={onBack} className="group flex min-h-11 items-center px-4 py-2">
+        <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
+          <ChevronLeft className="text-muted-foreground size-5" />
+          <span className="text-foreground font-semibold">{t('tagSelector.new')}</span>
+        </span>
       </button>
 
       <div className="flex flex-col gap-5 px-4 py-3">
@@ -282,7 +281,7 @@ function TagQuickSelectorContent({
   onTagHover,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null) => void;
+  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
 }) {
   const t = useTranslations('calendar');
@@ -335,8 +334,8 @@ function TagQuickSelectorContent({
       <CreateTagFormView
         parentTags={parentTags}
         onBack={() => setView({ type: 'grid' })}
-        onCreateAndSelect={(name, color) => {
-          onCreateAndSelect(name, color);
+        onCreateAndSelect={(name, color, icon) => {
+          onCreateAndSelect(name, color, icon);
           setView({ type: 'grid' });
         }}
       />
@@ -354,15 +353,17 @@ function TagQuickSelectorContent({
         <button
           type="button"
           onClick={() => setView({ type: 'grid' })}
-          className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
+          className="group flex min-h-11 items-center px-4 py-2"
         >
-          <ChevronLeft className="text-muted-foreground size-5" />
-          <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-          <span className="text-foreground font-semibold">{view.prefix}</span>
+          <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
+            <ChevronLeft className="text-muted-foreground size-5" />
+            <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
+            <span className="text-foreground font-semibold">{view.prefix}</span>
+          </span>
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -406,7 +407,7 @@ function TagQuickSelectorContent({
                 <button
                   key={nameKey}
                   type="button"
-                  onClick={() => onCreateAndSelect(name, color)}
+                  onClick={() => onCreateAndSelect(name, color, icon)}
                   className="border-border hover:bg-state-hover flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
                 >
                   <TagIcon icon={icon} color={color} size="sm" />
@@ -420,7 +421,7 @@ function TagQuickSelectorContent({
 
       {/* タググリッド */}
       {!isTagZero && (
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTags.map((tag) => {
             const hasChildren = childrenByPrefix.has(tag.name);
             return (

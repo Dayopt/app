@@ -78,11 +78,12 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
   const selectedTagColorClasses = selectedTag ? getTagColorClasses(selectedTag.color) : undefined;
 
   const handleCreateAndSelectTag = useCallback(
-    async (name: string, color?: string | null) => {
+    async (name: string, color?: string | null, icon?: string | null) => {
       try {
         const newTag = await createTagMutation.mutateAsync({
           name,
           color: resolveTagColor(color),
+          icon: icon ?? undefined,
         });
         handleTagChange(newTag.id);
       } catch (err) {
