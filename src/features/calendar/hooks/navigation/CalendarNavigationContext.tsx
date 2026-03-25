@@ -69,11 +69,11 @@ export const CalendarNavigationProvider = ({
   React.useEffect(() => {
     currentDateRef.current = currentDate;
     // グローバルストアに同期（Palette等がカレンダー表示日を参照するため）
-    useCalendarNavigationStore.getState().setViewedDate(currentDate);
+    useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
   }, [currentDate]);
   React.useEffect(() => {
     viewTypeRef.current = viewType;
-    useCalendarNavigationStore.getState().setViewType(viewType);
+    useCalendarNavigationStore.getState()._syncViewType(viewType);
   }, [viewType]);
   React.useEffect(() => {
     localeRef.current = locale;
