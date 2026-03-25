@@ -7,6 +7,7 @@ import {
   EntryCard,
   computeActualTimeDiffOverlay,
   isNewEntry,
+  setInspectorAnchorRect,
   useEntryInspectorStore,
 } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
@@ -90,7 +91,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 }: CalendarGridContentProps) {
   const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
-  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -281,7 +281,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
                   entry={entry}
                   tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
                   tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-                  onAnchorRect={setAnchorRect}
+                  onAnchorRect={setInspectorAnchorRect}
                   isMobile={isMobile}
                   position={{
                     top: 0,
