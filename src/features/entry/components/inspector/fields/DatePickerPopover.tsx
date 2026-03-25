@@ -55,7 +55,7 @@ export function DatePickerPopover({
         <button
           type="button"
           disabled={disabled}
-          className="text-muted-foreground data-[state=selected]:text-foreground hover:bg-state-hover focus-visible:ring-ring inline-flex h-8 items-center gap-2 rounded-lg px-2 text-sm tabular-nums transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+          className="text-muted-foreground data-[state=selected]:text-foreground hover:bg-state-hover focus-visible:ring-ring inline-flex h-8 items-center gap-2 rounded-lg px-2 text-base tabular-nums transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
           data-state={selectedDate ? 'selected' : undefined}
           aria-label={
             selectedDate

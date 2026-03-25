@@ -107,7 +107,7 @@ export function TimeSelect({
               placeholder="--:--"
               size={5}
               className={cn(
-                'flex h-8 cursor-pointer rounded-lg bg-transparent text-sm tabular-nums outline-none',
+                'flex h-8 cursor-pointer rounded-lg bg-transparent text-base tabular-nums outline-none',
                 'disabled:cursor-default disabled:opacity-50',
                 showIcon ? 'w-auto' : 'px-2 text-right',
                 value ? 'text-foreground' : 'text-muted-foreground',
