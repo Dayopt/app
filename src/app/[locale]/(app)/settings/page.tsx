@@ -27,11 +27,12 @@ import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useContactStore } from '@/shell/stores/useContactStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 /**
  * 設定ページのルート
  *
- * PC: /settings/profile にリダイレクト
+ * PC: ホームにリダイレクトし、設定モーダルを開く
  * Mobile: Instagram風アカウント概要ページ
  */
 export default function SettingsPage() {
@@ -42,18 +43,20 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const { logout, isLoggingOut } = useLogout();
   const openContact = useContactStore((s) => s.open);
+  const openSettings = useSettingsStore((s) => s.open);
   const [legalOpen, setLegalOpen] = useState(false);
 
   const displayName = getDisplayName(user, t('navigation.navUser.account'));
   const avatarUrl = getAvatarUrl(user);
   const initials = getInitials(displayName);
 
-  // PC: デフォルトカテゴリにリダイレクト
+  // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
     if (!isMobile) {
-      router.replace('/settings/profile');
+      openSettings('profile');
+      router.replace('/');
     }
-  }, [isMobile, router]);
+  }, [isMobile, openSettings, router]);
 
   if (!isMobile) {
     return null;
