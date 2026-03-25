@@ -10,8 +10,11 @@
  * cross-feature依存の橋渡しはこのファイルが担当する。
  */
 
+import { PanelLeft } from 'lucide-react';
+
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
+import { useLayoutStore } from '@/stores/useLayoutStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -24,6 +27,8 @@ interface CalendarViewClientProps {
 
 export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const calendarNavigation = useCalendarNavigation();
+  const isSidebarOpen = useLayoutStore.use.sidebarOpen();
+  const toggleSidebar = useLayoutStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。
@@ -45,6 +50,18 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
     navigateToDate,
     changeView,
   });
+
+  // サイドバーが閉じているときに表示するトグルボタン
+  const sidebarToggle = !isSidebarOpen ? (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      aria-label="Open sidebar"
+    >
+      <PanelLeft className="size-4" />
+    </button>
+  ) : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -92,6 +109,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onToggleWeekends={composition.onToggleWeekends}
           onSettingsChange={composition.onSettingsChange}
           onDateSelect={composition.onDateSelect}
+          leftSlot={sidebarToggle}
         />
       </FeatureErrorBoundary>
     </div>

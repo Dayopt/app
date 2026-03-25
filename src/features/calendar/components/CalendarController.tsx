@@ -83,6 +83,7 @@ export interface CalendarControllerProps {
 
   // --- Slots ---
   className?: string;
+  leftSlot?: React.ReactNode;
   rightSlot?: React.ReactNode;
 }
 
@@ -113,6 +114,7 @@ export function CalendarController({
   onSettingsChange,
   onDateSelect,
   className,
+  leftSlot,
   rightSlot,
 }: CalendarControllerProps) {
   // =========================================================================
@@ -191,6 +193,7 @@ export function CalendarController({
           end: viewDateRange.end,
         }}
         onSettingsChange={onSettingsChange}
+        leftSlot={leftSlot}
         rightSlot={rightSlot}
       >
         <CalendarViewRenderer viewType={viewType} commonProps={commonProps} />

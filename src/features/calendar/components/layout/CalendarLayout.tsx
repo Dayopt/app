@@ -43,7 +43,8 @@ export interface CalendarLayoutProps {
   // Settings persistence callback
   onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
 
-  // Header right slot
+  // Header slots
+  leftSlot?: React.ReactNode | undefined;
   rightSlot?: React.ReactNode | undefined;
 }
 
@@ -70,7 +71,8 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Settings persistence
     onSettingsChange,
 
-    // Header right slot
+    // Header slots
+    leftSlot,
     rightSlot,
   }) => {
     const t = useTranslations('calendar');
@@ -127,7 +129,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
 
         {/* デスクトップ: 現行AppHeader（変更なし） */}
         <div className="hidden md:block">
-          <AppHeader rightSlot={rightSlot}>
+          <AppHeader leftSlot={leftSlot} rightSlot={rightSlot}>
             <div className="flex items-center gap-2">
               <DateRangeDisplay
                 date={currentDate}
