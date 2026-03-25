@@ -133,7 +133,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
             <div key={weekIndex} className={cn('grid', gridCols)}>
               {showWeekNumbers && (
                 <div className="text-muted-foreground flex h-10 w-6 items-center justify-center text-xs">
-                  {getWeek(week[0], { weekStartsOn: 1 })}
+                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn }) : null}
                 </div>
               )}
               {week.map((date) => {
