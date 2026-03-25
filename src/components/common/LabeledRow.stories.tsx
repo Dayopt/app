@@ -20,7 +20,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** ラベルのみ。 */
+/** control（デフォルト）: ラベル + Switch。 */
 export const Default: Story = {
   args: {
     label: 'Notifications',
@@ -37,10 +37,46 @@ export const WithDescription: Story = {
   },
 };
 
-/** 複数行を並べた設定画面パターン。 */
-export const AllPatterns: StoryObj = {
+/** navigate: ChevronRight付き、行全体がタップ可能。 */
+export const Navigate: Story = {
+  args: {
+    label: 'Change password',
+    variant: 'navigate',
+    onClick: () => alert('Navigate clicked'),
+  },
+};
+
+/** navigate + 現在値表示。 */
+export const NavigateWithValue: Story = {
+  args: {
+    label: 'Display name',
+    variant: 'navigate',
+    onClick: () => alert('Navigate clicked'),
+    children: <span className="text-muted-foreground text-sm">John Doe</span>,
+  },
+};
+
+/** action: destructiveカラー。 */
+export const Action: Story = {
+  args: {
+    label: 'Delete account',
+    variant: 'action',
+    onClick: () => alert('Action clicked'),
+  },
+};
+
+/** display: 表示のみ（操作なし）。 */
+export const Display: Story = {
+  args: {
+    label: 'demo@dayopt.app',
+    variant: 'display',
+  },
+};
+
+/** 複数行を並べた設定画面パターン（全variant）。 */
+export const AllVariants: StoryObj = {
   render: () => (
-    <div className="divide-border divide-y">
+    <div>
       <LabeledRow label="Notifications">
         <Switch aria-label="Notifications" />
       </LabeledRow>
@@ -50,6 +86,9 @@ export const AllPatterns: StoryObj = {
       <LabeledRow label="Language">
         <span className="text-muted-foreground text-sm">English</span>
       </LabeledRow>
+      <LabeledRow label="Change password" variant="navigate" onClick={() => {}} />
+      <LabeledRow label="Delete account" variant="action" onClick={() => {}} />
+      <LabeledRow label="demo@dayopt.app" variant="display" />
     </div>
   ),
 };

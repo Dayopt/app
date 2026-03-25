@@ -12,25 +12,28 @@ interface SectionCardProps {
 }
 
 /**
- * 設定セクションコンポーネント（フラット + セパレーター方式）
+ * 設定セクションコンポーネント
  *
- * カード風UIではなく、セパレーターで区切るフラットなスタイル。
- * ChatGPT設定画面風のシンプルなデザイン。
+ * セクション間はborder-bセパレータで区切るフラットスタイル
  */
 export function SectionCard({ title, children, className, actions }: SectionCardProps) {
   return (
-    <section className={cn('text-foreground', className)}>
-      <div>
-        {(title || actions) && (
-          <div className="border-border mb-2 flex items-center justify-between border-b pb-2">
-            {title ? <h2 className="text-foreground text-lg font-normal">{title}</h2> : <div />}
-            {actions ? (
-              <div className="flex flex-shrink-0 items-center gap-4">{actions}</div>
-            ) : null}
-          </div>
-        )}
-        <div className="text-base">{children}</div>
-      </div>
+    <section
+      className={cn('border-border text-foreground border-b pb-6 last:border-b-0', className)}
+    >
+      {(title || actions) && (
+        <div className="mb-3 flex items-center justify-between">
+          {title ? (
+            <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+              {title}
+            </h2>
+          ) : (
+            <div />
+          )}
+          {actions ? <div className="flex flex-shrink-0 items-center gap-4">{actions}</div> : null}
+        </div>
+      )}
+      <div className="text-base">{children}</div>
     </section>
   );
 }

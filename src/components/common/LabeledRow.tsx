@@ -2,24 +2,67 @@
 
 import type { ReactNode } from 'react';
 
+import { ChevronRight } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
+
+type LabeledRowVariant = 'control' | 'navigate' | 'action' | 'display';
+
 interface LabeledRowProps {
   label: ReactNode;
   description?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
+  /** 行のバリアント: control(デフォルト), navigate(遷移), action(破壊的), display(表示のみ) */
+  variant?: LabeledRowVariant;
+  /** navigate variant時のクリックハンドラ */
+  onClick?: () => void;
 }
 
 /**
  * 設定画面の行コンポーネント（2カラム: ラベル | コントロール）
- * Apple Settings / ChatGPT 設定画面の標準パターン
+ *
+ * - min-h-11 (44px) でタッチターゲット保証
+ * - variant="navigate" で ChevronRight 自動表示 + 行タップ可能
+ * - variant="action" で destructive カラー
  */
-export function LabeledRow({ label, description, children }: LabeledRowProps) {
-  return (
-    <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+export function LabeledRow({
+  label,
+  description,
+  children,
+  variant = 'control',
+  onClick,
+}: LabeledRowProps) {
+  const isNavigate = variant === 'navigate';
+  const isAction = variant === 'action';
+
+  const content = (
+    <div
+      className={cn(
+        'flex min-h-11 items-center gap-4 py-3',
+        isNavigate && 'active:bg-muted/50 cursor-pointer',
+        isAction && 'cursor-pointer',
+      )}
+    >
       <div className="min-w-0 flex-1">
-        <div className="text-foreground text-base">{label}</div>
-        {description ? <div className="text-muted-foreground text-sm">{description}</div> : null}
+        <div className={cn('text-base', isAction && 'text-destructive')}>{label}</div>
+        {description ? (
+          <div className="text-muted-foreground mt-0.5 text-sm">{description}</div>
+        ) : null}
       </div>
-      <div className="flex shrink-0 items-center">{children}</div>
+      <div className="flex shrink-0 items-center gap-2">
+        {children}
+        {isNavigate && <ChevronRight className="text-muted-foreground size-4" />}
+      </div>
     </div>
   );
+
+  if ((isNavigate || isAction) && onClick) {
+    return (
+      <button type="button" className="w-full text-left" onClick={onClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return content;
 }

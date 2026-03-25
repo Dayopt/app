@@ -27,14 +27,14 @@ export const Default: Story = {
   args: {
     title: 'General',
     children: (
-      <div className="divide-border divide-y">
+      <>
         <LabeledRow label="Notifications">
           <Switch aria-label="Notifications" />
         </LabeledRow>
         <LabeledRow label="Sound">
           <Switch aria-label="Sound" />
         </LabeledRow>
-      </div>
+      </>
     ),
   },
 };
@@ -56,11 +56,22 @@ export const WithActions: Story = {
 export const WithoutTitle: Story = {
   args: {
     children: (
-      <div className="divide-border divide-y">
-        <LabeledRow label="Email">
-          <span className="text-muted-foreground text-sm">demo@dayopt.app</span>
-        </LabeledRow>
-      </div>
+      <LabeledRow label="Email">
+        <span className="text-muted-foreground text-sm">demo@dayopt.app</span>
+      </LabeledRow>
+    ),
+  },
+};
+
+/** navigate variant付きセクション。 */
+export const WithNavigateRows: Story = {
+  args: {
+    title: 'Account',
+    children: (
+      <>
+        <LabeledRow label="demo@dayopt.app" variant="navigate" onClick={() => {}} />
+        <LabeledRow label="••••••••" variant="navigate" onClick={() => {}} />
+      </>
     ),
   },
 };
@@ -68,16 +79,18 @@ export const WithoutTitle: Story = {
 /** 複数セクションを並べた設定画面パターン。 */
 export const AllPatterns: StoryObj = {
   render: () => (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <SectionCard title="General">
-        <div className="divide-border divide-y">
-          <LabeledRow label="Notifications">
-            <Switch aria-label="Notifications" />
-          </LabeledRow>
-          <LabeledRow label="Sound">
-            <Switch aria-label="Sound" />
-          </LabeledRow>
-        </div>
+        <LabeledRow label="Notifications">
+          <Switch aria-label="Notifications" />
+        </LabeledRow>
+        <LabeledRow label="Sound">
+          <Switch aria-label="Sound" />
+        </LabeledRow>
+      </SectionCard>
+      <SectionCard title="Account">
+        <LabeledRow label="Change email" variant="navigate" onClick={() => {}} />
+        <LabeledRow label="Change password" variant="navigate" onClick={() => {}} />
       </SectionCard>
       <SectionCard
         title="Tags"
@@ -88,6 +101,9 @@ export const AllPatterns: StoryObj = {
         }
       >
         <div className="text-muted-foreground py-4 text-center text-sm">No tags yet</div>
+      </SectionCard>
+      <SectionCard title="Danger Zone">
+        <LabeledRow label="Delete account" variant="action" onClick={() => {}} />
       </SectionCard>
     </div>
   ),
