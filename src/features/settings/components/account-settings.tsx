@@ -65,7 +65,11 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
     <div className="space-y-6 sm:space-y-8">
       {/* メールアドレス */}
       <SectionCard title={t('settings.account.email')}>
-        <LabeledRow label={email} variant="navigate" onClick={() => setShowEmailDialog(true)} />
+        <LabeledRow
+          label={email || t('settings.account.noEmail')}
+          variant="navigate"
+          onClick={() => setShowEmailDialog(true)}
+        />
       </SectionCard>
 
       {/* パスワード */}

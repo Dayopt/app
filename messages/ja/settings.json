@@ -19,6 +19,7 @@
       "displayNameDesc": "他のユーザーに表示される名前",
       "displayNamePlaceholder": "表示名を入力",
       "email": "メールアドレス",
+      "noEmail": "未設定",
       "emailDesc": "アカウントに関連付けられたメールアドレス",
       "emailPlaceholder": "メールアドレスを入力",
       "emailChange": {

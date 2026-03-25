@@ -19,6 +19,7 @@
       "displayNameDesc": "Name shown to other users",
       "displayNamePlaceholder": "Enter display name",
       "email": "Email Address",
+      "noEmail": "Not set",
       "emailDesc": "Email address associated with your account",
       "emailPlaceholder": "Enter email address",
       "emailChange": {

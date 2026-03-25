@@ -13,6 +13,7 @@ export {
   TagDeleteStrategyDialog,
 } from './components';
 export { IconPicker } from './components/IconPicker';
+export { TagGridPicker } from './components/TagGridPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
 export type { HoveredTagInfo } from './components/TagQuickSelector';

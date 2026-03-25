@@ -29,8 +29,20 @@ const MOCK_TAGS = [
     name: '仕事',
     user_id: 'user-1',
     color: 'blue',
+    icon: 'briefcase',
     is_active: true,
     sort_order: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'tag-work-meeting',
+    name: '仕事:会議',
+    user_id: 'user-1',
+    color: 'blue',
+    icon: 'users',
+    is_active: true,
+    sort_order: 1,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
   },
@@ -39,8 +51,9 @@ const MOCK_TAGS = [
     name: '勉強',
     user_id: 'user-1',
     color: 'green',
+    icon: 'book-open',
     is_active: true,
-    sort_order: 1,
+    sort_order: 2,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
   },
@@ -49,8 +62,9 @@ const MOCK_TAGS = [
     name: '運動',
     user_id: 'user-1',
     color: 'amber',
+    icon: 'dumbbell',
     is_active: true,
-    sort_order: 2,
+    sort_order: 3,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
   },
@@ -59,16 +73,7 @@ const MOCK_TAGS = [
     name: '休憩',
     user_id: 'user-1',
     color: 'orange',
-    is_active: true,
-    sort_order: 3,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-meeting',
-    name: '会議',
-    user_id: 'user-1',
-    color: 'indigo',
+    icon: 'coffee',
     is_active: true,
     sort_order: 4,
     created_at: '2026-01-01T00:00:00.000Z',
@@ -190,24 +195,13 @@ export const DuplicateError: Story = {
     const canvas = within(canvasElement);
     // パネルを開く
     await userEvent.click(canvas.getByRole('button', { name: /パレットに追加/i }));
-    // タグ選択: 「仕事」（tag-work）
-    const tagTrigger =
-      document.querySelector<HTMLElement>('[aria-label="タグ"]') ??
-      document.querySelectorAll('[role="combobox"]')[0];
-    if (tagTrigger) {
-      await userEvent.click(tagTrigger);
-      const workOption = await within(document.body).findByText('仕事');
-      await userEvent.click(workOption);
-    }
-    // Duration 選択: 1h (60min) — ピン済みと一致
-    const durationTrigger =
-      document.querySelectorAll('[role="combobox"]')[1] ??
-      document.querySelector<HTMLElement>('[aria-label="時間"]');
-    if (durationTrigger) {
-      await userEvent.click(durationTrigger);
-      const oneHourOption = await within(document.body).findByText('1h');
-      await userEvent.click(oneHourOption);
-    }
+    // タグ選択: 「仕事」グリッドセルをクリック
+    const body = within(document.body);
+    const workCell = await body.findByText('仕事');
+    await userEvent.click(workCell);
+    // Duration 選択: 1h チップをクリック — ピン済みと一致
+    const oneHourChip = await body.findByText('1h');
+    await userEvent.click(oneHourChip);
   },
 };
 
