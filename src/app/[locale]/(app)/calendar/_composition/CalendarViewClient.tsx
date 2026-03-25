@@ -123,7 +123,6 @@ export function CalendarViewClient({ view, initialDate, translations }: Calendar
           onTimeRangeSelect={composition.onTimeRangeSelect}
           onUpdateEntry={composition.onUpdatePlan}
           onDeleteEntry={composition.onDeletePlan}
-          onRestoreEntry={composition.onRestorePlan}
           getAddToPaletteHandler={composition.getAddToPaletteHandler}
           onDeleteEntryConfirm={composition.onDeletePlanConfirm}
           onNavigate={composition.onNavigate}

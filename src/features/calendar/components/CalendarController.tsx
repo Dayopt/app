@@ -63,7 +63,6 @@ export interface CalendarControllerProps {
     updates?: { startTime: Date; endTime: Date },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
-  onRestoreEntry: (entry: CalendarEvent) => Promise<void>;
 
   // --- Context menu actions ---
   getAddToPaletteHandler?: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
@@ -102,7 +101,6 @@ export function CalendarController({
   onTimeRangeSelect,
   onUpdateEntry,
   onDeleteEntry,
-  onRestoreEntry,
   getAddToPaletteHandler,
   onDeleteEntryConfirm,
   onNavigate,
@@ -147,7 +145,6 @@ export function CalendarController({
       onEntryContextMenu: handleEventContextMenu,
       onUpdateEntry,
       onDeleteEntry,
-      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,
@@ -165,7 +162,6 @@ export function CalendarController({
       handleEventContextMenu,
       onUpdateEntry,
       onDeleteEntry,
-      onRestoreEntry,
       onTimeRangeSelect,
       onViewChange,
       onNavigatePrev,

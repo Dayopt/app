@@ -118,7 +118,6 @@ const defaultHandlers = {
   onEntryContextMenu: fn(),
   onUpdateEntry: fn(),
   onDeleteEntry: fn(),
-  onRestoreEntry: fn(),
   onTimeRangeSelect: fn(),
   onViewChange: fn(),
   onNavigatePrev: fn(),

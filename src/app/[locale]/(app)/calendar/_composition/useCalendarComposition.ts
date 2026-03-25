@@ -81,7 +81,6 @@ export interface CalendarCompositionResult {
     updates?: { startTime: Date; endTime: Date },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeletePlan: (planId: string) => void;
-  onRestorePlan: (plan: CalendarEvent) => Promise<void>;
 
   // === Context menu actions ===
   getAddToPaletteHandler: (plan: CalendarEvent) => ((plan: CalendarEvent) => void) | undefined;
@@ -189,11 +188,7 @@ export function useCalendarComposition({
   // =========================================================================
   // Plan Operations（CRUD）
   // =========================================================================
-  const {
-    handlePlanDelete: deletePlan,
-    handlePlanRestore,
-    handleUpdatePlan: handlePlanUpdate,
-  } = usePlanOperations();
+  const { handlePlanDelete: deletePlan, handleUpdatePlan: handlePlanUpdate } = usePlanOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
@@ -370,7 +365,6 @@ export function useCalendarComposition({
       // Plan CRUD
       onUpdatePlan: handlePlanUpdate,
       onDeletePlan: deletePlan,
-      onRestorePlan: handlePlanRestore,
 
       // Context menu actions
       getAddToPaletteHandler,
@@ -396,7 +390,6 @@ export function useCalendarComposition({
       handleDateTimeRangeSelect,
       handlePlanUpdate,
       deletePlan,
-      handlePlanRestore,
       getAddToPaletteHandler,
       handleDeletePlanConfirm,
       handleNavigate,

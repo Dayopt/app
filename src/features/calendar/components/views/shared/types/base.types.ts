@@ -56,7 +56,6 @@ export interface GridViewProps extends BaseViewProps {
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onDeleteEntry?: ((entryId: string) => void) | undefined;
-  onRestoreEntry?: ((entry: CalendarEvent) => Promise<void>) | undefined;
   onTimeRangeSelect?:
     | ((selection: {
         date: Date;

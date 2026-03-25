@@ -28,7 +28,6 @@ export const DayView = ({
   onEntryContextMenu,
   onUpdateEntry,
   onDeleteEntry: _onDeleteEntry,
-  onRestoreEntry: _onRestoreEntry,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,

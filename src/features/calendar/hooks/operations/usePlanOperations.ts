@@ -24,11 +24,6 @@ export const usePlanOperations = () => {
     [deleteEntry],
   );
 
-  // プラン復元ハンドラー
-  const handlePlanRestore = useCallback(async (_plan: CalendarEvent) => {
-    // noop - planにはソフトデリート機能がないため、復元は未実装
-  }, []);
-
   // プラン更新ハンドラー（ドラッグ&ドロップ用）
   const handleUpdatePlan = useCallback(
     async (planIdOrPlan: string | CalendarEvent, updates?: { startTime: Date; endTime: Date }) => {
@@ -73,7 +68,6 @@ export const usePlanOperations = () => {
 
   return {
     handlePlanDelete,
-    handlePlanRestore,
     handleUpdatePlan,
   };
 };

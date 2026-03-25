@@ -39,7 +39,6 @@ export function MultiDayView({
   onEntryContextMenu,
   onUpdateEntry,
   onDeleteEntry: _onDeleteEntry,
-  onRestoreEntry: _onRestoreEntry,
   onTimeRangeSelect,
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
