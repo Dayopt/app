@@ -3,7 +3,7 @@
 import React, { useCallback } from 'react';
 
 import { ChronotypeBackground } from '@/features/chronotype';
-import { useEntryInspectorStore } from '@/features/entry';
+import { isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
@@ -200,7 +200,11 @@ export const DayContent = ({
                   isActive={isInspectorOpen && inspectorEntryId === entry.id}
                   previewTime={getPreviewTime(entry.id, state)}
                   hourHeight={HOUR_HEIGHT}
-                  className={`h-full w-full ${entryDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  className={cn(
+                    'h-full w-full',
+                    entryDragging ? 'cursor-grabbing' : 'cursor-grab',
+                    isNewEntry(entry.id) && 'animate-entry-pop',
+                  )}
                 />
               </div>
             </div>
