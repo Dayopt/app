@@ -29,8 +29,8 @@ export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
         {/* 左側 */}
         <div className="flex items-center">{leftSlot}</div>
 
-        {/* 中央 */}
-        <div className="flex items-center justify-center">{children}</div>
+        {/* コンテンツ */}
+        <div className="flex min-w-0 items-center">{children}</div>
 
         {/* 右側 */}
         <div className="flex items-center justify-end gap-2">

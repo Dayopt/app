@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { SquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ export function MobileCreateButton() {
       onClick={() => setOpen(true)}
       aria-label={t('navigation.sidebar.quickCreate')}
     >
-      <Plus className="size-5" />
+      <SquarePlus className="size-5" />
     </Button>
   );
 }
