@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { XIcon } from 'lucide-react';
 
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 import { SettingsContent } from './SettingsContent';
@@ -14,14 +14,15 @@ import { SettingsSidebar } from './SettingsSidebar';
 /**
  * 設定ダイアログ（PC用）
  *
- * Zustand store で開閉・カテゴリを管理。
+ * ShellStore で開閉・カテゴリを管理。
  * URL は変更しない。サイドバーのカテゴリ切替も store 経由。
  */
 export function SettingsDialog() {
   const t = useTranslations();
-  const isOpen = useSettingsStore((s) => s.isOpen);
-  const category = useSettingsStore((s) => s.category);
-  const close = useSettingsStore((s) => s.close);
+  const activeSheet = useShellStore((s) => s.activeSheet);
+  const isOpen = activeSheet?.type === 'settings';
+  const category = activeSheet?.type === 'settings' ? activeSheet.category : 'profile';
+  const close = useShellStore((s) => s.closeSheet);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>

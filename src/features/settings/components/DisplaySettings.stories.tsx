@@ -15,7 +15,7 @@ import { useTourStore } from '@/features/tour';
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import { DisplaySettings } from './display-settings';
 
@@ -113,7 +113,7 @@ const meta = {
         machine: { completed: true },
         send: () => {},
       } as never);
-      useSettingsStore.setState({ close: () => {} } as never);
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
       return (
         <div className="mx-auto max-w-2xl">
           <Story />

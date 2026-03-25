@@ -14,7 +14,7 @@ import { PanelLeft } from 'lucide-react';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
-import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -27,8 +27,8 @@ interface CalendarViewClientProps {
 
 export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const calendarNavigation = useCalendarNavigation();
-  const isSidebarOpen = useLayoutStore.use.sidebarOpen();
-  const toggleSidebar = useLayoutStore.use.toggleSidebar();
+  const sidebar = useShellStore.use.sidebar();
+  const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。
@@ -52,7 +52,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   });
 
   // サイドバーが閉じているときに表示するトグルボタン
-  const sidebarToggle = !isSidebarOpen ? (
+  const sidebarToggle = !sidebar.open ? (
     <button
       type="button"
       onClick={toggleSidebar}

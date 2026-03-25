@@ -20,15 +20,27 @@ import {
 } from '@/features/palette';
 import { TagIcon, useTags } from '@/features/tags';
 import { cn } from '@/lib/utils';
-import { useMobileCreateSheetStore } from '@/shell/stores/useMobileCreateSheetStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 const SNAP_POINTS = [0.95] as const;
 
 /** モバイル用作成ボトムシート — Palette + RecentBlocks + インライン追加フォーム（Composition Layer） */
 export function MobileCreateSheet() {
   const t = useTranslations();
-  const open = useMobileCreateSheetStore((s) => s.open);
-  const setOpen = useMobileCreateSheetStore((s) => s.setOpen);
+  const activeSheet = useShellStore((s) => s.activeSheet);
+  const open = activeSheet?.type === 'mobileCreate';
+  const openSheet = useShellStore((s) => s.openSheet);
+  const closeSheet = useShellStore((s) => s.closeSheet);
+  const setOpen = useCallback(
+    (isOpen: boolean) => {
+      if (isOpen) {
+        openSheet({ type: 'mobileCreate' });
+      } else {
+        closeSheet();
+      }
+    },
+    [openSheet, closeSheet],
+  );
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
   const { pinItem } = usePaletteMutations();
 

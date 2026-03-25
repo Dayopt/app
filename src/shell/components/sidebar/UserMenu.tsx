@@ -36,8 +36,7 @@ import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getInitials } from '@/lib/user';
 import { useRouter } from '@/platform/i18n/navigation';
 import { useLogout } from '@/shell/hooks/useLogout';
-import { useContactStore } from '@/shell/stores/useContactStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/types/settings';
@@ -57,8 +56,8 @@ export function UserMenu({
   const t = useTranslations();
   const locale = useLocale();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const openSettings = useSettingsStore((s) => s.open);
-  const openContact = useContactStore((s) => s.open);
+  const openSettings = useShellStore((s) => s.openSettings);
+  const openSheet = useShellStore((s) => s.openSheet);
 
   const handleOpenSettings = (category: SettingsCategory) => {
     if (isMobile) {
@@ -207,7 +206,7 @@ export function UserMenu({
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => openContact()}>
+              <DropdownMenuItem onSelect={() => openSheet({ type: 'contact' })}>
                 <MessageSquare />
                 {t('navigation.navUser.helpSubmenu.contact')}
               </DropdownMenuItem>

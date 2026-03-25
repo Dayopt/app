@@ -21,8 +21,8 @@ import { routing, type Locale } from '@/platform/i18n/routing';
 import { useTourStore } from '@/features/tour';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/platform/trpc';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useUserSettings } from '../hooks/useUserSettings';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
@@ -125,7 +125,7 @@ export function DisplaySettings() {
   const tourMachine = useTourStore.use.machine();
   const tourSend = useTourStore.use.send();
   const tourCompleted = tourMachine.completed;
-  const closeSettings = useSettingsStore((s) => s.close);
+  const closeSettings = useShellStore((s) => s.closeSettings);
   const resetOnboarding = api.onboarding.reset.useMutation();
 
   const handleReplayTour = useCallback(() => {

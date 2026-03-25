@@ -1,7 +1,7 @@
 /**
  * SettingsDialog Stories
  *
- * PC用設定ダイアログ。useSettingsStore で開閉・カテゴリを管理。
+ * PC用設定ダイアログ。useShellStore で開閉・カテゴリを管理。
  * SettingsContent は各カテゴリコンポーネントを遅延読み込みするため、
  * tRPC モックで userSettings / notificationPreferences をカバー。
  *
@@ -21,7 +21,7 @@ import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
 import { Button } from '@/components/ui/button';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import type { SettingsCategory } from '../types';
 import { SettingsDialog } from './SettingsDialog';
 
@@ -121,7 +121,7 @@ function InteractiveSettingsDialog({
     <MockProvider>
       <Button
         onClick={() => {
-          useSettingsStore.getState().open(initialCategory);
+          useShellStore.getState().openSettings(initialCategory);
           setMounted(true);
         }}
       >
@@ -139,7 +139,7 @@ function InteractiveSettingsDialog({
 /**
  * SettingsDialog — 設定ダイアログ（PC用）
  *
- * useSettingsStore で開閉とカテゴリ切替を管理。
+ * useShellStore で開閉とカテゴリ切替を管理。
  * URL は変更せず、モーダル内でサイドバーのカテゴリ切替のみ行う。
  */
 const meta = {
@@ -166,7 +166,7 @@ type Story = StoryObj<typeof meta>;
  */
 export const Default: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: true, category: 'profile' });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
     return (
       <MockProvider>
         <SettingsDialog />
@@ -180,7 +180,7 @@ export const Default: Story = {
  */
 export const DisplayCategory: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: true, category: 'display' });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'display' } });
     return (
       <MockProvider>
         <SettingsDialog />
@@ -194,7 +194,7 @@ export const DisplayCategory: Story = {
  */
 export const NotificationsCategory: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: true, category: 'notifications' });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'notifications' } });
     return (
       <MockProvider>
         <SettingsDialog />
@@ -208,7 +208,7 @@ export const NotificationsCategory: Story = {
  */
 export const DataCategory: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: true, category: 'data' });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'data' } });
     return (
       <MockProvider>
         <SettingsDialog />
@@ -222,7 +222,7 @@ export const DataCategory: Story = {
  */
 export const AccountCategory: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: true, category: 'account' });
+    useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
     return (
       <MockProvider>
         <SettingsDialog />
@@ -234,11 +234,11 @@ export const AccountCategory: Story = {
 /**
  * 閉じた状態
  *
- * isOpen が false の場合、ダイアログは表示されない。
+ * activeSheet が null の場合、ダイアログは表示されない。
  */
 export const ClosedState: Story = {
   render: () => {
-    useSettingsStore.setState({ isOpen: false, category: 'profile' });
+    useShellStore.setState({ activeSheet: null });
     return (
       <MockProvider>
         <SettingsDialog />

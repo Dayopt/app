@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import { SETTINGS_CATEGORIES } from '../constants';
 
@@ -32,8 +32,9 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
   const pathname = usePathname() ?? '/';
 
   // PC: store から、Mobile: pathname から現在カテゴリを取得
-  const storeCategory = useSettingsStore((s) => s.category);
-  const setCategory = useSettingsStore((s) => s.setCategory);
+  const activeSheet = useShellStore((s) => s.activeSheet);
+  const storeCategory = activeSheet?.type === 'settings' ? activeSheet.category : 'profile';
+  const setCategory = useShellStore((s) => s.setSettingsCategory);
   const pathCategory = pathname.split('/settings/')[1]?.split('/')[0] ?? 'profile';
   const currentCategory = isMobile ? pathCategory : storeCategory;
 

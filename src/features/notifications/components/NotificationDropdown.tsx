@@ -18,7 +18,7 @@ import type { NotificationType } from '../schemas';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useRouter } from '@/platform/i18n/navigation';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import {
   useNotificationMutations,
@@ -99,7 +99,7 @@ export function NotificationDropdown({
 
   const settingsRouter = useRouter();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const openSettings = useSettingsStore((s) => s.open);
+  const openSettings = useShellStore((s) => s.openSettings);
   const handleOpenSettings = useCallback(() => {
     setIsOpen(false);
     if (isMobile) {

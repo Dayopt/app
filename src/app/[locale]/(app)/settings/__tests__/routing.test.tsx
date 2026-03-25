@@ -49,9 +49,9 @@ vi.mock('@/hooks/useMediaQuery', () => ({
   useMediaQuery: () => mockIsMobile,
 }));
 
-vi.mock('@/stores/useSettingsStore', () => ({
-  useSettingsStore: (selector: (state: { open: typeof mockOpenSettings }) => unknown) =>
-    selector({ open: mockOpenSettings }),
+vi.mock('@/shell/stores/useShellStore', () => ({
+  useShellStore: (selector: (state: { openSettings: typeof mockOpenSettings }) => unknown) =>
+    selector({ openSettings: mockOpenSettings }),
 }));
 
 vi.mock('@/shell/stores/useContactStore', () => ({

@@ -13,7 +13,7 @@ import {
 import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
-import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';
@@ -41,7 +41,7 @@ const DAY_COUNTS = [2, 3, 4, 5, 6, 7, 8, 9] as const;
 export function ViewSwitcherList() {
   const navigation = useCalendarNavigation();
   const t = useTranslations();
-  const closeSidebar = useLayoutStore((state) => state.closeSidebar);
+  const closeSidebar = useShellStore((state) => state.closeSidebar);
   const currentView = navigation?.viewType ?? 'week';
   const [daysExpanded, setDaysExpanded] = useState(false);
 
