@@ -11,8 +11,6 @@
  * content の重複なし: EntryInspectorForm を一度だけ描画。
  */
 
-import { useState } from 'react';
-
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
@@ -36,9 +34,6 @@ function InspectorURLSyncHandler() {
   return null;
 }
 
-/** モバイル Drawer のスナップポイント（55%: 半開き、100%: フル展開） */
-const SNAP_POINTS = [0.55, 1] as const;
-
 interface EntryInspectorProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
   onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
@@ -50,7 +45,6 @@ interface EntryInspectorProps {
 export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
@@ -129,14 +123,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
       {urlSyncElement}
 
       {isMobile ? (
-        <Drawer
-          open={isOpen}
-          onOpenChange={(open) => !open && handleClose()}
-          snapPoints={SNAP_POINTS as unknown as (number | string)[]}
-          activeSnapPoint={snap}
-          setActiveSnapPoint={setSnap}
-          fadeFromIndex={0}
-        >
+        <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
           <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-xl p-0 [&>div:first-child]:hidden">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
