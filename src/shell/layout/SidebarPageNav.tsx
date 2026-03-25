@@ -1,12 +1,13 @@
 'use client';
 
-import { format } from 'date-fns';
 import { usePathname } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { PageNav } from '@/shell/components/sidebar';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
+
+import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
 function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
   const segments = pathname.split('/');
@@ -29,13 +30,7 @@ export function SidebarPageNav() {
   // usePathname() は Next.js のソフトナビゲーション完了まで遅延するため
   const clientPage = useClientRouterStore((s) => s.clientPage);
 
-  const locale = useMemo(() => {
-    const segments = pathname?.split('/') ?? [];
-    if (segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')) {
-      return segments[1];
-    }
-    return 'ja';
-  }, [pathname]);
+  const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
 
   // clientPage（Zustand）を優先、null（初回/リロード）時は pathname から判定
   const activePage = clientPage ?? getActivePageFromPath(pathname ?? '/');
@@ -43,21 +38,22 @@ export function SidebarPageNav() {
   const handleCalendarClick = useCallback(() => {
     if (activePage === 'calendar') return;
 
-    const viewType = calendarNav?.viewType ?? 'day';
-    const currentDate = calendarNav?.currentDate;
-    const params = new URLSearchParams();
-    if (currentDate) {
-      params.set('date', format(currentDate, 'yyyy-MM-dd'));
-    }
-    const query = params.size > 0 ? `?${params.toString()}` : '';
-    window.history.pushState(null, '', `/${locale}/calendar/${viewType}${query}`);
+    window.history.pushState(
+      null,
+      '',
+      buildCalendarPath({
+        locale,
+        viewType: calendarNav?.viewType ?? 'day',
+        currentDate: calendarNav?.currentDate,
+      }),
+    );
     switchToPage('calendar');
   }, [activePage, calendarNav, locale, switchToPage]);
 
   const handleStatsClick = useCallback(() => {
     if (activePage === 'stats') return;
 
-    window.history.pushState(null, '', `/${locale}/stats/review`);
+    window.history.pushState(null, '', buildStatsPath(locale));
     switchToPage('stats');
   }, [activePage, locale, switchToPage]);
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
 import { BarChart3, Bell, CalendarDays, UserCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,6 +12,8 @@ import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+
+import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
 type TabId = 'calendar' | 'stats' | 'notifications' | 'account';
 
@@ -43,13 +44,7 @@ export function BottomTabBar() {
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
 
-  const locale = useMemo(() => {
-    const segments = pathname?.split('/') ?? [];
-    if (segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')) {
-      return segments[1];
-    }
-    return 'ja';
-  }, [pathname]);
+  const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
 
   // clientPage（Zustand）を優先、null時は pathname から判定
   const activeTab: TabId = useMemo(() => {
@@ -60,21 +55,22 @@ export function BottomTabBar() {
   const handleCalendarClick = useCallback(() => {
     if (activeTab === 'calendar') return;
 
-    const viewType = calendarNav?.viewType ?? 'day';
-    const currentDate = calendarNav?.currentDate;
-    const params = new URLSearchParams();
-    if (currentDate) {
-      params.set('date', format(currentDate, 'yyyy-MM-dd'));
-    }
-    const query = params.size > 0 ? `?${params.toString()}` : '';
-    window.history.pushState(null, '', `/${locale}/calendar/${viewType}${query}`);
+    window.history.pushState(
+      null,
+      '',
+      buildCalendarPath({
+        locale,
+        viewType: calendarNav?.viewType ?? 'day',
+        currentDate: calendarNav?.currentDate,
+      }),
+    );
     switchToPage('calendar');
   }, [activeTab, calendarNav, locale, switchToPage]);
 
   const handleStatsClick = useCallback(() => {
     if (activeTab === 'stats') return;
 
-    window.history.pushState(null, '', `/${locale}/stats/review`);
+    window.history.pushState(null, '', buildStatsPath(locale));
     switchToPage('stats');
   }, [activeTab, locale, switchToPage]);
 
@@ -135,7 +131,6 @@ export function BottomTabBar() {
   return (
     <nav
       className="bg-background surface-raised z-bottom-tab pb-safe fixed inset-x-0 bottom-0"
-      role="tablist"
       aria-label={t('common.aria.pageNavigation')}
     >
       <div className="flex h-14 items-center justify-around">
@@ -144,9 +139,9 @@ export function BottomTabBar() {
           const Icon = tab.icon;
           return (
             <button
+              type="button"
               key={tab.id}
-              role="tab"
-              aria-selected={isActive}
+              aria-current={isActive ? 'page' : undefined}
               onClick={tab.onClick}
               className={cn(
                 'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
