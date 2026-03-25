@@ -37,6 +37,7 @@ export function BottomTabBar() {
   const calendarNav = useCalendarNavigation();
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const clientPage = useClientRouterStore((s) => s.clientPage);
+  const resetToServer = useClientRouterStore((s) => s.resetToServer);
   const { data: unreadCount = 0 } = useUnreadCount();
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
@@ -78,12 +79,14 @@ export function BottomTabBar() {
   }, [activeTab, locale, switchToPage]);
 
   const handleNotificationsClick = useCallback(() => {
+    resetToServer();
     router.push(`/${locale}/notifications`);
-  }, [router, locale]);
+  }, [router, locale, resetToServer]);
 
   const handleAccountClick = useCallback(() => {
+    resetToServer();
     router.push(`/${locale}/settings`);
-  }, [router, locale]);
+  }, [router, locale, resetToServer]);
 
   const tabs: Array<{
     id: TabId;
