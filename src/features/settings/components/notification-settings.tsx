@@ -91,7 +91,7 @@ export function NotificationSettings() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         <SectionCard>
           <div className="space-y-4">
             {Array.from({ length: 4 }, (_, i) => (
@@ -106,61 +106,59 @@ export function NotificationSettings() {
   const isBrowserPermissionDenied = browserPermission === 'denied';
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <SectionCard>
-        <div className="space-y-0">
-          <LabeledRow
-            label={t('notification.settings.browserNotifications.label')}
-            description={
-              isBrowserPermissionDenied
-                ? t('notification.settings.permissionDenied')
-                : t('notification.settings.browserNotifications.description')
-            }
-          >
-            <Switch
-              checked={preferences?.enableBrowserNotifications ?? true}
-              onCheckedChange={handleBrowserToggle}
-              disabled={updateBrowserNotifications.isPending || isBrowserPermissionDenied}
-            />
-          </LabeledRow>
-          <LabeledRow
-            label={t('notification.settings.emailNotifications.label')}
-            description={t('notification.settings.emailNotifications.description')}
-          >
-            <Switch
-              checked={preferences?.enableEmailNotifications ?? false}
-              onCheckedChange={(checked) => updateEmailNotifications.mutate({ enabled: checked })}
-              disabled={updateEmailNotifications.isPending}
-            />
-          </LabeledRow>
-          <LabeledRow
-            label={
-              <span className="flex items-center gap-2">
-                {t('notification.settings.pushNotifications.label')}
-                <Badge variant="secondary" className="text-xs">
-                  {t('notification.settings.pushNotifications.comingSoon')}
-                </Badge>
-              </span>
-            }
-            description={t('notification.settings.pushNotifications.description')}
-          >
-            <Switch
-              checked={preferences?.enablePushNotifications ?? false}
-              onCheckedChange={(checked) => updatePushNotifications.mutate({ enabled: checked })}
-              disabled={updatePushNotifications.isPending}
-            />
-          </LabeledRow>
-          <LabeledRow
-            label={t('notification.settings.defaultReminder.label')}
-            description={t('notification.settings.defaultReminder.description')}
-          >
-            <Switch
-              checked={preferences?.defaultReminderEnabled ?? true}
-              onCheckedChange={(checked) => updateDefaultReminder.mutate({ enabled: checked })}
-              disabled={updateDefaultReminder.isPending}
-            />
-          </LabeledRow>
-        </div>
+        <LabeledRow
+          label={t('notification.settings.browserNotifications.label')}
+          description={
+            isBrowserPermissionDenied
+              ? t('notification.settings.permissionDenied')
+              : t('notification.settings.browserNotifications.description')
+          }
+        >
+          <Switch
+            checked={preferences?.enableBrowserNotifications ?? true}
+            onCheckedChange={handleBrowserToggle}
+            disabled={updateBrowserNotifications.isPending || isBrowserPermissionDenied}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.emailNotifications.label')}
+          description={t('notification.settings.emailNotifications.description')}
+        >
+          <Switch
+            checked={preferences?.enableEmailNotifications ?? false}
+            onCheckedChange={(checked) => updateEmailNotifications.mutate({ enabled: checked })}
+            disabled={updateEmailNotifications.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={
+            <span className="flex items-center gap-2">
+              {t('notification.settings.pushNotifications.label')}
+              <Badge variant="secondary" className="text-xs">
+                {t('notification.settings.pushNotifications.comingSoon')}
+              </Badge>
+            </span>
+          }
+          description={t('notification.settings.pushNotifications.description')}
+        >
+          <Switch
+            checked={preferences?.enablePushNotifications ?? false}
+            onCheckedChange={(checked) => updatePushNotifications.mutate({ enabled: checked })}
+            disabled={updatePushNotifications.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.defaultReminder.label')}
+          description={t('notification.settings.defaultReminder.description')}
+        >
+          <Switch
+            checked={preferences?.defaultReminderEnabled ?? true}
+            onCheckedChange={(checked) => updateDefaultReminder.mutate({ enabled: checked })}
+            disabled={updateDefaultReminder.isPending}
+          />
+        </LabeledRow>
       </SectionCard>
 
       {/* ヒント情報 */}

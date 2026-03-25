@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Camera, ChevronDown } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
@@ -33,16 +33,15 @@ export function ProfileSettings() {
   const displayName = getDisplayName(user);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* アバター・表示名 */}
       <SectionCard title={t('settings.account.profile')}>
-        <LabeledRow label={t('settings.account.avatar')}>
-          <button
-            type="button"
-            className="group relative cursor-pointer"
-            onClick={() => setShowAvatarDialog(true)}
-            aria-label={t('settings.account.avatar')}
-          >
+        <LabeledRow
+          label={t('settings.account.avatar')}
+          variant="navigate"
+          onClick={() => setShowAvatarDialog(true)}
+        >
+          <div className="group relative">
             <Avatar size="sm">
               <AvatarImage src={avatarUrl || undefined} alt={displayName} />
               <AvatarFallback className="bg-foreground text-background text-xs">
@@ -52,17 +51,14 @@ export function ProfileSettings() {
             <div className="group-hover:bg-foreground/40 absolute inset-0 flex items-center justify-center rounded-full transition-colors">
               <Camera className="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
-          </button>
+          </div>
         </LabeledRow>
-        <LabeledRow label={t('settings.account.displayName')}>
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-            onClick={() => setShowDisplayNameDialog(true)}
-          >
-            <span className="text-sm">{displayName}</span>
-            <ChevronDown className="h-4 w-4" />
-          </button>
+        <LabeledRow
+          label={t('settings.account.displayName')}
+          variant="navigate"
+          onClick={() => setShowDisplayNameDialog(true)}
+        >
+          <span className="text-muted-foreground text-sm">{displayName}</span>
         </LabeledRow>
       </SectionCard>
 
