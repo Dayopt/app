@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let mockPathname = '/ja/calendar/day';
@@ -20,7 +20,7 @@ vi.mock('next-intl', () => ({
 vi.mock('@/features/calendar', () => ({
   useCalendarNavigation: () => ({
     viewType: 'week',
-    currentDate: new Date('2026-03-25T09:00:00.000Z'),
+    currentDate: new Date(2026, 2, 25, 23, 45, 0, 0),
   }),
 }));
 
@@ -92,5 +92,19 @@ describe('BottomTabBar', () => {
     expect(
       screen.getByRole('button', { name: /navigation\.bottomTab\.calendar/ }),
     ).not.toHaveAttribute('aria-current');
+  });
+
+  it('keeps the local calendar day when generating the return URL', () => {
+    mockPathname = '/ja/stats/review';
+    mockClientPage = 'stats';
+
+    render(<BottomTabBar />);
+
+    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+
+    fireEvent.click(screen.getByRole('button', { name: /navigation\.bottomTab\.calendar/ }));
+
+    expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/ja/calendar/week?date=2026-03-25');
+    pushStateSpy.mockRestore();
   });
 });

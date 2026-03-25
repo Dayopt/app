@@ -1,6 +1,5 @@
-import { format } from 'date-fns';
-
 import type { CalendarViewType } from '@/features/calendar';
+import { formatCalendarDateParam } from '@/features/calendar/lib/date-param';
 
 export function getLocaleFromPathname(pathname: string | null | undefined): 'ja' | 'en' {
   const segments = pathname?.split('/') ?? [];
@@ -17,7 +16,7 @@ export function buildCalendarPath(params: {
   const searchParams = new URLSearchParams();
 
   if (params.currentDate) {
-    searchParams.set('date', format(params.currentDate, 'yyyy-MM-dd'));
+    searchParams.set('date', formatCalendarDateParam(params.currentDate));
   }
 
   const query = searchParams.size > 0 ? `?${searchParams.toString()}` : '';

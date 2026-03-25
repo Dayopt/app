@@ -64,6 +64,7 @@ export { usePlanOperations } from './hooks/operations/usePlanOperations';
 // =============================================================================
 // Lib / Utils
 // =============================================================================
+export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
 export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
 

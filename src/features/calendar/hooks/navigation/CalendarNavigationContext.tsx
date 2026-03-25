@@ -12,12 +12,11 @@ import React, {
 
 import { usePathname } from 'next/navigation';
 
-import { format } from 'date-fns';
-
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
+import { formatCalendarDateParam } from '../../lib/date-param';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
 
@@ -38,10 +37,12 @@ export const CalendarNavigationProvider = ({
   children,
   initialDate = new Date(),
   initialView = 'week' as CalendarViewType,
+  isCalendarPage = false,
 }: {
   children: React.ReactNode;
   initialDate?: Date;
   initialView?: CalendarViewType;
+  isCalendarPage?: boolean;
 }) => {
   const pathname = usePathname();
   const [currentDate, setCurrentDate] = useState(initialDate);
@@ -84,12 +85,12 @@ export const CalendarNavigationProvider = ({
   // モバイルでday以外のビューが設定された場合、強制的にdayに切替
   // （URL直アクセスやブラウザ戻る/進むでweek URLに遷移した場合のガード）
   React.useEffect(() => {
-    if (isMobile && viewType !== 'day') {
+    if (isCalendarPage && isMobile && viewType !== 'day') {
       startTransition(() => {
         setViewType('day');
       });
       // URLもday viewに更新
-      const dateString = format(currentDateRef.current, 'yyyy-MM-dd');
+      const dateString = formatCalendarDateParam(currentDateRef.current);
       const params = new URLSearchParams(window.location.search);
       params.set('date', dateString);
       window.history.replaceState(
@@ -98,16 +99,16 @@ export const CalendarNavigationProvider = ({
         `/${localeRef.current}/calendar/day?${params.toString()}`,
       );
     }
-  }, [isMobile, viewType]);
+  }, [isCalendarPage, isMobile, viewType]);
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
   React.useEffect(() => {
-    if (initialView !== viewType) {
+    if (isCalendarPage && initialView !== viewType) {
       setViewType(initialView);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
-  }, [initialView]);
+  }, [isCalendarPage, initialView]);
 
   // URL由来の initialDate が変更されたら currentDate を同期
   // （ブラウザ戻る/進む、直接URL入力時）
@@ -116,6 +117,7 @@ export const CalendarNavigationProvider = ({
     initialDateRef.current = initialDate;
 
     if (
+      isCalendarPage &&
       initialDate.getTime() !== previousInitialDate.getTime() &&
       initialDate.getTime() !== currentDateRef.current.getTime()
     ) {
@@ -123,7 +125,7 @@ export const CalendarNavigationProvider = ({
         setCurrentDate(initialDate);
       });
     }
-  }, [initialDate, startTransition]);
+  }, [isCalendarPage, initialDate, startTransition]);
 
   const navigateToDate = useCallback((date: Date, updateUrl = false) => {
     startTransition(() => {
@@ -131,7 +133,7 @@ export const CalendarNavigationProvider = ({
     });
 
     if (updateUrl) {
-      const dateString = format(date, 'yyyy-MM-dd');
+      const dateString = formatCalendarDateParam(date);
       // 既存のquery paramを保持しつつdateのみ更新
       const params = new URLSearchParams(window.location.search);
       params.set('date', dateString);
@@ -148,7 +150,7 @@ export const CalendarNavigationProvider = ({
     startTransition(() => {
       setViewType(view);
     });
-    const dateString = format(currentDateRef.current, 'yyyy-MM-dd');
+    const dateString = formatCalendarDateParam(currentDateRef.current);
     // 既存のquery paramを保持しつつdateのみ更新
     const params = new URLSearchParams(window.location.search);
     params.set('date', dateString);

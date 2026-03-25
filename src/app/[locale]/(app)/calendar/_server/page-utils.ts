@@ -1,17 +1,13 @@
 import { getTranslations } from 'next-intl/server';
 
+import { parseCalendarDateParam } from '@/features/calendar';
 import type { Locale } from '@/platform/i18n/routing';
 
 /**
  * searchParams から日付を解析する
  */
 export function parseDateParam(date: string | undefined): Date | undefined {
-  if (!date) return undefined;
-  const parsedDate = new Date(date);
-  if (!isNaN(parsedDate.getTime())) {
-    return parsedDate;
-  }
-  return undefined;
+  return parseCalendarDateParam(date);
 }
 
 /**

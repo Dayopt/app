@@ -35,7 +35,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
     return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
   }, [pathname]);
 
-  const { calendarProviderProps } = useCalendarProviderProps(
+  const { isCalendarPage, calendarProviderProps } = useCalendarProviderProps(
     pathname,
     searchParams || new URLSearchParams(),
   );
@@ -44,7 +44,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
     // CalendarNavigationProvider を常にレンダリングしてツリー構造を安定化。
     // ルート切替時にProvider の付け外しによるリマウントを防ぎ、
     // Sidebar が静止したままメインコンテンツだけが変わる体験を実現する。
-    <CalendarNavigationProvider {...(calendarProviderProps ?? {})}>
+    <CalendarNavigationProvider isCalendarPage={isCalendarPage} {...(calendarProviderProps ?? {})}>
       <div className="flex h-screen flex-col">
         {/* オフラインインジケーター */}
         <OfflineIndicator />
