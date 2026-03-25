@@ -47,7 +47,7 @@ type Story = StoryObj<typeof meta>;
 
 interface InspectorContentProps {
   tagName?: string;
-  tagDotClass?: string;
+  tagColor?: string | null;
   initialPlannedStart?: string;
   initialPlannedEnd?: string;
   initialActualStart?: string | null;
@@ -67,7 +67,7 @@ function computeDuration(start: string, end: string): number {
 
 function InspectorContent({
   tagName,
-  tagDotClass,
+  tagColor,
   initialPlannedStart = '10:00',
   initialPlannedEnd = '11:30',
   initialActualStart = null,
@@ -93,7 +93,7 @@ function InspectorContent({
   return (
     <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
       {/* Tag + Delete */}
-      <MockTagRow tagName={tagName} dotClass={tagDotClass} />
+      <MockTagRow tagName={tagName} tagColor={tagColor} />
 
       {/* Micro Insight (Composition Layer 経由で注入) */}
       {microInsight && <div className="mt-1.5 px-0.5">{microInsight}</div>}
@@ -180,7 +180,7 @@ export const UpcomingPlanned: Story = {
     <InspectorFrame>
       <InspectorContent
         tagName="Work"
-        tagDotClass="bg-blue-500"
+        tagColor="blue"
         initialPlannedStart="14:00"
         initialPlannedEnd="15:30"
         initialNote="Prepare slides for the meeting"
@@ -207,7 +207,7 @@ export const PastPlanned: Story = {
     <InspectorFrame>
       <InspectorContent
         tagName="Meeting"
-        tagDotClass="bg-purple-500"
+        tagColor="purple"
         initialPlannedStart="10:00"
         initialPlannedEnd="11:30"
         initialActualStart="10:15"
@@ -235,7 +235,7 @@ export const WithMicroInsightEstimation: Story = {
     <InspectorFrame>
       <InspectorContent
         tagName="Meeting"
-        tagDotClass="bg-purple-500"
+        tagColor="purple"
         initialPlannedStart="10:00"
         initialPlannedEnd="11:30"
         microInsight={
@@ -258,7 +258,7 @@ export const WithMicroInsightFulfillment: Story = {
     <InspectorFrame>
       <InspectorContent
         tagName="Work"
-        tagDotClass="bg-blue-500"
+        tagColor="blue"
         initialPlannedStart="10:00"
         initialPlannedEnd="12:00"
         initialActualStart="10:00"
@@ -283,7 +283,7 @@ export const WithoutMicroInsight: Story = {
     <InspectorFrame>
       <InspectorContent
         tagName="Work"
-        tagDotClass="bg-blue-500"
+        tagColor="blue"
         initialPlannedStart="14:00"
         initialPlannedEnd="15:30"
         microInsight={undefined}
@@ -375,7 +375,7 @@ export const MobileDrawer: Story = {
           <div className="min-h-0 flex-1 overflow-y-auto">
             <InspectorContent
               tagName="Work"
-              tagDotClass="bg-blue-500"
+              tagColor="blue"
               initialPlannedStart="10:00"
               initialPlannedEnd="11:30"
               initialNote="モバイル Drawer 表示の確認"
@@ -403,7 +403,7 @@ export const AllPatterns: Story = {
           <InspectorFrame>
             <InspectorContent
               tagName="Work"
-              tagDotClass="bg-blue-500"
+              tagColor="blue"
               initialPlannedStart="14:00"
               initialPlannedEnd="15:30"
               initialNote="Prepare slides"
@@ -417,7 +417,7 @@ export const AllPatterns: Story = {
           <InspectorFrame>
             <InspectorContent
               tagName="Meeting"
-              tagDotClass="bg-purple-500"
+              tagColor="purple"
               initialPlannedStart="10:00"
               initialPlannedEnd="11:30"
               initialActualStart="10:15"

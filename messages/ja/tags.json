@@ -140,7 +140,6 @@
       "icon": "アイコン",
       "selectColor": "色を選択: {color}",
       "selectIcon": "アイコンを選択",
-      "noIcon": "アイコンなし",
       "iconCategories": {
         "work": "仕事",
         "study": "学習",

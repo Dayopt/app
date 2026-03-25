@@ -140,7 +140,6 @@
       "icon": "Icon",
       "selectColor": "Select color: {color}",
       "selectIcon": "Select icon",
-      "noIcon": "No icon",
       "iconCategories": {
         "work": "Work",
         "study": "Study",

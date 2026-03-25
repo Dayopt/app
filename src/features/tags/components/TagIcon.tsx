@@ -14,7 +14,7 @@ import { icons } from 'lucide-react';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { CURATED_ICONS, kebabToPascal } from '../lib/curated-icons';
+import { CURATED_ICONS, DEFAULT_TAG_ICON, kebabToPascal } from '../lib/curated-icons';
 
 const SIZE_MAP = {
   sm: { icon: 'size-4', dot: 'size-3' },
@@ -68,18 +68,16 @@ export function TagIcon({ icon, color, size = 'md', className }: TagIconProps) {
   const colorClasses = getTagColorClasses(color);
   const sizeConfig = SIZE_MAP[size];
 
-  if (icon) {
-    const resolved = getIcon(icon);
-    if (resolved) {
-      return createElement(resolved, {
-        className: cn(sizeConfig.icon, className),
-        style: { color: colorClasses.cssVar },
-        'aria-hidden': true,
-      });
-    }
+  const resolved = getIcon(icon || DEFAULT_TAG_ICON);
+  if (resolved) {
+    return createElement(resolved, {
+      className: cn(sizeConfig.icon, className),
+      style: { color: colorClasses.cssVar },
+      'aria-hidden': true,
+    });
   }
 
-  // フォールバック: 色ドット（icon未設定 or 解決失敗）
+  // フォールバック: 色ドット（アイコン解決に失敗した場合のみ）
   return (
     <span className={cn('rounded-full', colorClasses.dot, sizeConfig.dot, className)} aria-hidden />
   );
