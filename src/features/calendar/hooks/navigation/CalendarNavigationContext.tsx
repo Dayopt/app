@@ -58,6 +58,7 @@ export const CalendarNavigationProvider = ({
   // useRefで最新値を保持し、コールバックの依存配列を安定化
   const currentDateRef = useRef(currentDate);
   const viewTypeRef = useRef(viewType);
+  const initialDateRef = useRef(initialDate);
 
   // 現在のlocaleを取得（例: /ja/day -> ja）
   const locale = pathname?.split('/')[1] || 'ja';
@@ -107,6 +108,22 @@ export const CalendarNavigationProvider = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
   }, [initialView]);
+
+  // URL由来の initialDate が変更されたら currentDate を同期
+  // （ブラウザ戻る/進む、直接URL入力時）
+  React.useEffect(() => {
+    const previousInitialDate = initialDateRef.current;
+    initialDateRef.current = initialDate;
+
+    if (
+      initialDate.getTime() !== previousInitialDate.getTime() &&
+      initialDate.getTime() !== currentDateRef.current.getTime()
+    ) {
+      startTransition(() => {
+        setCurrentDate(initialDate);
+      });
+    }
+  }, [initialDate, startTransition]);
 
   const navigateToDate = useCallback((date: Date, updateUrl = false) => {
     startTransition(() => {
