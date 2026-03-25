@@ -4,15 +4,15 @@
  * TagQuickSelector
  *
  * タグ選択用フローティングパネル。
- * ラジオボタン型の単一選択 + 検索 + 新規作成。
+ * ラジオボタン型の単一選択 + 新規作成。
  * overlayなし — 背景コンテンツが見える状態を維持。
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  */
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -71,8 +71,6 @@ function TagQuickSelectorContent({
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
-  const [searchQuery, setSearchQuery] = useState('');
-  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [newTagName, setNewTagName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -82,13 +80,6 @@ function TagQuickSelectorContent({
     return [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [tags]);
 
-  // 検索フィルタリング（deferred でグルーピング計算の頻度を抑制）
-  const filteredTags = useMemo(() => {
-    if (!deferredSearchQuery) return sortedTags;
-    const q = deferredSearchQuery.toLowerCase();
-    return sortedTags.filter((tag) => tag.name.toLowerCase().includes(q));
-  }, [sortedTags, deferredSearchQuery]);
-
   // コロン記法でグルーピング
   // prefix と完全一致するタグがあれば親タグとして使用
   const { groups, ungrouped } = useMemo(() => {
@@ -96,7 +87,7 @@ function TagQuickSelectorContent({
     const noColon: Tag[] = [];
 
     // 1パス: コロン付きを子としてグルーピング、コロンなしは候補として保持
-    for (const tag of filteredTags) {
+    for (const tag of sortedTags) {
       const { prefix, suffix } = parseColonTag(tag.name);
       if (suffix !== null) {
         const existing = prefixMap.get(prefix) ?? { parent: null, children: [] };
@@ -119,7 +110,7 @@ function TagQuickSelectorContent({
     }
 
     return { groups: prefixMap, ungrouped: ungroupedResult };
-  }, [filteredTags]);
+  }, [sortedTags]);
 
   const handleSelect = useCallback(
     (tagId: string, tagName: string) => {
@@ -149,29 +140,13 @@ function TagQuickSelectorContent({
 
   const handleHoverEnd = useCallback(() => onTagHover?.(null), [onTagHover]);
 
-  const hasResults = filteredTags.length > 0;
   const isTagZero = sortedTags.length === 0;
 
   return (
     <>
-      {/* Search — タグゼロ時は非表示 */}
-      {!isTagZero && (
-        <div className="border-border border-b px-4 py-3">
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('tagSelector.searchPlaceholder')}
-              className="pl-9"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Tag list */}
       <div
-        className="overflow-y-auto px-1 py-2"
+        className="overflow-y-auto px-1 py-1"
         style={{ maxHeight: '50vh' }}
         role="radiogroup"
         aria-label={t('tagSelector.title')}
@@ -205,13 +180,6 @@ function TagQuickSelectorContent({
               })}
             </div>
           </div>
-        )}
-
-        {/* 検索結果なし（タグはあるが検索にマッチしない） */}
-        {!isTagZero && !hasResults && (
-          <p className="text-muted-foreground px-3 py-6 text-center text-sm">
-            {t('tagSelector.noResults')}
-          </p>
         )}
 
         {/* Grouped tags */}
@@ -282,20 +250,20 @@ function TagQuickSelectorContent({
       </div>
 
       {/* Create new tag */}
-      <div className="border-border flex items-center gap-2 border-t px-4 py-3">
+      <div className="border-border flex items-center gap-2 border-t px-4 py-4">
         <Input
           value={newTagName}
           onChange={(e) => setNewTagName(e.target.value)}
           onKeyDown={handleCreateKeyDown}
           placeholder={t('tagSelector.createPlaceholder')}
-          className="flex-1"
+          className="min-h-11 flex-1"
         />
         <Button
           icon
           variant="outline"
           onClick={handleCreateSubmit}
           disabled={!newTagName.trim()}
-          className="shrink-0"
+          className="size-10 shrink-0"
           aria-label={t('tagSelector.createPlaceholder')}
         >
           <Plus className="size-4" />

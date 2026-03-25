@@ -80,7 +80,9 @@
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
       "Bash(grep -r \"border-b\\\\|border-border\\\\|h-12\\\\|h-14\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/notifications/page.tsx)",
-      "Bash(grep -r \"h-12\\\\|h-14\\\\|border\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx)"
+      "Bash(grep -r \"h-12\\\\|h-14\\\\|border\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx)",
+      "Bash(cat /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/_overlays/GlobalOverlays.tsx)",
+      "Bash(find /Users/takayasutomoya/Desktop/app/.storybook -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.json \\\\\\))"
     ],
     "deny": [
       "Read(**/.env)",

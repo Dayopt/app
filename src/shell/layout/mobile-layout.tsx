@@ -10,7 +10,6 @@ import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { MobileCreateSheet } from './MobileCreateSheet';
-import { MobileFilterSheet } from './MobileFilterSheet';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -59,9 +58,6 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
 
       {/* 作成ボトムシート（Palette + RecentBlocks） */}
       <MobileCreateSheet />
-
-      {/* フィルター・パレットボトムシート */}
-      <MobileFilterSheet />
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />
