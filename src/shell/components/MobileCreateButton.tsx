@@ -19,7 +19,7 @@ export function MobileCreateButton() {
       onClick={() => setOpen(true)}
       aria-label={t('navigation.sidebar.quickCreate')}
     >
-      <Plus className="size-4" />
+      <Plus className="size-5" />
     </Button>
   );
 }
