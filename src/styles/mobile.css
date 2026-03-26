@@ -161,15 +161,6 @@ img {
   user-drag: none;
 }
 
-/* touch-actionユーティリティ（Tailwindにない複合値のみ） */
-.touch-pan-y-pinch {
-  touch-action: pan-y pinch-zoom;
-}
-
-.touch-pan-x-pinch {
-  touch-action: pan-x pinch-zoom;
-}
-
 /* ============================================
  * フォーカス表示の最適化
  *
