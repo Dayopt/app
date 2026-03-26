@@ -262,8 +262,8 @@ export function TagCreateModal({
                         className={cn(
                           'flex size-9 items-center justify-center rounded-full transition-all',
                           isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
+                          classes.dot,
                         )}
-                        style={{ backgroundColor: classes.cssVar }}
                         aria-label={COLOR_DISPLAY_NAMES[c]}
                         aria-pressed={isActive}
                       >

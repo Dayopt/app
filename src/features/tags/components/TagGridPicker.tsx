@@ -46,8 +46,8 @@ function TagGridCell({
         'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        colorClasses.tint,
       )}
-      style={{ backgroundColor: colorClasses.cssVarTint }}
     >
       <div className="relative flex size-8 items-center justify-center">
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />

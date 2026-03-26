@@ -76,20 +76,9 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
       }}
     >
       {/* 左アクセントストリップ */}
-      <div
-        className="shrink-0"
-        style={{
-          width: '3px',
-          backgroundColor: 'var(--entry-default)',
-        }}
-      />
+      <div className="bg-entry-default shrink-0" style={{ width: '3px' }} />
       {/* カード本体 */}
-      <div
-        className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
-        style={{
-          backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
-        }}
-      >
+      <div className="entry-tint min-w-0 flex-1 overflow-hidden rounded-r-lg">
         {isCompact ? (
           <div className="flex h-full items-center px-2">
             <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>

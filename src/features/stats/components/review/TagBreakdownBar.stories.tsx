@@ -1,7 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
-
 import { TagBreakdownBar } from './TagBreakdownBar';
 
 /** TagBreakdownBar — タグ別時間配分の積み上げバー + 凡例 */
@@ -16,11 +14,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const MOCK_SEGMENTS = [
-  { tagName: 'Work', tagColor: getTagColorClasses('blue').cssVar, minutes: 1200 },
-  { tagName: 'Study', tagColor: getTagColorClasses('violet').cssVar, minutes: 480 },
-  { tagName: 'Exercise', tagColor: getTagColorClasses('green').cssVar, minutes: 240 },
-  { tagName: 'Reading', tagColor: getTagColorClasses('amber').cssVar, minutes: 120 },
-  { tagName: 'Other', tagColor: getTagColorClasses('gray').cssVar, minutes: 60 },
+  { tagName: 'Work', tagColor: 'blue' as const, minutes: 1200 },
+  { tagName: 'Study', tagColor: 'violet' as const, minutes: 480 },
+  { tagName: 'Exercise', tagColor: 'green' as const, minutes: 240 },
+  { tagName: 'Reading', tagColor: 'amber' as const, minutes: 120 },
+  { tagName: 'Other', tagColor: 'gray' as const, minutes: 60 },
 ];
 
 /** リスト表示（バー + 凡例） */
@@ -43,8 +41,8 @@ export const BarOnly: Story = {
 export const TwoTags: Story = {
   args: {
     segments: [
-      { tagName: 'Work', tagColor: getTagColorClasses('blue').cssVar, minutes: 900 },
-      { tagName: 'Personal', tagColor: getTagColorClasses('pink').cssVar, minutes: 300 },
+      { tagName: 'Work', tagColor: 'blue' as const, minutes: 900 },
+      { tagName: 'Personal', tagColor: 'pink' as const, minutes: 300 },
     ],
   },
 };
@@ -71,8 +69,8 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-3 text-xs font-medium">TwoTags（タグ2つ）</p>
         <TagBreakdownBar
           segments={[
-            { tagName: 'Work', tagColor: getTagColorClasses('blue').cssVar, minutes: 900 },
-            { tagName: 'Personal', tagColor: getTagColorClasses('pink').cssVar, minutes: 300 },
+            { tagName: 'Work', tagColor: 'blue', minutes: 900 },
+            { tagName: 'Personal', tagColor: 'pink', minutes: 300 },
           ]}
         />
       </div>

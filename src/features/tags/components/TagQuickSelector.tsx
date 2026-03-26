@@ -142,8 +142,8 @@ function CreateTagFormView({
                     className={cn(
                       'flex size-9 items-center justify-center rounded-full transition-all',
                       isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
+                      classes.dot,
                     )}
-                    style={{ backgroundColor: classes.cssVar }}
                     aria-label={COLOR_DISPLAY_NAMES[color]}
                     aria-pressed={isActive}
                   >
@@ -246,8 +246,8 @@ function TagGridCell({
         'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        colorClasses.tint,
       )}
-      style={{ backgroundColor: colorClasses.cssVarTint }}
     >
       <div className="relative flex size-8 items-center justify-center">
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />

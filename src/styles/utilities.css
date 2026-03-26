@@ -175,6 +175,16 @@
   border: 1px solid var(--glass-border);
 }
 
+/* ============================================
+ * Entry Tint ユーティリティ
+ *
+ * 未タグ付きエントリのカード背景。
+ * --entry-default を 12% で --background と混色。
+ * ============================================ */
+@utility entry-tint {
+  background-color: color-mix(in oklch, var(--entry-default) 12%, var(--background));
+}
+
 @utility glass-heavy {
   background-color: var(--glass-bg-heavy);
   backdrop-filter: blur(var(--glass-blur-lg));

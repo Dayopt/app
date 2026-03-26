@@ -4,6 +4,7 @@ import { BarChart3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
+import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
@@ -43,7 +44,7 @@ export function StatsView({ className }: StatsViewProps) {
     if (!timeByTag.data) return [];
     return timeByTag.data.map((tag) => ({
       tagName: tag.name,
-      tagColor: tag.color,
+      tagColor: resolveTagColor(tag.color),
       minutes: Math.round(tag.hours * 60),
     }));
   }, [timeByTag.data]);

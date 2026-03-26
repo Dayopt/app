@@ -4,6 +4,8 @@
  * メトリクス定義マスター型 + tRPCレスポンス型
  */
 
+import type { TagColorName } from '@/lib/tag-colors';
+
 // =============================================================================
 // Metric Definition System（定義マスター型）
 // =============================================================================
@@ -77,7 +79,7 @@ export interface PlanRateData {
 export interface EstimationAccuracyData {
   tagId: string;
   tagName: string;
-  tagColor: string;
+  tagColor: TagColorName;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;

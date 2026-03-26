@@ -1,10 +1,11 @@
 'use client';
 
+import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface TagSegment {
   tagName: string;
-  tagColor: string;
+  tagColor: TagColorName;
   minutes: number;
 }
 
@@ -41,7 +42,7 @@ export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreak
             <div
               key={seg.tagName}
               className="h-full first:rounded-l-full last:rounded-r-full"
-              style={{ width: `${pct}%`, backgroundColor: seg.tagColor }}
+              style={{ width: `${pct}%`, backgroundColor: `var(--tag-${seg.tagColor})` }}
               title={`${seg.tagName}: ${formatMinutes(seg.minutes)} (${Math.round(pct)}%)`}
             />
           );
@@ -57,7 +58,7 @@ export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreak
               <div key={seg.tagName} className="flex items-center gap-1.5 text-xs">
                 <span
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: seg.tagColor }}
+                  style={{ backgroundColor: `var(--tag-${seg.tagColor})` }}
                 />
                 <span className="text-foreground">{seg.tagName}</span>
                 <span className="text-muted-foreground">

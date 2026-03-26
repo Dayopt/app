@@ -75,12 +75,8 @@ export function BlockItem({
             className={cn(
               'shrink-0 rounded-full',
               dotVariant === 'outline' ? 'size-3 border-2 bg-transparent' : 'size-2.5',
+              dotVariant === 'outline' ? colorClasses.border : colorClasses.dot,
             )}
-            style={
-              dotVariant === 'outline'
-                ? { borderColor: colorClasses.cssVar }
-                : { backgroundColor: colorClasses.cssVar }
-            }
             aria-hidden="true"
           />
         )}
