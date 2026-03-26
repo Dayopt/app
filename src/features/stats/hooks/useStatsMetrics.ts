@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import { api } from '@/platform/trpc';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {
@@ -90,14 +91,15 @@ export interface UseStatsMetricsResult {
 export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResult {
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computeStatsDateRange(currentDate, granularity, timezone),
+    [currentDate, granularity, timezone],
   );
   const prevDateRange = useMemo(
-    () => computePreviousDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computePreviousDateRange(currentDate, granularity, timezone),
+    [currentDate, granularity, timezone],
   );
 
   // === 統合クエリ（5 KPI を 1 RPC で取得） ===

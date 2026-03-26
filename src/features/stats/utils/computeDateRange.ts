@@ -1,83 +1,157 @@
-import {
-  addDays,
-  addMonths,
-  addWeeks,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from '@/lib/date/core';
+import { fromZonedTime } from 'date-fns-tz';
+
+import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 
+// ============================================================
+// TZ-aware boundary helpers
+// ============================================================
+
 /**
- * ローカル日付から UTC midnight の ISO 文字列を生成
- *
- * サーバー(UTC)とクライアント(JST等)で同じローカル日付なら同じ文字列を返す。
- * これにより tRPC のクエリキー（= input オブジェクト）が一致し、
- * サーバー prefetch のキャッシュがクライアントで正しくヒットする。
- *
- * 例: 2026-03-23 00:00 JST → "2026-03-23T00:00:00.000Z"
- *     2026-03-23 00:00 UTC → "2026-03-23T00:00:00.000Z"（同じ文字列）
+ * 指定タイムゾーンにおける日付の "YYYY-MM-DD" 文字列を返す
  */
-function toLocalDateUTCStart(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}T00:00:00.000Z`;
+function getLocalDateStr(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date); // "YYYY-MM-DD"
 }
 
-/** ローカル日付の 23:59:59.999 を UTC ISO 文字列として生成 */
-function toLocalDateUTCEnd(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}T23:59:59.999Z`;
+/**
+ * 指定タイムゾーンにおける "YYYY-MM-DD" の深夜 00:00:00 を UTC ISO に変換
+ */
+function tzDayStart(dateStr: string, timezone: string): string {
+  return fromZonedTime(new Date(`${dateStr}T00:00:00`), timezone).toISOString();
 }
+
+/**
+ * 指定タイムゾーンにおける "YYYY-MM-DD" の 23:59:59.999 を UTC ISO に変換
+ */
+function tzDayEnd(dateStr: string, timezone: string): string {
+  return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
+}
+
+/**
+ * "YYYY-MM-DD" 文字列に日数を加算して新しい "YYYY-MM-DD" を返す
+ *
+ * T12:00:00Z を使うことでランタイムTZに依存しない安全な加算を行う
+ */
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+/**
+ * 指定タイムゾーンで date が属する週の月曜日（ISO週: 月曜始まり）の "YYYY-MM-DD" を返す
+ *
+ * "YYYY-MM-DD" を UTC正午で Date 化し getUTCDay() で曜日を安全に取得する
+ */
+function getWeekStartStr(date: Date, timezone: string): string {
+  const todayStr = getLocalDateStr(date, timezone);
+  // UTCの正午として解釈することでランタイムTZに依存しない曜日計算
+  const d = new Date(`${todayStr}T12:00:00Z`);
+  const utcDow = d.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // 月曜始まりのオフセット: Mon=0, Tue=1, ..., Sun=6
+  const offset = utcDow === 0 ? 6 : utcDow - 1;
+  return addDaysToDateStr(todayStr, -offset);
+}
+
+/**
+ * 指定タイムゾーンで date が属する月の初日 "YYYY-MM-DD" を返す
+ */
+function getMonthStartStr(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const y = parts.find((p) => p.type === 'year')!.value;
+  const m = parts.find((p) => p.type === 'month')!.value;
+  return `${y}-${m}-01`;
+}
+
+/**
+ * 指定タイムゾーンで date が属する月の末日 "YYYY-MM-DD" を返す
+ */
+function getMonthEndStr(date: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const y = parseInt(parts.find((p) => p.type === 'year')!.value, 10);
+  const m = parseInt(parts.find((p) => p.type === 'month')!.value, 10);
+  // Date(y, m, 0) は m月の末日（mは1-indexed、0日目 = 前月末）
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
+/**
+ * 指定タイムゾーンで date が属する年を返す
+ */
+function getYearInTimezone(date: Date, timezone: string): number {
+  return parseInt(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+    }).format(date),
+    10,
+  );
+}
+
+// ============================================================
+// Public API
+// ============================================================
 
 /**
  * 基準日と粒度から絶対的な日付範囲を算出
  *
- * ⚠ toISOString() を直接使わない。ローカルタイムゾーンの日付境界を
- *   UTC midnight として正規化し、サーバー/クライアント間のキャッシュキー一致を保証する。
+ * timezone パラメータを使用してユーザーのローカル深夜をUTCに変換する。
+ * これにより非UTCユーザーでも正確な日付境界が保証される。
  */
 export function computeStatsDateRange(
   currentDate: Date,
   granularity: StatsGranularity,
+  timezone: string,
 ): {
   startDate: string;
   endDate: string;
 } {
   switch (granularity) {
     case 'day': {
-      const start = startOfDay(currentDate);
+      const dateStr = getLocalDateStr(currentDate, timezone);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(start),
+        startDate: tzDayStart(dateStr, timezone),
+        endDate: tzDayEnd(dateStr, timezone),
       };
     }
     case 'week': {
-      const start = startOfWeek(currentDate);
-      const end = endOfWeek(currentDate);
+      const startStr = getWeekStartStr(currentDate, timezone);
+      const endStr = addDaysToDateStr(startStr, 6);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(end),
+        startDate: tzDayStart(startStr, timezone),
+        endDate: tzDayEnd(endStr, timezone),
       };
     }
     case 'month': {
-      const start = startOfMonth(currentDate);
-      const end = endOfMonth(currentDate);
+      const startStr = getMonthStartStr(currentDate, timezone);
+      const endStr = getMonthEndStr(currentDate, timezone);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(end),
+        startDate: tzDayStart(startStr, timezone),
+        endDate: tzDayEnd(endStr, timezone),
       };
     }
     case 'year': {
-      const year = currentDate.getFullYear();
+      const year = getYearInTimezone(currentDate, timezone);
       return {
-        startDate: `${year}-01-01T00:00:00.000Z`,
-        endDate: `${year}-12-31T23:59:59.999Z`,
+        startDate: tzDayStart(`${year}-01-01`, timezone),
+        endDate: tzDayEnd(`${year}-12-31`, timezone),
       };
     }
   }
@@ -91,6 +165,7 @@ export function computeStatsDateRange(
 export function computePreviousDateRange(
   currentDate: Date,
   granularity: StatsGranularity,
+  timezone: string,
 ): {
   startDate: string;
   endDate: string;
@@ -98,35 +173,35 @@ export function computePreviousDateRange(
   switch (granularity) {
     case 'day': {
       const prev = addDays(currentDate, -1);
-      const start = startOfDay(prev);
+      const dateStr = getLocalDateStr(prev, timezone);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(start),
+        startDate: tzDayStart(dateStr, timezone),
+        endDate: tzDayEnd(dateStr, timezone),
       };
     }
     case 'week': {
       const prev = addWeeks(currentDate, -1);
-      const start = startOfWeek(prev);
-      const end = endOfWeek(prev);
+      const startStr = getWeekStartStr(prev, timezone);
+      const endStr = addDaysToDateStr(startStr, 6);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(end),
+        startDate: tzDayStart(startStr, timezone),
+        endDate: tzDayEnd(endStr, timezone),
       };
     }
     case 'month': {
       const prev = addMonths(currentDate, -1);
-      const start = startOfMonth(prev);
-      const end = endOfMonth(prev);
+      const startStr = getMonthStartStr(prev, timezone);
+      const endStr = getMonthEndStr(prev, timezone);
       return {
-        startDate: toLocalDateUTCStart(start),
-        endDate: toLocalDateUTCEnd(end),
+        startDate: tzDayStart(startStr, timezone),
+        endDate: tzDayEnd(endStr, timezone),
       };
     }
     case 'year': {
-      const year = currentDate.getFullYear() - 1;
+      const year = getYearInTimezone(currentDate, timezone) - 1;
       return {
-        startDate: `${year}-01-01T00:00:00.000Z`,
-        endDate: `${year}-12-31T23:59:59.999Z`,
+        startDate: tzDayStart(`${year}-01-01`, timezone),
+        endDate: tzDayEnd(`${year}-12-31`, timezone),
       };
     }
   }

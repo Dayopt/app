@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { calculatePeakUtilization } from '../lib/metrics';
 import { evaluateRuleInsights } from '../lib/ruleInsights';
@@ -27,10 +28,11 @@ export function StatsView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computeStatsDateRange(currentDate, granularity, timezone),
+    [currentDate, granularity, timezone],
   );
 
   // タグ別内訳

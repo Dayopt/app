@@ -15,8 +15,10 @@ export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
 
   const now = new Date();
-  const dateRange = computeStatsDateRange(now, 'week');
-  const prevDateRange = computePreviousDateRange(now, 'week');
+  // サーバーサイドではユーザー設定が取得できないためUTCをデフォルトとして使用
+  const serverTimezone = 'UTC';
+  const dateRange = computeStatsDateRange(now, 'week', serverTimezone);
+  const prevDateRange = computePreviousDateRange(now, 'week', serverTimezone);
 
   try {
     await Promise.all([

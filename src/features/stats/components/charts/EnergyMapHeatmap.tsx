@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import type { EnergyMapRow } from '../../types/metrics.types';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
@@ -55,10 +57,11 @@ export function EnergyMapHeatmap() {
   const t = useTranslations('calendar.stats');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computeStatsDateRange(currentDate, granularity, timezone),
+    [currentDate, granularity, timezone],
   );
 
   const { data, isPending } = api.entries.getEnergyMap.useQuery(dateRange);

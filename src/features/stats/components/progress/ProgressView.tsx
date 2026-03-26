@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import type { StatsViewProps } from '../../types/stats.types';
@@ -25,10 +26,11 @@ export function ProgressView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computeStatsDateRange(currentDate, granularity, timezone),
+    [currentDate, granularity, timezone],
   );
 
   // TanStack Query キャッシュ共有: StatsView と同じクエリのため追加リクエストは発生しない
