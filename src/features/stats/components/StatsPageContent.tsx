@@ -84,7 +84,9 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
       startTransition(() => {
         setActiveTab(newTab);
       });
-      window.history.pushState(null, '', `/${locale}/stats/${newTab}`);
+      // 既存の searchParams (g, d) を保持してタブのみ変更
+      const params = new URLSearchParams(window.location.search);
+      window.history.pushState(null, '', `/${locale}/stats/${newTab}?${params.toString()}`);
     },
     [locale, startTransition],
   );

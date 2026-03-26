@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
@@ -22,28 +20,37 @@ function parseDateParam(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+/** 現在のURLからsearchParamsを読み取る（Next.js useSearchParams を使わない） */
+function readUrlParams(): URLSearchParams {
+  return new URLSearchParams(window.location.search);
+}
+
 /**
- * useStatsFilterSync — Zustand store ↔ URL searchParams の双方向同期
+ * useStatsFilterSync — Zustand store ↔ URL searchParams の同期
  *
- * URL → Store: 初回マウント時に searchParams から復元
- * Store → URL: granularity/currentDate 変更時に URL を更新（replaceState）
+ * URL → Store: 初回マウント時に window.location.search から復元
+ * Store → URL: granularity/currentDate 変更時に replaceState で URL を更新
+ *
+ * ⚠ Next.js の useSearchParams() は使用しない。
+ *   ClientPageRouter の pushState ベースのナビゲーションと同期しないため、
+ *   window.location.search を直接読み書きする。
  *
  * StatsPageContent に1箇所だけ配置する。
  */
 export function useStatsFilterSync() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const setGranularity = useStatsFilterStore((s) => s.setGranularity);
   const setCurrentDate = useStatsFilterStore((s) => s.setCurrentDate);
 
+  // 初回同期済みフラグ（Store→URL同期が初回URL→Store同期より先に走るのを防ぐ）
+  const initializedRef = useRef(false);
+
   // URL → Store: 初回マウント時のみ
   useEffect(() => {
-    const g = searchParams.get('g');
-    const d = searchParams.get('d');
+    const params = readUrlParams();
+    const g = params.get('g');
+    const d = params.get('d');
 
     if (g && isValidGranularity(g)) {
       setGranularity(g);
@@ -52,24 +59,28 @@ export function useStatsFilterSync() {
       const parsed = parseDateParam(d);
       if (parsed) setCurrentDate(parsed);
     }
-    // 初回のみ実行（searchParams 変更で再実行しない）
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    initializedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 初回マウント時のみ実行
   }, []);
 
-  // Store → URL: 状態変更時に URL を同期
+  // Store → URL: ストア状態変更時に URL を同期
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    if (!initializedRef.current) return;
+
     const newG = granularity;
     const newD = formatDateParam(currentDate);
 
-    const currentG = params.get('g');
-    const currentD = params.get('d');
+    const currentParams = readUrlParams();
+    if (currentParams.get('g') === newG && currentParams.get('d') === newD) return;
 
-    if (currentG === newG && currentD === newD) return;
+    currentParams.set('g', newG);
+    currentParams.set('d', newD);
 
-    params.set('g', newG);
-    params.set('d', newD);
-
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [granularity, currentDate, pathname, router, searchParams]);
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}?${currentParams.toString()}`,
+    );
+  }, [granularity, currentDate]);
 }

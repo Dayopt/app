@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useUnreadCount } from '@/features/notifications';
+import { useStatsFilterStore } from '@/features/stats';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
@@ -43,6 +44,8 @@ export function BottomTabBar() {
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
+  const statsGranularity = useStatsFilterStore((s) => s.granularity);
+  const statsDate = useStatsFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
 
@@ -70,9 +73,13 @@ export function BottomTabBar() {
   const handleStatsClick = useCallback(() => {
     if (activeTab === 'stats') return;
 
-    window.history.pushState(null, '', buildStatsPath(locale));
+    window.history.pushState(
+      null,
+      '',
+      buildStatsPath(locale, 'review', { granularity: statsGranularity, date: statsDate }),
+    );
     switchToPage('stats');
-  }, [activeTab, locale, switchToPage]);
+  }, [activeTab, locale, statsGranularity, statsDate, switchToPage]);
 
   const handleNotificationsClick = useCallback(() => {
     resetToServer();

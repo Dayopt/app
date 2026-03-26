@@ -23,6 +23,16 @@ export function buildCalendarPath(params: {
   return `/${params.locale}/calendar/${params.viewType}${query}`;
 }
 
-export function buildStatsPath(locale: string, tab: 'review' | 'progress' | 'insights' = 'review') {
-  return `/${locale}/stats/${tab}`;
+export function buildStatsPath(
+  locale: string,
+  tab: 'review' | 'progress' | 'insights' = 'review',
+  options?: { granularity?: string; date?: Date },
+) {
+  const basePath = `/${locale}/stats/${tab}`;
+  if (!options?.granularity && !options?.date) return basePath;
+
+  const params = new URLSearchParams();
+  if (options.granularity) params.set('g', options.granularity);
+  if (options.date) params.set('d', options.date.toISOString().split('T')[0]!);
+  return `${basePath}?${params.toString()}`;
 }
