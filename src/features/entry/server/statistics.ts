@@ -5,12 +5,37 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { TRPCError } from '@trpc/server';
+import { formatInTimeZone } from 'date-fns-tz';
 import { z } from 'zod';
 
+import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { traceDbQuery } from '@/platform/sentry/trace';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+
+/**
+ * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
+ */
+function getTodayInTimezone(timezone: string): string {
+  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+}
+
+/**
+ * supabase から user_settings.timezone を取得する（失敗時は 'UTC' にフォールバック）
+ */
+async function getUserTimezone(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from('user_settings')
+    .select('timezone')
+    .eq('user_id', userId)
+    .single();
+  return (data?.timezone as string | null | undefined) ?? 'UTC';
+}
 
 // exactOptionalPropertyTypes 対応: undefined値を除外して optional params を安全に渡す
 type StripUndefinedValues<T> = { [K in keyof T]: Exclude<T[K], undefined> };
@@ -272,8 +297,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
       try {
         const { supabase, userId } = ctx;
         const monthCount = input?.months ?? 12;
-        const now = new Date();
-        const startDate = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1), 1);
+
+        // ユーザーのタイムゾーンで「現在の年月」を決定する
+        const timezone = await getUserTimezone(supabase, userId);
+        const nowStr = formatInTimeZone(new Date(), timezone, 'yyyy-MM');
+        const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
+
+        // monthCount ヶ月前の1日（UTC ISO形式）
+        const startDate = new Date(Date.UTC(nowYear, nowMonth - 1 - (monthCount - 1), 1));
 
         const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
           supabase.rpc('get_monthly_hours', {
@@ -293,8 +324,9 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const rows = data ?? [];
         const monthlyHours: Record<string, number> = {};
         for (let i = 0; i < monthCount; i++) {
-          const date = new Date(now.getFullYear(), now.getMonth() - (monthCount - 1) + i, 1);
-          const key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+          const year = nowYear + Math.floor((nowMonth - 1 - (monthCount - 1) + i) / 12);
+          const month = ((((nowMonth - 1 - (monthCount - 1) + i) % 12) + 12) % 12) + 1;
+          const key = `${year}-${month.toString().padStart(2, '0')}`;
           monthlyHours[key] = 0;
         }
         for (const row of rows) {
@@ -632,9 +664,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
       try {
         const { supabase, userId } = ctx;
 
+        // ユーザーのタイムゾーンで「今日」を決定する
+        const timezone = await getUserTimezone(supabase, userId);
+        const todayStr = getTodayInTimezone(timezone);
+
         // 過去365日分のアクティブ日を取得
-        const since = new Date();
-        since.setDate(since.getDate() - 365);
+        const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
         const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
           supabase.rpc('get_active_dates', {
@@ -654,15 +689,13 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const activeDates = data ?? [];
         const dateSet = new Set(activeDates.map((d) => d.active_date));
 
-        // 今日から逆順にstreakをカウント
+        // ユーザーのタイムゾーンで今日から逆順にstreakをカウント
         let streak = 0;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const todayMs = new Date(todayStr + 'T00:00:00Z').getTime();
 
         for (let i = 0; i < 365; i++) {
-          const d = new Date(today);
-          d.setDate(d.getDate() - i);
-          const dateStr = d.toISOString().slice(0, 10);
+          const d = new Date(todayMs - i * 24 * 60 * 60 * 1000);
+          const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
           if (dateSet.has(dateStr)) {
             streak++;
           } else {

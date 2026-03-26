@@ -5,9 +5,10 @@
  * entries テーブル（plans+records統合）からデータを取得する。
  */
 
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+
 import { MS_PER_MINUTE } from '@/lib/date';
 import { endOfWeek, startOfWeek } from '@/lib/date/core';
-import { formatDateISO } from '@/lib/date/format';
 import { logger } from '@/lib/logger';
 
 import type { ChronotypeType } from '@/features/chronotype';
@@ -16,8 +17,8 @@ import type { AIContext, AIContextPlan, AIContextRecord, AISupabaseClient } from
 /**
  * AIコンテキストを組み立てる
  *
- * Promise.allで以下を並列取得:
- * - ユーザー設定（パーソナライゼーション、クロノタイプ）
+ * 1. ユーザー設定を先行取得してタイムゾーンを確定
+ * 2. 残りデータを並列取得:
  * - 今日のエントリ（origin='planned'）
  * - 最近の過去エントリ（直近7日）
  * - 今週のエントリ時間
@@ -28,30 +29,40 @@ export async function buildAIContext(
   userId: string,
 ): Promise<AIContext> {
   const now = new Date();
-  const todayStr = formatDateISO(now);
+
+  // 1. ユーザー設定を先行取得してタイムゾーンを確定する
+  const settingsResult = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  const timezone = (settingsResult.data?.timezone as string | null | undefined) ?? 'Asia/Tokyo';
+
+  // ユーザーのタイムゾーンで「今日」のUTC境界を計算する
+  const todayStr = formatInTimeZone(now, timezone, 'yyyy-MM-dd');
+  const todayStart = fromZonedTime(`${todayStr}T00:00:00`, timezone);
+  const todayEnd = fromZonedTime(`${todayStr}T23:59:59`, timezone);
+
   const weekStart = startOfWeek(now);
   const weekEnd = endOfWeek(now);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * MS_PER_MINUTE);
 
   const [
-    settingsResult,
     todayEntriesResult,
     recentEntriesResult,
     weeklyPlannedResult,
     weeklyUnplannedResult,
     tagsResult,
   ] = await Promise.all([
-    // 1. ユーザー設定
-    supabase.from('user_settings').select('*').eq('user_id', userId).single(),
-
-    // 2. 今日のエントリ（planned）
+    // 2. 今日のエントリ（planned）— ユーザーTZで計算したUTC境界を使用
     supabase
       .from('entries')
       .select('id, title, start_time, end_time, origin, entry_tags(tag_id)')
       .eq('user_id', userId)
       .eq('origin', 'planned')
-      .gte('start_time', `${todayStr}T00:00:00`)
-      .lte('start_time', `${todayStr}T23:59:59`)
+      .gte('start_time', todayStart.toISOString())
+      .lte('start_time', todayEnd.toISOString())
       .order('start_time', { ascending: true })
       .limit(20),
 
