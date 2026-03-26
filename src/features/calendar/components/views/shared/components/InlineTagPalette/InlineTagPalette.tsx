@@ -183,11 +183,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 flex rounded-r-lg duration-100 motion-reduce:animate-none"
+          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 flex rounded-r-lg transition-colors duration-150 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,
-            transition: 'background-color 150ms ease',
           }}
         >
           {/* 左アクセントストリップ */}

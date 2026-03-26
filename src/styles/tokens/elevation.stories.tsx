@@ -331,7 +331,7 @@ export const BackdropFilterComparison: Story = {
                     <span className="text-foreground text-sm font-medium">Aa テキスト</span>
                   </div>
                 </div>
-                <code className="mt-2 inline-block text-[10px] leading-tight">{filter.name}</code>
+                <code className="mt-2 inline-block text-xs leading-tight">{filter.name}</code>
               </div>
             ))}
           </div>

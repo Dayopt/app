@@ -63,13 +63,13 @@ export const DataExportSettings = memo(function DataExportSettings() {
               <FileJson className="h-4 w-4" />
               {t('settings.dataControls.export.includedDataTitle')}
             </h4>
-            <ul className="text-muted-foreground grid grid-cols-2 gap-1 text-sm">
-              <li>• {t('settings.dataControls.export.profileInfo')}</li>
-              <li>• {t('settings.dataControls.export.tasksEvents')}</li>
-              <li>• {t('settings.dataControls.export.tagSettings')}</li>
-              <li>• {t('settings.dataControls.export.calendarSettings')}</li>
-              <li>• {t('settings.dataControls.export.notificationSettings')}</li>
-              <li>• {t('settings.dataControls.export.otherSettings')}</li>
+            <ul className="text-muted-foreground grid list-inside list-disc grid-cols-2 gap-1 text-sm">
+              <li>{t('settings.dataControls.export.profileInfo')}</li>
+              <li>{t('settings.dataControls.export.tasksEvents')}</li>
+              <li>{t('settings.dataControls.export.tagSettings')}</li>
+              <li>{t('settings.dataControls.export.calendarSettings')}</li>
+              <li>{t('settings.dataControls.export.notificationSettings')}</li>
+              <li>{t('settings.dataControls.export.otherSettings')}</li>
             </ul>
           </div>
 
