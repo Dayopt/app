@@ -333,6 +333,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                     type="button"
                     onClick={() => !isDisabled && handleDateClick(date)}
                     disabled={isDisabled}
+                    aria-label={format(date, 'yyyy-MM-dd')}
                     className={cn(
                       // ベーススタイル - 高さ32px、幅はグリッドに委ねる
                       'flex h-8 items-center justify-center text-sm transition-colors',

@@ -334,7 +334,7 @@ export function TagFlatList({
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-          {tagDisplayInfos.map((info) => renderItem(info))}
+          <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>
         </SortableContext>
       </DndContext>
     );
@@ -344,7 +344,12 @@ export function TagFlatList({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-        <div ref={scrollContainerRef} className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+        <div
+          ref={scrollContainerRef}
+          className="overflow-y-auto"
+          role="list"
+          style={{ maxHeight: '50vh' }}
+        >
           <div
             style={{
               height: virtualizer.getTotalSize(),

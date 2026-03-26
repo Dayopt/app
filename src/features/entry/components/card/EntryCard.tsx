@@ -272,7 +272,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       onTouchStart={handleTouchStart}
       onKeyDown={handleKeyDown}
       draggable={false}
-      role="group"
       tabIndex={0}
       aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
