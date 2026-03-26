@@ -23,7 +23,7 @@ export function ReminderEmail({
   planTitle,
   startTime,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: ReminderEmailProps) {
   const t = createEmailTranslator(locale);
   const manageLinkText = t('common.manageNotificationSettings');

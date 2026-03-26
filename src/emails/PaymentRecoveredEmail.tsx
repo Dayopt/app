@@ -19,7 +19,7 @@ export interface PaymentRecoveredEmailProps {
 export function PaymentRecoveredEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: PaymentRecoveredEmailProps) {
   const t = createEmailTranslator(locale);
   return (

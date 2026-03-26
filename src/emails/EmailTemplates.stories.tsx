@@ -260,12 +260,12 @@ export const Confirm: Story = {
     <BilingualEmailPreview
       enElement={ConfirmEmail({
         userName: 'Tomoya',
-        confirmUrl: 'https://dayopt.app/auth/confirm?token=abc123',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token=abc123',
         locale: 'en',
       })}
       jaElement={ConfirmEmail({
         userName: 'Tomoya',
-        confirmUrl: 'https://dayopt.app/auth/confirm?token=abc123',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token=abc123',
         locale: 'ja',
       })}
       title="Confirm Email"
@@ -279,12 +279,12 @@ export const PasswordReset: Story = {
     <BilingualEmailPreview
       enElement={PasswordResetEmail({
         userName: 'Tomoya',
-        resetUrl: 'https://dayopt.app/auth/reset?token=abc123',
+        resetUrl: 'https://app.dayopt.app/auth/reset?token=abc123',
         locale: 'en',
       })}
       jaElement={PasswordResetEmail({
         userName: 'Tomoya',
-        resetUrl: 'https://dayopt.app/auth/reset?token=abc123',
+        resetUrl: 'https://app.dayopt.app/auth/reset?token=abc123',
         locale: 'ja',
       })}
       title="Password Reset"
@@ -297,11 +297,11 @@ export const MagicLink: Story = {
   render: () => (
     <BilingualEmailPreview
       enElement={MagicLinkEmail({
-        loginUrl: 'https://dayopt.app/auth/magic-link?token=abc123',
+        loginUrl: 'https://app.dayopt.app/auth/magic-link?token=abc123',
         locale: 'en',
       })}
       jaElement={MagicLinkEmail({
-        loginUrl: 'https://dayopt.app/auth/magic-link?token=abc123',
+        loginUrl: 'https://app.dayopt.app/auth/magic-link?token=abc123',
         locale: 'ja',
       })}
       title="Magic Link"

@@ -22,7 +22,7 @@ export function PaymentFailedEmail({
   userName,
   portalUrl,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: PaymentFailedEmailProps) {
   const t = createEmailTranslator(locale);
   const ctaUrl = portalUrl || `${appUrl}/settings/billing`;

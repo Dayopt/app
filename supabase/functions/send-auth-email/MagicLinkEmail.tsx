@@ -44,7 +44,7 @@ export interface MagicLinkEmailProps {
 export function MagicLinkEmail({
   loginUrl,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: MagicLinkEmailProps) {
   const t = i18n[locale];
   return (
@@ -70,7 +70,7 @@ export function MagicLinkEmail({
               <br />
               <br />
               <Link style={styles.link} href={appUrl}>
-                dayopt.app
+                app.dayopt.app
               </Link>
               <br />
               <br />

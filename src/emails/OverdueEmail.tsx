@@ -23,7 +23,7 @@ export function OverdueEmail({
   planTitle,
   endTime,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: OverdueEmailProps) {
   const t = createEmailTranslator(locale);
   const manageLinkText = t('common.manageNotificationSettings');

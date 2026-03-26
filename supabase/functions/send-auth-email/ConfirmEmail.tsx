@@ -46,7 +46,7 @@ export function ConfirmEmail({
   userName,
   confirmUrl,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: ConfirmEmailProps) {
   const t = i18n[locale];
   return (

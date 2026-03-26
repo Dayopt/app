@@ -22,7 +22,7 @@ export function CancellationConfirmEmail({
   userName,
   periodEndDate,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: CancellationConfirmEmailProps) {
   const t = createEmailTranslator(locale);
   return (
