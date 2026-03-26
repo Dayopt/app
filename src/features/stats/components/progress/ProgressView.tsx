@@ -34,7 +34,10 @@ export function ProgressView({ className }: StatsViewProps) {
   // TanStack Query キャッシュ共有: StatsView と同じクエリのため追加リクエストは発生しない
   const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
   const isAllLoaded = !timeByTag.isPending;
-  const hasNoData = isAllLoaded && (!timeByTag.data || timeByTag.data.length === 0);
+  const isFetching = timeByTag.isFetching;
+  const hasError = timeByTag.isError;
+  const hasNoData =
+    isAllLoaded && !isFetching && !hasError && (!timeByTag.data || timeByTag.data.length === 0);
 
   if (hasNoData) {
     return (

@@ -95,8 +95,11 @@ export function StatsView({ className }: StatsViewProps) {
   ]);
 
   // 全クエリがロード完了かつデータが空の場合に空状態を表示
+  // エラー・フェッチ中は空状態を表示しない（エラーは FeatureErrorBoundary に委任）
   const isAllLoaded = !timeByTag.isPending && !planRate.isPending;
-  const hasNoData = isAllLoaded && tagSegments.length === 0;
+  const isFetching = timeByTag.isFetching || planRate.isFetching;
+  const hasError = timeByTag.isError || planRate.isError;
+  const hasNoData = isAllLoaded && !isFetching && !hasError && tagSegments.length === 0;
 
   if (hasNoData) {
     return (
