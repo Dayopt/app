@@ -313,7 +313,12 @@ export function BillingSettings() {
                     <h4 className="font-bold">{t(plan.nameKey)}</h4>
                   </div>
                   <div className="mt-2">
-                    <span className="text-2xl font-bold">${plan.price}</span>
+                    <span className="text-2xl font-bold">
+                      {new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: 'usd',
+                      }).format(plan.price)}
+                    </span>
                     <span className="text-muted-foreground text-sm">
                       {t('settings.subscription.perMonth')}
                     </span>
