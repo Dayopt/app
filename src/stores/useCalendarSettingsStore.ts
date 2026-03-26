@@ -57,10 +57,11 @@ interface CalendarSettingsStore extends CalendarSettings {
 }
 
 const defaultSettings: CalendarSettings = {
-  timezone: 'Asia/Tokyo', // デフォルトはJST、useEffectで実際の値に更新
+  timezone:
+    typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   showUTCOffset: true,
   timeFormat: '24h',
-  dateFormat: 'yyyy/MM/dd', // デフォルトは日本式
+  dateFormat: 'yyyy-MM-dd', // ISO 8601（国際標準）
   defaultView: 'week', // デフォルトは週表示
   weekStartsOn: 1, // 月曜始まり
   defaultDuration: 60,

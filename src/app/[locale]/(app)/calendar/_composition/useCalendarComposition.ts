@@ -20,11 +20,9 @@ import React, { useEffect, useMemo } from 'react';
 import type { CalendarViewType } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
-import { getBrowserTimezone } from '@/lib/date';
 import { logger } from '@/lib/logger';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 // Sub-hooks
 import { useCalendarCrudHandlers } from './useCalendarCrudHandlers';
@@ -96,22 +94,6 @@ export function useCalendarComposition({
   navigateToDate,
   changeView,
 }: CalendarCompositionInput): CalendarCompositionResult {
-  // =========================================================================
-  // Side Effects: Timezone initialization
-  // =========================================================================
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
-  const updateSettings = useCalendarSettingsStore((state) => state.updateSettings);
-
-  useEffect(() => {
-    // デフォルト値のままならブラウザの実際のTZで上書き
-    if (timezone === 'Asia/Tokyo') {
-      const browserTz = getBrowserTimezone();
-      if (browserTz !== 'Asia/Tokyo') {
-        updateSettings({ timezone: browserTz });
-      }
-    }
-  }, [timezone, updateSettings]);
-
   // =========================================================================
   // Side Effects: Inspector cleanup on date navigation
   // =========================================================================
