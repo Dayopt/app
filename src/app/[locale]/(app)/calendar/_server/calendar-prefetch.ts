@@ -1,3 +1,5 @@
+import { headers } from 'next/headers';
+
 import type { CalendarViewType } from '@/features/calendar';
 import { calculateViewDateRange } from '@/features/calendar';
 import { logger } from '@/lib/logger';
@@ -25,6 +27,33 @@ function toLocalDateUTCEnd(date: Date): string {
 }
 
 /**
+ * タイムゾーン文字列を用いてサーバーの UTC 日時をユーザーのローカル日付に変換する。
+ *
+ * `new Date()` はサーバー上では UTC で評価されるため、ユーザーがタイムゾーンをまたぐ
+ * 時間帯（例: UTC+9 深夜）では日付がズレる。
+ * Intl.DateTimeFormat で UTC → ローカル日付部分を取得し、Date を再構成する。
+ */
+function toLocalDate(utcDate: Date, timezone: string): Date {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(utcDate);
+
+    const year = Number(parts.find((p) => p.type === 'year')?.value ?? utcDate.getFullYear());
+    const month = Number(parts.find((p) => p.type === 'month')?.value ?? utcDate.getMonth() + 1);
+    const day = Number(parts.find((p) => p.type === 'day')?.value ?? utcDate.getDate());
+
+    return new Date(year, month - 1, day);
+  } catch {
+    // 不正なタイムゾーン文字列の場合は UTC をそのまま使用
+    return utcDate;
+  }
+}
+
+/**
  * カレンダービュー用 prefetch（day/week/Nday）
  *
  * ビュータイプに応じた日付範囲でプランデータを事前取得し、
@@ -36,8 +65,15 @@ function toLocalDateUTCEnd(date: Date): string {
 export async function prefetchCalendarData(view: CalendarViewType, targetDate: Date) {
   const helpers = await createServerHelpers();
 
+  // middleware が `user-tz` Cookie から転送した `x-user-timezone` ヘッダーを使用
+  // targetDate が `new Date()` の場合はユーザーのローカル日付に補正する
+  // 初回アクセス時（Cookie未設定）は UTC にフォールバック
+  const headersList = await headers();
+  const userTimezone = headersList.get('x-user-timezone') ?? 'UTC';
+  const localTargetDate = toLocalDate(targetDate, userTimezone);
+
   // weekStartsOnはZustandストアなのでSSRではデフォルト値1（月曜日）を使用
-  const viewDateRange = calculateViewDateRange(view, targetDate, 1);
+  const viewDateRange = calculateViewDateRange(view, localTargetDate, 1);
   // toISOString()はTZ依存のためローカル日付をUTC normalizeして文字列化
   const dateFilter = {
     startDate: toLocalDateUTCStart(viewDateRange.start),

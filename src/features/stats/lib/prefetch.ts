@@ -1,3 +1,5 @@
+import { headers } from 'next/headers';
+
 import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
 
 import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
@@ -15,8 +17,10 @@ export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
 
   const now = new Date();
-  // サーバーサイドではユーザー設定が取得できないためUTCをデフォルトとして使用
-  const serverTimezone = 'UTC';
+  // middleware が `user-tz` Cookie から転送した `x-user-timezone` ヘッダーを使用
+  // 初回アクセス時（Cookie未設定）は UTC にフォールバック
+  const headersList = await headers();
+  const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
   const dateRange = computeStatsDateRange(now, 'week', serverTimezone);
   const prevDateRange = computePreviousDateRange(now, 'week', serverTimezone);
 

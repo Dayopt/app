@@ -43,8 +43,15 @@ export function useUserSettings() {
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       utils.userSettings.get.invalidate();
+
+      // タイムゾーン変更時: タイムゾーン依存クエリキャッシュを全て無効化
+      // SSR側の `user-tz` Cookie も更新して次回訪問時のSSRを正確にする
+      if ('timezone' in variables && typeof variables.timezone === 'string') {
+        utils.entries.invalidate();
+        document.cookie = `user-tz=${variables.timezone};path=/;max-age=31536000;SameSite=Lax`;
+      }
     },
     onError: () => {
       toast.error(t('settings.common.saveFailed'));
