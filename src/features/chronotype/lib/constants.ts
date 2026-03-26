@@ -90,12 +90,3 @@ export const CHRONOTYPE_PRESETS: Record<ChronotypeProfile['type'], ChronotypePro
     productivityZones: [],
   },
 };
-
-/** 生産性レベル別の半透明背景クラス（カレンダー背景表示用） */
-export const CHRONOTYPE_LEVEL_TINT_CLASSES: Record<ProductivityLevel, string> = {
-  warmup: 'bg-chronotype-tint-warmup',
-  peak: 'bg-chronotype-tint-peak',
-  dip: 'bg-chronotype-tint-dip',
-  recovery: 'bg-chronotype-tint-recovery',
-  winddown: 'bg-chronotype-tint-winddown',
-};

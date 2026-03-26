@@ -55,21 +55,15 @@ export const AllColors: Story = {
     <div>
       <h1 className="mb-8 text-2xl font-bold">カラートークン</h1>
 
-      <ColorGroup title="Surface（背景色・MD3準拠4段階）">
-        <ColorSwatch tailwindClass="bg-background" description="ページ背景（MD3 Surface）" />
-        <ColorSwatch
-          tailwindClass="bg-surface-inset"
-          description="card内セクション（MD3 Surface Container Low）"
-        />
-        <ColorSwatch
-          tailwindClass="bg-container"
-          description="サイドバー、セクション（MD3 Surface Container）"
-        />
+      <ColorGroup title="Surface（背景色・3段階 + muted）">
+        <ColorSwatch tailwindClass="bg-container" description="サイドバー、セクション（沈む）" />
+        <ColorSwatch tailwindClass="bg-background" description="ページ背景（基準）" />
         <ColorSwatch
           tailwindClass="bg-card"
-          description="カード、ダイアログ、ポップオーバー（MD3 Surface Container High）"
+          description="カード、ダイアログ、ポップオーバー（浮く）"
         />
-        <ColorSwatch tailwindClass="bg-overlay" description="モーダル背景（半透明・MD3 scrim）" />
+        <ColorSwatch tailwindClass="bg-muted" description="入力欄、well" />
+        <ColorSwatch tailwindClass="bg-overlay" description="モーダル背景（半透明）" />
       </ColorGroup>
 
       <ColorGroup title="テキスト">
@@ -99,20 +93,6 @@ export const AllColors: Story = {
         <ColorSwatch tailwindClass="bg-warning" description="警告、注意" />
         <ColorSwatch tailwindClass="bg-info" description="情報" />
         <ColorSwatch tailwindClass="bg-destructive" description="削除、エラー" />
-      </ColorGroup>
-
-      <ColorGroup title="Chronotype Tints（タイムライン背景用）">
-        <ColorSwatch tailwindClass="bg-chronotype-tint-warmup" description="ウォームアップ tint" />
-        <ColorSwatch
-          tailwindClass="bg-chronotype-tint-peak"
-          description="ピーク tint（alpha込み）"
-        />
-        <ColorSwatch tailwindClass="bg-chronotype-tint-dip" description="ディップ tint" />
-        <ColorSwatch tailwindClass="bg-chronotype-tint-recovery" description="リカバリー tint" />
-        <ColorSwatch
-          tailwindClass="bg-chronotype-tint-winddown"
-          description="ウインドダウン tint"
-        />
       </ColorGroup>
 
       <ColorGroup title="Border & Input">
@@ -168,35 +148,40 @@ export const Surface: Story = {
     <div>
       <h2 className="mb-6 text-xl font-bold">Surface体系（GAFA準拠・3段階）</h2>
       <p className="text-muted-foreground mb-8">
-        Material Design 3 / Apple HIG の共通原則に基づく意味ベース設計。
+        container(沈む) → background(基準) → card(浮く) の3段階 + muted(入力欄)。
         <br />
-        ダークモードでは高elevation = 明るい（MD3原則）。明度差は3-6%で視認性を確保。
+        ダークモードでは warm H60 (C=0.02) を適用。明度差は2-4%で視認性を確保。
       </p>
 
       <div className="space-y-4">
+        <div className="bg-container border-border rounded-lg border p-6">
+          <div className="font-bold">Container</div>
+          <div className="text-muted-foreground text-sm">
+            サイドバー、セクション（沈む — backgroundより暗い）
+          </div>
+        </div>
+
         <div className="bg-background border-border rounded-lg border p-6">
           <div className="font-bold">Background</div>
           <div className="text-muted-foreground text-sm">ページ背景（基準レベル）</div>
         </div>
 
-        <div className="bg-container border-border rounded-lg border p-6">
-          <div className="font-bold">Container</div>
-          <div className="text-muted-foreground text-sm">
-            サイドバー、セクション（backgroundより6%暗い）
-          </div>
-        </div>
-
         <div className="bg-card border-border rounded-lg border p-6">
           <div className="font-bold">Card</div>
           <div className="text-muted-foreground text-sm">
-            カード、ダイアログ、ポップオーバー（containerより3%暗い = 最も沈んだレベル）
+            カード、ダイアログ、ポップオーバー（浮く — backgroundより明るい）
           </div>
+        </div>
+
+        <div className="bg-muted border-border rounded-lg border p-6">
+          <div className="font-bold">Muted</div>
+          <div className="text-muted-foreground text-sm">入力欄、well</div>
         </div>
 
         <div className="bg-overlay border-border rounded-lg border p-6">
           <div className="text-foreground font-bold">Overlay</div>
           <div className="text-muted-foreground text-sm">
-            モーダル背景（半透明・MD3 scrim）。Dialog/Sheetの後ろに敷く背景幕。
+            モーダル背景（半透明）。Dialog/Sheetの後ろに敷く背景幕。
           </div>
         </div>
       </div>
@@ -239,10 +224,10 @@ export const Semantic: Story = {
 
     return (
       <div>
-        <h2 className="mb-2 text-xl font-bold">Semantic Colors（意味を持つ色）</h2>
+        <h2 className="mb-2 text-xl font-bold">Semantic Colors（bg + accent 体系）</h2>
         <p className="text-muted-foreground mb-6 text-sm">
-          WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト比を確保。
-          ダークモードでは明度を上げ、foreground をダーク文字に反転。
+          4色とも同じ L/C 構造で hue のみ変化。accent(テキスト・アイコン用) + bg(tint背景用)
+          の2トークン体系。
         </p>
 
         {/* 背景スウォッチ */}
@@ -715,38 +700,6 @@ export const Tags: Story = {
         <p className="text-muted-foreground mt-4 text-sm">
           タグバッジでは <code>border-tag-*</code> でボーダー色を設定
         </p>
-      </div>
-    </div>
-  ),
-};
-
-export const Chronotype: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-2 text-2xl font-bold">Chronotype Tints</h1>
-      <p className="text-muted-foreground mb-8">
-        カレンダーグリッド背景にうっすら色づく程度のtint色。
-        <br />
-        タイムラインバー・現在時刻ラインは bg-primary を使用。
-      </p>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        {[
-          { token: 'chronotype-tint-warmup', label: 'Warmup', desc: '起床後' },
-          { token: 'chronotype-tint-peak', label: 'Peak', desc: '最集中' },
-          { token: 'chronotype-tint-dip', label: 'Dip', desc: 'エネルギー低下' },
-          { token: 'chronotype-tint-recovery', label: 'Recovery', desc: '回復' },
-          { token: 'chronotype-tint-winddown', label: 'Wind-down', desc: '就寝準備' },
-        ].map(({ token, label, desc }) => (
-          <div key={token} className="text-center">
-            <div
-              className="border-border mb-2 h-20 rounded-lg border"
-              style={{ backgroundColor: `var(--${token})` }}
-            />
-            <p className="text-sm font-bold">{label}</p>
-            <p className="text-muted-foreground text-xs">{desc}</p>
-          </div>
-        ))}
       </div>
     </div>
   ),

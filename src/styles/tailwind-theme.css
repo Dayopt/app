@@ -4,39 +4,42 @@
  * ============================================ */
 @theme inline {
   /* ============================================
-   * Surface トークン（MD3準拠・4段階）
-   * background:     ページ背景（MD3 Surface）
-   * surface-inset:  card内セクション（MD3 Surface Container Low）
-   * container:      サイドバー、セクション（MD3 Surface Container）
-   * card:           カード、ダイアログ、ポップオーバー（MD3 Surface Container High）
-   * overlay:        モーダル背景（半透明・MD3 scrim）
+   * Surface トークン（3段階 + muted）
+   * container:   サイドバー、セクション（沈む）
+   * background:  ページ背景（基準）
+   * card:        カード、ダイアログ、ポップオーバー（浮く）
+   * muted:       入力欄、well
+   * overlay:     モーダル背景（半透明）
    * ============================================ */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-surface-inset: var(--surface-inset);
   --color-container: var(--container);
-  --color-surface-container: var(--container); /* 後方互換: bg-surface-container（70箇所で使用） */
+  --color-surface-container: var(--container); /* 後方互換: bg-surface-container */
   --color-overlay: var(--overlay);
   --color-entry-default: var(--entry-default);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--container);
+  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
 
   /* 後方互換エイリアス（shadcn/ui互換） */
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-bg: var(--destructive-bg);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
   --color-warning-foreground: var(--warning-foreground);
   --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
   --color-success-foreground: var(--success-foreground);
   --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
   --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -58,11 +61,15 @@
   --color-chart-muted: var(--muted-foreground);
 
   /* ============================================
-   * Shadow トークン（ドラッグ、ホバー時のシャドウ）
-   * rgba(0,0,0,...) のハードコードを置き換え
+   * Shadow トークン
+   * sm: 軽いエレベーション（ボタン、入力欄）
+   * card: カード・ポップオーバー用
+   * ダークモードは colors.css の CSS変数で切替
    * ============================================ */
   --shadow-color: oklch(0 0 0 / 15%);
   --shadow-color-heavy: oklch(0 0 0 / 20%);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-card: var(--shadow-card);
 
   /* ============================================
    * Tag Colors — Base（borders / dots / accents）
@@ -91,16 +98,6 @@
   --color-tag-violet-tint: var(--tag-violet-tint);
   --color-tag-pink-tint: var(--tag-pink-tint);
   --color-tag-gray-tint: var(--tag-gray-tint);
-
-  /* ============================================
-   * Chronotype Tints（タイムライン背景用）
-   * base色は廃止。タイムラインバー等は bg-primary を使用。
-   * ============================================ */
-  --color-chronotype-tint-warmup: var(--chronotype-tint-warmup);
-  --color-chronotype-tint-peak: var(--chronotype-tint-peak);
-  --color-chronotype-tint-dip: var(--chronotype-tint-dip);
-  --color-chronotype-tint-recovery: var(--chronotype-tint-recovery);
-  --color-chronotype-tint-winddown: var(--chronotype-tint-winddown);
 }
 
 /* ============================================

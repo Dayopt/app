@@ -3,9 +3,6 @@ import { z } from 'zod';
 /** クロノタイプ種別のZodスキーマ */
 export const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
 
-/** クロノタイプ表示モードのZodスキーマ */
-export const chronotypeDisplayModeSchema = z.enum(['border', 'background', 'both']);
-
 /** 生産性レベルのZodスキーマ */
 export const chronotypeLevelSchema = z.enum(['warmup', 'peak', 'dip', 'recovery', 'winddown']);
 

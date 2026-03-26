@@ -155,7 +155,6 @@ export const WeekGrid = ({
                 entryStyles={entryStyles}
                 viewMode="week"
                 dayIndex={dayIndex}
-                showChronotypeBackground={true}
                 allEventsForOverlapCheck={events}
                 displayDates={weekDates}
                 onEntryClick={onEventClick}

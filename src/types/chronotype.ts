@@ -7,8 +7,6 @@ export type PresetChronotypeType = Exclude<ChronotypeType, 'custom'>;
 
 export type ProductivityLevel = 'warmup' | 'peak' | 'dip' | 'recovery' | 'winddown';
 
-export type ChronotypeDisplayMode = 'border' | 'background' | 'both';
-
 export interface ProductivityZone {
   startHour: number;
   endHour: number;
@@ -27,6 +25,4 @@ export interface ChronotypeSettings {
   enabled: boolean;
   type: ChronotypeType;
   customZones?: ProductivityZone[];
-  displayMode: ChronotypeDisplayMode;
-  opacity: number;
 }

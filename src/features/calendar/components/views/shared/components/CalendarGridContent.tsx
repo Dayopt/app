@@ -2,7 +2,6 @@
 
 import React, { useCallback } from 'react';
 
-import { ChronotypeBackground } from '@/features/chronotype';
 import {
   EntryCard,
   computeActualTimeDiffOverlay,
@@ -41,8 +40,6 @@ export interface CalendarGridContentProps {
   viewMode?: 'day' | '3day' | '5day' | 'week';
   /** この列の日付インデックス（DayView=0, Week/MultiDay=列番号） */
   dayIndex: number;
-  /** クロノタイプ背景の表示 */
-  showChronotypeBackground?: boolean;
   /** 重複チェック用の全イベント（週/複数日ビュー用） */
   allEventsForOverlapCheck?: CalendarEvent[];
   /** 表示日付リスト（週/複数日ビュー用） */
@@ -78,7 +75,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   entryStyles,
   viewMode = 'day',
   dayIndex,
-  showChronotypeBackground = false,
   allEventsForOverlapCheck,
   displayDates,
   onEntryClick,
@@ -187,9 +183,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         plans={allEventsForOverlapCheck ?? entries}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
-          {showChronotypeBackground && (
-            <ChronotypeBackground startHour={0} endHour={24} hourHeight={HOUR_HEIGHT} />
-          )}
           {timeGrid}
         </div>
       </CalendarDragSelection>

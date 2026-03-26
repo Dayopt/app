@@ -6,12 +6,8 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import type { ChronotypeDisplayMode, ChronotypeType } from '@/features/chronotype';
-import {
-  chronotypeCustomZonesSchema,
-  chronotypeDisplayModeSchema,
-  chronotypeTypeSchema,
-} from '@/features/chronotype';
+import type { ChronotypeType } from '@/features/chronotype';
+import { chronotypeCustomZonesSchema, chronotypeTypeSchema } from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
@@ -51,8 +47,6 @@ const userSettingsSchema = z.object({
   chronotypeEnabled: z.boolean().optional(),
   chronotypeType: chronotypeTypeSchema.optional(),
   chronotypeCustomZones: chronotypeCustomZonesSchema.optional(),
-  chronotypeDisplayMode: chronotypeDisplayModeSchema.optional(),
-  chronotypeOpacity: z.number().min(0).max(100).optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
@@ -162,8 +156,6 @@ export const userSettingsRouter = createTRPCRouter({
             enabled: data.chronotype_enabled,
             type: data.chronotype_type as ChronotypeType,
             customZones: data.chronotype_custom_zones,
-            displayMode: data.chronotype_display_mode as ChronotypeDisplayMode,
-            opacity: data.chronotype_opacity,
           },
           defaultView: (data as Record<string, unknown>).default_view as
             | 'day'
@@ -244,10 +236,6 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.chronotypeType !== undefined) updateData.chronotype_type = input.chronotypeType;
         if (input.chronotypeCustomZones !== undefined)
           updateData.chronotype_custom_zones = input.chronotypeCustomZones;
-        if (input.chronotypeDisplayMode !== undefined)
-          updateData.chronotype_display_mode = input.chronotypeDisplayMode;
-        if (input.chronotypeOpacity !== undefined)
-          updateData.chronotype_opacity = input.chronotypeOpacity;
         if (input.defaultView !== undefined)
           (updateData as Record<string, unknown>).default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)

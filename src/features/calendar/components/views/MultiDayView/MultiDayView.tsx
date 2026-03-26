@@ -141,7 +141,6 @@ export function MultiDayView({
                   entryStyles={entryStyles}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
-                  showChronotypeBackground={false}
                   allEventsForOverlapCheck={entries}
                   displayDates={displayDates}
                   onEntryClick={onEntryClick}

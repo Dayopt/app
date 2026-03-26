@@ -53,8 +53,6 @@ describe('useCalendarSettingsStore', () => {
         chronotype: {
           enabled: true,
           type: 'lion',
-          displayMode: 'background',
-          opacity: 80,
         },
       });
       const state = useCalendarSettingsStore.getState();

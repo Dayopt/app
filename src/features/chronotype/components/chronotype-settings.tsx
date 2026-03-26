@@ -21,7 +21,6 @@ import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import { ChronotypeQuiz } from './chronotype-quiz';
 
 import type {
-  ChronotypeDisplayMode,
   ChronotypeSettings as ChronotypeSettingsState,
   ChronotypeType,
   PresetChronotypeType,
@@ -117,13 +116,9 @@ export function ChronotypeSettings() {
         ...DEFAULT_CHRONOTYPE_SETTINGS,
         enabled: dbChronotype?.enabled ?? DEFAULT_CHRONOTYPE_SETTINGS.enabled,
         type: (dbChronotype?.type as ChronotypeType) ?? DEFAULT_CHRONOTYPE_SETTINGS.type,
-        displayMode:
-          (dbChronotype?.displayMode as ChronotypeDisplayMode) ??
-          DEFAULT_CHRONOTYPE_SETTINGS.displayMode,
-        opacity: dbChronotype?.opacity ?? DEFAULT_CHRONOTYPE_SETTINGS.opacity,
       },
     }),
-    [dbChronotype?.displayMode, dbChronotype?.enabled, dbChronotype?.opacity, dbChronotype?.type],
+    [dbChronotype?.enabled, dbChronotype?.type],
   );
 
   const autoSave = useAutoSaveSettings<ChronotypeAutoSaveSettings>({
@@ -132,8 +127,6 @@ export function ChronotypeSettings() {
       await updateMutation.mutateAsync({
         chronotypeEnabled: values.chronotype.enabled,
         chronotypeType: values.chronotype.type,
-        chronotypeDisplayMode: values.chronotype.displayMode,
-        chronotypeOpacity: values.chronotype.opacity,
       });
     },
     successMessage: t('settings.chronotype.settingsSaved'),

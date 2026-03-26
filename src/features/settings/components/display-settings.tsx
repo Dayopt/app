@@ -143,23 +143,6 @@ export function DisplaySettings() {
     });
   }, [resetOnboarding, closeSettings, router]);
 
-  const showChronotypeOnTimeline =
-    settings.chronotype?.displayMode === 'background' ||
-    settings.chronotype?.displayMode === 'both';
-
-  const handleChronotypeTimelineToggle = useCallback(
-    (checked: boolean) => {
-      if (!settings.chronotype) return;
-      saveSettings({
-        chronotype: {
-          ...settings.chronotype,
-          displayMode: checked ? 'background' : 'border',
-        },
-      });
-    },
-    [settings.chronotype, saveSettings],
-  );
-
   if (isPending) {
     return (
       <div className="space-y-6 sm:space-y-8">
@@ -315,21 +298,6 @@ export function DisplaySettings() {
           </Select>
         </LabeledRow>
       </SectionCard>
-
-      {/* Chronotype Display */}
-      {settings.chronotype?.enabled && (
-        <SectionCard title={t('settings.chronotype.title')}>
-          <LabeledRow
-            label={t('settings.chronotype.showOnTimeline')}
-            description={t('settings.chronotype.showOnTimelineDesc')}
-          >
-            <Switch
-              checked={showChronotypeOnTimeline}
-              onCheckedChange={handleChronotypeTimelineToggle}
-            />
-          </LabeledRow>
-        </SectionCard>
-      )}
 
       {/* Getting Started — Tour & Onboarding replay */}
       <SectionCard title={t('settings.gettingStarted.title')}>

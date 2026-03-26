@@ -11,7 +11,6 @@
 
 import React, { useCallback } from 'react';
 
-import { ChronotypeBackground } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
@@ -188,7 +187,6 @@ export const ScrollableCalendarLayout = ({
             style={{ width: timeColumnWidth }}
           >
             <div className="relative h-full overflow-hidden">
-              <ChronotypeBackground startHour={0} endHour={24} hourHeight={HOUR_HEIGHT} />
               <TimeColumn
                 startHour={0}
                 endHour={24}

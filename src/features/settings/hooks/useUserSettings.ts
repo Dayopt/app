@@ -64,8 +64,6 @@ export function useUserSettings() {
       const chronotypeSettings: ChronotypeSettingsState = {
         enabled: dbSettings.chronotype.enabled,
         type: dbSettings.chronotype.type,
-        displayMode: dbSettings.chronotype.displayMode,
-        opacity: dbSettings.chronotype.opacity,
       };
 
       if (dbSettings.chronotype.customZones) {
@@ -115,8 +113,6 @@ export function useUserSettings() {
         dbInput.chronotypeEnabled = settings.chronotype.enabled;
         dbInput.chronotypeType = settings.chronotype.type;
         dbInput.chronotypeCustomZones = settings.chronotype.customZones;
-        dbInput.chronotypeDisplayMode = settings.chronotype.displayMode;
-        dbInput.chronotypeOpacity = settings.chronotype.opacity;
       }
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)

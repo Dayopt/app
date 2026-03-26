@@ -119,7 +119,6 @@ export const DayView = ({
             entryStyles={eventStyles}
             viewMode="day"
             dayIndex={0}
-            showChronotypeBackground={true}
             onEntryClick={onEntryClick}
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}

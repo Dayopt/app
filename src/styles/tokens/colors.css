@@ -7,22 +7,21 @@
 /* ライトモード */
 :root {
   /* ============================================
-   * Surface体系（MD3準拠・4段階）
-   * background(最明) → surface-inset → container → card(最暗)
-   * 各段階で約3%の明度差
+   * Surface体系（3段階 + muted）
+   * container(沈む) → background(基準) → card(浮く)
+   * muted は入力欄・well 用の控えめな面
    *
-   * MD3対応:
-   *   background     = Surface
-   *   surface-inset  = Surface Container Low（card内セクション）
-   *   container      = Surface Container（サイドバー）
-   *   card           = Surface Container High（カード、ダイアログ）
+   *   container   L=0.96  サイドバー、セクション
+   *   background  L=0.98  ページ背景（基準）
+   *   card        L=1.00  カード、ダイアログ、ポップオーバー
+   *   muted       L=0.95  入力欄、well
    * ============================================ */
-  --background: var(--neutral-99); /* ページ背景 */
-  --foreground: var(--neutral-25);
+  --background: var(--neutral-98); /* ページ背景（基準） */
+  --foreground: var(--neutral-13);
 
-  --surface-inset: var(--neutral-96); /* card内セクション（差: 0.03） */
-  --container: var(--neutral-93); /* サイドバー、セクション（差: 0.03） */
-  --card: var(--neutral-90); /* カード、ダイアログ、ポップオーバー（差: 0.03） */
+  --container: var(--neutral-96); /* サイドバー、セクション（沈む） */
+  --card: var(--white); /* カード、ダイアログ、ポップオーバー（浮く） */
+  --muted: var(--neutral-95); /* 入力欄、well */
 
   /* Overlay（MD3 scrim準拠・モーダル背景用） */
   --overlay: var(--black-32);
@@ -30,16 +29,11 @@
   /* Calendar: デフォルトのEntry色（タグ未設定時） */
   --entry-default: oklch(0.55 0.15 220); /* sky blue */
 
-  /* shadcn/ui aliases (DO NOT REMOVE — shadcn components depend on these)
-   * --secondary          = --container
-   * --card-foreground    = --foreground（常に同値）
-   * --secondary-foreground = neutral-25(light) / neutral-95(dark)
-   *                         ※ dark時は foreground(neutral-92)より明るい
-   */
+  /* shadcn/ui aliases (DO NOT REMOVE — shadcn components depend on these) */
   --card-foreground: var(--foreground);
   --secondary: var(--container);
-  --secondary-foreground: var(--neutral-25);
-  --muted-foreground: oklch(0.35 0.02 var(--hue-neutral));
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: oklch(0.4 0 0);
 
   /* Primary */
   --primary: oklch(0.45 0.14 var(--hue-brand));
@@ -53,31 +47,34 @@
   --accent: var(--state-active);
   --accent-foreground: var(--state-active-foreground);
 
-  /* Semantic Colors（WCAG 2.1 AA準拠 — card L=0.90 上で 4.5:1+） */
-  --destructive: oklch(0.52 0.22 var(--hue-destructive)); /* card上4.59:1 */
+  /* ============================================
+   * Semantic Colors — bg + accent 体系
+   * accent: テキスト・アイコン・ボーダー用（中彩度）
+   * bg: tint背景用（高明度・低彩度）
+   * 4色とも同じ L/C 構造で hue のみ変化
+   * ============================================ */
+  --destructive: oklch(0.58 0.16 25);
+  --destructive-bg: oklch(0.96 0.015 25);
   --destructive-foreground: var(--white);
-  --warning: oklch(0.48 0.16 var(--hue-warning)); /* card上5.08:1 */
+  --warning: oklch(0.68 0.16 70);
+  --warning-bg: oklch(0.97 0.015 70);
   --warning-foreground: var(--white);
-  --success: oklch(0.47 0.17 var(--hue-success)); /* card上4.69:1 */
+  --success: oklch(0.6 0.14 150);
+  --success-bg: oklch(0.95 0.02 150);
   --success-foreground: var(--white);
-  --info: oklch(0.48 0.17 var(--hue-info)); /* card上4.89:1 */
+  --info: oklch(0.58 0.16 250);
+  --info-bg: oklch(0.97 0.01 250);
   --info-foreground: var(--white);
 
-  /* ============================================
-   * Chronotype Tints（タイムライン背景用、solid）
-   * カレンダーグリッド背景にうっすら色づく程度。
-   * ※ base色は廃止。タイムラインバー等は bg-primary を使用。
-   * ============================================ */
-  --chronotype-tint-warmup: oklch(0.7 0.01 165);
-  --chronotype-tint-peak: oklch(0.7 0.01 165);
-  --chronotype-tint-dip: oklch(0.7 0.01 165);
-  --chronotype-tint-recovery: oklch(0.7 0.01 165);
-  --chronotype-tint-winddown: oklch(0.7 0.01 165);
-
   /* Borders & Inputs */
-  --border: oklch(0.75 0.01 var(--hue-neutral));
+  --border: oklch(0 0 0 / 0.06);
   --input: var(--black-06);
   --ring: oklch(0.6231 0.14 var(--hue-brand));
+
+  /* Shadow（light） */
+  --shadow-sm: 0 0 0 1px oklch(0 0 0 / 0.03), 0 1px 3px oklch(0 0 0 / 0.03);
+  --shadow-card:
+    0 0 0 1px oklch(0 0 0 / 0.03), 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 16px oklch(0 0 0 / 0.05);
 
   /* Heatmap Scale（primary色のアルファスケール — SVG fill用） */
   --heatmap-scale-1: oklch(from var(--primary) l c h / 20%);
@@ -128,22 +125,20 @@
 /* ダークモード */
 .dark {
   /* ============================================
-   * Surface体系（MD3準拠・4段階）
-   * MD3原則: 高いelevationほど明るい
-   * background(最暗) → surface-inset → container → card(最明)
+   * Surface体系（3段階 + muted・warm H60 C=0.008）
+   * container(沈む) → background(基準) → card(浮く)
    *
-   * MD3対応:
-   *   background     = Surface（最暗）
-   *   surface-inset  = Surface Container Low（card内セクション）
-   *   container      = Surface Container（サイドバー）
-   *   card           = Surface Container High（最明・カード、ダイアログ）
+   *   container   L=0.15  サイドバー、セクション
+   *   background  L=0.18  ページ背景（基準）
+   *   card        L=0.22  カード、ダイアログ、ポップオーバー
+   *   muted       L=0.25  入力欄、well
    * ============================================ */
-  --background: var(--neutral-12); /* ページ背景（最暗） */
-  --foreground: var(--neutral-92);
+  --background: oklch(0.18 0.008 60); /* ページ背景（基準） */
+  --foreground: oklch(0.9 0.005 70);
 
-  --surface-inset: var(--neutral-16); /* card内セクション（差: 0.04） */
-  --container: var(--neutral-18); /* サイドバー、セクション（差: 0.02） */
-  --card: var(--neutral-24); /* カード、ダイアログ、ポップオーバー（差: 0.06） */
+  --container: oklch(0.15 0.008 60); /* サイドバー、セクション（沈む） */
+  --card: oklch(0.22 0.008 60); /* カード、ダイアログ、ポップオーバー（浮く） */
+  --muted: oklch(0.25 0.008 60); /* 入力欄、well */
 
   /* Overlay */
   --overlay: var(--black-50);
@@ -154,8 +149,8 @@
   /* shadcn/ui aliases */
   --card-foreground: var(--foreground);
   --secondary: var(--container);
-  --secondary-foreground: var(--neutral-95); /* foreground(0.92)より明るい(0.95) */
-  --muted-foreground: var(--neutral-78);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: oklch(0.68 0.005 60);
 
   /* Primary */
   --primary: oklch(0.5 0.188 var(--hue-brand));
@@ -169,22 +164,19 @@
   --accent: var(--state-active);
   --accent-foreground: var(--state-active-foreground);
 
-  /* Semantic Colors（WCAG 2.1 AA準拠 — dark bg(L=0.12)/card(L=0.24) 上で 4.5:1+） */
-  --destructive: oklch(0.72 0.19 var(--hue-destructive)); /* bg上7.5:1+ */
+  /* Semantic Colors — bg + accent 体系（dark） */
+  --destructive: oklch(0.62 0.14 25);
+  --destructive-bg: oklch(0.22 0.03 25);
   --destructive-foreground: var(--neutral-15);
-  --warning: oklch(0.78 0.14 var(--hue-warning)); /* bg上8.01:1 */
+  --warning: oklch(0.72 0.14 70);
+  --warning-bg: oklch(0.22 0.03 70);
   --warning-foreground: var(--neutral-15);
-  --success: oklch(0.72 0.15 var(--hue-success)); /* bg上7.04:1 */
+  --success: oklch(0.65 0.12 150);
+  --success-bg: oklch(0.22 0.03 150);
   --success-foreground: var(--neutral-15);
-  --info: oklch(0.72 0.12 var(--hue-info)); /* bg上6.67:1 */
+  --info: oklch(0.65 0.14 250);
+  --info-bg: oklch(0.22 0.03 250);
   --info-foreground: var(--neutral-15);
-
-  /* Chronotype Tints（ダークモード） */
-  --chronotype-tint-warmup: oklch(0.52 0.01 165);
-  --chronotype-tint-peak: oklch(0.52 0.01 165);
-  --chronotype-tint-dip: oklch(0.52 0.01 165);
-  --chronotype-tint-recovery: oklch(0.52 0.01 165);
-  --chronotype-tint-winddown: oklch(0.52 0.01 165);
 
   /* Tag Colors — Base（ダークモード: L=0.78, C=0.15） */
   --tag-red: oklch(0.78 0.15 25);
@@ -199,7 +191,7 @@
   --tag-gray: oklch(0.7 0.02 250);
 
   /* Tag Colors — Tint（ダークモード card背景: L=0.28, C=0.06）
-   * card(L=0.24)上で視認可能・低明度でも色味を識別できるようC=0.06に引き上げ
+   * card(L=0.22)上で視認可能・低明度でも色味を識別できるようC=0.06に引き上げ
    * foreground text(L≈0.92)とのコントラスト比 ≈ 8:1 維持 */
   --tag-red-tint: oklch(0.28 0.06 25);
   --tag-orange-tint: oklch(0.28 0.06 55);
@@ -213,11 +205,15 @@
   --tag-gray-tint: oklch(0.28 0.02 250);
 
   /* Borders & Inputs */
-  --border: oklch(0.45 0 0); /* L=0.45: bg(L=0.12)上で~4:1コントラスト */
+  --border: oklch(1 0 0 / 0.07);
   --input: var(--white-08);
   --ring: oklch(0.6231 0.188 var(--hue-brand));
 
-  /* Charts - Comparison（shadcn準拠・card L=0.24上で3:1+） */
+  /* Shadow（dark） */
+  --shadow-sm: 0 0 0 1px oklch(1 0 0 / 0.03), 0 1px 4px oklch(0 0 0 / 0.18);
+  --shadow-card: 0 0 0 1px oklch(1 0 0 / 0.04), 0 2px 8px oklch(0 0 0 / 0.25);
+
+  /* Charts - Comparison（shadcn準拠・card L=0.22上で3:1+） */
   --chart-1: oklch(0.7137 0.1434 254.624);
   --chart-2: oklch(0.6231 0.188 var(--hue-brand));
   --chart-3: oklch(0.5461 0.2152 262.8809);
