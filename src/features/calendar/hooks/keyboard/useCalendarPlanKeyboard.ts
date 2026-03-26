@@ -3,7 +3,9 @@
 import { useEffect, useRef } from 'react';
 
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
+import { localTimeToUTCISO } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
@@ -55,6 +57,8 @@ export function useCalendarEventKeyboard({
   const t = useTranslations();
   const { isOpen, entryId, openInspector, closeInspector } = useEntryInspectorStore();
   const { createEntry } = useEntryMutations();
+  // ユーザーの設定タイムゾーン（ペースト時のUTC変換に使用）
+  const timezone = useCalendarSettingsStore((s: { timezone: string }) => s.timezone);
 
   // コールバックの最新値を参照
   const onDeletePlanRef = useRef(onDeletePlan);
@@ -68,6 +72,7 @@ export function useCalendarEventKeyboard({
   const closeInspectorRef = useRef(closeInspector);
   const openInspectorRef = useRef(openInspector);
   const tRef = useRef(t);
+  const timezoneRef = useRef(timezone);
 
   useEffect(() => {
     onDeletePlanRef.current = onDeletePlan;
@@ -81,6 +86,7 @@ export function useCalendarEventKeyboard({
     closeInspectorRef.current = closeInspector;
     openInspectorRef.current = openInspector;
     tRef.current = t;
+    timezoneRef.current = timezone;
   }, [
     onDeletePlan,
     getSelectedPlanTitle,
@@ -93,6 +99,7 @@ export function useCalendarEventKeyboard({
     closeInspector,
     openInspector,
     t,
+    timezone,
   ]);
 
   useEffect(() => {
@@ -182,18 +189,23 @@ export function useCalendarEventKeyboard({
             const targetDate =
               lastClicked?.date ?? getPasteDateForKeyboardRef.current?.() ?? new Date();
 
-            const startTime = new Date(targetDate);
-            startTime.setHours(copiedEntry.startHour, copiedEntry.startMinute, 0, 0);
-
-            const endTime = new Date(startTime);
-            endTime.setMinutes(endTime.getMinutes() + copiedEntry.duration);
+            // ユーザーのタイムゾーンを考慮してUTC ISOに変換する
+            const tz = timezoneRef.current;
+            const startTimeISO = localTimeToUTCISO(
+              targetDate,
+              copiedEntry.startHour,
+              copiedEntry.startMinute,
+              tz,
+            );
+            const endMs = new Date(startTimeISO).getTime() + copiedEntry.duration * 60 * 1000;
+            const endTimeISO = new Date(endMs).toISOString();
 
             createEntryRef.current
               .mutateAsync({
                 title: copiedEntry.title,
                 description: copiedEntry.description ?? undefined,
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
+                start_time: startTimeISO,
+                end_time: endTimeISO,
               })
               .then((result) => {
                 if (result?.id) {

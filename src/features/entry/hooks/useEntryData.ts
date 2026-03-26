@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 
 import type { DateRangeFilter } from '@/lib/date';
 import { matchesDateRangeFilter } from '@/lib/date';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { getEntryState } from '../lib/entry-status';
 import type { EntryWithTags } from '../types/entry';
 import { useEntries } from './useEntries';
@@ -130,6 +131,9 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
     ...(filters.search && { search: filters.search }),
   });
 
+  // ユーザーのタイムゾーン（日付範囲フィルタリングに使用）
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
+
   // フィルタリング・ソートをメモ化
   const items = useMemo(() => {
     let result: EntryItem[] =
@@ -160,14 +164,18 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
       result = result.filter((item) => matchesScheduleFilter(item.start_time, filters.schedule!));
     }
 
-    // 作成日フィルタリング
+    // 作成日フィルタリング（ユーザーのタイムゾーンを使用）
     if (filters.createdAt && filters.createdAt !== 'all') {
-      result = result.filter((item) => matchesDateRangeFilter(item.created_at, filters.createdAt!));
+      result = result.filter((item) =>
+        matchesDateRangeFilter(item.created_at, filters.createdAt!, timezone),
+      );
     }
 
-    // 更新日フィルタリング
+    // 更新日フィルタリング（ユーザーのタイムゾーンを使用）
     if (filters.updatedAt && filters.updatedAt !== 'all') {
-      result = result.filter((item) => matchesDateRangeFilter(item.updated_at, filters.updatedAt!));
+      result = result.filter((item) =>
+        matchesDateRangeFilter(item.updated_at, filters.updatedAt!, timezone),
+      );
     }
 
     // 完了を非表示フィルタリング
@@ -200,7 +208,7 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
     }
 
     return result;
-  }, [entriesData, filters, sort]);
+  }, [entriesData, filters, sort, timezone]);
 
   return {
     items,
