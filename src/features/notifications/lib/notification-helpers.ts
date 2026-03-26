@@ -3,11 +3,39 @@ import { isThisMonth, isThisWeek, isToday, isYesterday } from 'date-fns';
 import { checkBrowserNotificationSupport } from '@/lib/browser-notification';
 import { logger } from '@/lib/logger';
 
+import type { NotificationType } from '../schemas';
+
 // Browser Notification API ラッパーを re-export
 export {
   checkBrowserNotificationSupport,
   requestNotificationPermission,
 } from '@/lib/browser-notification';
+
+// =============================================================================
+// Activity Tab フィルタリング
+// =============================================================================
+
+/** Activity Panel のタブ種別 */
+export type ActivityTab = 'all' | 'reminders' | 'ai';
+
+/** タブ → 通知タイプのマッピング（null = フィルタなし） */
+export const ACTIVITY_TAB_TYPE_MAP: Record<ActivityTab, NotificationType[] | null> = {
+  all: null,
+  reminders: ['reminder', 'overdue'],
+  ai: ['ai_insight', 'weekly_report', 'burnout_warning', 'energy_insight'],
+} as const;
+
+/**
+ * 通知をタブでフィルタリング
+ */
+export function filterNotificationsByTab<T extends { type: string }>(
+  notifications: T[],
+  tab: ActivityTab,
+): T[] {
+  const types = ACTIVITY_TAB_TYPE_MAP[tab];
+  if (!types) return notifications;
+  return notifications.filter((n) => types.includes(n.type as NotificationType));
+}
 
 /** 通知の日付グループキー */
 export type DateGroupKey = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'older';

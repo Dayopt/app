@@ -1,5 +1,5 @@
 /**
- * NotificationDropdown Stories
+ * ActivityPopover Stories
  *
  * tRPC の notifications クエリをモックして通知ドロップダウンの各状態を再現する。
  * GeneralSettings.stories.tsx と同じ MockProvider パターンを使用。
@@ -15,7 +15,9 @@ import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
 import type { NotificationType } from '../schemas';
-import { NotificationDropdown } from './NotificationDropdown';
+import { ActivityPopover } from './ActivityPopover';
+
+// NOTE: Storybook は後回し。既存 Story を ActivityPopover に差し替えのみ。
 
 // ─────────────────────────────────────────────────────────
 // モックデータ
@@ -133,13 +135,13 @@ const mockResponseMap = {
 
 /** 通知ドロップダウン。ベルアイコン・未読バッジ・日付グループ化リストを含む。 */
 const meta = {
-  title: 'Features/Notifications/Dropdown',
-  component: NotificationDropdown,
+  title: 'Features/Notifications/ActivityPopover',
+  component: ActivityPopover,
   parameters: {
     layout: 'padded',
   },
   tags: ['autodocs'],
-} satisfies Meta<typeof NotificationDropdown>;
+} satisfies Meta<typeof ActivityPopover>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -218,13 +220,13 @@ export const AllPatterns: Story = {
       <div className="flex flex-col gap-2">
         <span className="text-muted-foreground text-xs">デフォルト（未読2件）</span>
         <MockProvider responseMap={mockResponseMap}>
-          <NotificationDropdown />
+          <ActivityPopover />
         </MockProvider>
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-muted-foreground text-xs">サイズ sm</span>
         <MockProvider responseMap={mockResponseMap}>
-          <NotificationDropdown size="sm" />
+          <ActivityPopover size="sm" />
         </MockProvider>
       </div>
       <div className="flex flex-col gap-2">
@@ -235,13 +237,13 @@ export const AllPatterns: Story = {
             'notifications.unreadCount': 0,
           }}
         >
-          <NotificationDropdown />
+          <ActivityPopover />
         </MockProvider>
       </div>
       <div className="flex flex-col gap-2">
         <span className="text-muted-foreground text-xs">通知なし（空）</span>
         <MockProvider responseMap={{ 'notifications.list': [], 'notifications.unreadCount': 0 }}>
-          <NotificationDropdown />
+          <ActivityPopover />
         </MockProvider>
       </div>
     </div>

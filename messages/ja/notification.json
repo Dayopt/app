@@ -3,11 +3,15 @@
     "title": "通知",
     "tabs": {
       "all": "すべて",
-      "unread": "未読"
+      "unread": "未読",
+      "reminders": "リマインダー",
+      "ai": "AI"
     },
     "empty": {
       "all": "通知はありません",
-      "unread": "未読の通知はありません"
+      "unread": "未読の通知はありません",
+      "reminders": "リマインダー通知はありません",
+      "ai": "AI通知はありません"
     },
     "actions": {
       "markAllAsRead": "すべて既読にする",

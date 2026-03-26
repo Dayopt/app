@@ -3,11 +3,15 @@
     "title": "Notifications",
     "tabs": {
       "all": "All",
-      "unread": "Unread"
+      "unread": "Unread",
+      "reminders": "Reminders",
+      "ai": "AI"
     },
     "empty": {
       "all": "No notifications",
-      "unread": "No unread notifications"
+      "unread": "No unread notifications",
+      "reminders": "No reminder notifications",
+      "ai": "No AI notifications"
     },
     "actions": {
       "markAllAsRead": "Mark all as read",
