@@ -731,6 +731,64 @@ export const Tags: Story = {
   ),
 };
 
+export const Chronotype: Story = {
+  render: () => {
+    const CHROMA_STEPS = [
+      { c: 0.01, label: 'tint', usage: 'タイムライン背景' },
+      { c: 0.04, label: 'hover', usage: 'ホバー状態' },
+      { c: 0.08, label: 'base', usage: 'ベース色' },
+      { c: 0.12, label: 'accent', usage: 'アクセント' },
+      { c: 0.18, label: 'strong', usage: 'テキスト on bg' },
+    ] as const;
+
+    const PHASES = [
+      { name: 'Warmup', key: 'warmup', hue: 165, l: 0.7, desc: 'ダスティエメラルド' },
+      { name: 'Peak', key: 'peak', hue: 110, l: 0.68, desc: 'セージライム' },
+      { name: 'Dip', key: 'dip', hue: 260, l: 0.68, desc: 'ダスティペリウィンクル' },
+      { name: 'Recovery', key: 'recovery', hue: 213, l: 0.7, desc: 'ミューテッドアジュール' },
+      { name: 'Wind-down', key: 'winddown', hue: 330, l: 0.7, desc: 'ダスティローズ' },
+    ] as const;
+
+    return (
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">Chronotype カラー</h1>
+        <p className="text-muted-foreground mb-8">
+          OKLCH の C（彩度）軸だけを変えることで、同一色相の濃淡バリエーションを作成。
+          <br />H と L を固定し、C のスライダーを動かすだけで tint から strong
+          まで一貫性のあるスケールが得られる。
+        </p>
+
+        <div className="space-y-8">
+          {PHASES.map((phase) => (
+            <div key={phase.key}>
+              <h2 className="mb-3 text-lg font-bold">
+                {phase.name}{' '}
+                <span className="text-muted-foreground text-sm font-normal">
+                  H={phase.hue} L={phase.l}（{phase.desc}）
+                </span>
+              </h2>
+              <div className="flex gap-4">
+                {CHROMA_STEPS.map((step) => (
+                  <div key={step.c} className="text-center">
+                    <div
+                      className="border-border mb-2 size-20 rounded-lg border"
+                      style={{
+                        backgroundColor: `oklch(${phase.l} ${step.c} ${phase.hue})`,
+                      }}
+                    />
+                    <p className="text-sm font-medium">C {step.c}</p>
+                    <p className="text-muted-foreground text-xs">{step.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  },
+};
+
 export const DosDonts: Story = {
   render: () => (
     <div>

@@ -99,6 +99,9 @@
   --color-chronotype-warmup: var(--chronotype-warmup);
   --color-chronotype-peak: var(--chronotype-peak);
   --color-chronotype-dip: var(--chronotype-dip);
+  --color-chronotype-dip-hover: var(--chronotype-dip-hover);
+  --color-chronotype-dip-accent: var(--chronotype-dip-accent);
+  --color-chronotype-dip-strong: var(--chronotype-dip-strong);
   --color-chronotype-recovery: var(--chronotype-recovery);
   --color-chronotype-winddown: var(--chronotype-winddown);
 

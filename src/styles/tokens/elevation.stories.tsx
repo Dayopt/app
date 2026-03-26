@@ -261,3 +261,122 @@ export const UseCases: Story = {
     </div>
   ),
 };
+
+/* ============================================
+ * Surface × Backdrop Filter 比較
+ * ============================================ */
+
+const SURFACES = [
+  { name: 'background', bg: 'bg-background', desc: 'ページ背景' },
+  { name: 'surface-inset', bg: 'bg-surface-inset', desc: 'カード内セクション' },
+  { name: 'container', bg: 'bg-container', desc: 'サイドバー、セクション' },
+  { name: 'card', bg: 'bg-card', desc: 'カード、ダイアログ' },
+] as const;
+
+const FILTERS = [
+  { name: 'なし（現状）', classes: '' },
+  { name: 'backdrop-blur-sm', classes: 'backdrop-blur-sm' },
+  { name: 'backdrop-blur-md', classes: 'backdrop-blur-md' },
+  { name: 'backdrop-brightness-90', classes: 'backdrop-brightness-90' },
+  { name: 'backdrop-brightness-75', classes: 'backdrop-brightness-75' },
+  { name: 'backdrop-saturate-150', classes: 'backdrop-saturate-150' },
+  { name: 'backdrop-saturate-200', classes: 'backdrop-saturate-200' },
+  { name: 'blur + brightness-90', classes: 'backdrop-blur-sm backdrop-brightness-90' },
+  { name: 'blur + saturate-150', classes: 'backdrop-blur-sm backdrop-saturate-150' },
+  {
+    name: 'blur + brightness + saturate',
+    classes: 'backdrop-blur-sm backdrop-brightness-90 backdrop-saturate-150',
+  },
+] as const;
+
+function ColorfulBackground() {
+  return (
+    <>
+      <div className="from-primary/30 via-info/20 to-warning/10 absolute inset-0 bg-gradient-to-br" />
+      <div className="bg-primary/40 absolute top-4 left-8 size-24 rounded-full blur-2xl" />
+      <div className="bg-info/30 absolute right-8 bottom-4 size-32 rounded-full blur-2xl" />
+      <div className="bg-warning/20 absolute top-1/2 left-1/3 size-20 rounded-full blur-xl" />
+      <div className="bg-destructive/15 absolute top-1/4 right-1/4 size-16 rounded-full blur-xl" />
+    </>
+  );
+}
+
+export const BackdropFilterComparison: Story = {
+  render: () => (
+    <div className="space-y-12">
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">Surface × Backdrop Filter</h1>
+        <p className="text-muted-foreground mb-8">
+          各surface背景に backdrop-blur / backdrop-brightness / backdrop-saturate を適用した比較。
+          <br />
+          <span className="text-xs">
+            背景を半透明（/80）にしてフィルター効果を可視化しています。
+          </span>
+        </p>
+      </div>
+
+      {SURFACES.map((surface) => (
+        <div key={surface.name}>
+          <h2 className="mb-1 text-lg font-bold">{surface.name}</h2>
+          <p className="text-muted-foreground mb-4 text-xs">{surface.desc}</p>
+
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {FILTERS.map((filter) => (
+              <div key={filter.name} className="text-center">
+                <div className="relative overflow-hidden rounded-xl" style={{ minHeight: 120 }}>
+                  <ColorfulBackground />
+                  <div
+                    className={`relative flex h-full min-h-[120px] items-center justify-center rounded-xl p-4 ${surface.bg}/80 ${filter.classes}`}
+                  >
+                    <span className="text-foreground text-sm font-medium">Aa テキスト</span>
+                  </div>
+                </div>
+                <code className="mt-2 inline-block text-[10px] leading-tight">{filter.name}</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div>
+        <h2 className="mb-4 text-lg font-bold">不透明 vs 半透明 + Filter</h2>
+        <p className="text-muted-foreground mb-4 text-xs">
+          左: 現状（不透明 bg-card）、右: 半透明 + backdrop-filter の比較
+        </p>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <p className="text-muted-foreground mb-2 text-xs font-bold">現状: bg-card（不透明）</p>
+            <div className="relative overflow-hidden rounded-2xl" style={{ minHeight: 200 }}>
+              <ColorfulBackground />
+              <div className="bg-card relative rounded-2xl p-6 shadow-md">
+                <h3 className="mb-2 font-bold">カードタイトル</h3>
+                <p className="text-muted-foreground text-sm">背景は完全に隠れる</p>
+                <div className="mt-4 flex gap-2">
+                  <div className="bg-primary/10 h-8 flex-1 rounded" />
+                  <div className="bg-primary/10 h-8 flex-1 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p className="text-muted-foreground mb-2 text-xs font-bold">
+              提案: bg-card/80 + backdrop-blur-sm + backdrop-saturate-150
+            </p>
+            <div className="relative overflow-hidden rounded-2xl" style={{ minHeight: 200 }}>
+              <ColorfulBackground />
+              <div className="bg-card/80 relative rounded-2xl p-6 shadow-md backdrop-blur-sm backdrop-saturate-150">
+                <h3 className="mb-2 font-bold">カードタイトル</h3>
+                <p className="text-muted-foreground text-sm">背景がぼんやり透ける</p>
+                <div className="mt-4 flex gap-2">
+                  <div className="bg-primary/10 h-8 flex-1 rounded" />
+                  <div className="bg-primary/10 h-8 flex-1 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ),
+};
