@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { PanelLeft } from 'lucide-react';
 
 import { DnDProvider, isCalendarViewPath } from '@/features/calendar';
-import { NotificationDropdown } from '@/features/notifications';
+import { ActivityPopover } from '@/features/notifications';
 import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
 import { Sidebar } from '@/shell/components/sidebar';
@@ -68,10 +68,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
             )}
           >
             <div className="h-full w-64">
-              <Sidebar
-                footerActions={<NotificationDropdown size="sm" />}
-                pageNav={<SidebarPageNav />}
-              >
+              <Sidebar footerActions={<ActivityPopover size="sm" />} pageNav={<SidebarPageNav />}>
                 <SidebarContent />
               </Sidebar>
             </div>

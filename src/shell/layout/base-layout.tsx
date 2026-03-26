@@ -1,5 +1,3 @@
-import React, { Suspense } from 'react';
-
 import { BaseLayoutContent } from './base-layout-content';
 
 interface BaseLayoutProps {
@@ -15,15 +13,9 @@ interface BaseLayoutProps {
  * 注: Providersは app/layout.tsx で既にラップされているため、
  * ここでは重複してラップしない
  *
- * 重要: BaseLayoutContentはuseSearchParams()を使用するため、
- * Next.js 15ではSuspense境界が必須
- *
- * @see https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns#moving-client-components-down-the-tree
+ * ⚠ Suspense 境界は不要。BaseLayoutContent は useSearchParams() を使用しないため。
+ *   カレンダーの searchParams 読み取りは CalendarNavigationProvider 内部で行う。
  */
 export function BaseLayout({ children }: BaseLayoutProps) {
-  return (
-    <Suspense fallback={null}>
-      <BaseLayoutContent>{children}</BaseLayoutContent>
-    </Suspense>
-  );
+  return <BaseLayoutContent>{children}</BaseLayoutContent>;
 }
