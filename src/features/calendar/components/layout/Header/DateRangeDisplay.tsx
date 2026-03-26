@@ -105,7 +105,7 @@ export const DateRangeDisplay = ({
       : format(date, localizedFormatPattern, { locale: dateFnsLocale });
 
   // 日付コンテンツ
-  const dateContent = <h2 className="text-2xl font-normal">{displayText}</h2>;
+  const dateContent = <h2 className="text-2xl font-normal text-pretty">{displayText}</h2>;
 
   // モバイル用: MiniCalendarポップアップ付き（週番号はカレンダーグリッドに表示するため非表示）
   const mobileContent = clickable && onDateSelect && (

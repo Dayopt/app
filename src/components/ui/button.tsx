@@ -53,7 +53,7 @@ const buttonVariants = cva(
     'transition-colors',
     // フォーカス状態（アクセシビリティ）
     'outline-none',
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
     // 無効状態（aria-disabled推奨、disabled属性も対応）
     'disabled:pointer-events-none disabled:opacity-50',
     'aria-disabled:pointer-events-none aria-disabled:opacity-50',

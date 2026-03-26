@@ -69,8 +69,6 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     width: columnRect.width,
     height: state.originalPosition.height,
     zIndex: 9999,
-    pointerEvents: 'none',
-    opacity: 0.85,
     transition: 'top 50ms ease-out, left 100ms ease-out',
   };
 
@@ -83,7 +81,10 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
   return createPortal(
     <div
-      className={cn('rounded-lg shadow-md', state.isOverlapping && 'ring-destructive ring-2')}
+      className={cn(
+        'pointer-events-none rounded-lg opacity-85 shadow-md',
+        state.isOverlapping && 'ring-destructive ring-2',
+      )}
       style={style}
     >
       {content ?? (
