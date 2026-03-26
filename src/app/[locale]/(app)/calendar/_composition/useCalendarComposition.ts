@@ -20,7 +20,7 @@ import React, { useEffect, useMemo } from 'react';
 import type { CalendarViewType } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
-import { getCurrentTimezone, setUserTimezone } from '@/features/settings';
+import { getBrowserTimezone } from '@/lib/date';
 import { logger } from '@/lib/logger';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
@@ -103,11 +103,11 @@ export function useCalendarComposition({
   const updateSettings = useCalendarSettingsStore((state) => state.updateSettings);
 
   useEffect(() => {
-    setUserTimezone(timezone);
+    // デフォルト値のままならブラウザの実際のTZで上書き
     if (timezone === 'Asia/Tokyo') {
-      const actualTimezone = getCurrentTimezone();
-      if (actualTimezone !== 'Asia/Tokyo') {
-        updateSettings({ timezone: actualTimezone });
+      const browserTz = getBrowserTimezone();
+      if (browserTz !== 'Asia/Tokyo') {
+        updateSettings({ timezone: browserTz });
       }
     }
   }, [timezone, updateSettings]);

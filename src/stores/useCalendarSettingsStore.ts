@@ -3,7 +3,6 @@ import { devtools, persist } from 'zustand/middleware';
 
 import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
-import { listenToTimezoneChange } from '@/lib/timezone-listener';
 import { platformStorage } from '@/lib/zustand/storage';
 import type { ChronotypeSettings as ChronotypeSettingsState } from '@/types/chronotype';
 
@@ -82,20 +81,7 @@ const defaultSettings: CalendarSettings = {
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(
     persist(
-      (set, get) => {
-        // タイムゾーン変更リスナーをセットアップ
-        if (typeof window !== 'undefined') {
-          listenToTimezoneChange((newTimezone) => {
-            const currentState = get();
-            if (currentState.timezone !== newTimezone) {
-              set({ ...currentState, timezone: newTimezone });
-            }
-          });
-
-          // クリーンアップ関数は保存されない（Zustandの制約）
-          // 必要に応じて手動でクリーンアップ
-        }
-
+      (set) => {
         return {
           ...defaultSettings,
 

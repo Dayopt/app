@@ -11,7 +11,7 @@
  *   // フォーマット
  *   formatDate, formatTime, formatRelativeTime,
  *   // タイムゾーン
- *   convertToTimezone, formatInTimezone, getUserTimezone,
+ *   convertToTimezone, formatInTimezone, getBrowserTimezone,
  * } from '@/lib/date';
  * ```
  *
@@ -34,7 +34,7 @@
  * ### タイムゾーン（timezone.ts）
  * - 変換: `convertToTimezone`, `convertFromTimezone`
  * - フォーマット: `formatInTimezone`, `formatTimeWithTimezone`
- * - ユーザーTZ: `getUserTimezone`, `getTimezoneAbbreviation`
+ * - ブラウザTZ: `getBrowserTimezone`, `getTimezoneAbbreviation`
  * - ISO変換: `localTimeToUTCISO`, `parseISOToUserTimezone`
  */
 
@@ -122,15 +122,25 @@ export {
   // フォーマット
   formatInTimezone,
   formatTimeWithTimezone,
+  // ブラウザタイムゾーン
+  getBrowserTimezone,
   // タイムゾーンリスト
   getCommonTimezones,
   getTimezoneAbbreviation,
   getTimezoneOffset,
-  // ユーザータイムゾーン
-  getUserTimezone,
   // ISO変換
   localTimeToUTCISO,
   parseISOToUserTimezone,
+  // TZ境界ヘルパー
+  tzDayEnd,
+  tzDayStart,
+  tzGetDateKey,
+  tzIsSameDay,
+  tzMonthEnd,
+  tzMonthStart,
+  tzToday,
+  tzWeekEnd,
+  tzWeekStart,
   type TimezoneInfo,
 } from './timezone';
 

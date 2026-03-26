@@ -19,8 +19,8 @@ export {
   formatInTimezone,
   formatInTimezone as formatInTimeZone,
   formatTimeWithTimezone,
+  getBrowserTimezone,
   getTimezoneAbbreviation,
-  getUserTimezone,
 } from '@/lib/date';
 
 // ========================================
