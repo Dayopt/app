@@ -32,7 +32,9 @@ export function TrialExpiringEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('trialExpiring.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('trialExpiring.body', { trialEndDate })}</Text>
             <Text style={styles.paragraph}>{t('trialExpiring.keepProHint')}</Text>
@@ -40,7 +42,7 @@ export function TrialExpiringEmail({
               {t('trialExpiring.ctaButton')}
             </Button>
             <Text style={styles.paragraph}>{t('trialExpiring.freePlanNote')}</Text>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

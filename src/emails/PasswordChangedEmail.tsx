@@ -22,7 +22,7 @@ export function PasswordChangedEmail({
   appUrl = 'https://app.dayopt.app',
 }: PasswordChangedEmailProps) {
   const t = createEmailTranslator(locale);
-  const supportEmail = t('common.supportEmail');
+  const supportEmail = t('emailCommon.supportEmail');
   const resetUrl = `${appUrl}/auth/reset`;
   const securityWarning = t('passwordChanged.securityWarning', {
     resetLink: resetUrl,
@@ -42,7 +42,9 @@ export function PasswordChangedEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('passwordChanged.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('passwordChanged.body')}</Text>
             <Text style={styles.paragraph}>
@@ -56,7 +58,7 @@ export function PasswordChangedEmail({
               </Link>
               {warningAfterSupport}
             </Text>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

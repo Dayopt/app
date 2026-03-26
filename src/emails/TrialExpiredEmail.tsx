@@ -30,7 +30,9 @@ export function TrialExpiredEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('trialExpired.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('trialExpired.body')}</Text>
             <Text style={styles.paragraph}>{t('trialExpired.freeAccessIntro')}</Text>
@@ -53,7 +55,7 @@ export function TrialExpiredEmail({
               {t('trialExpired.thankYou')}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

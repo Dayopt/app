@@ -24,7 +24,7 @@ export function AccountDeletionEmail({
   appUrl = 'https://app.dayopt.app',
 }: AccountDeletionEmailProps) {
   const t = createEmailTranslator(locale);
-  const supportEmail = t('common.supportEmail');
+  const supportEmail = t('emailCommon.supportEmail');
   const appLinkText = 'app.dayopt.app';
 
   const mistakeLine = t('accountDeletion.mistakeLine', { supportEmail });
@@ -41,7 +41,9 @@ export function AccountDeletionEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('accountDeletion.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('accountDeletion.body', { deletionDate })}</Text>
             <Text style={styles.paragraph}>{t('accountDeletion.dataRemovedIntro')}</Text>
@@ -77,7 +79,7 @@ export function AccountDeletionEmail({
               {t('accountDeletion.thankYou')}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

@@ -26,8 +26,8 @@ export function ReminderEmail({
   appUrl = 'https://app.dayopt.app',
 }: ReminderEmailProps) {
   const t = createEmailTranslator(locale);
-  const manageLinkText = t('common.manageNotificationSettings');
-  const notificationOptOut = t('common.notificationOptOut', { manageLink: manageLinkText });
+  const manageLinkText = t('emailCommon.manageNotificationSettings');
+  const notificationOptOut = t('emailCommon.notificationOptOut', { manageLink: manageLinkText });
   const [notifBefore, notifAfter] = notificationOptOut.split(manageLinkText);
 
   return (
@@ -38,7 +38,9 @@ export function ReminderEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('reminder.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('reminder.body')}</Text>
             <Section style={styles.infoBox}>
@@ -60,7 +62,7 @@ export function ReminderEmail({
               {notifAfter}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

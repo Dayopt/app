@@ -31,7 +31,9 @@ export function ProStartEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('proStart.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('proStart.body')}</Text>
             <Text style={styles.paragraph}>{t('proStart.fullAccessIntro')}</Text>
@@ -51,7 +53,7 @@ export function ProStartEmail({
             <Button style={styles.button} href={`${appUrl}/calendar`}>
               {t('proStart.ctaButton')}
             </Button>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

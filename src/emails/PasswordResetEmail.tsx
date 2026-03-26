@@ -37,13 +37,15 @@ export function PasswordResetEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('passwordReset.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('passwordReset.body')}</Text>
             <Button style={styles.button} href={resetUrl}>
               {t('passwordReset.ctaButton')}
             </Button>
-            <Text style={styles.smallText}>{t('common.buttonFallbackText')}</Text>
+            <Text style={styles.smallText}>{t('emailCommon.buttonFallbackText')}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={resetUrl}>
                 {resetUrl}
@@ -61,7 +63,7 @@ export function PasswordResetEmail({
               {securityAfter}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

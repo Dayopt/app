@@ -30,14 +30,16 @@ export function PaymentRecoveredEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('paymentRecovered.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('paymentRecovered.body')}</Text>
             <Text style={styles.paragraph}>{t('paymentRecovered.noActionNote')}</Text>
             <Button style={styles.button} href={`${appUrl}/calendar`}>
               {t('paymentRecovered.ctaButton')}
             </Button>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

@@ -33,7 +33,9 @@ export function CancellationConfirmEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('cancellationConfirm.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('cancellationConfirm.body', { periodEndDate })}</Text>
             <Section style={styles.infoBox}>
@@ -51,7 +53,7 @@ export function CancellationConfirmEmail({
               {t('cancellationConfirm.thankYou')}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

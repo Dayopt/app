@@ -26,8 +26,8 @@ export function OverdueEmail({
   appUrl = 'https://app.dayopt.app',
 }: OverdueEmailProps) {
   const t = createEmailTranslator(locale);
-  const manageLinkText = t('common.manageNotificationSettings');
-  const notificationOptOut = t('common.notificationOptOut', { manageLink: manageLinkText });
+  const manageLinkText = t('emailCommon.manageNotificationSettings');
+  const notificationOptOut = t('emailCommon.notificationOptOut', { manageLink: manageLinkText });
   const [notifBefore, notifAfter] = notificationOptOut.split(manageLinkText);
 
   return (
@@ -38,7 +38,9 @@ export function OverdueEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('overdue.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('overdue.body')}</Text>
             <Section style={styles.infoBox}>
@@ -61,7 +63,7 @@ export function OverdueEmail({
               {notifAfter}
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

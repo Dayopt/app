@@ -35,7 +35,7 @@ export function MagicLinkEmail({
             <Button style={styles.button} href={loginUrl}>
               {t('magicLink.ctaButton')}
             </Button>
-            <Text style={styles.smallText}>{t('common.buttonFallbackText')}</Text>
+            <Text style={styles.smallText}>{t('emailCommon.buttonFallbackText')}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={loginUrl}>
                 {loginUrl}
@@ -51,7 +51,7 @@ export function MagicLinkEmail({
               </Link>
               <br />
               <br />
-              {t('common.teamSignature')}
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

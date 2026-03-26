@@ -1,5 +1,5 @@
 {
-  "common": {
+  "emailCommon": {
     "greeting": "Hi {userName},",
     "greetingFallback": "Hi there,",
     "teamSignature": "The Dayopt Team",

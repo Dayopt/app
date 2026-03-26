@@ -32,7 +32,9 @@ export function TrialStartEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('trialStart.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('trialStart.body')}</Text>
             <Section style={styles.infoBox}>
@@ -58,7 +60,7 @@ export function TrialStartEmail({
             <Button style={styles.button} href={`${appUrl}/calendar`}>
               {t('trialStart.ctaButton')}
             </Button>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

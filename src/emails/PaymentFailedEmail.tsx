@@ -26,7 +26,7 @@ export function PaymentFailedEmail({
 }: PaymentFailedEmailProps) {
   const t = createEmailTranslator(locale);
   const ctaUrl = portalUrl || `${appUrl}/settings/billing`;
-  const supportEmail = t('common.supportEmail');
+  const supportEmail = t('emailCommon.supportEmail');
   const helpLine = t('paymentFailed.helpLine', { supportEmail });
   const [helpBefore, helpAfter] = helpLine.split(supportEmail);
 
@@ -38,7 +38,9 @@ export function PaymentFailedEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('paymentFailed.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('paymentFailed.body')}</Text>
             <Text style={styles.paragraph}>{t('paymentFailed.urgencyNote')}</Text>
@@ -52,7 +54,7 @@ export function PaymentFailedEmail({
               </Link>
               {helpAfter}
             </Text>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

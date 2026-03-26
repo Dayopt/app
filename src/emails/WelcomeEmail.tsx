@@ -20,8 +20,8 @@ export function WelcomeEmail({
   appUrl = 'https://app.dayopt.app',
 }: WelcomeEmailProps) {
   const t = createEmailTranslator(locale);
-  const supportEmail = t('common.supportEmail');
-  const questionsLine = t('common.questionsLine', { supportEmail });
+  const supportEmail = t('emailCommon.supportEmail');
+  const questionsLine = t('emailCommon.questionsLine', { supportEmail });
   const [beforeEmail, afterEmail] = questionsLine.split(supportEmail);
 
   return (
@@ -32,7 +32,9 @@ export function WelcomeEmail({
           <Section style={styles.section}>
             <Text style={styles.heading}>{t('welcome.heading')}</Text>
             <Text style={styles.paragraph}>
-              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
             <Text style={styles.paragraph}>{t('welcome.body')}</Text>
             <Text style={styles.paragraph}>{t('welcome.valueProp')}</Text>
@@ -46,7 +48,7 @@ export function WelcomeEmail({
               </Link>
               {afterEmail}
             </Text>
-            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>
