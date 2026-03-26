@@ -227,7 +227,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ログアウト */}
-      <div className="border-border border-t px-2 pt-1 pb-16">
+      <div className="border-border border-t px-2 pt-1 pb-24">
         <button
           type="button"
           onClick={logout}
