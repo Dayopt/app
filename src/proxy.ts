@@ -100,6 +100,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // `user-tz` Cookie からタイムゾーンを読み取り、リクエストヘッダーとして転送
+  // → Server Components / prefetch 関数で `headers().get('x-user-timezone')` で利用可能にする
+  const userTz = request.cookies.get('user-tz')?.value;
+  if (userTz) {
+    request.headers.set('x-user-timezone', userTz);
+  }
+
   // メンテナンスモードチェック
   const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true';
   if (isMaintenanceMode) {
