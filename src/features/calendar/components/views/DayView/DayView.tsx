@@ -89,7 +89,7 @@ export const DayView = ({
   );
 
   const headerComponent = (
-    <div className="bg-background flex h-8 items-center justify-center px-2">
+    <div className="flex h-8 items-center justify-center px-2">
       <DateDisplay
         date={date}
         className="text-center"
@@ -106,7 +106,7 @@ export const DayView = ({
 
   return (
     <CalendarViewAnimation viewType="day">
-      <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         {/* 固定日付ヘッダー */}
         <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 

@@ -18,7 +18,7 @@ export const DateDisplayRow = ({
   onDateDoubleClick,
 }: DateDisplayRowProps) => {
   return (
-    <div className={cn('bg-background flex', className)}>
+    <div className={cn('flex', className)}>
       {dates.map((date, index) => (
         <DateDisplay
           key={date.toISOString()}

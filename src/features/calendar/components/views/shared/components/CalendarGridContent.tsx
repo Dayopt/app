@@ -167,7 +167,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   return (
     <div
       className={cn(
-        'bg-background relative flex-1',
+        'relative flex-1',
         enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
         // WeekContent/MultiDayContent は h-full を持つ
         enableCrossDayDrag && 'h-full',

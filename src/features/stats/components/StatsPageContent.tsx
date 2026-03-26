@@ -92,7 +92,7 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
   );
 
   return (
-    <div className="bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
       <AppHeader
         rightSlot={

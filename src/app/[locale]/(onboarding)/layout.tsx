@@ -21,9 +21,7 @@ export default async function OnboardingLayout({ children }: OnboardingLayoutPro
   return (
     <IntlProvider namespaces={ONBOARDING_NAMESPACES}>
       <OnboardingProviders>
-        <main className="bg-background flex min-h-screen items-center justify-center">
-          {children}
-        </main>
+        <main className="flex min-h-screen items-center justify-center">{children}</main>
       </OnboardingProviders>
     </IntlProvider>
   );

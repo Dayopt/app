@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function StatsTabLoading() {
   return (
     <div
-      className="bg-background flex h-full flex-col overflow-hidden"
+      className="flex h-full flex-col overflow-hidden"
       role="status"
       aria-live="polite"
       aria-label="Loading stats"

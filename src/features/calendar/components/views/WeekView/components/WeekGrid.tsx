@@ -100,7 +100,7 @@ export const WeekGrid = ({
   }, [weekDates, weekStartsOn]);
 
   const headerComponent = (
-    <div className="bg-background flex h-8 flex-1">
+    <div className="flex h-8 flex-1">
       {/* 7日分の日付ヘッダー */}
       {weekDates.map((date) => (
         <div
@@ -124,7 +124,7 @@ export const WeekGrid = ({
   );
 
   return (
-    <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+    <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       {/* 固定日付ヘッダー */}
       <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 

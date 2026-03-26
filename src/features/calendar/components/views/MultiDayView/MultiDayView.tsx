@@ -94,7 +94,7 @@ export function MultiDayView({
   const viewMode = `${dayCount}day` as '3day' | '5day';
 
   const headerComponent = (
-    <div className="bg-background flex h-8">
+    <div className="flex h-8">
       {displayDates.map((date) => (
         <div key={date.toISOString()} className="flex flex-1 items-center justify-center px-1">
           <DateDisplay
@@ -114,7 +114,7 @@ export function MultiDayView({
 
   return (
     <CalendarViewAnimation viewType={viewMode}>
-      <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 
         <ScrollableCalendarLayout
