@@ -58,10 +58,11 @@ export function EnergyMapHeatmap() {
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone),
-    [currentDate, granularity, timezone],
+    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+    [currentDate, granularity, timezone, weekStartsOn],
   );
 
   const { data, isPending } = api.entries.getEnergyMap.useQuery(dateRange);

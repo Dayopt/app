@@ -5,6 +5,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
 
@@ -28,6 +29,7 @@ export function StatsDateDisplay({ currentDate, granularity, className }: StatsD
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // メインテキスト（h2）
   const mainText = (() => {
@@ -49,7 +51,7 @@ export function StatsDateDisplay({ currentDate, granularity, className }: StatsD
 
   // 週番号（day/week 粒度のみ表示）
   const showWeekNumber = granularity === 'day' || granularity === 'week';
-  const weekNumber = showWeekNumber ? getWeek(currentDate, { weekStartsOn: 1 }) : null;
+  const weekNumber = showWeekNumber ? getWeek(currentDate, { weekStartsOn }) : null;
 
   return (
     <div className={cn('flex items-center gap-2', className)}>

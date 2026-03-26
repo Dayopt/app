@@ -46,11 +46,15 @@ function tzYearEnd(year: number, timezone: string): string {
  *
  * timezone パラメータを使用してユーザーのローカル深夜をUTCに変換する。
  * これにより非UTCユーザーでも正確な日付境界が保証される。
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
 export function computeStatsDateRange(
   currentDate: Date,
   granularity: StatsGranularity,
   timezone: string,
+  weekStartsOn: 0 | 1 | 6 = 1,
 ): {
   startDate: string;
   endDate: string;
@@ -64,8 +68,8 @@ export function computeStatsDateRange(
     }
     case 'week': {
       return {
-        startDate: tzWeekStart(currentDate, timezone, 1),
-        endDate: tzWeekEnd(currentDate, timezone, 1),
+        startDate: tzWeekStart(currentDate, timezone, weekStartsOn),
+        endDate: tzWeekEnd(currentDate, timezone, weekStartsOn),
       };
     }
     case 'month': {
@@ -88,11 +92,15 @@ export function computeStatsDateRange(
  * 現在の日付範囲から前期間の日付範囲を算出
  *
  * day → 前日、week → 前週、month → 前月、year → 前年
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
 export function computePreviousDateRange(
   currentDate: Date,
   granularity: StatsGranularity,
   timezone: string,
+  weekStartsOn: 0 | 1 | 6 = 1,
 ): {
   startDate: string;
   endDate: string;
@@ -108,8 +116,8 @@ export function computePreviousDateRange(
     case 'week': {
       const prev = addWeeks(currentDate, -1);
       return {
-        startDate: tzWeekStart(prev, timezone, 1),
-        endDate: tzWeekEnd(prev, timezone, 1),
+        startDate: tzWeekStart(prev, timezone, weekStartsOn),
+        endDate: tzWeekEnd(prev, timezone, weekStartsOn),
       };
     }
     case 'month': {

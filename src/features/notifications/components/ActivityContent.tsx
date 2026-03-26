@@ -6,6 +6,7 @@ import { CheckCheck, Loader2, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { NotificationType } from '../schemas';
 
@@ -39,6 +40,7 @@ interface ActivityContentProps {
 export function ActivityContent({ tab, compact = false }: ActivityContentProps) {
   const locale = useLocale();
   const t = useTranslations();
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   const { data: allNotifications = [], isLoading } = useNotificationsList();
   const { markAsRead, markAllAsRead, deleteNotification, deleteAllRead } =
@@ -50,7 +52,10 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
     [allNotifications, tab],
   );
 
-  const groupedNotifications = useMemo(() => groupNotificationsByDate(filtered, t), [filtered, t]);
+  const groupedNotifications = useMemo(
+    () => groupNotificationsByDate(filtered, t, weekStartsOn),
+    [filtered, t, weekStartsOn],
+  );
 
   const totalCount = useMemo(
     () => groupedNotifications.reduce((acc, g) => acc + g.notifications.length, 0),

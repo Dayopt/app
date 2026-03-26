@@ -27,10 +27,11 @@ export function ProgressView({ className }: StatsViewProps) {
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone),
-    [currentDate, granularity, timezone],
+    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+    [currentDate, granularity, timezone, weekStartsOn],
   );
 
   // TanStack Query キャッシュ共有: StatsView と同じクエリのため追加リクエストは発生しない

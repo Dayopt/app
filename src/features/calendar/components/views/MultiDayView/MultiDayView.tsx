@@ -46,6 +46,7 @@ export function MultiDayView({
   onNavigateToday: _onNavigateToday,
 }: MultiDayViewProps) {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   const displayCenterDate = useMemo(() => {
@@ -87,8 +88,8 @@ export function MultiDayView({
   );
 
   const weekNumber = useMemo(() => {
-    return getWeek(displayCenterDate, { weekStartsOn: 1 });
-  }, [displayCenterDate]);
+    return getWeek(displayCenterDate, { weekStartsOn });
+  }, [displayCenterDate, weekStartsOn]);
 
   const viewMode = `${dayCount}day` as '3day' | '5day';
 

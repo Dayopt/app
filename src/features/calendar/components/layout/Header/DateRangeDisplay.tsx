@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { cn } from '@/lib/utils';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { Locale } from 'date-fns';
 
@@ -91,6 +92,7 @@ export const DateRangeDisplay = ({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // ロケールに応じたフォーマットパターン（翻訳ファイルから取得）
   const localizedFormatPattern =
@@ -137,7 +139,7 @@ export const DateRangeDisplay = ({
       {dateContent}
       {showWeekNumber ? (
         <span className="text-muted-foreground text-lg">
-          {t('weekLabel', { weekNumber: getWeek(date, { weekStartsOn: 1 }) })}
+          {t('weekLabel', { weekNumber: getWeek(date, { weekStartsOn }) })}
         </span>
       ) : null}
     </div>
@@ -169,6 +171,7 @@ export const CompactDateDisplay = ({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // ロケールに応じたフォーマット（翻訳ファイルから取得）
   const dateFormat = tCommon('dates.formats.monthDay');
@@ -180,7 +183,7 @@ export const CompactDateDisplay = ({
       </span>
       {showWeekNumber ? (
         <span className="text-muted-foreground text-xs">
-          {t('weekLabel', { weekNumber: getWeek(date, { weekStartsOn: 1 }) })}
+          {t('weekLabel', { weekNumber: getWeek(date, { weekStartsOn }) })}
         </span>
       ) : null}
     </div>

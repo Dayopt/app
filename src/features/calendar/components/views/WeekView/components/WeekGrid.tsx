@@ -45,6 +45,7 @@ export const WeekGrid = ({
   className,
 }: WeekGridProps) => {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // レスポンシブな時間高さ
   const hourHeight = useResponsiveHourHeight();
@@ -95,8 +96,8 @@ export const WeekGrid = ({
   const weekNumber = React.useMemo(() => {
     const firstDate = weekDates[0];
     if (!firstDate) return undefined;
-    return getWeek(firstDate, { weekStartsOn: 1 });
-  }, [weekDates]);
+    return getWeek(firstDate, { weekStartsOn });
+  }, [weekDates, weekStartsOn]);
 
   const headerComponent = (
     <div className="bg-background flex h-8 flex-1">

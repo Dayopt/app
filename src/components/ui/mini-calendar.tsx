@@ -321,7 +321,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             <div key={weekIndex} className={cn('grid', gridCols)}>
               {showWeekNumbers && (
                 <div className="text-muted-foreground flex h-8 w-6 items-center justify-center text-xs">
-                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn: 1 }) : null}
+                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn }) : null}
                 </div>
               )}
               {week.map((date) => {

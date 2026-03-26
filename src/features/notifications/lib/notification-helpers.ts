@@ -49,23 +49,30 @@ export interface GroupedNotifications<T> {
 
 /**
  * 日付からグループキーを取得
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
-export function getDateGroupKey(date: Date | string): DateGroupKey {
+export function getDateGroupKey(date: Date | string, weekStartsOn: 0 | 1 | 6 = 1): DateGroupKey {
   const d = typeof date === 'string' ? new Date(date) : date;
 
   if (isToday(d)) return 'today';
   if (isYesterday(d)) return 'yesterday';
-  if (isThisWeek(d, { weekStartsOn: 1 })) return 'thisWeek';
+  if (isThisWeek(d, { weekStartsOn })) return 'thisWeek';
   if (isThisMonth(d)) return 'thisMonth';
   return 'older';
 }
 
 /**
  * 通知を日付グループでグループ化
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
 export function groupNotificationsByDate<T extends { created_at: string }>(
   notifications: T[],
   t: (key: string) => string,
+  weekStartsOn: 0 | 1 | 6 = 1,
 ): GroupedNotifications<T>[] {
   const groups: Record<DateGroupKey, T[]> = {
     today: [],
@@ -76,7 +83,7 @@ export function groupNotificationsByDate<T extends { created_at: string }>(
   };
 
   for (const notification of notifications) {
-    const key = getDateGroupKey(notification.created_at);
+    const key = getDateGroupKey(notification.created_at, weekStartsOn);
     groups[key].push(notification);
   }
 

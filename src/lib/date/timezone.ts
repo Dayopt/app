@@ -288,10 +288,10 @@ export function tzDayEnd(date: Date, timezone: string): string {
  *
  * @param date - 基準日
  * @param timezone - ユーザーのタイムゾーン
- * @param weekStartsOn - 週の開始曜日（0=日, 1=月）。デフォルト1
+ * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
  * @returns UTC ISO 8601文字列
  */
-export function tzWeekStart(date: Date, timezone: string, weekStartsOn: 0 | 1 = 1): string {
+export function tzWeekStart(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
   const zonedDate = toZonedTime(date, timezone);
   const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
   const dateStr = format(weekStart, 'yyyy-MM-dd');
@@ -303,10 +303,10 @@ export function tzWeekStart(date: Date, timezone: string, weekStartsOn: 0 | 1 = 
  *
  * @param date - 基準日
  * @param timezone - ユーザーのタイムゾーン
- * @param weekStartsOn - 週の開始曜日（0=日, 1=月）。デフォルト1
+ * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
  * @returns UTC ISO 8601文字列
  */
-export function tzWeekEnd(date: Date, timezone: string, weekStartsOn: 0 | 1 = 1): string {
+export function tzWeekEnd(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
   const zonedDate = toZonedTime(date, timezone);
   const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
   const weekEndDate = new Date(weekStart);

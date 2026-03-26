@@ -35,6 +35,7 @@ export const DayView = ({
   onNavigateToday,
 }: DayViewProps) => {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // 表示する日付
   const displayDates = useMemo(() => {
@@ -75,8 +76,8 @@ export const DayView = ({
 
   // 週番号を計算
   const weekNumber = useMemo(() => {
-    return getWeek(date, { weekStartsOn: 1 });
-  }, [date]);
+    return getWeek(date, { weekStartsOn });
+  }, [date, weekStartsOn]);
 
   // 日付ヘッダーのクリックハンドラー（DayViewでは日付変更のみ）
   const handleDateHeaderClick = React.useCallback(
