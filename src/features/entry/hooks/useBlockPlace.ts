@@ -19,27 +19,29 @@ import { toast } from 'sonner';
 
 import type { CalendarViewType } from '@/lib/calendar-constants';
 import { getMultiDayCount, isMultiDayView } from '@/lib/calendar-constants';
+import { convertToTimezone } from '@/lib/date/timezone';
 import { snapToNextInterval } from '@/lib/time-utils';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { createListQueryPredicate } from './mutations/mutationUtils';
 import { useEntryMutations } from './useEntryMutations';
 
-/** 時刻を HH:mm にフォーマット */
+/** 時刻を HH:mm にフォーマット（ユーザーTZ変換済み Date を受け取る） */
 function formatHHmm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
-/** 現在時刻をカレンダー表示日に適用した Date を返す */
-function applyTimeToDate(targetDate: Date): Date {
-  const now = new Date();
+/** 現在時刻（ユーザーTZ）をカレンダー表示日に適用した Date を返す */
+function applyTimeToDate(targetDate: Date, timezone: string): Date {
+  const nowInTz = convertToTimezone(new Date(), timezone);
   const result = new Date(targetDate);
-  result.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+  result.setHours(nowInTz.getHours(), nowInTz.getMinutes(), nowInTz.getSeconds(), 0);
   return result;
 }
 
 /** 今日がカレンダー表示範囲内かを判定し、範囲内なら今日を返す */
-function resolveTargetDate(viewedDate: Date, viewType: CalendarViewType): Date {
+function resolveTargetDate(viewedDate: Date, viewType: CalendarViewType, timezone: string): Date {
   // day ビュー: そのまま viewedDate を使用
   if (viewType === 'day') return viewedDate;
 
@@ -47,17 +49,21 @@ function resolveTargetDate(viewedDate: Date, viewType: CalendarViewType): Date {
   const dayCount =
     viewType === 'week' ? 7 : isMultiDayView(viewType) ? getMultiDayCount(viewType) : 1;
 
-  const today = new Date();
-  const startOfViewed = new Date(viewedDate);
-  startOfViewed.setHours(0, 0, 0, 0);
-  const endOfRange = new Date(startOfViewed);
-  endOfRange.setDate(startOfViewed.getDate() + dayCount);
+  const now = new Date();
+  const nowInTz = convertToTimezone(now, timezone);
+  const viewedInTz = convertToTimezone(viewedDate, timezone);
 
-  const todayStart = new Date(today);
+  // ユーザーTZで viewedDate から dayCount 日分の範囲を構築
+  const viewedStart = new Date(viewedInTz);
+  viewedStart.setHours(0, 0, 0, 0);
+  const viewedEnd = new Date(viewedStart);
+  viewedEnd.setDate(viewedStart.getDate() + dayCount);
+
+  const todayStart = new Date(nowInTz);
   todayStart.setHours(0, 0, 0, 0);
 
-  if (todayStart >= startOfViewed && todayStart < endOfRange) {
-    return today;
+  if (todayStart >= viewedStart && todayStart < viewedEnd) {
+    return now;
   }
 
   return viewedDate;
@@ -111,6 +117,7 @@ export function useBlockPlace() {
   const { createEntry, deleteEntry } = useEntryMutations({ suppressCreateToast: true });
   const t = useTranslations();
   const queryClient = useQueryClient();
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   /** 指定時刻にブロックを配置 */
   const placeBlock = useCallback(
@@ -119,7 +126,8 @@ export function useBlockPlace() {
 
       // キャッシュから事前重複チェック（楽観的更新でカードが一瞬現れるのを防ぐ）
       if (hasOverlapInCache(queryClient, params.startTime, end)) {
-        const timeStr = formatHHmm(params.startTime);
+        const displayStart = convertToTimezone(params.startTime, timezone);
+        const timeStr = formatHHmm(displayStart);
         toast.error(t('sidebar.palette.overlapError', { time: timeStr }));
         return;
       }
@@ -135,7 +143,8 @@ export function useBlockPlace() {
         {
           onSuccess: (newEntry) => {
             // Undo 付きトースト
-            const timeStr = formatHHmm(params.startTime);
+            const displayStart = convertToTimezone(params.startTime, timezone);
+            const timeStr = formatHHmm(displayStart);
             toast.success(t('sidebar.palette.placed', { name: params.tagName, time: timeStr }), {
               duration: 5000,
               action: {
@@ -146,21 +155,22 @@ export function useBlockPlace() {
               },
             });
 
-            // 自動スクロール
-            scrollCalendarToTime(params.startTime.getHours(), params.startTime.getMinutes());
+            // 自動スクロール（ユーザーTZの時刻で表示位置を決定）
+            const tzStart = convertToTimezone(params.startTime, timezone);
+            scrollCalendarToTime(tzStart.getHours(), tzStart.getMinutes());
           },
         },
       );
     },
-    [createEntry, deleteEntry, queryClient, t],
+    [createEntry, deleteEntry, queryClient, t, timezone],
   );
 
   /** カレンダー表示日の現在時刻にブロックを配置（週表示で今日が範囲内なら今日に配置） */
   const placeBlockNow = useCallback(
     (tagId: string, durationMinutes: number, tagName: string) => {
       const { viewedDate, viewType } = useCalendarNavigationStore.getState();
-      const targetDate = resolveTargetDate(viewedDate, viewType);
-      const startTime = snapToNextInterval(applyTimeToDate(targetDate));
+      const targetDate = resolveTargetDate(viewedDate, viewType, timezone);
+      const startTime = snapToNextInterval(applyTimeToDate(targetDate, timezone));
       placeBlock({
         tagId,
         tagName,
@@ -168,7 +178,7 @@ export function useBlockPlace() {
         durationMinutes,
       });
     },
-    [placeBlock],
+    [placeBlock, timezone],
   );
 
   return { placeBlock, placeBlockNow };

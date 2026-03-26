@@ -143,7 +143,7 @@ export function useCalendarData({
         ...e,
         tagId: e.tagId ?? null,
       })) as EntryWithTags[];
-      const expandedEvents = expandEntriesToCalendarEvents(normalized);
+      const expandedEvents = expandEntriesToCalendarEvents(normalized, timezone);
       calendarPlans.push(...expandedEvents);
 
       const duration = performance.now() - startTime;
@@ -162,7 +162,7 @@ export function useCalendarData({
     }
 
     return calendarPlans;
-  }, [entriesData]);
+  }, [entriesData, timezone]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {

@@ -7,6 +7,7 @@
 
 import type { EntryWithTags } from '@/features/entry';
 import { getEntryState } from '@/features/entry';
+import { tzIsSameDay } from '@/lib/date/timezone';
 import type { CalendarEvent } from '../types/calendar.types';
 
 /**
@@ -15,7 +16,7 @@ import type { CalendarEvent } from '../types/calendar.types';
  * - status は時間位置から自動判定
  * - title が空の場合はカレンダー側で「(無題)」表示
  */
-export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null {
+export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): CalendarEvent | null {
   if (!entry.start_time || !entry.end_time) {
     return null;
   }
@@ -26,10 +27,8 @@ export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
   const entryState = getEntryState(entry);
 
-  const isMultiDay =
-    startDate.getFullYear() !== endDate.getFullYear() ||
-    startDate.getMonth() !== endDate.getMonth() ||
-    startDate.getDate() !== endDate.getDate();
+  // ユーザーTZで同日かどうかを判定（ブラウザローカルTZ依存を排除）
+  const isMultiDay = !tzIsSameDay(startDate, endDate, timezone);
 
   const duration =
     entry.duration_minutes ?? Math.round((endDate.getTime() - startDate.getTime()) / 60000);
@@ -62,10 +61,14 @@ export function entryToCalendarEvent(entry: EntryWithTags): CalendarEvent | null
  * エントリをCalendarEvent配列に変換
  *
  * @param entries - エントリ配列（タグID付き）
+ * @param timezone - ユーザーのタイムゾーン（マルチデイ判定に使用）
  * @returns CalendarEvent配列
  */
-export function expandEntriesToCalendarEvents(entries: EntryWithTags[]): CalendarEvent[] {
+export function expandEntriesToCalendarEvents(
+  entries: EntryWithTags[],
+  timezone: string,
+): CalendarEvent[] {
   return entries
-    .map(entryToCalendarEvent)
+    .map((entry) => entryToCalendarEvent(entry, timezone))
     .filter((event): event is CalendarEvent => event !== null);
 }

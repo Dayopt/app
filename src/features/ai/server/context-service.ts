@@ -8,7 +8,7 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 import { MS_PER_MINUTE } from '@/lib/date';
-import { endOfWeek, startOfWeek } from '@/lib/date/core';
+import { tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 
 import type { ChronotypeType } from '@/features/chronotype';
@@ -37,15 +37,16 @@ export async function buildAIContext(
     .eq('user_id', userId)
     .single();
 
-  const timezone = (settingsResult.data?.timezone as string | null | undefined) ?? 'Asia/Tokyo';
+  const timezone = (settingsResult.data?.timezone as string | null | undefined) ?? 'UTC';
 
   // ユーザーのタイムゾーンで「今日」のUTC境界を計算する
   const todayStr = formatInTimeZone(now, timezone, 'yyyy-MM-dd');
   const todayStart = fromZonedTime(`${todayStr}T00:00:00`, timezone);
   const todayEnd = fromZonedTime(`${todayStr}T23:59:59`, timezone);
 
-  const weekStart = startOfWeek(now);
-  const weekEnd = endOfWeek(now);
+  // ユーザーTZで今週の境界を計算する（サーバーTZ依存を排除）
+  const weekStart = new Date(tzWeekStart(now, timezone));
+  const weekEnd = new Date(tzWeekEnd(now, timezone));
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * MS_PER_MINUTE);
 
   const [
@@ -185,7 +186,7 @@ export async function buildAIContext(
       plan: Math.round(planWeeklyMinutes),
       record: Math.round(recordWeeklyMinutes),
     },
-    timezone: settings?.timezone ?? 'Asia/Tokyo',
+    timezone: settings?.timezone ?? 'UTC',
     chronotype: {
       type: (settings?.chronotype_type as ChronotypeType) ?? 'bear',
       enabled: settings?.chronotype_enabled ?? false,

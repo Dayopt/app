@@ -6,6 +6,8 @@
 
 import { memo, useMemo } from 'react';
 
+import { tzIsSameDay } from '@/lib/date/timezone';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { timeToPixels } from '../../../../../lib/grid';
 import { HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
 import { useCurrentTime } from '../../hooks/useCurrentTime';
@@ -24,25 +26,20 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   viewMode: _viewMode = 'day',
 }) {
   const currentTime = useCurrentTime({ updateInterval });
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   // 現在時刻のY座標を計算
   const topPosition = timeToPixels(currentTime, hourHeight);
 
-  // 今日が含まれているかチェック
+  // 今日が含まれているかチェック（ユーザーTZで判定）
   const hasToday = useMemo(() => {
     if (!displayDates || displayDates.length === 0) {
       return true; // displayDatesがない場合は今日とみなす
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return displayDates.some((date) => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
-    });
-  }, [displayDates]);
+    const now = new Date();
+    return displayDates.some((date) => tzIsSameDay(date, now, timezone));
+  }, [displayDates, timezone]);
 
   // 今日の列位置を計算（複数日表示の場合）
   const columnInfo = useMemo(() => {
@@ -55,15 +52,9 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
       };
     }
 
-    // 複数日表示の場合、今日の列を特定
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayIndex = displayDates.findIndex((date) => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
-    });
+    // 複数日表示の場合、今日の列を特定（ユーザーTZで判定）
+    const now = new Date();
+    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, now, timezone));
 
     if (todayIndex === -1) {
       // 今日が見つからない場合、showOnOtherDaysがtrueなら全幅で薄く表示
@@ -87,7 +78,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
       width: columnWidth,
       isToday: true,
     };
-  }, [displayDates, timeColumnWidth, containerWidth, hasToday, showOnOtherDays]);
+  }, [displayDates, timeColumnWidth, containerWidth, hasToday, showOnOtherDays, timezone]);
 
   // 表示しない場合
   if (!columnInfo) {
@@ -135,7 +126,7 @@ export const CurrentTimeLineForColumn = memo<{
   className?: string;
   /** この列が今日かどうか */
   isToday?: boolean;
-  /** 他の日でも薄く表示するか（デフォルト: true） */
+  /** 他の日でも薄い線を表示するか（デフォルト: true） */
   showOnOtherDays?: boolean;
 }>(function CurrentTimeLineForColumn({
   hourHeight = HOUR_HEIGHT,
