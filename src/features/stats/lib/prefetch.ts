@@ -1,26 +1,22 @@
-import { addWeeks, endOfWeek, startOfWeek } from '@/lib/date/core';
 import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
+
+import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
 
 /**
  * Stats ビュー用 prefetch
  *
  * デフォルト粒度（week）の日付範囲 + 前期間（TrendBadge 用）を事前取得する。
  * KPI は統合エンドポイント getStatsOverview で 1 RPC にまとめる。
+ *
+ * ⚠ computeStatsDateRange を使用して日付文字列を生成する。
+ *   サーバー/クライアント間で同じクエリキーを生成し、キャッシュヒットを保証するため。
  */
 export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
 
   const now = new Date();
-  const dateRange = {
-    startDate: startOfWeek(now).toISOString(),
-    endDate: endOfWeek(now).toISOString(),
-  };
-
-  const prevWeek = addWeeks(now, -1);
-  const prevDateRange = {
-    startDate: startOfWeek(prevWeek).toISOString(),
-    endDate: endOfWeek(prevWeek).toISOString(),
-  };
+  const dateRange = computeStatsDateRange(now, 'week');
+  const prevDateRange = computePreviousDateRange(now, 'week');
 
   try {
     await Promise.all([

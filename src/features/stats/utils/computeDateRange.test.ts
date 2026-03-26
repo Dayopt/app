@@ -5,6 +5,7 @@ import { computeMonthCount, computeStatsDateRange } from './computeDateRange';
 describe('computeStatsDateRange', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    // 2026-03-10 12:00 UTC（火曜日）
     vi.setSystemTime(new Date('2026-03-10T12:00:00.000Z'));
   });
 
@@ -12,21 +13,26 @@ describe('computeStatsDateRange', () => {
     vi.useRealTimers();
   });
 
+  it('UTC正規化されたISO文字列を返す（タイムゾーン非依存）', () => {
+    const result = computeStatsDateRange(new Date(), 'day');
+    // toLocalDateUTCStart/End で生成されるため、常に T00:00:00.000Z / T23:59:59.999Z
+    expect(result.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/);
+    expect(result.endDate).toMatch(/^\d{4}-\d{2}-\d{2}T23:59:59\.999Z$/);
+  });
+
   describe('granularity = "day"', () => {
-    it('その日の00:00:00〜23:59:59を返す', () => {
+    it('その日の00:00:00Z〜23:59:59.999Zを返す', () => {
       const result = computeStatsDateRange(new Date(), 'day');
       const start = new Date(result.startDate);
       const end = new Date(result.endDate);
 
-      expect(start.getDate()).toBe(10);
-      expect(start.getHours()).toBe(0);
-      expect(start.getMinutes()).toBe(0);
-      expect(start.getSeconds()).toBe(0);
+      expect(start.getUTCDate()).toBe(10);
+      expect(start.getUTCHours()).toBe(0);
+      expect(start.getUTCMinutes()).toBe(0);
 
-      expect(end.getDate()).toBe(10);
-      expect(end.getHours()).toBe(23);
-      expect(end.getMinutes()).toBe(59);
-      expect(end.getSeconds()).toBe(59);
+      expect(end.getUTCDate()).toBe(10);
+      expect(end.getUTCHours()).toBe(23);
+      expect(end.getUTCMinutes()).toBe(59);
     });
   });
 
@@ -37,14 +43,14 @@ describe('computeStatsDateRange', () => {
       const end = new Date(result.endDate);
 
       // 2026-03-10 は火曜なので、月曜 = 3/9
-      expect(start.getDate()).toBe(9);
-      expect(start.getDay()).toBe(1); // Monday
-      expect(start.getHours()).toBe(0);
+      expect(start.getUTCDate()).toBe(9);
+      expect(start.getUTCDay()).toBe(1); // Monday
+      expect(start.getUTCHours()).toBe(0);
 
       // 日曜 = 3/15
-      expect(end.getDate()).toBe(15);
-      expect(end.getDay()).toBe(0); // Sunday
-      expect(end.getHours()).toBe(23);
+      expect(end.getUTCDate()).toBe(15);
+      expect(end.getUTCDay()).toBe(0); // Sunday
+      expect(end.getUTCHours()).toBe(23);
     });
   });
 
@@ -54,31 +60,22 @@ describe('computeStatsDateRange', () => {
       const start = new Date(result.startDate);
       const end = new Date(result.endDate);
 
-      expect(start.getDate()).toBe(1);
-      expect(start.getMonth()).toBe(2); // March
-      expect(start.getHours()).toBe(0);
+      expect(start.getUTCDate()).toBe(1);
+      expect(start.getUTCMonth()).toBe(2); // March
+      expect(start.getUTCHours()).toBe(0);
 
-      expect(end.getDate()).toBe(31); // March has 31 days
-      expect(end.getMonth()).toBe(2);
-      expect(end.getHours()).toBe(23);
+      expect(end.getUTCDate()).toBe(31); // March has 31 days
+      expect(end.getUTCMonth()).toBe(2);
+      expect(end.getUTCHours()).toBe(23);
     });
   });
 
   describe('granularity = "year"', () => {
     it('1月1日〜12月31日の範囲を返す', () => {
       const result = computeStatsDateRange(new Date(), 'year');
-      const start = new Date(result.startDate);
-      const end = new Date(result.endDate);
 
-      expect(start.getFullYear()).toBe(2026);
-      expect(start.getMonth()).toBe(0);
-      expect(start.getDate()).toBe(1);
-      expect(start.getHours()).toBe(0);
-
-      expect(end.getFullYear()).toBe(2026);
-      expect(end.getMonth()).toBe(11);
-      expect(end.getDate()).toBe(31);
-      expect(end.getHours()).toBe(23);
+      expect(result.startDate).toBe('2026-01-01T00:00:00.000Z');
+      expect(result.endDate).toBe('2026-12-31T23:59:59.999Z');
     });
   });
 });
