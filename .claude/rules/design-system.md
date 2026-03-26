@@ -10,17 +10,12 @@
 
 ## Elevation / Shadow
 
-- **`surface-*` utility を使用**。直接 `shadow-sm`, `shadow-lg` 等のクラスは原則禁止
-  - `surface-sunken` → input, well（凹み）
-  - `surface-flat` → card, コンテンツ面
-  - `surface-raised` → dropdown, popover, toast
-  - `surface-raised-heavy` → dialog, sheet, inspector, modal
-- **例外**: `shadow-none`（リセット用）、装飾的シャドウ（CurrentTimeLine等の視覚インジケータ）
-
-## Glassmorphism
-
-- `glass-light` / `glass-medium` / `glass-heavy` utility を使用
-- 定義: `src/styles/tokens/elevation.css` + `src/styles/utilities.css`
+- **Tailwind標準の `shadow-*` クラスを使用**
+  - `shadow-inner` → input, well（凹み）
+  - （shadow なし） → card, コンテンツ面
+  - `shadow-md` → dropdown, popover, toast
+  - `shadow-lg` → dialog, sheet, inspector, modal
+  - `shadow-none` → リセット用
 
 ## Spacing
 

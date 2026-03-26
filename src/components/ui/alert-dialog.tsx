@@ -18,7 +18,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     className={cn(
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-overlay-confirm fixed inset-0 data-[state=closed]:pointer-events-none motion-reduce:animate-none',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-overlay-confirm fixed inset-0 backdrop-blur-sm data-[state=closed]:pointer-events-none motion-reduce:animate-none',
       className,
     )}
     {...props}
@@ -36,7 +36,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        'border-border bg-card text-card-foreground z-overlay-confirm surface-raised-heavy fixed top-[50%] left-[50%] grid translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border p-6 duration-200',
+        'border-border bg-card text-card-foreground z-overlay-confirm fixed top-[50%] left-[50%] grid translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border p-6 shadow-lg duration-200',
         // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限（Storybook対応）
         'w-full max-w-[calc(100vw-2rem)] min-w-80 sm:max-w-lg',
         'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',

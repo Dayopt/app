@@ -17,7 +17,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-surface-inset: var(--surface-inset);
   --color-container: var(--container);
-  --color-surface-container: var(--container);  /* 後方互換: bg-surface-container（70箇所で使用） */
+  --color-surface-container: var(--container); /* 後方互換: bg-surface-container（70箇所で使用） */
   --color-overlay: var(--overlay);
   --color-entry-default: var(--entry-default);
   --color-primary: var(--primary);
@@ -63,17 +63,6 @@
    * ============================================ */
   --shadow-color: oklch(0 0 0 / 15%);
   --shadow-color-heavy: oklch(0 0 0 / 20%);
-
-  /* Physical Lighting — 合成シャドウ */
-  --shadow-elevation-sunken: var(--elevation-sunken);
-  --shadow-elevation-raised: var(--elevation-raised);
-  --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
-
-  /* Glassmorphism — 背景色トークン */
-  --color-glass-light: var(--glass-bg-light);
-  --color-glass-medium: var(--glass-bg-medium);
-  --color-glass-heavy: var(--glass-bg-heavy);
-  --color-glass-border: var(--glass-border);
 
   /* ============================================
    * Tag Colors — Base（borders / dots / accents）

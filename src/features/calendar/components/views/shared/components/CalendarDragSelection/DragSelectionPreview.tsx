@@ -78,7 +78,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
       {/* 左アクセントストリップ */}
       <div className="bg-entry-default shrink-0" style={{ width: '3px' }} />
       {/* カード本体 */}
-      <div className="entry-tint min-w-0 flex-1 overflow-hidden rounded-r-lg">
+      <div className="bg-entry-default/12 min-w-0 flex-1 overflow-hidden rounded-r-lg">
         {isCompact ? (
           <div className="flex h-full items-center px-2">
             <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>

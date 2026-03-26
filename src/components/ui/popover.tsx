@@ -22,7 +22,7 @@ const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        'bg-card surface-raised text-card-foreground z-overlay-popover w-72 rounded-lg p-4 outline-none',
+        'bg-card text-card-foreground z-overlay-popover w-72 rounded-lg p-4 shadow-md outline-none',
         'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

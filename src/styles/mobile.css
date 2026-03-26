@@ -68,15 +68,6 @@
  * @see https://css-tricks.com/16px-or-larger-text-prevents-ios-form-zoom/
  * ============================================ */
 
-/* スクロールチェーン防止（モーダル、ドロワー等で使用） */
-.overscroll-none {
-  overscroll-behavior: none;
-}
-
-.overscroll-contain {
-  overscroll-behavior: contain;
-}
-
 /* Pull-to-Refresh無効化（PWAアプリ向け） */
 body {
   overscroll-behavior-y: contain;
@@ -107,8 +98,7 @@ body {
 button,
 [role='button'],
 [role='tab'],
-[role='menuitem'],
-.no-select {
+[role='menuitem'] {
   -webkit-user-select: none;
   -moz-user-select: none;
   user-select: none;
@@ -171,15 +161,7 @@ img {
   user-drag: none;
 }
 
-/* touch-actionユーティリティ（横スクロール領域向け） */
-.touch-pan-y {
-  touch-action: pan-y;
-}
-
-.touch-pan-x {
-  touch-action: pan-x;
-}
-
+/* touch-actionユーティリティ（Tailwindにない複合値のみ） */
 .touch-pan-y-pinch {
   touch-action: pan-y pinch-zoom;
 }

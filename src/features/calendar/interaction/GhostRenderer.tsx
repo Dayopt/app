@@ -83,7 +83,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
   return createPortal(
     <div
-      className={cn('surface-raised rounded-lg', state.isOverlapping && 'ring-destructive ring-2')}
+      className={cn('rounded-lg shadow-md', state.isOverlapping && 'ring-destructive ring-2')}
       style={style}
     >
       {content ?? (
