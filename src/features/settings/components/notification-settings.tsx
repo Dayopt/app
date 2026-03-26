@@ -70,6 +70,13 @@ export function NotificationSettings() {
       onError: onSettingsError,
     });
 
+  // 通知タイプ別設定を更新
+  const updateTypePreferences =
+    api.notificationPreferences.updateNotificationTypePreferences.useMutation({
+      onSuccess: onSettingsSuccess,
+      onError: onSettingsError,
+    });
+
   const handleBrowserToggle = useCallback(
     async (checked: boolean) => {
       if (checked) {
@@ -157,6 +164,58 @@ export function NotificationSettings() {
             checked={preferences?.defaultReminderEnabled ?? true}
             onCheckedChange={(checked) => updateDefaultReminder.mutate({ enabled: checked })}
             disabled={updateDefaultReminder.isPending}
+          />
+        </LabeledRow>
+      </SectionCard>
+
+      {/* 通知タイプ別設定 */}
+      <SectionCard title={t('notification.settings.typeSection.title')}>
+        <LabeledRow
+          label={t('notification.settings.typeSection.dailyInsights.label')}
+          description={t('notification.settings.typeSection.dailyInsights.description')}
+        >
+          <Switch
+            checked={preferences?.enableDailyInsights ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableDailyInsights: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.energyInsights.label')}
+          description={t('notification.settings.typeSection.energyInsights.description')}
+        >
+          <Switch
+            checked={preferences?.enableEnergyInsights ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableEnergyInsights: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.burnoutWarnings.label')}
+          description={t('notification.settings.typeSection.burnoutWarnings.description')}
+        >
+          <Switch
+            checked={preferences?.enableBurnoutWarnings ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableBurnoutWarnings: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.weeklyReports.label')}
+          description={t('notification.settings.typeSection.weeklyReports.description')}
+        >
+          <Switch
+            checked={preferences?.enableWeeklyReports ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableWeeklyReports: checked })
+            }
+            disabled={updateTypePreferences.isPending}
           />
         </LabeledRow>
       </SectionCard>

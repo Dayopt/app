@@ -66,14 +66,24 @@ export const notificationPreferencesRouter = createTRPCRouter({
             enableEmailNotifications: false,
             enablePushNotifications: false,
             defaultReminderEnabled: true,
+            enableDailyInsights: true,
+            enableEnergyInsights: true,
+            enableBurnoutWarnings: true,
+            enableWeeklyReports: true,
           };
         }
 
+        // NOTE: 新カラムは型生成前のため as never でアクセス
+        const row = data as Record<string, unknown>;
         return {
           enableBrowserNotifications: data.enable_browser_notifications,
           enableEmailNotifications: data.enable_email_notifications,
           enablePushNotifications: data.enable_push_notifications,
           defaultReminderEnabled: data.default_reminder_enabled ?? true,
+          enableDailyInsights: (row.enable_daily_insights as boolean | undefined) ?? true,
+          enableEnergyInsights: (row.enable_energy_insights as boolean | undefined) ?? true,
+          enableBurnoutWarnings: (row.enable_burnout_warnings as boolean | undefined) ?? true,
+          enableWeeklyReports: (row.enable_weekly_reports as boolean | undefined) ?? true,
         };
       } catch (error) {
         return handlePreferencesError('get', error);
@@ -200,6 +210,59 @@ export const notificationPreferencesRouter = createTRPCRouter({
         return { success: true };
       } catch (error) {
         return handlePreferencesError('updatePushNotifications', error);
+      }
+    }),
+
+  /**
+   * 通知タイプ別ON/OFFを一括更新
+   */
+  updateNotificationTypePreferences: protectedProcedure
+    .meta({ description: '通知タイプ別ON/OFF更新' })
+    .input(
+      z.object({
+        enableDailyInsights: z.boolean().optional(),
+        enableEnergyInsights: z.boolean().optional(),
+        enableBurnoutWarnings: z.boolean().optional(),
+        enableWeeklyReports: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const userId = ctx.userId;
+
+        if (!userId) {
+          throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'User ID not found',
+          });
+        }
+
+        const updateData: Record<string, unknown> = { user_id: userId };
+        if (input.enableDailyInsights !== undefined)
+          updateData.enable_daily_insights = input.enableDailyInsights;
+        if (input.enableEnergyInsights !== undefined)
+          updateData.enable_energy_insights = input.enableEnergyInsights;
+        if (input.enableBurnoutWarnings !== undefined)
+          updateData.enable_burnout_warnings = input.enableBurnoutWarnings;
+        if (input.enableWeeklyReports !== undefined)
+          updateData.enable_weekly_reports = input.enableWeeklyReports;
+
+        // NOTE: 新カラムは型生成前のため as never でキャスト
+        const { error } = await ctx.supabase
+          .from('notification_preferences')
+          .upsert(updateData as never, { onConflict: 'user_id' });
+
+        if (error) {
+          logger.error('NotificationPreferences type update error:', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to update notification type preferences: ${error.message}`,
+          });
+        }
+
+        return { success: true };
+      } catch (error) {
+        return handlePreferencesError('updateNotificationTypePreferences', error);
       }
     }),
 

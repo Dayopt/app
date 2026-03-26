@@ -18,6 +18,7 @@
 -- | ジョブ名                    | スケジュール            | Edge Function          |
 -- |-----------------------------|-------------------------|------------------------|
 -- | check-reminders             | * * * * * (毎分)        | check-reminders        |
+-- | daily-insights              | 0 14 * * * (毎日 14:00 UTC = JST 23:00) | daily-insights |
 --
 -- Dashboard での設定手順:
 -- 1. Supabase Dashboard > Database > Extensions > pg_net を有効化

@@ -15,6 +15,21 @@ export interface ReminderEntry {
 }
 
 // ============================================================
+// daily-insights
+// ============================================================
+
+export interface ActiveUser {
+  user_id: string;
+  entry_count: number;
+}
+
+export interface DailySnapshot {
+  day: string;
+  total_minutes: number;
+  avg_fulfillment: number | null;
+}
+
+// ============================================================
 // send-auth-email
 // ============================================================
 
