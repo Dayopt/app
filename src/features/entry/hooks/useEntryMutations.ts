@@ -161,7 +161,10 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       }
 
       // TIME_OVERLAPエラー（重複防止）
-      if (error.message.includes('既に予定があります') || error.message.includes('TIME_OVERLAP')) {
+      if (
+        error.message.includes('既にエントリがあります') ||
+        error.message.includes('TIME_OVERLAP')
+      ) {
         toast.error(t('plan.toast.timeOverlap'));
         return;
       }
@@ -318,7 +321,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
           },
         });
       } else if (
-        err.message.includes('既に予定があります') ||
+        err.message.includes('既にエントリがあります') ||
         err.message.includes('TIME_OVERLAP')
       ) {
         toast.error(t('plan.toast.timeOverlap'));

@@ -77,7 +77,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
     return (
-      <div className={cn('md:hidden', className)}>
+      <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
         <AppHeader
           rightSlot={
             <>

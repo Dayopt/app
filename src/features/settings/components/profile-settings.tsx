@@ -58,7 +58,7 @@ export function ProfileSettings() {
           variant="navigate"
           onClick={() => setShowDisplayNameDialog(true)}
         >
-          <span className="text-muted-foreground text-sm">{displayName}</span>
+          <span className="text-muted-foreground">{displayName}</span>
         </LabeledRow>
       </SectionCard>
 

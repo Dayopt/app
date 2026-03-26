@@ -150,14 +150,20 @@ export class EntryService {
   }): Promise<string[]> {
     const { userId, startTime, endTime, excludeEntryId } = options;
 
+    // 半開区間 [start, end) の重複判定
+    // 境界精度の問題を回避するため、1秒バッファを設けて lte/gte で比較
+    // （最小エントリ幅15分に対して1秒は十分安全なマージン）
+    const endTimeExclusive = new Date(new Date(endTime).getTime() - 1000).toISOString();
+    const startTimeExclusive = new Date(new Date(startTime).getTime() + 1000).toISOString();
+
     let query = this.supabase
       .from('entries')
       .select('id')
       .eq('user_id', userId)
       .not('start_time', 'is', null)
       .not('end_time', 'is', null)
-      .lt('start_time', endTime)
-      .gt('end_time', startTime);
+      .lte('start_time', endTimeExclusive)
+      .gte('end_time', startTimeExclusive);
 
     if (excludeEntryId) {
       query = query.neq('id', excludeEntryId);

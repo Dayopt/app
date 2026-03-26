@@ -11,9 +11,11 @@ export const useCalendarContextMenu = () => {
     null,
   );
 
-  // プランの右クリックハンドラー
+  // プランの右クリックハンドラー（タッチデバイスでは無効）
   const handleEventContextMenu = useCallback(
     (plan: CalendarEvent, mouseEvent: React.MouseEvent) => {
+      // タッチデバイスからの contextmenu イベントは無視（長押しで発火するため）
+      if (window.matchMedia('(pointer: coarse)').matches) return;
       setContextMenuEvent(plan);
       setContextMenuPosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
     },
