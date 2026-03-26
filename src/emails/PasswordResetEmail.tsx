@@ -8,56 +8,60 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface PasswordResetEmailProps {
   userName: string;
   resetUrl: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function PasswordResetEmail({
   userName,
   resetUrl,
+  locale = 'en',
   appUrl = 'https://dayopt.app',
 }: PasswordResetEmailProps) {
+  const t = createEmailTranslator(locale);
+  const settingsLinkText = t('passwordReset.yourSettings');
+  const securityNote = t('passwordReset.securityNote', { settingsLink: settingsLinkText });
+  const [securityBefore, securityAfter] = securityNote.split(settingsLinkText);
+
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Reset your password</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('passwordReset.heading')}</Text>
             <Text style={styles.paragraph}>
-              We received a request to reset your Dayopt password. Click the button below to choose
-              a new password.
+              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
             </Text>
+            <Text style={styles.paragraph}>{t('passwordReset.body')}</Text>
             <Button style={styles.button} href={resetUrl}>
-              Reset Password
+              {t('passwordReset.ctaButton')}
             </Button>
-            <Text style={styles.smallText}>
-              If the button doesn&apos;t work, copy and paste this link into your browser:
-            </Text>
+            <Text style={styles.smallText}>{t('common.buttonFallbackText')}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={resetUrl}>
                 {resetUrl}
               </Link>
             </Text>
-            <Text style={styles.smallText}>This link will expire in 24 hours.</Text>
+            <Text style={styles.smallText}>{t('passwordReset.expiryNote')}</Text>
             <Text style={styles.footer}>
-              If you didn&apos;t request a password reset, you can safely ignore this email. Your
-              password will remain unchanged.
+              {t('passwordReset.ignoreLine')}
               <br />
               <br />
-              If you&apos;re concerned about your account security, please visit{' '}
+              {securityBefore}
               <Link style={styles.link} href={`${appUrl}/settings/profile`}>
-                your settings
-              </Link>{' '}
-              to update your password.
+                {settingsLinkText}
+              </Link>
+              {securityAfter}
               <br />
               <br />
-              The Dayopt Team
+              {t('common.teamSignature')}
             </Text>
           </Section>
         </Container>

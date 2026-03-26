@@ -7,34 +7,37 @@
 
 import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface PaymentRecoveredEmailProps {
   userName: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function PaymentRecoveredEmail({
   userName,
+  locale = 'en',
   appUrl = 'https://dayopt.app',
 }: PaymentRecoveredEmailProps) {
+  const t = createEmailTranslator(locale);
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Payment successful — you&apos;re all set</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('paymentRecovered.heading')}</Text>
             <Text style={styles.paragraph}>
-              Good news — your latest payment for Dayopt Pro has been processed successfully. Your
-              Pro access continues without interruption.
+              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
             </Text>
-            <Text style={styles.paragraph}>No action is needed on your part.</Text>
+            <Text style={styles.paragraph}>{t('paymentRecovered.body')}</Text>
+            <Text style={styles.paragraph}>{t('paymentRecovered.noActionNote')}</Text>
             <Button style={styles.button} href={`${appUrl}/calendar`}>
-              Open Dayopt
+              {t('paymentRecovered.ctaButton')}
             </Button>
-            <Text style={styles.footer}>The Dayopt Team</Text>
+            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

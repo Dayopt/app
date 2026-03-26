@@ -7,12 +7,14 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface OverdueEmailProps {
   userName: string;
   planTitle: string;
   endTime: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
@@ -20,39 +22,46 @@ export function OverdueEmail({
   userName,
   planTitle,
   endTime,
+  locale = 'en',
   appUrl = 'https://dayopt.app',
 }: OverdueEmailProps) {
+  const t = createEmailTranslator(locale);
+  const manageLinkText = t('common.manageNotificationSettings');
+  const notificationOptOut = t('common.notificationOptOut', { manageLink: manageLinkText });
+  const [notifBefore, notifAfter] = notificationOptOut.split(manageLinkText);
+
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Plan Overdue</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('overdue.heading')}</Text>
             <Text style={styles.paragraph}>
-              The following plan has passed its scheduled end time and hasn&apos;t been completed:
+              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
             </Text>
+            <Text style={styles.paragraph}>{t('overdue.body')}</Text>
             <Section style={styles.infoBox}>
-              <Text style={styles.infoBoxLabel}>Plan</Text>
+              <Text style={styles.infoBoxLabel}>{t('overdue.labelPlan')}</Text>
               <Text style={styles.infoBoxValue}>{planTitle}</Text>
-              <Text style={{ ...styles.infoBoxLabel, marginTop: '12px' }}>Was due by</Text>
+              <Text style={{ ...styles.infoBoxLabel, marginTop: '12px' }}>
+                {t('overdue.labelWasDueBy')}
+              </Text>
               <Text style={styles.infoBoxValue}>{endTime}</Text>
             </Section>
-            <Text style={styles.paragraph}>
-              You can reschedule this plan or mark it as complete from your calendar.
-            </Text>
+            <Text style={styles.paragraph}>{t('overdue.rescheduleHint')}</Text>
             <Button style={styles.button} href={`${appUrl}/calendar`}>
-              View Calendar
+              {t('overdue.ctaButton')}
             </Button>
             <Text style={styles.footer}>
-              You&apos;re receiving this because you enabled email notifications.{' '}
+              {notifBefore}
               <Link style={styles.link} href={`${appUrl}/settings/notifications`}>
-                Manage notification settings
+                {manageLinkText}
               </Link>
+              {notifAfter}
               <br />
               <br />
-              The Dayopt Team
+              {t('common.teamSignature')}
             </Text>
           </Section>
         </Container>

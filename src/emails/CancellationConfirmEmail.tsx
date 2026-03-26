@@ -7,51 +7,51 @@
 
 import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface CancellationConfirmEmailProps {
   userName: string;
   /** Pro アクセス継続期限（billing period end） */
   periodEndDate: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function CancellationConfirmEmail({
   userName,
   periodEndDate,
+  locale = 'en',
   appUrl = 'https://dayopt.app',
 }: CancellationConfirmEmailProps) {
+  const t = createEmailTranslator(locale);
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Your Pro subscription has been canceled</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('cancellationConfirm.heading')}</Text>
             <Text style={styles.paragraph}>
-              Your Pro subscription has been canceled. You&apos;ll continue to have Pro access until{' '}
-              {periodEndDate}.
+              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
             </Text>
+            <Text style={styles.paragraph}>{t('cancellationConfirm.body', { periodEndDate })}</Text>
             <Section style={styles.infoBox}>
-              <Text style={styles.infoBoxLabel}>Pro access until</Text>
+              <Text style={styles.infoBoxLabel}>
+                {t('cancellationConfirm.labelProAccessUntil')}
+              </Text>
               <Text style={styles.infoBoxValue}>{periodEndDate}</Text>
             </Section>
-            <Text style={styles.paragraph}>
-              After that, your account will move to the Free plan. Your data will be preserved —
-              nothing is deleted.
-            </Text>
-            <Text style={styles.paragraph}>
-              You can resubscribe anytime from Settings → Billing.
-            </Text>
+            <Text style={styles.paragraph}>{t('cancellationConfirm.afterPeriodNote')}</Text>
+            <Text style={styles.paragraph}>{t('cancellationConfirm.resubscribeHint')}</Text>
             <Button style={styles.button} href={`${appUrl}/settings/billing`}>
-              Manage Account
+              {t('cancellationConfirm.ctaButton')}
             </Button>
             <Text style={styles.footer}>
-              Thank you for being a Pro member.
+              {t('cancellationConfirm.thankYou')}
               <br />
               <br />
-              The Dayopt Team
+              {t('common.teamSignature')}
             </Text>
           </Section>
         </Container>

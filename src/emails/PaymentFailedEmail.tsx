@@ -7,21 +7,28 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface PaymentFailedEmailProps {
   userName: string;
   /** Stripe Customer Portal URL（動的生成） */
   portalUrl?: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function PaymentFailedEmail({
   userName,
   portalUrl,
+  locale = 'en',
   appUrl = 'https://dayopt.app',
 }: PaymentFailedEmailProps) {
+  const t = createEmailTranslator(locale);
   const ctaUrl = portalUrl || `${appUrl}/settings/billing`;
+  const supportEmail = t('common.supportEmail');
+  const helpLine = t('paymentFailed.helpLine', { supportEmail });
+  const [helpBefore, helpAfter] = helpLine.split(supportEmail);
 
   return (
     <Html>
@@ -29,25 +36,23 @@ export function PaymentFailedEmail({
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Action needed: payment failed</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('paymentFailed.heading')}</Text>
             <Text style={styles.paragraph}>
-              We weren&apos;t able to process your latest payment for Dayopt Pro.
+              {userName ? t('common.greeting', { userName }) : t('common.greetingFallback')}
             </Text>
-            <Text style={styles.paragraph}>
-              Your Pro features are still active for now, but please update your payment method to
-              avoid any interruption.
-            </Text>
+            <Text style={styles.paragraph}>{t('paymentFailed.body')}</Text>
+            <Text style={styles.paragraph}>{t('paymentFailed.urgencyNote')}</Text>
             <Button style={styles.button} href={ctaUrl}>
-              Update Payment Method
+              {t('paymentFailed.ctaButton')}
             </Button>
             <Text style={styles.paragraph}>
-              If you believe this is an error, or if you need help, contact us at{' '}
-              <Link style={styles.link} href="mailto:support@dayopt.app">
-                support@dayopt.app
+              {helpBefore}
+              <Link style={styles.link} href={`mailto:${supportEmail}`}>
+                {supportEmail}
               </Link>
+              {helpAfter}
             </Text>
-            <Text style={styles.footer}>The Dayopt Team</Text>
+            <Text style={styles.footer}>{t('common.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>
