@@ -153,7 +153,7 @@ export function ConfirmDialog({
 
   const dialog = (
     <div
-      className="animate-in fade-in bg-overlay z-overlay-confirm fixed inset-0 flex items-center justify-center backdrop-blur-sm duration-150"
+      className="animate-in fade-in bg-overlay z-overlay-confirm fixed inset-0 flex items-center justify-center backdrop-blur-md duration-150"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
