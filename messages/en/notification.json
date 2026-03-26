@@ -60,6 +60,25 @@
       "defaultReminder": {
         "label": "Default start notification",
         "description": "Automatically enable start notification for new plans"
+      },
+      "typeSection": {
+        "title": "Notification types",
+        "dailyInsights": {
+          "label": "Daily insights",
+          "description": "Daily analysis alerts for plan rate, blank time, etc."
+        },
+        "energyInsights": {
+          "label": "Energy insights",
+          "description": "Suggestions for utilizing your peak hours"
+        },
+        "burnoutWarnings": {
+          "label": "Burnout warnings",
+          "description": "Alerts when overwork patterns are detected"
+        },
+        "weeklyReports": {
+          "label": "Weekly reports",
+          "description": "Weekly activity summary and reflection"
+        }
       }
     }
   }

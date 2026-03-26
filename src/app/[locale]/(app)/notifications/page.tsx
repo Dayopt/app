@@ -49,15 +49,13 @@ export default function NotificationsPage() {
 
       {/* タブ + コンテンツ */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
-        <div className="px-4 pt-2">
-          <TabsList>
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab} value={tab}>
-                {t(`notification.tabs.${tab}`)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        <TabsList className="h-auto gap-4 rounded-none border-transparent bg-transparent p-0 px-4 pt-2">
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab} value={tab}>
+              {t(`notification.tabs.${tab}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
         <ScrollArea className="flex-1">
           {TABS.map((tab) => (

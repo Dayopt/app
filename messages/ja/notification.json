@@ -60,6 +60,25 @@
       "defaultReminder": {
         "label": "開始時通知のデフォルト",
         "description": "新規プラン作成時に開始時通知を自動でONにする"
+      },
+      "typeSection": {
+        "title": "通知タイプ",
+        "dailyInsights": {
+          "label": "デイリーインサイト",
+          "description": "計画率や空白時間などの日次分析通知"
+        },
+        "energyInsights": {
+          "label": "エネルギーインサイト",
+          "description": "ピーク時間の活用に関する提案"
+        },
+        "burnoutWarnings": {
+          "label": "バーンアウト警告",
+          "description": "過負荷の兆候を検出して通知"
+        },
+        "weeklyReports": {
+          "label": "週次レポート",
+          "description": "1週間の振り返りサマリー"
+        }
       }
     }
   }

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { Bell, Settings, X } from 'lucide-react';
+import { Bell, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -83,45 +83,44 @@ export function ActivityPopover({ size = 'default' }: ActivityPopoverProps) {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[28rem] p-0" side="right" align="end" sideOffset={8}>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
-          {/* ヘッダー: タブ + アクション */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-2">
-            <TabsList>
+      <PopoverContent
+        className="flex w-80 flex-col p-0"
+        side="top"
+        align="start"
+        sideOffset={8}
+        alignOffset={-8}
+      >
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as ActivityTab)}
+          className="flex min-h-[40vh] flex-col"
+        >
+          {/* ヘッダー: タブ + 設定 */}
+          <div className="flex shrink-0 items-center justify-between px-4 pt-4 pb-2">
+            <TabsList className="h-auto gap-4 rounded-none border-transparent bg-transparent p-0">
               {TABS.map((tab) => (
                 <TabsTrigger key={tab} value={tab}>
                   {t(`notification.tabs.${tab}`)}
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="flex items-center gap-1">
-              <HoverTooltip content={t('notification.settings.title')} side="top">
-                <Button
-                  variant="ghost"
-                  icon
-                  size="sm"
-                  onClick={handleOpenSettings}
-                  aria-label={t('notification.settings.title')}
-                >
-                  <Settings className="size-4" />
-                </Button>
-              </HoverTooltip>
+            <HoverTooltip content={t('notification.settings.title')} side="top">
               <Button
                 variant="ghost"
                 icon
                 size="sm"
-                onClick={() => setIsOpen(false)}
-                aria-label={t('common.actions.close')}
+                onClick={handleOpenSettings}
+                aria-label={t('notification.settings.title')}
               >
-                <X className="size-4" />
+                <Settings className="size-4" />
               </Button>
-            </div>
+            </HoverTooltip>
           </div>
 
-          {/* コンテンツ */}
+          {/* コンテンツ（スクロール可能） */}
           {TABS.map((tab) => (
-            <TabsContent key={tab} value={tab} className="px-4 pb-4">
-              <ActivityContent tab={tab} compact />
+            <TabsContent key={tab} value={tab} className="flex-1 overflow-y-auto px-4 pb-4">
+              <ActivityContent tab={tab} />
             </TabsContent>
           ))}
         </Tabs>
