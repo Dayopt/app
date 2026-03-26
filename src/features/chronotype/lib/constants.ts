@@ -91,15 +91,6 @@ export const CHRONOTYPE_PRESETS: Record<ChronotypeProfile['type'], ChronotypePro
   },
 };
 
-/** 生産性レベル別の背景色クラス（タイムライン表示用） */
-export const CHRONOTYPE_LEVEL_CLASSES: Record<ProductivityLevel, string> = {
-  warmup: 'bg-chronotype-warmup',
-  peak: 'bg-chronotype-peak',
-  dip: 'bg-chronotype-dip',
-  recovery: 'bg-chronotype-recovery',
-  winddown: 'bg-chronotype-winddown',
-};
-
 /** 生産性レベル別の半透明背景クラス（カレンダー背景表示用） */
 export const CHRONOTYPE_LEVEL_TINT_CLASSES: Record<ProductivityLevel, string> = {
   warmup: 'bg-chronotype-tint-warmup',
@@ -108,17 +99,3 @@ export const CHRONOTYPE_LEVEL_TINT_CLASSES: Record<ProductivityLevel, string> = 
   recovery: 'bg-chronotype-tint-recovery',
   winddown: 'bg-chronotype-tint-winddown',
 };
-
-/** 生産性レベル別のCSS変数カラー値（グラフ描画等に使用） */
-export const CHRONOTYPE_LEVEL_COLORS: Record<ProductivityLevel, string> = {
-  warmup: 'var(--chronotype-warmup)',
-  peak: 'var(--chronotype-peak)',
-  dip: 'var(--chronotype-dip)',
-  recovery: 'var(--chronotype-recovery)',
-  winddown: 'var(--chronotype-winddown)',
-};
-
-/** 生産性レベルに対応するCSS変数カラー値を取得する */
-export function getChronotypeColor(level: ProductivityLevel): string {
-  return CHRONOTYPE_LEVEL_COLORS[level];
-}

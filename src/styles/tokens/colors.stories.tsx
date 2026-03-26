@@ -101,17 +101,6 @@ export const AllColors: Story = {
         <ColorSwatch tailwindClass="bg-destructive" description="削除、エラー" />
       </ColorGroup>
 
-      <ColorGroup title="Chronotype（エネルギーフェーズ）">
-        <ColorSwatch tailwindClass="bg-chronotype-warmup" description="ウォームアップ（起床後）" />
-        <ColorSwatch tailwindClass="bg-chronotype-peak" description="ピーク（最集中）" />
-        <ColorSwatch tailwindClass="bg-chronotype-dip" description="ディップ（エネルギー低下）" />
-        <ColorSwatch tailwindClass="bg-chronotype-recovery" description="リカバリー（回復）" />
-        <ColorSwatch
-          tailwindClass="bg-chronotype-winddown"
-          description="ウインドダウン（就寝準備）"
-        />
-      </ColorGroup>
-
       <ColorGroup title="Chronotype Tints（タイムライン背景用）">
         <ColorSwatch tailwindClass="bg-chronotype-tint-warmup" description="ウォームアップ tint" />
         <ColorSwatch
@@ -732,61 +721,35 @@ export const Tags: Story = {
 };
 
 export const Chronotype: Story = {
-  render: () => {
-    const CHROMA_STEPS = [
-      { c: 0.01, label: 'tint', usage: 'タイムライン背景' },
-      { c: 0.04, label: 'hover', usage: 'ホバー状態' },
-      { c: 0.08, label: 'base', usage: 'ベース色' },
-      { c: 0.12, label: 'accent', usage: 'アクセント' },
-      { c: 0.18, label: 'strong', usage: 'テキスト on bg' },
-    ] as const;
+  render: () => (
+    <div>
+      <h1 className="mb-2 text-2xl font-bold">Chronotype Tints</h1>
+      <p className="text-muted-foreground mb-8">
+        カレンダーグリッド背景にうっすら色づく程度のtint色。
+        <br />
+        タイムラインバー・現在時刻ラインは bg-primary を使用。
+      </p>
 
-    const PHASES = [
-      { name: 'Warmup', key: 'warmup', hue: 165, l: 0.7, desc: 'ダスティエメラルド' },
-      { name: 'Peak', key: 'peak', hue: 110, l: 0.68, desc: 'セージライム' },
-      { name: 'Dip', key: 'dip', hue: 260, l: 0.68, desc: 'ダスティペリウィンクル' },
-      { name: 'Recovery', key: 'recovery', hue: 213, l: 0.7, desc: 'ミューテッドアジュール' },
-      { name: 'Wind-down', key: 'winddown', hue: 330, l: 0.7, desc: 'ダスティローズ' },
-    ] as const;
-
-    return (
-      <div>
-        <h1 className="mb-2 text-2xl font-bold">Chronotype カラー</h1>
-        <p className="text-muted-foreground mb-8">
-          OKLCH の C（彩度）軸だけを変えることで、同一色相の濃淡バリエーションを作成。
-          <br />H と L を固定し、C のスライダーを動かすだけで tint から strong
-          まで一貫性のあるスケールが得られる。
-        </p>
-
-        <div className="space-y-8">
-          {PHASES.map((phase) => (
-            <div key={phase.key}>
-              <h2 className="mb-3 text-lg font-bold">
-                {phase.name}{' '}
-                <span className="text-muted-foreground text-sm font-normal">
-                  H={phase.hue} L={phase.l}（{phase.desc}）
-                </span>
-              </h2>
-              <div className="flex gap-4">
-                {CHROMA_STEPS.map((step) => (
-                  <div key={step.c} className="text-center">
-                    <div
-                      className="border-border mb-2 size-20 rounded-lg border"
-                      style={{
-                        backgroundColor: `oklch(${phase.l} ${step.c} ${phase.hue})`,
-                      }}
-                    />
-                    <p className="text-sm font-medium">C {step.c}</p>
-                    <p className="text-muted-foreground text-xs">{step.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        {[
+          { token: 'chronotype-tint-warmup', label: 'Warmup', desc: '起床後' },
+          { token: 'chronotype-tint-peak', label: 'Peak', desc: '最集中' },
+          { token: 'chronotype-tint-dip', label: 'Dip', desc: 'エネルギー低下' },
+          { token: 'chronotype-tint-recovery', label: 'Recovery', desc: '回復' },
+          { token: 'chronotype-tint-winddown', label: 'Wind-down', desc: '就寝準備' },
+        ].map(({ token, label, desc }) => (
+          <div key={token} className="text-center">
+            <div
+              className="border-border mb-2 h-20 rounded-lg border"
+              style={{ backgroundColor: `var(--${token})` }}
+            />
+            <p className="text-sm font-bold">{label}</p>
+            <p className="text-muted-foreground text-xs">{desc}</p>
+          </div>
+        ))}
       </div>
-    );
-  },
+    </div>
+  ),
 };
 
 export const DosDonts: Story = {

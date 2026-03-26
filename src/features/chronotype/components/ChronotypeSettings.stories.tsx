@@ -11,14 +11,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 
 import {
   CHRONOTYPE_EMOJI,
-  CHRONOTYPE_LEVEL_CLASSES,
   CHRONOTYPE_LEVEL_ORDER,
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
@@ -67,7 +65,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
         {segments.map((segment, index) => (
           <div
             key={index}
-            className={cn(CHRONOTYPE_LEVEL_CLASSES[segment.level], 'flex-1 transition-colors')}
+            className="bg-primary flex-1 transition-colors"
             title={`${segment.hour}:00 - ${segment.label}`}
           />
         ))}
@@ -75,7 +73,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
       <div className="flex flex-wrap gap-4 text-xs">
         {CHRONOTYPE_LEVEL_ORDER.map((level) => (
           <div key={level} className="flex items-center gap-1">
-            <div className={cn(CHRONOTYPE_LEVEL_CLASSES[level], 'h-3 w-3 rounded')} />
+            <div className="bg-primary h-3 w-3 rounded" />
             <span className="text-muted-foreground">{LEVEL_LABELS[level]}</span>
           </div>
         ))}

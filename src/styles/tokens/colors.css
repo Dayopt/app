@@ -64,48 +64,15 @@
   --info-foreground: var(--white);
 
   /* ============================================
-   * Chronotype Colors（エネルギーフェーズ）
-   * タグの隙間に色相を配置（最低20°分離）。
-   * 色相スイープ: peak(110) warmup(165) recovery(213) dip(260) winddown(330)
-   *
-   * C軸スケール設計: H・Lを固定し、Cだけで5段階の濃淡を生成。
-   * tint(0.01) → hover(0.04) → base(0.08) → accent(0.12) → strong(0.18)
+   * Chronotype Tints（タイムライン背景用、solid）
+   * カレンダーグリッド背景にうっすら色づく程度。
+   * ※ base色は廃止。タイムラインバー等は bg-primary を使用。
    * ============================================ */
-
-  /* Warmup — H=165 L=0.7（ダスティエメラルド） */
   --chronotype-tint-warmup: oklch(0.7 0.01 165);
-  --chronotype-warmup-hover: oklch(0.7 0.04 165);
-  --chronotype-warmup: oklch(0.7 0.08 165);
-  --chronotype-warmup-accent: oklch(0.7 0.12 165);
-  --chronotype-warmup-strong: oklch(0.7 0.18 165);
-
-  /* Peak — H=110 L=0.68（セージライム） */
-  --chronotype-tint-peak: oklch(0.68 0.01 110);
-  --chronotype-peak-hover: oklch(0.68 0.04 110);
-  --chronotype-peak: oklch(0.68 0.08 110);
-  --chronotype-peak-accent: oklch(0.68 0.12 110);
-  --chronotype-peak-strong: oklch(0.68 0.18 110);
-
-  /* Dip — H=260 L=0.68（ダスティペリウィンクル） */
-  --chronotype-tint-dip: oklch(0.68 0.01 260);
-  --chronotype-dip-hover: oklch(0.68 0.04 260);
-  --chronotype-dip: oklch(0.68 0.08 260);
-  --chronotype-dip-accent: oklch(0.68 0.12 260);
-  --chronotype-dip-strong: oklch(0.68 0.18 260);
-
-  /* Recovery — H=213 L=0.7（ミューテッドアジュール） */
-  --chronotype-tint-recovery: oklch(0.7 0.01 213);
-  --chronotype-recovery-hover: oklch(0.7 0.04 213);
-  --chronotype-recovery: oklch(0.7 0.08 213);
-  --chronotype-recovery-accent: oklch(0.7 0.12 213);
-  --chronotype-recovery-strong: oklch(0.7 0.18 213);
-
-  /* Wind-down — H=330 L=0.7（ダスティローズ） */
-  --chronotype-tint-winddown: oklch(0.7 0.01 330);
-  --chronotype-winddown-hover: oklch(0.7 0.04 330);
-  --chronotype-winddown: oklch(0.7 0.08 330);
-  --chronotype-winddown-accent: oklch(0.7 0.12 330);
-  --chronotype-winddown-strong: oklch(0.7 0.18 330);
+  --chronotype-tint-peak: oklch(0.7 0.01 165);
+  --chronotype-tint-dip: oklch(0.7 0.01 165);
+  --chronotype-tint-recovery: oklch(0.7 0.01 165);
+  --chronotype-tint-winddown: oklch(0.7 0.01 165);
 
   /* Borders & Inputs */
   --border: oklch(0.75 0.01 var(--hue-neutral));
@@ -212,43 +179,12 @@
   --info: oklch(0.72 0.12 var(--hue-info)); /* bg上6.67:1 */
   --info-foreground: var(--neutral-15);
 
-  /* Chronotype Colors（エネルギーフェーズ - ダークモード）
-   * C軸スケール設計（ライトモードと同構造） */
-
-  /* Warmup — H=165 L=0.52 */
+  /* Chronotype Tints（ダークモード） */
   --chronotype-tint-warmup: oklch(0.52 0.01 165);
-  --chronotype-warmup-hover: oklch(0.52 0.04 165);
-  --chronotype-warmup: oklch(0.52 0.08 165);
-  --chronotype-warmup-accent: oklch(0.52 0.12 165);
-  --chronotype-warmup-strong: oklch(0.52 0.18 165);
-
-  /* Peak — H=110 L=0.52 */
-  --chronotype-tint-peak: oklch(0.52 0.01 110);
-  --chronotype-peak-hover: oklch(0.52 0.04 110);
-  --chronotype-peak: oklch(0.52 0.08 110);
-  --chronotype-peak-accent: oklch(0.52 0.12 110);
-  --chronotype-peak-strong: oklch(0.52 0.18 110);
-
-  /* Dip — H=260 L=0.52 */
-  --chronotype-tint-dip: oklch(0.52 0.01 260);
-  --chronotype-dip-hover: oklch(0.52 0.04 260);
-  --chronotype-dip: oklch(0.52 0.08 260);
-  --chronotype-dip-accent: oklch(0.52 0.12 260);
-  --chronotype-dip-strong: oklch(0.52 0.18 260);
-
-  /* Recovery — H=213 L=0.52 */
-  --chronotype-tint-recovery: oklch(0.52 0.01 213);
-  --chronotype-recovery-hover: oklch(0.52 0.04 213);
-  --chronotype-recovery: oklch(0.52 0.08 213);
-  --chronotype-recovery-accent: oklch(0.52 0.12 213);
-  --chronotype-recovery-strong: oklch(0.52 0.18 213);
-
-  /* Wind-down — H=330 L=0.52 */
-  --chronotype-tint-winddown: oklch(0.52 0.01 330);
-  --chronotype-winddown-hover: oklch(0.52 0.04 330);
-  --chronotype-winddown: oklch(0.52 0.08 330);
-  --chronotype-winddown-accent: oklch(0.52 0.12 330);
-  --chronotype-winddown-strong: oklch(0.52 0.18 330);
+  --chronotype-tint-peak: oklch(0.52 0.01 165);
+  --chronotype-tint-dip: oklch(0.52 0.01 165);
+  --chronotype-tint-recovery: oklch(0.52 0.01 165);
+  --chronotype-tint-winddown: oklch(0.52 0.01 165);
 
   /* Tag Colors — Base（ダークモード: L=0.78, C=0.15） */
   --tag-red: oklch(0.78 0.15 25);

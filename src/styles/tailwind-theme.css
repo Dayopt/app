@@ -93,22 +93,8 @@
   --color-tag-gray-tint: var(--tag-gray-tint);
 
   /* ============================================
-   * Chronotype Colors（エネルギーフェーズ）
-   * 使用例: bg-chronotype-peak, bg-chronotype-warmup
-   * ============================================ */
-  --color-chronotype-warmup: var(--chronotype-warmup);
-  --color-chronotype-peak: var(--chronotype-peak);
-  --color-chronotype-dip: var(--chronotype-dip);
-  --color-chronotype-dip-hover: var(--chronotype-dip-hover);
-  --color-chronotype-dip-accent: var(--chronotype-dip-accent);
-  --color-chronotype-dip-strong: var(--chronotype-dip-strong);
-  --color-chronotype-recovery: var(--chronotype-recovery);
-  --color-chronotype-winddown: var(--chronotype-winddown);
-
-  /* ============================================
-   * Chronotype Tints（タイムライン背景用、solid）
-   * tag-tint同様にsolid色。surface体系の隙間(background↔surface-inset)に位置。
-   * 使用例: bg-chronotype-tint-peak
+   * Chronotype Tints（タイムライン背景用）
+   * base色は廃止。タイムラインバー等は bg-primary を使用。
    * ============================================ */
   --color-chronotype-tint-warmup: var(--chronotype-tint-warmup);
   --color-chronotype-tint-peak: var(--chronotype-tint-peak);
