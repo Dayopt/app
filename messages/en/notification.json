@@ -48,6 +48,12 @@
         "label": "Email notifications",
         "description": "Receive reminder notifications via email"
       },
+      "emailLanguage": {
+        "label": "Email language",
+        "description": "Language used for transactional emails (reminders, billing, etc.)",
+        "en": "English",
+        "ja": "Japanese"
+      },
       "pushNotifications": {
         "label": "Push notifications",
         "description": "Receive notifications even when the app is closed",

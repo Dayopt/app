@@ -80,6 +80,9 @@ const userSettingsSchema = z.object({
 
   // 価値観キーワードランキング（トップ5）
   rankedValues: z.array(z.string().max(50)).max(5).optional(),
+
+  // メール送信言語
+  preferredLocale: z.enum(['en', 'ja']).optional(),
 });
 
 /**
@@ -189,6 +192,8 @@ export const userSettingsRouter = createTRPCRouter({
               | 'custom',
             aiCustomStylePrompt: data.ai_custom_style_prompt ?? '',
           },
+          preferredLocale:
+            ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
       } catch (error) {
         return handleSettingsError('get', error);
@@ -258,6 +263,8 @@ export const userSettingsRouter = createTRPCRouter({
           updateData.ai_custom_style_prompt = input.aiCustomStylePrompt;
         if (input.rankedValues !== undefined)
           updateData.personalization_ranked_values = input.rankedValues;
+        if (input.preferredLocale !== undefined)
+          (updateData as Record<string, unknown>).preferred_locale = input.preferredLocale;
 
         const { data, error } = await ctx.supabase
           .from('user_settings')

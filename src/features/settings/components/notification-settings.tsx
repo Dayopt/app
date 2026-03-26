@@ -6,6 +6,13 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -24,6 +31,9 @@ export function NotificationSettings() {
 
   // 通知設定を取得
   const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery();
+
+  // ユーザー設定を取得（メール言語用）
+  const { data: userSettings } = api.userSettings.get.useQuery();
 
   // ブラウザ通知許可状態
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | null>(() => {
@@ -76,6 +86,16 @@ export function NotificationSettings() {
       onSuccess: onSettingsSuccess,
       onError: onSettingsError,
     });
+
+  // メール言語設定を更新
+  const updateUserSettings = api.userSettings.update.useMutation({
+    onSuccess: () => {
+      utils.userSettings.get.invalidate();
+    },
+    onError: (error) => {
+      toast.error(t('notification.settings.saveError', { message: error.message }));
+    },
+  });
 
   const handleBrowserToggle = useCallback(
     async (checked: boolean) => {
@@ -138,6 +158,26 @@ export function NotificationSettings() {
             onCheckedChange={(checked) => updateEmailNotifications.mutate({ enabled: checked })}
             disabled={updateEmailNotifications.isPending}
           />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.emailLanguage.label')}
+          description={t('notification.settings.emailLanguage.description')}
+        >
+          <Select
+            value={userSettings?.preferredLocale ?? 'en'}
+            onValueChange={(value: 'en' | 'ja') => {
+              updateUserSettings.mutate({ preferredLocale: value });
+            }}
+            disabled={updateUserSettings.isPending}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">{t('notification.settings.emailLanguage.en')}</SelectItem>
+              <SelectItem value="ja">{t('notification.settings.emailLanguage.ja')}</SelectItem>
+            </SelectContent>
+          </Select>
         </LabeledRow>
         <LabeledRow
           label={

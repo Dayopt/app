@@ -9,7 +9,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { TRPCClientError } from '@trpc/client';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +29,7 @@ import type { PresetChronotypeType } from '@/types/chronotype';
 export default function OnboardingPage() {
   const router = useRouter();
   const t = useTranslations();
+  const locale = useLocale();
 
   // Fetch profile for pre-filling name
   const {
@@ -54,10 +55,11 @@ export default function OnboardingPage() {
   const handleComplete = useCallback(
     async (data: { fullName: string; chronotypeType: PresetChronotypeType | null }) => {
       try {
-        // 1. Save onboarding data
+        // 1. Save onboarding data (including current locale as preferred_locale)
         await completeMutation.mutateAsync({
           fullName: data.fullName,
           chronotypeType: data.chronotypeType ?? undefined,
+          locale: locale === 'ja' ? 'ja' : 'en',
         });
 
         // 2. Navigate to calendar (middleware will set httpOnly cookie on next request)
@@ -82,7 +84,7 @@ export default function OnboardingPage() {
         toast.error(t('onboarding.error.completeFailed'));
       }
     },
-    [completeMutation, router, t],
+    [completeMutation, router, t, locale],
   );
 
   // Quiz component factory — receives wizard callbacks so quiz can update wizard state

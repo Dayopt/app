@@ -45,6 +45,7 @@ export interface EmailData {
 
 export interface WebhookPayload {
   user: {
+    id: string;
     email: string;
     user_metadata: {
       full_name?: string;

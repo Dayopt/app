@@ -16,8 +16,11 @@ import { TRPCError } from '@trpc/server';
 import { Resend } from 'resend';
 import { z } from 'zod';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
 import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
+import { createEmailTranslator, type EmailLocale } from '@/emails/i18n';
 import { OverdueEmail } from '@/emails/OverdueEmail';
 import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
@@ -44,6 +47,16 @@ function getResend() {
 // 送信元メールアドレス
 const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const APP_URL = getAppUrl();
+
+/**
+ * ユーザーの preferred_locale を user_settings から取得する
+ * 未設定の場合は 'en' にフォールバック
+ */
+async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<EmailLocale> {
+  const { data } = await supabase.from('user_settings').select('*').eq('user_id', userId).single();
+  const locale = (data as Record<string, unknown> | null)?.preferred_locale;
+  return (locale as EmailLocale) ?? 'en';
+}
 
 /**
  * 送信先メールアドレスがログインユーザー自身のものか検証する
@@ -165,10 +178,13 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending welcome email', { email: input.email, userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Welcome to Dayopt!',
-          react: WelcomeEmail({ userName: input.userName, appUrl: APP_URL }),
+          subject: t('welcome.subject'),
+          react: WelcomeEmail({ userName: input.userName, locale, appUrl: APP_URL }),
           context: 'Welcome email',
         });
       } catch (error) {
@@ -193,12 +209,16 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending trial start email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Your 7-day Pro trial has started',
+          subject: t('trialStart.subject'),
           react: TrialStartEmail({
             userName: input.userName,
             trialEndDate: input.trialEndDate,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Trial start email',
@@ -225,12 +245,16 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending trial expiring email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Your Pro trial ends in 3 days',
+          subject: t('trialExpiring.subject'),
           react: TrialExpiringEmail({
             userName: input.userName,
             trialEndDate: input.trialEndDate,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Trial expiring email',
@@ -256,11 +280,15 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending trial expired email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Your Pro trial has ended',
+          subject: t('trialExpired.subject'),
           react: TrialExpiredEmail({
             userName: input.userName,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Trial expired email',
@@ -286,11 +314,15 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending Pro start email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Welcome to Pro',
+          subject: t('proStart.subject'),
           react: ProStartEmail({
             userName: input.userName,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Pro start email',
@@ -317,12 +349,16 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending payment failed email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Action needed: payment failed',
+          subject: t('paymentFailed.subject'),
           react: PaymentFailedEmail({
             userName: input.userName,
             ...(input.portalUrl ? { portalUrl: input.portalUrl } : {}),
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Payment failed email',
@@ -348,11 +384,15 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending payment recovered email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: "Payment successful — you're all set",
+          subject: t('paymentRecovered.subject'),
           react: PaymentRecoveredEmail({
             userName: input.userName,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Payment recovered email',
@@ -378,11 +418,15 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending password changed email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Your password has been changed',
+          subject: t('passwordChanged.subject'),
           react: PasswordChangedEmail({
             userName: input.userName,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Password changed email',
@@ -409,12 +453,16 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending cancellation confirm email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: 'Your Pro subscription has been canceled',
+          subject: t('cancellationConfirm.subject'),
           react: CancellationConfirmEmail({
             userName: input.userName,
             periodEndDate: input.periodEndDate,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Cancellation confirm email',
@@ -445,13 +493,17 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending reminder email', { planTitle: input.planTitle, userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: `Reminder: ${input.planTitle}`,
+          subject: t('reminder.subject', { planTitle: input.planTitle }),
           react: ReminderEmail({
             userName: input.userName,
             planTitle: input.planTitle,
             startTime: input.startTime,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Reminder email',
@@ -479,13 +531,17 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending overdue email', { planTitle: input.planTitle, userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
         return sendEmail({
           to: input.email,
-          subject: `Overdue: ${input.planTitle}`,
+          subject: t('overdue.subject', { planTitle: input.planTitle }),
           react: OverdueEmail({
             userName: input.userName,
             planTitle: input.planTitle,
             endTime: input.endTime,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Overdue email',
@@ -511,16 +567,22 @@ export const emailRouter = createTRPCRouter({
         await verifyEmailOwnership(ctx, input.email);
         logger.info('Sending account deletion email', { userId: ctx.userId });
 
+        const locale = await getUserLocale(ctx.supabase, ctx.userId);
+        const t = createEmailTranslator(locale);
+
+        const deletionDate = new Date().toLocaleDateString(locale === 'ja' ? 'ja-JP' : 'en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+
         return sendEmail({
           to: input.email,
-          subject: 'Your Dayopt account has been deleted',
+          subject: t('accountDeletion.subject'),
           react: AccountDeletionEmail({
             userName: input.userName,
-            deletionDate: new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            }),
+            deletionDate,
+            locale,
             appUrl: APP_URL,
           }),
           context: 'Account deletion email',

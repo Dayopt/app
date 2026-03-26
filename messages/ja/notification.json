@@ -48,6 +48,12 @@
         "label": "メール通知",
         "description": "リマインダー通知をメールで受信"
       },
+      "emailLanguage": {
+        "label": "メールの言語",
+        "description": "トランザクションメール（リマインダー・請求など）に使用する言語",
+        "en": "英語",
+        "ja": "日本語"
+      },
       "pushNotifications": {
         "label": "プッシュ通知",
         "description": "アプリを閉じていても通知を受け取る",

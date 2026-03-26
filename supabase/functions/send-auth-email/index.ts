@@ -8,6 +8,7 @@
  */
 
 import { renderAsync } from '@react-email/components';
+import { createClient } from '@supabase/supabase-js';
 import React from 'react';
 import { Resend } from 'resend';
 import { Webhook } from 'standardwebhooks';
@@ -22,6 +23,47 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string);
 const hookSecret = (Deno.env.get('SEND_EMAIL_HOOK_SECRET') as string).replace('v1,whsec_', '');
 const FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'auth@send.dayopt.app';
 const APP_URL = Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://dayopt.app';
+
+type Locale = 'en' | 'ja';
+
+/**
+ * user_settings から preferred_locale を取得する
+ * 取得できない場合は 'en' にフォールバック
+ */
+async function getUserLocale(userId: string): Promise<Locale> {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !serviceRoleKey) return 'en';
+
+  try {
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const { data } = await supabase
+      .from('user_settings')
+      .select('preferred_locale')
+      .eq('user_id', userId)
+      .single();
+
+    const locale = (data as Record<string, unknown> | null)?.preferred_locale;
+    if (locale === 'ja') return 'ja';
+    return 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+const i18nSubjects: Record<Locale, Record<string, string>> = {
+  en: {
+    signup: 'Confirm your Dayopt email',
+    recovery: 'Reset your Dayopt password',
+    magic_link: 'Log in to Dayopt',
+  },
+  ja: {
+    signup: 'Dayopt メールアドレスの確認',
+    recovery: 'Dayopt パスワードのリセット',
+    magic_link: 'Dayopt にログイン',
+  },
+};
 
 /**
  * Auth メールタイプに応じた確認URLを構築
@@ -47,33 +89,38 @@ Deno.serve(async (req) => {
 
     const userName = user.user_metadata.full_name || 'there';
     const confirmUrl = buildConfirmUrl(email_data);
+    const locale = await getUserLocale(user.id);
+    const subjects = i18nSubjects[locale];
 
     let subject: string;
     let element: React.ReactElement;
 
     switch (email_data.email_action_type) {
       case 'signup': {
-        subject = 'Confirm your Dayopt email';
+        subject = subjects.signup;
         element = React.createElement(ConfirmEmail, {
           userName,
           confirmUrl,
+          locale,
           appUrl: APP_URL,
         });
         break;
       }
       case 'recovery': {
-        subject = 'Reset your Dayopt password';
+        subject = subjects.recovery;
         element = React.createElement(PasswordResetEmail, {
           userName,
           resetUrl: confirmUrl,
+          locale,
           appUrl: APP_URL,
         });
         break;
       }
       case 'magic_link': {
-        subject = 'Log in to Dayopt';
+        subject = subjects.magic_link;
         element = React.createElement(MagicLinkEmail, {
           loginUrl: confirmUrl,
+          locale,
           appUrl: APP_URL,
         });
         break;

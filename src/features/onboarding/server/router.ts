@@ -73,6 +73,7 @@ export const onboardingRouter = createTRPCRouter({
       z.object({
         fullName: z.string().min(1).max(100),
         chronotypeType: chronotypeTypeSchema.optional(),
+        locale: z.enum(['en', 'ja']).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -93,18 +94,20 @@ export const onboardingRouter = createTRPCRouter({
         });
       }
 
-      // クロノタイプ設定（指定がある場合）
-      if (input.chronotypeType) {
+      // クロノタイプ設定 or ロケール設定（指定がある場合）
+      if (input.chronotypeType || input.locale) {
+        const settingsUpsert: Record<string, unknown> = { user_id: ctx.userId };
+        if (input.chronotypeType) {
+          settingsUpsert.chronotype_type = input.chronotypeType;
+          settingsUpsert.chronotype_enabled = true;
+        }
+        if (input.locale) {
+          settingsUpsert.preferred_locale = input.locale;
+        }
+
         const { error: settingsError } = await ctx.supabase
           .from('user_settings')
-          .upsert(
-            {
-              user_id: ctx.userId,
-              chronotype_type: input.chronotypeType,
-              chronotype_enabled: true,
-            },
-            { onConflict: 'user_id' },
-          )
+          .upsert(settingsUpsert as never, { onConflict: 'user_id' })
           .select()
           .single();
 
