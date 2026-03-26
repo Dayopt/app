@@ -108,7 +108,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >
             <h2 className="text-xl">{headerText}</h2>
-            <ChevronIcon className="text-muted-foreground size-4" />
+            <ChevronIcon className="text-muted-foreground size-5" />
           </button>
         </AppHeader>
 
