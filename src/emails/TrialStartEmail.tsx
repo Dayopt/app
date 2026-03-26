@@ -21,7 +21,7 @@ export function TrialStartEmail({
   userName,
   trialEndDate,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: TrialStartEmailProps) {
   const t = createEmailTranslator(locale);
   return (

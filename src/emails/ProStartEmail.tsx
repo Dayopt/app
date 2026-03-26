@@ -20,7 +20,7 @@ export interface ProStartEmailProps {
 export function ProStartEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: ProStartEmailProps) {
   const t = createEmailTranslator(locale);
   return (

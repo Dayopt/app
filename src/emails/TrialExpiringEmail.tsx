@@ -21,7 +21,7 @@ export function TrialExpiringEmail({
   userName,
   trialEndDate,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: TrialExpiringEmailProps) {
   const t = createEmailTranslator(locale);
   return (

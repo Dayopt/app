@@ -19,7 +19,7 @@ export interface TrialExpiredEmailProps {
 export function TrialExpiredEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: TrialExpiredEmailProps) {
   const t = createEmailTranslator(locale);
   return (

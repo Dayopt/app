@@ -22,7 +22,7 @@ export function PasswordResetEmail({
   userName,
   resetUrl,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: PasswordResetEmailProps) {
   const t = createEmailTranslator(locale);
   const settingsLinkText = t('passwordReset.yourSettings');

@@ -19,7 +19,7 @@ export interface PasswordChangedEmailProps {
 export function PasswordChangedEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: PasswordChangedEmailProps) {
   const t = createEmailTranslator(locale);
   const supportEmail = t('common.supportEmail');

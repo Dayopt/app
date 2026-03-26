@@ -17,7 +17,7 @@ export interface WelcomeEmailProps {
 export function WelcomeEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: WelcomeEmailProps) {
   const t = createEmailTranslator(locale);
   const supportEmail = t('common.supportEmail');

@@ -21,11 +21,11 @@ export function AccountDeletionEmail({
   userName,
   deletionDate,
   locale = 'en',
-  appUrl = 'https://dayopt.app',
+  appUrl = 'https://app.dayopt.app',
 }: AccountDeletionEmailProps) {
   const t = createEmailTranslator(locale);
   const supportEmail = t('common.supportEmail');
-  const appLinkText = 'dayopt.app';
+  const appLinkText = 'app.dayopt.app';
 
   const mistakeLine = t('accountDeletion.mistakeLine', { supportEmail });
   const [mistakeBefore, mistakeAfter] = mistakeLine.split(supportEmail);
