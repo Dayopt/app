@@ -1,0 +1,150 @@
+{
+  "common": {
+    "greeting": "{userName}さん、こんにちは。",
+    "greetingFallback": "こんにちは。",
+    "teamSignature": "Dayopt チーム",
+    "supportEmail": "support@dayopt.app",
+    "questionsLine": "ご不明な点がございましたら、{supportEmail} までお気軽にお問い合わせください。",
+    "buttonFallbackText": "ボタンが機能しない場合は、以下のリンクをブラウザにコピー＆ペーストしてください：",
+    "notificationOptOut": "このメールはメール通知を有効にしているため送信されています。{manageLink}",
+    "manageNotificationSettings": "通知設定を管理"
+  },
+  "welcome": {
+    "subject": "Dayopt へようこそ",
+    "heading": "Dayopt へようこそ",
+    "body": "Dayopt にご登録いただきありがとうございます。アカウントの準備が整いました。",
+    "valueProp": "Dayopt はタスク管理・時間記録・カレンダーをひとつにまとめたアプリです。あなたの時間の使い方を可視化します。",
+    "ctaButton": "はじめる"
+  },
+  "confirm": {
+    "subject": "メールアドレスの確認",
+    "heading": "メールアドレスの確認",
+    "body": "Dayopt にご登録いただきありがとうございます。以下のボタンをクリックして、メールアドレスを確認してください。",
+    "ctaButton": "メールアドレスを確認",
+    "ignoreLine": "Dayopt でアカウントを作成した覚えがない場合は、このメールを無視してください。"
+  },
+  "magicLink": {
+    "subject": "Dayopt にログイン",
+    "heading": "Dayopt にログイン",
+    "body": "以下のボタンをクリックして、Dayopt アカウントにログインしてください。パスワードは不要です。",
+    "ctaButton": "Dayopt にログイン",
+    "expiryNote": "このリンクは1時間で有効期限が切れます。",
+    "ignoreLine": "ログインリンクをリクエストした覚えがない場合は、このメールを無視してください。他の方がメールアドレスを間違えて入力した可能性があります。"
+  },
+  "passwordReset": {
+    "subject": "パスワードのリセット",
+    "heading": "パスワードのリセット",
+    "body": "Dayopt のパスワードリセットのリクエストを受け付けました。以下のボタンをクリックして、新しいパスワードを設定してください。",
+    "ctaButton": "パスワードをリセット",
+    "expiryNote": "このリンクは24時間で有効期限が切れます。",
+    "ignoreLine": "パスワードリセットをリクエストした覚えがない場合は、このメールを無視してください。パスワードは変更されません。",
+    "securityNote": "アカウントのセキュリティに不安がある場合は、{settingsLink}からパスワードを変更してください。",
+    "yourSettings": "設定ページ"
+  },
+  "passwordChanged": {
+    "subject": "パスワードが変更されました",
+    "heading": "パスワードが変更されました",
+    "body": "Dayopt のパスワードが正常に変更されました。",
+    "securityWarning": "この変更に覚えがない場合は、すぐに {resetLink} からパスワードをリセットし、{supportEmail} までご連絡ください。"
+  },
+  "accountDeletion": {
+    "subject": "アカウントが削除されました",
+    "heading": "アカウントが削除されました",
+    "body": "{deletionDate} をもって、Dayopt アカウントが正常に削除されました。",
+    "dataRemovedIntro": "以下のデータが完全に削除されました：",
+    "dataPlans": "すべてのプランと時間記録",
+    "dataTags": "タグとカテゴリ",
+    "dataNotifications": "通知設定",
+    "dataProfile": "プロフィール情報",
+    "mistakeLine": "この削除に覚えがない場合、または誤りであると思われる場合は、すぐに {supportEmail} までご連絡ください。",
+    "recreateLine": "いつでも {appLink} から新しいアカウントを作成できます。",
+    "thankYou": "Dayopt をご利用いただきありがとうございました。"
+  },
+  "reminder": {
+    "subject": "リマインダー：{planTitle}",
+    "heading": "プランのリマインダー",
+    "body": "プランの開始時刻になりました：",
+    "labelPlan": "プラン",
+    "labelStartsAt": "開始時刻",
+    "ctaButton": "カレンダーを開く"
+  },
+  "overdue": {
+    "subject": "期限超過：{planTitle}",
+    "heading": "プランが期限を超過しています",
+    "body": "以下のプランが予定終了時刻を過ぎましたが、まだ完了していません：",
+    "labelPlan": "プラン",
+    "labelWasDueBy": "予定終了時刻",
+    "rescheduleHint": "カレンダーからプランの再スケジュールまたは完了にできます。",
+    "ctaButton": "カレンダーを開く"
+  },
+  "trialStart": {
+    "subject": "7日間の Pro トライアルが始まりました",
+    "heading": "7日間の Pro トライアルが始まりました",
+    "body": "Pro トライアルが有効になりました。以下の機能をお試しいただけます：",
+    "labelTrialEnds": "トライアル終了日",
+    "proFeaturesIntro": "Pro に含まれる機能：",
+    "featureAnalytics": "詳細な分析とインサイト",
+    "featureTags": "タグ無制限",
+    "featureApi": "API アクセスとデータエクスポート",
+    "featureAi": "AI アシスタント無制限",
+    "noActionNote": "特に操作は不要です。トライアルは今すぐ開始されます。Pro が不要と感じた場合、トライアル終了後に自動的に Free プランに移行します。",
+    "ctaButton": "Dayopt を開く"
+  },
+  "trialExpiring": {
+    "subject": "Pro トライアルが残り3日です",
+    "heading": "Pro トライアルが残り3日です",
+    "body": "Pro トライアルは {trialEndDate} に終了します。終了後、アカウントは自動的に Free プランに移行します。",
+    "keepProHint": "Pro の機能を引き続きご利用いただくには、アカウント設定からいつでもサブスクリプションに登録できます。",
+    "ctaButton": "プランを見る",
+    "freePlanNote": "Free プランでも、タイムボクシング・時間記録・カレンダー表示をすべてご利用いただけます。"
+  },
+  "trialExpired": {
+    "subject": "Pro トライアルが終了しました",
+    "heading": "Pro トライアルが終了しました",
+    "body": "7日間の Pro トライアルが終了し、アカウントは Free プランになりました。",
+    "freeAccessIntro": "引き続き以下の機能をご利用いただけます：",
+    "featureTimeboxing": "タイムボクシングとデイリープランニング",
+    "featureTracking": "時間記録とレコード",
+    "featureCalendar": "カレンダー表示",
+    "upgradeHint": "分析機能やタグ無制限などをご利用いただくには、いつでも Pro にアップグレードできます。",
+    "ctaButton": "Pro にアップグレード",
+    "thankYou": "Pro をお試しいただきありがとうございました。"
+  },
+  "proStart": {
+    "subject": "Pro へようこそ",
+    "heading": "Pro へようこそ",
+    "body": "Pro サブスクリプションが有効になりました。ご利用ありがとうございます。",
+    "fullAccessIntro": "以下の機能をすべてご利用いただけます：",
+    "featureAnalytics": "詳細な分析とインサイト",
+    "featureTags": "タグとカテゴリ無制限",
+    "featureApi": "API アクセスとデータエクスポート",
+    "featureAi": "AI アシスタント無制限",
+    "manageHint": "サブスクリプションは「設定 → お支払い」からいつでも管理できます。",
+    "ctaButton": "Dayopt を開く"
+  },
+  "paymentFailed": {
+    "subject": "お支払いに失敗しました",
+    "heading": "お支払いに失敗しました",
+    "body": "Dayopt Pro の最新のお支払いを処理できませんでした。",
+    "urgencyNote": "現在 Pro 機能は引き続きご利用いただけますが、サービスの中断を避けるため、お支払い方法を更新してください。",
+    "ctaButton": "お支払い方法を更新",
+    "helpLine": "お心当たりがない場合やサポートが必要な場合は、{supportEmail} までご連絡ください。"
+  },
+  "paymentRecovered": {
+    "subject": "お支払いが完了しました",
+    "heading": "お支払いが完了しました",
+    "body": "Dayopt Pro の最新のお支払いが正常に処理されました。Pro アクセスは引き続きご利用いただけます。",
+    "noActionNote": "お客様側での操作は不要です。",
+    "ctaButton": "Dayopt を開く"
+  },
+  "cancellationConfirm": {
+    "subject": "Pro サブスクリプションが解約されました",
+    "heading": "Pro サブスクリプションが解約されました",
+    "body": "Pro サブスクリプションが解約されました。{periodEndDate} まで引き続き Pro をご利用いただけます。",
+    "labelProAccessUntil": "Pro 利用可能期限",
+    "afterPeriodNote": "期限後、アカウントは Free プランに移行します。データはすべて保持され、削除されることはありません。",
+    "resubscribeHint": "「設定 → お支払い」からいつでも再登録できます。",
+    "ctaButton": "アカウントを管理",
+    "thankYou": "Pro メンバーとしてご利用いただきありがとうございました。"
+  }
+}

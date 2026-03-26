@@ -1,0 +1,150 @@
+{
+  "common": {
+    "greeting": "Hi {userName},",
+    "greetingFallback": "Hi there,",
+    "teamSignature": "The Dayopt Team",
+    "supportEmail": "support@dayopt.app",
+    "questionsLine": "Questions? Reach out at {supportEmail}",
+    "buttonFallbackText": "If the button doesn't work, copy and paste this link into your browser:",
+    "notificationOptOut": "You're receiving this because you enabled email notifications. {manageLink}",
+    "manageNotificationSettings": "Manage notification settings"
+  },
+  "welcome": {
+    "subject": "Welcome to Dayopt",
+    "heading": "Welcome to Dayopt",
+    "body": "Thanks for joining Dayopt. Your account is ready.",
+    "valueProp": "Dayopt combines task planning, time tracking, and calendar views in one place — so you can see where your time actually goes.",
+    "ctaButton": "Get Started"
+  },
+  "confirm": {
+    "subject": "Confirm your email",
+    "heading": "Confirm your email",
+    "body": "Thanks for signing up for Dayopt. Please confirm your email address by clicking the button below.",
+    "ctaButton": "Confirm Email Address",
+    "ignoreLine": "If you didn't create an account on Dayopt, you can safely ignore this email."
+  },
+  "magicLink": {
+    "subject": "Log in to Dayopt",
+    "heading": "Log in to Dayopt",
+    "body": "Click the button below to log in to your Dayopt account. No password needed.",
+    "ctaButton": "Log In to Dayopt",
+    "expiryNote": "This link will expire in 1 hour.",
+    "ignoreLine": "If you didn't request this login link, you can safely ignore this email. Someone may have entered your email address by mistake."
+  },
+  "passwordReset": {
+    "subject": "Reset your password",
+    "heading": "Reset your password",
+    "body": "We received a request to reset your Dayopt password. Click the button below to choose a new password.",
+    "ctaButton": "Reset Password",
+    "expiryNote": "This link will expire in 24 hours.",
+    "ignoreLine": "If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.",
+    "securityNote": "If you're concerned about your account security, please visit {settingsLink} to update your password.",
+    "yourSettings": "your settings"
+  },
+  "passwordChanged": {
+    "subject": "Your password has been changed",
+    "heading": "Your password has been changed",
+    "body": "Your Dayopt password was successfully changed.",
+    "securityWarning": "If you didn't make this change, please reset your password immediately at {resetLink} and contact us at {supportEmail}"
+  },
+  "accountDeletion": {
+    "subject": "Account deleted",
+    "heading": "Account deleted",
+    "body": "Your Dayopt account has been successfully deleted as of {deletionDate}.",
+    "dataRemovedIntro": "The following data has been permanently removed:",
+    "dataPlans": "All plans and time records",
+    "dataTags": "Tags and categories",
+    "dataNotifications": "Notification preferences",
+    "dataProfile": "Profile information",
+    "mistakeLine": "If you didn't request this deletion or believe this was a mistake, please contact us immediately at {supportEmail}.",
+    "recreateLine": "You're welcome to create a new account at any time at {appLink}.",
+    "thankYou": "Thank you for using Dayopt."
+  },
+  "reminder": {
+    "subject": "Reminder: {planTitle}",
+    "heading": "Plan Reminder",
+    "body": "Your plan is starting now:",
+    "labelPlan": "Plan",
+    "labelStartsAt": "Starts at",
+    "ctaButton": "View Calendar"
+  },
+  "overdue": {
+    "subject": "Overdue: {planTitle}",
+    "heading": "Plan Overdue",
+    "body": "The following plan has passed its scheduled end time and hasn't been completed:",
+    "labelPlan": "Plan",
+    "labelWasDueBy": "Was due by",
+    "rescheduleHint": "You can reschedule this plan or mark it as complete from your calendar.",
+    "ctaButton": "View Calendar"
+  },
+  "trialStart": {
+    "subject": "Your 7-day Pro trial has started",
+    "heading": "Your 7-day Pro trial has started",
+    "body": "Your 7-day Pro trial is now active. Here's what you can explore:",
+    "labelTrialEnds": "Trial ends",
+    "proFeaturesIntro": "What's included in Pro:",
+    "featureAnalytics": "Full analytics and insights",
+    "featureTags": "Unlimited tags",
+    "featureApi": "API access and data export",
+    "featureAi": "Unlimited AI assistance",
+    "noActionNote": "No action needed — your trial starts now. If you decide Pro isn't for you, you'll automatically move to the Free plan when the trial ends.",
+    "ctaButton": "Open Dayopt"
+  },
+  "trialExpiring": {
+    "subject": "Your Pro trial ends in 3 days",
+    "heading": "Your Pro trial ends in 3 days",
+    "body": "Your Pro trial ends on {trialEndDate}. After that, your account will move to the Free plan automatically.",
+    "keepProHint": "If you'd like to keep Pro features, you can subscribe anytime from your account settings.",
+    "ctaButton": "View Plans",
+    "freePlanNote": "No pressure — the Free plan still gives you full access to timeboxing, time tracking, and calendar views."
+  },
+  "trialExpired": {
+    "subject": "Your Pro trial has ended",
+    "heading": "Your Pro trial has ended",
+    "body": "Your 7-day Pro trial has ended, and your account is now on the Free plan.",
+    "freeAccessIntro": "You still have full access to:",
+    "featureTimeboxing": "Timeboxing and daily planning",
+    "featureTracking": "Time tracking and records",
+    "featureCalendar": "Calendar views",
+    "upgradeHint": "If you'd like to unlock analytics, unlimited tags, and more, you can upgrade to Pro anytime.",
+    "ctaButton": "Upgrade to Pro",
+    "thankYou": "Thanks for trying Pro."
+  },
+  "proStart": {
+    "subject": "Welcome to Pro",
+    "heading": "Welcome to Pro",
+    "body": "Your Pro subscription is now active. Thank you for your support.",
+    "fullAccessIntro": "You now have full access to:",
+    "featureAnalytics": "Detailed analytics and insights",
+    "featureTags": "Unlimited tags and categories",
+    "featureApi": "API access and data export",
+    "featureAi": "Unlimited AI assistance",
+    "manageHint": "Manage your subscription anytime in Settings → Billing.",
+    "ctaButton": "Open Dayopt"
+  },
+  "paymentFailed": {
+    "subject": "Action needed: payment failed",
+    "heading": "Action needed: payment failed",
+    "body": "We weren't able to process your latest payment for Dayopt Pro.",
+    "urgencyNote": "Your Pro features are still active for now, but please update your payment method to avoid any interruption.",
+    "ctaButton": "Update Payment Method",
+    "helpLine": "If you believe this is an error, or if you need help, contact us at {supportEmail}"
+  },
+  "paymentRecovered": {
+    "subject": "Payment successful — you're all set",
+    "heading": "Payment successful — you're all set",
+    "body": "Good news — your latest payment for Dayopt Pro has been processed successfully. Your Pro access continues without interruption.",
+    "noActionNote": "No action is needed on your part.",
+    "ctaButton": "Open Dayopt"
+  },
+  "cancellationConfirm": {
+    "subject": "Your Pro subscription has been canceled",
+    "heading": "Your Pro subscription has been canceled",
+    "body": "Your Pro subscription has been canceled. You'll continue to have Pro access until {periodEndDate}.",
+    "labelProAccessUntil": "Pro access until",
+    "afterPeriodNote": "After that, your account will move to the Free plan. Your data will be preserved — nothing is deleted.",
+    "resubscribeHint": "You can resubscribe anytime from Settings → Billing.",
+    "ctaButton": "Manage Account",
+    "thankYou": "Thank you for being a Pro member."
+  }
+}
