@@ -211,10 +211,8 @@ describe('EntryCard', () => {
         </div>,
       );
 
-      const eventBlock = container.querySelector('[role="group"]');
-      if (eventBlock) {
-        fireEvent.click(eventBlock);
-      }
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
+      fireEvent.click(eventBlock);
 
       expect(onClick).toHaveBeenCalled();
       expect(parentClick).not.toHaveBeenCalled();
