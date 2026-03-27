@@ -321,57 +321,35 @@ export const AllColors: Story = {
         5. Domain — Dayopt 固有
       </h2>
 
-      <ColorGroup title="Tag Colors（oklch統一 L/C、Dark: L+0.13 C-0.03）">
-        <ColorSwatch
-          tailwindClass="bg-tag-blue"
-          description="Blue（デフォルト）"
-          oklch="oklch(0.65 0.18 240) | oklch(0.78 0.15 240)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-green"
-          description="Green"
-          oklch="oklch(0.65 0.18 145) | oklch(0.78 0.15 145)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-red"
-          description="Red"
-          oklch="oklch(0.65 0.18 25) | oklch(0.78 0.15 25)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-amber"
-          description="Amber"
-          oklch="oklch(0.65 0.18 80) | oklch(0.78 0.15 80)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-violet"
-          description="Violet"
-          oklch="oklch(0.65 0.18 310) | oklch(0.78 0.15 310)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-pink"
-          description="Pink"
-          oklch="oklch(0.65 0.18 350) | oklch(0.78 0.15 350)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-teal"
-          description="Teal"
-          oklch="oklch(0.65 0.13 185) | oklch(0.78 0.11 185)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-orange"
-          description="Orange"
-          oklch="oklch(0.65 0.18 55) | oklch(0.78 0.15 55)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-gray"
-          description="Gray"
-          oklch="oklch(0.55 0.02 250) | oklch(0.70 0.02 250)"
-        />
-        <ColorSwatch
-          tailwindClass="bg-tag-indigo"
-          description="Indigo"
-          oklch="oklch(0.65 0.18 280) | oklch(0.78 0.15 280)"
-        />
+      <ColorGroup title="Tag Colors（oklch統一 L/C、Hのみ変化）">
+        {/* Base: L=0.65 C=0.18 / Dark: L=0.78 C=0.15（例外: teal, gray） */}
+        {[
+          { name: 'red', hue: 25 },
+          { name: 'orange', hue: 55 },
+          { name: 'amber', hue: 80 },
+          { name: 'green', hue: 145 },
+          { name: 'teal', hue: 185, lightC: 0.13, darkC: 0.11, note: 'sRGB色域制限' },
+          { name: 'blue', hue: 240, note: 'デフォルト' },
+          { name: 'indigo', hue: 280 },
+          { name: 'violet', hue: 310 },
+          { name: 'pink', hue: 350 },
+          {
+            name: 'gray',
+            hue: 250,
+            lightL: 0.55,
+            lightC: 0.02,
+            darkL: 0.7,
+            darkC: 0.02,
+            note: 'achromatic',
+          },
+        ].map(({ name, hue, note, lightL = 0.65, lightC = 0.18, darkL = 0.78, darkC = 0.15 }) => (
+          <ColorSwatch
+            key={name}
+            tailwindClass={`bg-tag-${name}`}
+            description={`${name}${note ? `（${note}）` : ''}`}
+            oklch={`oklch(${lightL} ${lightC} ${hue}) | oklch(${darkL} ${darkC} ${hue})`}
+          />
+        ))}
       </ColorGroup>
 
       <ColorGroup title="Chart（比較用5色）">
