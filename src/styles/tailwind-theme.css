@@ -26,22 +26,23 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
 
-  /* 後方互換エイリアス（shadcn/ui互換） */
+  /* Semantic — accent + tint + foreground */
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-bg: var(--destructive-bg);
+  --color-destructive-tint: var(--destructive-tint);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
-  --color-warning-bg: var(--warning-bg);
+  --color-warning-tint: var(--warning-tint);
   --color-warning-foreground: var(--warning-foreground);
   --color-success: var(--success);
-  --color-success-bg: var(--success-bg);
+  --color-success-tint: var(--success-tint);
   --color-success-foreground: var(--success-foreground);
   --color-info: var(--info);
-  --color-info-bg: var(--info-bg);
+  --color-info-tint: var(--info-tint);
   --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--input);
   --color-ring: var(--ring);
 

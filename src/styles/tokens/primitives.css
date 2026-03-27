@@ -17,28 +17,30 @@
    * 色体系の「DNA」— 各カテゴリの色相を一元管理
    * 変更例: --hue-brand を 220 にするとブランドカラーが全て青紫に
    * ============================================ */
-  --hue-brand: 259.8145;          /* 青紫 — Primary, Ring, Charts */
-  --hue-destructive: 25.33;       /* 赤 */
-  --hue-warning: 68.04;           /* アンバー */
-  --hue-success: 149.2;           /* 緑 */
-  --hue-info: 250;                /* 青 */
-  --hue-neutral: 264.54;          /* 青み灰 — Border, Muted text */
+  --hue-brand: 259.8145; /* 青紫 — Primary, Ring, Charts */
+  --hue-destructive: 25.33; /* 赤 */
+  --hue-warning: 68.04; /* アンバー */
+  --hue-success: 149.2; /* 緑 */
+  /* --hue-info: 廃止（neutral化のため info は直接 H=260 を指定） */
+  --hue-neutral: 264.54; /* 青み灰 — Border, Muted text */
 
   /* ============================================
    * Neutral scale（無彩色）
    * 明度のみで差を表現（chroma = 0）
    * Surface階層、テキスト階層の基盤
    * ============================================ */
-  --neutral-99: oklch(0.99 0 0);     /* 最明 */
+  --neutral-99: oklch(0.99 0 0); /* 最明 */
+  --neutral-98: oklch(0.98 0 0);
   --neutral-96: oklch(0.96 0 0);
   --neutral-95: oklch(0.95 0 0);
   --neutral-93: oklch(0.93 0 0);
   --neutral-92: oklch(0.9219 0 0);
-  --neutral-90: oklch(0.90 0 0);
+  --neutral-90: oklch(0.9 0 0);
   --neutral-78: oklch(0.78 0 0);
-  --neutral-37: oklch(0.3715 0 0);   /* dark border */
+  --neutral-37: oklch(0.3715 0 0); /* dark border */
   --neutral-25: oklch(0.25 0 0);
   --neutral-24: oklch(0.24 0 0);
+  --neutral-13: oklch(0.13 0 0);
   --neutral-18: oklch(0.18 0 0);
   --neutral-16: oklch(0.16 0 0);
   --neutral-15: oklch(0.15 0 0);
@@ -46,8 +48,8 @@
 
   /* White & Black */
   --white: oklch(1 0 0);
-  --black-32: oklch(0 0 0 / 0.32);   /* light overlay */
-  --black-50: oklch(0 0 0 / 0.50);   /* dark overlay */
-  --black-06: oklch(0 0 0 / 0.06);   /* light input bg */
-  --white-08: oklch(1 0 0 / 0.08);   /* dark input bg */
+  --black-32: oklch(0 0 0 / 0.32); /* light overlay */
+  --black-50: oklch(0 0 0 / 0.5); /* dark overlay */
+  --black-06: oklch(0 0 0 / 0.06); /* light input bg */
+  --white-08: oklch(1 0 0 / 0.08); /* dark input bg */
 }
