@@ -947,93 +947,118 @@ export const Text: Story = {
 };
 
 export const Tags: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-2 text-2xl font-bold">タグカラー</h1>
-      <p className="text-muted-foreground mb-8">
-        ユーザーがタグに設定できる10色のパレット。
-        <br />
-        ダークモードでは明度を上げ、彩度を下げてアクセシビリティを確保。
-      </p>
+  render: () => {
+    const tags: ReadonlyArray<{ name: string; hue: number; note?: string }> = [
+      { name: 'blue', hue: 240, note: 'デフォルト' },
+      { name: 'green', hue: 145 },
+      { name: 'red', hue: 25 },
+      { name: 'amber', hue: 80 },
+      { name: 'violet', hue: 310 },
+      { name: 'pink', hue: 350 },
+      { name: 'teal', hue: 185, note: 'C=0.13（sRGB色域制限）' },
+      { name: 'orange', hue: 55 },
+      { name: 'gray', hue: 250, note: 'achromatic C=0.02' },
+      { name: 'indigo', hue: 280 },
+    ];
 
-      <div className="space-y-4">
-        {[
-          { token: 'tag-blue', name: 'Blue', description: 'デフォルト' },
-          { token: 'tag-green', name: 'Green', description: '' },
-          { token: 'tag-red', name: 'Red', description: '' },
-          { token: 'tag-amber', name: 'Amber', description: '' },
-          { token: 'tag-violet', name: 'Violet', description: '' },
-          { token: 'tag-pink', name: 'Pink', description: '' },
-          { token: 'tag-teal', name: 'Teal', description: '' },
-          { token: 'tag-orange', name: 'Orange', description: '' },
-          { token: 'tag-gray', name: 'Gray', description: 'グループのデフォルト' },
-          { token: 'tag-indigo', name: 'Indigo', description: '' },
-        ].map(({ token, name, description }) => (
-          <div key={token} className="border-border flex items-center gap-4 border-b pb-4">
-            <div
-              className="size-10 shrink-0 rounded-lg"
-              style={{ backgroundColor: `var(--${token})` }}
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <code className="bg-container rounded px-2 py-1 text-xs">bg-{token}</code>
-                <span className="font-bold">{name}</span>
-              </div>
-              {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <h2 className="border-border mt-8 mb-4 border-b pb-2 text-lg font-bold">
-        Tag Tint（EntryCard背景色）
-      </h2>
-      <p className="text-muted-foreground mb-4 text-sm">
-        EntryCardの背景に使用される薄いティント。ダークモードではL=0.28 C=0.06で色味を維持。
-      </p>
-      <div className="space-y-4">
-        {[
-          { token: 'tag-blue-tint', name: 'Blue Tint' },
-          { token: 'tag-green-tint', name: 'Green Tint' },
-          { token: 'tag-red-tint', name: 'Red Tint' },
-          { token: 'tag-amber-tint', name: 'Amber Tint' },
-          { token: 'tag-violet-tint', name: 'Violet Tint' },
-          { token: 'tag-pink-tint', name: 'Pink Tint' },
-          { token: 'tag-teal-tint', name: 'Teal Tint' },
-          { token: 'tag-orange-tint', name: 'Orange Tint' },
-          { token: 'tag-gray-tint', name: 'Gray Tint' },
-          { token: 'tag-indigo-tint', name: 'Indigo Tint' },
-        ].map(({ token, name }) => (
-          <div key={token} className="border-border flex items-center gap-4 border-b pb-4">
-            <div
-              className="border-border size-10 shrink-0 rounded-lg border"
-              style={{ backgroundColor: `var(--${token})` }}
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <code className="bg-container rounded px-2 py-1 text-xs">{token}</code>
-                <span className="font-bold">{name}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-card border-border mt-8 rounded-lg border p-6">
-        <h2 className="mb-4 font-bold">使用例</h2>
-        <div className="flex flex-wrap gap-2">
-          <span className="border-tag-blue rounded-full border px-3 py-1 text-sm">タグ例</span>
-          <span className="border-tag-green rounded-full border px-3 py-1 text-sm">タグ例</span>
-          <span className="border-tag-red rounded-full border px-3 py-1 text-sm">タグ例</span>
-          <span className="border-tag-amber rounded-full border px-3 py-1 text-sm">タグ例</span>
-          <span className="border-tag-violet rounded-full border px-3 py-1 text-sm">タグ例</span>
-        </div>
-        <p className="text-muted-foreground mt-4 text-sm">
-          タグバッジでは <code>border-tag-*</code> でボーダー色を設定
+    return (
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">タグカラー</h1>
+        <p className="text-muted-foreground mb-2 text-sm">
+          ユーザーがタグに設定できる10色。oklch 統一 L/C で Hue のみ変化。
         </p>
+        <p className="text-muted-foreground mb-8 text-sm">
+          Light: L=0.65 C=0.18 → Dark: L=0.78 C=0.15（明度+0.13, 彩度-0.03）。
+        </p>
+
+        {/* ── Base + Tint 並列表示 ── */}
+        <h3 className="mb-3 font-bold">Base / Tint 一覧</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">色</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Base</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Tint</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Hue</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light base</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark base</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {tags.map(({ name, hue, note }) => (
+                <tr key={name} className="border-border border-b">
+                  <td className="px-4 py-2 text-xs font-bold capitalize">{name}</td>
+                  <td className="px-4 py-2">
+                    <div
+                      className="size-6 rounded"
+                      style={{ backgroundColor: `var(--tag-${name})` }}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <div
+                      className="border-border size-6 rounded border"
+                      style={{ backgroundColor: `var(--tag-${name}-tint)` }}
+                    />
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    {hue}
+                    {note && (
+                      <span className="text-muted-foreground ml-1 font-sans text-xs">{note}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    oklch(0.65 {name === 'teal' ? '0.13' : name === 'gray' ? '0.02' : '0.18'} {hue})
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    oklch(0.78 {name === 'teal' ? '0.11' : name === 'gray' ? '0.02' : '0.15'} {hue})
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Tint 構造 ── */}
+        <h3 className="mb-3 font-bold">Tint（EntryCard 背景色）</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Light: L=0.92 C=0.05。Dark: L=0.28 C=0.06（低明度でも色味を識別可能）。
+        </p>
+        <div className="mb-8 flex flex-wrap gap-2">
+          {tags.map(({ name }) => (
+            <div
+              key={name}
+              className="border-border flex h-16 w-20 flex-col items-center justify-center rounded-lg border"
+              style={{ backgroundColor: `var(--tag-${name}-tint)` }}
+            >
+              <span className="text-foreground text-xs font-bold">{name}</span>
+              <span className="text-muted-foreground text-xs">tint</span>
+            </div>
+          ))}
+        </div>
+
+        {/* ── 使用例 ── */}
+        <h3 className="mb-3 font-bold">使用例</h3>
+        <div className="bg-card border-border rounded-xl border p-6">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {tags.map(({ name }) => (
+              <span
+                key={name}
+                className="rounded-full border px-3 py-1 text-sm capitalize"
+                style={{ borderColor: `var(--tag-${name})`, color: `var(--tag-${name})` }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+          <p className="text-muted-foreground text-xs">
+            <code>border-tag-*</code> + <code>text-tag-*</code> でアウトラインバッジ。 EntryCard
+            背景は <code>bg-tag-*-tint</code>。
+          </p>
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
 };
 
 export const DosDonts: Story = {
