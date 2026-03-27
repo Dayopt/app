@@ -70,7 +70,7 @@ export const AllColors: Story = {
             <span className="text-muted-foreground">L軸</span> = 空間（浮く/沈む）
           </div>
           <div>
-            <span className="text-muted-foreground">H軸</span> = 意味（blue=info, amber=warning,
+            <span className="text-muted-foreground">H軸</span> = 意味（blue=primary, amber=warning,
             green=success, red=destructive）
           </div>
           <div>
