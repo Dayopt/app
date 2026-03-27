@@ -24,7 +24,7 @@ import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/t
 
 const SHORT_DESC: Record<PresetChronotypeType, string> = {
   lion: 'Morning focus',
-  bear: 'Late-morning peak',
+  bear: 'Late-morning deep',
   wolf: 'Evening energy',
   dolphin: 'Late-morning stability',
 };
@@ -115,7 +115,7 @@ function ChronotypeSettingsDemo({
             label="Show focus zones on calendar"
             description="Highlight your best focus and rest windows on the calendar"
           >
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Enable rhythm" />
           </LabeledRow>
 
           {/* タイプ選択: 4 カード横並び */}
