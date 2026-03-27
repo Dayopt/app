@@ -58,16 +58,19 @@ function smoothstep(t: number): number {
   return clamped * clamped * (3 - 2 * clamped);
 }
 
-/** oklch 値の線形補間 */
+/** oklch 値の線形補間（achromatic の hue は相手に合わせる） */
 function lerpOklch(
   a: { l: number; c: number; h: number },
   b: { l: number; c: number; h: number },
   t: number,
 ): { l: number; c: number; h: number } {
+  // chroma=0 は achromatic（hue 無意味）→ 相手の hue を使う
+  const hA = a.c < 0.001 ? b.h : a.h;
+  const hB = b.c < 0.001 ? a.h : b.h;
   return {
     l: a.l + (b.l - a.l) * t,
     c: a.c + (b.c - a.c) * t,
-    h: a.h + (b.h - a.h) * t,
+    h: hA + (hB - hA) * t,
   };
 }
 
@@ -107,55 +110,57 @@ export function generateChronotypeGradient(
   stops.push({ position: 0, color: formatOklch(bg.l, bg.c, bg.h) });
 
   // 各ゾーンの fade-in → flat → fade-out ストップを生成
-  // 境界: ハードエッジ（bg → 薄い zone色）、内側で smoothstep（薄 → 濃）
-  for (const b of boundaries) {
+  // Medium smoothstep: フェードはゾーン外側にはみ出す（start-r ~ start, end ~ end+r）
+  // 隣のゾーンとの gap が 2r 未満ならフェード幅を gap/2 に縮小（重なり防止）
+  for (let idx = 0; idx < boundaries.length; idx++) {
+    const b = boundaries[idx];
     const zc = ZONE_COLORS[b.level][mode];
-    const duration = b.end - b.start;
-    const r = Math.min(FADE_RADIUS, duration / 2);
 
-    // 開始境界: bg → zone色（ハードエッジ）
-    stops.push({
-      position: (b.start / 24) * 100,
-      color: formatOklch(bg.l, bg.c, bg.h),
-    });
+    // fade-in 幅: 前のゾーンとの gap を考慮
+    const prev = boundaries[idx - 1];
+    const gapBefore = prev ? b.start - prev.end : b.start;
+    const rIn = Math.min(FADE_RADIUS, gapBefore / 2, b.start);
 
-    // fade-in: 薄い zone色 → 濃い zone色（start → start+r）
+    // fade-out 幅: 次のゾーンとの gap を考慮
+    const next = boundaries[idx + 1];
+    const gapAfter = next ? next.start - b.end : 24 - b.end;
+    const rOut = Math.min(FADE_RADIUS, gapAfter / 2, 24 - b.end);
+
+    // fade-in: bg → zone色（start-rIn → start）
     for (let i = 0; i <= FADE_STEPS; i++) {
       const t = i / FADE_STEPS;
-      const hour = b.start + t * r;
-      const blend = EDGE_MIN + (1 - EDGE_MIN) * smoothstep(t);
-      const color = lerpOklch(bg, zc, blend);
+      const hour = b.start - rIn + t * rIn;
+      const s = smoothstep(t);
+      const color = lerpOklch(bg, zc, s);
       stops.push({
         position: (hour / 24) * 100,
         color: formatOklch(color.l, color.c, color.h),
       });
     }
 
-    // flat top: zone色均一（start+r → end-r）
-    if (b.end - r > b.start + r) {
+    // flat top: zone色均一（start → end、両端を明示して線形補間を防ぐ）
+    stops.push({
+      position: (b.start / 24) * 100,
+      color: formatOklch(zc.l, zc.c, zc.h),
+    });
+    if (b.end > b.start) {
       stops.push({
-        position: ((b.end - r) / 24) * 100,
+        position: (b.end / 24) * 100,
         color: formatOklch(zc.l, zc.c, zc.h),
       });
     }
 
-    // fade-out: 濃い zone色 → 薄い zone色（end-r → end）
+    // fade-out: zone色 → bg（end → end+rOut）
     for (let i = 0; i <= FADE_STEPS; i++) {
       const t = i / FADE_STEPS;
-      const hour = b.end - r + t * r;
-      const blend = 1 - (1 - EDGE_MIN) * smoothstep(t);
-      const color = lerpOklch(bg, zc, blend);
+      const hour = b.end + t * rOut;
+      const s = smoothstep(t);
+      const color = lerpOklch(zc, bg, s);
       stops.push({
         position: (hour / 24) * 100,
         color: formatOklch(color.l, color.c, color.h),
       });
     }
-
-    // 終了境界: zone色 → bg（ハードエッジ）
-    stops.push({
-      position: (b.end / 24) * 100,
-      color: formatOklch(bg.l, bg.c, bg.h),
-    });
   }
 
   // 24h → bg

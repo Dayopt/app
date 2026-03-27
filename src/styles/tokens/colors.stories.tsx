@@ -1307,11 +1307,11 @@ export const Chronotype: Story = {
               <div className="flex items-center gap-3">
                 <div
                   className="border-border size-10 shrink-0 rounded-md border"
-                  style={{ backgroundColor: 'oklch(0.965 0.006 70)' }}
+                  style={{ backgroundColor: 'oklch(0.955 0.008 70)' }}
                 />
                 <div>
                   <p className="text-xs font-bold">背景</p>
-                  <p className="font-mono text-xs opacity-40">L0.965 C0.006</p>
+                  <p className="font-mono text-xs opacity-40">L0.955 C0.008</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -1330,11 +1330,11 @@ export const Chronotype: Story = {
               <div className="flex items-center gap-3">
                 <div
                   className="border-border size-10 shrink-0 rounded-md border"
-                  style={{ backgroundColor: 'oklch(0.965 0.006 250)' }}
+                  style={{ backgroundColor: 'oklch(0.955 0.008 250)' }}
                 />
                 <div>
                   <p className="text-xs font-bold">背景</p>
-                  <p className="font-mono text-xs opacity-40">L0.965 C0.006</p>
+                  <p className="font-mono text-xs opacity-40">L0.955 C0.008</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -1401,8 +1401,8 @@ export const Chronotype: Story = {
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
                 <td className="px-2 py-2 font-bold">peak 背景</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.965 0.006 70)</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.20 0.014 70)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.955 0.008 70)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.21 0.018 70)</td>
                 <td className="px-2 py-2 text-xs">gradient 帯</td>
               </tr>
               <tr className="border-border border-b">
@@ -1413,8 +1413,8 @@ export const Chronotype: Story = {
               </tr>
               <tr className="border-border border-b">
                 <td className="px-2 py-2 font-bold">dip 背景</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.965 0.006 250)</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.20 0.014 250)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.955 0.008 250)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.21 0.018 250)</td>
                 <td className="px-2 py-2 text-xs">gradient 帯</td>
               </tr>
               <tr className="border-border border-b">
@@ -1432,7 +1432,7 @@ export const Chronotype: Story = {
             </tbody>
           </table>
           <div className="text-muted-foreground mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span>境界: ハードエッジ</span>
+            <span>境界: smoothstep（r=0.8h, flat top）</span>
             <span>CSS linear-gradient 1 本</span>
             <span>サーバー事前計算</span>
           </div>

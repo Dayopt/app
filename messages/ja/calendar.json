@@ -169,7 +169,7 @@
       "deleteGroup": {
         "label": "グループを削除",
         "title": "「{name}」グループを削除",
-        "description": "{count}個のタグが削除されます。プラン自体は削除されません。",
+        "description": "{count}個のタグが削除されます。エントリー自体は削除されません。",
         "success": "「{name}」グループを削除しました（{count}個のタグ）",
         "failed": "グループの削除に失敗しました"
       }
@@ -204,14 +204,14 @@
       "days": "日",
       "longestStreak": "最長: {days}日",
       "tag": "タグ",
-      "plan": "Plan",
+      "plan": "Entry",
       "done": "Done",
       "percent": "%",
       "total": "合計",
       "backToAll": "すべてのタグ",
       "noTagData": "この期間のタグデータがありません",
       "emptyTitle": "今週のデータがありません",
-      "emptyDescription": "プランとレコードを追加して進捗を確認しましょう",
+      "emptyDescription": "エントリーを追加して進捗を確認しましょう",
       "periodDay": "日",
       "periodWeek": "週",
       "periodMonth": "月",
@@ -303,6 +303,10 @@
         "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
         "peakHour": "ピーク時間帯です — 集中作業に向いています"
       }
+    },
+    "nowBadge": {
+      "inPeak": "In peak",
+      "inDip": "In dip"
     },
     "timeGrid": {
       "ariaLabel": "カレンダータイムグリッド - クリックまたはEnterキーでイベントを作成"

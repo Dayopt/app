@@ -169,7 +169,7 @@
       "deleteGroup": {
         "label": "Delete group",
         "title": "Delete group \"{name}\"",
-        "description": "{count} tags will be deleted. Plans themselves will not be deleted.",
+        "description": "{count} tags will be deleted. Entries themselves will not be deleted.",
         "success": "Deleted group \"{name}\" ({count} tags)",
         "failed": "Failed to delete group"
       }
@@ -204,14 +204,14 @@
       "days": "days",
       "longestStreak": "Best: {days} days",
       "tag": "Tag",
-      "plan": "Plan",
+      "plan": "Entry",
       "done": "Done",
       "percent": "%",
       "total": "Total",
       "backToAll": "All tags",
       "noTagData": "No tag data for this period",
       "emptyTitle": "No data this week",
-      "emptyDescription": "Add plans and records to see your progress",
+      "emptyDescription": "Add entries to see your progress",
       "periodDay": "Day",
       "periodWeek": "Week",
       "periodMonth": "Month",
@@ -303,6 +303,10 @@
         "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
         "peakHour": "This is a peak hour — great for focused work"
       }
+    },
+    "nowBadge": {
+      "inPeak": "In peak",
+      "inDip": "In dip"
     },
     "timeGrid": {
       "ariaLabel": "Calendar time grid - click or press Enter to create event"
