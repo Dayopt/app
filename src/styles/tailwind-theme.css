@@ -108,6 +108,12 @@
   --color-tag-violet-tint: var(--tag-violet-tint);
   --color-tag-pink-tint: var(--tag-pink-tint);
   --color-tag-gray-tint: var(--tag-gray-tint);
+
+  /* Chronotype — テキスト + 背景 tint */
+  --color-chronotype-peak: var(--chronotype-peak);
+  --color-chronotype-dip: var(--chronotype-dip);
+  --color-chronotype-peak-tint: var(--chronotype-peak-tint);
+  --color-chronotype-dip-tint: var(--chronotype-dip-tint);
 }
 
 /* ============================================

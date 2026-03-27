@@ -6,32 +6,32 @@ import type { ProductivityZone } from '@/types/chronotype';
 // oklch ベースの CSS linear-gradient を生成。
 // peak(H70 暖色) / dip(H250 寒色) のみ色を付け、
 // それ以外は bg-background のまま。
-// 境界は smoothstep (r=1.4h) で滑らかに遷移。
+// 境界: smoothstep + flat top（ゾーン内均一、端 0.8h でフェード）
 // ============================================
 
-/** テーマモード別の bg-background 明度 */
-const BG_LIGHTNESS = { light: 0.98, dark: 0.18 } as const;
-
-/** peak/dip の oklch パラメータ（bg-background からのオフセット） */
-const ZONE_PARAMS = {
-  peak: { deltaL: 0.015, chroma: 0.015, hue: 70 },
-  dip: { deltaL: 0.015, chroma: 0.015, hue: 250 },
+/** テーマモード別の bg-background */
+const BG = {
+  light: { l: 0.98, c: 0, h: 0 },
+  dark: { l: 0.18, c: 0, h: 0 },
 } as const;
 
-/** smoothstep 遷移の半幅（hours） */
-const SMOOTHSTEP_RADIUS = 1.4;
-
-/** サンプリング間隔（hours） */
-const SAMPLE_INTERVAL = 5 / 60; // 5分
-
 /**
- * smoothstep: 3次エルミート補間
- * edge0 → edge1 の間を [0, 1] で滑らかに遷移
+ * peak/dip の oklch パラメータ（モード別）
+ *
+ * 仕様の energy=1 時の値:
+ *   Light: L = 0.98 - 0.025 = 0.955, C = 0.008
+ *   Dark:  L = 0.18 + 0.03  = 0.210, C = 0.008 + 0.010 = 0.018
  */
-function smoothstep(x: number, edge0: number, edge1: number): number {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
+const ZONE_COLORS = {
+  peak: {
+    light: { l: 0.955, c: 0.008, h: 70 },
+    dark: { l: 0.21, c: 0.018, h: 70 },
+  },
+  dip: {
+    light: { l: 0.955, c: 0.008, h: 250 },
+    dark: { l: 0.21, c: 0.018, h: 250 },
+  },
+} as const;
 
 /** ゾーン配列から peak/dip の境界時刻リストを構築 */
 function buildZoneBoundaries(zones: ProductivityZone[]): Array<{
@@ -47,51 +47,35 @@ function buildZoneBoundaries(zones: ProductivityZone[]): Array<{
     .map((z) => ({ start: z.startHour, end: z.endHour, level: z.level }));
 }
 
-/**
- * 指定時刻における色の強度を計算（0 = neutral, 1 = full zone color）
- * 複数ゾーンの smoothstep を合成
- */
-function getIntensityAt(
-  hour: number,
-  boundaries: Array<{ start: number; end: number; level: 'peak' | 'dip' }>,
-): { intensity: number; level: 'peak' | 'dip' } | null {
-  let bestIntensity = 0;
-  let bestLevel: 'peak' | 'dip' = 'peak';
-
-  for (const { start, end, level } of boundaries) {
-    // ゾーンの中心部分（smoothstep で 1.0 の平坦区間）
-    const fadeInStart = start - SMOOTHSTEP_RADIUS;
-    const fadeInEnd = start + SMOOTHSTEP_RADIUS;
-    const fadeOutStart = end - SMOOTHSTEP_RADIUS;
-    const fadeOutEnd = end + SMOOTHSTEP_RADIUS;
-
-    let intensity = 0;
-
-    if (hour >= fadeInEnd && hour <= fadeOutStart) {
-      // 完全にゾーン内
-      intensity = 1;
-    } else if (hour >= fadeInStart && hour < fadeInEnd) {
-      // フェードイン中
-      intensity = smoothstep(hour, fadeInStart, fadeInEnd);
-    } else if (hour > fadeOutStart && hour <= fadeOutEnd) {
-      // フェードアウト中
-      intensity = 1 - smoothstep(hour, fadeOutStart, fadeOutEnd);
-    }
-
-    if (intensity > bestIntensity) {
-      bestIntensity = intensity;
-      bestLevel = level;
-    }
-  }
-
-  if (bestIntensity <= 0) return null;
-  return { intensity: bestIntensity, level: bestLevel };
-}
-
 /** oklch 値を CSS 文字列にフォーマット */
 function formatOklch(l: number, c: number, h: number): string {
   return `oklch(${l.toFixed(4)} ${c.toFixed(4)} ${h})`;
 }
+
+/** smoothstep: 3t² − 2t³ */
+function smoothstep(t: number): number {
+  const clamped = Math.max(0, Math.min(1, t));
+  return clamped * clamped * (3 - 2 * clamped);
+}
+
+/** oklch 値の線形補間 */
+function lerpOklch(
+  a: { l: number; c: number; h: number },
+  b: { l: number; c: number; h: number },
+  t: number,
+): { l: number; c: number; h: number } {
+  return {
+    l: a.l + (b.l - a.l) * t,
+    c: a.c + (b.c - a.c) * t,
+    h: a.h + (b.h - a.h) * t,
+  };
+}
+
+/** フェード区間の半径（時間単位） */
+const FADE_RADIUS = 0.8;
+
+/** フェード区間あたりのストップ数 */
+const FADE_STEPS = 5;
 
 interface GradientStop {
   position: number; // 0-100 (%)
@@ -100,6 +84,8 @@ interface GradientStop {
 
 /**
  * Chronotype gradient の CSS 文字列を生成
+ *
+ * Smoothstep + Flat top: ゾーン内は均一の濃さ、端 0.8h でフェード。
  *
  * @param zones - 生産性ゾーン配列
  * @param mode - 'light' | 'dark'
@@ -114,61 +100,73 @@ export function generateChronotypeGradient(
     return 'none';
   }
 
-  const bgL = BG_LIGHTNESS[mode];
+  const bg = BG[mode];
   const stops: GradientStop[] = [];
 
-  // 24h を 5 分刻みでサンプリング
-  const totalSamples = Math.ceil(24 / SAMPLE_INTERVAL);
+  // 0h → bg
+  stops.push({ position: 0, color: formatOklch(bg.l, bg.c, bg.h) });
 
-  for (let i = 0; i <= totalSamples; i++) {
-    const hour = Math.min(i * SAMPLE_INTERVAL, 24);
-    const position = (hour / 24) * 100;
+  // 各ゾーンの fade-in → flat → fade-out ストップを生成
+  // 境界: ハードエッジ（bg → 薄い zone色）、内側で smoothstep（薄 → 濃）
+  for (const b of boundaries) {
+    const zc = ZONE_COLORS[b.level][mode];
+    const duration = b.end - b.start;
+    const r = Math.min(FADE_RADIUS, duration / 2);
 
-    const result = getIntensityAt(hour, boundaries);
+    // 開始境界: bg → zone色（ハードエッジ）
+    stops.push({
+      position: (b.start / 24) * 100,
+      color: formatOklch(bg.l, bg.c, bg.h),
+    });
 
-    if (!result) {
-      stops.push({ position, color: formatOklch(bgL, 0, 0) });
-    } else {
-      const params = ZONE_PARAMS[result.level];
-      const l = bgL + params.deltaL * result.intensity;
-      const c = params.chroma * result.intensity;
-      stops.push({ position, color: formatOklch(l, c, params.hue) });
+    // fade-in: 薄い zone色 → 濃い zone色（start → start+r）
+    for (let i = 0; i <= FADE_STEPS; i++) {
+      const t = i / FADE_STEPS;
+      const hour = b.start + t * r;
+      const blend = EDGE_MIN + (1 - EDGE_MIN) * smoothstep(t);
+      const color = lerpOklch(bg, zc, blend);
+      stops.push({
+        position: (hour / 24) * 100,
+        color: formatOklch(color.l, color.c, color.h),
+      });
     }
+
+    // flat top: zone色均一（start+r → end-r）
+    if (b.end - r > b.start + r) {
+      stops.push({
+        position: ((b.end - r) / 24) * 100,
+        color: formatOklch(zc.l, zc.c, zc.h),
+      });
+    }
+
+    // fade-out: 濃い zone色 → 薄い zone色（end-r → end）
+    for (let i = 0; i <= FADE_STEPS; i++) {
+      const t = i / FADE_STEPS;
+      const hour = b.end - r + t * r;
+      const blend = 1 - (1 - EDGE_MIN) * smoothstep(t);
+      const color = lerpOklch(bg, zc, blend);
+      stops.push({
+        position: (hour / 24) * 100,
+        color: formatOklch(color.l, color.c, color.h),
+      });
+    }
+
+    // 終了境界: zone色 → bg（ハードエッジ）
+    stops.push({
+      position: (b.end / 24) * 100,
+      color: formatOklch(bg.l, bg.c, bg.h),
+    });
   }
 
-  // 隣接する同色 stop を間引く（始点・終点・変化点のみ残す）
-  const optimized = optimizeStops(stops);
+  // 24h → bg
+  stops.push({ position: 100, color: formatOklch(bg.l, bg.c, bg.h) });
 
-  const stopsStr = optimized.map((s) => `${s.color} ${s.position.toFixed(2)}%`).join(', ');
+  // 位置順にソートして重複を除去
+  stops.sort((a, b) => a.position - b.position);
+
+  const stopsStr = stops.map((s) => `${s.color} ${s.position.toFixed(2)}%`).join(', ');
 
   return `linear-gradient(to bottom, ${stopsStr})`;
-}
-
-/** 連続する同色 stop を間引いて最適化 */
-function optimizeStops(stops: GradientStop[]): GradientStop[] {
-  if (stops.length <= 2) return stops;
-
-  const first = stops[0];
-  const last = stops[stops.length - 1];
-  if (!first || !last) return stops;
-
-  const result: GradientStop[] = [first];
-
-  for (let i = 1; i < stops.length - 1; i++) {
-    const prev = stops[i - 1]!;
-    const curr = stops[i]!;
-    const next = stops[i + 1]!;
-
-    // 前後と色が同じなら省略可能
-    if (prev.color === curr.color && curr.color === next.color) {
-      continue;
-    }
-
-    result.push(curr);
-  }
-
-  result.push(last);
-  return result;
 }
 
 /**

@@ -266,6 +266,15 @@
       "details": "タイプの詳細",
       "timeline": "24時間タイムライン",
       "peakTime": "ピーク時間",
+      "dipTime": "ディップ時間",
+      "peakTimeHint": "Deep Workに最適",
+      "dipTimeHint": "軽い作業・休憩向き",
+      "population": {
+        "lion": "15-20%",
+        "bear": "~55%",
+        "wolf": "15-20%",
+        "dolphin": "~10%"
+      },
       "learnMore": "クロノタイプについて詳しく知る",
       "showOnTimeline": "タイムラインに表示",
       "showOnTimelineDesc": "生産性ゾーンでタイムグリッドの背景を色分けする",

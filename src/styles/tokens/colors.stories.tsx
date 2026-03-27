@@ -1,4 +1,9 @@
+import { useState } from 'react';
+
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+import { CHRONOTYPE_PRESETS } from '@/features/chronotype/lib/constants';
+import { generateChronotypeGradient } from '@/features/chronotype/lib/gradient';
 
 const meta = {
   title: 'Foundations/Colors',
@@ -348,6 +353,53 @@ export const AllColors: Story = {
             tailwindClass={`bg-tag-${name}`}
             description={`${name}${note ? `（${note}）` : ''}`}
             oklch={`oklch(${lightL} ${lightC} ${hue}) | oklch(${darkL} ${darkC} ${hue})`}
+          />
+        ))}
+      </ColorGroup>
+
+      <ColorGroup title="Chronotype（タイムライン）">
+        {/* 背景色（gradient） */}
+        {[
+          {
+            name: 'peak-bg',
+            label: 'peak 背景（gradient）',
+            light: 'oklch(0.955 0.008 70)',
+            dark: 'oklch(0.21 0.018 70)',
+          },
+          {
+            name: 'dip-bg',
+            label: 'dip 背景（gradient）',
+            light: 'oklch(0.955 0.008 250)',
+            dark: 'oklch(0.21 0.018 250)',
+          },
+        ].map(({ name, label, light, dark }) => (
+          <ColorSwatch
+            key={name}
+            tailwindClass={`chronotype-${name}`}
+            description={label}
+            oklch={`${light} | ${dark}`}
+          />
+        ))}
+        {/* テキスト色（ラベル） */}
+        {[
+          {
+            name: 'peak',
+            label: 'peak テキスト（ラベル）',
+            light: 'oklch(0.65 0.15 70)',
+            dark: 'oklch(0.80 0.12 70)',
+          },
+          {
+            name: 'dip',
+            label: 'dip テキスト（ラベル）',
+            light: 'oklch(0.55 0.15 250)',
+            dark: 'oklch(0.75 0.12 250)',
+          },
+        ].map(({ name, label, light, dark }) => (
+          <ColorSwatch
+            key={name}
+            tailwindClass={`chronotype-${name}`}
+            description={label}
+            oklch={`${light} | ${dark}`}
           />
         ))}
       </ColorGroup>
@@ -1144,6 +1196,247 @@ export const DosDonts: Story = {
             </section>
           ))}
         </div>
+      </div>
+    );
+  },
+};
+
+/** タイムラインプレビュー（Light / Dark 共通ヘルパー） */
+function TimelinePreview({
+  gradient,
+  zones,
+  isDark,
+}: {
+  gradient: string;
+  zones: readonly { startHour: number; endHour: number; level: string }[];
+  isDark: boolean;
+}) {
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  return (
+    <div
+      className="relative h-[480px] rounded-lg"
+      style={{
+        backgroundImage: gradient,
+        ...(isDark && { backgroundColor: 'oklch(0.18 0.008 60)' }),
+      }}
+    >
+      {hours.map((hour) => {
+        const zone = zones.find(
+          (z) =>
+            (z.level === 'peak' || z.level === 'dip') && hour >= z.startHour && hour < z.endHour,
+        );
+        const show = hour % 2 === 0;
+        if (!show) return null;
+        return (
+          <div
+            key={hour}
+            className={`absolute left-3 text-xs ${
+              zone?.level === 'peak'
+                ? 'text-chronotype-peak font-bold'
+                : zone?.level === 'dip'
+                  ? 'text-chronotype-dip font-bold'
+                  : isDark
+                    ? 'text-white/30'
+                    : 'opacity-30'
+            }`}
+            style={{ top: `${(hour / 24) * 100}%` }}
+          >
+            {String(hour).padStart(2, '0')}:00
+          </div>
+        );
+      })}
+      {/* ゾーンラベル */}
+      {zones
+        .filter((z) => z.level === 'peak' || z.level === 'dip')
+        .map((z) => (
+          <div
+            key={z.level}
+            className={`absolute right-3 text-xs font-bold ${
+              z.level === 'peak' ? 'text-chronotype-peak' : 'text-chronotype-dip'
+            }`}
+            style={{ top: `${((z.startHour + z.endHour) / 2 / 24) * 100}%` }}
+          >
+            {z.level}
+          </div>
+        ))}
+    </div>
+  );
+}
+
+export const Chronotype: Story = {
+  tags: [],
+  render: function ChronotypeStory() {
+    const [selectedType, setSelectedType] = useState<'bear' | 'lion' | 'wolf' | 'dolphin'>('bear');
+    const zones = CHRONOTYPE_PRESETS[selectedType].productivityZones;
+    const lightGradient = generateChronotypeGradient(zones, 'light');
+    const darkGradient = generateChronotypeGradient(zones, 'dark');
+
+    return (
+      <div className="space-y-8">
+        {/* ===== 概要 ===== */}
+        <section className="bg-card border-border rounded-xl border p-6">
+          <h2 className="mb-2 text-lg font-bold">Chronotype タイムライン</h2>
+          <p className="text-muted-foreground text-sm">
+            ユーザーのクロノタイプに応じて、タイムラインに peak / dip ゾーンを視覚的に表示する。
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="bg-muted rounded-lg p-3">
+              <p className="text-xs font-bold">背景 gradient</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                低彩度の帯で「ここはゾーン内」を伝える
+              </p>
+            </div>
+            <div className="bg-muted rounded-lg p-3">
+              <p className="text-xs font-bold">時刻ラベル色</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                高彩度テキスト + 太字でゾーン範囲を強調
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== カラーパレット ===== */}
+        <section className="bg-card border-border rounded-xl border p-6">
+          <h3 className="mb-4 text-sm font-bold">カラーパレット（2 色体制）</h3>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Peak */}
+            <div className="space-y-3">
+              <p className="text-chronotype-peak text-xs font-bold tracking-widest uppercase">
+                Peak（H=70 暖色）
+              </p>
+              <div className="flex items-center gap-3">
+                <div
+                  className="border-border size-10 shrink-0 rounded-md border"
+                  style={{ backgroundColor: 'oklch(0.965 0.006 70)' }}
+                />
+                <div>
+                  <p className="text-xs font-bold">背景</p>
+                  <p className="font-mono text-xs opacity-40">L0.965 C0.006</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-chronotype-peak size-10 shrink-0 rounded-md" />
+                <div>
+                  <p className="text-xs font-bold">テキスト</p>
+                  <p className="font-mono text-xs opacity-40">Light 0.65/0.15 — Dark 0.80/0.12</p>
+                </div>
+              </div>
+            </div>
+            {/* Dip */}
+            <div className="space-y-3">
+              <p className="text-chronotype-dip text-xs font-bold tracking-widest uppercase">
+                Dip（H=250 寒色）
+              </p>
+              <div className="flex items-center gap-3">
+                <div
+                  className="border-border size-10 shrink-0 rounded-md border"
+                  style={{ backgroundColor: 'oklch(0.965 0.006 250)' }}
+                />
+                <div>
+                  <p className="text-xs font-bold">背景</p>
+                  <p className="font-mono text-xs opacity-40">L0.965 C0.006</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-chronotype-dip size-10 shrink-0 rounded-md" />
+                <div>
+                  <p className="text-xs font-bold">テキスト</p>
+                  <p className="font-mono text-xs opacity-40">Light 0.55/0.15 — Dark 0.75/0.12</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== タイムラインプレビュー ===== */}
+        <section className="bg-card border-border rounded-xl border p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-bold">タイムラインプレビュー</h3>
+            <div className="flex gap-1">
+              {(['bear', 'lion', 'wolf', 'dolphin'] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setSelectedType(type)}
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                    selectedType === type
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-state-hover'
+                  }`}
+                >
+                  {CHRONOTYPE_PRESETS[type].name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-bold">Light</p>
+              <div className="border-border overflow-hidden rounded-lg border">
+                <TimelinePreview gradient={lightGradient} zones={zones} isDark={false} />
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-bold">Dark</p>
+              <div className="overflow-hidden rounded-lg border border-white/10">
+                <TimelinePreview gradient={darkGradient} zones={zones} isDark />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== 仕様 ===== */}
+        <section className="bg-card border-border rounded-xl border p-6">
+          <h3 className="mb-4 text-sm font-bold">oklch 仕様</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-2 py-2 text-left text-xs font-bold">レイヤー</th>
+                <th className="px-2 py-2 text-left text-xs font-bold">Light</th>
+                <th className="px-2 py-2 text-left text-xs font-bold">Dark</th>
+                <th className="px-2 py-2 text-left text-xs font-bold">用途</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              <tr className="border-border border-b">
+                <td className="px-2 py-2 font-bold">peak 背景</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.965 0.006 70)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.20 0.014 70)</td>
+                <td className="px-2 py-2 text-xs">gradient 帯</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-2 py-2 font-bold">peak テキスト</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.65 0.15 70)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.80 0.12 70)</td>
+                <td className="px-2 py-2 text-xs">時刻ラベル</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-2 py-2 font-bold">dip 背景</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.965 0.006 250)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.20 0.014 250)</td>
+                <td className="px-2 py-2 text-xs">gradient 帯</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-2 py-2 font-bold">dip テキスト</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.55 0.15 250)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.75 0.12 250)</td>
+                <td className="px-2 py-2 text-xs">時刻ラベル</td>
+              </tr>
+              <tr>
+                <td className="px-2 py-2 font-bold">other</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.98 0 0)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.18 0 0)</td>
+                <td className="px-2 py-2 text-xs">bg-background</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="text-muted-foreground mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span>境界: ハードエッジ</span>
+            <span>CSS linear-gradient 1 本</span>
+            <span>サーバー事前計算</span>
+          </div>
+        </section>
       </div>
     );
   },

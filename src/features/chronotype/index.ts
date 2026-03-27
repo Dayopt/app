@@ -9,4 +9,9 @@ export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chro
 export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';
 export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';
 export { chronotypeCustomZonesSchema, chronotypeTypeSchema } from './lib/schemas';
-export { getChronotypeProfile, getProductivityZoneForHour } from './lib/utils';
+export {
+  getChronotypeProfile,
+  getDipHours,
+  getPeakHours,
+  getProductivityZoneForHour,
+} from './lib/utils';

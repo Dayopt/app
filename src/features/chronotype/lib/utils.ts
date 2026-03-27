@@ -133,15 +133,26 @@ export function getVisibleProductivityZones(
 }
 
 /**
- * 生産性ゾーン配列からピーク時間帯を "HH:00 - HH:00" 形式で返す
+ * 生産性ゾーン配列から指定レベルの時間帯を "HH:00 – HH:00" 形式で返す
+ */
+function getZoneHours(zones: ProductivityZone[], level: ProductivityZone['level']): string {
+  const zone = zones.find((z) => z.level === level);
+  if (!zone) return '-';
+  return `${zone.startHour}:00 – ${zone.endHour}:00`;
+}
+
+/**
+ * ピーク時間帯を返す
  * @returns ピークゾーンがない場合は '-'
  */
 export function getPeakHours(zones: ProductivityZone[]): string {
-  const peakZone = zones.find((zone) => zone.level === 'peak');
-  if (!peakZone) {
-    return '-';
-  }
+  return getZoneHours(zones, 'peak');
+}
 
-  const formatHour = (hour: number) => `${hour}:00`;
-  return `${formatHour(peakZone.startHour)} - ${formatHour(peakZone.endHour)}`;
+/**
+ * ディップ時間帯を返す
+ * @returns ディップゾーンがない場合は '-'
+ */
+export function getDipHours(zones: ProductivityZone[]): string {
+  return getZoneHours(zones, 'dip');
 }

@@ -126,6 +126,14 @@
   --tag-violet-tint: oklch(0.92 0.05 310);
   --tag-pink-tint: oklch(0.92 0.05 350);
   --tag-gray-tint: oklch(0.92 0.01 250);
+
+  /* Chronotype — タイムラインラベル用テキスト色 */
+  --chronotype-peak: oklch(0.65 0.15 70); /* 暖色 */
+  --chronotype-dip: oklch(0.55 0.15 250); /* 寒色 */
+
+  /* Chronotype — 設定パネル TimelineBar 等の背景 tint */
+  --chronotype-peak-tint: oklch(0.96 0.02 70);
+  --chronotype-dip-tint: oklch(0.96 0.02 250);
 }
 
 /* ダークモード */
@@ -209,6 +217,14 @@
   --tag-violet-tint: oklch(0.28 0.06 310);
   --tag-pink-tint: oklch(0.28 0.06 350);
   --tag-gray-tint: oklch(0.28 0.02 250);
+
+  /* Chronotype — タイムラインラベル用テキスト色 */
+  --chronotype-peak: oklch(0.8 0.12 70); /* 暖色 */
+  --chronotype-dip: oklch(0.75 0.12 250); /* 寒色 */
+
+  /* Chronotype — 設定パネル TimelineBar 等の背景 tint */
+  --chronotype-peak-tint: oklch(0.25 0.03 70);
+  --chronotype-dip-tint: oklch(0.25 0.03 250);
 
   /* Borders & Inputs */
   --border: oklch(1 0 0 / 0.07);

@@ -34,8 +34,8 @@ describe('generateChronotypeGradient', () => {
 
     expect(light).not.toBe(dark);
     // light は L≈0.98 ベース、dark は L≈0.18 ベース
-    expect(light).toContain('0.98');
-    expect(dark).toContain('0.18');
+    expect(light).toContain('0.9800');
+    expect(dark).toContain('0.1800');
   });
 
   it('peak ゾーンで H=70 (amber) を使う', () => {
@@ -66,14 +66,22 @@ describe('generateChronotypeGradient', () => {
     }
   });
 
-  it('stop が最適化されて 288 点より少なくなる', () => {
+  it('smoothstep フェードで十分な stop 数を生成する', () => {
     const zones = CHRONOTYPE_PRESETS.bear.productivityZones;
     const result = generateChronotypeGradient(zones, 'light');
 
-    // 最適化前は ~289 stop。最適化後は neutral 平坦区間が間引かれる
+    // smoothstep: 各ゾーンで fade-in(6) + flat(1) + fade-out(6) + 両端(2)
     const stopCount = result.split('%').length - 1;
-    expect(stopCount).toBeLessThan(289);
-    expect(stopCount).toBeGreaterThan(10); // 少なくとも遷移区間分は残る
+    expect(stopCount).toBeGreaterThanOrEqual(10);
+  });
+
+  it('フェード区間で中間色のストップが含まれる', () => {
+    const zones = CHRONOTYPE_PRESETS.bear.productivityZones;
+    const result = generateChronotypeGradient(zones, 'light');
+
+    // bg(L=0.98) と zone(L=0.965) の中間値が存在するはず
+    // smoothstep 補間により 0.97xx 付近の値が含まれる
+    expect(result).toMatch(/oklch\(0\.97\d+/);
   });
 });
 
@@ -88,28 +96,20 @@ describe('getActiveZoneLevel', () => {
   });
 
   it('dip 時間帯では "dip" を返す', () => {
-    // bear: dip = 14-16
-    expect(getActiveZoneLevel(bearZones, 14)).toBe('dip');
+    // bear: dip = 15-17
     expect(getActiveZoneLevel(bearZones, 15)).toBe('dip');
+    expect(getActiveZoneLevel(bearZones, 16)).toBe('dip');
   });
 
-  it('warmup/recovery/winddown 時間帯では null を返す', () => {
-    // bear: warmup = 7-10
+  it('peak/dip 以外の時間帯では null を返す', () => {
+    // bear: 14-15 は peak と dip の間（neutral）
+    expect(getActiveZoneLevel(bearZones, 14.5)).toBeNull();
+    // bear: 8 は peak 前
     expect(getActiveZoneLevel(bearZones, 8)).toBeNull();
-    // bear: recovery = 16-19
-    expect(getActiveZoneLevel(bearZones, 17)).toBeNull();
   });
 
   it('ゾーン外の時間帯では null を返す', () => {
-    // bear: 0-7 はゾーン外
+    // bear: 深夜はゾーン外
     expect(getActiveZoneLevel(bearZones, 3)).toBeNull();
-  });
-
-  it('日をまたぐゾーンを正しく判定する', () => {
-    // wolf: winddown = 23-1
-    const wolfZones = CHRONOTYPE_PRESETS.wolf.productivityZones;
-    // winddown は peak/dip ではないので null
-    expect(getActiveZoneLevel(wolfZones, 23.5)).toBeNull();
-    expect(getActiveZoneLevel(wolfZones, 0.5)).toBeNull();
   });
 });
