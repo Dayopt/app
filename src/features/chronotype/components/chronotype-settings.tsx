@@ -246,7 +246,11 @@ export function ChronotypeSettings() {
           label={t('settings.chronotype.subtitle')}
           description={t('settings.chronotype.description')}
         >
-          <Switch checked={isEnabled} onCheckedChange={handleToggle} />
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={handleToggle}
+            aria-label={t('settings.chronotype.subtitle')}
+          />
         </LabeledRow>
 
         {/* タイプ選択: 4 カード横並び */}

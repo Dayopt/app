@@ -30,9 +30,27 @@ const SRC_DIR = resolve(ROOT, 'src');
 
 const LOCALES = ['en', 'ja'] as const;
 
-// common.json は app + common の2キーを許容（歴史的例外）
+// ファイル名とトップキーが一致しない歴史的例外
 const MULTI_KEY_EXCEPTIONS: Record<string, string[]> = {
   common: ['app', 'common'],
+  email: [
+    'emailCommon',
+    'welcome',
+    'confirm',
+    'magicLink',
+    'passwordReset',
+    'passwordChanged',
+    'accountDeletion',
+    'reminder',
+    'overdue',
+    'trialStart',
+    'trialExpiring',
+    'trialExpired',
+    'proStart',
+    'paymentFailed',
+    'paymentRecovered',
+    'cancellationConfirm',
+  ],
 };
 
 interface Violation {
