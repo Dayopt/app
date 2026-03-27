@@ -34,20 +34,20 @@ describe('EntryCard', () => {
     it('イベントが正しく表示される', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
-      expect(screen.getByRole('slider', { name: /entry: テストイベント/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/entry: テストイベント/i)).toBeInTheDocument();
     });
 
     it('デフォルトポジションが適用される', () => {
       render(<EntryCard entry={mockEvent} position={undefined} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock).toBeInTheDocument();
     });
 
     it('aria属性が正しく設定される', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock).toHaveAttribute('aria-label', 'entry: テストイベント');
       expect(eventBlock).toHaveAttribute('tabIndex', '0');
     });
@@ -58,7 +58,7 @@ describe('EntryCard', () => {
       const onClick = vi.fn();
       render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       fireEvent.click(eventBlock);
 
       expect(onClick).toHaveBeenCalledWith(mockEvent);
@@ -68,7 +68,7 @@ describe('EntryCard', () => {
       const onContextMenu = vi.fn();
       render(<EntryCard entry={mockEvent} position={mockPosition} onContextMenu={onContextMenu} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       fireEvent.contextMenu(eventBlock);
 
       expect(onContextMenu).toHaveBeenCalledWith(mockEvent, expect.any(Object));
@@ -78,7 +78,7 @@ describe('EntryCard', () => {
       const onClick = vi.fn();
       render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       fireEvent.keyDown(eventBlock, { key: 'Enter' });
 
       expect(onClick).toHaveBeenCalledWith(mockEvent);
@@ -88,7 +88,7 @@ describe('EntryCard', () => {
       const onClick = vi.fn();
       render(<EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       fireEvent.keyDown(eventBlock, { key: ' ' });
 
       expect(onClick).toHaveBeenCalledWith(mockEvent);
@@ -100,7 +100,7 @@ describe('EntryCard', () => {
       const onDragStart = vi.fn();
       render(<EntryCard entry={mockEvent} position={mockPosition} onDragStart={onDragStart} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       fireEvent.mouseDown(eventBlock, { button: 0 });
 
       expect(onDragStart).toHaveBeenCalledWith(
@@ -118,14 +118,14 @@ describe('EntryCard', () => {
     it('ドラッグ中の状態が正しく反映される', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} isDragging={true} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock.className).toContain('cursor-grabbing');
     });
 
     it('選択状態が正しく反映される', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} isSelected={true} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock.className).toContain('ring-2');
     });
   });
@@ -168,7 +168,7 @@ describe('EntryCard', () => {
     it('カスタムclassNameが適用される', () => {
       render(<EntryCard entry={mockEvent} position={mockPosition} className="custom-class" />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock.className).toContain('custom-class');
     });
 
@@ -176,7 +176,7 @@ describe('EntryCard', () => {
       const customStyle = { backgroundColor: 'red' };
       render(<EntryCard entry={mockEvent} position={mockPosition} style={customStyle} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       expect(eventBlock).toHaveStyle({ backgroundColor: 'red' });
     });
 
@@ -184,7 +184,7 @@ describe('EntryCard', () => {
       const smallPosition = { ...mockPosition, height: 25 };
       render(<EntryCard entry={mockEvent} position={smallPosition} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       const contentDiv = eventBlock.querySelector('.text-sm');
       expect(contentDiv).toBeTruthy();
     });
@@ -193,7 +193,7 @@ describe('EntryCard', () => {
       const tinyPosition = { ...mockPosition, height: 5 };
       render(<EntryCard entry={mockEvent} position={tinyPosition} />);
 
-      const eventBlock = screen.getByRole('slider', { name: /entry: テストイベント/i });
+      const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       const heightMatch = eventBlock.style.height.match(/(\d+)px/);
       const height = heightMatch ? parseInt(heightMatch[1]!, 10) : 0;
       expect(height).toBeGreaterThanOrEqual(20);
