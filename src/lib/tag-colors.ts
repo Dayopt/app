@@ -60,6 +60,17 @@ export interface TagColorEntry {
   cssVarTint: string;
 }
 
+/**
+ * Tailwind v4 safelist — テンプレートリテラルはJITスキャナーに検出されないため、
+ * 全タグカラーのクラス名をフル文字列で列挙してCSS生成を保証する。
+ *
+ * bg-tag-red bg-tag-orange bg-tag-amber bg-tag-green bg-tag-teal
+ * bg-tag-blue bg-tag-indigo bg-tag-violet bg-tag-pink bg-tag-gray
+ * bg-tag-red-tint bg-tag-orange-tint bg-tag-amber-tint bg-tag-green-tint bg-tag-teal-tint
+ * bg-tag-blue-tint bg-tag-indigo-tint bg-tag-violet-tint bg-tag-pink-tint bg-tag-gray-tint
+ * border-tag-red border-tag-orange border-tag-amber border-tag-green border-tag-teal
+ * border-tag-blue border-tag-indigo border-tag-violet border-tag-pink border-tag-gray
+ */
 function entry(name: TagColorName): TagColorEntry {
   return {
     border: `border-tag-${name}`,
