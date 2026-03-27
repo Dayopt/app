@@ -3,29 +3,64 @@
 **リリース日**: 2026-03-27
 **バージョン**: 0.23.0
 
-## 概要
+## 🎯 概要
 
-モバイルUI刷新、Chronotype機能の大幅リデザイン（deep/ease体系への移行）、デザイントークン体系の刷新、タイムゾーン対応の全面修正、メール全テンプレートのi18n対応、通知機能の強化、plan/record用語のentry統一を含む大型リリース。
+541ファイル変更（+19,175 / -15,091行）の大型リリース。モバイルUI全面刷新（ボトムタブナビ・作成シート・設定リデザイン）、カレンダー内部アーキテクチャの統一、タグアイコン機能、Chronotype体系の deep/ease 移行、デザイントークン刷新、タイムゾーン全面修正、メール全15テンプレートのi18n対応、通知機能強化、plan/record → entry 用語統一を含む。
 
 ---
 
-## 変更内容
+## 📋 変更内容
 
 ### ✨ 新機能 (Added)
 
-#### モバイルUI刷新 + カレンダーリファクタリング ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### モバイルUI全面刷新 ([#1017](https://github.com/Dayopt/app/pull/1017))
 
-- モバイル専用レイアウトの改善（ヘッダー固定、ボトムナビ調整）
-- 隣接予定の重複誤検出修正
-- コンテキストメニューのモバイル対応
-- お問い合わせをモバイルではDrawer（ボトムシート）表示に変更
-- タイムライン長押しによるエントリー作成のタッチヒント追加
+**ボトムタブナビゲーション**
+
+- カレンダー / 通知 / アカウントの3タブ構成
+- モバイルではday view固定、スワイプで日付遷移
+- ボトムタブからの遷移状態を `resetToServer` で正しく同期
+
+**モバイルカレンダーヘッダー + 作成シート**
+
+- monthDay形式 + text-xl のコンパクトヘッダー
+- 作成ボタン（SquarePlus）タップで作成シートを展開
+- インライン追加フォーム + TagGridPickerでタグ選択可能
+
+**モバイル専用ページ**
+
+- 通知フルページ（通知タブから遷移）
+- アカウント概要ページ + ヘルプ&サポートページ
+- お問い合わせをDrawer（ボトムシート）表示に変更
+
+**モバイルサイドバー最適化**
+
+- タッチターゲット拡大（min-h-11 = 44px）
+- DnD無効化、メニュー簡素化
+- フィルターシート追加
+
+**Inspector モバイル対応**
+
+- DrawerをフルスクリーンOPENに変更
+- フィールド行のタッチターゲットを44pxに拡大
+- タグ名・ドット・ボタンサイズ拡大
+- 入力値のフォントサイズを `text-base` に統一
+- メモ欄の最大高さを160px（`max-h-40`）に拡大
+
+#### カレンダー機能強化 ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- 日付遷移スライドアニメーション追加
+- エントリ作成時のアニメーション追加（day view）
+- ミニカレンダーに週番号表示を追加
+- ブロック配置時のスクロール位置を画面中央に調整
 
 #### タグアイコン機能 ([#1017](https://github.com/Dayopt/app/pull/1017))
 
-- タグにアイコンを設定可能に（48個の厳選アイコン）
-- IconPickerコンポーネント（8列グリッド）
-- タグUIのグリッド4列化
+- タグにLucideアイコンフィールドを追加（48個の厳選アイコン）
+- `TagGridPicker` — GridSelectorパターンで統一されたタグ選択UI
+- パレット・履歴の `BlockItem` にタグアイコンを表示
+- タグ統合モーダルをドリルダウン対応（親→子タグ）に改善
+- `TagQuickSelector` に作成フォーム + キャンセルボタン追加
 
 #### メールi18n対応 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
@@ -49,7 +84,17 @@
 
 - Slack風ポップオーバー（Bell + 未読バッジ）
 - タブフィルタ（All / Reminders / AI）
+- 未読/既読デザインをGAFA準拠に改善
 - 設定ギアボタンから通知設定へ直接遷移
+
+#### iCalフィードのレート制限 ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- レート制限をUpstash Redisに移行（Supabase依存から脱却）
+
+#### i18n CI整合性チェック ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- `lint:i18n` — 全ロケール間の翻訳キー整合性チェックをCIに追加
+- 新言語追加スクリプト
 
 #### Storybook Docs全面刷新 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
@@ -57,7 +102,7 @@
 - Foundations Overviewページ新設
 - Elevation を4段階（sunken/base/raised/overlay）に再構成
 - タイムゾーン設計ガイド（Docs/Architecture）追加
-- トークン一覧Overviewストーリー追加
+- タグカラーをデータ駆動に最適化
 
 ### 🔄 変更 (Changed)
 
@@ -72,7 +117,7 @@
 
 - `generateChronotypeGradient(zones, mode)` — oklch smoothstep fade-in/flat-top/fade-out
 - DBにグラデーションキャッシュ保存（`chronotypeGradient.light/dark`）
-- 旧 `ChronotypeBackground` コンポーネント削除
+- 旧 `ChronotypeBackground` コンポーネント削除（-67行）
 
 **Now Line**
 
@@ -83,6 +128,20 @@
 
 - 旧 `chronotype-warmup/peak/dip/recovery/winddown` → `chronotype-deep` / `chronotype-ease` / `chronotype-deep-tint` / `chronotype-ease-tint`
 
+**設定パネル**
+
+- Chronotypeトグルを設定パネルに追加
+- クイズ導線を統一
+
+#### カレンダー内部アーキテクチャ統一 ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- 3つの `Content` コンポーネント（DayContent/WeekContent/MonthContent）を `CalendarGridContent` に統一
+- weekViewの `overlap` アルゴリズムを `lib/layout.ts` に集約（重複関数 `entriesToCalendarEvents` 削除）
+- `useCalendarLayout` を `useCalendarSidebarLayout` に縮小（カレンダーレイアウトロジックを分離）
+- `useCalendarComposition` を3つのsub-hooks（drag/keyboard/layout）に分割
+- キーボードショートカットの中央レジストリ化（D/W/0-9, Cmd+C/V, Delete, Cmd+W）
+- dead code削除（アニメーションstub + `handlePlanRestore`）
+
 #### デザイントークン体系の刷新 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
 - opacity派生トークン全廃 → named tint/scale/stateトークンに統一
@@ -91,6 +150,7 @@
 - セマンティックtintトークン追加（`destructive-tint`, `warning-tint`, `success-tint`, `info-tint`, `border-subtle`）
 - ヒートマップスケールカラー追加
 - `shadow-*` をTailwind標準クラスに統一（独自surface-\*ユーティリティ廃止）
+- カラー準拠監査 — primitive/semantic修正 + lint拡張
 
 #### タイムゾーン対応の全面修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
@@ -119,6 +179,19 @@
 - `usePlanOperations` → `useEntryOperations`
 - `SamplePlanTemplate` → `SampleEntryTemplate`
 
+#### シェル・ヘッダー整理 ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- `appHeader` を薄いシェルに簡素化 — `leftSlot` / `children` / `rightSlot` の3スロット構成
+- 3カラムgridレイアウトに変更（children中央寄せ）
+- PCヘッダーのナビゲーション・ビュー切替を日付の右隣に配置
+- サイドバー閉じ時の `PanelLeft` トグルボタンをヘッダーに復元
+
+#### 設定画面リデザイン ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- `SectionCard` / `LabeledRow` コンポーネントをリデザイン
+- 全設定ページにリデザインコンポーネントを適用
+- モバイル設定ルートのハイドレーション後ガード追加
+
 #### Zustand Store統合 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
 - `useShellStore` に5ストアを統合（`useLayoutStore`, `usePageTitleStore`, `useMobileCreateSheetStore`, `useContactStore`, `useSettingsStore`）
@@ -128,11 +201,20 @@
 
 #### スタイル最適化 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
-- tw-animate-css導入で手書きアニメーション約190行を削除
+- `tw-animate-css` 導入で手書きアニメーション約190行を削除
 - arbitrary values・インラインstyleをTailwind標準に置換
 - 子コンポーネントの冗長な `bg-background` 削除
 - `field-sizing-content` で手書きauto-resize JS約25行を削除
 - オーバーレイに `backdrop-blur-md` 追加 + Popover/Dropdownにlayered shadow適用
+- `pageNav` をセグメントコントロールからghost+stateレイヤーに変更
+- `tabsTrigger` をアンダーラインスタイルに統一
+
+#### UIリファインメント ([#1017](https://github.com/Dayopt/app/pull/1017))
+
+- `blockItem` 16px化 + 履歴ピンアイコンを Star に統一
+- `entryCard` リマインダーBellアイコン削除
+- サイドバー見出しのホバーをタイトル部分とアクション部分で分離
+- パレット追加UIを `TagGridPicker` + チップに統一
 
 ### 🐛 バグ修正 (Fixed)
 
@@ -156,39 +238,61 @@
 - Security advisor警告の一括修正
 - Performance advisor警告の修正
 
+#### モバイル修正 ([#1017](https://github.com/Dayopt/app/pull/1017), [#1022](https://github.com/Dayopt/app/pull/1022))
+
+- 隣接予定の重複誤検出を修正
+- ヘッダーTodayアイコンを `size-5` に縮小
+- 日付横Chevronアイコンを `size-5` に拡大
+- ログアウト下のバージョン表記がボトムナビに隠れる問題を修正
+- PCで設定ページが3カラム表示されるバグを修正
+- `mobileMonthGrid` の週番号 `weekStartsOn` 不整合を修正
+- `calendarDateHeader` 上部ボーダー削除
+
 #### その他 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
 - Stats: `hasNoData` がエラー・フェッチ中を無視して空状態を表示するバグ修正
 - Stats: `useStatsFilterSync` の `useEffect` 無限ループとURLパラメータ消失修正
 - Layout: `useSearchParams` を `BaseLayoutContent` から除去しSuspenseアンマウント防止
 - Sidebar: タグ作成ボタンをパレットと同じ Button ghost に統一
+- Email: `email.json` の `common` キーが `common.json` を上書きする問題を修正
+- Email: `appUrl` デフォルト値を `https://app.dayopt.app` に更新
 
 ### ⚡ パフォーマンス (Performance)
 
-- 統計関数のWHERE句をインデックス活用可能に最適化
+- **Next.jsパフォーマンス最適化** ([#1017](https://github.com/Dayopt/app/pull/1017))
+  - React Compiler有効化（→後に無効化、安定性のため）
+  - `useTransition` によるUI応答性改善
+  - リスト仮想化
+- **ホットパス改善** ([#1017](https://github.com/Dayopt/app/pull/1017))
+  - ホットパスのlogger呼び出し削除
+  - drag中のDOM queryキャッシュ化
+- **`entryInspector` / `tourOrchestrator` をdynamic importに変更** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **統計関数のWHERE句をインデックス活用可能に最適化** ([#1022](https://github.com/Dayopt/app/pull/1022))
 
-### 破壊的変更 (Breaking Changes)
+### 🔒 セキュリティ (Security)
 
-**データベース**
+- Supabase Security advisor警告の一括修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
 
-- `user_settings` に `preferred_locale` カラム追加
-- 統計RPC関数9つの引数にタイムゾーン対応追加
-- `notification_preferences` に4つの通知タイプカラム追加
-- Chronotypeグラデーションキャッシュ用スキーマ追加
+### 🗑️ 削除 (Removed)
 
-**削除されたコンポーネント・ストア**
+**コンポーネント・ストア**
 
 - `ChronotypeBackground` コンポーネント（-67行）
 - `NotificationDropdown` → `ActivityPopover` に置換
 - `useLayoutStore`, `useSettingsStore`, `usePageTitleStore`, `useMobileCreateSheetStore`, `useContactStore` → `useShellStore` に統合
 - `useOnboardingStore`, `useTagCacheStore` 削除
+- `TagRadioItem` コンポーネント削除
+- モバイルFAB関連コード完全削除
+- モバイルサイドバー・フィルター関連の不要ファイル削除
+- 未使用のtouch-pan-\*-pinchデッドコード削除
 
-**削除されたファイル**
+**ファイル**
 
 - `messages/*/plan.json`（`entry.json` にマージ）
 - `src/features/settings/utils/timezone.ts`（`src/lib/date/timezone.ts` に統合）
 - `src/lib/timezone-listener.ts`
 - 旧Storybook docs（ColorSystem, CommonPatterns, DesignPrinciples, Overview, Rules）
+- 重複関数 `entriesToCalendarEvents`
 
 **CSSトークン**
 
@@ -200,19 +304,40 @@
 **i18nキー**
 
 - `plan.*` 名前空間廃止 → `entry.*` に統一
-- `entry.toast.restored` / `restoreFailed` / `conflict` は `entry.json` に移行済み
+
+### ⚠️ 破壊的変更 (Breaking Changes)
+
+**データベース**
+
+- `user_settings` に `preferred_locale` カラム追加
+- 統計RPC関数9つの引数にタイムゾーン対応追加
+- `notification_preferences` に4つの通知タイプカラム追加
+- Chronotypeグラデーションキャッシュ用スキーマ追加
+
+### 🔧 開発基盤 (DX)
+
+- **knip dead code検出をCIに組み込み** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **i18n整合性チェック（`lint:i18n`）をCIに追加** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **未使用依存削除** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **E2Eテスト追加** — モバイル設定・ボトムナビゲーション ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **ユニットテスト追加** — history・onboarding・palette（48テスト） ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **AI feature の deep import解消** + 重複テスト削除 ([#1017](https://github.com/Dayopt/app/pull/1017))
 
 ---
 
-## 関連リンク
+## 🔗 関連リンク
 
 ### Pull Requests
 
-| PR                                               | タイトル                                                   | 概要                     |
-| ------------------------------------------------ | ---------------------------------------------------------- | ------------------------ |
-| [#1017](https://github.com/Dayopt/app/pull/1017) | モバイルUI刷新 + カレンダーリファクタリング + タグアイコン | モバイル体験の大幅改善   |
-| [#1022](https://github.com/Dayopt/app/pull/1022) | v0.23.0                                                    | リリースブランチの統合PR |
+| PR                                               | タイトル                                                         | 概要                                                                         |
+| ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [#1017](https://github.com/Dayopt/app/pull/1017) | feat: モバイルUI刷新 + カレンダーリファクタリング + タグアイコン | モバイル体験の全面刷新、カレンダー内部統一、タグアイコン、パフォーマンス改善 |
+| [#1022](https://github.com/Dayopt/app/pull/1022) | v0.23.0                                                          | Chronotypeリデザイン、トークン刷新、TZ修正、メールi18n、通知強化、用語統一   |
 
 ---
 
 **Full Changelog**: https://github.com/Dayopt/app/compare/v0.22.0...v0.23.0
+
+**🤖 Generated with [Claude Code](https://claude.com/claude-code)**
+
+**Co-Authored-By: Claude <noreply@anthropic.com>**

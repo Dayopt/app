@@ -17,7 +17,8 @@ interface ThemeContextType {
   isPending: boolean;
 }
 
-const ThemeContext = createContext<ThemeContextType | null>(null);
+/** @internal Storybook グローバルデコレータ用にexport */
+export const ThemeContext = createContext<ThemeContextType | null>(null);
 
 /** テーマコンテキストを取得するフック（テーマ・カラースキームの取得/設定） */
 export function useTheme() {
