@@ -4,7 +4,7 @@
       "title": "エントリー詳細",
       "deleteConfirm": "このエントリーを削除しますか？",
       "notFound": "エントリーが見つかりません",
-      "openPlan": "エントリーを開く",
+      "openEntry": "エントリーを開く",
       "toast": {
         "timeOverlap": "時間が重複しています",
         "saveFailed": "保存に失敗しました",

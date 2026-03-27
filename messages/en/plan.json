@@ -1,5 +1,5 @@
 {
-  "plan": {
+  "entry": {
     "sidebar": {
       "tabs": {
         "calendar": "Calendar",
@@ -59,12 +59,12 @@
       "editDescription": "Edit description",
       "addDescription": "Add description",
       "addDescriptionPlaceholder": "Add description...",
-      "createPlan": "Create Entry",
+      "create": "Create Entry",
       "createRecord": "Create Entry",
       "markComplete": "Mark complete",
       "markIncomplete": "Mark incomplete",
       "completeOptions": "Complete options",
-      "completeAndCreateRecord": "Complete + Create Entry",
+      "completeAndCreate": "Complete + Create Entry",
       "timeConflict": "Time overlaps",
       "toast": {
         "tagsSaveFailed": "Failed to save tags",
@@ -118,14 +118,14 @@
         "titleLabel": "Entry title",
         "timeOverlap": "Time overlaps with existing entry",
         "failed": "Failed to create entry",
-        "linkPlan": "Link to entry",
-        "unlinkPlan": "Unlink from entry",
-        "searchPlan": "Search entries...",
-        "noPlans": "No entries found",
+        "linkEntry": "Link to entry",
+        "unlinkEntry": "Unlink from entry",
+        "searchEntries": "Search entries...",
+        "noEntries": "No entries found",
         "fulfillmentTooltip": "Fulfillment: {score}/5 (long press to reset)",
         "fulfillmentTap": "Fulfillment (tap to add)",
         "fulfillmentLabel": "Fulfillment: {score}/5",
-        "addNewPlan": "Add new entry"
+        "addNew": "Add new entry"
       }
     },
     "view": {

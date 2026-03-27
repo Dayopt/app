@@ -175,7 +175,7 @@
       "confirmTitleWithName": "Delete \"{name}\"?",
       "warningIrreversible": "This action cannot be undone",
       "affectedItems": "Affected items",
-      "plans": "Plans",
+      "plans": "Entries",
       "events": "Events",
       "tasks": "Tasks",
       "itemsCount": "{count} items",
@@ -284,8 +284,8 @@
       "addDescription": "Add description...",
       "previousTag": "Previous tag",
       "nextTag": "Next tag",
-      "linkedRecords": "{count, plural, one {1 Linked Record} other {# Linked Records}}",
-      "noLinkedRecords": "No records linked to this tag"
+      "linkedRecords": "{count, plural, one {1 Linked Entry} other {# Linked Entries}}",
+      "noLinkedRecords": "No entries linked to this tag"
     },
     "bulkMerge": {
       "title": "Merge Tags",
@@ -302,7 +302,7 @@
     "merge": {
       "title": "Merge Tags",
       "description": "Merge \"{source}\" into another tag",
-      "autoMergeDescription": "All plans from the source tag will be transferred to the target tag, and the source tag will be automatically deleted.",
+      "autoMergeDescription": "All entries from the source tag will be transferred to the target tag, and the source tag will be automatically deleted.",
       "targetTag": "Target tag",
       "selectTarget": "Select target...",
       "noTargetSelected": "Please select a target tag",
@@ -344,8 +344,8 @@
     },
     "detail": {
       "description": "Description",
-      "linkedPlans": "Linked Plans ({count})",
-      "noLinkedPlans": "No plans linked to this tag"
+      "linkedPlans": "Linked Entries ({count})",
+      "noLinkedPlans": "No entries linked to this tag"
     }
   }
 }

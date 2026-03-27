@@ -1,5 +1,5 @@
 {
-  "plan": {
+  "entry": {
     "sidebar": {
       "tabs": {
         "calendar": "カレンダー",
@@ -59,12 +59,12 @@
       "editDescription": "説明を編集",
       "addDescription": "説明を追加",
       "addDescriptionPlaceholder": "説明を追加...",
-      "createPlan": "エントリーを作成",
+      "create": "エントリーを作成",
       "createRecord": "エントリーを作成",
       "markComplete": "完了にする",
       "markIncomplete": "未完了に戻す",
       "completeOptions": "完了オプション",
-      "completeAndCreateRecord": "完了 + エントリー作成",
+      "completeAndCreate": "完了 + エントリー作成",
       "timeConflict": "時間が重複しています",
       "toast": {
         "tagsSaveFailed": "タグの保存に失敗しました",
@@ -118,14 +118,14 @@
         "titleLabel": "エントリータイトル",
         "timeOverlap": "時間が重複しています",
         "failed": "エントリーの作成に失敗しました",
-        "linkPlan": "エントリーに紐付け",
-        "unlinkPlan": "エントリー紐付けを解除",
-        "searchPlan": "エントリーを検索...",
-        "noPlans": "エントリーがありません",
+        "linkEntry": "エントリーに紐付け",
+        "unlinkEntry": "エントリー紐付けを解除",
+        "searchEntries": "エントリーを検索...",
+        "noEntries": "エントリーがありません",
         "fulfillmentTooltip": "充実度: {score}/5（長押しでリセット）",
         "fulfillmentTap": "充実度（タップで加算）",
         "fulfillmentLabel": "充実度: {score}/5",
-        "addNewPlan": "エントリーを追加"
+        "addNew": "エントリーを追加"
       }
     },
     "view": {

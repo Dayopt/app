@@ -4,7 +4,7 @@
       "title": "Entry details",
       "deleteConfirm": "Delete this entry?",
       "notFound": "Entry not found",
-      "openPlan": "Open entry",
+      "openEntry": "Open entry",
       "toast": {
         "timeOverlap": "Time overlaps with existing entry",
         "saveFailed": "Failed to save",
