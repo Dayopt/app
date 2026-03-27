@@ -2,19 +2,21 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { ExternalLink, RefreshCw, Stethoscope } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
-import { getDipHours, getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
+import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
@@ -28,13 +30,13 @@ import type {
   ProductivityZone,
 } from '@/types/chronotype';
 
-type ViewState = 'idle' | 'quiz' | 'empty';
+type ViewState = 'idle' | 'quiz';
 
 interface ChronotypeAutoSaveSettings {
   chronotype: ChronotypeSettingsState;
 }
 
-/** 活動時間帯のタイムライン（6:00–22:00、peak/dip のみ色分け） */
+/** 活動時間帯のタイムライン（6:00–22:00、deep/ease のみ色分け） */
 function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
   const t = useTranslations();
   const START = 6;
@@ -54,8 +56,8 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
     return result;
   }, [zones]);
 
-  const peakZone = zones.find((z) => z.level === 'peak');
-  const dipZone = zones.find((z) => z.level === 'dip');
+  const deepZone = zones.find((z) => z.level === 'deep');
+  const easeZone = zones.find((z) => z.level === 'ease');
 
   return (
     <div className="space-y-1">
@@ -65,31 +67,30 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
             key={index}
             className={cn(
               'relative flex-1',
-              segment.level === 'peak' && 'bg-chronotype-peak-tint',
-              segment.level === 'dip' && 'bg-chronotype-dip-tint',
-              segment.level !== 'peak' && segment.level !== 'dip' && 'bg-muted',
+              segment.level === 'deep' && 'bg-chronotype-deep-tint',
+              segment.level === 'ease' && 'bg-chronotype-ease-tint',
+              segment.level !== 'deep' && segment.level !== 'ease' && 'bg-muted',
             )}
           />
         ))}
-        {/* ゾーンラベル */}
-        {peakZone && (
+        {deepZone && (
           <span
-            className="text-chronotype-peak pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
             style={{
-              left: `${((Math.max(peakZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+              left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
           >
-            {t('settings.chronotype.levels.peak')}
+            {t('settings.chronotype.levels.deep')}
           </span>
         )}
-        {dipZone && (
+        {easeZone && (
           <span
-            className="text-chronotype-dip pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
             style={{
-              left: `${((Math.max(dipZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+              left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
           >
-            {t('settings.chronotype.levels.dip')}
+            {t('settings.chronotype.levels.ease')}
           </span>
         )}
       </div>
@@ -128,7 +129,7 @@ function TypeCard({
       <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
       <span className="text-sm font-bold">{profile?.name}</span>
       <span className="text-muted-foreground text-xs">
-        {t(`settings.chronotype.population.${type}`)}
+        {t(`settings.chronotype.shortDesc.${type}`)}
       </span>
     </button>
   );
@@ -176,10 +177,21 @@ export function ChronotypeSettings() {
 
   const isEnabled = autoSave.values.chronotype.enabled;
   const selectedType = autoSave.values.chronotype.type;
-  const selectedProfile = isEnabled ? getPresetChronotypeProfile(selectedType) : null;
+  const selectedProfile = getPresetChronotypeProfile(selectedType);
 
-  const initialView: ViewState = isEnabled ? 'idle' : 'empty';
-  const [view, setView] = useState<ViewState>(initialView);
+  const [view, setView] = useState<ViewState>('idle');
+
+  const handleToggle = useCallback(
+    (checked: boolean) => {
+      const nextChronotype = {
+        ...autoSave.values.chronotype,
+        enabled: checked,
+      };
+      updateStoreSettings({ chronotype: nextChronotype });
+      autoSave.updateValue('chronotype', nextChronotype);
+    },
+    [autoSave, updateStoreSettings],
+  );
 
   const handleSelectType = useCallback(
     (type: PresetChronotypeType) => {
@@ -207,8 +219,8 @@ export function ChronotypeSettings() {
   }, []);
 
   const handleCancelQuiz = useCallback(() => {
-    setView(isEnabled ? 'idle' : 'empty');
-  }, [isEnabled]);
+    setView('idle');
+  }, []);
 
   if (isPending) {
     return (
@@ -226,17 +238,75 @@ export function ChronotypeSettings() {
     );
   }
 
-  if (view === 'empty') {
-    return (
-      <SectionCard title={t('settings.chronotype.title')}>
-        <div className="space-y-4 py-2">
-          <p className="text-muted-foreground text-sm">{t('settings.chronotype.notDiagnosed')}</p>
-          <Button variant="outline" size="sm" onClick={handleStartQuiz}>
-            <Stethoscope />
-            {t('settings.chronotype.diagnose')}
-          </Button>
+  return (
+    <SectionCard title={t('settings.chronotype.title')}>
+      <div className="space-y-6">
+        {/* ラベル行: テキスト + Switch */}
+        <LabeledRow
+          label={t('settings.chronotype.subtitle')}
+          description={t('settings.chronotype.description')}
+        >
+          <Switch checked={isEnabled} onCheckedChange={handleToggle} />
+        </LabeledRow>
+
+        {/* タイプ選択: 4 カード横並び */}
+        <div className="flex gap-2">
+          {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
+            <TypeCard
+              key={type}
+              type={type}
+              isSelected={isEnabled && selectedType === type}
+              onSelect={() => handleSelectType(type)}
+            />
+          ))}
         </div>
-        <div className="mt-4">
+
+        {/* enabled 時のみ: 説明 + タイムライン + 結果カード */}
+        {isEnabled && selectedProfile ? (
+          <>
+            <p className="text-muted-foreground text-sm">{selectedProfile.description}</p>
+
+            <TimelineBar zones={selectedProfile.productivityZones} />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-xl p-4">
+                <span className="bg-chronotype-deep/20 text-chronotype-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                  ↗
+                </span>
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground text-xs leading-none">
+                    {t('settings.chronotype.deepTime')}
+                  </p>
+                  <p className="text-sm leading-tight font-bold">
+                    {getDeepHours(selectedProfile.productivityZones)}
+                  </p>
+                  <p className="text-muted-foreground text-xs leading-none">
+                    {t('settings.chronotype.deepTimeHint')}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-xl p-4">
+                <span className="bg-chronotype-ease/20 text-chronotype-ease flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                  ↘
+                </span>
+                <div className="space-y-0.5">
+                  <p className="text-muted-foreground text-xs leading-none">
+                    {t('settings.chronotype.easeTime')}
+                  </p>
+                  <p className="text-sm leading-tight font-bold">
+                    {getEaseHours(selectedProfile.productivityZones)}
+                  </p>
+                  <p className="text-muted-foreground text-xs leading-none">
+                    {t('settings.chronotype.easeTimeHint')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {/* フッター（常に表示） */}
+        <div className="flex items-center justify-between">
           <a
             href="https://sleepdoctor.com/pages/chronotypes"
             target="_blank"
@@ -246,88 +316,11 @@ export function ChronotypeSettings() {
             <span>{t('settings.chronotype.learnMore')}</span>
             <ExternalLink className="h-3 w-3" />
           </a>
+          <Button variant="outline" size="sm" onClick={handleStartQuiz}>
+            <RefreshCw />
+            {t('settings.chronotype.quizAction')}
+          </Button>
         </div>
-      </SectionCard>
-    );
-  }
-
-  return (
-    <SectionCard title={t('settings.chronotype.title')}>
-      <div className="space-y-6">
-        {/* タイプ選択: 4 カード横並び */}
-        <div className="flex gap-2">
-          {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
-            <TypeCard
-              key={type}
-              type={type}
-              isSelected={selectedType === type}
-              onSelect={() => handleSelectType(type)}
-            />
-          ))}
-        </div>
-
-        {selectedProfile ? (
-          <>
-            {/* 説明 */}
-            <p className="text-muted-foreground text-sm">{selectedProfile.description}</p>
-
-            {/* タイムライン（6:00–22:00） */}
-            <TimelineBar zones={selectedProfile.productivityZones} />
-
-            {/* Peak / Dip 結果カード */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-chronotype-peak-tint flex items-center gap-3 rounded-xl p-4">
-                <span className="bg-chronotype-peak/20 text-chronotype-peak flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
-                  ↗
-                </span>
-                <div className="space-y-0.5">
-                  <p className="text-muted-foreground text-xs leading-none">
-                    {t('settings.chronotype.peakTime')}
-                  </p>
-                  <p className="text-sm leading-tight font-bold">
-                    {getPeakHours(selectedProfile.productivityZones)}
-                  </p>
-                  <p className="text-muted-foreground text-xs leading-none">
-                    {t('settings.chronotype.peakTimeHint')}
-                  </p>
-                </div>
-              </div>
-              <div className="bg-chronotype-dip-tint flex items-center gap-3 rounded-xl p-4">
-                <span className="bg-chronotype-dip/20 text-chronotype-dip flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
-                  ↘
-                </span>
-                <div className="space-y-0.5">
-                  <p className="text-muted-foreground text-xs leading-none">
-                    {t('settings.chronotype.dipTime')}
-                  </p>
-                  <p className="text-sm leading-tight font-bold">
-                    {getDipHours(selectedProfile.productivityZones)}
-                  </p>
-                  <p className="text-muted-foreground text-xs leading-none">
-                    {t('settings.chronotype.dipTimeHint')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* フッター */}
-            <div className="flex items-center justify-between">
-              <a
-                href="https://sleepdoctor.com/pages/chronotypes"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline transition-colors"
-              >
-                <span>{t('settings.chronotype.learnMore')}</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
-              <Button variant="outline" size="sm" onClick={handleStartQuiz}>
-                <RefreshCw />
-                {t('settings.chronotype.rediagnose')}
-              </Button>
-            </div>
-          </>
-        ) : null}
       </div>
     </SectionCard>
   );

@@ -3,7 +3,9 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 
+import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
 import { cn } from '@/lib/utils';
 
@@ -12,7 +14,7 @@ import {
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
 } from '../lib/constants';
-import { getDipHours, getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/types/chronotype';
 
@@ -20,11 +22,11 @@ import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/t
 // Demo Components（tRPC/Zustandに依存しないpure版）
 // ─────────────────────────────────────────────────────────
 
-const POPULATION: Record<PresetChronotypeType, string> = {
-  lion: '15-20%',
-  bear: '~55%',
-  wolf: '15-20%',
-  dolphin: '~10%',
+const SHORT_DESC: Record<PresetChronotypeType, string> = {
+  lion: 'Morning focus',
+  bear: 'Late-morning peak',
+  wolf: 'Evening energy',
+  dolphin: 'Late-morning stability',
 };
 
 function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
@@ -42,8 +44,8 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
     return { hour, level: zone?.level ?? ('warmup' as const) };
   });
 
-  const peakZone = zones.find((z) => z.level === 'peak');
-  const dipZone = zones.find((z) => z.level === 'dip');
+  const deepZone = zones.find((z) => z.level === 'deep');
+  const easeZone = zones.find((z) => z.level === 'ease');
 
   return (
     <div className="space-y-1">
@@ -53,30 +55,30 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
             key={index}
             className={cn(
               'relative flex-1',
-              segment.level === 'peak' && 'bg-chronotype-peak-tint',
-              segment.level === 'dip' && 'bg-chronotype-dip-tint',
-              segment.level !== 'peak' && segment.level !== 'dip' && 'bg-muted',
+              segment.level === 'deep' && 'bg-chronotype-deep-tint',
+              segment.level === 'ease' && 'bg-chronotype-ease-tint',
+              segment.level !== 'deep' && segment.level !== 'ease' && 'bg-muted',
             )}
           />
         ))}
-        {peakZone && (
+        {deepZone && (
           <span
-            className="text-chronotype-peak pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
             style={{
-              left: `${((Math.max(peakZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+              left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
           >
-            PEAK
+            DEEP
           </span>
         )}
-        {dipZone && (
+        {easeZone && (
           <span
-            className="text-chronotype-dip pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
             style={{
-              left: `${((Math.max(dipZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+              left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
           >
-            DIP
+            EASE
           </span>
         )}
       </div>
@@ -89,63 +91,82 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
   );
 }
 
-function ChronotypeSettingsDemo({ initialType = 'bear' }: { initialType?: PresetChronotypeType }) {
+function ChronotypeSettingsDemo({
+  initialType = 'bear',
+  initialEnabled = true,
+}: {
+  initialType?: PresetChronotypeType;
+  initialEnabled?: boolean;
+}) {
+  const [enabled, setEnabled] = useState(initialEnabled);
   const [selectedType, setSelectedType] = useState<ChronotypeType>(initialType);
   const selectedProfile = getPresetChronotypeProfile(selectedType);
 
+  const handleSelectType = (type: PresetChronotypeType) => {
+    setSelectedType(type);
+    setEnabled(true);
+  };
+
   return (
     <div className="max-w-2xl">
-      <SectionCard title="Chronotype">
+      <SectionCard title="Your rhythm">
         <div className="space-y-6">
+          <LabeledRow
+            label="Show focus zones on calendar"
+            description="Highlight your best focus and rest windows on the calendar"
+          >
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </LabeledRow>
+
           {/* タイプ選択: 4 カード横並び */}
           <div className="flex gap-2">
             {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
               <button
                 key={type}
                 type="button"
-                onClick={() => setSelectedType(type)}
+                onClick={() => handleSelectType(type)}
                 className={cn(
                   'flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition-colors',
-                  selectedType === type
+                  enabled && selectedType === type
                     ? 'border-foreground bg-card'
                     : 'border-border hover:border-foreground/30',
                 )}
               >
                 <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
                 <span className="text-sm font-bold">{CHRONOTYPE_PRESETS[type].name}</span>
-                <span className="text-muted-foreground text-xs">{POPULATION[type]}</span>
+                <span className="text-muted-foreground text-xs">{SHORT_DESC[type]}</span>
               </button>
             ))}
           </div>
 
-          {selectedProfile ? (
+          {/* enabled 時のみ表示 */}
+          {enabled && selectedProfile ? (
             <>
               <p className="text-muted-foreground text-sm">{selectedProfile.description}</p>
 
               <TimelineBarDemo zones={selectedProfile.productivityZones} />
 
-              {/* Peak / Dip 結果カード */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-chronotype-peak-tint flex items-center gap-3 rounded-xl p-4">
-                  <span className="bg-chronotype-peak/20 text-chronotype-peak flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-xl p-4">
+                  <span className="bg-chronotype-deep/20 text-chronotype-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                     ↗
                   </span>
                   <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs leading-none">Peak time</p>
+                    <p className="text-muted-foreground text-xs leading-none">Deep time</p>
                     <p className="text-sm leading-tight font-bold">
-                      {getPeakHours(selectedProfile.productivityZones)}
+                      {getDeepHours(selectedProfile.productivityZones)}
                     </p>
                     <p className="text-muted-foreground text-xs leading-none">Best for Deep Work</p>
                   </div>
                 </div>
-                <div className="bg-chronotype-dip-tint flex items-center gap-3 rounded-xl p-4">
-                  <span className="bg-chronotype-dip/20 text-chronotype-dip flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-xl p-4">
+                  <span className="bg-chronotype-ease/20 text-chronotype-ease flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                     ↘
                   </span>
                   <div className="space-y-0.5">
-                    <p className="text-muted-foreground text-xs leading-none">Dip time</p>
+                    <p className="text-muted-foreground text-xs leading-none">Ease time</p>
                     <p className="text-sm leading-tight font-bold">
-                      {getDipHours(selectedProfile.productivityZones)}
+                      {getEaseHours(selectedProfile.productivityZones)}
                     </p>
                     <p className="text-muted-foreground text-xs leading-none">Light tasks & rest</p>
                   </div>
@@ -162,7 +183,7 @@ function ChronotypeSettingsDemo({ initialType = 'bear' }: { initialType?: Preset
 function ChronotypeSettingsLoadingDemo() {
   return (
     <div className="max-w-2xl">
-      <SectionCard title="Chronotype">
+      <SectionCard title="Your rhythm">
         <Skeleton className="h-12 w-full rounded-lg" />
       </SectionCard>
     </div>
@@ -184,27 +205,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Bear（標準型）を選択した状態 */
-export const BearSelected: Story = {
+/** 有効 + Bear */
+export const EnabledBear: Story = {
   render: () => <ChronotypeSettingsDemo initialType="bear" />,
 };
 
-/** Lion（朝型）を選択した状態 */
-export const LionSelected: Story = {
+/** 有効 + Lion */
+export const EnabledLion: Story = {
   render: () => <ChronotypeSettingsDemo initialType="lion" />,
 };
 
-/** Wolf（夜型）を選択した状態 */
-export const WolfSelected: Story = {
-  render: () => <ChronotypeSettingsDemo initialType="wolf" />,
-};
-
-/** Dolphin（不規則型）を選択した状態 */
-export const DolphinSelected: Story = {
+/** 有効 + Dolphin */
+export const EnabledDolphin: Story = {
   render: () => <ChronotypeSettingsDemo initialType="dolphin" />,
 };
 
-/** ローディング状態 */
+/** 無効（トグル OFF） */
+export const Disabled: Story = {
+  render: () => <ChronotypeSettingsDemo initialEnabled={false} />,
+};
+
+/** ローディング */
 export const Loading: Story = {
   render: () => <ChronotypeSettingsLoadingDemo />,
 };

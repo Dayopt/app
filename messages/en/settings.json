@@ -259,32 +259,29 @@
       "densitySpacious": "Spacious"
     },
     "chronotype": {
-      "title": "Chronotype",
-      "description": "Select a type that matches your biological rhythm. Based on your selection, optimal work hours will be displayed in the status bar.",
+      "title": "Your rhythm",
+      "description": "Highlight your best focus and rest windows on the calendar",
       "settingsSaved": "Chronotype settings saved",
       "notSelected": "Not selected",
       "details": "Type Details",
       "timeline": "24-Hour Timeline",
-      "peakTime": "Peak time",
-      "dipTime": "Dip time",
-      "peakTimeHint": "Best for Deep Work",
-      "dipTimeHint": "Light tasks & rest",
-      "population": {
-        "lion": "15-20%",
-        "bear": "~55%",
-        "wolf": "15-20%",
-        "dolphin": "~10%"
+      "deepTime": "Deep time",
+      "easeTime": "Ease time",
+      "deepTimeHint": "Best for Deep Work",
+      "easeTimeHint": "Light tasks & rest",
+      "subtitle": "Show focus zones on calendar",
+      "quizAction": "Take the quiz",
+      "shortDesc": {
+        "lion": "Morning focus",
+        "bear": "Late-morning peak",
+        "wolf": "Evening energy",
+        "dolphin": "Late-morning stability"
       },
       "learnMore": "Learn more about chronotypes",
-      "showOnTimeline": "Show on timeline",
-      "showOnTimelineDesc": "Color the time grid background by productivity zone",
-      "notDiagnosed": "Not yet diagnosed. Answer a few questions to discover your chronotype.",
-      "diagnose": "Take the quiz",
-      "rediagnose": "Retake quiz",
       "levels": {
         "warmup": "Warm-up",
-        "peak": "Peak",
-        "dip": "Dip",
+        "deep": "Deep",
+        "ease": "Ease",
         "recovery": "Recovery",
         "winddown": "Wind-down"
       },
@@ -314,7 +311,7 @@
               "anxious": "Restless and uneasy"
             }
           },
-          "peakFocus": {
+          "deepFocus": {
             "title": "When do you focus best?",
             "options": {
               "earlyMorning": "Early morning (6–9 AM)",
@@ -323,12 +320,12 @@
               "evening": "Evening or night (after 5 PM)"
             }
           },
-          "afternoonDip": {
+          "afternoonEase": {
             "title": "How does the afternoon slump affect you?",
             "options": {
-              "earlyDip": "Strong drowsiness right after lunch",
-              "normalDip": "Slightly sleepy around 2–3 PM",
-              "noDip": "No drowsiness in the afternoon",
+              "earlyEase": "Strong drowsiness right after lunch",
+              "normalEase": "Slightly sleepy around 2–3 PM",
+              "noEase": "No drowsiness in the afternoon",
               "unpredictable": "Sleepiness hits at unpredictable times"
             }
           },
