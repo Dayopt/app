@@ -308,6 +308,12 @@
       "inDeep": "In deep",
       "inEase": "In ease"
     },
+    "mobile": {
+      "touchHint": {
+        "title": "Long press to create",
+        "description": "Press and hold on the timeline to create a new entry"
+      }
+    },
     "timeGrid": {
       "ariaLabel": "Calendar time grid - click or press Enter to create event"
     },

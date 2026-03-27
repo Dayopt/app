@@ -308,6 +308,12 @@
       "inDeep": "In deep",
       "inEase": "In ease"
     },
+    "mobile": {
+      "touchHint": {
+        "title": "長押しで作成",
+        "description": "タイムライン上を長押しして新しいエントリーを作成"
+      }
+    },
     "timeGrid": {
       "ariaLabel": "カレンダータイムグリッド - クリックまたはEnterキーでイベントを作成"
     },
