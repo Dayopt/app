@@ -809,313 +809,6 @@ export const Semantic: Story = {
   },
 };
 
-// Interaction story は Foundations/States に統合済み
-
-export const Text: Story = {
-  render: () => (
-    <div>
-      <h2 className="mb-6 text-xl font-bold">インタラクション状態</h2>
-      <p className="text-muted-foreground mb-8">
-        ホバー、フォーカス、プレス時の色変化。実際に操作して確認できます。
-      </p>
-
-      {/* State Layer一覧（MD3準拠） */}
-      <div className="bg-card border-border mb-8 rounded-xl border p-6">
-        <h3 className="mb-4 text-lg font-bold">State Layer一覧（MD3準拠）</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          foregroundベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border border-b">
-                <th className="py-3 text-left font-bold">状態</th>
-                <th className="py-3 text-left font-bold">トークン</th>
-                <th className="py-3 text-left font-bold">不透明度</th>
-                <th className="py-3 text-left font-bold">用途</th>
-              </tr>
-            </thead>
-            <tbody className="text-muted-foreground">
-              <tr className="border-border border-b">
-                <td className="py-3">Hover</td>
-                <td className="py-3">
-                  <code>bg-state-hover</code>
-                </td>
-                <td className="py-3">10%</td>
-                <td className="py-3">マウスオーバー時</td>
-              </tr>
-              <tr className="border-border border-b">
-                <td className="py-3">Focus</td>
-                <td className="py-3">
-                  <code>bg-state-focus</code>
-                </td>
-                <td className="py-3">12%</td>
-                <td className="py-3">キーボードフォーカス時</td>
-              </tr>
-              <tr className="border-border border-b">
-                <td className="py-3">Pressed</td>
-                <td className="py-3">
-                  <code>bg-state-pressed</code>
-                </td>
-                <td className="py-3">12%</td>
-                <td className="py-3">クリック中</td>
-              </tr>
-              <tr className="border-border border-b">
-                <td className="py-3">Selected</td>
-                <td className="py-3">
-                  <code>bg-state-selected</code>
-                </td>
-                <td className="py-3">12%</td>
-                <td className="py-3">選択状態</td>
-              </tr>
-              <tr className="border-border border-b">
-                <td className="py-3">Dragged</td>
-                <td className="py-3">
-                  <code>bg-state-dragged</code>
-                </td>
-                <td className="py-3">16%</td>
-                <td className="py-3">ドラッグ中</td>
-              </tr>
-              <tr>
-                <td className="py-3">Active</td>
-                <td className="py-3">
-                  <code>bg-state-active</code>
-                </td>
-                <td className="py-3">塗り</td>
-                <td className="py-3">選択中（塗りつぶし）</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 汎用ホバー（Ghost/Outline用） */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">
-          汎用ホバー（Ghost/Outline用）
-        </h3>
-        <div className="flex flex-wrap gap-4">
-          <button
-            type="button"
-            className="hover:bg-state-hover rounded-lg border border-transparent px-4 py-2 transition-colors"
-          >
-            <code className="text-sm">hover:bg-state-hover</code>
-          </button>
-          <button
-            type="button"
-            className="border-border hover:bg-state-hover rounded-lg border px-4 py-2 transition-colors"
-          >
-            <code className="text-sm">Outline + hover</code>
-          </button>
-        </div>
-      </div>
-
-      {/* 塗りボタン用ホバー */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">塗りボタン用ホバー</h3>
-        <div className="flex flex-wrap gap-4">
-          {[
-            { bg: 'bg-primary', hover: 'hover:bg-primary-hover', label: 'primary' },
-            { bg: 'bg-destructive', hover: 'hover:bg-destructive-hover', label: 'destructive' },
-            { bg: 'bg-secondary', hover: 'hover:bg-secondary-hover', label: 'secondary' },
-            { bg: 'bg-warning', hover: 'hover:bg-warning-hover', label: 'warning' },
-            { bg: 'bg-success', hover: 'hover:bg-success-hover', label: 'success' },
-            { bg: 'bg-info', hover: 'hover:bg-info-hover', label: 'info' },
-          ].map(({ bg, hover, label }) => (
-            <div key={label} className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                className={`${bg} ${hover} h-12 w-24 rounded-lg transition-colors`}
-                aria-label={`${label} hover demo`}
-              />
-              <code className="text-muted-foreground text-xs">{label}</code>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* セマンティックGhostホバー */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">
-          セマンティックGhostホバー
-        </h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          色付きのGhost/Outlineボタン用（MD3 state layer方式）
-        </p>
-        <div className="flex flex-wrap gap-4">
-          {[
-            {
-              text: 'text-primary',
-              hover: 'hover:bg-primary-state-hover',
-              label: 'primary',
-            },
-            {
-              text: 'text-destructive',
-              hover: 'hover:bg-destructive-state-hover',
-              label: 'destructive',
-            },
-          ].map(({ text, hover, label }) => (
-            <div key={label} className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                className={`${text} ${hover} border-border h-12 w-24 rounded-lg border transition-colors`}
-                aria-label={`${label} ghost hover demo`}
-              />
-              <code className="text-muted-foreground text-xs">{label}</code>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* フォーカスリング */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">
-          フォーカスリング（MD3スタイル）
-        </h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          Tabキーでフォーカスを移動して確認。ボーダーがリングに置き換わる。
-        </p>
-        <div className="flex flex-wrap gap-4">
-          <button
-            type="button"
-            className="border-border focus-visible:ring-ring rounded-lg border px-4 py-2 outline-none focus-visible:border-transparent focus-visible:ring-2"
-          >
-            <code className="text-sm">focus-visible:border-transparent + ring</code>
-          </button>
-          <input
-            type="text"
-            placeholder="入力フィールド"
-            className="border-border bg-input focus-visible:ring-ring rounded-lg border px-4 py-2 outline-none focus-visible:border-transparent focus-visible:ring-2"
-          />
-        </div>
-      </div>
-
-      {/* アクティブ/選択状態 */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">アクティブ/選択状態</h3>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col items-center gap-2">
-            <div className="bg-state-active h-12 w-24 rounded-lg" />
-            <code className="text-muted-foreground text-xs">bg-state-active</code>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <button
-              type="button"
-              className="active:bg-state-hover border-border h-12 w-24 rounded-lg border transition-colors"
-              aria-label="active state demo"
-            />
-            <code className="text-muted-foreground text-xs">active:bg-state-hover</code>
-          </div>
-        </div>
-      </div>
-
-      {/* リンク/テキストホバー */}
-      <div className="mb-8">
-        <h3 className="border-border mb-4 border-b pb-2 text-lg font-bold">
-          リンク/テキストホバー
-        </h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          テキストリンクのホバースタイル。下線の濃さが変化。
-        </p>
-        <div className="flex flex-wrap items-center gap-6">
-          <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            className="text-primary decoration-primary/30 hover:decoration-primary underline transition-colors"
-          >
-            下線リンク（hover:decoration-primary）
-          </a>
-          <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            className="text-primary transition-colors hover:underline"
-          >
-            ホバーで下線（hover:underline）
-          </a>
-          <a
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            色変化（hover:text-foreground）
-          </a>
-        </div>
-      </div>
-
-      {/* 使用例 */}
-      <div className="bg-card border-border rounded-lg border p-6">
-        <h3 className="mb-4 font-bold">コピペ用クラス</h3>
-        <div className="space-y-4 font-mono text-sm">
-          <div className="text-muted-foreground mb-2 text-xs">汎用</div>
-          <div>
-            <span className="text-muted-foreground">Ghost:</span> <code>hover:bg-state-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Focus:</span>{' '}
-            <code>
-              focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring
-            </code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Selected:</span>{' '}
-            <code>bg-state-active text-state-active-foreground</code>
-          </div>
-
-          <div className="text-muted-foreground mt-4 mb-2 text-xs">塗りボタン</div>
-          <div>
-            <span className="text-muted-foreground">Primary:</span>{' '}
-            <code>bg-primary hover:bg-primary-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Destructive:</span>{' '}
-            <code>bg-destructive hover:bg-destructive-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Secondary:</span>{' '}
-            <code>bg-secondary hover:bg-secondary-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Warning:</span>{' '}
-            <code>bg-warning hover:bg-warning-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Success:</span>{' '}
-            <code>bg-success hover:bg-success-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Info:</span>{' '}
-            <code>bg-info hover:bg-info-hover</code>
-          </div>
-
-          <div className="text-muted-foreground mt-4 mb-2 text-xs">セマンティックGhost</div>
-          <div>
-            <span className="text-muted-foreground">Primary Ghost:</span>{' '}
-            <code>text-primary hover:bg-primary-state-hover</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Destructive Ghost:</span>{' '}
-            <code>text-destructive hover:bg-destructive-state-hover</code>
-          </div>
-
-          <div className="text-muted-foreground mt-4 mb-2 text-xs">リンク</div>
-          <div>
-            <span className="text-muted-foreground">下線リンク:</span>{' '}
-            <code>text-primary underline decoration-primary/30 hover:decoration-primary</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">ホバー下線:</span>{' '}
-            <code>text-primary hover:underline</code>
-          </div>
-          <div>
-            <span className="text-muted-foreground">色変化:</span>{' '}
-            <code>text-muted-foreground hover:text-foreground</code>
-          </div>
-        </div>
-      </div>
-    </div>
-  ),
-};
-
 export const Text: Story = {
   render: () => {
     const neutralTexts = [
@@ -1366,134 +1059,89 @@ export const Tags: Story = {
 };
 
 export const DosDonts: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-2 text-2xl font-bold">Do&apos;s & Don&apos;ts</h1>
-      <p className="text-muted-foreground mb-8">カラー使用のベストプラクティス。</p>
+  render: () => {
+    const rules = [
+      {
+        title: '1. セマンティックトークンを使う',
+        doCode: 'bg-destructive text-destructive-foreground',
+        dontCode: 'bg-red-500 text-white',
+        reason:
+          'oklch の値を直接書かない。トークン経由で使う。直接指定するとダークモード切替、将来の色調整が全部壊れる。',
+      },
+      {
+        title: '2. Surface の階層を守る',
+        doCode: 'container(沈む) → background(基準) → card(浮く)',
+        dontCode: 'card の中に background、background の中に card',
+        reason:
+          '判断基準: ユーザーの目がそこに行くべきか？ 行くべき → card（浮かせる）。行かなくていい → container / muted（沈める）。',
+      },
+      {
+        title: '3. 色は意味があるときだけつける',
+        doCode: 'ほとんどのUIは neutral（surface + text-foreground）で完結',
+        dontCode: '意味なく色をつけて画面をカラフルにする',
+        reason:
+          '色を足す前に「これを灰色にしたら情報が失われるか？」と問う。失われないなら neutral のまま。9割のUIは Step 1 で終わる。',
+      },
+      {
+        title: '4. Semantic の色と意味を一致させる',
+        doCode: '成功→green、エラー→red、警告→amber、情報→blue',
+        dontCode: '成功を青で、エラーを黄色で表示',
+        reason: '色の意味が揺れると、ユーザーが毎回「この色は何？」と考える負荷が発生する。',
+      },
+      {
+        title: '5. 色だけで情報を伝えない',
+        doCode: '<CheckCircle /> 完了 — 色+アイコン+テキストの三重伝達',
+        dontCode: '<span className="text-success">完了</span> — 色だけ',
+        reason: 'WCAG 1.4.1: 色を唯一の視覚的手段にしない。色覚多様性のユーザーが識別できない。',
+      },
+      {
+        title: '6. テキストコントラストを確保する',
+        doCode: 'text-foreground on bg-card\ntext-primary-foreground on bg-primary',
+        dontCode: 'text-muted-foreground on bg-primary\nopacity-50 のテキスト',
+        reason:
+          'WCAG AA: コントラスト比 4.5:1 以上。Dark のテキストは L=0.90（オフホワイト）なので暗い背景との比率を確認する。',
+      },
+      {
+        title: '7. Semantic の強度を用途に合わせる',
+        doCode: '背景にうっすら → bg-info-tint\nはっきり → bg-info\nテキスト → text-info',
+        dontCode: 'accent（bg-info）をセクション全体の背景に\ntint（bg-info-tint）をボタンに',
+        reason: '薄い色を広い面に、強い色を小さい要素に。逆にすると画面がうるさくなる。',
+      },
+      {
+        title: '8. Dark で oklch を手動で反転しない',
+        doCode: 'トークンを使う。Light/Dark の切替はトークンが処理する',
+        dontCode: 'dark:bg-[oklch(0.22_0.008_60)] と直接書く',
+        reason:
+          '値を直接書くとトークンの体系から外れて、色調整時に見落とされる「野良の色」になる。',
+      },
+    ] as const;
 
-      <div className="grid max-w-5xl gap-8">
-        {/* セマンティックトークン */}
-        <section className="bg-card border-border rounded-xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">セマンティックトークンを使用</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="border-success space-y-3 border-l-4 pl-4">
-              <p className="text-success font-bold">Do</p>
-              <div className="flex gap-2">
-                <div className="bg-destructive h-8 w-16 rounded" />
-                <div className="bg-success h-8 w-16 rounded" />
-              </div>
-              <code className="text-muted-foreground block text-xs">
-                className=&quot;bg-destructive text-destructive-foreground&quot;
-              </code>
-            </div>
-            <div className="border-destructive space-y-3 border-l-4 pl-4">
-              <p className="text-destructive font-bold">Don&apos;t</p>
-              <code className="text-muted-foreground block text-xs">
-                className=&quot;bg-red-500 text-white&quot;
-                <br />
-                className=&quot;bg-green-500 text-white&quot;
-              </code>
-              <p className="text-muted-foreground text-xs">
-                直接カラー指定はダークモードで破綻する
-              </p>
-            </div>
-          </div>
-          <p className="text-muted-foreground mt-4 text-sm">
-            理由:
-            セマンティックトークンはダークモード対応を自動化し、デザイン変更時の一括修正を可能にする。
-          </p>
-        </section>
+    return (
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">Do&apos;s &amp; Don&apos;ts</h1>
+        <p className="text-muted-foreground mb-8">カラー使用のベストプラクティス。</p>
 
-        {/* テキストコントラスト */}
-        <section className="bg-card border-border rounded-xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">適切なテキストコントラスト</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="border-success space-y-3 border-l-4 pl-4">
-              <p className="text-success font-bold">Do</p>
-              <div className="bg-primary h-8 rounded" />
-              <code className="text-muted-foreground block text-xs">
-                text-primary-foreground on bg-primary
-              </code>
-              <div className="bg-container text-foreground rounded p-2 text-sm">
-                text-foreground on bg-container
-              </div>
-            </div>
-            <div className="border-destructive space-y-3 border-l-4 pl-4">
-              <p className="text-destructive font-bold">Don&apos;t</p>
-              <code className="text-muted-foreground block text-xs">
-                text-muted-foreground on bg-primary
-                <br />
-                opacity-50 text
-              </code>
-              <p className="text-muted-foreground text-xs">
-                コントラスト比4.5:1未満になる組み合わせは避ける
-              </p>
-            </div>
-          </div>
-          <p className="text-muted-foreground mt-4 text-sm">
-            理由: WCAG 2.1 AA基準（コントラスト比4.5:1以上）を満たすため。
-          </p>
-        </section>
-
-        {/* Surface階層 */}
-        <section className="bg-card border-border rounded-xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Surface階層を守る</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="border-success space-y-3 border-l-4 pl-4">
-              <p className="text-success font-bold">Do</p>
-              <div className="bg-background rounded-lg p-2">
-                <div className="bg-container rounded p-2">
-                  <div className="bg-card rounded p-2 text-sm">background → container → card</div>
+        <div className="grid max-w-5xl gap-6">
+          {rules.map(({ title, doCode, dontCode, reason }) => (
+            <section key={title} className="bg-card border-border rounded-xl border p-6">
+              <h2 className="mb-4 text-lg font-bold">{title}</h2>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="border-success space-y-2 border-l-4 pl-4">
+                  <p className="text-success text-sm font-bold">Do</p>
+                  <pre className="text-foreground text-xs whitespace-pre-wrap">{doCode}</pre>
+                </div>
+                <div className="border-destructive space-y-2 border-l-4 pl-4">
+                  <p className="text-destructive text-sm font-bold">Don&apos;t</p>
+                  <pre className="text-muted-foreground text-xs whitespace-pre-wrap">
+                    {dontCode}
+                  </pre>
                 </div>
               </div>
-            </div>
-            <div className="border-destructive space-y-3 border-l-4 pl-4">
-              <p className="text-destructive font-bold">Don&apos;t</p>
-              <code className="text-muted-foreground block text-xs">
-                card → background → container
-              </code>
-              <p className="text-muted-foreground text-xs">親→子で暗くなる階層を逆転させない</p>
-            </div>
-          </div>
-          <p className="text-muted-foreground mt-4 text-sm">
-            理由: MD3原則に基づく視覚的階層。親→子で暗くなる一貫した構造。
-          </p>
-        </section>
-
-        {/* 状態色 */}
-        <section className="bg-card border-border rounded-xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">状態を色で表現</h2>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="border-success space-y-3 border-l-4 pl-4">
-              <p className="text-success font-bold">Do</p>
-              <ul className="text-muted-foreground space-y-2 text-sm">
-                {[
-                  { label: '成功', cls: 'bg-success' },
-                  { label: 'エラー', cls: 'bg-destructive' },
-                  { label: '警告', cls: 'bg-warning' },
-                  { label: '情報', cls: 'bg-info' },
-                ].map(({ label, cls }) => (
-                  <li key={label} className="flex items-center gap-2">
-                    <span className={`${cls} inline-block h-4 w-4 shrink-0 rounded-full`} />
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="border-destructive space-y-3 border-l-4 pl-4">
-              <p className="text-destructive font-bold">Don&apos;t</p>
-              <ul className="text-muted-foreground space-y-1 text-sm">
-                <li>成功を青で表示</li>
-                <li>エラーを黄色で表示</li>
-                <li>色だけで状態を伝える（アイコンなし）</li>
-              </ul>
-            </div>
-          </div>
-          <p className="text-muted-foreground mt-4 text-sm">
-            理由: 色の意味を統一することでユーザーの認知負荷を軽減。
-          </p>
-        </section>
+              <p className="text-muted-foreground mt-4 text-sm">{reason}</p>
+            </section>
+          ))}
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
 };
