@@ -67,6 +67,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
             style={{
               left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
+            aria-hidden="true"
           >
             DEEP
           </span>
@@ -77,6 +78,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
             style={{
               left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
+            aria-hidden="true"
           >
             EASE
           </span>

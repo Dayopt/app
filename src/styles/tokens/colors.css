@@ -53,7 +53,7 @@
    * bg: tint背景用（高明度・低彩度）
    * 4色とも同じ L/C 構造で hue のみ変化
    * ============================================ */
-  --destructive: oklch(0.55 0.16 25);
+  --destructive: oklch(0.58 0.16 25);
   --destructive-tint: oklch(0.96 0.015 25);
   --destructive-foreground: var(--white);
   --warning: oklch(0.68 0.16 70);
