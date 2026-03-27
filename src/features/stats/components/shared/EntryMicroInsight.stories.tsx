@@ -94,11 +94,11 @@ export const TagFulfillment: Story = {
 };
 
 /** ピーク時間帯（優先度4） */
-export const PeakHour: Story = {
+export const DeepHour: Story = {
   args: {
     insight: {
-      type: 'peak_hour',
-      messageKey: 'peakHour',
+      type: 'deep_hour',
+      messageKey: 'deepHour',
     },
   },
 };
@@ -233,7 +233,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">PeakHour（ピーク時間帯）</p>
+        <p className="text-muted-foreground mb-3 text-xs font-medium">DeepHour（ピーク時間帯）</p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
             <span className="bg-primary size-3 rounded-full" />
@@ -242,8 +242,8 @@ export const AllPatterns: Story = {
           <div className="mt-1.5">
             <EntryMicroInsight
               insight={{
-                type: 'peak_hour',
-                messageKey: 'peakHour',
+                type: 'deep_hour',
+                messageKey: 'deepHour',
               }}
             />
           </div>

@@ -5,7 +5,7 @@ import { Clock } from 'lucide-react';
 import type { EnergyMapRow, MetricDefinition } from '../types/metrics.types';
 
 import {
-  calculatePeakUtilization,
+  calculateDeepUtilization,
   formatMetricValue,
   formatMetricValueParts,
   getMetricTrend,
@@ -13,67 +13,67 @@ import {
 } from './metrics';
 
 // =============================================================================
-// calculatePeakUtilization
+// calculateDeepUtilization
 // =============================================================================
 
-describe('calculatePeakUtilization', () => {
-  it('returns zero when no peak zones are defined', () => {
+describe('calculateDeepUtilization', () => {
+  it('returns zero when no deep zones are defined', () => {
     const energyMap: EnergyMapRow[] = [
       { hour: 9, dow: 1, avgFulfillment: 2.5, totalMinutes: 60, entryCount: 2 },
     ];
 
-    const result = calculatePeakUtilization(energyMap, [], 7);
-    expect(result).toEqual({ peakMinutes: 0, totalPeakAvailable: 0, peakUtilization: 0 });
+    const result = calculateDeepUtilization(energyMap, [], 7);
+    expect(result).toEqual({ deepMinutes: 0, totalDeepAvailable: 0, deepUtilization: 0 });
   });
 
   it('returns zero when daysInRange is 0', () => {
-    const result = calculatePeakUtilization([], [{ startHour: 9, endHour: 12 }], 0);
-    expect(result).toEqual({ peakMinutes: 0, totalPeakAvailable: 0, peakUtilization: 0 });
+    const result = calculateDeepUtilization([], [{ startHour: 9, endHour: 12 }], 0);
+    expect(result).toEqual({ deepMinutes: 0, totalDeepAvailable: 0, deepUtilization: 0 });
   });
 
-  it('calculates peak utilization correctly', () => {
+  it('calculates deep utilization correctly', () => {
     const energyMap: EnergyMapRow[] = [
       { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
       { hour: 10, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
-      { hour: 14, dow: 1, avgFulfillment: 1, totalMinutes: 60, entryCount: 1 }, // non-peak
+      { hour: 14, dow: 1, avgFulfillment: 1, totalMinutes: 60, entryCount: 1 }, // non-deep
     ];
 
-    // Peak: 9:00-11:00 inclusive (3 hours: 9, 10, 11)
-    const result = calculatePeakUtilization(energyMap, [{ startHour: 9, endHour: 11 }], 1);
+    // Deep: 9:00-11:00 inclusive (3 hours: 9, 10, 11)
+    const result = calculateDeepUtilization(energyMap, [{ startHour: 9, endHour: 11 }], 1);
 
-    expect(result.peakMinutes).toBe(75); // 45 + 30 (hour 11 has no data)
-    expect(result.totalPeakAvailable).toBe(180); // 3 hours * 60 min * 1 day
-    expect(result.peakUtilization).toBeCloseTo(75 / 180); // ~0.4167
+    expect(result.deepMinutes).toBe(75); // 45 + 30 (hour 11 has no data)
+    expect(result.totalDeepAvailable).toBe(180); // 3 hours * 60 min * 1 day
+    expect(result.deepUtilization).toBeCloseTo(75 / 180); // ~0.4167
   });
 
-  it('handles multiple peak zones', () => {
+  it('handles multiple deep zones', () => {
     const energyMap: EnergyMapRow[] = [
       { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 60, entryCount: 1 },
       { hour: 15, dow: 1, avgFulfillment: 2, totalMinutes: 30, entryCount: 1 },
     ];
 
-    const peakZones = [
+    const deepZones = [
       { startHour: 9, endHour: 10 }, // inclusive: 9, 10 = 2 hours
       { startHour: 15, endHour: 16 }, // inclusive: 15, 16 = 2 hours
     ];
 
-    const result = calculatePeakUtilization(energyMap, peakZones, 7);
+    const result = calculateDeepUtilization(energyMap, deepZones, 7);
 
-    expect(result.peakMinutes).toBe(90); // 60 + 30
-    expect(result.totalPeakAvailable).toBe(1680); // 4 hours * 60 * 7 days
+    expect(result.deepMinutes).toBe(90); // 60 + 30
+    expect(result.totalDeepAvailable).toBe(1680); // 4 hours * 60 * 7 days
   });
 
-  it('ignores non-peak hours in energy map', () => {
+  it('ignores non-deep hours in energy map', () => {
     const energyMap: EnergyMapRow[] = [
       { hour: 8, dow: 1, avgFulfillment: 2, totalMinutes: 60, entryCount: 1 },
       { hour: 9, dow: 1, avgFulfillment: 3, totalMinutes: 45, entryCount: 1 },
-      { hour: 13, dow: 1, avgFulfillment: 1, totalMinutes: 30, entryCount: 1 }, // outside peak
+      { hour: 13, dow: 1, avgFulfillment: 1, totalMinutes: 30, entryCount: 1 }, // outside deep
     ];
 
-    // Peak: 9-12 inclusive (hours 9, 10, 11, 12)
-    const result = calculatePeakUtilization(energyMap, [{ startHour: 9, endHour: 12 }], 1);
+    // Deep: 9-12 inclusive (hours 9, 10, 11, 12)
+    const result = calculateDeepUtilization(energyMap, [{ startHour: 9, endHour: 12 }], 1);
 
-    expect(result.peakMinutes).toBe(45); // only hour 9 (10,11,12 have no data)
+    expect(result.deepMinutes).toBe(45); // only hour 9 (10,11,12 have no data)
   });
 });
 

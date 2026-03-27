@@ -14,7 +14,7 @@
       "confirmSubtitle": "アカウントから取得しました"
     },
     "chronotype": {
-      "title": "あなたのクロノタイプは？",
+      "title": "あなたのリズムは？",
       "subtitle": "あなたの生活リズムに合わせて、集中しやすい時間帯をカレンダーに色で表示します",
       "lion": {
         "name": "ライオン",
@@ -45,7 +45,7 @@
       "quizDuration": "6つの質問に答えるだけ（約1分）",
       "quizResult": {
         "title": "あなたは{type}タイプです！",
-        "description": "集中のゴールデンタイムは{peakTime}です。カレンダーに色で表示します。",
+        "description": "集中のゴールデンタイムは{deepTime}です。カレンダーに色で表示します。",
         "confirm": "OK"
       }
     },

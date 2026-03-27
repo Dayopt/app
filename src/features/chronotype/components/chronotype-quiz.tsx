@@ -77,8 +77,8 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
   // --- 結果サマリー画面 ---
   if (phase === 'result' && resultType) {
     const preset = CHRONOTYPE_PRESETS[resultType];
-    const peakZone = preset.productivityZones.find((z) => z.level === 'peak');
-    const peakTimeStr = peakZone ? `${peakZone.startHour}:00 – ${peakZone.endHour}:00` : '';
+    const deepZone = preset.productivityZones.find((z) => z.level === 'deep');
+    const deepTimeStr = deepZone ? `${deepZone.startHour}:00 – ${deepZone.endHour}:00` : '';
 
     return (
       <div className="flex flex-col items-center gap-4 py-4 text-center">
@@ -90,7 +90,7 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
         </h3>
         <p className="text-muted-foreground text-sm">
           {t('onboarding.chronotype.quizResult.description', {
-            peakTime: peakTimeStr,
+            deepTime: deepTimeStr,
           })}
         </p>
         <Button variant="primary" onClick={handleConfirmResult} className="mt-2 w-full">

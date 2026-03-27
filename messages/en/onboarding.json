@@ -19,25 +19,25 @@
       "lion": {
         "name": "Lion",
         "trait": "Early riser",
-        "time": "Peak: 7 AM – 12 PM",
+        "time": "Deep: 7 AM – 12 PM",
         "hint": "You naturally wake up before 6 AM"
       },
       "bear": {
         "name": "Bear",
         "trait": "Steady pace",
-        "time": "Peak: 10 AM – 2 PM",
+        "time": "Deep: 10 AM – 2 PM",
         "hint": "You follow a regular sleep schedule"
       },
       "wolf": {
         "name": "Wolf",
         "trait": "Night owl",
-        "time": "Peak: 3 PM – 9 PM",
+        "time": "Deep: 3 PM – 9 PM",
         "hint": "You come alive in the evening"
       },
       "dolphin": {
         "name": "Dolphin",
         "trait": "Light sleeper",
-        "time": "Peak: 8 AM – 12 PM",
+        "time": "Deep: 8 AM – 12 PM",
         "hint": "You sleep lightly and wake often"
       },
       "quizLink": "Not sure? Take the quiz",
@@ -45,7 +45,7 @@
       "quizDuration": "6 questions, about 1 minute",
       "quizResult": {
         "title": "You're a {type}!",
-        "description": "Your peak focus time is {peakTime}. We'll highlight this on your calendar.",
+        "description": "Your deep focus time is {deepTime}. We'll highlight this on your calendar.",
         "confirm": "Sounds right"
       }
     },

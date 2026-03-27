@@ -145,14 +145,14 @@ function getZoneHours(zones: ProductivityZone[], level: ProductivityZone['level'
  * ピーク時間帯を返す
  * @returns ピークゾーンがない場合は '-'
  */
-export function getPeakHours(zones: ProductivityZone[]): string {
-  return getZoneHours(zones, 'peak');
+export function getDeepHours(zones: ProductivityZone[]): string {
+  return getZoneHours(zones, 'deep');
 }
 
 /**
  * ディップ時間帯を返す
  * @returns ディップゾーンがない場合は '-'
  */
-export function getDipHours(zones: ProductivityZone[]): string {
-  return getZoneHours(zones, 'dip');
+export function getEaseHours(zones: ProductivityZone[]): string {
+  return getZoneHours(zones, 'ease');
 }

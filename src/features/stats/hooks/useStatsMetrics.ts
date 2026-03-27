@@ -7,7 +7,7 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {
-  calculatePeakUtilization,
+  calculateDeepUtilization,
   formatMetricValueParts,
   getMetricProgress,
   getMetricTrend,
@@ -21,17 +21,17 @@ import { computePreviousDateRange, computeStatsDateRange } from '../utils/comput
 // Helpers
 // =============================================================================
 
-function computePeakFromEnergyMap(
+function computeDeepFromEnergyMap(
   data: EnergyMapRow[] | undefined,
   startDate: string,
   endDate: string,
 ) {
   if (!data || !startDate || !endDate) return null;
-  const defaultPeakZones = [{ startHour: 9, endHour: 14 }];
+  const defaultDeepZones = [{ startHour: 9, endHour: 14 }];
   const s = new Date(startDate);
   const e = new Date(endDate);
   const daysInRange = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)));
-  return calculatePeakUtilization(data, defaultPeakZones, daysInRange);
+  return calculateDeepUtilization(data, defaultDeepZones, daysInRange);
 }
 
 function computeAvgDeviation(
@@ -86,7 +86,7 @@ export interface UseStatsMetricsResult {
  * useStatsMetrics — KPI メトリクスの取得・正規化・フォーマットを一括処理
  *
  * 統合エンドポイント `getStatsOverview` を使い、14→2クエリに削減。
- * estimationAccuracy と energyMap（peakUtilization）は個別クエリが必要。
+ * estimationAccuracy と energyMap（deepUtilization）は個別クエリが必要。
  */
 export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResult {
   const currentDate = useStatsFilterStore((s) => s.currentDate);
@@ -117,13 +117,13 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
   const isLoading = overview.isPending || estimationAccuracy.isPending || energyMap.isPending;
 
   // ピーク活用率
-  const peakUtilization = useMemo(
-    () => computePeakFromEnergyMap(energyMap.data, dateRange.startDate, dateRange.endDate),
+  const deepUtilization = useMemo(
+    () => computeDeepFromEnergyMap(energyMap.data, dateRange.startDate, dateRange.endDate),
     [energyMap.data, dateRange.startDate, dateRange.endDate],
   );
-  const prevPeakUtilization = useMemo(
+  const prevDeepUtilization = useMemo(
     () =>
-      computePeakFromEnergyMap(prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate),
+      computeDeepFromEnergyMap(prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate),
     [prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate],
   );
 
@@ -191,13 +191,13 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
       };
     }
 
-    if (peakUtilization) {
-      map.peakUtilization = {
-        id: 'peakUtilization',
-        value: peakUtilization.peakUtilization,
+    if (deepUtilization) {
+      map.deepUtilization = {
+        id: 'deepUtilization',
+        value: deepUtilization.deepUtilization,
         trend: computeTrend(
-          peakUtilization.peakUtilization,
-          prevPeakUtilization?.peakUtilization,
+          deepUtilization.deepUtilization,
+          prevDeepUtilization?.deepUtilization,
           'up',
         ),
       };
@@ -229,8 +229,8 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
     prevOverview.data,
     avgDeviation,
     prevAvgDeviation,
-    peakUtilization,
-    prevPeakUtilization,
+    deepUtilization,
+    prevDeepUtilization,
     streakQuery.data,
   ]);
 

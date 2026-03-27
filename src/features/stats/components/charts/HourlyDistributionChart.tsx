@@ -78,7 +78,7 @@ export function HourlyDistributionChart() {
       <CardHeader>
         <CardTitle>{t('hourlyDist')}</CardTitle>
         <CardDescription>
-          {t('hourlyPeak', {
+          {t('hourlyDeep', {
             slot: maxSlot?.timeSlot ?? '',
             hours: formatHours(maxSlot?.hours ?? 0),
           })}

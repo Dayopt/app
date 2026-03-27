@@ -26,7 +26,7 @@ Layer 1で実装するKPIメトリクス。2行×4列グリッドに配置。
 | メトリクス | 計算式 | DB関数 | 意味 | 採用理由 |
 |-----------|--------|--------|------|----------|
 | **Estimation Accuracy** | `avg(\|actual - planned\|)` | `get_estimation_accuracy` | 見積もりと実績のズレ（タグ別） | 自己理解の正確さ。改善可能な具体的アクション |
-| **Peak Utilization** | `peak_minutes / peak_available` | `get_energy_map` + client | ピーク時間帯の活用度 | chronotype連携。高エネルギー帯を有効活用しているか |
+| **Deep Utilization** | `deep_minutes / deep_available` | `get_energy_map` + client | ピーク時間帯の活用度 | chronotype連携。高エネルギー帯を有効活用しているか |
 | **Context Switches** | `tag変化回数 / 日数` | `get_context_switches` | 1日あたりのタスク切替数 | 集中力の分散度。マルチタスクの可視化 |
 | **Blank Rate** | `1 - scheduled / available` | `get_blank_rate` | 空白時間の割合 | 余白の意図性。詰め込みすぎ/余裕の判断材料 |
 
@@ -52,7 +52,7 @@ Layer 1で実装するKPIメトリクス。2行×4列グリッドに配置。
 | **Top Tag Concentration** | `MAX(tag_time) / total_time` | entries + tags | 上位タグへの時間集中度 | ★★☆ | 多角的 vs 一極集中の可視化 |
 | **Overrun Rate** | `actual > planned` の割合 | actual vs planned duration | 予定時間を超過したエントリの比率 | ★★☆ | Estimation Accuracyの補完（方向性あり） |
 | **Consistency** | `1 - CV(daily_hours)` | entries (日次集計) | 日次記録時間の安定性（変動係数の逆数） | ★★☆ | 毎日2h vs 0hと10hの交互は同じ平均5hでも全く違う |
-| **Chronotype Alignment** | 全フェーズの加重適合スコア | `getEnergyMap` + chronotype設定 | chronotypeとの全体的な一致度 | ★★☆ | Peak Utilはピークだけ。これは全5フェーズの適合度（dip帯に軽作業も評価） |
+| **Chronotype Alignment** | 全フェーズの加重適合スコア | `getEnergyMap` + chronotype設定 | chronotypeとの全体的な一致度 | ★★☆ | Deep Utilはピークだけ。これは全5フェーズの適合度（ease帯に軽作業も評価） |
 
 ---
 

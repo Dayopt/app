@@ -129,7 +129,7 @@ origin（planned/unplanned）と見積もり精度に基づく分析チャート
 ## 5. Chronotype/フェーズ分析
 
 Dayoptの差別化要素であるchronotype（lion/bear/wolf/dolphin/custom）の5フェーズ
-（warmup → peak → dip → recovery → winddown）を活用した分析。
+（warmup → deep → ease → recovery → winddown）を活用した分析。
 
 **データソース**: `getEnergyMap`（hour × dow × fulfillment × minutes）+ `useCalendarSettingsStore` の chronotype設定（フェーズ別時間帯）。
 エントリの `start_time` がどのフェーズに該当するかはクライアント側で判定可能。
@@ -137,7 +137,7 @@ Dayoptの差別化要素であるchronotype（lion/bear/wolf/dolphin/custom）�
 | チャート                   | 計算方法                                                                      | 表現方式               | 説明                                                   |
 | -------------------------- | ----------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
 | **Chronotype適合度推移**   | `getEnergyMap` + chronotype設定 (client)                                      | 折れ線グラフ           | ピーク時間帯の活用度の月次変化                         |
-| **フェーズ別充実度**       | `getEnergyMap` をフェーズでグルーピング (client)                              | 棒グラフ（5フェーズ）  | どのフェーズで充実度が高いか。peak > dip なら理想的    |
+| **フェーズ別充実度**       | `getEnergyMap` をフェーズでグルーピング (client)                              | 棒グラフ（5フェーズ）  | どのフェーズで充実度が高いか。deep > ease なら理想的    |
 | **フェーズ別見積もり精度** | `getEstimationAccuracy` + entries の時間帯をフェーズ判定（新規RPC or client） | グループ棒グラフ       | ピーク帯とディップ帯で見積もり精度に差があるか         |
 | **フェーズ別計画外発生率** | entries の origin をフェーズ別に集計（新規RPC or client）                     | 棒グラフ               | ディップ帯に計画外（unplanned）が集中していないか      |
 | **推奨配置 vs 実配置**     | タグ別のフェーズ分布 + chronotype推奨（新規RPC or client）                    | 比較棒グラフ or Sankey | 重要タスクをピークに置けているか。理想と現実のギャップ |

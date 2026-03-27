@@ -49,8 +49,8 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     thresholds: { good: 10, warning: 30 },
     icon: Timer,
   },
-  peakUtilization: {
-    id: 'peakUtilization',
+  deepUtilization: {
+    id: 'deepUtilization',
     format: 'percentage',
     trendPositive: 'up',
     thresholds: { good: 0.6, warning: 0.3 },
@@ -77,7 +77,7 @@ export const METRIC_ORDER: MetricId[] = [
   'entryRate',
   'streak',
   'estimationAccuracy',
-  'peakUtilization',
+  'deepUtilization',
   'contextSwitches',
   'blankRate',
 ];

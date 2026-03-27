@@ -44,7 +44,7 @@ export const CHRONOTYPE_QUIZ_QUESTIONS: ChronotypeQuizQuestion[] = [
   },
   {
     // Q3: 最も集中できる時間帯
-    id: 'peakFocus',
+    id: 'deepFocus',
     options: [
       { id: 'earlyMorning', scores: { lion: 3, bear: 0, wolf: 0, dolphin: 1 } },
       { id: 'lateMorning', scores: { lion: 1, bear: 3, wolf: 0, dolphin: 1 } },
@@ -54,11 +54,11 @@ export const CHRONOTYPE_QUIZ_QUESTIONS: ChronotypeQuizQuestion[] = [
   },
   {
     // Q4: 午後の眠気パターン
-    id: 'afternoonDip',
+    id: 'afternoonEase',
     options: [
-      { id: 'earlyDip', scores: { lion: 3, bear: 1, wolf: 0, dolphin: 0 } },
-      { id: 'normalDip', scores: { lion: 1, bear: 3, wolf: 0, dolphin: 1 } },
-      { id: 'noDip', scores: { lion: 0, bear: 0, wolf: 3, dolphin: 1 } },
+      { id: 'earlyEase', scores: { lion: 3, bear: 1, wolf: 0, dolphin: 0 } },
+      { id: 'normalEase', scores: { lion: 1, bear: 3, wolf: 0, dolphin: 1 } },
+      { id: 'noEase', scores: { lion: 0, bear: 0, wolf: 3, dolphin: 1 } },
       { id: 'unpredictable', scores: { lion: 0, bear: 0, wolf: 1, dolphin: 3 } },
     ],
   },

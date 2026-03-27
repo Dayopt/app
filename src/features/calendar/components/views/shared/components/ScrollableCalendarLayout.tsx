@@ -265,7 +265,7 @@ export const ScrollableCalendarLayout = ({
                 viewMode={viewMode}
                 showDot={viewMode !== 'day'}
               />
-              {/* Now Badge（peak/dip ゾーン内のみ、今日の列に配置） */}
+              {/* Now Badge（deep/ease ゾーン内のみ、今日の列に配置） */}
               {hasToday && todayColumnPosition && (
                 <div
                   className="pointer-events-none absolute"

@@ -235,7 +235,7 @@
         "weekends": "休日: {hours}",
         "hourlyDist": "時間帯別",
         "hourlyDistDesc": "活動の時間帯分布",
-        "hourlyPeak": "ピーク: {slot} ({hours})",
+        "hourlyDeep": "ピーク: {slot} ({hours})",
         "hourlyTotal": "合計 {hours}",
         "yearlyGrid": "年間カレンダー",
         "yearlyTotal": "合計 {hours}",
@@ -270,8 +270,8 @@
         "streakDesc": "現在の連続記録日数",
         "estimationAccuracy": "見積もり精度",
         "estimationAccuracyDesc": "予定時間との平均差",
-        "peakUtilization": "ピーク活用率",
-        "peakUtilizationDesc": "ピーク時間帯の活動率",
+        "deepUtilization": "ピーク活用率",
+        "deepUtilizationDesc": "ピーク時間帯の活動率",
         "contextSwitches": "コンテキストスイッチ",
         "contextSwitchesDesc": "1日あたりのタグ切替回数",
         "blankRate": "自由時間率",
@@ -289,7 +289,7 @@
       "insights": {
         "entryRateLow": "この期間の活動の大半は計画外でした",
         "entryRateLowDetail": "翌日の計画を前夜に立ててみましょう",
-        "peakUtilizationLow": "ピーク時間帯がほとんど使われていません",
+        "deepUtilizationLow": "ピーク時間帯がほとんど使われていません",
         "contextSwitchesHigh": "タスク切替が多い期間でした",
         "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理してみましょう",
         "blankRateHigh": "空白時間が多めの期間でした",
@@ -301,12 +301,12 @@
         "hourlyFulfillmentLow": "この時間帯の充実度は平均より低い傾向があります",
         "tagFulfillmentHigh": "このタグの平均充実度は {score} — 全体より高めです",
         "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
-        "peakHour": "ピーク時間帯です — 集中作業に向いています"
+        "deepHour": "ピーク時間帯です — 集中作業に向いています"
       }
     },
     "nowBadge": {
-      "inPeak": "In peak",
-      "inDip": "In dip"
+      "inDeep": "In deep",
+      "inEase": "In ease"
     },
     "timeGrid": {
       "ariaLabel": "カレンダータイムグリッド - クリックまたはEnterキーでイベントを作成"

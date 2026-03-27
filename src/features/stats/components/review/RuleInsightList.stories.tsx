@@ -24,10 +24,10 @@ const MOCK_INSIGHTS: RuleInsight[] = [
     detailKey: 'entryRateLowDetail',
   },
   {
-    metricId: 'peakUtilization',
+    metricId: 'deepUtilization',
     type: 'threshold',
     severity: 'info',
-    messageKey: 'peakUtilizationLow',
+    messageKey: 'deepUtilizationLow',
   },
   {
     metricId: 'avgFulfillment',

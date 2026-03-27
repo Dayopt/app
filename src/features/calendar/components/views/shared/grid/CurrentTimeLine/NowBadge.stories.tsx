@@ -5,7 +5,7 @@ import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { NowBadge } from './NowBadge';
 
 /**
- * Now Badge。peak/dip ゾーン内にいるときだけ ↗/↘ アイコン付きテキストを表示。
+ * Now Badge。deep/ease ゾーン内にいるときだけ ↗/↘ アイコン付きテキストを表示。
  */
 const meta = {
   title: 'Features/Calendar/Views/Grid/NowBadge',
@@ -39,8 +39,8 @@ const disableChronotype = () => {
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** Peak ゾーン内（Bear: 10-14h）。↗ In peak を表示。 */
-export const InPeak: Story = {
+/** Deep ゾーン内（Bear: 10-14h）。↗ In deep を表示。 */
+export const InDeep: Story = {
   args: {
     currentHour: 11,
   },
@@ -56,8 +56,8 @@ export const InPeak: Story = {
   ],
 };
 
-/** Dip ゾーン内（Bear: 14-16h）。↘ In dip を表示。 */
-export const InDip: Story = {
+/** Ease ゾーン内（Bear: 14-16h）。↘ In ease を表示。 */
+export const InEase: Story = {
   args: {
     currentHour: 15,
   },
@@ -111,18 +111,19 @@ export const ChronotypeDisabled: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
+  args: { currentHour: 11 },
   render: () => {
     enableBearChronotype();
     return (
       <div className="flex flex-col items-start gap-8">
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium">Peak ゾーン（Bear 11:00）</p>
+          <p className="text-muted-foreground text-xs font-medium">Deep ゾーン（Bear 11:00）</p>
           <div className="relative h-8 w-48">
             <NowBadge currentHour={11} />
           </div>
         </div>
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium">Dip ゾーン（Bear 15:00）</p>
+          <p className="text-muted-foreground text-xs font-medium">Ease ゾーン（Bear 15:00）</p>
           <div className="relative h-8 w-48">
             <NowBadge currentHour={15} />
           </div>

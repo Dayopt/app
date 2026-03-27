@@ -23,6 +23,7 @@ export type { StatsGranularity, StatsTab } from './stores/useStatsFilterStore';
 export type {
   BlankRateData,
   ContextSwitchData,
+  DeepUtilizationData,
   EnergyMapRow,
   EntryRateData,
   EstimationAccuracyData,
@@ -32,7 +33,6 @@ export type {
   MetricId,
   MetricTrend,
   MetricValueParts,
-  PeakUtilizationData,
 } from './types/metrics.types';
 export type { StatsViewProps } from './types/stats.types';
 
@@ -41,7 +41,7 @@ export type { StatsViewProps } from './types/stats.types';
 // =============================================================================
 export { METRIC_DEFINITIONS, METRIC_ORDER } from './lib/metricDefinitions';
 export {
-  calculatePeakUtilization,
+  calculateDeepUtilization,
   formatMetricValue,
   formatMetricValueParts,
   getMetricTrend,

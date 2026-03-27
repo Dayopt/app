@@ -49,10 +49,10 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
       const zone = zones ? getActiveZoneLevel(zones, hour) : null;
 
       const textClass =
-        zone === 'peak'
-          ? 'text-chronotype-peak font-bold'
-          : zone === 'dip'
-            ? 'text-chronotype-dip font-bold'
+        zone === 'deep'
+          ? 'text-chronotype-deep font-bold'
+          : zone === 'ease'
+            ? 'text-chronotype-ease font-bold'
             : 'text-muted-foreground';
 
       rows.push(

@@ -1,8 +1,8 @@
 /**
- * Now Badge — peak/dip ゾーン内にいるときだけ表示するラベル
+ * Now Badge — deep/ease ゾーン内にいるときだけ表示するラベル
  *
  * 位置: now line の 16px 上、グリッド左端
- * 色: peak → text-chronotype-peak, dip → text-chronotype-dip
+ * 色: deep → text-chronotype-deep, ease → text-chronotype-ease
  */
 
 'use client';
@@ -30,9 +30,9 @@ export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
 
   if (!zoneLevel) return null;
 
-  const label = zoneLevel === 'peak' ? t('inPeak') : t('inDip');
-  const colorClass = zoneLevel === 'peak' ? 'text-chronotype-peak' : 'text-chronotype-dip';
-  const arrow = zoneLevel === 'peak' ? '↗' : '↘';
+  const label = zoneLevel === 'deep' ? t('inDeep') : t('inEase');
+  const colorClass = zoneLevel === 'deep' ? 'text-chronotype-deep' : 'text-chronotype-ease';
+  const arrow = zoneLevel === 'deep' ? '↗' : '↘';
 
   return (
     <span className={`${colorClass} absolute -top-5 left-2 text-sm font-medium whitespace-nowrap`}>

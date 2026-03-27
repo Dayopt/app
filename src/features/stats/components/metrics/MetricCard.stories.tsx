@@ -30,7 +30,7 @@ export const Default: Story = {
 /** トレンド: 上昇（良い方向） */
 export const TrendUpPositive: Story = {
   args: {
-    label: 'Peak Utilization',
+    label: 'Deep Utilization',
     valueParts: { primary: '65', unit: '%' },
     icon: Gauge,
     trend: { direction: 'up', delta: 0.12, isPositive: true },
@@ -191,7 +191,7 @@ export const GridPreview: Story = {
         progressStatus="good"
       />
       <MetricCard
-        label="Peak Utilization"
+        label="Deep Utilization"
         valueParts={{ primary: '65', unit: '%' }}
         icon={Gauge}
         trend={{ direction: 'up', delta: 0.08, isPositive: true }}
@@ -234,7 +234,7 @@ export const GridLoading: Story = {
       <MetricCard label="Entry Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Streak" valueParts={{ primary: '-', unit: '' }} variant="hero" isLoading />
       <MetricCard label="Estimation Accuracy" valueParts={{ primary: '-', unit: '' }} isLoading />
-      <MetricCard label="Peak Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
+      <MetricCard label="Deep Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Context Switches" valueParts={{ primary: '-', unit: '' }} isLoading />
       <MetricCard label="Blank Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
     </div>
@@ -261,7 +261,7 @@ export const AllPatterns: Story = {
           TrendUpPositive（上昇・良い変化）
         </p>
         <MetricCard
-          label="Peak Utilization"
+          label="Deep Utilization"
           valueParts={{ primary: '65', unit: '%' }}
           icon={Gauge}
           trend={{ direction: 'up', delta: 0.12, isPositive: true }}
@@ -421,7 +421,7 @@ export const AllPatterns: Story = {
             progressStatus="good"
           />
           <MetricCard
-            label="Peak Utilization"
+            label="Deep Utilization"
             valueParts={{ primary: '65', unit: '%' }}
             icon={Gauge}
             trend={{ direction: 'up', delta: 0.08, isPositive: true }}
@@ -468,7 +468,7 @@ export const AllPatterns: Story = {
             valueParts={{ primary: '-', unit: '' }}
             isLoading
           />
-          <MetricCard label="Peak Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
+          <MetricCard label="Deep Utilization" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard label="Context Switches" valueParts={{ primary: '-', unit: '' }} isLoading />
           <MetricCard label="Blank Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
         </div>

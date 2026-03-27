@@ -110,10 +110,10 @@
   --color-tag-gray-tint: var(--tag-gray-tint);
 
   /* Chronotype — テキスト + 背景 tint */
-  --color-chronotype-peak: var(--chronotype-peak);
-  --color-chronotype-dip: var(--chronotype-dip);
-  --color-chronotype-peak-tint: var(--chronotype-peak-tint);
-  --color-chronotype-dip-tint: var(--chronotype-dip-tint);
+  --color-chronotype-deep: var(--chronotype-deep);
+  --color-chronotype-ease: var(--chronotype-ease);
+  --color-chronotype-deep-tint: var(--chronotype-deep-tint);
+  --color-chronotype-ease-tint: var(--chronotype-ease-tint);
 }
 
 /* ============================================

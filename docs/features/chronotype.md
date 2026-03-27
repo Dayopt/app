@@ -1,14 +1,14 @@
 # Chronotype
 
 ユーザーのエネルギーリズムをカレンダー上に可視化する機能。
-手動でクロノタイプを選択すると、タイムラインに peak（集中ゾーン）と dip（回避ゾーン）が常時表示される。
+手動であなたのリズムを選択すると、タイムラインに deep（集中ゾーン）と ease（回避ゾーン）が常時表示される。
 
 ## 概要
 
 | 項目             | 値                                                      |
 | ---------------- | ------------------------------------------------------- |
 | プリセットタイプ | lion / bear / wolf / dolphin                            |
-| 表示フェーズ     | peak / dip のみ（warmup 等は表示しない）                |
+| 表示フェーズ     | deep / ease のみ（warmup 等は表示しない）               |
 | 表示方式         | タイムライン背景の oklch gradient（常時表示）           |
 | 設定方法         | 手動選択（オンボーディング時 + Settings）               |
 | 料金             | Free で利用可能                                         |
@@ -20,7 +20,7 @@
 エネルギーの波を感じながら timebox を計画する体験。
 「ここに集中作業を」と「ここは避けろ」の2つだけを伝える。
 
-- peak と dip 以外は neutral（bg-background そのまま）
+- deep と ease 以外は neutral（bg-background そのまま）
 - 5フェーズの概念はユーザーに見せない
 - 背景色は「言われてみれば暖かい/冷たい」レベルの控えめさ
 
@@ -35,11 +35,11 @@ CSS linear-gradient 1本をタイムライン全体に敷く。
 
 **Light:**
 
-| パラメータ | 計算式                             |
-| ---------- | ---------------------------------- |
-| L          | 0.98 - energy x 0.025              |
-| C          | energy x 0.008                     |
-| H          | peak: 70（暖色）、dip: 250（寒色） |
+| パラメータ | 計算式                            |
+| ---------- | --------------------------------- |
+| L          | 0.98 - energy x 0.025             |
+| C          | energy x 0.008                    |
+| H          | deep: 70（暖色）、ease: 150（緑） |
 
 **Dark:**
 
@@ -54,31 +54,31 @@ energy が 0 の時間帯 → bg-background そのまま（色なし）
 ### 内部形状
 
 Flat top — ゾーン内は均一の濃さ。端 0.8h でフェード。
-peak の中心も端も同じ色 = 「この範囲全体が peak」と明確に伝わる。
+deep の中心も端も同じ色 = 「この範囲全体が deep」と明確に伝わる。
 
 ### 境界
 
-Medium（smoothstep r=1.4）。peak/dip の端がなめらかに neutral に溶ける。
+Medium（smoothstep r=1.4）。deep/ease の端がなめらかに neutral に溶ける。
 ゾーン境界で色が始まり、内側に向かってフェードイン。ゾーン外にはみ出さない。
 
 ### 生成
 
 サーバー側で設定変更時に gradient を事前計算し DB に保存。
 クライアントは CSS 変数として受け取って適用するだけ。
-更新頻度: クロノタイプ変更時のみ。毎フレーム計算ではない。
+更新頻度: あなたのリズム変更時のみ。毎フレーム計算ではない。
 
 ## タイムライン UI 要素
 
 ### 時刻ラベルの色変え
 
-- peak 範囲の時刻ラベル → 暖色（H70）、font-weight: 600
-- dip 範囲の時刻ラベル → 寒色（H250）、font-weight: 600
+- deep 範囲の時刻ラベル → 暖色（H70）、font-weight: 600
+- ease 範囲の時刻ラベル → 寒色（H150）、font-weight: 600
 - それ以外 → 通常の text-tertiary
 
 ### 開始行アイコン（diagonal arrow）
 
-- peak 開始行 → ArrowUpRight（↗）peak 色
-- dip 開始行 → ArrowDownRight（↘）dip 色
+- deep 開始行 → ArrowUpRight（↗）deep 色
+- ease 開始行 → ArrowDownRight（↘）ease 色
 - 時刻ラベルの左に配置。追加幅ゼロ。
 
 ### Now line
@@ -89,16 +89,16 @@ Medium（smoothstep r=1.4）。peak/dip の端がなめらかに neutral に溶�
 
 ### Now badge（テキストのみ）
 
-- peak ゾーン内 → "in peak" テキスト表示（pill なし）
-- dip ゾーン内 → "in dip" テキスト表示（pill なし）
+- deep ゾーン内 → "in deep" テキスト表示（pill なし）
+- ease ゾーン内 → "in ease" テキスト表示（pill なし）
 - ゾーン外 → 非表示
 - 位置: now line の直上、グリッド左端（週ビューでは今日の列）
 - サイズ: 7px, font-weight: 600
-- 色: peak なら oklch(0.72 0.10 70)、dip なら同 250（Dark 時）
+- 色: deep なら oklch(0.72 0.10 70)、ease なら同 250（Dark 時）
 
 ## プリセット定義
 
-| タイプ  | Peak          | Dip           | 人口   |
+| タイプ  | Deep          | Ease          | 人口   |
 | ------- | ------------- | ------------- | ------ |
 | Lion    | 8:00 - 12:00  | 14:00 - 17:00 | 15-20% |
 | Bear    | 10:00 - 14:00 | 15:00 - 17:00 | ~55%   |
@@ -106,7 +106,7 @@ Medium（smoothstep r=1.4）。peak/dip の端がなめらかに neutral に溶�
 | Dolphin | 10:00 - 12:00 | 14:00 - 16:00 | ~10%   |
 
 warmup / recovery / winddown の時間帯はデータとして保持しない。
-peak と dip の開始・終了時刻のみ。
+deep と ease の開始・終了時刻のみ。
 
 ## Settings UI
 
@@ -121,11 +121,11 @@ peak と dip の開始・終了時刻のみ。
 
 3. **Timeline バー**
    6:00-22:00 の活動時間帯のみ（24時間ではない）。
-   peak と dip だけ色付き。他は neutral。
+   deep と ease だけ色付き。他は neutral。
 
 4. **結果カード（2枚）**
-   - Peak time: 時間帯 + 「Deep Work に最適」
-   - Dip time: 時間帯 + 「軽い作業・休憩向き」
+   - Deep time: 時間帯 + 「Deep Work に最適」
+   - Ease time: 時間帯 + 「軽い作業・休憩向き」
    - diagonal arrow アイコン付き（タイムラインと統一）。
 
 クイズは廃止。手動選択のみ。
@@ -142,14 +142,14 @@ peak と dip の開始・終了時刻のみ。
 - タイムライン背景 → 完全 neutral（bg-background のまま）
 - Now badge → 非表示
 - 時刻ラベル → 通常色のまま
-- Settings に「クロノタイプを設定する」の導線あり
+- Settings に「あなたのリズムを設定する」の導線あり
 
 ## コンポーネント構成
 
 ```
 ChronotypeSettings           設定パネル（タイプ選択 + 結果表示）
   ChronotypeTypeCard         4タイプの選択カード
-  ChronotypeTimelineBar      活動時間帯バー（peak/dip のみ色付き）
+  ChronotypeTimelineBar      活動時間帯バー（deep/ease のみ色付き）
 
 ChronotypeBackground         カレンダーグリッドの背景 gradient
                              （pointer-events-none で入力を妨げない）
@@ -169,11 +169,11 @@ displayMode / opacity は廃止（gradient で固定）。
 
 ### Hooks
 
-| Hook                                    | 用途                                             |
-| --------------------------------------- | ------------------------------------------------ |
-| `api.userSettings.get.useQuery()`       | DB からクロノタイプ設定を取得（staleTime: 5min） |
-| `api.userSettings.update.useMutation()` | enabled / type を保存                            |
-| `useAutoSaveSettings`                   | 800ms デバウンスで自動保存                       |
+| Hook                                    | 用途                                               |
+| --------------------------------------- | -------------------------------------------------- |
+| `api.userSettings.get.useQuery()`       | DB からあなたのリズム設定を取得（staleTime: 5min） |
+| `api.userSettings.update.useMutation()` | enabled / type を保存                              |
+| `useAutoSaveSettings`                   | 800ms デバウンスで自動保存                         |
 
 ## tRPC
 
@@ -210,8 +210,8 @@ type 変更時に再計算して保存。
 
 ## 未決定（後フェーズ）
 
-- 振り返り分析: peak にどれだけ集中作業を配置できたか
-- 曜日別変動: 平日/休日で peak 時間帯が異なる設定
+- 振り返り分析: deep にどれだけ集中作業を配置できたか
+- 曜日別変動: 平日/休日で deep 時間帯が異なる設定
 - カラートークン: chronotype 用の oklch トークンを Design System に追加
 
 ## 廃止した仕様
@@ -219,7 +219,7 @@ type 変更時に再計算して保存。
 v1 からの変更:
 
 - 6問クイズ → 手動選択に変更
-- 5フェーズ表示 → peak/dip のみに変更
+- 5フェーズ表示 → deep/ease のみに変更
 - 表示モード（border/background/both）→ gradient 背景固定
 - opacity 設定 → oklch 計算式で固定
 - 5フェーズ用カラートークン（bg-chronotype-warmup 等）→ 廃止

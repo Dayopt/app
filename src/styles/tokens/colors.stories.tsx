@@ -361,16 +361,16 @@ export const AllColors: Story = {
         {/* 背景色（gradient） */}
         {[
           {
-            name: 'peak-bg',
-            label: 'peak 背景（gradient）',
+            name: 'deep-bg',
+            label: 'deep 背景（gradient）',
             light: 'oklch(0.955 0.008 70)',
             dark: 'oklch(0.21 0.018 70)',
           },
           {
-            name: 'dip-bg',
-            label: 'dip 背景（gradient）',
-            light: 'oklch(0.955 0.008 250)',
-            dark: 'oklch(0.21 0.018 250)',
+            name: 'ease-bg',
+            label: 'ease 背景（gradient）',
+            light: 'oklch(0.955 0.008 150)',
+            dark: 'oklch(0.21 0.018 150)',
           },
         ].map(({ name, label, light, dark }) => (
           <ColorSwatch
@@ -383,16 +383,16 @@ export const AllColors: Story = {
         {/* テキスト色（ラベル） */}
         {[
           {
-            name: 'peak',
-            label: 'peak テキスト（ラベル）',
+            name: 'deep',
+            label: 'deep テキスト（ラベル）',
             light: 'oklch(0.65 0.15 70)',
             dark: 'oklch(0.80 0.12 70)',
           },
           {
-            name: 'dip',
-            label: 'dip テキスト（ラベル）',
-            light: 'oklch(0.55 0.15 250)',
-            dark: 'oklch(0.75 0.12 250)',
+            name: 'ease',
+            label: 'ease テキスト（ラベル）',
+            light: 'oklch(0.55 0.15 150)',
+            dark: 'oklch(0.75 0.12 150)',
           },
         ].map(({ name, label, light, dark }) => (
           <ColorSwatch
@@ -1223,7 +1223,7 @@ function TimelinePreview({
       {hours.map((hour) => {
         const zone = zones.find(
           (z) =>
-            (z.level === 'peak' || z.level === 'dip') && hour >= z.startHour && hour < z.endHour,
+            (z.level === 'deep' || z.level === 'ease') && hour >= z.startHour && hour < z.endHour,
         );
         const show = hour % 2 === 0;
         if (!show) return null;
@@ -1231,10 +1231,10 @@ function TimelinePreview({
           <div
             key={hour}
             className={`absolute left-3 text-xs ${
-              zone?.level === 'peak'
-                ? 'text-chronotype-peak font-bold'
-                : zone?.level === 'dip'
-                  ? 'text-chronotype-dip font-bold'
+              zone?.level === 'deep'
+                ? 'text-chronotype-deep font-bold'
+                : zone?.level === 'ease'
+                  ? 'text-chronotype-ease font-bold'
                   : isDark
                     ? 'text-white/30'
                     : 'opacity-30'
@@ -1247,12 +1247,12 @@ function TimelinePreview({
       })}
       {/* ゾーンラベル */}
       {zones
-        .filter((z) => z.level === 'peak' || z.level === 'dip')
+        .filter((z) => z.level === 'deep' || z.level === 'ease')
         .map((z) => (
           <div
             key={z.level}
             className={`absolute right-3 text-xs font-bold ${
-              z.level === 'peak' ? 'text-chronotype-peak' : 'text-chronotype-dip'
+              z.level === 'deep' ? 'text-chronotype-deep' : 'text-chronotype-ease'
             }`}
             style={{ top: `${((z.startHour + z.endHour) / 2 / 24) * 100}%` }}
           >
@@ -1277,7 +1277,7 @@ export const Chronotype: Story = {
         <section className="bg-card border-border rounded-xl border p-6">
           <h2 className="mb-2 text-lg font-bold">Chronotype タイムライン</h2>
           <p className="text-muted-foreground text-sm">
-            ユーザーのクロノタイプに応じて、タイムラインに peak / dip ゾーンを視覚的に表示する。
+            ユーザーのクロノタイプに応じて、タイムラインに deep / ease ゾーンを視覚的に表示する。
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="bg-muted rounded-lg p-3">
@@ -1299,10 +1299,10 @@ export const Chronotype: Story = {
         <section className="bg-card border-border rounded-xl border p-6">
           <h3 className="mb-4 text-sm font-bold">カラーパレット（2 色体制）</h3>
           <div className="grid gap-6 sm:grid-cols-2">
-            {/* Peak */}
+            {/* Deep */}
             <div className="space-y-3">
-              <p className="text-chronotype-peak text-xs font-bold tracking-widest uppercase">
-                Peak（H=70 暖色）
+              <p className="text-chronotype-deep text-xs font-bold tracking-widest uppercase">
+                Deep（H=70 暖色）
               </p>
               <div className="flex items-center gap-3">
                 <div
@@ -1315,22 +1315,22 @@ export const Chronotype: Story = {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="bg-chronotype-peak size-10 shrink-0 rounded-md" />
+                <div className="bg-chronotype-deep size-10 shrink-0 rounded-md" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.65/0.15 — Dark 0.80/0.12</p>
                 </div>
               </div>
             </div>
-            {/* Dip */}
+            {/* Ease */}
             <div className="space-y-3">
-              <p className="text-chronotype-dip text-xs font-bold tracking-widest uppercase">
-                Dip（H=250 寒色）
+              <p className="text-chronotype-ease text-xs font-bold tracking-widest uppercase">
+                Ease（H=150 寒色）
               </p>
               <div className="flex items-center gap-3">
                 <div
                   className="border-border size-10 shrink-0 rounded-md border"
-                  style={{ backgroundColor: 'oklch(0.955 0.008 250)' }}
+                  style={{ backgroundColor: 'oklch(0.955 0.008 150)' }}
                 />
                 <div>
                   <p className="text-xs font-bold">背景</p>
@@ -1338,7 +1338,7 @@ export const Chronotype: Story = {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="bg-chronotype-dip size-10 shrink-0 rounded-md" />
+                <div className="bg-chronotype-ease size-10 shrink-0 rounded-md" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.55/0.15 — Dark 0.75/0.12</p>
@@ -1400,27 +1400,27 @@ export const Chronotype: Story = {
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
-                <td className="px-2 py-2 font-bold">peak 背景</td>
+                <td className="px-2 py-2 font-bold">deep 背景</td>
                 <td className="px-2 py-2 font-mono text-xs">oklch(0.955 0.008 70)</td>
                 <td className="px-2 py-2 font-mono text-xs">oklch(0.21 0.018 70)</td>
                 <td className="px-2 py-2 text-xs">gradient 帯</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="px-2 py-2 font-bold">peak テキスト</td>
+                <td className="px-2 py-2 font-bold">deep テキスト</td>
                 <td className="px-2 py-2 font-mono text-xs">oklch(0.65 0.15 70)</td>
                 <td className="px-2 py-2 font-mono text-xs">oklch(0.80 0.12 70)</td>
                 <td className="px-2 py-2 text-xs">時刻ラベル</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="px-2 py-2 font-bold">dip 背景</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.955 0.008 250)</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.21 0.018 250)</td>
+                <td className="px-2 py-2 font-bold">ease 背景</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.955 0.008 150)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.21 0.018 150)</td>
                 <td className="px-2 py-2 text-xs">gradient 帯</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="px-2 py-2 font-bold">dip テキスト</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.55 0.15 250)</td>
-                <td className="px-2 py-2 font-mono text-xs">oklch(0.75 0.12 250)</td>
+                <td className="px-2 py-2 font-bold">ease テキスト</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.55 0.15 150)</td>
+                <td className="px-2 py-2 font-mono text-xs">oklch(0.75 0.12 150)</td>
                 <td className="px-2 py-2 text-xs">時刻ラベル</td>
               </tr>
               <tr>

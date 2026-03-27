@@ -75,7 +75,7 @@
         },
         "energyInsights": {
           "label": "Energy insights",
-          "description": "Suggestions for utilizing your peak hours"
+          "description": "Suggestions for utilizing your deep hours"
         },
         "burnoutWarnings": {
           "label": "Burnout warnings",

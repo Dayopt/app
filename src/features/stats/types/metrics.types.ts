@@ -17,7 +17,7 @@ export type MetricId =
   | 'entryRate'
   | 'streak'
   | 'estimationAccuracy'
-  | 'peakUtilization'
+  | 'deepUtilization'
   | 'contextSwitches'
   | 'blankRate';
 
@@ -101,10 +101,10 @@ export interface BlankRateData {
 }
 
 /** ピーク時間帯活用率の計算結果型 */
-export interface PeakUtilizationData {
-  peakMinutes: number;
-  totalPeakAvailable: number;
-  peakUtilization: number;
+export interface DeepUtilizationData {
+  deepMinutes: number;
+  totalDeepAvailable: number;
+  deepUtilization: number;
 }
 
 /** エネルギーマップの時間帯×曜日行データ */

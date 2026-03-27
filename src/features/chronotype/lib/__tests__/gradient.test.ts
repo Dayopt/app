@@ -10,7 +10,7 @@ describe('generateChronotypeGradient', () => {
     expect(generateChronotypeGradient([], 'light')).toBe('none');
   });
 
-  it('peak/dip がないゾーン配列でも "none" を返す', () => {
+  it('deep/ease がないゾーン配列でも "none" を返す', () => {
     const zones: ProductivityZone[] = [
       { startHour: 7, endHour: 10, level: 'warmup', label: 'ウォームアップ' },
       { startHour: 14, endHour: 17, level: 'recovery', label: 'リカバリー' },
@@ -38,20 +38,20 @@ describe('generateChronotypeGradient', () => {
     expect(dark).toContain('0.1800');
   });
 
-  it('peak ゾーンで H=70 (amber) を使う', () => {
+  it('deep ゾーンで H=70 (amber) を使う', () => {
     const zones = CHRONOTYPE_PRESETS.bear.productivityZones;
     const result = generateChronotypeGradient(zones, 'light');
 
-    // peak 区間の stop に H=70 が含まれる
+    // deep 区間の stop に H=70 が含まれる
     expect(result).toContain(' 70)');
   });
 
-  it('dip ゾーンで H=250 (blue) を使う', () => {
+  it('ease ゾーンで H=150 (green) を使う', () => {
     const zones = CHRONOTYPE_PRESETS.bear.productivityZones;
     const result = generateChronotypeGradient(zones, 'light');
 
-    // dip 区間の stop に H=250 が含まれる
-    expect(result).toContain(' 250)');
+    // ease 区間の stop に H=150 が含まれる
+    expect(result).toContain(' 150)');
   });
 
   it('全プリセットで正常に生成できる', () => {
@@ -88,23 +88,23 @@ describe('generateChronotypeGradient', () => {
 describe('getActiveZoneLevel', () => {
   const bearZones = CHRONOTYPE_PRESETS.bear.productivityZones;
 
-  it('peak 時間帯では "peak" を返す', () => {
-    // bear: peak = 10-14
-    expect(getActiveZoneLevel(bearZones, 10)).toBe('peak');
-    expect(getActiveZoneLevel(bearZones, 12)).toBe('peak');
-    expect(getActiveZoneLevel(bearZones, 13.5)).toBe('peak');
+  it('deep 時間帯では "deep" を返す', () => {
+    // bear: deep = 10-14
+    expect(getActiveZoneLevel(bearZones, 10)).toBe('deep');
+    expect(getActiveZoneLevel(bearZones, 12)).toBe('deep');
+    expect(getActiveZoneLevel(bearZones, 13.5)).toBe('deep');
   });
 
-  it('dip 時間帯では "dip" を返す', () => {
-    // bear: dip = 15-17
-    expect(getActiveZoneLevel(bearZones, 15)).toBe('dip');
-    expect(getActiveZoneLevel(bearZones, 16)).toBe('dip');
+  it('ease 時間帯では "ease" を返す', () => {
+    // bear: ease = 15-17
+    expect(getActiveZoneLevel(bearZones, 15)).toBe('ease');
+    expect(getActiveZoneLevel(bearZones, 16)).toBe('ease');
   });
 
-  it('peak/dip 以外の時間帯では null を返す', () => {
-    // bear: 14-15 は peak と dip の間（neutral）
+  it('deep/ease 以外の時間帯では null を返す', () => {
+    // bear: 14-15 は deep と ease の間（neutral）
     expect(getActiveZoneLevel(bearZones, 14.5)).toBeNull();
-    // bear: 8 は peak 前
+    // bear: 8 は deep 前
     expect(getActiveZoneLevel(bearZones, 8)).toBeNull();
   });
 

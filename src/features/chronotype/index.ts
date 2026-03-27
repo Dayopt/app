@@ -11,7 +11,7 @@ export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';
 export { chronotypeCustomZonesSchema, chronotypeTypeSchema } from './lib/schemas';
 export {
   getChronotypeProfile,
-  getDipHours,
-  getPeakHours,
+  getDeepHours,
+  getEaseHours,
   getProductivityZoneForHour,
 } from './lib/utils';

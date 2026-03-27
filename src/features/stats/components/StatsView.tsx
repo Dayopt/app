@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { calculatePeakUtilization } from '../lib/metrics';
+import { calculateDeepUtilization } from '../lib/metrics';
 import { evaluateRuleInsights } from '../lib/ruleInsights';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import type { MetricId } from '../types/metrics.types';
@@ -65,15 +65,15 @@ export function StatsView({ className }: StatsViewProps) {
 
     // ピーク活用率
     if (energyMap.data && dateRange.startDate && dateRange.endDate) {
-      const defaultPeakZones = [{ startHour: 9, endHour: 14 }];
+      const defaultDeepZones = [{ startHour: 9, endHour: 14 }];
       const start = new Date(dateRange.startDate);
       const end = new Date(dateRange.endDate);
       const daysInRange = Math.max(
         1,
         Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
       );
-      const peak = calculatePeakUtilization(energyMap.data, defaultPeakZones, daysInRange);
-      if (peak) current.peakUtilization = peak.peakUtilization;
+      const deep = calculateDeepUtilization(energyMap.data, defaultDeepZones, daysInRange);
+      if (deep) current.deepUtilization = deep.deepUtilization;
     }
 
     // 見積もり精度

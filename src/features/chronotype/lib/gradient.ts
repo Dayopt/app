@@ -4,7 +4,7 @@ import type { ProductivityZone } from '@/types/chronotype';
 // Chronotype Gradient Generator
 //
 // oklch ベースの CSS linear-gradient を生成。
-// peak(H70 暖色) / dip(H250 寒色) のみ色を付け、
+// deep(H70 暖色) / ease(H250 寒色) のみ色を付け、
 // それ以外は bg-background のまま。
 // 境界: smoothstep + flat top（ゾーン内均一、端 0.8h でフェード）
 // ============================================
@@ -16,33 +16,33 @@ const BG = {
 } as const;
 
 /**
- * peak/dip の oklch パラメータ（モード別）
+ * deep/ease の oklch パラメータ（モード別）
  *
  * 仕様の energy=1 時の値:
  *   Light: L = 0.98 - 0.025 = 0.955, C = 0.008
  *   Dark:  L = 0.18 + 0.03  = 0.210, C = 0.008 + 0.010 = 0.018
  */
 const ZONE_COLORS = {
-  peak: {
+  deep: {
     light: { l: 0.955, c: 0.008, h: 70 },
     dark: { l: 0.21, c: 0.018, h: 70 },
   },
-  dip: {
-    light: { l: 0.955, c: 0.008, h: 250 },
-    dark: { l: 0.21, c: 0.018, h: 250 },
+  ease: {
+    light: { l: 0.955, c: 0.008, h: 150 },
+    dark: { l: 0.21, c: 0.018, h: 150 },
   },
 } as const;
 
-/** ゾーン配列から peak/dip の境界時刻リストを構築 */
+/** ゾーン配列から deep/ease の境界時刻リストを構築 */
 function buildZoneBoundaries(zones: ProductivityZone[]): Array<{
   start: number;
   end: number;
-  level: 'peak' | 'dip';
+  level: 'deep' | 'ease';
 }> {
   return zones
     .filter(
-      (z): z is ProductivityZone & { level: 'peak' | 'dip' } =>
-        z.level === 'peak' || z.level === 'dip',
+      (z): z is ProductivityZone & { level: 'deep' | 'ease' } =>
+        z.level === 'deep' || z.level === 'ease',
     )
     .map((z) => ({ start: z.startHour, end: z.endHour, level: z.level }));
 }
@@ -113,7 +113,7 @@ export function generateChronotypeGradient(
   // Medium smoothstep: フェードはゾーン外側にはみ出す（start-r ~ start, end ~ end+r）
   // 隣のゾーンとの gap が 2r 未満ならフェード幅を gap/2 に縮小（重なり防止）
   for (let idx = 0; idx < boundaries.length; idx++) {
-    const b = boundaries[idx];
+    const b = boundaries[idx] as (typeof boundaries)[number];
     const zc = ZONE_COLORS[b.level][mode];
 
     // fade-in 幅: 前のゾーンとの gap を考慮
@@ -175,10 +175,13 @@ export function generateChronotypeGradient(
 }
 
 /**
- * 指定時刻が peak/dip ゾーン内かどうかを判定
+ * 指定時刻が deep/ease ゾーン内かどうかを判定
  * Now Line バッジ表示用
  */
-export function getActiveZoneLevel(zones: ProductivityZone[], hour: number): 'peak' | 'dip' | null {
+export function getActiveZoneLevel(
+  zones: ProductivityZone[],
+  hour: number,
+): 'deep' | 'ease' | null {
   const zone = zones.find((z) => {
     if (z.startHour <= z.endHour) {
       return hour >= z.startHour && hour < z.endHour;
@@ -187,6 +190,6 @@ export function getActiveZoneLevel(zones: ProductivityZone[], hour: number): 'pe
   });
 
   if (!zone) return null;
-  if (zone.level === 'peak' || zone.level === 'dip') return zone.level;
+  if (zone.level === 'deep' || zone.level === 'ease') return zone.level;
   return null;
 }

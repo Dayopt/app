@@ -285,7 +285,7 @@ type Story = StoryObj<typeof meta>;
  * データありの典型的な振り返りタブ
  *
  * 7つのメトリクス（totalTime / avgFulfillment / entryRate /
- * estimationAccuracy / peakUtilization / contextSwitches / blankRate）が
+ * estimationAccuracy / deepUtilization / contextSwitches / blankRate）が
  * TrendBadge 付きでグリッド表示される。
  */
 export const WithData: Story = {
@@ -302,7 +302,7 @@ export const WithData: Story = {
  * 前期間データありのトレンド表示
  *
  * 現在期間と前期間に異なる値を持たせて TrendBadge の方向（上昇/下降/横ばい）を確認する。
- * energyMap を前期間より現在の方が高くすることで peakUtilization が up トレンドになる。
+ * energyMap を前期間より現在の方が高くすることで deepUtilization が up トレンドになる。
  */
 export const WithTrend: Story = {
   decorators: [
