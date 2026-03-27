@@ -20,7 +20,10 @@
       "statusChangeFailed": "ステータスの変更に失敗しました",
       "archivedCount": "{count}件をアーカイブしました",
       "archiveFailed": "アーカイブに失敗しました",
-      "deletedCount": "{count}件を削除しました"
+      "deletedCount": "{count}件を削除しました",
+      "restored": "復元しました",
+      "restoreFailed": "復元に失敗しました",
+      "conflict": "このエントリは他の場所で変更されています。最新データをリロードしてください。"
     },
     "sidebar": {
       "tabs": {

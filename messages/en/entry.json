@@ -20,7 +20,10 @@
       "statusChangeFailed": "Failed to change status",
       "archivedCount": "{count, plural, one {1 item} other {# items}} archived",
       "archiveFailed": "Failed to archive",
-      "deletedCount": "{count, plural, one {1 item} other {# items}} deleted"
+      "deletedCount": "{count, plural, one {1 item} other {# items}} deleted",
+      "restored": "Restored",
+      "restoreFailed": "Failed to restore",
+      "conflict": "This entry was modified elsewhere. Reload to see the latest version."
     },
     "sidebar": {
       "tabs": {

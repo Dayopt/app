@@ -10,7 +10,7 @@ describe('useCalendarSettingsStore', () => {
   describe('初期状態', () => {
     it('デフォルト値が正しい', () => {
       const state = useCalendarSettingsStore.getState();
-      expect(state.timezone).toBe('UTC');
+      expect(state.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
       expect(state.timeFormat).toBe('24h');
       expect(state.dateFormat).toBe('yyyy-MM-dd');
       expect(state.defaultView).toBe('week');
@@ -45,7 +45,7 @@ describe('useCalendarSettingsStore', () => {
       expect(state.timeFormat).toBe('12h');
       expect(state.dateFormat).toBe('MM/dd/yyyy');
       // 他は維持
-      expect(state.timezone).toBe('UTC');
+      expect(state.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
     });
 
     it('クロノタイプを有効化できる', () => {
