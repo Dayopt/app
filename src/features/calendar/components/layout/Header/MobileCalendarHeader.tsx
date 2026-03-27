@@ -125,7 +125,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
               <button
                 type="button"
                 onClick={openSearch}
-                className="bg-muted/50 text-muted-foreground mx-3 mt-1 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                className="bg-muted text-muted-foreground mx-3 mt-1 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-sm"
               >
                 <Search className="size-4 shrink-0" />
                 <span>{tCommon('search.placeholder')}</span>

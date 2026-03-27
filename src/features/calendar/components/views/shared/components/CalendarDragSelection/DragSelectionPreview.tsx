@@ -50,7 +50,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   if (isOverlapping) {
     return (
       <div
-        className="bg-destructive border-destructive/50 pointer-events-none absolute right-2 left-0 rounded border"
+        className="bg-destructive border-destructive pointer-events-none absolute right-2 left-0 rounded border"
         style={{ top, height, zIndex: 1000 }}
       >
         <div className="flex items-center gap-1 px-2 py-1">
@@ -78,7 +78,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
       {/* 左アクセントストリップ */}
       <div className="bg-entry-default shrink-0" style={{ width: '3px' }} />
       {/* カード本体 */}
-      <div className="bg-entry-default/12 min-w-0 flex-1 overflow-hidden rounded-r-lg">
+      <div className="bg-muted min-w-0 flex-1 overflow-hidden rounded-r-lg">
         {isCompact ? (
           <div className="flex h-full items-center px-2">
             <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>

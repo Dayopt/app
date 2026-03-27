@@ -75,7 +75,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
     'relative flex-1 min-w-0',
     GRID_BACKGROUND,
     'border-r border-border last:border-r-0',
-    isWeekendActual ? 'bg-surface-container/50' : '',
+    isWeekendActual ? 'bg-container' : '',
     className,
   ]
     .filter(Boolean)
@@ -126,7 +126,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
           <div className="absolute inset-0 flex items-center justify-center">
             <button
               type="button"
-              className="text-muted-foreground/50 hover:text-muted-foreground flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 transition-colors"
+              className="text-muted-foreground hover:text-muted-foreground flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onTimeClick) {

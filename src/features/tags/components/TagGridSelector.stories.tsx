@@ -109,11 +109,11 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-muted/80 flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >
-      <span className="bg-muted-foreground/20 flex size-8 items-center justify-center rounded-full">
+      <span className="bg-muted flex size-8 items-center justify-center rounded-full">
         <Plus className="text-muted-foreground size-5" />
       </span>
       <span className="text-muted-foreground text-sm font-medium">新規</span>

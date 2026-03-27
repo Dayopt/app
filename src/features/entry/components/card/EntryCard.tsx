@@ -333,7 +333,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             : isMobile
               ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
               : 'p-2 text-sm',
-          colorClasses ? colorClasses.tint : 'bg-entry-default/12',
+          colorClasses ? colorClasses.tint : 'bg-muted',
         )}
       >
         <EntryCardContent

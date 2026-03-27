@@ -400,7 +400,9 @@ export const DosDonts: Story = {
               <h3 className="text-destructive font-bold">Don&apos;t</h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground">text-gray-600（直接色指定）</p>
-                <p className="text-foreground/50">text-foreground/50（透明度）</p>
+                <p className="text-muted-foreground">
+                  text-muted-foreground（透明度の代わりにセマンティックトークン）
+                </p>
               </div>
             </div>
           </div>

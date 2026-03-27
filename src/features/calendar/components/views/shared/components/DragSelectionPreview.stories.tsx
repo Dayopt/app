@@ -36,7 +36,7 @@ const formatTime = (hour: number, minute: number) => {
 
 /** ドラッグ選択中のプレビュー。 */
 export const Default: Story = {
-  // color-contrast: text-foreground/60 on plan card background
+  // color-contrast: text-muted-foreground on plan card background
   parameters: { a11y: { test: 'todo' } },
   render: () => (
     <Slot>
@@ -63,7 +63,7 @@ export const Overlapping: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  // color-contrast: text-foreground/60 on plan card background
+  // color-contrast: text-muted-foreground on plan card background
   parameters: { a11y: { test: 'todo' } },
   render: () => (
     <div className="flex flex-col items-start gap-6">

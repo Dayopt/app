@@ -37,7 +37,7 @@ function MockSidebarContent() {
   return (
     <>
       <div className="p-3">
-        <div className="bg-muted/50 flex aspect-square w-full items-center justify-center rounded-lg">
+        <div className="bg-muted flex aspect-square w-full items-center justify-center rounded-lg">
           <span className="text-muted-foreground text-xs">Mini Calendar</span>
         </div>
       </div>

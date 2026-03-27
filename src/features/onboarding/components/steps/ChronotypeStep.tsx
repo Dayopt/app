@@ -91,7 +91,7 @@ export function ChronotypeStep({
       <button
         type="button"
         onClick={onShowQuiz}
-        className="text-primary hover:text-primary/80 block w-full text-center text-sm transition-colors"
+        className="text-primary hover:text-primary block w-full text-center text-sm transition-colors"
       >
         {t('onboarding.chronotype.quizLink')} →
       </button>

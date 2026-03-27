@@ -51,7 +51,7 @@ export function InsightCard({ insight, className }: InsightCardProps) {
         )}
 
         {/* Question */}
-        <div className="bg-muted/50 flex items-start gap-2.5 rounded-lg p-3">
+        <div className="bg-muted flex items-start gap-2.5 rounded-lg p-3">
           <MessageCircleQuestion className="text-muted-foreground mt-0.5 size-4 shrink-0" />
           <p className="text-muted-foreground text-sm italic">{insight.question}</p>
         </div>

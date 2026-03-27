@@ -56,7 +56,7 @@ function ContextMenuTrigger({
 
   return (
     <div
-      className="border-border bg-muted/20 relative flex h-40 w-full cursor-context-menu items-center justify-center rounded-lg border"
+      className="border-border bg-muted relative flex h-40 w-full cursor-context-menu items-center justify-center rounded-lg border"
       onContextMenu={(e) => {
         e.preventDefault();
         setMenuState({ x: e.clientX, y: e.clientY });

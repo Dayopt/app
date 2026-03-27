@@ -55,6 +55,13 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     message: 'semantic 色の opacity 派生は禁止。tint トークンまたは state トークンを使用',
     suggestion: 'bg-success/10 → bg-success-tint, bg-primary/10 → bg-primary-state-selected',
   },
+  {
+    pattern:
+      '(text|border|bg)-(foreground|muted-foreground|border|muted|entry-default|surface-container)/[0-9]',
+    message: 'neutral トークンの opacity 派生は禁止。named トークンを使用',
+    suggestion:
+      'text-foreground/80 → text-muted-foreground, border-border/50 → border-border-subtle',
+  },
 ];
 
 let hasViolations = false;

@@ -235,7 +235,7 @@ export const SizeVariations: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  // color-contrast: text-foreground/60 on plan card background
+  // color-contrast: text-muted-foreground on plan card background
   parameters: { a11y: { test: 'todo' } },
   render: () => (
     <div className="flex flex-col gap-8">

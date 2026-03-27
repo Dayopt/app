@@ -75,7 +75,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
                 <h2 className="text-destructive mb-2 text-2xl font-bold tracking-tight">
                   {translations.errorTitle}
                 </h2>
-                <p className="text-foreground/80 mb-4 text-sm">{translations.errorMessage}</p>
+                <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
                 <button
                   onClick={() => window.location.reload()}
                   className="bg-primary text-primary-foreground rounded px-4 py-2 transition-opacity hover:opacity-80"

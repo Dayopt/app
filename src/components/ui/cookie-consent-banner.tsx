@@ -89,7 +89,7 @@ export function CookieConsentBanner() {
                 href={privacyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground hover:text-foreground/80 underline"
+                className="text-foreground hover:text-foreground underline"
               >
                 {t('common.cookies.banner.learnMore')}
               </a>

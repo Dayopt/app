@@ -48,7 +48,7 @@ export function ProfileSettings() {
                 {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
-            <div className="group-hover:bg-foreground/40 absolute inset-0 flex items-center justify-center rounded-full transition-colors">
+            <div className="group-hover:bg-foreground absolute inset-0 flex items-center justify-center rounded-full transition-colors group-hover:opacity-40">
               <Camera className="h-4 w-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
             </div>
           </div>
