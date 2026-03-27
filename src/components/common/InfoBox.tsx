@@ -12,7 +12,7 @@ interface InfoBoxProps {
  * 情報ボックスコンポーネント
  *
  * 設定画面のインフォメーション・警告表示に使用。
- * - default: bg-surface-inset（案内・ヒント）
+ * - default: bg-muted（案内・ヒント）
  * - destructive: destructive背景 + ボーダー（警告・エラー）
  */
 export function InfoBox({ variant = 'default', className, children }: InfoBoxProps) {
@@ -20,7 +20,7 @@ export function InfoBox({ variant = 'default', className, children }: InfoBoxPro
     <div
       className={cn(
         'rounded-2xl p-4',
-        variant === 'default' && 'bg-surface-inset',
+        variant === 'default' && 'bg-muted',
         variant === 'destructive' && 'border-destructive bg-destructive-state-hover border',
         className,
       )}

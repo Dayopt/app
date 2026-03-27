@@ -110,7 +110,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               </p>
             </div>
 
-            <div className="bg-surface-inset grid grid-cols-2 gap-2 rounded-2xl p-4 font-mono text-sm">
+            <div className="bg-muted grid grid-cols-2 gap-2 rounded-2xl p-4 font-mono text-sm">
               {recoveryCodes.map((code, index) => (
                 <div key={index} className="text-foreground">
                   {code}
@@ -172,7 +172,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                   <p className="mb-2 text-sm font-normal">
                     {t('settings.account.mfa.setup.manualEntry')}
                   </p>
-                  <code className="bg-surface-inset block rounded p-2 text-xs">{secret}</code>
+                  <code className="bg-muted block rounded p-2 text-xs">{secret}</code>
                 </div>
               )}
 

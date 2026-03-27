@@ -185,7 +185,7 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-surface-inset mt-3 rounded-xl">
+      <div className="bg-muted mt-3 rounded-xl">
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* 日付 */}
           <DateRow

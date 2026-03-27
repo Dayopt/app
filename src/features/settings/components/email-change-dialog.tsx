@@ -106,7 +106,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   type="email"
                   value={currentEmail}
                   disabled
-                  className="bg-surface-inset"
+                  className="bg-muted"
                 />
               </div>
 
