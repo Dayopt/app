@@ -13,6 +13,8 @@ interface ForbiddenPattern {
   pattern: string;
   message: string;
   suggestion: string;
+  /** true = 検出するが CI を block しない（段階移行中のルール） */
+  warnOnly?: boolean;
 }
 
 // 禁止パターン（トークン化すべき任意値）
@@ -37,21 +39,44 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     message: 'タッチターゲットはトークンを使用',
     suggestion: 'min-h-[44px] → min-h-11',
   },
+  // カラートークン準拠
+  {
+    pattern: 'border-black/|border-white/',
+    message: '手書き border 色は禁止。border-border / border-border-subtle を使用',
+    suggestion: 'border-black/[0.04] → border-border-subtle',
+  },
+  {
+    pattern: 'shadow-\\[',
+    message: '任意 shadow 値は禁止。shadow-sm / shadow-card を使用',
+    suggestion: 'shadow-[...] → shadow-card',
+  },
+  {
+    pattern: 'bg-(primary|success|warning|destructive|info)/[0-9]',
+    message: 'semantic 色の opacity 派生は禁止。tint トークンまたは state トークンを使用',
+    suggestion: 'bg-success/10 → bg-success-tint, bg-primary/10 → bg-primary-state-selected',
+    warnOnly: true,
+  },
 ];
 
 let hasViolations = false;
+let hasWarnings = false;
 
 console.log('🔍 Tailwind トークン違反をチェック中...\n');
 
-for (const { pattern, message, suggestion } of FORBIDDEN_PATTERNS) {
+for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
   try {
     const result = execSync(`grep -rE "${pattern}" src --include="*.tsx" -l 2>/dev/null || true`, {
       encoding: 'utf8',
     }).trim();
 
     if (result) {
-      hasViolations = true;
-      console.log(`❌ ${message}`);
+      if (warnOnly) {
+        hasWarnings = true;
+        console.log(`⚠️  [warn] ${message}`);
+      } else {
+        hasViolations = true;
+        console.log(`❌ ${message}`);
+      }
       console.log(`   修正例: ${suggestion}`);
       console.log(`   該当ファイル:`);
       result.split('\n').forEach((file) => {
@@ -67,6 +92,9 @@ for (const { pattern, message, suggestion } of FORBIDDEN_PATTERNS) {
 if (hasViolations) {
   console.log('⚠️  トークン違反が見つかりました。修正してください。');
   process.exit(1);
+} else if (hasWarnings) {
+  console.log('✅ エラーなし（⚠️ 警告あり — 段階的に修正してください）');
+  process.exit(0);
 } else {
   console.log('✅ トークン違反なし');
   process.exit(0);

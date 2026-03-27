@@ -159,7 +159,7 @@ export function BottomTabBar() {
               <span
                 className={cn(
                   'relative flex items-center justify-center rounded-full px-4 py-1 transition-colors',
-                  isActive && 'bg-primary/10',
+                  isActive && 'bg-primary-state-selected',
                 )}
               >
                 {/* Accountタブはユーザーアバターを表示 */}

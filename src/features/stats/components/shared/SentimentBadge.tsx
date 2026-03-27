@@ -10,9 +10,9 @@ interface SentimentBadgeProps {
 }
 
 const SENTIMENT_STYLES: Record<FindingSentiment, string> = {
-  positive: 'bg-success/10 text-success',
+  positive: 'bg-success-tint text-success',
   neutral: 'bg-muted text-muted-foreground',
-  needs_attention: 'bg-warning/10 text-warning',
+  needs_attention: 'bg-warning-tint text-warning',
 };
 
 const SENTIMENT_LABELS: Record<FindingSentiment, string> = {
