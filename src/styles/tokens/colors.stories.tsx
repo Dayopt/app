@@ -809,7 +809,9 @@ export const Semantic: Story = {
   },
 };
 
-export const Interaction: Story = {
+// Interaction story は Foundations/States に統合済み
+
+export const Text: Story = {
   render: () => (
     <div>
       <h2 className="mb-6 text-xl font-bold">インタラクション状態</h2>
@@ -1115,38 +1117,162 @@ export const Interaction: Story = {
 };
 
 export const Text: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">テキストカラー</h1>
-      <p className="text-muted-foreground mb-8">色で情報の重要度を表現。</p>
+  render: () => {
+    const neutralTexts = [
+      {
+        token: 'text-foreground',
+        cls: 'text-foreground',
+        label: '主要（見出し、本文）',
+        light: 'oklch(0.13 0 0)',
+        dark: 'oklch(0.90 0.005 70)',
+      },
+      {
+        token: 'text-muted-foreground',
+        cls: 'text-muted-foreground',
+        label: '補助（説明、キャプション）',
+        light: 'oklch(0.40 0 0)',
+        dark: 'oklch(0.68 0.005 60)',
+      },
+    ] as const;
 
-      <div className="space-y-4">
-        {[
-          {
-            token: 'text-foreground',
-            cls: 'text-foreground',
-            label: '主要テキスト（見出し、本文）',
-          },
-          {
-            token: 'text-muted-foreground',
-            cls: 'text-muted-foreground',
-            label: '補助テキスト（説明、キャプション）',
-          },
-          { token: 'text-primary', cls: 'text-primary', label: 'リンク、アクション' },
-          { token: 'text-destructive', cls: 'text-destructive', label: 'エラー、警告' },
-          { token: 'text-success', cls: 'text-success', label: '成功、完了' },
-        ].map(({ token, cls, label }) => (
-          <div key={token} className="border-border flex items-center gap-4 border-b pb-4">
-            <div className={`${cls} h-6 w-6 shrink-0 rounded-full bg-current`} />
-            <div>
-              <code className="text-foreground text-xs">{token}</code>
-              <p className="text-muted-foreground text-sm">{label}</p>
+    const semanticTexts = [
+      { token: 'text-primary', cls: 'text-primary', label: 'リンク、アクション' },
+      { token: 'text-destructive', cls: 'text-destructive', label: 'エラー H25' },
+      { token: 'text-warning', cls: 'text-warning', label: '警告 H70' },
+      { token: 'text-success', cls: 'text-success', label: '成功 H150' },
+      { token: 'text-info', cls: 'text-info', label: '情報 H260' },
+    ] as const;
+
+    return (
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">テキストカラー</h1>
+        <p className="text-muted-foreground mb-2 text-sm">
+          Neutral 2段階で9割のUIが完結。Semantic は意味があるときだけ。
+        </p>
+        <p className="text-muted-foreground mb-8 text-sm">
+          Dark: 純白にしない（L=0.90 オフホワイト, C=0.005, H=70）。
+        </p>
+
+        {/* ── Hierarchy bar ── */}
+        <h3 className="mb-3 font-bold">Hierarchy（左:主要 → 右:補助）</h3>
+        <div className="bg-background border-border mb-8 flex overflow-hidden rounded-xl border">
+          <div className="flex flex-1 flex-col items-center justify-center py-8">
+            <span className="text-foreground text-lg font-bold">foreground</span>
+            <span className="text-foreground text-sm">主要テキスト</span>
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center py-8">
+            <span className="text-muted-foreground text-lg font-bold">muted-foreground</span>
+            <span className="text-muted-foreground text-sm">補助テキスト</span>
+          </div>
+        </div>
+
+        {/* ── Contrast check: on card / on background ── */}
+        <h3 className="mb-3 font-bold">コントラスト確認</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Storybook ツールバーの 🌙 で Light/Dark を切り替えて確認。
+        </p>
+        <div className="mb-8 grid grid-cols-2 gap-4">
+          <div className="bg-card rounded-xl p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <div className="text-muted-foreground mb-1 text-xs">on card</div>
+            <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
+            <p className="text-muted-foreground mt-2 text-sm">
+              muted-foreground — 説明文やキャプション
+            </p>
+          </div>
+          <div className="bg-background border-border rounded-xl border p-6">
+            <div className="text-muted-foreground mb-1 text-xs">on background</div>
+            <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
+            <p className="text-muted-foreground mt-2 text-sm">
+              muted-foreground — 説明文やキャプション
+            </p>
+          </div>
+        </div>
+
+        {/* ── Spec table: Neutral ── */}
+        <h3 className="mb-3 font-bold">Neutral</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {neutralTexts.map(({ token, cls, light, dark, label }) => (
+                <tr key={token} className="border-border border-b">
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`${cls} size-4 shrink-0 rounded-full bg-current`} />
+                      <code className="text-foreground text-xs">{token}</code>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">{light}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{dark}</td>
+                  <td className="px-4 py-2 text-xs">{label}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Spec table: Semantic ── */}
+        <h3 className="mb-3 font-bold">Semantic（意味があるときだけ）</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          値は Color &gt; Semantic の accent と同じ。text-* と bg-* が同一トークンを参照。
+        </p>
+        <div className="bg-card border-border mb-6 rounded-xl border">
+          <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-5">
+            {semanticTexts.map(({ token, cls, label }) => (
+              <div key={token} className="flex flex-col items-center gap-2">
+                <div
+                  className={`${cls} bg-background border-border flex size-12 items-center justify-center rounded-lg border text-lg font-bold`}
+                >
+                  Aa
+                </div>
+                <code className="text-xs">{token.replace('text-', '')}</code>
+                <span className="text-muted-foreground text-xs">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Usage guide ── */}
+        <h3 className="mb-3 font-bold">使い分けガイド</h3>
+        <div className="bg-card border-border rounded-xl border p-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="border-success space-y-2 border-l-4 pl-4">
+              <p className="text-success font-bold">Do</p>
+              <pre className="text-muted-foreground text-xs leading-relaxed">{`// 主要テキスト
+<h1 className="text-foreground">見出し</h1>
+
+// 補助テキスト
+<p className="text-muted-foreground">説明</p>
+
+// リンク
+<a className="text-primary">リンク</a>
+
+// エラーメッセージ
+<p className="text-destructive">入力エラー</p>`}</pre>
+            </div>
+            <div className="border-destructive space-y-2 border-l-4 pl-4">
+              <p className="text-destructive font-bold">Don&apos;t</p>
+              <pre className="text-muted-foreground text-xs leading-relaxed">{`// ❌ 直接カラー
+<h1 className="text-gray-900">見出し</h1>
+
+// ❌ opacity で階層を作る
+<p className="text-foreground opacity-50">説明</p>
+
+// ❌ 意味なく semantic を使う
+<p className="text-success">普通のテキスト</p>`}</pre>
             </div>
           </div>
-        ))}
+        </div>
       </div>
-    </div>
-  ),
+    );
+  },
 };
 
 export const Tags: Story = {
