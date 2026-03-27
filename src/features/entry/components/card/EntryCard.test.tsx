@@ -205,7 +205,7 @@ describe('EntryCard', () => {
       const onClick = vi.fn();
       const parentClick = vi.fn();
 
-      const { container } = render(
+      render(
         <div onClick={parentClick}>
           <EntryCard entry={mockEvent} position={mockPosition} onClick={onClick} />
         </div>,
