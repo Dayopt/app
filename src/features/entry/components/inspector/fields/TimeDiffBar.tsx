@@ -39,10 +39,10 @@ export function TimeDiffBar({ plannedMinutes, actualMinutes }: TimeDiffBarProps)
         className={cn(
           'shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium tabular-nums',
           diffMinutes > 0
-            ? 'bg-warning/15 text-warning'
+            ? 'bg-warning-tint text-warning'
             : diffMinutes < 0
-              ? 'bg-destructive/15 text-destructive'
-              : 'bg-success/15 text-success',
+              ? 'bg-destructive-tint text-destructive'
+              : 'bg-success-tint text-success',
         )}
       >
         {formatDiffDisplay(diffMinutes)}

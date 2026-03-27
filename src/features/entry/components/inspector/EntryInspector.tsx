@@ -22,7 +22,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
-import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
+import { inspectorAnchorRef, useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../types/entry';
 import { EntryInspectorForm } from './EntryInspectorForm';
 import { FloatingPopover } from './FloatingPopover';
@@ -48,7 +48,6 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
-  const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   const {
@@ -78,7 +77,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
   });
 
   // --- コンテンツ（loading / empty / form） ---
-  const title = entry?.title || t('plan.inspector.noTitle');
+  const title = entry?.title || t('entry.inspector.noTitle');
   let content: React.ReactNode;
 
   if (isLoading) {
@@ -100,7 +99,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
   } else if (!entry) {
     content = (
       <div className="flex h-full flex-1 items-center justify-center">
-        <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+        <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>
       </div>
     );
   } else {
@@ -133,7 +132,11 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
           </DrawerContent>
         </Drawer>
       ) : (
-        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
+        <FloatingPopover
+          onClose={handleClose}
+          title={title}
+          anchorRect={inspectorAnchorRef.current}
+        >
           {content}
         </FloatingPopover>
       )}

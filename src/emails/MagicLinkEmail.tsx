@@ -8,47 +8,50 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface MagicLinkEmailProps {
   loginUrl: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
-export function MagicLinkEmail({ loginUrl, appUrl = 'https://dayopt.app' }: MagicLinkEmailProps) {
+export function MagicLinkEmail({
+  loginUrl,
+  locale = 'en',
+  appUrl = 'https://app.dayopt.app',
+}: MagicLinkEmailProps) {
+  const t = createEmailTranslator(locale);
+
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Log in to Dayopt</Text>
-            <Text style={styles.paragraph}>
-              Click the button below to log in to your Dayopt account. No password needed.
-            </Text>
+            <Text style={styles.heading}>{t('magicLink.heading')}</Text>
+            <Text style={styles.paragraph}>{t('magicLink.body')}</Text>
             <Button style={styles.button} href={loginUrl}>
-              Log In to Dayopt
+              {t('magicLink.ctaButton')}
             </Button>
-            <Text style={styles.smallText}>
-              If the button doesn&apos;t work, copy and paste this link into your browser:
-            </Text>
+            <Text style={styles.smallText}>{t('emailCommon.buttonFallbackText')}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={loginUrl}>
                 {loginUrl}
               </Link>
             </Text>
-            <Text style={styles.smallText}>This link will expire in 1 hour.</Text>
+            <Text style={styles.smallText}>{t('magicLink.expiryNote')}</Text>
             <Text style={styles.footer}>
-              If you didn&apos;t request this login link, you can safely ignore this email. Someone
-              may have entered your email address by mistake.
+              {t('magicLink.ignoreLine')}
               <br />
               <br />
               <Link style={styles.link} href={appUrl}>
-                dayopt.app
+                app.dayopt.app
               </Link>
               <br />
               <br />
-              The Dayopt Team
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

@@ -255,15 +255,9 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
     >
       {children}
 
-      <DragOverlay style={{ pointerEvents: 'none' }}>
+      <DragOverlay className="pointer-events-none">
         {activeplan ? (
-          <div
-            className="surface-raised border-l-indicator flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90"
-            style={{
-              borderLeftColor: 'var(--entry-default)',
-              backgroundColor: 'color-mix(in oklch, var(--entry-default) 12%, var(--background))',
-            }}
-          >
+          <div className="bg-muted border-l-indicator border-l-entry-default flex w-48 flex-col gap-0.5 rounded-r-lg p-2 opacity-90 shadow-md">
             <span className="text-foreground truncate text-sm font-normal">{activeplan.title}</span>
             {dragPreviewTime?.time && (
               <span className="text-muted-foreground text-xs tabular-nums">

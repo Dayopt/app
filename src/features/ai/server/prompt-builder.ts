@@ -135,8 +135,8 @@ Respond in the same language the user writes in. If they write in Japanese, resp
   }
 
   // 今日のスケジュール
-  if (context.todayPlans.length > 0) {
-    const planStr = context.todayPlans
+  if (context.todayEntries.length > 0) {
+    const planStr = context.todayEntries
       .map((p) => {
         const time = formatTimeRange(p.startTime, p.endTime);
         const tagStr = p.tags.filter(Boolean).join(', ');
@@ -148,9 +148,9 @@ Respond in the same language the user writes in. If they write in Japanese, resp
     sections.push(`## Today's Schedule\nNo plans scheduled for today.`);
   }
 
-  // 最近のレコード
-  if (context.recentRecords.length > 0) {
-    const recordStr = context.recentRecords
+  // 最近の過去エントリー
+  if (context.recentEntries.length > 0) {
+    const recordStr = context.recentEntries
       .map((r) => {
         const hours = Math.floor(r.durationMinutes / 60);
         const mins = r.durationMinutes % 60;
@@ -163,8 +163,8 @@ Respond in the same language the user writes in. If they write in Japanese, resp
   }
 
   // 週間統計
-  const planHours = (context.weeklyMinutes.plan / 60).toFixed(1);
-  const recordHours = (context.weeklyMinutes.record / 60).toFixed(1);
+  const planHours = (context.weeklyMinutes.planned / 60).toFixed(1);
+  const recordHours = (context.weeklyMinutes.actual / 60).toFixed(1);
   sections.push(
     `## This Week's Stats\n- Planned time: ${planHours}h\n- Recorded time: ${recordHours}h`,
   );

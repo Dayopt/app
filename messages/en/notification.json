@@ -3,11 +3,15 @@
     "title": "Notifications",
     "tabs": {
       "all": "All",
-      "unread": "Unread"
+      "unread": "Unread",
+      "reminders": "Reminders",
+      "ai": "AI"
     },
     "empty": {
       "all": "No notifications",
-      "unread": "No unread notifications"
+      "unread": "No unread notifications",
+      "reminders": "No reminder notifications",
+      "ai": "No AI notifications"
     },
     "actions": {
       "markAllAsRead": "Mark all as read",
@@ -44,6 +48,12 @@
         "label": "Email notifications",
         "description": "Receive reminder notifications via email"
       },
+      "emailLanguage": {
+        "label": "Email language",
+        "description": "Language used for transactional emails (reminders, billing, etc.)",
+        "en": "English",
+        "ja": "Japanese"
+      },
       "pushNotifications": {
         "label": "Push notifications",
         "description": "Receive notifications even when the app is closed",
@@ -55,7 +65,26 @@
       "tip": "Browser notifications only work when the app is open. Enable email or push notifications to stay informed anytime.",
       "defaultReminder": {
         "label": "Default start notification",
-        "description": "Automatically enable start notification for new plans"
+        "description": "Automatically enable start notification for new entries"
+      },
+      "typeSection": {
+        "title": "Notification types",
+        "dailyInsights": {
+          "label": "Daily insights",
+          "description": "Daily analysis alerts for entry rate, blank time, etc."
+        },
+        "energyInsights": {
+          "label": "Energy insights",
+          "description": "Suggestions for utilizing your deep hours"
+        },
+        "burnoutWarnings": {
+          "label": "Burnout warnings",
+          "description": "Alerts when overwork patterns are detected"
+        },
+        "weeklyReports": {
+          "label": "Weekly reports",
+          "description": "Weekly activity summary and reflection"
+        }
       }
     }
   }

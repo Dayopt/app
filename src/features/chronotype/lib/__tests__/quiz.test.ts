@@ -7,8 +7,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'early', // lion: 3
       morningEnergy: 'veryHigh', // lion: 3
-      peakFocus: 'earlyMorning', // lion: 3
-      afternoonDip: 'earlyDip', // lion: 3
+      deepFocus: 'earlyMorning', // lion: 3
+      afternoonEase: 'earlyEase', // lion: 3
       bedTime: 'early', // lion: 3
       sleepQuality: 'deepSleep', // lion: 3
     };
@@ -21,8 +21,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'moderate', // bear: 3
       morningEnergy: 'gradual', // bear: 3
-      peakFocus: 'lateMorning', // bear: 3
-      afternoonDip: 'normalDip', // bear: 3
+      deepFocus: 'lateMorning', // bear: 3
+      afternoonEase: 'normalEase', // bear: 3
       bedTime: 'normal', // bear: 3
       sleepQuality: 'normalSleep', // bear: 3
     };
@@ -35,8 +35,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'late', // wolf: 3
       morningEnergy: 'low', // wolf: 3
-      peakFocus: 'afternoon', // wolf: 3
-      afternoonDip: 'noDip', // wolf: 3
+      deepFocus: 'afternoon', // wolf: 3
+      afternoonEase: 'noEase', // wolf: 3
       bedTime: 'late', // wolf: 3
       sleepQuality: 'nightOwl', // wolf: 3
     };
@@ -49,8 +49,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'irregular', // dolphin: 3
       morningEnergy: 'anxious', // dolphin: 3
-      peakFocus: 'evening', // dolphin: 1
-      afternoonDip: 'unpredictable', // dolphin: 3
+      deepFocus: 'evening', // dolphin: 1
+      afternoonEase: 'unpredictable', // dolphin: 3
       bedTime: 'inconsistent', // dolphin: 3
       sleepQuality: 'lightSleep', // dolphin: 3
     };
@@ -73,8 +73,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'moderate', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
       morningEnergy: 'gradual', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
-      peakFocus: 'lateMorning', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
-      afternoonDip: 'normalDip', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
+      deepFocus: 'lateMorning', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
+      afternoonEase: 'normalEase', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
       bedTime: 'normal', // lion: 1, bear: 3, wolf: 0, dolphin: 1 (bear wins here)
       sleepQuality: 'normalSleep', // lion: 1, bear: 3, wolf: 1, dolphin: 0 (bear wins)
     };
@@ -87,8 +87,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'early', // lion: 3
       morningEnergy: 'veryHigh', // lion: 3
-      peakFocus: 'earlyMorning', // lion: 3
-      // Missing afternoonDip, bedTime, sleepQuality
+      deepFocus: 'earlyMorning', // lion: 3
+      // Missing afternoonEase, bedTime, sleepQuality
     };
 
     const result = calculateChronotypeResult(answers);
@@ -99,8 +99,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'early', // lion: 3
       morningEnergy: 'veryHigh', // lion: 3
-      peakFocus: 'earlyMorning', // lion: 3
-      afternoonDip: 'earlyDip', // lion: 3
+      deepFocus: 'earlyMorning', // lion: 3
+      afternoonEase: 'earlyEase', // lion: 3
       bedTime: 'early', // lion: 3
       sleepQuality: 'deepSleep', // lion: 3
       unknownQuestion: 'someOption', // Should be ignored
@@ -115,8 +115,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'unknownOption', // Unknown option, should be skipped
       morningEnergy: 'veryHigh', // lion: 3
-      peakFocus: 'earlyMorning', // lion: 3
-      afternoonDip: 'earlyDip', // lion: 3
+      deepFocus: 'earlyMorning', // lion: 3
+      afternoonEase: 'earlyEase', // lion: 3
       bedTime: 'early', // lion: 3
       sleepQuality: 'deepSleep', // lion: 3
     };
@@ -130,8 +130,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'early', // lion: 3, bear: 1, dolphin: 1
       morningEnergy: 'gradual', // lion: 1, bear: 3, dolphin: 1
-      peakFocus: 'lateMorning', // lion: 1, bear: 3, dolphin: 1
-      afternoonDip: 'normalDip', // lion: 1, bear: 3, dolphin: 1
+      deepFocus: 'lateMorning', // lion: 1, bear: 3, dolphin: 1
+      afternoonEase: 'normalEase', // lion: 1, bear: 3, dolphin: 1
       bedTime: 'normal', // lion: 1, bear: 3, dolphin: 1
       sleepQuality: 'deepSleep', // lion: 3, bear: 1, wolf: 1
     };
@@ -148,8 +148,8 @@ describe('calculateChronotypeResult', () => {
     const answers: Record<string, string> = {
       wakeTime: 'moderate',
       morningEnergy: 'low',
-      peakFocus: 'afternoon',
-      afternoonDip: 'noDip',
+      deepFocus: 'afternoon',
+      afternoonEase: 'noEase',
       bedTime: 'late',
       sleepQuality: 'nightOwl',
     };
@@ -164,8 +164,8 @@ describe('calculateChronotypeResult', () => {
     const expectedQuestionIds = [
       'wakeTime',
       'morningEnergy',
-      'peakFocus',
-      'afternoonDip',
+      'deepFocus',
+      'afternoonEase',
       'bedTime',
       'sleepQuality',
     ];

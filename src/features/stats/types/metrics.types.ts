@@ -4,6 +4,8 @@
  * メトリクス定義マスター型 + tRPCレスポンス型
  */
 
+import type { TagColorName } from '@/lib/tag-colors';
+
 // =============================================================================
 // Metric Definition System（定義マスター型）
 // =============================================================================
@@ -12,10 +14,10 @@
 export type MetricId =
   | 'totalTime'
   | 'avgFulfillment'
-  | 'planRate'
+  | 'entryRate'
   | 'streak'
   | 'estimationAccuracy'
-  | 'peakUtilization'
+  | 'deepUtilization'
   | 'contextSwitches'
   | 'blankRate';
 
@@ -66,18 +68,18 @@ export interface MetricData {
 // tRPC Response Types（DB関数のレスポンス型）
 // =============================================================================
 
-/** プラン率の tRPC レスポンス型 */
-export interface PlanRateData {
+/** エントリー率の tRPC レスポンス型 */
+export interface EntryRateData {
   totalEntries: number;
   plannedEntries: number;
-  planRate: number;
+  entryRate: number;
 }
 
 /** 見積もり精度のタグ別 tRPC レスポンス型 */
 export interface EstimationAccuracyData {
   tagId: string;
   tagName: string;
-  tagColor: string;
+  tagColor: TagColorName;
   avgPlannedMinutes: number;
   avgActualMinutes: number;
   avgDeviationMinutes: number;
@@ -99,10 +101,10 @@ export interface BlankRateData {
 }
 
 /** ピーク時間帯活用率の計算結果型 */
-export interface PeakUtilizationData {
-  peakMinutes: number;
-  totalPeakAvailable: number;
-  peakUtilization: number;
+export interface DeepUtilizationData {
+  deepMinutes: number;
+  totalDeepAvailable: number;
+  deepUtilization: number;
 }
 
 /** エネルギーマップの時間帯×曜日行データ */

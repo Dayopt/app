@@ -77,7 +77,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
 
     return (
-      <div className={cn('md:hidden', className)}>
+      <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
         <AppHeader
           rightSlot={
             <>
@@ -89,8 +89,8 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 onClick={handleTodayClick}
                 aria-label={t('actions.goToToday')}
               >
-                <div className="relative flex size-6 flex-col">
-                  <div className="h-1.5 w-full border-b-2 border-current" />
+                <div className="relative flex size-5 flex-col">
+                  <div className="h-1 w-full border-b-2 border-current" />
                   <div className="flex flex-1 items-center justify-center">
                     <span className="text-xs leading-none font-bold">{new Date().getDate()}</span>
                   </div>
@@ -108,7 +108,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >
             <h2 className="text-xl">{headerText}</h2>
-            <ChevronIcon className="text-muted-foreground size-4" />
+            <ChevronIcon className="text-muted-foreground size-5" />
           </button>
         </AppHeader>
 
@@ -125,7 +125,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
               <button
                 type="button"
                 onClick={openSearch}
-                className="bg-muted/50 text-muted-foreground mx-3 mt-1 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                className="bg-muted text-muted-foreground mx-3 mt-1 mb-2 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg px-3 py-2 text-sm"
               >
                 <Search className="size-4 shrink-0" />
                 <span>{tCommon('search.placeholder')}</span>

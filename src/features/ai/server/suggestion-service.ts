@@ -1,7 +1,7 @@
 /**
  * Suggestions Service
  *
- * 最近のPlan/Recordエントリからタイトル+タグのサジェストを提供するサービス層
+ * 最近のエントリからタイトル+タグのサジェストを提供するサービス層
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -16,14 +16,14 @@ interface RecentTitlesOptions {
   userId: string;
   search?: string | undefined;
   limit?: number | undefined;
-  /** 'plan' のみ or 'record' のみに絞り込む。省略時は両方取得 */
-  type?: 'plan' | 'record' | undefined;
+  /** 'planned' のみ or 'actual' のみに絞り込む。省略時は両方取得 */
+  type?: 'planned' | 'actual' | undefined;
 }
 
 interface RecentEntry {
   title: string;
   tagIds: string[];
-  source: 'plan' | 'record';
+  source: 'planned' | 'actual';
   lastUsedAt: string;
   count: number;
 }
@@ -43,7 +43,7 @@ export class SuggestionService {
   /**
    * 最近のユニークなタイトル+タグ組み合わせを取得
    *
-   * entries テーブルから origin で plan/record を区別して取得し、
+   * entries テーブルから origin で planned/actual を区別して取得し、
    * タイトルでグループ化して使用頻度と最新日時でソートする
    */
   async recentTitles(options: RecentTitlesOptions): Promise<RecentEntry[]> {
@@ -58,9 +58,9 @@ export class SuggestionService {
       .limit(100);
 
     // type フィルター: origin で絞り込み
-    if (type === 'plan') {
+    if (type === 'planned') {
       query = query.eq('origin', 'planned');
-    } else if (type === 'record') {
+    } else if (type === 'actual') {
       query = query.eq('origin', 'planned');
     }
 
@@ -80,7 +80,7 @@ export class SuggestionService {
       string,
       {
         tagIds: string[];
-        source: 'plan' | 'record';
+        source: 'planned' | 'actual';
         lastUsedAt: string;
         count: number;
       }
@@ -93,7 +93,7 @@ export class SuggestionService {
         (t) => t.tag_id,
       );
       const createdAt = entry.created_at;
-      const source: 'plan' | 'record' = entry.origin === 'planned' ? 'plan' : 'record';
+      const source: 'planned' | 'actual' = entry.origin === 'planned' ? 'planned' : 'actual';
 
       if (existing) {
         existing.count += 1;

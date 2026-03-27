@@ -169,7 +169,7 @@
       "deleteGroup": {
         "label": "Delete group",
         "title": "Delete group \"{name}\"",
-        "description": "{count} tags will be deleted. Plans themselves will not be deleted.",
+        "description": "{count} tags will be deleted. Entries themselves will not be deleted.",
         "success": "Deleted group \"{name}\" ({count} tags)",
         "failed": "Failed to delete group"
       }
@@ -204,14 +204,14 @@
       "days": "days",
       "longestStreak": "Best: {days} days",
       "tag": "Tag",
-      "plan": "Plan",
+      "plan": "Entry",
       "done": "Done",
       "percent": "%",
       "total": "Total",
       "backToAll": "All tags",
       "noTagData": "No tag data for this period",
       "emptyTitle": "No data this week",
-      "emptyDescription": "Add plans and records to see your progress",
+      "emptyDescription": "Add entries to see your progress",
       "periodDay": "Day",
       "periodWeek": "Week",
       "periodMonth": "Month",
@@ -235,7 +235,7 @@
         "weekends": "Weekends: {hours}",
         "hourlyDist": "Hourly Distribution",
         "hourlyDistDesc": "When you work",
-        "hourlyPeak": "Peak: {slot} ({hours})",
+        "hourlyDeep": "Deep: {slot} ({hours})",
         "hourlyTotal": "Total {hours}",
         "yearlyGrid": "Yearly Grid",
         "yearlyTotal": "Total {hours}",
@@ -264,14 +264,14 @@
         "totalTimeDesc": "Total tracked time",
         "avgFulfillment": "Avg Fulfillment",
         "avgFulfillmentDesc": "Average fulfillment score",
-        "planRate": "Plan Rate",
-        "planRateDesc": "Ratio of planned entries",
+        "entryRate": "Entry Rate",
+        "entryRateDesc": "Ratio of planned entries",
         "streak": "Streak",
         "streakDesc": "Current streak",
         "estimationAccuracy": "Estimation Accuracy",
         "estimationAccuracyDesc": "Avg deviation from planned time",
-        "peakUtilization": "Peak Utilization",
-        "peakUtilizationDesc": "Activity during peak hours",
+        "deepUtilization": "Deep Utilization",
+        "deepUtilizationDesc": "Activity during deep hours",
         "contextSwitches": "Context Switches",
         "contextSwitchesDesc": "Tag changes per day",
         "blankRate": "Free Time",
@@ -287,9 +287,9 @@
         "entries": "{count} entries"
       },
       "insights": {
-        "planRateLow": "Most activities in this period were unplanned",
-        "planRateLowDetail": "Try planning tomorrow's schedule the night before",
-        "peakUtilizationLow": "Peak hours were mostly unused",
+        "entryRateLow": "Most activities in this period were unplanned",
+        "entryRateLowDetail": "Try planning tomorrow's schedule the night before",
+        "deepUtilizationLow": "Deep hours were mostly unused",
         "contextSwitchesHigh": "Many context switches in this period",
         "contextSwitchesHighDetail": "Try batching similar tasks together",
         "blankRateHigh": "This period had a lot of free time",
@@ -301,7 +301,17 @@
         "hourlyFulfillmentLow": "Fulfillment tends to be below average at this hour",
         "tagFulfillmentHigh": "This tag's avg fulfillment is {score} — above overall average",
         "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
-        "peakHour": "This is a peak hour — great for focused work"
+        "deepHour": "This is a deep hour — great for focused work"
+      }
+    },
+    "nowBadge": {
+      "inDeep": "In deep",
+      "inEase": "In ease"
+    },
+    "mobile": {
+      "touchHint": {
+        "title": "Long press to create",
+        "description": "Press and hold on the timeline to create a new entry"
       }
     },
     "timeGrid": {

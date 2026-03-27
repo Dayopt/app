@@ -216,7 +216,7 @@ function ValueCategoryCollapsible({
             value={text}
             onChange={(e) => onTextChange(category, e.target.value)}
             placeholder={t('settings.values.placeholder')}
-            className="min-h-[60px] resize-none text-sm"
+            className="min-h-15 resize-none text-sm"
             rows={2}
           />
           <div className="flex justify-end">

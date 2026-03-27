@@ -39,7 +39,7 @@ type MetricId =
   | 'planRate'
   | 'streak'
   | 'estimationAccuracy'
-  | 'peakUtilization'
+  | 'deepUtilization'
   | 'contextSwitches'
   | 'blankRate';
 ```
@@ -53,7 +53,7 @@ type MetricId =
 | 条件 | severity | message |
 |------|----------|---------|
 | Plan Rate < 50% | warning | "今週の活動の大半は計画外でした" |
-| Peak Utilization < 30% | info | "ピーク時間帯がほとんど使われていません" |
+| Deep Utilization < 30% | info | "ピーク時間帯がほとんど使われていません" |
 | Context Switches > 8/日 | warning | "タスク切替が多い週でした" |
 | Blank Rate > 60% | info | "空白時間が多めの週でした" |
 
@@ -97,7 +97,7 @@ function evaluateRuleInsights(
 ```typescript
 const DEFAULT_THRESHOLDS: RuleThresholds = {
   planRate: { low: 0.5 },
-  peakUtilization: { low: 0.3 },
+  deepUtilization: { low: 0.3 },
   contextSwitches: { high: 8 },
   blankRate: { high: 0.6 },
   trendDelta: 0.2,           // 20% 変化で発火

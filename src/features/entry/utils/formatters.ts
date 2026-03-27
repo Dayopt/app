@@ -1,35 +1,35 @@
 import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '@/lib/date';
 
 /**
- * プラン番号のフォーマット
- * @example formatplanNumber("TKT-20241030-001") => "#TKT-001"
+ * エントリー番号のフォーマット
+ * @example formatEntryNumber("TKT-20241030-001") => "#TKT-001"
  */
-/** プラン番号を短縮表示形式にフォーマット（例: "TKT-20241030-001" → "#TKT-001"）
- * @param planNumber - プラン番号文字列
- * @returns 短縮形式のプラン番号
+/** エントリー番号を短縮表示形式にフォーマット（例: "TKT-20241030-001" → "#TKT-001"）
+ * @param entryNumber - エントリー番号文字列
+ * @returns 短縮形式のエントリー番号
  */
-export function formatplanNumber(planNumber: string): string {
+export function formatEntryNumber(entryNumber: string): string {
   // TKT-20241030-001 → #TKT-001
-  const parts = planNumber.split('-');
+  const parts = entryNumber.split('-');
   if (parts.length === 3) {
     return `#${parts[0]}-${parts[2]}`;
   }
-  return `#${planNumber}`;
+  return `#${entryNumber}`;
 }
 
 /**
  * 日付のフォーマット
  * @param dateString - ISO 8601形式の日時文字列
  * @param locale - 'en' | 'ja' (デフォルト: 'en')
- * @example formatplanDate("2025-01-15", "ja") => "2025年1月15日"
- * @example formatplanDate("2025-01-15", "en") => "Jan 15, 2025"
+ * @example formatEntryDate("2025-01-15", "ja") => "2025年1月15日"
+ * @example formatEntryDate("2025-01-15", "en") => "Jan 15, 2025"
  */
 /** 日付文字列をロケール対応形式にフォーマット
  * @param dateString - ISO 8601形式の日時文字列
  * @param locale - ロケール（'en' | 'ja'、デフォルト: 'en'）
  * @returns フォーマット済み日付文字列
  */
-export function formatplanDate(
+export function formatEntryDate(
   dateString: string | null | undefined,
   locale: string = 'en',
 ): string {
@@ -51,7 +51,7 @@ export function formatplanDate(
  * 日時のフォーマット（ISO 8601 → YYYY/MM/DD HH:mm）
  */
 /** 日時文字列を "YYYY/MM/DD HH:mm" 形式にフォーマット */
-export function formatplanDateTime(dateTimeString: string | null | undefined): string {
+export function formatEntryDateTime(dateTimeString: string | null | undefined): string {
   if (!dateTimeString) return '-';
 
   try {

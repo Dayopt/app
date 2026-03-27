@@ -5,6 +5,9 @@
  *
  * tRPC に依存しない純粋UIコンポーネント。
  * ContactDialog（Container）から呼ばれる。
+ *
+ * モバイル: Drawer（下からスライド）
+ * デスクトップ: Dialog（中央モーダル）
  */
 
 import { useCallback, useState } from 'react';
@@ -14,13 +17,22 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 import type { ContactCategory } from '../types';
 
@@ -45,35 +57,23 @@ export interface ContactDialogContentProps {
   };
 }
 
-/** お問い合わせダイアログのUIコンポーネント（tRPC非依存のプレゼンテーション層） */
-export function ContactDialogContent({
-  open,
-  onOpenChange,
+/** フォーム本体（Dialog/Drawer 共通） */
+function ContactForm({
   onSubmit,
   isPending,
   categoryLabel,
   labels,
-}: ContactDialogContentProps) {
+  onClose,
+}: {
+  onSubmit: (input: { category: ContactCategory; message: string }) => void;
+  isPending: boolean;
+  categoryLabel: (category: ContactCategory) => string;
+  labels: ContactDialogContentProps['labels'];
+  onClose: () => void;
+}) {
   const [category, setCategory] = useState<ContactCategory>('bug');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  const resetForm = useCallback(() => {
-    setCategory('bug');
-    setMessage('');
-    setError('');
-  }, []);
-
-  const handleOpenChange = useCallback(
-    (isOpen: boolean) => {
-      if (isPending) return;
-      if (isOpen) {
-        resetForm();
-      }
-      onOpenChange(isOpen);
-    },
-    [onOpenChange, isPending, resetForm],
-  );
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -89,6 +89,121 @@ export function ContactDialogContent({
   );
 
   return (
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4 px-4 py-4 md:px-0">
+        {/* カテゴリ */}
+        <div className="space-y-2">
+          <Label>{labels.categoryLabel}</Label>
+          <RadioGroup
+            value={category}
+            onValueChange={(value: string) => setCategory(value as ContactCategory)}
+            className="grid grid-cols-2 gap-2"
+          >
+            {CATEGORIES.map((cat) => (
+              <Label
+                key={cat}
+                htmlFor={`contact-category-${cat}`}
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <RadioGroupItem id={`contact-category-${cat}`} value={cat} />
+                <span className="text-sm">{categoryLabel(cat)}</span>
+              </Label>
+            ))}
+          </RadioGroup>
+        </div>
+
+        {/* メッセージ */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="contact-message">{labels.messageLabel}</Label>
+            <span className="text-muted-foreground text-xs tabular-nums">
+              {message.length}/5000
+            </span>
+          </div>
+          <Textarea
+            id="contact-message"
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (error) setError('');
+            }}
+            placeholder={labels.messagePlaceholder}
+            maxLength={5000}
+            className={`h-32 resize-none overflow-y-auto${error ? 'ring-destructive ring-2' : ''}`}
+          />
+          {error && <p className="text-destructive text-sm">{error}</p>}
+        </div>
+      </div>
+
+      {/* フッター: モバイルは縦並び、デスクトップは横並び */}
+      <div className="flex flex-col-reverse gap-2 p-4 md:flex-row md:justify-end md:p-0 md:pt-4">
+        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+          {labels.cancel}
+        </Button>
+        <Button type="submit" isLoading={isPending} disabled={isPending}>
+          {labels.submit}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** お問い合わせダイアログのUIコンポーネント（tRPC非依存のプレゼンテーション層） */
+export function ContactDialogContent({
+  open,
+  onOpenChange,
+  onSubmit,
+  isPending,
+  categoryLabel,
+  labels,
+}: ContactDialogContentProps) {
+  const isMobile = useIsMobile();
+
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (isPending) return;
+      onOpenChange(isOpen);
+    },
+    [onOpenChange, isPending],
+  );
+
+  const handleClose = useCallback(() => {
+    handleOpenChange(false);
+  }, [handleOpenChange]);
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{labels.title}</DrawerTitle>
+            <DrawerDescription>
+              {labels.description}{' '}
+              <a href="mailto:support@dayopt.app" className="text-primary hover:underline">
+                support@dayopt.app
+              </a>
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <ContactForm
+            onSubmit={onSubmit}
+            isPending={isPending}
+            categoryLabel={categoryLabel}
+            labels={labels}
+            onClose={handleClose}
+          />
+
+          <DrawerFooter className="sr-only">
+            <DrawerClose asChild>
+              <span />
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader className="text-left">
@@ -101,66 +216,13 @@ export function ContactDialogContent({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            {/* カテゴリ */}
-            <div className="space-y-2">
-              <Label>{labels.categoryLabel}</Label>
-              <RadioGroup
-                value={category}
-                onValueChange={(value: string) => setCategory(value as ContactCategory)}
-                className="grid grid-cols-2 gap-2"
-              >
-                {CATEGORIES.map((cat) => (
-                  <Label
-                    key={cat}
-                    htmlFor={`contact-category-${cat}`}
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    <RadioGroupItem id={`contact-category-${cat}`} value={cat} />
-                    <span className="text-sm">{categoryLabel(cat)}</span>
-                  </Label>
-                ))}
-              </RadioGroup>
-            </div>
-
-            {/* メッセージ */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="contact-message">{labels.messageLabel}</Label>
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {message.length}/5000
-                </span>
-              </div>
-              <Textarea
-                id="contact-message"
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  if (error) setError('');
-                }}
-                placeholder={labels.messagePlaceholder}
-                maxLength={5000}
-                className={`h-32 resize-none overflow-y-auto${error ? 'ring-destructive ring-2' : ''}`}
-              />
-              {error && <p className="text-destructive text-sm">{error}</p>}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isPending}
-            >
-              {labels.cancel}
-            </Button>
-            <Button type="submit" isLoading={isPending} disabled={isPending}>
-              {labels.submit}
-            </Button>
-          </DialogFooter>
-        </form>
+        <ContactForm
+          onSubmit={onSubmit}
+          isPending={isPending}
+          categoryLabel={categoryLabel}
+          labels={labels}
+          onClose={handleClose}
+        />
       </DialogContent>
     </Dialog>
   );

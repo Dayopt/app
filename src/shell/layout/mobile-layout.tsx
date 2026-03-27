@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/shell/components/AppHeader';
-import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';
@@ -25,7 +25,7 @@ interface MobileLayoutProps {
  * - BottomTabBar（固定ボトムタブ）
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
-  const title = usePageTitleStore.use.title();
+  const title = useShellStore.use.pageTitle();
 
   const pathname = usePathname();
 

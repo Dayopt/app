@@ -13,7 +13,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Link, useRouter } from '@/platform/i18n/navigation';
 import { AppHeader } from '@/shell/components/AppHeader';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 /**
  * 設定カテゴリページ
@@ -27,7 +27,7 @@ export default function SettingsCategoryPage() {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const router = useRouter();
-  const openSettings = useSettingsStore((s) => s.open);
+  const openSettings = useShellStore((s) => s.openSettings);
 
   const category = params?.category ?? 'general';
   const isValid = isValidCategory(category);

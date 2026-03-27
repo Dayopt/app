@@ -21,6 +21,7 @@ import * as Sentry from '@sentry/nextjs';
 import { Resend } from 'resend';
 
 import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
+import { createEmailTranslator, type EmailLocale } from '@/emails/i18n';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
 import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
 import { ProStartEmail } from '@/emails/ProStartEmail';
@@ -63,12 +64,12 @@ const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const APP_URL = getAppUrl();
 
 /**
- * stripe_customer_id からユーザーのメールアドレスと名前を取得
+ * stripe_customer_id からユーザーのメールアドレス・名前・ロケールを取得
  */
 async function getUserByCustomerId(
   supabase: ReturnType<typeof createServiceRoleClient>,
   stripeCustomerId: string,
-): Promise<{ email: string; userName: string } | null> {
+): Promise<{ email: string; userName: string; locale: EmailLocale } | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name' as never)
@@ -96,7 +97,16 @@ async function getUserByCustomerId(
     return null;
   }
 
-  return { email: user.email, userName: profile.full_name || 'there' };
+  // user_settings から preferred_locale を取得
+  const { data: settingsData } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', profile.id)
+    .single();
+  const rawLocale = (settingsData as Record<string, unknown> | null)?.preferred_locale;
+  const locale: EmailLocale = (rawLocale as EmailLocale) ?? 'en';
+
+  return { email: user.email, userName: profile.full_name || 'there', locale };
 }
 
 /**
@@ -233,20 +243,21 @@ export async function POST(request: NextRequest) {
           // トランザクションメール送信
           const user = await getUserByCustomerId(supabase, customerId);
           if (user) {
+            const t = createEmailTranslator(user.locale);
             if (status === 'trialing') {
               const trialEnd = sub.trial_end
-                ? new Date(sub.trial_end * 1000).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
+                ? new Date(sub.trial_end * 1000).toLocaleDateString(
+                    user.locale === 'ja' ? 'ja-JP' : 'en-US',
+                    { year: 'numeric', month: 'long', day: 'numeric' },
+                  )
                 : '7 days from now';
               await sendTransactionalEmail(
                 user.email,
-                'Your 7-day Pro trial has started',
+                t('trialStart.subject'),
                 TrialStartEmail({
                   userName: user.userName,
                   trialEndDate: trialEnd,
+                  locale: user.locale,
                   appUrl: APP_URL,
                 }),
                 'Trial start email',
@@ -254,8 +265,8 @@ export async function POST(request: NextRequest) {
             } else if (status === 'active') {
               await sendTransactionalEmail(
                 user.email,
-                'Welcome to Pro',
-                ProStartEmail({ userName: user.userName, appUrl: APP_URL }),
+                t('proStart.subject'),
+                ProStartEmail({ userName: user.userName, locale: user.locale, appUrl: APP_URL }),
                 'Pro start email',
               );
             }
@@ -293,10 +304,15 @@ export async function POST(request: NextRequest) {
         if (previousStatus === 'trialing' && status === 'active') {
           const updatedUser = await getUserByCustomerId(supabase, customerId);
           if (updatedUser) {
+            const t = createEmailTranslator(updatedUser.locale);
             await sendTransactionalEmail(
               updatedUser.email,
-              'Welcome to Pro',
-              ProStartEmail({ userName: updatedUser.userName, appUrl: APP_URL }),
+              t('proStart.subject'),
+              ProStartEmail({
+                userName: updatedUser.userName,
+                locale: updatedUser.locale,
+                appUrl: APP_URL,
+              }),
               'Pro start email (trial conversion)',
             );
           }
@@ -306,10 +322,15 @@ export async function POST(request: NextRequest) {
         if (previousStatus === 'past_due' && status === 'active') {
           const recoveredUser = await getUserByCustomerId(supabase, customerId);
           if (recoveredUser) {
+            const t = createEmailTranslator(recoveredUser.locale);
             await sendTransactionalEmail(
               recoveredUser.email,
-              "Payment successful — you're all set",
-              PaymentRecoveredEmail({ userName: recoveredUser.userName, appUrl: APP_URL }),
+              t('paymentRecovered.subject'),
+              PaymentRecoveredEmail({
+                userName: recoveredUser.userName,
+                locale: recoveredUser.locale,
+                appUrl: APP_URL,
+              }),
               'Payment recovered email',
             );
           }
@@ -332,21 +353,22 @@ export async function POST(request: NextRequest) {
         // 解約確認メール
         const cancelUser = await getUserByCustomerId(supabase, customerId);
         if (cancelUser) {
+          const t = createEmailTranslator(cancelUser.locale);
           const rawPeriodEnd = (subscription as unknown as { current_period_end?: number })
             .current_period_end;
           const periodEnd = rawPeriodEnd
-            ? new Date(rawPeriodEnd * 1000).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })
+            ? new Date(rawPeriodEnd * 1000).toLocaleDateString(
+                cancelUser.locale === 'ja' ? 'ja-JP' : 'en-US',
+                { year: 'numeric', month: 'long', day: 'numeric' },
+              )
             : 'your current billing period';
           await sendTransactionalEmail(
             cancelUser.email,
-            'Your Pro subscription has been canceled',
+            t('cancellationConfirm.subject'),
             CancellationConfirmEmail({
               userName: cancelUser.userName,
               periodEndDate: periodEnd,
+              locale: cancelUser.locale,
               appUrl: APP_URL,
             }),
             'Cancellation confirm email',
@@ -371,10 +393,15 @@ export async function POST(request: NextRequest) {
         if (customerId) {
           const paymentUser = await getUserByCustomerId(supabase, customerId);
           if (paymentUser) {
+            const t = createEmailTranslator(paymentUser.locale);
             await sendTransactionalEmail(
               paymentUser.email,
-              'Action needed: payment failed',
-              PaymentFailedEmail({ userName: paymentUser.userName, appUrl: APP_URL }),
+              t('paymentFailed.subject'),
+              PaymentFailedEmail({
+                userName: paymentUser.userName,
+                locale: paymentUser.locale,
+                appUrl: APP_URL,
+              }),
               'Payment failed email',
             );
           }

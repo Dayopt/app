@@ -22,7 +22,7 @@ export const suggestionsRouter = createTRPCRouter({
         .object({
           search: z.string().max(200).optional(),
           limit: z.number().min(1).max(30).default(20),
-          type: z.enum(['plan', 'record']).optional(),
+          type: z.enum(['planned', 'actual']).optional(),
         })
         .optional(),
     )

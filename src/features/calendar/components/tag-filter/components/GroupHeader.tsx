@@ -140,6 +140,9 @@ export function GroupHeader({
           checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
           isMobile && 'opacity-100',
         )}
+        aria-label={
+          checked || indeterminate ? t('calendar.filter.hide') : t('calendar.filter.show')
+        }
       >
         {checked || indeterminate ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
       </button>

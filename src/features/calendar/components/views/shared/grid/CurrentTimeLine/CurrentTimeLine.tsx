@@ -1,127 +1,120 @@
 /**
- * 現在時刻線コンポーネント - シンプル版
+ * 現在時刻線コンポーネント
+ *
+ * 仕様:
+ *   now-line (absolute, flex)
+ *     ├── now-dot (6×6px, rounded-full)
+ *     └── now-bar (h-0.5, flex-1)
+ *   色: bg-primary（Light: blue accent, Dark: amber accent）
+ *   z-index: Z_INDEX.CURRENT_TIME (15)
  */
 
 'use client';
 
 import { memo, useMemo } from 'react';
 
+import { tzIsSameDay } from '@/lib/date/timezone';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { timeToPixels } from '../../../../../lib/grid';
-import { HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
+import { CURRENT_TIME_DOT_SIZE, HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
 import { useCurrentTime } from '../../hooks/useCurrentTime';
 import type { CurrentTimeLineProps } from '../../types/grid.types';
 
 export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLine({
   hourHeight = HOUR_HEIGHT,
-  timeColumnWidth = 64,
-  containerWidth = 800,
   className = '',
   showDot = true,
   updateInterval = 60000,
   displayDates,
   showOnOtherDays = true,
-  // viewModeはpropsとして受け取るが使用しない（将来の拡張用）
   viewMode: _viewMode = 'day',
+  startHour = 0,
+  endHour = 24,
+  // timeColumnWidth / containerWidth は ScrollableCalendarLayout 側で制御するため不使用
+  timeColumnWidth: _timeColumnWidth = 64,
+  containerWidth: _containerWidth = 800,
 }) {
   const currentTime = useCurrentTime({ updateInterval });
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   // 現在時刻のY座標を計算
   const topPosition = timeToPixels(currentTime, hourHeight);
 
-  // 今日が含まれているかチェック
+  // 今日が含まれているかチェック（ユーザーTZで判定）
   const hasToday = useMemo(() => {
     if (!displayDates || displayDates.length === 0) {
-      return true; // displayDatesがない場合は今日とみなす
+      return true;
     }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return displayDates.some((date) => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
-    });
-  }, [displayDates]);
+    const now = new Date();
+    return displayDates.some((date) => tzIsSameDay(date, now, timezone));
+  }, [displayDates, timezone]);
 
   // 今日の列位置を計算（複数日表示の場合）
   const columnInfo = useMemo(() => {
     if (!displayDates || displayDates.length <= 1) {
-      // 単一日表示の場合は全幅
-      return {
-        left: timeColumnWidth,
-        width: '100%',
-        isToday: hasToday,
-      };
+      return { left: 0, width: '100%', isToday: hasToday };
     }
 
-    // 複数日表示の場合、今日の列を特定
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayIndex = displayDates.findIndex((date) => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime() === today.getTime();
-    });
+    const now = new Date();
+    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, now, timezone));
 
     if (todayIndex === -1) {
-      // 今日が見つからない場合、showOnOtherDaysがtrueなら全幅で薄く表示
       if (showOnOtherDays) {
-        return {
-          left: timeColumnWidth,
-          width: containerWidth - timeColumnWidth,
-          isToday: false,
-        };
+        return { left: 0, width: '100%', isToday: false };
       }
       return null;
     }
 
-    // 今日の列の位置とサイズを計算
-    const availableWidth = containerWidth - timeColumnWidth;
-    const columnWidth = availableWidth / displayDates.length;
-    const left = timeColumnWidth + todayIndex * columnWidth;
+    const columnWidthPct = 100 / displayDates.length;
+    const leftPct = todayIndex * columnWidthPct;
 
     return {
-      left,
-      width: columnWidth,
+      left: `${leftPct}%`,
+      width: `${columnWidthPct}%`,
       isToday: true,
     };
-  }, [displayDates, timeColumnWidth, containerWidth, hasToday, showOnOtherDays]);
+  }, [displayDates, hasToday, showOnOtherDays, timezone]);
 
-  // 表示しない場合
+  // 表示範囲外なら非表示
+  const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;
+  if (currentHour < startHour || currentHour >= endHour) {
+    return null;
+  }
+
   if (!columnInfo) {
     return null;
   }
+
+  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
 
   return (
     <div
       className={`pointer-events-none absolute ${className}`}
       style={{
         top: `${topPosition}px`,
-        left: `${columnInfo.left}px`,
-        width: typeof columnInfo.width === 'string' ? columnInfo.width : `${columnInfo.width}px`,
-        height: columnInfo.isToday ? '2px' : '1px',
+        left: typeof columnInfo.left === 'number' ? `${columnInfo.left}px` : columnInfo.left,
+        width: columnInfo.width,
         zIndex: Z_INDEX.CURRENT_TIME,
       }}
+      aria-hidden="true"
     >
-      {/* 時刻線 - 今日は濃く、他の日は薄く */}
-      <div
-        className={`h-full w-full shadow-sm ${columnInfo.isToday ? 'bg-primary' : 'bg-primary/70'}`}
-      />
+      {/* now-line: dot + bar */}
+      <div className="flex items-center">
+        {/* now-dot */}
+        {showDot && columnInfo.isToday && (
+          <div
+            className="bg-primary shrink-0 rounded-full"
+            style={{
+              width: `${CURRENT_TIME_DOT_SIZE}px`,
+              height: `${CURRENT_TIME_DOT_SIZE}px`,
+              marginLeft: `-${dotOffset}px`,
+            }}
+          />
+        )}
 
-      {/* ドット（今日の場合のみ） */}
-      {showDot && columnInfo.isToday && (
-        <div
-          className="border-background bg-primary absolute rounded-full border-2 shadow-sm"
-          style={{
-            left: `-5px`,
-            top: `-4px`,
-            width: '10px',
-            height: '10px',
-          }}
-        />
-      )}
+        {/* now-bar */}
+        <div className={`bg-primary h-0.5 flex-1 ${columnInfo.isToday ? '' : 'opacity-40'}`} />
+      </div>
     </div>
   );
 });
@@ -133,26 +126,36 @@ export const CurrentTimeLineForColumn = memo<{
   hourHeight?: number;
   showDot?: boolean;
   className?: string;
-  /** この列が今日かどうか */
   isToday?: boolean;
-  /** 他の日でも薄く表示するか（デフォルト: true） */
   showOnOtherDays?: boolean;
+  /** 表示範囲（開始時間, 0-24） */
+  startHour?: number;
+  /** 表示範囲（終了時間, 0-24） */
+  endHour?: number;
 }>(function CurrentTimeLineForColumn({
   hourHeight = HOUR_HEIGHT,
   showDot = false,
   className = '',
   isToday = true,
   showOnOtherDays = true,
+  startHour = 0,
+  endHour = 24,
 }) {
   const currentTime = useCurrentTime({ updateInterval: 60000 });
 
-  // 現在時刻のY座標を計算
   const topPosition = timeToPixels(currentTime, hourHeight);
 
-  // 今日でない場合で、他の日に表示しない設定なら非表示
+  // 表示範囲外なら非表示
+  const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;
+  if (currentHour < startHour || currentHour >= endHour) {
+    return null;
+  }
+
   if (!isToday && !showOnOtherDays) {
     return null;
   }
+
+  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
 
   return (
     <div
@@ -161,14 +164,24 @@ export const CurrentTimeLineForColumn = memo<{
         top: `${topPosition}px`,
         zIndex: Z_INDEX.CURRENT_TIME,
       }}
+      aria-hidden="true"
     >
-      {/* ドット（今日の場合のみ、列の左端） */}
-      {showDot && isToday && (
-        <div className="border-background bg-primary absolute -top-1 -left-1 size-2 rounded-full border-2 shadow-sm" />
-      )}
+      <div className="flex items-center">
+        {/* now-dot */}
+        {showDot && isToday && (
+          <div
+            className="bg-primary shrink-0 rounded-full"
+            style={{
+              width: `${CURRENT_TIME_DOT_SIZE}px`,
+              height: `${CURRENT_TIME_DOT_SIZE}px`,
+              marginLeft: `-${dotOffset}px`,
+            }}
+          />
+        )}
 
-      {/* 時刻線 - 今日は濃く、他の日は薄く */}
-      <div className={`w-full shadow-sm ${isToday ? 'bg-primary h-0.5' : 'bg-primary/70 h-px'}`} />
+        {/* now-bar */}
+        <div className={`bg-primary h-0.5 flex-1 ${isToday ? '' : 'opacity-40'}`} />
+      </div>
     </div>
   );
 });

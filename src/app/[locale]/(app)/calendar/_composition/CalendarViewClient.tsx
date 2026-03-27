@@ -14,7 +14,7 @@ import { PanelLeft } from 'lucide-react';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
-import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
 interface CalendarViewClientProps {
@@ -27,8 +27,8 @@ interface CalendarViewClientProps {
 
 export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   const calendarNavigation = useCalendarNavigation();
-  const isSidebarOpen = useLayoutStore.use.sidebarOpen();
-  const toggleSidebar = useLayoutStore.use.toggleSidebar();
+  const sidebar = useShellStore.use.sidebar();
+  const toggleSidebar = useShellStore.use.toggleSidebar();
 
   // CalendarNavigationProvider は base-layout-content.tsx で常にレンダリングされるため、
   // calendarNavigation は常に利用可能。
@@ -52,7 +52,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
   });
 
   // サイドバーが閉じているときに表示するトグルボタン
-  const sidebarToggle = !isSidebarOpen ? (
+  const sidebarToggle = !sidebar.open ? (
     <button
       type="button"
       onClick={toggleSidebar}
@@ -75,7 +75,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
                 <h2 className="text-destructive mb-2 text-2xl font-bold tracking-tight">
                   {translations.errorTitle}
                 </h2>
-                <p className="text-foreground/80 mb-4 text-sm">{translations.errorMessage}</p>
+                <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
                 <button
                   onClick={() => window.location.reload()}
                   className="bg-primary text-primary-foreground rounded px-4 py-2 transition-opacity hover:opacity-80"
@@ -94,13 +94,13 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           filteredEntries={composition.filteredEvents}
           allEntries={composition.allCalendarEvents}
           showWeekends={composition.showWeekends}
-          disabledEntryId={composition.disabledPlanId}
-          onEntryClick={composition.onPlanClick}
+          disabledEntryId={composition.disabledEntryId}
+          onEntryClick={composition.onEntryClick}
           onTimeRangeSelect={composition.onTimeRangeSelect}
-          onUpdateEntry={composition.onUpdatePlan}
-          onDeleteEntry={composition.onDeletePlan}
+          onUpdateEntry={composition.onUpdateEntry}
+          onDeleteEntry={composition.onDeleteEntry}
           getAddToPaletteHandler={composition.getAddToPaletteHandler}
-          onDeleteEntryConfirm={composition.onDeletePlanConfirm}
+          onDeleteEntryConfirm={composition.onDeleteEntryConfirm}
           onNavigate={composition.onNavigate}
           onViewChange={composition.onViewChange}
           onNavigatePrev={composition.onNavigatePrev}

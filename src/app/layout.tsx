@@ -188,6 +188,12 @@ const RootLayout = async ({ children, params }: RootLayoutProps) => {
         />
       </head>
       <body className={cn('bg-background')} suppressHydrationWarning>
+        {/* SSR timezone detection: 2回目以降のSSRで正しいタイムゾーンを使用 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(!document.cookie.includes('user-tz='))document.cookie='user-tz='+Intl.DateTimeFormat().resolvedOptions().timeZone+';path=/;max-age=31536000;SameSite=Lax';`,
+          }}
+        />
         <Suspense fallback={null}>
           {children}
           <WebVitalsReporter />

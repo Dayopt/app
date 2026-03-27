@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/platform/trpc';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
 import { formatHours } from '../../utils/formatHours';
@@ -26,9 +28,11 @@ export function DayOfWeekChart() {
   const t = useTranslations('calendar.stats.charts');
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const granularity = useStatsFilterStore((s) => s.granularity);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
   const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity),
-    [currentDate, granularity],
+    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+    [currentDate, granularity, timezone, weekStartsOn],
   );
   const queryInput = dateRange;
   const { data, isPending } = api.entries.getDayOfWeekDistribution.useQuery(queryInput);

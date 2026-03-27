@@ -1,10 +1,10 @@
 /** ツアーの各ステップ識別子 */
 export type TourStepId =
   | 'intro'
-  | 'grid-drag-plan'
-  | 'select-tag-plan'
+  | 'grid-drag-entry'
+  | 'select-tag-entry'
   | 'explain-tags'
-  | 'plan-vs-record';
+  | 'planned-vs-actual';
 
 /** ツアーステップの配置方向 */
 export type TourStepPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center';
@@ -49,7 +49,7 @@ export type BeforeEnterAction =
 export type SkipCondition = () => boolean;
 
 /** カスタムリッチコンテンツのキー */
-export type TourContentKey = 'tag-explain' | 'plan-vs-record-visual';
+export type TourContentKey = 'tag-explain' | 'planned-vs-actual-visual';
 
 // ---------------------------------------------------------------------------
 // ステップ定義

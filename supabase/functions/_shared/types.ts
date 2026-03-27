@@ -15,6 +15,21 @@ export interface ReminderEntry {
 }
 
 // ============================================================
+// daily-insights
+// ============================================================
+
+export interface ActiveUser {
+  user_id: string;
+  entry_count: number;
+}
+
+export interface DailySnapshot {
+  day: string;
+  total_minutes: number;
+  avg_fulfillment: number | null;
+}
+
+// ============================================================
 // send-auth-email
 // ============================================================
 
@@ -30,6 +45,7 @@ export interface EmailData {
 
 export interface WebhookPayload {
   user: {
+    id: string;
     email: string;
     user_metadata: {
       full_name?: string;

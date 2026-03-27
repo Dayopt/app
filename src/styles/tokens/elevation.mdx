@@ -4,60 +4,109 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Elevation（高さ）
 
-UI 要素の z 軸上の位置を表現。高いほど前面に浮き出る。
+UI 要素の z 軸上の位置。surface色 + shadow + border のセットで表現する。shadow 単体ではなく、3つの組み合わせ。
 
 ---
 
-## Elevation レベル
+## 設計原則
 
-| レベル | クラス | 用途 |
-|--------|--------|------|
-| Level 0 | `shadow-none` | ベース面、背景要素 |
-| Level 1 | `shadow-xs` | 入力フィールド、微細な境界 |
-| Level 2 | `shadow-sm` | カード、軽い浮き上がり |
-| Level 3 | `shadow-md` | ホバー状態、アクティブカード |
-| **Level 4** | **`shadow-lg`** | **ドロップダウン、ポップオーバー** |
-| Level 5 | `shadow-xl` | モーダル、最前面要素 |
+**Light:** shadow が奥行きの主役。面色差は補助。
+**Dark:** 面色差が主役。shadow は補助。
+
+この逆転が elevation 設計の核心。Light と Dark で「浮いて見える」仕組みが違う。
 
 ---
 
-## 使い分け
+## Elevation レベル（4段階）
 
-UI の階層構造に応じて Elevation を選択。高いほどユーザーの注目を集める。
+| Level   | Surface         | Shadow        | Border                 | 用途                      |
+| ------- | --------------- | ------------- | ---------------------- | ------------------------- |
+| Sunken  | `bg-container`  | none          | `border-border`        | sidebar, footer           |
+|         | `bg-muted`      | none          | —                      | input, well               |
+| Base    | `bg-background` | none          | —                      | ページ地                  |
+| Raised  | `bg-card`       | `shadow-sm`   | `border-border-subtle` | カード, セクション        |
+| Overlay | `bg-card`       | `shadow-card` | `border-border-subtle` | dropdown, popover, dialog |
 
-### Level 2: カード (`shadow-sm`)
+### Shadow の値
 
-コンテンツをグループ化するカード。軽い浮き上がりで視覚的に分離。
+| Token         | Light                                       | Dark                       |
+| ------------- | ------------------------------------------- | -------------------------- |
+| `shadow-sm`   | ring(0.03) + 1px 3px(0.03)                  | ring(0.03) + 1px 4px(0.18) |
+| `shadow-card` | ring(0.03) + 1px 2px(0.04) + 4px 16px(0.05) | ring(0.04) + 2px 8px(0.25) |
+
+Sunken と Base は shadow なし。Raised と Overlay だけが shadow を持つ。
+
+---
+
+## なぜ 6段階 → 4段階か
+
+旧: `shadow-none` / `xs` / `sm` / `md` / `lg` / `xl` の6段階
+新: Sunken / Base / Raised / Overlay の4段階
+
+6段階だと「この dropdown は shadow-lg? shadow-xl?」と毎回迷う。4段階なら判断は明確:
+
+- 背景に沈むか？ → **Sunken**
+- 地面か？ → **Base**
+- 浮くか？ → **Raised**
+- 最前面か？ → **Overlay**
+
+Color ページの Surface トークンと 1:1 で対応するので覚えることが増えない。
+
+---
+
+## Dark mode での見え方
+
+Light では Raised と Base の区別は主に shadow で見える。Dark では shadow がほぼ見えないので、面色差で区別する。
+
+| Level   | Light L     | Dark L      |
+| ------- | ----------- | ----------- |
+| Sunken  | 0.96 / 0.95 | 0.15 / 0.25 |
+| Base    | 0.98        | 0.18        |
+| Raised  | 1.00        | 0.22        |
+| Overlay | 1.00        | 0.22        |
+
+Dark の Raised と Overlay は同じ surface 色。違いは shadow の強さと z-index。
+
+---
+
+## z-index
+
+| Level   | z-index | 備考                                |
+| ------- | ------- | ----------------------------------- |
+| Sunken  | auto    | 通常フロー                          |
+| Base    | auto    | 通常フロー                          |
+| Raised  | auto    | 通常フロー（shadow で浮いて見える） |
+| Overlay | 50+     | ページの上に重なる要素              |
+
+z-index は Overlay 以上でのみ使う。Sunken / Base / Raised は z-index を指定しない。
+
+---
+
+## 実装例
+
+### Raised: カード
 
 ```tsx
-<div className="bg-card border-border rounded-lg border p-4 shadow-sm">
-  <p className="font-bold">カードタイトル</p>
-  <p className="text-muted-foreground text-sm">コンテンツ</p>
+<div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">...</div>
+```
+
+### Overlay: ドロップダウン
+
+```tsx
+<div className="bg-card border-border-subtle shadow-card z-50 rounded-lg border p-2">...</div>
+```
+
+### Overlay: モーダル
+
+```tsx
+<div className="bg-overlay fixed inset-0 z-50" />  {/* scrim */}
+<div className="bg-card border-border-subtle rounded-2xl border shadow-card p-6 z-50">
+  ...
 </div>
 ```
 
-### Level 4: ドロップダウン (`shadow-lg`)
-
-メニューやポップオーバー。ページの上に浮く要素。
+### Sunken: サイドバー
 
 ```tsx
-<div className="bg-card border-border rounded-lg border p-2 shadow-lg">
-  <div className="hover:bg-state-hover rounded px-4 py-2">メニュー1</div>
-  <div className="hover:bg-state-hover rounded px-4 py-2">メニュー2</div>
-</div>
-```
-
-### Level 5: モーダル (`shadow-xl`)
-
-最前面でユーザーの操作を待つ要素。
-
-```tsx
-<div className="bg-card border-border rounded-2xl border p-6 shadow-xl">
-  <h4 className="text-lg font-bold">モーダルタイトル</h4>
-  <p className="text-muted-foreground mt-2 text-sm">説明テキスト</p>
-  <div className="mt-6 flex justify-end gap-2">
-    <button className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm">キャンセル</button>
-    <button className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm">確認</button>
-  </div>
-</div>
+<aside className="bg-container border-border border-r">...</aside>
 ```

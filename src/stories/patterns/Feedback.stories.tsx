@@ -140,40 +140,40 @@ toast('カスタムメッセージ', {
 
           <div className="space-y-3">
             {/* Info */}
-            <div className="bg-info/10 border-info flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-info-tint border-info flex items-start gap-3 rounded-lg border p-4">
               <Info className="text-info mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-info font-bold">新機能</p>
-                <p className="text-info/80 text-sm">タグのマージ機能が追加されました。</p>
+                <p className="text-info text-sm">タグのマージ機能が追加されました。</p>
               </div>
             </div>
 
             {/* Warning */}
-            <div className="bg-warning/10 border-warning flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-warning-tint border-warning flex items-start gap-3 rounded-lg border p-4">
               <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-warning font-bold">保存されていません</p>
-                <p className="text-warning/80 text-sm">変更内容を保存してください。</p>
+                <p className="text-warning text-sm">変更内容を保存してください。</p>
               </div>
             </div>
 
             {/* Error */}
-            <div className="bg-destructive/10 border-destructive flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-destructive-tint border-destructive flex items-start gap-3 rounded-lg border p-4">
               <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-destructive font-bold">接続エラー</p>
-                <p className="text-destructive/80 text-sm">
+                <p className="text-destructive text-sm">
                   サーバーに接続できません。ネットワークを確認してください。
                 </p>
               </div>
             </div>
 
             {/* Success */}
-            <div className="bg-success/10 border-success flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-success-tint border-success flex items-start gap-3 rounded-lg border p-4">
               <CheckCircle2 className="text-success mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-success font-bold">完了</p>
-                <p className="text-success/80 text-sm">すべての変更が保存されました。</p>
+                <p className="text-success text-sm">すべての変更が保存されました。</p>
               </div>
             </div>
           </div>

@@ -20,7 +20,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
 
   return (
     <div
-      className={cn('bg-muted flex h-11 items-center gap-1 rounded-lg p-1', className)}
+      className={cn('flex items-center gap-1', className)}
       role="tablist"
       aria-label={tAria('pageNavigation')}
     >
@@ -29,10 +29,11 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'calendar'}
         onClick={onCalendarClick}
         className={cn(
-          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
+          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-colors',
+          'hover:bg-state-hover',
           activePage === 'calendar'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground',
         )}
       >
         <CalendarDays className="size-4" />
@@ -43,10 +44,11 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'stats'}
         onClick={onStatsClick}
         className={cn(
-          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
+          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-colors',
+          'hover:bg-state-hover',
           activePage === 'stats'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground',
         )}
       >
         <BarChart3 className="size-4" />

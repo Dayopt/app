@@ -99,6 +99,7 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
                   : 'border-border text-muted-foreground hover:text-foreground border',
               )}
               aria-current={isActive ? 'true' : undefined}
+              aria-label={`${item.year}-${String(item.month + 1).padStart(2, '0')}`}
             >
               {item.label}
             </button>

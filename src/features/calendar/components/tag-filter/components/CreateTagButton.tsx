@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 
+import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 
 /** 新規タグ作成モーダルを開くボタンコンポーネント */
@@ -14,14 +15,15 @@ export function CreateTagButton() {
 
   return (
     <HoverTooltip content={t('calendar.filter.createTag')} side="top">
-      <button
-        type="button"
-        className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded"
+      <Button
+        variant="ghost"
+        icon
+        className="size-6"
         onClick={() => openTagCreateModal()}
         aria-label={t('calendar.filter.createTag')}
       >
         <Plus className="size-4" />
-      </button>
+      </Button>
     </HoverTooltip>
   );
 }

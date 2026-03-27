@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo } from 'react';
 
 import { addDays, subDays } from 'date-fns';
+import { fromZonedTime } from 'date-fns-tz';
 
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
@@ -17,6 +18,33 @@ import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { calculateViewDateRange } from '../../../lib/range';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
+
+/**
+ * ローカル日付の 00:00:00 をユーザーTZのUTC ISO文字列に変換
+ * サーバーのprefetchと同じクエリキーを生成するため使用する
+ */
+function toTZStartISO(date: Date, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const localDateStr = formatter.format(date);
+  return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
+}
+
+/** ローカル日付の 23:59:59.999 をユーザーTZのUTC ISO文字列に変換 */
+function toTZEndISO(date: Date, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const localDateStr = formatter.format(date);
+  return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
+}
 
 interface UseCalendarDataOptions {
   viewType: CalendarViewType;
@@ -43,8 +71,9 @@ export function useCalendarData({
   viewType,
   currentDate,
 }: UseCalendarDataOptions): UseCalendarDataResult {
-  // 週の開始日設定を取得
+  // 週の開始日設定とタイムゾーンを取得
   const weekStartsOn = useCalendarSettingsStore((state) => state.weekStartsOn);
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   // ビューに応じた期間計算（週の開始日設定を反映）
   const viewDateRange = useMemo(() => {
@@ -52,15 +81,16 @@ export function useCalendarData({
   }, [viewType, currentDate, weekStartsOn]);
 
   // 日付範囲をISO 8601形式に変換（サーバーサイドフィルタ用）
+  // toISOString()はTZ依存のためユーザーTZのローカル深夜をUTC ISOに変換して使用
   const dateFilter = useMemo(
     () => ({
-      startDate: viewDateRange.start.toISOString(),
-      endDate: viewDateRange.end.toISOString(),
+      startDate: toTZStartISO(viewDateRange.start, timezone),
+      endDate: toTZEndISO(viewDateRange.end, timezone),
     }),
-    [viewDateRange],
+    [viewDateRange, timezone],
   );
 
-  // entries を取得（plans + records 統合、単一クエリ）
+  // entries を取得（単一クエリ）
   const {
     data: entriesData,
     error: entriesError,
@@ -79,20 +109,20 @@ export function useCalendarData({
       // 前の期間
       const prevRange = calculateViewDateRange(viewType, subDays(currentDate, 7), weekStartsOn);
       void utils.entries.list.prefetch({
-        startDate: prevRange.start.toISOString(),
-        endDate: prevRange.end.toISOString(),
+        startDate: toTZStartISO(prevRange.start, timezone),
+        endDate: toTZEndISO(prevRange.end, timezone),
       });
 
       // 次の期間
       const nextRange = calculateViewDateRange(viewType, addDays(currentDate, 7), weekStartsOn);
       void utils.entries.list.prefetch({
-        startDate: nextRange.start.toISOString(),
-        endDate: nextRange.end.toISOString(),
+        startDate: toTZStartISO(nextRange.start, timezone),
+        endDate: toTZEndISO(nextRange.end, timezone),
       });
     };
 
     prefetchAdjacentPeriods();
-  }, [currentDate, viewType, weekStartsOn, utils.entries.list]);
+  }, [currentDate, viewType, weekStartsOn, timezone, utils.entries.list]);
 
   // フィルター関数と状態を取得（ストアに統一）
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
@@ -113,7 +143,7 @@ export function useCalendarData({
         ...e,
         tagId: e.tagId ?? null,
       })) as EntryWithTags[];
-      const expandedEvents = expandEntriesToCalendarEvents(normalized);
+      const expandedEvents = expandEntriesToCalendarEvents(normalized, timezone);
       calendarPlans.push(...expandedEvents);
 
       const duration = performance.now() - startTime;
@@ -132,7 +162,7 @@ export function useCalendarData({
     }
 
     return calendarPlans;
-  }, [entriesData]);
+  }, [entriesData, timezone]);
 
   // 表示範囲のイベントをフィルタリング
   const filteredEvents = useMemo(() => {

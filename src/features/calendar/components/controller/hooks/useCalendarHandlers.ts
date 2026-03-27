@@ -10,27 +10,27 @@ import type { CalendarEvent } from '../../../types/calendar.types';
 
 /** エントリクリック・時間範囲選択など、カレンダー共通のUIイベントハンドラーを提供するフック */
 export function useCalendarHandlers() {
-  const openPlanInspector = useEntryInspectorStore((state) => state.openInspector);
-  const inspectorPlanId = useEntryInspectorStore((state) => state.entryId);
+  const openEntryInspector = useEntryInspectorStore((state) => state.openInspector);
+  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const inspectorIsOpen = useEntryInspectorStore((state) => state.isOpen);
 
   const setPendingSelection = useInlineCreateStore.use.setPendingSelection();
 
-  // Inspector で開いているプランIDをDnD無効化用に計算
-  const disabledPlanId = inspectorIsOpen ? inspectorPlanId : null;
+  // Inspector で開いているエントリーIDをDnD無効化用に計算
+  const disabledEntryId = inspectorIsOpen ? inspectorEntryId : null;
 
-  // エントリクリックハンドラー（Plan/Record 統一）
-  const handlePlanClick = useCallback(
-    (plan: CalendarEvent) => {
-      openPlanInspector(plan.id);
+  // エントリクリックハンドラー
+  const handleEntryClick = useCallback(
+    (entry: CalendarEvent) => {
+      openEntryInspector(entry.id);
 
       logger.log('Opening Entry Inspector:', {
-        entryId: plan.id,
-        title: plan.title,
-        origin: plan.origin,
+        entryId: entry.id,
+        title: entry.title,
+        origin: entry.origin,
       });
     },
-    [openPlanInspector],
+    [openEntryInspector],
   );
 
   // 統一された時間範囲選択ハンドラー（全ビュー共通）
@@ -68,9 +68,9 @@ export function useCalendarHandlers() {
   );
 
   return {
-    handlePlanClick,
+    handleEntryClick,
     handleDateTimeRangeSelect,
-    /** DnDを無効化するプランID（Inspector表示中のプラン） */
-    disabledPlanId,
+    /** DnDを無効化するエントリーID（Inspector表示中のエントリー） */
+    disabledEntryId,
   };
 }

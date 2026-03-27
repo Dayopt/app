@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 
 import type { DateRangeFilter } from '@/lib/date';
 import { matchesDateRangeFilter } from '@/lib/date';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { getEntryState } from '../lib/entry-status';
 import type { EntryWithTags } from '../types/entry';
 import { useEntries } from './useEntries';
@@ -36,7 +37,7 @@ export interface EntrySortOptions {
  * @internal テスト用にエクスポート
  */
 /** APIから返されるエントリデータの型（テスト用エクスポート） */
-export type PlanWithTagIds = EntryWithTags;
+export type EntryWithTagIds = EntryWithTags;
 
 /**
  * エントリアイテム
@@ -98,7 +99,7 @@ function matchesScheduleFilter(
  * @param entry - 変換元のエントリデータ
  * @returns Board/Table表示用のEntryItem
  */
-export function planToPlanItem(entry: PlanWithTagIds): EntryItem {
+export function entryToEntryItem(entry: EntryWithTagIds): EntryItem {
   // 時間位置ベースでステータスを導出
   const entryState = getEntryState({ start_time: entry.start_time, end_time: entry.end_time });
   const status: EntryStatus = entryState === 'past' ? 'closed' : 'open';
@@ -130,10 +131,13 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
     ...(filters.search && { search: filters.search }),
   });
 
+  // ユーザーのタイムゾーン（日付範囲フィルタリングに使用）
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
+
   // フィルタリング・ソートをメモ化
   const items = useMemo(() => {
     let result: EntryItem[] =
-      entriesData?.map((entry) => planToPlanItem(entry as PlanWithTagIds)) || [];
+      entriesData?.map((entry) => entryToEntryItem(entry as EntryWithTagIds)) || [];
 
     // ステータスフィルタリング
     if (filters.status) {
@@ -160,14 +164,18 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
       result = result.filter((item) => matchesScheduleFilter(item.start_time, filters.schedule!));
     }
 
-    // 作成日フィルタリング
+    // 作成日フィルタリング（ユーザーのタイムゾーンを使用）
     if (filters.createdAt && filters.createdAt !== 'all') {
-      result = result.filter((item) => matchesDateRangeFilter(item.created_at, filters.createdAt!));
+      result = result.filter((item) =>
+        matchesDateRangeFilter(item.created_at, filters.createdAt!, timezone),
+      );
     }
 
-    // 更新日フィルタリング
+    // 更新日フィルタリング（ユーザーのタイムゾーンを使用）
     if (filters.updatedAt && filters.updatedAt !== 'all') {
-      result = result.filter((item) => matchesDateRangeFilter(item.updated_at, filters.updatedAt!));
+      result = result.filter((item) =>
+        matchesDateRangeFilter(item.updated_at, filters.updatedAt!, timezone),
+      );
     }
 
     // 完了を非表示フィルタリング
@@ -200,7 +208,7 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
     }
 
     return result;
-  }, [entriesData, filters, sort]);
+  }, [entriesData, filters, sort, timezone]);
 
   return {
     items,

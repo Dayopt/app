@@ -60,7 +60,7 @@ function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
       {info.lastInsightPath && (
         <Link
           href={info.lastInsightPath}
-          className="text-primary hover:text-primary/80 text-sm font-medium"
+          className="text-primary hover:text-primary text-sm font-medium"
         >
           {t('viewInsights')}
         </Link>

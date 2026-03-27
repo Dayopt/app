@@ -13,6 +13,7 @@ import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { snapToNextInterval } from '@/lib/time-utils';
 import { api } from '@/platform/trpc';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useEntryMutations } from './useEntryMutations';
 
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -30,6 +31,7 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
   const { createEntry } = useEntryMutations();
   const utils = api.useUtils();
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   /** 時間重複チェック（TanStack Query キャッシュベース） */
   const checkOverlap = useCallback(
@@ -72,10 +74,13 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
   /** エントリ作成（空きスロット検索 + Inspector を開く） */
   const create = useCallback(
     async (initialDate?: Date) => {
+      // initialDate が渡された場合はそのまま使用。
+      // 未指定時は現在時刻（UTC）を基準にするが、
+      // snapToNextInterval が UTC ISO を扱うため toISOString() で渡すのが正しい。
       const baseDate = initialDate ?? new Date();
       const { start, end } = findAvailableSlot(baseDate);
 
-      // カレンダーに選択範囲を表示
+      // カレンダーに選択範囲を表示（ユーザーTZで解釈された時刻をイベントに渡す）
       window.dispatchEvent(
         new CustomEvent('calendar-show-selection', {
           detail: {
@@ -84,6 +89,7 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
             startMinute: start.getMinutes(),
             endHour: end.getHours(),
             endMinute: end.getMinutes(),
+            timezone,
           },
         }),
       );
@@ -102,7 +108,7 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
       }
       onSuccess?.();
     },
-    [findAvailableSlot, createEntry, openInspector, onSuccess],
+    [findAvailableSlot, createEntry, openInspector, onSuccess, timezone],
   );
 
   return { create };

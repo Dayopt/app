@@ -4,41 +4,45 @@
  * ============================================ */
 @theme inline {
   /* ============================================
-   * Surface トークン（MD3準拠・4段階）
-   * background:     ページ背景（MD3 Surface）
-   * surface-inset:  card内セクション（MD3 Surface Container Low）
-   * container:      サイドバー、セクション（MD3 Surface Container）
-   * card:           カード、ダイアログ、ポップオーバー（MD3 Surface Container High）
-   * overlay:        モーダル背景（半透明・MD3 scrim）
+   * Surface トークン（3段階 + muted）
+   * container:   サイドバー、セクション（沈む）
+   * background:  ページ背景（基準）
+   * card:        カード、ダイアログ、ポップオーバー（浮く）
+   * muted:       入力欄、well
+   * overlay:     モーダル背景（半透明）
    * ============================================ */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
-  --color-surface-inset: var(--surface-inset);
   --color-container: var(--container);
-  --color-surface-container: var(--container);  /* 後方互換: bg-surface-container（70箇所で使用） */
+  --color-surface-container: var(--container); /* 後方互換: bg-surface-container */
   --color-overlay: var(--overlay);
   --color-entry-default: var(--entry-default);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--container);
+  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
 
-  /* 後方互換エイリアス（shadcn/ui互換） */
+  /* Semantic — accent + tint + foreground */
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-tint: var(--destructive-tint);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
   --color-warning-foreground: var(--warning-foreground);
   --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
   --color-success-foreground: var(--success-foreground);
   --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
   --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
@@ -57,23 +61,25 @@
   --color-chart-info: var(--info);
   --color-chart-muted: var(--muted-foreground);
 
+  /* Heatmap Scale（primary α段階 — SVG/セル背景用） */
+  --color-heatmap-scale-1: var(--heatmap-scale-1);
+  --color-heatmap-scale-2: var(--heatmap-scale-2);
+  --color-heatmap-scale-3: var(--heatmap-scale-3);
+  --color-heatmap-scale-4: var(--heatmap-scale-4);
+  --color-fulfillment-high: var(--fulfillment-high);
+  --color-fulfillment-mid: var(--fulfillment-mid);
+  --color-fulfillment-low: var(--fulfillment-low);
+
   /* ============================================
-   * Shadow トークン（ドラッグ、ホバー時のシャドウ）
-   * rgba(0,0,0,...) のハードコードを置き換え
+   * Shadow トークン
+   * sm: 軽いエレベーション（ボタン、入力欄）
+   * card: カード・ポップオーバー用
+   * ダークモードは colors.css の CSS変数で切替
    * ============================================ */
   --shadow-color: oklch(0 0 0 / 15%);
   --shadow-color-heavy: oklch(0 0 0 / 20%);
-
-  /* Physical Lighting — 合成シャドウ */
-  --shadow-elevation-sunken: var(--elevation-sunken);
-  --shadow-elevation-raised: var(--elevation-raised);
-  --shadow-elevation-raised-heavy: var(--elevation-raised-heavy);
-
-  /* Glassmorphism — 背景色トークン */
-  --color-glass-light: var(--glass-bg-light);
-  --color-glass-medium: var(--glass-bg-medium);
-  --color-glass-heavy: var(--glass-bg-heavy);
-  --color-glass-border: var(--glass-border);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-card: var(--shadow-card);
 
   /* ============================================
    * Tag Colors — Base（borders / dots / accents）
@@ -103,26 +109,11 @@
   --color-tag-pink-tint: var(--tag-pink-tint);
   --color-tag-gray-tint: var(--tag-gray-tint);
 
-  /* ============================================
-   * Chronotype Colors（エネルギーフェーズ）
-   * 使用例: bg-chronotype-peak, bg-chronotype-warmup
-   * ============================================ */
-  --color-chronotype-warmup: var(--chronotype-warmup);
-  --color-chronotype-peak: var(--chronotype-peak);
-  --color-chronotype-dip: var(--chronotype-dip);
-  --color-chronotype-recovery: var(--chronotype-recovery);
-  --color-chronotype-winddown: var(--chronotype-winddown);
-
-  /* ============================================
-   * Chronotype Tints（タイムライン背景用、solid）
-   * tag-tint同様にsolid色。surface体系の隙間(background↔surface-inset)に位置。
-   * 使用例: bg-chronotype-tint-peak
-   * ============================================ */
-  --color-chronotype-tint-warmup: var(--chronotype-tint-warmup);
-  --color-chronotype-tint-peak: var(--chronotype-tint-peak);
-  --color-chronotype-tint-dip: var(--chronotype-tint-dip);
-  --color-chronotype-tint-recovery: var(--chronotype-tint-recovery);
-  --color-chronotype-tint-winddown: var(--chronotype-tint-winddown);
+  /* Chronotype — テキスト + 背景 tint */
+  --color-chronotype-deep: var(--chronotype-deep);
+  --color-chronotype-ease: var(--chronotype-ease);
+  --color-chronotype-deep-tint: var(--chronotype-deep-tint);
+  --color-chronotype-ease-tint: var(--chronotype-ease-tint);
 }
 
 /* ============================================

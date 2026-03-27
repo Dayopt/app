@@ -46,8 +46,8 @@ function TagGridCell({
         'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        colorClasses.tint,
       )}
-      style={{ backgroundColor: colorClasses.cssVarTint }}
     >
       <div className="relative flex size-8 items-center justify-center">
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
@@ -133,14 +133,16 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
         <button
           type="button"
           onClick={() => setView({ type: 'grid' })}
-          className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
+          className="group flex min-h-11 items-center px-4 py-2"
         >
-          <ChevronLeft className="text-muted-foreground size-5" />
-          <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-          <span className="text-foreground font-semibold">{view.prefix}</span>
+          <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
+            <ChevronLeft className="text-muted-foreground size-5" />
+            <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
+            <span className="text-foreground font-semibold">{view.prefix}</span>
+          </span>
         </button>
 
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && !parentTag.id.startsWith('__virtual_') && (
             <TagGridCell
               tag={parentTag}
@@ -163,7 +165,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
 
   // メイングリッド
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {topLevelTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (

@@ -60,8 +60,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // タグカラー（props で解決済み）
   const colorClasses = tagColor ? getTagColorClasses(tagColor) : null;
   const accentColor = colorClasses?.cssVar ?? 'var(--entry-default)';
-  const accentTint =
-    colorClasses?.cssVarTint ?? 'color-mix(in oklch, var(--entry-default) 12%, var(--background))';
 
   // ドラフト（未保存プレビュー）かどうか判定
   const isDraft = entry.isDraft === true;
@@ -272,7 +270,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       onTouchStart={handleTouchStart}
       onKeyDown={handleKeyDown}
       draggable={false}
-      role="group"
       tabIndex={0}
       aria-label={isDraft ? `draft: ${tagName ?? entry.title}` : `entry: ${tagName ?? entry.title}`}
     >
@@ -296,19 +293,19 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
       {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
       <div
-        className={cn('relative shrink-0', isActiveEntry && 'animate-pulse')}
-        style={{
-          width: `${accentWidth}px`,
-          backgroundColor: accentColor,
-        }}
+        className={cn(
+          'relative shrink-0',
+          isActiveEntry && 'animate-pulse',
+          colorClasses ? colorClasses.dot : 'bg-entry-default',
+        )}
+        style={{ width: `${accentWidth}px` }}
       >
         {/* 超過で上に拡張 → その区間だけ点線 */}
         {overlay.topKind === 'overtime' && (
           <div
-            className="absolute top-0 right-0 left-0"
+            className="bg-background absolute top-0 right-0 left-0"
             style={{
               height: `${overlay.topHeight}px`,
-              backgroundColor: 'var(--background)',
               backgroundImage: overtimeAccentGradient,
             }}
           />
@@ -316,10 +313,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         {/* 超過で下に拡張 → その区間だけ点線 */}
         {overlay.bottomKind === 'overtime' && (
           <div
-            className="absolute right-0 bottom-0 left-0"
+            className="bg-background absolute right-0 bottom-0 left-0"
             style={{
               height: `${overlay.bottomHeight}px`,
-              backgroundColor: 'var(--background)',
               backgroundImage: overtimeAccentGradient,
             }}
           />
@@ -337,8 +333,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             : isMobile
               ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
               : 'p-2 text-sm',
+          colorClasses ? colorClasses.tint : 'bg-muted',
         )}
-        style={{ backgroundColor: accentTint }}
       >
         <EntryCardContent
           plan={entry}

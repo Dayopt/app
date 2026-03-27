@@ -1,29 +1,20 @@
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { Star } from 'lucide-react';
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
+import { cn } from '@/lib/utils';
 
 import {
   CHRONOTYPE_EMOJI,
-  CHRONOTYPE_LEVEL_CLASSES,
-  CHRONOTYPE_LEVEL_ORDER,
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
 } from '../lib/constants';
-import { getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/types/chronotype';
 
@@ -31,53 +22,71 @@ import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/t
 // Demo Components（tRPC/Zustandに依存しないpure版）
 // ─────────────────────────────────────────────────────────
 
+const SHORT_DESC: Record<PresetChronotypeType, string> = {
+  lion: 'Morning focus',
+  bear: 'Late-morning deep',
+  wolf: 'Evening energy',
+  dolphin: 'Late-morning stability',
+};
+
 function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
-  const segments = Array.from({ length: 24 }, (_, hour) => {
+  const START = 6;
+  const END = 22;
+
+  const segments = Array.from({ length: END - START }, (_, i) => {
+    const hour = START + i;
     const zone = zones.find((item) => {
       if (item.startHour <= item.endHour) {
         return hour >= item.startHour && hour < item.endHour;
       }
       return hour >= item.startHour || hour < item.endHour;
     });
-    return {
-      hour,
-      level: zone?.level ?? ('warmup' as const),
-      label: zone?.label ?? '',
-    };
+    return { hour, level: zone?.level ?? ('warmup' as const) };
   });
 
-  const LEVEL_LABELS: Record<string, string> = {
-    warmup: 'Warmup',
-    peak: 'Peak',
-    dip: 'Dip',
-    recovery: 'Recovery',
-    winddown: 'Wind Down',
-  };
+  const deepZone = zones.find((z) => z.level === 'deep');
+  const easeZone = zones.find((z) => z.level === 'ease');
 
   return (
-    <div className="space-y-2">
-      <div className="text-muted-foreground flex justify-between text-xs">
-        <span>0:00</span>
-        <span>6:00</span>
-        <span>12:00</span>
-        <span>18:00</span>
-        <span>24:00</span>
-      </div>
-      <div className="flex h-6 overflow-hidden rounded-lg">
+    <div className="space-y-1">
+      <div className="relative flex h-10 overflow-hidden rounded-lg">
         {segments.map((segment, index) => (
           <div
             key={index}
-            className={cn(CHRONOTYPE_LEVEL_CLASSES[segment.level], 'flex-1 transition-colors')}
-            title={`${segment.hour}:00 - ${segment.label}`}
+            className={cn(
+              'relative flex-1',
+              segment.level === 'deep' && 'bg-chronotype-deep-tint',
+              segment.level === 'ease' && 'bg-chronotype-ease-tint',
+              segment.level !== 'deep' && segment.level !== 'ease' && 'bg-muted',
+            )}
           />
         ))}
+        {deepZone && (
+          <span
+            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            style={{
+              left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+            }}
+            aria-hidden="true"
+          >
+            DEEP
+          </span>
+        )}
+        {easeZone && (
+          <span
+            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            style={{
+              left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
+            }}
+            aria-hidden="true"
+          >
+            EASE
+          </span>
+        )}
       </div>
-      <div className="flex flex-wrap gap-4 text-xs">
-        {CHRONOTYPE_LEVEL_ORDER.map((level) => (
-          <div key={level} className="flex items-center gap-1">
-            <div className={cn(CHRONOTYPE_LEVEL_CLASSES[level], 'h-3 w-3 rounded')} />
-            <span className="text-muted-foreground">{LEVEL_LABELS[level]}</span>
-          </div>
+      <div className="text-muted-foreground flex justify-between text-xs">
+        {[6, 9, 12, 15, 18, 21].map((hour) => (
+          <span key={hour}>{hour}:00</span>
         ))}
       </div>
     </div>
@@ -91,84 +100,92 @@ function ChronotypeSettingsDemo({
   initialType?: PresetChronotypeType;
   initialEnabled?: boolean;
 }) {
-  const NONE_VALUE = 'none';
   const [enabled, setEnabled] = useState(initialEnabled);
   const [selectedType, setSelectedType] = useState<ChronotypeType>(initialType);
+  const selectedProfile = getPresetChronotypeProfile(selectedType);
 
-  const selectValue = enabled ? selectedType : NONE_VALUE;
-  const selectedProfile = enabled ? getPresetChronotypeProfile(selectedType) : null;
-
-  const handleTypeSelect = (value: string) => {
-    if (value === NONE_VALUE) {
-      setEnabled(false);
-    } else {
-      setEnabled(true);
-      setSelectedType(value as ChronotypeType);
-    }
+  const handleSelectType = (type: PresetChronotypeType) => {
+    setSelectedType(type);
+    setEnabled(true);
   };
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <SectionCard title="Chronotype">
-        <LabeledRow label="Chronotype">
-          <Select value={selectValue} onValueChange={handleTypeSelect}>
-            <SelectTrigger variant="ghost">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_VALUE}>Not selected</SelectItem>
-              {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {CHRONOTYPE_EMOJI[type]} {CHRONOTYPE_PRESETS[type].name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </LabeledRow>
-      </SectionCard>
+    <div className="max-w-2xl">
+      <SectionCard title="Your rhythm">
+        <div className="space-y-6">
+          <LabeledRow
+            label="Show focus zones on calendar"
+            description="Highlight your best focus and rest windows on the calendar"
+          >
+            <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Enable rhythm" />
+          </LabeledRow>
 
-      {selectedProfile ? (
-        <SectionCard title="Details">
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <span className="text-3xl">
-                {CHRONOTYPE_EMOJI[selectedType as PresetChronotypeType]}
-              </span>
-              <div>
-                <h4 className="font-normal">{selectedProfile.name}</h4>
-                <p className="text-muted-foreground mt-1 text-sm">{selectedProfile.description}</p>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <h5 className="mb-4 text-sm font-normal">Timeline</h5>
-              <TimelineBarDemo zones={selectedProfile.productivityZones} />
-            </div>
-
-            <div className="bg-success/10 flex items-center gap-2 rounded-2xl p-4">
-              <Star className="text-success h-4 w-4" />
-              <div>
-                <span className="text-sm font-normal">Peak Time</span>
-                <span className="text-muted-foreground ml-2 text-sm">
-                  {getPeakHours(selectedProfile.productivityZones)}
-                </span>
-              </div>
-            </div>
+          {/* タイプ選択: 4 カード横並び */}
+          <div className="flex gap-2">
+            {CHRONOTYPE_SELECTABLE_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleSelectType(type)}
+                className={cn(
+                  'flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition-colors',
+                  enabled && selectedType === type
+                    ? 'border-foreground bg-card'
+                    : 'border-border hover:border-foreground/30',
+                )}
+              >
+                <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
+                <span className="text-sm font-bold">{CHRONOTYPE_PRESETS[type].name}</span>
+                <span className="text-muted-foreground text-xs">{SHORT_DESC[type]}</span>
+              </button>
+            ))}
           </div>
-        </SectionCard>
-      ) : null}
+
+          {/* enabled 時のみ表示 */}
+          {enabled && selectedProfile ? (
+            <>
+              <p className="text-muted-foreground text-sm">{selectedProfile.description}</p>
+
+              <TimelineBarDemo zones={selectedProfile.productivityZones} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-xl p-4">
+                  <span className="bg-chronotype-deep/20 text-chronotype-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                    ↗
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="text-muted-foreground text-xs leading-none">Deep time</p>
+                    <p className="text-sm leading-tight font-bold">
+                      {getDeepHours(selectedProfile.productivityZones)}
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-none">Best for Deep Work</p>
+                  </div>
+                </div>
+                <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-xl p-4">
+                  <span className="bg-chronotype-ease/20 text-chronotype-ease flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
+                    ↘
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="text-muted-foreground text-xs leading-none">Ease time</p>
+                    <p className="text-sm leading-tight font-bold">
+                      {getEaseHours(selectedProfile.productivityZones)}
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-none">Light tasks & rest</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </SectionCard>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-// Loading state
-// ─────────────────────────────────────────────────────────
-
 function ChronotypeSettingsLoadingDemo() {
   return (
     <div className="max-w-2xl">
-      <SectionCard title="Chronotype">
+      <SectionCard title="Your rhythm">
         <Skeleton className="h-12 w-full rounded-lg" />
       </SectionCard>
     </div>
@@ -183,8 +200,6 @@ const meta = {
   title: 'Features/Chronotype/Settings',
   parameters: {
     layout: 'padded',
-    // button-name: SelectTrigger without explicit label in LabeledRow component
-    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
 } satisfies Meta;
@@ -192,68 +207,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Bear（標準型）を選択した状態 */
-export const BearSelected: Story = {
+/** 有効 + Bear */
+export const EnabledBear: Story = {
   render: () => <ChronotypeSettingsDemo initialType="bear" />,
 };
 
-/** Lion（朝型）を選択した状態 */
-export const LionSelected: Story = {
+/** 有効 + Lion */
+export const EnabledLion: Story = {
   render: () => <ChronotypeSettingsDemo initialType="lion" />,
 };
 
-/** Wolf（夜型）を選択した状態 */
-export const WolfSelected: Story = {
-  render: () => <ChronotypeSettingsDemo initialType="wolf" />,
-};
-
-/** Dolphin（不規則型）を選択した状態 */
-export const DolphinSelected: Story = {
+/** 有効 + Dolphin */
+export const EnabledDolphin: Story = {
   render: () => <ChronotypeSettingsDemo initialType="dolphin" />,
 };
 
-/** 未選択状態 */
-export const NotSelected: Story = {
+/** 無効（トグル OFF） */
+export const Disabled: Story = {
   render: () => <ChronotypeSettingsDemo initialEnabled={false} />,
 };
 
-/** ローディング状態 */
+/** ローディング */
 export const Loading: Story = {
   render: () => <ChronotypeSettingsLoadingDemo />,
-};
-
-/** 全パターン一覧。 */
-export const AllPatterns: Story = {
-  render: () => (
-    <div className="flex flex-col items-start gap-6">
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
-          Bear（標準型）を選択した状態
-        </p>
-        <ChronotypeSettingsDemo initialType="bear" />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Lion（朝型）を選択した状態</p>
-        <ChronotypeSettingsDemo initialType="lion" />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Wolf（夜型）を選択した状態</p>
-        <ChronotypeSettingsDemo initialType="wolf" />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
-          Dolphin（不規則型）を選択した状態
-        </p>
-        <ChronotypeSettingsDemo initialType="dolphin" />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">未選択状態</p>
-        <ChronotypeSettingsDemo initialEnabled={false} />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">ローディング状態</p>
-        <ChronotypeSettingsLoadingDemo />
-      </div>
-    </div>
-  ),
 };

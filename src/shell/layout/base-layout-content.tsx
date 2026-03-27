@@ -3,9 +3,9 @@
 import { useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
-import { CalendarNavigationProvider, useCalendarProviderProps } from '@/features/calendar';
+import { CalendarNavigationProvider } from '@/features/calendar';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 
@@ -24,27 +24,26 @@ interface BaseLayoutContentProps {
  * レイアウトのオーケストレーションのみを担当：
  * - デスクトップ/モバイルレイアウトの切り替え
  * - カレンダープロバイダーのラップ
+ *
+ * ⚠ useSearchParams() は使用しない。
+ *   Stats ページでの URL 変更（replaceState）が Suspense 境界を発火し、
+ *   子ツリー全体がアンマウントされるバグを防止するため。
+ *   カレンダーの searchParams 読み取りは CalendarNavigationProvider 内部で行う。
  */
 export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
   const pathname = usePathname() || '/';
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const searchParams = useSearchParams();
 
   const localeFromPath = useMemo(() => {
     return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
   }, [pathname]);
 
-  const { isCalendarPage, calendarProviderProps } = useCalendarProviderProps(
-    pathname,
-    searchParams || new URLSearchParams(),
-  );
-
   return (
     // CalendarNavigationProvider を常にレンダリングしてツリー構造を安定化。
     // ルート切替時にProvider の付け外しによるリマウントを防ぎ、
     // Sidebar が静止したままメインコンテンツだけが変わる体験を実現する。
-    <CalendarNavigationProvider isCalendarPage={isCalendarPage} {...(calendarProviderProps ?? {})}>
+    <CalendarNavigationProvider>
       <div className="flex h-screen flex-col">
         {/* オフラインインジケーター */}
         <OfflineIndicator />

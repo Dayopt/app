@@ -9,7 +9,7 @@
  * useMediaQuery のモックで PC/Mobile 両レイアウトを確認。
  */
 
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { SETTINGS_CATEGORIES } from '../constants';
@@ -57,7 +57,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'profile' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
       return <Story />;
     },
   ],
@@ -69,7 +69,7 @@ export const Default: Story = {
 export const DisplayActive: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'display' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'display' } });
       return <Story />;
     },
   ],
@@ -81,7 +81,7 @@ export const DisplayActive: Story = {
 export const NotificationsActive: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'notifications' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'notifications' } });
       return <Story />;
     },
   ],
@@ -93,7 +93,7 @@ export const NotificationsActive: Story = {
 export const DataActive: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'data' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'data' } });
       return <Story />;
     },
   ],
@@ -105,7 +105,7 @@ export const DataActive: Story = {
 export const BillingActive: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'billing' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'billing' } });
       return <Story />;
     },
   ],
@@ -117,7 +117,7 @@ export const BillingActive: Story = {
 export const AccountActive: Story = {
   decorators: [
     (Story) => {
-      useSettingsStore.setState({ isOpen: true, category: 'account' });
+      useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
       return <Story />;
     },
   ],
@@ -135,7 +135,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-wrap gap-4">
       {SETTINGS_CATEGORIES.map((cat) => {
-        useSettingsStore.setState({ isOpen: true, category: cat.id });
+        useShellStore.setState({ activeSheet: { type: 'settings', category: cat.id } });
         return (
           <div key={cat.id} className="h-[500px] w-56 overflow-hidden rounded-lg border">
             <p className="text-muted-foreground border-b px-3 py-1 text-xs">{cat.id}</p>

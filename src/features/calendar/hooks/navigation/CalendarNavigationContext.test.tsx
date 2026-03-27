@@ -43,66 +43,53 @@ describe('CalendarNavigationProvider', () => {
     window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
   });
 
-  it('syncs currentDate when initialDate prop changes', () => {
-    const { rerender } = render(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-03-25T12:00:00.000Z')}
-        initialView="day"
-        isCalendarPage
-      >
+  it('resolves initialDate from URL searchParams', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
         <TestConsumer />
       </CalendarNavigationProvider>,
     );
 
     expect(screen.getByTestId('date')).toHaveTextContent('2026-03-25');
-
-    rerender(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-03-28T12:00:00.000Z')}
-        initialView="day"
-        isCalendarPage
-      >
-        <TestConsumer />
-      </CalendarNavigationProvider>,
-    );
-
-    expect(screen.getByTestId('date')).toHaveTextContent('2026-03-28');
+    expect(screen.getByTestId('view')).toHaveTextContent('day');
   });
 
-  it('keeps internal date changes until the URL-derived date actually changes', () => {
-    const { rerender } = render(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-03-25T12:00:00.000Z')}
-        initialView="day"
-        isCalendarPage
-      >
+  it('keeps internal date changes after navigateToDate', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
+    render(
+      <CalendarNavigationProvider>
         <TestConsumer />
       </CalendarNavigationProvider>,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'move' }));
     expect(screen.getByTestId('date')).toHaveTextContent('2026-03-29');
+  });
 
-    rerender(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-03-25T12:00:00.000Z')}
-        initialView="day"
-        isCalendarPage
-      >
+  it('resolves week view from pathname', () => {
+    window.history.replaceState(null, '', '/ja/calendar/week?date=2026-03-25');
+    mockPathname = '/ja/calendar/week';
+
+    render(
+      <CalendarNavigationProvider>
         <TestConsumer />
       </CalendarNavigationProvider>,
     );
 
-    expect(screen.getByTestId('date')).toHaveTextContent('2026-03-29');
+    expect(screen.getByTestId('view')).toHaveTextContent('week');
   });
 
   it('preserves calendar state when the current route is not a calendar page', () => {
+    window.history.replaceState(null, '', '/ja/calendar/day?date=2026-03-25');
+    mockPathname = '/ja/calendar/day';
+
     const { rerender } = render(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-03-25T12:00:00.000Z')}
-        initialView="day"
-        isCalendarPage
-      >
+      <CalendarNavigationProvider>
         <TestConsumer />
       </CalendarNavigationProvider>,
     );
@@ -111,13 +98,10 @@ describe('CalendarNavigationProvider', () => {
     expect(screen.getByTestId('date')).toHaveTextContent('2026-03-29');
     expect(screen.getByTestId('view')).toHaveTextContent('day');
 
+    // Settings ページに遷移してもカレンダー状態は維持される
     mockPathname = '/ja/settings';
     rerender(
-      <CalendarNavigationProvider
-        initialDate={new Date('2026-04-01T12:00:00.000Z')}
-        initialView="week"
-        isCalendarPage={false}
-      >
+      <CalendarNavigationProvider>
         <TestConsumer />
       </CalendarNavigationProvider>,
     );

@@ -108,16 +108,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     return undefined;
   }, [entryId]);
 
-  // Adjust description height
-  useEffect(() => {
-    if (descriptionRef.current && entry) {
-      const textarea = descriptionRef.current;
-      textarea.style.height = 'auto';
-      const newHeight = Math.min(textarea.scrollHeight, 96);
-      textarea.style.height = `${newHeight}px`;
-    }
-  }, [entry]);
-
   // リアルタイム重複チェック
   useEffect(() => {
     if (!scheduleDate || !startTime || !endTime || !entryId) {

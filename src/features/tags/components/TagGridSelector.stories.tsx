@@ -109,11 +109,11 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-muted/80 flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >
-      <span className="bg-muted-foreground/20 flex size-8 items-center justify-center rounded-full">
+      <span className="bg-muted flex size-8 items-center justify-center rounded-full">
         <Plus className="text-muted-foreground size-5" />
       </span>
       <span className="text-muted-foreground text-sm font-medium">新規</span>
@@ -247,7 +247,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
 
             {/* ドロップダウン */}
             {groupOpen && (
-              <div className="border-border surface-raised bg-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border">
+              <div className="border-border bg-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border shadow-md">
                 <button
                   type="button"
                   onClick={() => {
@@ -371,7 +371,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -397,7 +397,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
 
   // メイン画面: 親タググリッド
   return (
-    <div className="grid grid-cols-3 gap-2 px-4 py-3">
+    <div className="grid grid-cols-4 gap-2 px-4 py-3">
       {parentTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (
@@ -427,7 +427,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
 
 function SelectorFrame({ children, title }: { children: React.ReactNode; title?: string }) {
   return (
-    <div className="bg-card surface-raised-heavy w-[360px] overflow-hidden rounded-2xl">
+    <div className="bg-card w-[360px] overflow-hidden rounded-2xl shadow-lg">
       <div className="px-4 pt-4 pb-2">
         <h2 className="text-lg font-bold">{title ?? 'タグを選択'}</h2>
       </div>
@@ -497,7 +497,7 @@ export const GridWithChildren: Story = {
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
-          <div className="grid grid-cols-3 gap-2 px-4 py-3">
+          <div className="grid grid-cols-4 gap-2 px-4 py-3">
             <TagGridCell
               tag={{ id: '1', name: '仕事', color: 'blue', icon: 'briefcase' }}
               isSelected={selected === '1'}
@@ -651,7 +651,7 @@ export const AllPatterns: Story = {
                 <TagIcon icon="briefcase" color="blue" size="sm" />
                 <span className="text-foreground font-semibold">仕事</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 px-4 py-3">
+              <div className="grid grid-cols-4 gap-2 px-4 py-3">
                 <TagGridCell
                   tag={{ id: 'p-0', name: '仕事', color: 'blue', icon: 'briefcase' }}
                   onSelect={fn()}

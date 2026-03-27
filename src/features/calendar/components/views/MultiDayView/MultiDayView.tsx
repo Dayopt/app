@@ -46,6 +46,7 @@ export function MultiDayView({
   onNavigateToday: _onNavigateToday,
 }: MultiDayViewProps) {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   const displayCenterDate = useMemo(() => {
@@ -87,13 +88,13 @@ export function MultiDayView({
   );
 
   const weekNumber = useMemo(() => {
-    return getWeek(displayCenterDate, { weekStartsOn: 1 });
-  }, [displayCenterDate]);
+    return getWeek(displayCenterDate, { weekStartsOn });
+  }, [displayCenterDate, weekStartsOn]);
 
   const viewMode = `${dayCount}day` as '3day' | '5day';
 
   const headerComponent = (
-    <div className="bg-background flex h-8">
+    <div className="flex h-8">
       {displayDates.map((date) => (
         <div key={date.toISOString()} className="flex flex-1 items-center justify-center px-1">
           <DateDisplay
@@ -113,7 +114,7 @@ export function MultiDayView({
 
   return (
     <CalendarViewAnimation viewType={viewMode}>
-      <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 
         <ScrollableCalendarLayout
@@ -140,7 +141,6 @@ export function MultiDayView({
                   entryStyles={entryStyles}
                   viewMode={viewMode}
                   dayIndex={dayIndex}
-                  showChronotypeBackground={false}
                   allEventsForOverlapCheck={entries}
                   displayDates={displayDates}
                   onEntryClick={onEntryClick}

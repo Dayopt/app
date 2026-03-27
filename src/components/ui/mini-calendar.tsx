@@ -321,7 +321,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             <div key={weekIndex} className={cn('grid', gridCols)}>
               {showWeekNumbers && (
                 <div className="text-muted-foreground flex h-8 w-6 items-center justify-center text-xs">
-                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn: 1 }) : null}
+                  {week[0] !== undefined ? getWeek(week[0], { weekStartsOn }) : null}
                 </div>
               )}
               {week.map((date) => {
@@ -333,6 +333,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                     type="button"
                     onClick={() => !isDisabled && handleDateClick(date)}
                     disabled={isDisabled}
+                    aria-label={format(date, 'yyyy-MM-dd')}
                     className={cn(
                       // ベーススタイル - 高さ32px、幅はグリッドに委ねる
                       'flex h-8 items-center justify-center text-sm transition-colors',
@@ -363,7 +364,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
 
         {/* 日付なしボタン（全幅ボーダー用に外側） */}
         {allowClear && (
-          <div className="border-border/50 border-t">
+          <div className="border-border-subtle border-t">
             <div className="px-4 py-2">
               <Button
                 variant="ghost"

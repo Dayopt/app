@@ -1,8 +1,15 @@
 /**
  * カレンダー日付ナビゲーションストア
  *
- * 検索等の外部機能からカレンダーの表示日付を変更するための仲介ストア。
- * pendingDate をセットすると、カレンダー composition layer が検知して navigateToDate を呼ぶ。
+ * 2つの役割:
+ * 1. **コマンドチャネル**: 外部機能（検索等）→ カレンダーへのナビゲーション要求
+ *    - pendingDate / navigateTo / clearPending
+ * 2. **読み取り専用ミラー**: CalendarNavigationContext → store（一方向同期）
+ *    - viewedDate / viewType（Context が唯一の source of truth）
+ *    - カレンダーページ外の機能（useBlockPlace等）がカレンダー状態を参照するため
+ *
+ * ⚠ viewedDate / viewType を直接変更しないこと。
+ *   CalendarNavigationContext の useEffect が自動同期する。
  */
 
 import { create } from 'zustand';
@@ -10,20 +17,25 @@ import { create } from 'zustand';
 import type { CalendarViewType } from '@/lib/calendar-constants';
 
 interface CalendarNavigationStore {
+  // ── コマンドチャネル（外部 → カレンダー） ──
   /** ナビゲーション待ちの日付 */
   pendingDate: Date | null;
-  /** カレンダーが現在表示している日付（CalendarNavigationContext から同期） */
-  viewedDate: Date;
-  /** カレンダーの表示ビュータイプ（CalendarNavigationContext から同期） */
-  viewType: CalendarViewType;
   /** 日付ナビゲーションを要求 */
   navigateTo: (date: Date) => void;
   /** 要求をクリア（カレンダー側が消費後に呼ぶ） */
   clearPending: () => void;
-  /** 表示日付を同期（CalendarNavigationContext → store） */
-  setViewedDate: (date: Date) => void;
-  /** ビュータイプを同期（CalendarNavigationContext → store） */
-  setViewType: (viewType: CalendarViewType) => void;
+
+  // ── 読み取り専用ミラー（CalendarNavigationContext → store） ──
+  /** カレンダーが現在表示している日付（読み取り専用 — Context が権威） */
+  viewedDate: Date;
+  /** カレンダーの表示ビュータイプ（読み取り専用 — Context が権威） */
+  viewType: CalendarViewType;
+
+  // ── 内部同期用（CalendarNavigationContext のみが呼ぶ） ──
+  /** @internal Context → store 同期用 */
+  _syncViewedDate: (date: Date) => void;
+  /** @internal Context → store 同期用 */
+  _syncViewType: (viewType: CalendarViewType) => void;
 }
 
 /** カレンダーの日付ナビゲーションを仲介するZustandストア */
@@ -33,6 +45,6 @@ export const useCalendarNavigationStore = create<CalendarNavigationStore>()((set
   viewType: 'week',
   navigateTo: (date) => set({ pendingDate: date }),
   clearPending: () => set({ pendingDate: null }),
-  setViewedDate: (date) => set({ viewedDate: date }),
-  setViewType: (viewType) => set({ viewType }),
+  _syncViewedDate: (date) => set({ viewedDate: date }),
+  _syncViewType: (viewType) => set({ viewType }),
 }));

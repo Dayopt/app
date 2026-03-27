@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useLayoutStore } from '@/stores/useLayoutStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import { MobileMenuButton } from '@/shell/components/MobileMenuButton';
 
@@ -14,7 +14,7 @@ const meta = {
   tags: ['autodocs'],
   decorators: [
     (Story) => {
-      useLayoutStore.setState({ sidebarOpen: false });
+      useShellStore.setState({ sidebar: { open: false, width: 256 } });
       return <Story />;
     },
   ],
@@ -41,7 +41,7 @@ export const WithClassName: Story = {
 export const SidebarOpen: Story = {
   decorators: [
     (Story) => {
-      useLayoutStore.setState({ sidebarOpen: true });
+      useShellStore.setState({ sidebar: { open: true, width: 256 } });
       return <Story />;
     },
   ],

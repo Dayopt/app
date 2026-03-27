@@ -199,7 +199,7 @@ export function TagCreateModal({
       aria-labelledby="tag-create-dialog-title"
     >
       <div
-        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border surface-raised rounded-2xl border p-6 duration-150"
+        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border rounded-2xl border p-6 shadow-md duration-150"
         style={{ width: 'min(calc(100vw - 32px), 400px)' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -262,8 +262,8 @@ export function TagCreateModal({
                         className={cn(
                           'flex size-9 items-center justify-center rounded-full transition-all',
                           isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
+                          classes.dot,
                         )}
-                        style={{ backgroundColor: classes.cssVar }}
                         aria-label={COLOR_DISPLAY_NAMES[c]}
                         aria-pressed={isActive}
                       >
@@ -296,7 +296,7 @@ export function TagCreateModal({
                   className={cn(
                     'rounded-full border px-3 py-1.5 text-sm transition-colors',
                     !selectedGroup
-                      ? 'border-primary bg-primary/10 text-foreground font-medium'
+                      ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
                   )}
                 >
@@ -310,7 +310,7 @@ export function TagCreateModal({
                     className={cn(
                       'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
                       selectedGroup === group.name
-                        ? 'border-primary bg-primary/10 text-foreground font-medium'
+                        ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                         : 'border-border hover:bg-state-hover text-muted-foreground',
                     )}
                   >

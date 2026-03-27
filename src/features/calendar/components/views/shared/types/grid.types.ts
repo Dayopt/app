@@ -26,6 +26,8 @@ export interface TimeColumnProps {
   hourHeight?: number | undefined;
   format?: '12h' | '24h' | undefined; // 時刻表示形式
   className?: string | undefined;
+  /** Chronotype ゾーン（deep/ease ラベル装飾用） */
+  zones?: import('@/types/chronotype').ProductivityZone[] | undefined;
 }
 
 /** グリッド線コンポーネントのプロパティ */
@@ -50,6 +52,10 @@ export interface CurrentTimeLineProps {
   viewMode?: 'day' | '3day' | '5day' | 'week' | undefined;
   /** 他の日にも薄い線を表示するか（デフォルト: true） */
   showOnOtherDays?: boolean | undefined;
+  /** 表示範囲（開始時間, 0-24）。範囲外なら非表示 */
+  startHour?: number | undefined;
+  /** 表示範囲（終了時間, 0-24）。範囲外なら非表示 */
+  endHour?: number | undefined;
 }
 
 /** 時間範囲（開始・終了） */

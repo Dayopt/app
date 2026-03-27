@@ -178,11 +178,13 @@ export const PartialRadius: Story = {
         <div>
           <h2 className="mb-4 font-bold">範囲選択（カレンダー）</h2>
           <div className="flex">
-            <div className="bg-primary/20 flex size-10 items-center justify-center rounded-l-lg text-sm">
+            <div className="bg-primary-state-selected flex size-10 items-center justify-center rounded-l-lg text-sm">
               1
             </div>
-            <div className="bg-primary/20 flex size-10 items-center justify-center text-sm">2</div>
-            <div className="bg-primary/20 flex size-10 items-center justify-center rounded-r-lg text-sm">
+            <div className="bg-primary-state-selected flex size-10 items-center justify-center text-sm">
+              2
+            </div>
+            <div className="bg-primary-state-selected flex size-10 items-center justify-center rounded-r-lg text-sm">
               3
             </div>
           </div>

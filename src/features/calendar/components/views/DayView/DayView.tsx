@@ -35,6 +35,7 @@ export const DayView = ({
   onNavigateToday,
 }: DayViewProps) => {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // 表示する日付
   const displayDates = useMemo(() => {
@@ -75,8 +76,8 @@ export const DayView = ({
 
   // 週番号を計算
   const weekNumber = useMemo(() => {
-    return getWeek(date, { weekStartsOn: 1 });
-  }, [date]);
+    return getWeek(date, { weekStartsOn });
+  }, [date, weekStartsOn]);
 
   // 日付ヘッダーのクリックハンドラー（DayViewでは日付変更のみ）
   const handleDateHeaderClick = React.useCallback(
@@ -88,7 +89,7 @@ export const DayView = ({
   );
 
   const headerComponent = (
-    <div className="bg-background flex h-8 items-center justify-center px-2">
+    <div className="flex h-8 items-center justify-center px-2">
       <DateDisplay
         date={date}
         className="text-center"
@@ -105,7 +106,7 @@ export const DayView = ({
 
   return (
     <CalendarViewAnimation viewType="day">
-      <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         {/* 固定日付ヘッダー */}
         <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 
@@ -118,7 +119,6 @@ export const DayView = ({
             entryStyles={eventStyles}
             viewMode="day"
             dayIndex={0}
-            showChronotypeBackground={true}
             onEntryClick={onEntryClick}
             onEntryContextMenu={onEntryContextMenu}
             onEventUpdate={handleEventTimeUpdate}

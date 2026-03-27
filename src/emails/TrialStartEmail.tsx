@@ -7,53 +7,60 @@
 
 import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface TrialStartEmailProps {
   userName: string;
   trialEndDate: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function TrialStartEmail({
   userName,
   trialEndDate,
-  appUrl = 'https://dayopt.app',
+  locale = 'en',
+  appUrl = 'https://app.dayopt.app',
 }: TrialStartEmailProps) {
+  const t = createEmailTranslator(locale);
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Your 7-day Pro trial has started</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('trialStart.heading')}</Text>
             <Text style={styles.paragraph}>
-              Your 7-day Pro trial is now active. Here&apos;s what you can explore:
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
+            <Text style={styles.paragraph}>{t('trialStart.body')}</Text>
             <Section style={styles.infoBox}>
-              <Text style={styles.infoBoxLabel}>Trial ends</Text>
+              <Text style={styles.infoBoxLabel}>{t('trialStart.labelTrialEnds')}</Text>
               <Text style={styles.infoBoxValue}>{trialEndDate}</Text>
             </Section>
-            <Text style={styles.paragraph}>What&apos;s included in Pro:</Text>
+            <Text style={styles.paragraph}>{t('trialStart.proFeaturesIntro')}</Text>
             <Section style={styles.infoBox}>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - Full analytics and insights
+                - {t('trialStart.featureAnalytics')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>- Unlimited tags</Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - API access and data export
+                - {t('trialStart.featureTags')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0' }}>- Unlimited AI assistance</Text>
+              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
+                - {t('trialStart.featureApi')}
+              </Text>
+              <Text style={{ ...styles.paragraph, margin: '0' }}>
+                - {t('trialStart.featureAi')}
+              </Text>
             </Section>
-            <Text style={styles.paragraph}>
-              No action needed — your trial starts now. If you decide Pro isn&apos;t for you,
-              you&apos;ll automatically move to the Free plan when the trial ends.
-            </Text>
+            <Text style={styles.paragraph}>{t('trialStart.noActionNote')}</Text>
             <Button style={styles.button} href={`${appUrl}/calendar`}>
-              Open Dayopt
+              {t('trialStart.ctaButton')}
             </Button>
-            <Text style={styles.footer}>The Dayopt Team</Text>
+            <Text style={styles.footer}>{t('emailCommon.teamSignature')}</Text>
           </Section>
         </Container>
       </Body>

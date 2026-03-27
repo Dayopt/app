@@ -21,8 +21,8 @@ import { routing, type Locale } from '@/platform/i18n/routing';
 import { useTourStore } from '@/features/tour';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/platform/trpc';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useUserSettings } from '../hooks/useUserSettings';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
@@ -125,7 +125,7 @@ export function DisplaySettings() {
   const tourMachine = useTourStore.use.machine();
   const tourSend = useTourStore.use.send();
   const tourCompleted = tourMachine.completed;
-  const closeSettings = useSettingsStore((s) => s.close);
+  const closeSettings = useShellStore((s) => s.closeSettings);
   const resetOnboarding = api.onboarding.reset.useMutation();
 
   const handleReplayTour = useCallback(() => {
@@ -142,23 +142,6 @@ export function DisplaySettings() {
       },
     });
   }, [resetOnboarding, closeSettings, router]);
-
-  const showChronotypeOnTimeline =
-    settings.chronotype?.displayMode === 'background' ||
-    settings.chronotype?.displayMode === 'both';
-
-  const handleChronotypeTimelineToggle = useCallback(
-    (checked: boolean) => {
-      if (!settings.chronotype) return;
-      saveSettings({
-        chronotype: {
-          ...settings.chronotype,
-          displayMode: checked ? 'background' : 'border',
-        },
-      });
-    },
-    [settings.chronotype, saveSettings],
-  );
 
   if (isPending) {
     return (
@@ -315,21 +298,6 @@ export function DisplaySettings() {
           </Select>
         </LabeledRow>
       </SectionCard>
-
-      {/* Chronotype Display */}
-      {settings.chronotype?.enabled && (
-        <SectionCard title={t('settings.chronotype.title')}>
-          <LabeledRow
-            label={t('settings.chronotype.showOnTimeline')}
-            description={t('settings.chronotype.showOnTimelineDesc')}
-          >
-            <Switch
-              checked={showChronotypeOnTimeline}
-              onCheckedChange={handleChronotypeTimelineToggle}
-            />
-          </LabeledRow>
-        </SectionCard>
-      )}
 
       {/* Getting Started — Tour & Onboarding replay */}
       <SectionCard title={t('settings.gettingStarted.title')}>

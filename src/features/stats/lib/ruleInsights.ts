@@ -36,8 +36,8 @@ export type MetricValues = Partial<Record<MetricId, number>>;
 
 /** ルールインサイトの判定閾値設定 */
 export interface RuleThresholds {
-  planRate: { low: number };
-  peakUtilization: { low: number };
+  entryRate: { low: number };
+  deepUtilization: { low: number };
   contextSwitches: { high: number };
   blankRate: { high: number };
   /** 前期間比の変化率しきい値（0.2 = 20%） */
@@ -51,8 +51,8 @@ export interface RuleThresholds {
 // =============================================================================
 
 const DEFAULT_THRESHOLDS: RuleThresholds = {
-  planRate: { low: 0.5 },
-  peakUtilization: { low: 0.3 },
+  entryRate: { low: 0.5 },
+  deepUtilization: { low: 0.3 },
   contextSwitches: { high: 8 },
   blankRate: { high: 0.6 },
   trendDelta: 0.2,
@@ -102,24 +102,24 @@ function evaluateThresholdRules(
   t: RuleThresholds,
   insights: RuleInsight[],
 ): void {
-  const planRate = current.planRate;
-  if (planRate != null && planRate < t.planRate.low) {
+  const entryRate = current.entryRate;
+  if (entryRate != null && entryRate < t.entryRate.low) {
     insights.push({
-      metricId: 'planRate',
+      metricId: 'entryRate',
       type: 'threshold',
       severity: 'warning',
-      messageKey: 'planRateLow',
-      detailKey: 'planRateLowDetail',
+      messageKey: 'entryRateLow',
+      detailKey: 'entryRateLowDetail',
     });
   }
 
-  const peakUtil = current.peakUtilization;
-  if (peakUtil != null && peakUtil < t.peakUtilization.low) {
+  const deepUtil = current.deepUtilization;
+  if (deepUtil != null && deepUtil < t.deepUtilization.low) {
     insights.push({
-      metricId: 'peakUtilization',
+      metricId: 'deepUtilization',
       type: 'threshold',
       severity: 'info',
-      messageKey: 'peakUtilizationLow',
+      messageKey: 'deepUtilizationLow',
     });
   }
 
@@ -153,8 +153,8 @@ function evaluateThresholdRules(
 const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
   { id: 'totalTime', worseDirection: 'down' },
   { id: 'avgFulfillment', worseDirection: 'down' },
-  { id: 'planRate', worseDirection: 'down' },
-  { id: 'peakUtilization', worseDirection: 'down' },
+  { id: 'entryRate', worseDirection: 'down' },
+  { id: 'deepUtilization', worseDirection: 'down' },
   { id: 'estimationAccuracy', worseDirection: 'up' },
   { id: 'contextSwitches', worseDirection: 'up' },
   { id: 'blankRate', worseDirection: 'up' },
@@ -163,10 +163,10 @@ const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
 const METRIC_LABELS: Record<MetricId, string> = {
   totalTime: 'Total Time',
   avgFulfillment: 'Avg Fulfillment',
-  planRate: 'Plan Rate',
+  entryRate: 'Entry Rate',
   streak: 'Streak',
   estimationAccuracy: 'Estimation Accuracy',
-  peakUtilization: 'Peak Utilization',
+  deepUtilization: 'Deep Utilization',
   contextSwitches: 'Context Switches',
   blankRate: 'Blank Rate',
 };

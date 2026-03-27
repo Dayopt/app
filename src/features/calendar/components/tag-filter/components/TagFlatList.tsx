@@ -334,7 +334,7 @@ export function TagFlatList({
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-          {tagDisplayInfos.map((info) => renderItem(info))}
+          <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>
         </SortableContext>
       </DndContext>
     );
@@ -344,14 +344,13 @@ export function TagFlatList({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
-        <div ref={scrollContainerRef} className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
-          <div
-            style={{
-              height: virtualizer.getTotalSize(),
-              position: 'relative',
-              width: '100%',
-            }}
-          >
+        <div
+          ref={scrollContainerRef}
+          className="overflow-y-auto"
+          role="list"
+          style={{ maxHeight: '50vh' }}
+        >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const realIndex = visibleIndices[virtualRow.index];
               if (realIndex === undefined) return null;
@@ -362,13 +361,8 @@ export function TagFlatList({
                   key={info.tag.id}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
+                  className="absolute top-0 left-0 w-full"
+                  style={{ transform: `translateY(${virtualRow.start}px)` }}
                 >
                   {renderItem(info)}
                 </div>

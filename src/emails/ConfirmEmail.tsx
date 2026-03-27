@@ -8,51 +8,60 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface ConfirmEmailProps {
   userName: string;
   confirmUrl: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function ConfirmEmail({
   userName,
   confirmUrl,
-  appUrl = 'https://dayopt.app',
+  locale = 'en',
+  appUrl = 'https://app.dayopt.app',
 }: ConfirmEmailProps) {
+  const t = createEmailTranslator(locale);
+  const ignoreLine = t('confirm.ignoreLine');
+  const appName = 'Dayopt';
+  const [ignoreLineBefore, ignoreLineAfter] = ignoreLine.includes(appName)
+    ? [ignoreLine.split(appName)[0], ignoreLine.split(appName).slice(1).join(appName)]
+    : [ignoreLine, ''];
+
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Confirm your email</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('confirm.heading')}</Text>
             <Text style={styles.paragraph}>
-              Thanks for signing up for Dayopt. Please confirm your email address by clicking the
-              button below.
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
+            <Text style={styles.paragraph}>{t('confirm.body')}</Text>
             <Button style={styles.button} href={confirmUrl}>
-              Confirm Email Address
+              {t('confirm.ctaButton')}
             </Button>
-            <Text style={styles.smallText}>
-              If the button doesn&apos;t work, copy and paste this link into your browser:
-            </Text>
+            <Text style={styles.smallText}>{t('emailCommon.buttonFallbackText')}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={confirmUrl}>
                 {confirmUrl}
               </Link>
             </Text>
             <Text style={styles.footer}>
-              If you didn&apos;t create an account on{' '}
+              {ignoreLineBefore}
               <Link style={styles.link} href={appUrl}>
-                Dayopt
+                {appName}
               </Link>
-              , you can safely ignore this email.
+              {ignoreLineAfter}
               <br />
               <br />
-              The Dayopt Team
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

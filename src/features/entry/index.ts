@@ -50,7 +50,11 @@ export {
 // =============================================================================
 // Stores
 // =============================================================================
-export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
+export {
+  inspectorAnchorRef,
+  setInspectorAnchorRect,
+  useEntryInspectorStore,
+} from './stores/useEntryInspectorStore';
 export type { AnchorRect } from './stores/useEntryInspectorStore';
 
 // =============================================================================

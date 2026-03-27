@@ -43,8 +43,15 @@ export function useUserSettings() {
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       utils.userSettings.get.invalidate();
+
+      // タイムゾーン変更時: タイムゾーン依存クエリキャッシュを全て無効化
+      // SSR側の `user-tz` Cookie も更新して次回訪問時のSSRを正確にする
+      if ('timezone' in variables && typeof variables.timezone === 'string') {
+        utils.entries.invalidate();
+        document.cookie = `user-tz=${variables.timezone};path=/;max-age=31536000;SameSite=Lax`;
+      }
     },
     onError: () => {
       toast.error(t('settings.common.saveFailed'));
@@ -57,8 +64,6 @@ export function useUserSettings() {
       const chronotypeSettings: ChronotypeSettingsState = {
         enabled: dbSettings.chronotype.enabled,
         type: dbSettings.chronotype.type,
-        displayMode: dbSettings.chronotype.displayMode,
-        opacity: dbSettings.chronotype.opacity,
       };
 
       if (dbSettings.chronotype.customZones) {
@@ -77,6 +82,10 @@ export function useUserSettings() {
         defaultDuration: dbSettings.defaultDuration,
         snapInterval: dbSettings.snapInterval,
         chronotype: chronotypeSettings,
+        chronotypeGradient: {
+          light: dbSettings.chronotype.gradientLight ?? null,
+          dark: dbSettings.chronotype.gradientDark ?? null,
+        },
         planRecordMode: dbSettings.planRecordMode,
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
@@ -108,8 +117,6 @@ export function useUserSettings() {
         dbInput.chronotypeEnabled = settings.chronotype.enabled;
         dbInput.chronotypeType = settings.chronotype.type;
         dbInput.chronotypeCustomZones = settings.chronotype.customZones;
-        dbInput.chronotypeDisplayMode = settings.chronotype.displayMode;
-        dbInput.chronotypeOpacity = settings.chronotype.opacity;
       }
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)

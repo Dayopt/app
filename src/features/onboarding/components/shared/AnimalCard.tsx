@@ -36,7 +36,7 @@ export function AnimalCard({
       <span className="text-sm font-medium">{name}</span>
       <span className="text-muted-foreground text-xs">{trait}</span>
       <span className="text-muted-foreground text-xs">{time}</span>
-      <span className="text-muted-foreground/70 text-xs leading-tight">{hint}</span>
+      <span className="text-muted-foreground text-xs leading-tight">{hint}</span>
     </button>
   );
 }

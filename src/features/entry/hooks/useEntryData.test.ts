@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { planToPlanItem, type PlanWithTagIds } from './useEntryData';
+import { entryToEntryItem, type EntryWithTagIds } from './useEntryData';
 
 // テスト用のモックエントリ
-const createMockEntry = (overrides: Partial<PlanWithTagIds> = {}): PlanWithTagIds => ({
+const createMockEntry = (overrides: Partial<EntryWithTagIds> = {}): EntryWithTagIds => ({
   id: 'test-id',
   user_id: 'user-1',
   title: 'テストエントリ',
@@ -24,7 +24,7 @@ const createMockEntry = (overrides: Partial<PlanWithTagIds> = {}): PlanWithTagId
 });
 
 describe('useEntryData', () => {
-  describe('planToPlanItem', () => {
+  describe('entryToEntryItem', () => {
     it('基本的なエントリを変換できる', () => {
       const entry = createMockEntry({
         id: 'entry-1',
@@ -32,7 +32,7 @@ describe('useEntryData', () => {
         description: '説明文',
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.id).toBe('entry-1');
       expect(result.title).toBe('タスク1');
@@ -47,7 +47,7 @@ describe('useEntryData', () => {
         end_time: '2099-01-20T10:00:00Z',
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.status).toBe('open');
     });
@@ -60,7 +60,7 @@ describe('useEntryData', () => {
         end_time: '2020-01-20T10:00:00Z',
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.status).toBe('closed');
     });
@@ -71,7 +71,7 @@ describe('useEntryData', () => {
         tagId: 'tag-1',
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.tagId).toBe('tag-1');
     });
@@ -82,7 +82,7 @@ describe('useEntryData', () => {
         tagId: null,
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.tagId).toBeNull();
     });
@@ -94,7 +94,7 @@ describe('useEntryData', () => {
         end_time: '2025-01-20T10:00:00Z',
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.start_time).toBe('2025-01-20T09:00:00Z');
       expect(result.end_time).toBe('2025-01-20T10:00:00Z');
@@ -111,7 +111,7 @@ describe('useEntryData', () => {
         updated_at: null,
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.created_at).toBe(now.toISOString());
       expect(result.updated_at).toBe(now.toISOString());
@@ -125,7 +125,7 @@ describe('useEntryData', () => {
         description: null,
       });
 
-      const result = planToPlanItem(entry);
+      const result = entryToEntryItem(entry);
 
       expect(result.description).toBeUndefined();
     });

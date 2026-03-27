@@ -125,8 +125,8 @@
       "unread": "Unread",
       "notifications": "Notifications",
       "close": "Close",
-      "previousPlan": "Previous plan",
-      "nextPlan": "Next plan",
+      "previousPlan": "Previous entry",
+      "nextPlan": "Next entry",
       "options": "Options",
       "selectAll": "Select all",
       "tagColor": "Tag color",
@@ -141,7 +141,7 @@
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
       "endTime": "End time",
-      "addPlan": "Tap to add",
+      "addPlan": "Tap to add entry",
       "navigationMenu": "Navigation menu",
       "pageNavigation": "Page navigation",
       "calendar": "Calendar",
@@ -246,10 +246,10 @@
       "pendingGenerationNoDate": "Scheduled for generation ✦"
     },
     "createNew": {
-      "plan": "Create Plan",
+      "plan": "Create Entry",
       "task": "Create Task",
       "tag": "Create Tag",
-      "defaultPlanTitle": "New Plan"
+      "defaultPlanTitle": "New Entry"
     },
     "comingSoon": "Coming Soon",
     "userProfile": {

@@ -46,7 +46,6 @@ export {
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useCalendarProviderProps } from './hooks/navigation/useCalendarProviderProps';
 export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
@@ -56,10 +55,10 @@ export { useInlineCreateStore } from './stores/useInlineCreateStore';
 export { useCalendarData } from './components/controller/hooks/useCalendarData';
 export { useCalendarHandlers } from './components/controller/hooks/useCalendarHandlers';
 export { useCalendarNavigationHandlers } from './components/controller/hooks/useCalendarNavigationHandlers';
-export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarPlanKeyboard';
+export { useCalendarEventKeyboard } from './hooks/keyboard/useCalendarEntryKeyboard';
 export { useWeekendToggleShortcut } from './hooks/keyboard/useWeekendToggleShortcut';
-export { usePlanContextActions } from './hooks/operations/usePlanContextActions';
-export { usePlanOperations } from './hooks/operations/usePlanOperations';
+export { useEntryContextActions } from './hooks/operations/useEntryContextActions';
+export { useEntryOperations } from './hooks/operations/useEntryOperations';
 
 // =============================================================================
 // Lib / Utils

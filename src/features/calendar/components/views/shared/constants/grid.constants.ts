@@ -33,7 +33,7 @@ export const HALF_HOUR_LINE_COLOR = 'border-border/50'; // より薄い線用
 /** 現在時刻線のTailwindクラス */
 export const CURRENT_TIME_LINE_COLOR = 'bg-primary';
 /** 現在時刻ドットのサイズ（px） */
-export const CURRENT_TIME_DOT_SIZE = 8; // 現在時刻のドットサイズ(px)
+export const CURRENT_TIME_DOT_SIZE = 6; // 現在時刻のドットサイズ(px)
 
 /** イベント間の隙間（px） */
 export const EVENT_GAP = 2; // イベント間の隙間(px)
@@ -55,7 +55,7 @@ export const GRID_BORDER = 'border-border';
 export const Z_INDEX = {
   GRID_LINES: 0,
   EVENTS: 10,
-  CURRENT_TIME: 20,
+  CURRENT_TIME: 15,
   DRAGGING: 30,
   POPOVER: 40,
   MODAL: 50,

@@ -9,7 +9,7 @@
 export function TourBackdrop() {
   return (
     <div
-      className="animate-in fade-in z-tour-backdrop pointer-events-none fixed inset-0 bg-black/40 duration-150"
+      className="animate-in fade-in bg-overlay z-tour-backdrop pointer-events-none fixed inset-0 backdrop-blur-md duration-150"
       aria-hidden="true"
     />
   );

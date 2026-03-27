@@ -8,7 +8,7 @@
  *
  * Sub-hooks:
  * - useCalendarDataLayer: データ取得・フィルタリング
- * - useCalendarCrudHandlers: Plan CRUD・キーボードショートカット
+ * - useCalendarCrudHandlers: Entry CRUD・キーボードショートカット
  * - useCalendarNavHandlers: ナビゲーション・設定永続化
  *
  * @see /docs/architecture/grand-design.md
@@ -20,11 +20,9 @@ import React, { useEffect, useMemo } from 'react';
 import type { CalendarViewType } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { useNotifications } from '@/features/notifications';
-import { getCurrentTimezone, setUserTimezone } from '@/features/settings';
 import { logger } from '@/lib/logger';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 // Sub-hooks
 import { useCalendarCrudHandlers } from './useCalendarCrudHandlers';
@@ -57,20 +55,20 @@ export interface CalendarCompositionResult {
   // === Settings ===
   showWeekends: boolean;
 
-  // === Plan state ===
-  disabledPlanId: string | null;
+  // === Entry state ===
+  disabledEntryId: string | null;
 
-  // === Plan click handlers ===
-  onPlanClick: ReturnType<typeof useCalendarCrudHandlers>['onPlanClick'];
+  // === Entry click handlers ===
+  onEntryClick: ReturnType<typeof useCalendarCrudHandlers>['onEntryClick'];
   onTimeRangeSelect: ReturnType<typeof useCalendarCrudHandlers>['onTimeRangeSelect'];
 
-  // === Plan CRUD ===
-  onUpdatePlan: ReturnType<typeof useCalendarCrudHandlers>['onUpdatePlan'];
-  onDeletePlan: ReturnType<typeof useCalendarCrudHandlers>['onDeletePlan'];
+  // === Entry CRUD ===
+  onUpdateEntry: ReturnType<typeof useCalendarCrudHandlers>['onUpdateEntry'];
+  onDeleteEntry: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntry'];
 
   // === Context menu actions ===
   getAddToPaletteHandler: ReturnType<typeof useCalendarCrudHandlers>['getAddToPaletteHandler'];
-  onDeletePlanConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeletePlanConfirm'];
+  onDeleteEntryConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntryConfirm'];
 
   // === Navigation handlers ===
   onNavigate: ReturnType<typeof useCalendarNavHandlers>['onNavigate'];
@@ -97,25 +95,9 @@ export function useCalendarComposition({
   changeView,
 }: CalendarCompositionInput): CalendarCompositionResult {
   // =========================================================================
-  // Side Effects: Timezone initialization
-  // =========================================================================
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
-  const updateSettings = useCalendarSettingsStore((state) => state.updateSettings);
-
-  useEffect(() => {
-    setUserTimezone(timezone);
-    if (timezone === 'Asia/Tokyo') {
-      const actualTimezone = getCurrentTimezone();
-      if (actualTimezone !== 'Asia/Tokyo') {
-        updateSettings({ timezone: actualTimezone });
-      }
-    }
-  }, [timezone, updateSettings]);
-
-  // =========================================================================
   // Side Effects: Inspector cleanup on date navigation
   // =========================================================================
-  const selectedPlanId = useEntryInspectorStore((state) => state.entryId);
+  const selectedEntryId = useEntryInspectorStore((state) => state.entryId);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   const prevDateRef = React.useRef(currentDate);
@@ -160,7 +142,7 @@ export function useCalendarComposition({
   const dataLayer = useCalendarDataLayer({ viewType, currentDate });
 
   const crudHandlers = useCalendarCrudHandlers({
-    selectedPlanId,
+    selectedEntryId,
     filteredEvents: dataLayer.filteredEvents,
     currentDate,
   });
@@ -192,7 +174,7 @@ export function useCalendarComposition({
       // Settings
       showWeekends: navHandlers.showWeekends,
 
-      // CRUD + Plan state
+      // CRUD + Entry state
       ...crudHandlers,
 
       // Navigation

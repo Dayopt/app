@@ -180,7 +180,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-3 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -222,7 +222,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         )}
 
         {hasResults && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             {topLevelTags.map((tag) => {
               const hasChildren = childrenByPrefix.has(tag.name);
               return (
@@ -302,7 +302,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         aria-modal="false"
         aria-label={t('calendar.filter.mergeTag.title')}
         className={cn(
-          'bg-card border-border surface-raised-heavy absolute flex flex-col border',
+          'bg-card border-border absolute flex flex-col border shadow-lg',
           'animate-in fade-in duration-150',
           'top-1/2 left-1/2 max-h-[70vh] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl',
         )}
@@ -363,8 +363,8 @@ function TagGridCell({
         'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        colorClasses.tint,
       )}
-      style={{ backgroundColor: colorClasses.cssVarTint }}
       role="radio"
       aria-checked={isSelected}
     >

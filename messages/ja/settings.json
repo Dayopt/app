@@ -259,23 +259,29 @@
       "densitySpacious": "ゆったり"
     },
     "chronotype": {
-      "title": "クロノタイプ",
-      "description": "あなたの生体リズムに合ったタイプを選択してください。選択したタイプに基づいて、最適な作業時間帯がステータスバーに表示されます。",
+      "title": "あなたのリズム",
+      "description": "集中しやすい時間帯と休憩の目安をカレンダーに表示",
       "settingsSaved": "クロノタイプ設定を保存しました",
       "notSelected": "未選択",
       "details": "タイプの詳細",
       "timeline": "24時間タイムライン",
-      "peakTime": "ピーク時間",
+      "deepTime": "ピーク時間",
+      "easeTime": "ディップ時間",
+      "deepTimeHint": "Deep Workに最適",
+      "easeTimeHint": "軽い作業・休憩向き",
+      "subtitle": "集中しやすい時間帯をカレンダーに表示",
+      "quizAction": "クイズで診断",
+      "shortDesc": {
+        "lion": "早朝から集中できる",
+        "bear": "午前から午後前半がピーク",
+        "wolf": "午後から夜に集中力が上がる",
+        "dolphin": "午前過ぎに安定しやすい"
+      },
       "learnMore": "クロノタイプについて詳しく知る",
-      "showOnTimeline": "タイムラインに表示",
-      "showOnTimelineDesc": "生産性ゾーンでタイムグリッドの背景を色分けする",
-      "notDiagnosed": "まだ診断されていません。いくつかの質問に答えて、あなたのクロノタイプを見つけましょう。",
-      "diagnose": "診断する",
-      "rediagnose": "再診断する",
       "levels": {
         "warmup": "ウォームアップ",
-        "peak": "ピーク",
-        "dip": "ディップ",
+        "deep": "ピーク",
+        "ease": "ディップ",
         "recovery": "リカバリー",
         "winddown": "ウインドダウン"
       },
@@ -305,7 +311,7 @@
               "anxious": "不安定で落ち着かない"
             }
           },
-          "peakFocus": {
+          "deepFocus": {
             "title": "最も集中できるのはいつですか？",
             "options": {
               "earlyMorning": "早朝（6〜9時）",
@@ -314,12 +320,12 @@
               "evening": "夕方〜夜（17時以降）"
             }
           },
-          "afternoonDip": {
+          "afternoonEase": {
             "title": "午後の眠気はどうですか？",
             "options": {
-              "earlyDip": "昼過ぎに強い眠気が来る",
-              "normalDip": "14〜15時頃に少し眠くなる",
-              "noDip": "午後は眠くならない",
+              "earlyEase": "昼過ぎに強い眠気が来る",
+              "normalEase": "14〜15時頃に少し眠くなる",
+              "noEase": "午後は眠くならない",
               "unpredictable": "予測できないタイミングで眠くなる"
             }
           },
@@ -493,7 +499,7 @@
       "startupScreenDesc": "アプリを開いたときに表示する画面を選択",
       "selectStartupScreen": "起動画面を選択",
       "startupLast": "前回の画面を表示",
-      "startupPlan": "Plan",
+      "startupPlan": "エントリー",
       "startupCalendar": "カレンダー",
       "userExperience": "ユーザーエクスペリエンス",
       "userExperienceDesc": "アニメーションやサウンドの設定",
@@ -563,7 +569,7 @@
         "csvComingSoon": "近日公開",
         "includedDataTitle": "エクスポートに含まれるデータ",
         "profileInfo": "プロフィール情報",
-        "tasksEvents": "予定・記録",
+        "tasksEvents": "エントリー",
         "tagSettings": "タグ設定",
         "calendarSettings": "カレンダー設定",
         "notificationSettings": "通知設定",
@@ -606,12 +612,12 @@
       "deletion": {
         "title": "データ削除",
         "deleteBlocks": "全ブロックを削除",
-        "deleteBlocksDesc": "すべてのプランと記録を削除します。タグと設定は残ります。",
+        "deleteBlocksDesc": "すべてのエントリーを削除します。タグと設定は残ります。",
         "deleteAllData": "全データを削除",
         "deleteAllDataDesc": "タグや設定を含むすべてのデータを削除します。アカウントは残ります。",
         "confirmTitle": "本当に削除しますか？",
-        "confirmDeleteBlocks": "すべてのプランと記録が完全に削除されます。タグと設定は保持されます。",
-        "confirmDeleteAll": "すべてのデータが完全に削除されます。アカウントは残りますが、プラン、記録、タグ、設定はすべて削除されます。",
+        "confirmDeleteBlocks": "すべてのエントリーが完全に削除されます。タグと設定は保持されます。",
+        "confirmDeleteAll": "すべてのデータが完全に削除されます。アカウントは残りますが、エントリー、タグ、設定はすべて削除されます。",
         "typeToConfirm": "確認のため「{keyword}」と入力してください",
         "confirmKeyword": "削除",
         "deleting": "削除中..."

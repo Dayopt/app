@@ -40,9 +40,6 @@ export {
 } from './hooks';
 export type { ReorderTagInput, TagInfo } from './hooks';
 
-// Stores
-export { useTagCacheStore } from './stores/useTagCacheStore';
-
 // Lib
 export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-colon';
 

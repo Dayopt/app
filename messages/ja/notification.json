@@ -3,11 +3,15 @@
     "title": "通知",
     "tabs": {
       "all": "すべて",
-      "unread": "未読"
+      "unread": "未読",
+      "reminders": "リマインダー",
+      "ai": "AI"
     },
     "empty": {
       "all": "通知はありません",
-      "unread": "未読の通知はありません"
+      "unread": "未読の通知はありません",
+      "reminders": "リマインダー通知はありません",
+      "ai": "AI通知はありません"
     },
     "actions": {
       "markAllAsRead": "すべて既読にする",
@@ -44,6 +48,12 @@
         "label": "メール通知",
         "description": "リマインダー通知をメールで受信"
       },
+      "emailLanguage": {
+        "label": "メールの言語",
+        "description": "トランザクションメール（リマインダー・請求など）に使用する言語",
+        "en": "英語",
+        "ja": "日本語"
+      },
       "pushNotifications": {
         "label": "プッシュ通知",
         "description": "アプリを閉じていても通知を受け取る",
@@ -55,7 +65,26 @@
       "tip": "ブラウザ通知はアプリを開いている時のみ動作します。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れます。",
       "defaultReminder": {
         "label": "開始時通知のデフォルト",
-        "description": "新規プラン作成時に開始時通知を自動でONにする"
+        "description": "新規エントリー作成時に開始時通知を自動でONにする"
+      },
+      "typeSection": {
+        "title": "通知タイプ",
+        "dailyInsights": {
+          "label": "デイリーインサイト",
+          "description": "エントリー率や空白時間などの日次分析通知"
+        },
+        "energyInsights": {
+          "label": "エネルギーインサイト",
+          "description": "ピーク時間の活用に関する提案"
+        },
+        "burnoutWarnings": {
+          "label": "バーンアウト警告",
+          "description": "過負荷の兆候を検出して通知"
+        },
+        "weeklyReports": {
+          "label": "週次レポート",
+          "description": "1週間の振り返りサマリー"
+        }
       }
     }
   }

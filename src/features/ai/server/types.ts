@@ -58,8 +58,8 @@ export const MODEL_OPTIONS: ModelInfo[] = [
   },
 ];
 
-/** 今日のプラン情報（AI向け簡略化） */
-export interface AIContextPlan {
+/** 今日のエントリー情報（AI向け簡略化） */
+export interface AIContextEntry {
   title: string;
   startTime: string;
   endTime: string;
@@ -67,8 +67,8 @@ export interface AIContextPlan {
   tags: string[];
 }
 
-/** 最近のレコード情報（AI向け簡略化） */
-export interface AIContextRecord {
+/** 最近の過去エントリー情報（AI向け簡略化） */
+export interface AIContextPastEntry {
   title: string;
   durationMinutes: number;
   fulfillmentScore: number | null;
@@ -100,15 +100,15 @@ export interface AIContext {
   aiCustomStylePrompt: string;
 
   /** 今日のスケジュール */
-  todayPlans: AIContextPlan[];
+  todayEntries: AIContextEntry[];
 
-  /** 最近のレコード（直近7日） */
-  recentRecords: AIContextRecord[];
+  /** 最近の過去エントリー（直近7日） */
+  recentEntries: AIContextPastEntry[];
 
   /** 今週の時間（分） */
   weeklyMinutes: {
-    plan: number;
-    record: number;
+    planned: number;
+    actual: number;
   };
 
   /** コンテキスト情報 */

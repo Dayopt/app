@@ -71,6 +71,26 @@ function EmailPreview({ element, title }: { element: React.ReactElement; title: 
   );
 }
 
+/**
+ * EN / JA 両ロケールを並べてプレビュー
+ */
+function BilingualEmailPreview({
+  enElement,
+  jaElement,
+  title,
+}: {
+  enElement: React.ReactElement;
+  jaElement: React.ReactElement;
+  title: string;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-0">
+      <EmailPreview element={enElement} title={`${title} (EN)`} />
+      <EmailPreview element={jaElement} title={`${title} (JA)`} />
+    </div>
+  );
+}
+
 /** ガイドライン: テンプレート仕様とカラートークン */
 export const Guidelines: Story = {
   render: () => (
@@ -225,16 +245,28 @@ export const Guidelines: Story = {
 
 /** ウェルカムメール */
 export const Welcome: Story = {
-  render: () => <EmailPreview element={WelcomeEmail({ userName: 'Tomoya' })} title="Welcome" />,
+  render: () => (
+    <BilingualEmailPreview
+      enElement={WelcomeEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={WelcomeEmail({ userName: 'Tomoya', locale: 'ja' })}
+      title="Welcome"
+    />
+  ),
 };
 
 /** メール確認 */
 export const Confirm: Story = {
   render: () => (
-    <EmailPreview
-      element={ConfirmEmail({
+    <BilingualEmailPreview
+      enElement={ConfirmEmail({
         userName: 'Tomoya',
-        confirmUrl: 'https://dayopt.app/auth/confirm?token=abc123',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token=abc123',
+        locale: 'en',
+      })}
+      jaElement={ConfirmEmail({
+        userName: 'Tomoya',
+        confirmUrl: 'https://app.dayopt.app/auth/confirm?token=abc123',
+        locale: 'ja',
       })}
       title="Confirm Email"
     />
@@ -244,10 +276,16 @@ export const Confirm: Story = {
 /** パスワードリセット */
 export const PasswordReset: Story = {
   render: () => (
-    <EmailPreview
-      element={PasswordResetEmail({
+    <BilingualEmailPreview
+      enElement={PasswordResetEmail({
         userName: 'Tomoya',
-        resetUrl: 'https://dayopt.app/auth/reset?token=abc123',
+        resetUrl: 'https://app.dayopt.app/auth/reset?token=abc123',
+        locale: 'en',
+      })}
+      jaElement={PasswordResetEmail({
+        userName: 'Tomoya',
+        resetUrl: 'https://app.dayopt.app/auth/reset?token=abc123',
+        locale: 'ja',
       })}
       title="Password Reset"
     />
@@ -257,9 +295,14 @@ export const PasswordReset: Story = {
 /** マジックリンク */
 export const MagicLink: Story = {
   render: () => (
-    <EmailPreview
-      element={MagicLinkEmail({
-        loginUrl: 'https://dayopt.app/auth/magic-link?token=abc123',
+    <BilingualEmailPreview
+      enElement={MagicLinkEmail({
+        loginUrl: 'https://app.dayopt.app/auth/magic-link?token=abc123',
+        locale: 'en',
+      })}
+      jaElement={MagicLinkEmail({
+        loginUrl: 'https://app.dayopt.app/auth/magic-link?token=abc123',
+        locale: 'ja',
       })}
       title="Magic Link"
     />
@@ -269,11 +312,18 @@ export const MagicLink: Story = {
 /** プランリマインダー */
 export const Reminder: Story = {
   render: () => (
-    <EmailPreview
-      element={ReminderEmail({
+    <BilingualEmailPreview
+      enElement={ReminderEmail({
         userName: 'Tomoya',
-        planTitle: 'Weekly team meeting',
+        entryTitle: 'Weekly team meeting',
         startTime: '10:00 AM',
+        locale: 'en',
+      })}
+      jaElement={ReminderEmail({
+        userName: 'Tomoya',
+        entryTitle: 'ウィークリーチームミーティング',
+        startTime: '10:00',
+        locale: 'ja',
       })}
       title="Reminder"
     />
@@ -283,11 +333,18 @@ export const Reminder: Story = {
 /** 期限超過通知 */
 export const Overdue: Story = {
   render: () => (
-    <EmailPreview
-      element={OverdueEmail({
+    <BilingualEmailPreview
+      enElement={OverdueEmail({
         userName: 'Tomoya',
-        planTitle: 'Submit project report',
+        entryTitle: 'Submit project report',
         endTime: '5:00 PM',
+        locale: 'en',
+      })}
+      jaElement={OverdueEmail({
+        userName: 'Tomoya',
+        entryTitle: 'プロジェクトレポートを提出',
+        endTime: '17:00',
+        locale: 'ja',
       })}
       title="Overdue"
     />
@@ -297,10 +354,16 @@ export const Overdue: Story = {
 /** トライアル開始 */
 export const TrialStart: Story = {
   render: () => (
-    <EmailPreview
-      element={TrialStartEmail({
+    <BilingualEmailPreview
+      enElement={TrialStartEmail({
         userName: 'Tomoya',
         trialEndDate: 'March 30, 2026',
+        locale: 'en',
+      })}
+      jaElement={TrialStartEmail({
+        userName: 'Tomoya',
+        trialEndDate: '2026年3月30日',
+        locale: 'ja',
       })}
       title="Trial Start"
     />
@@ -310,10 +373,16 @@ export const TrialStart: Story = {
 /** トライアル残3日 */
 export const TrialExpiring: Story = {
   render: () => (
-    <EmailPreview
-      element={TrialExpiringEmail({
+    <BilingualEmailPreview
+      enElement={TrialExpiringEmail({
         userName: 'Tomoya',
         trialEndDate: 'March 30, 2026',
+        locale: 'en',
+      })}
+      jaElement={TrialExpiringEmail({
+        userName: 'Tomoya',
+        trialEndDate: '2026年3月30日',
+        locale: 'ja',
       })}
       title="Trial Expiring"
     />
@@ -323,10 +392,9 @@ export const TrialExpiring: Story = {
 /** トライアル期限切れ */
 export const TrialExpired: Story = {
   render: () => (
-    <EmailPreview
-      element={TrialExpiredEmail({
-        userName: 'Tomoya',
-      })}
+    <BilingualEmailPreview
+      enElement={TrialExpiredEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={TrialExpiredEmail({ userName: 'Tomoya', locale: 'ja' })}
       title="Trial Expired"
     />
   ),
@@ -335,10 +403,9 @@ export const TrialExpired: Story = {
 /** Pro開始 */
 export const ProStart: Story = {
   render: () => (
-    <EmailPreview
-      element={ProStartEmail({
-        userName: 'Tomoya',
-      })}
+    <BilingualEmailPreview
+      enElement={ProStartEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={ProStartEmail({ userName: 'Tomoya', locale: 'ja' })}
       title="Pro Start"
     />
   ),
@@ -347,10 +414,9 @@ export const ProStart: Story = {
 /** 支払い失敗 */
 export const PaymentFailed: Story = {
   render: () => (
-    <EmailPreview
-      element={PaymentFailedEmail({
-        userName: 'Tomoya',
-      })}
+    <BilingualEmailPreview
+      enElement={PaymentFailedEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={PaymentFailedEmail({ userName: 'Tomoya', locale: 'ja' })}
       title="Payment Failed"
     />
   ),
@@ -359,10 +425,9 @@ export const PaymentFailed: Story = {
 /** 支払い復旧 */
 export const PaymentRecovered: Story = {
   render: () => (
-    <EmailPreview
-      element={PaymentRecoveredEmail({
-        userName: 'Tomoya',
-      })}
+    <BilingualEmailPreview
+      enElement={PaymentRecoveredEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={PaymentRecoveredEmail({ userName: 'Tomoya', locale: 'ja' })}
       title="Payment Recovered"
     />
   ),
@@ -371,10 +436,9 @@ export const PaymentRecovered: Story = {
 /** パスワード変更通知 */
 export const PasswordChanged: Story = {
   render: () => (
-    <EmailPreview
-      element={PasswordChangedEmail({
-        userName: 'Tomoya',
-      })}
+    <BilingualEmailPreview
+      enElement={PasswordChangedEmail({ userName: 'Tomoya', locale: 'en' })}
+      jaElement={PasswordChangedEmail({ userName: 'Tomoya', locale: 'ja' })}
       title="Password Changed"
     />
   ),
@@ -383,10 +447,16 @@ export const PasswordChanged: Story = {
 /** Pro解約確認 */
 export const CancellationConfirm: Story = {
   render: () => (
-    <EmailPreview
-      element={CancellationConfirmEmail({
+    <BilingualEmailPreview
+      enElement={CancellationConfirmEmail({
         userName: 'Tomoya',
         periodEndDate: 'April 23, 2026',
+        locale: 'en',
+      })}
+      jaElement={CancellationConfirmEmail({
+        userName: 'Tomoya',
+        periodEndDate: '2026年4月23日',
+        locale: 'ja',
       })}
       title="Cancellation Confirm"
     />
@@ -396,10 +466,16 @@ export const CancellationConfirm: Story = {
 /** アカウント削除確認 */
 export const AccountDeletion: Story = {
   render: () => (
-    <EmailPreview
-      element={AccountDeletionEmail({
+    <BilingualEmailPreview
+      enElement={AccountDeletionEmail({
         userName: 'Tomoya',
         deletionDate: 'February 24, 2026',
+        locale: 'en',
+      })}
+      jaElement={AccountDeletionEmail({
+        userName: 'Tomoya',
+        deletionDate: '2026年2月24日',
+        locale: 'ja',
       })}
       title="Account Deletion"
     />

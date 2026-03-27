@@ -9,15 +9,12 @@ import { useTranslations } from 'next-intl';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
 import type { Tag } from '@/features/tags';
+import { TagIcon } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
 /** Inspector風コンテナ（400px幅） */
 export function InspectorFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="bg-card surface-raised-heavy w-[400px] overflow-hidden rounded-2xl">
-      {children}
-    </div>
-  );
+  return <div className="bg-card w-[400px] overflow-hidden rounded-2xl shadow-lg">{children}</div>;
 }
 
 /** Plan紐付けボタン（静的表示 / Storybook用モック） */
@@ -57,10 +54,12 @@ export function MockPlanLinkButton({ planName }: { planName?: string | undefined
 /** モック用タグ行（Storybook用静的表示） */
 export function MockTagRow({
   tagName,
-  dotClass,
+  tagIcon,
+  tagColor,
 }: {
   tagName?: string | undefined;
-  dotClass?: string | undefined;
+  tagIcon?: string | null | undefined;
+  tagColor?: string | null | undefined;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -71,10 +70,7 @@ export function MockTagRow({
       >
         {tagName ? (
           <>
-            <span
-              className={cn('inline-block size-2.5 flex-shrink-0 rounded-full', dotClass)}
-              aria-hidden
-            />
+            <TagIcon icon={tagIcon} color={tagColor} size="sm" />
             <span className="text-foreground">{tagName}</span>
             <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
           </>

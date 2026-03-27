@@ -259,23 +259,29 @@
       "densitySpacious": "Spacious"
     },
     "chronotype": {
-      "title": "Chronotype",
-      "description": "Select a type that matches your biological rhythm. Based on your selection, optimal work hours will be displayed in the status bar.",
+      "title": "Your rhythm",
+      "description": "Highlight your best focus and rest windows on the calendar",
       "settingsSaved": "Chronotype settings saved",
       "notSelected": "Not selected",
       "details": "Type Details",
       "timeline": "24-Hour Timeline",
-      "peakTime": "Peak Time",
+      "deepTime": "Deep time",
+      "easeTime": "Ease time",
+      "deepTimeHint": "Best for Deep Work",
+      "easeTimeHint": "Light tasks & rest",
+      "subtitle": "Show focus zones on calendar",
+      "quizAction": "Take the quiz",
+      "shortDesc": {
+        "lion": "Morning focus",
+        "bear": "Late-morning deep",
+        "wolf": "Evening energy",
+        "dolphin": "Late-morning stability"
+      },
       "learnMore": "Learn more about chronotypes",
-      "showOnTimeline": "Show on timeline",
-      "showOnTimelineDesc": "Color the time grid background by productivity zone",
-      "notDiagnosed": "Not yet diagnosed. Answer a few questions to discover your chronotype.",
-      "diagnose": "Take the quiz",
-      "rediagnose": "Retake quiz",
       "levels": {
         "warmup": "Warm-up",
-        "peak": "Peak",
-        "dip": "Dip",
+        "deep": "Deep",
+        "ease": "Ease",
         "recovery": "Recovery",
         "winddown": "Wind-down"
       },
@@ -305,7 +311,7 @@
               "anxious": "Restless and uneasy"
             }
           },
-          "peakFocus": {
+          "deepFocus": {
             "title": "When do you focus best?",
             "options": {
               "earlyMorning": "Early morning (6–9 AM)",
@@ -314,12 +320,12 @@
               "evening": "Evening or night (after 5 PM)"
             }
           },
-          "afternoonDip": {
+          "afternoonEase": {
             "title": "How does the afternoon slump affect you?",
             "options": {
-              "earlyDip": "Strong drowsiness right after lunch",
-              "normalDip": "Slightly sleepy around 2–3 PM",
-              "noDip": "No drowsiness in the afternoon",
+              "earlyEase": "Strong drowsiness right after lunch",
+              "normalEase": "Slightly sleepy around 2–3 PM",
+              "noEase": "No drowsiness in the afternoon",
               "unpredictable": "Sleepiness hits at unpredictable times"
             }
           },
@@ -493,7 +499,7 @@
       "startupScreenDesc": "Choose which screen to show when opening the app",
       "selectStartupScreen": "Select startup screen",
       "startupLast": "Continue where you left off",
-      "startupPlan": "Plan",
+      "startupPlan": "Entry",
       "startupCalendar": "Calendar",
       "userExperience": "User Experience",
       "userExperienceDesc": "Animation and sound settings",
@@ -563,7 +569,7 @@
         "csvComingSoon": "Coming soon",
         "includedDataTitle": "Data included in export",
         "profileInfo": "Profile information",
-        "tasksEvents": "Plans & records",
+        "tasksEvents": "Entries",
         "tagSettings": "Tag settings",
         "calendarSettings": "Calendar settings",
         "notificationSettings": "Notification settings",
@@ -606,12 +612,12 @@
       "deletion": {
         "title": "Data Deletion",
         "deleteBlocks": "Delete all blocks",
-        "deleteBlocksDesc": "Remove all plans and records. Tags and settings are kept.",
+        "deleteBlocksDesc": "Remove all entries. Tags and settings are kept.",
         "deleteAllData": "Delete all data",
         "deleteAllDataDesc": "Remove all data including tags and settings. Your account remains active.",
         "confirmTitle": "Are you sure?",
-        "confirmDeleteBlocks": "This will permanently delete all your plans and records. Tags and settings will be preserved.",
-        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all plans, records, tags, and settings will be removed.",
+        "confirmDeleteBlocks": "This will permanently delete all your entries. Tags and settings will be preserved.",
+        "confirmDeleteAll": "This will permanently delete all your data. Your account will remain but all entries, tags, and settings will be removed.",
         "typeToConfirm": "Type \"{keyword}\" to confirm",
         "confirmKeyword": "DELETE",
         "deleting": "Deleting..."

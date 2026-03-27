@@ -6,6 +6,13 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -24,6 +31,9 @@ export function NotificationSettings() {
 
   // 通知設定を取得
   const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery();
+
+  // ユーザー設定を取得（メール言語用）
+  const { data: userSettings } = api.userSettings.get.useQuery();
 
   // ブラウザ通知許可状態
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | null>(() => {
@@ -69,6 +79,23 @@ export function NotificationSettings() {
       onSuccess: onSettingsSuccess,
       onError: onSettingsError,
     });
+
+  // 通知タイプ別設定を更新
+  const updateTypePreferences =
+    api.notificationPreferences.updateNotificationTypePreferences.useMutation({
+      onSuccess: onSettingsSuccess,
+      onError: onSettingsError,
+    });
+
+  // メール言語設定を更新
+  const updateUserSettings = api.userSettings.update.useMutation({
+    onSuccess: () => {
+      utils.userSettings.get.invalidate();
+    },
+    onError: (error) => {
+      toast.error(t('notification.settings.saveError', { message: error.message }));
+    },
+  });
 
   const handleBrowserToggle = useCallback(
     async (checked: boolean) => {
@@ -133,6 +160,26 @@ export function NotificationSettings() {
           />
         </LabeledRow>
         <LabeledRow
+          label={t('notification.settings.emailLanguage.label')}
+          description={t('notification.settings.emailLanguage.description')}
+        >
+          <Select
+            value={userSettings?.preferredLocale ?? 'en'}
+            onValueChange={(value: 'en' | 'ja') => {
+              updateUserSettings.mutate({ preferredLocale: value });
+            }}
+            disabled={updateUserSettings.isPending}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">{t('notification.settings.emailLanguage.en')}</SelectItem>
+              <SelectItem value="ja">{t('notification.settings.emailLanguage.ja')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </LabeledRow>
+        <LabeledRow
           label={
             <span className="flex items-center gap-2">
               {t('notification.settings.pushNotifications.label')}
@@ -157,6 +204,58 @@ export function NotificationSettings() {
             checked={preferences?.defaultReminderEnabled ?? true}
             onCheckedChange={(checked) => updateDefaultReminder.mutate({ enabled: checked })}
             disabled={updateDefaultReminder.isPending}
+          />
+        </LabeledRow>
+      </SectionCard>
+
+      {/* 通知タイプ別設定 */}
+      <SectionCard title={t('notification.settings.typeSection.title')}>
+        <LabeledRow
+          label={t('notification.settings.typeSection.dailyInsights.label')}
+          description={t('notification.settings.typeSection.dailyInsights.description')}
+        >
+          <Switch
+            checked={preferences?.enableDailyInsights ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableDailyInsights: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.energyInsights.label')}
+          description={t('notification.settings.typeSection.energyInsights.description')}
+        >
+          <Switch
+            checked={preferences?.enableEnergyInsights ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableEnergyInsights: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.burnoutWarnings.label')}
+          description={t('notification.settings.typeSection.burnoutWarnings.description')}
+        >
+          <Switch
+            checked={preferences?.enableBurnoutWarnings ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableBurnoutWarnings: checked })
+            }
+            disabled={updateTypePreferences.isPending}
+          />
+        </LabeledRow>
+        <LabeledRow
+          label={t('notification.settings.typeSection.weeklyReports.label')}
+          description={t('notification.settings.typeSection.weeklyReports.description')}
+        >
+          <Switch
+            checked={preferences?.enableWeeklyReports ?? true}
+            onCheckedChange={(checked) =>
+              updateTypePreferences.mutate({ enableWeeklyReports: checked })
+            }
+            disabled={updateTypePreferences.isPending}
           />
         </LabeledRow>
       </SectionCard>

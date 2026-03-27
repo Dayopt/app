@@ -56,7 +56,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         unstyled: true,
         classNames: {
           toast:
-            'grid grid-cols-[auto_1fr_auto] gap-4 items-start w-full p-4 rounded-lg border surface-raised bg-card text-foreground border-border',
+            'grid grid-cols-[auto_1fr_auto] gap-4 items-start w-full p-4 rounded-lg border shadow-md bg-card text-foreground border-border',
           icon: 'row-start-1 col-start-1 [&_svg]:size-5',
           loader: '!static !inset-auto !transform-none',
           content:

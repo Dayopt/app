@@ -8,8 +8,7 @@ import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
 import { usePaletteItems, usePaletteMutations } from '@/features/palette';
-import { useContactStore } from '@/shell/stores/useContactStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
 
@@ -66,10 +65,10 @@ export function GlobalOverlays() {
     [t],
   );
 
-  const contactOpen = useContactStore.use.isOpen();
-  const closeContact = useContactStore.use.close();
-
-  const settingsOpen = useSettingsStore((s) => s.isOpen);
+  const activeSheet = useShellStore.use.activeSheet();
+  const closeSheet = useShellStore.use.closeSheet();
+  const contactOpen = activeSheet?.type === 'contact';
+  const settingsOpen = activeSheet?.type === 'settings';
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
 
   // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
@@ -106,7 +105,7 @@ export function GlobalOverlays() {
       <ContactDialog
         open={contactOpen}
         onOpenChange={(open) => {
-          if (!open) closeContact();
+          if (!open) closeSheet();
         }}
       />
       <SettingsDialog />

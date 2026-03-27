@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useUnreadCount } from '@/features/notifications';
+import { useStatsFilterStore } from '@/features/stats';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
@@ -43,6 +44,8 @@ export function BottomTabBar() {
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
+  const statsGranularity = useStatsFilterStore((s) => s.granularity);
+  const statsDate = useStatsFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
 
@@ -70,9 +73,13 @@ export function BottomTabBar() {
   const handleStatsClick = useCallback(() => {
     if (activeTab === 'stats') return;
 
-    window.history.pushState(null, '', buildStatsPath(locale));
+    window.history.pushState(
+      null,
+      '',
+      buildStatsPath(locale, 'review', { granularity: statsGranularity, date: statsDate }),
+    );
     switchToPage('stats');
-  }, [activeTab, locale, switchToPage]);
+  }, [activeTab, locale, statsGranularity, statsDate, switchToPage]);
 
   const handleNotificationsClick = useCallback(() => {
     resetToServer();
@@ -130,7 +137,7 @@ export function BottomTabBar() {
 
   return (
     <nav
-      className="bg-background surface-raised z-bottom-tab pb-safe fixed inset-x-0 bottom-0"
+      className="bg-background z-bottom-tab pb-safe fixed inset-x-0 bottom-0 shadow-md"
       aria-label={t('common.aria.pageNavigation')}
     >
       <div className="flex h-14 items-center justify-around">
@@ -152,14 +159,14 @@ export function BottomTabBar() {
               <span
                 className={cn(
                   'relative flex items-center justify-center rounded-full px-4 py-1 transition-colors',
-                  isActive && 'bg-primary/10',
+                  isActive && 'bg-primary-state-selected',
                 )}
               >
                 {/* Accountタブはユーザーアバターを表示 */}
                 {tab.id === 'account' ? (
                   <Avatar className="size-6">
                     {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-                    <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                       {getInitials(displayName)}
                     </AvatarFallback>
                   </Avatar>
@@ -168,7 +175,7 @@ export function BottomTabBar() {
                 )}
                 {/* 未読バッジ */}
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold">
+                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-bold">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 )}

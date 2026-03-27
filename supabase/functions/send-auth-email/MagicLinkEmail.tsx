@@ -9,45 +9,72 @@ import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react
 
 import * as styles from './styles.tsx';
 
+type Locale = 'en' | 'ja';
+
+const i18n = {
+  en: {
+    heading: 'Log in to Dayopt',
+    body: 'Click the button below to log in to your Dayopt account. No password needed.',
+    ctaButton: 'Log In to Dayopt',
+    buttonFallback: "If the button doesn't work, copy and paste this link into your browser:",
+    expiryNote: 'This link will expire in 1 hour.',
+    ignoreLine:
+      "If you didn't request this login link, you can safely ignore this email. Someone may have entered your email address by mistake.",
+    teamSignature: 'The Dayopt Team',
+  },
+  ja: {
+    heading: 'Dayopt にログイン',
+    body: '以下のボタンをクリックして、Dayopt アカウントにログインしてください。パスワードは不要です。',
+    ctaButton: 'Dayopt にログイン',
+    buttonFallback:
+      'ボタンが機能しない場合は、以下のリンクをブラウザにコピー＆ペーストしてください：',
+    expiryNote: 'このリンクは1時間で有効期限が切れます。',
+    ignoreLine:
+      'ログインリンクをリクエストした覚えがない場合は、このメールを無視してください。他の方がメールアドレスを間違えて入力した可能性があります。',
+    teamSignature: 'Dayopt チーム',
+  },
+} as const;
+
 export interface MagicLinkEmailProps {
   loginUrl: string;
+  locale?: Locale;
   appUrl?: string;
 }
 
-export function MagicLinkEmail({ loginUrl, appUrl = 'https://dayopt.app' }: MagicLinkEmailProps) {
+export function MagicLinkEmail({
+  loginUrl,
+  locale = 'en',
+  appUrl = 'https://app.dayopt.app',
+}: MagicLinkEmailProps) {
+  const t = i18n[locale];
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Log in to Dayopt</Text>
-            <Text style={styles.paragraph}>
-              Click the button below to log in to your Dayopt account. No password needed.
-            </Text>
+            <Text style={styles.heading}>{t.heading}</Text>
+            <Text style={styles.paragraph}>{t.body}</Text>
             <Button style={styles.button} href={loginUrl}>
-              Log In to Dayopt
+              {t.ctaButton}
             </Button>
-            <Text style={styles.smallText}>
-              If the button doesn&apos;t work, copy and paste this link into your browser:
-            </Text>
+            <Text style={styles.smallText}>{t.buttonFallback}</Text>
             <Text style={{ ...styles.smallText, wordBreak: 'break-all' }}>
               <Link style={styles.link} href={loginUrl}>
                 {loginUrl}
               </Link>
             </Text>
-            <Text style={styles.smallText}>This link will expire in 1 hour.</Text>
+            <Text style={styles.smallText}>{t.expiryNote}</Text>
             <Text style={styles.footer}>
-              If you didn&apos;t request this login link, you can safely ignore this email. Someone
-              may have entered your email address by mistake.
+              {t.ignoreLine}
               <br />
               <br />
               <Link style={styles.link} href={appUrl}>
-                dayopt.app
+                app.dayopt.app
               </Link>
               <br />
               <br />
-              The Dayopt Team
+              {t.teamSignature}
             </Text>
           </Section>
         </Container>

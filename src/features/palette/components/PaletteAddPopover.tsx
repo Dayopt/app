@@ -288,7 +288,7 @@ export function PaletteAddPopover({
         aria-modal="false"
         aria-label={t('sidebar.palette.add')}
         className={cn(
-          'bg-card border-border surface-raised-heavy absolute flex w-80 flex-col rounded-2xl border',
+          'bg-card border-border absolute flex w-80 flex-col rounded-2xl border shadow-lg',
           'animate-in fade-in duration-150',
         )}
         style={position ? { top: position.top, left: position.left } : undefined}

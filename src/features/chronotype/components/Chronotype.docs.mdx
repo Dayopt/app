@@ -13,7 +13,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 | 項目 | 値 |
 |------|-----|
 | プリセットタイプ | lion / bear / wolf / dolphin / custom |
-| 生産性レベル | warmup / peak / dip / recovery / winddown |
+| 生産性レベル | warmup / deep / ease / recovery / winddown |
 | 表示モード | border / background / both |
 | クイズ問題数 | 6問（スコア集計で最高点タイプを判定） |
 | 設定保存先 | `user_settings` テーブル（tRPC `userSettings.update` 経由） |
@@ -90,8 +90,8 @@ Chronotype 専用ルーターは存在しない。`userSettings` ルーターの
 |--------|------|
 | `wakeTime` | 目覚まし不要の自然な起床時間 |
 | `morningEnergy` | 午前中のエネルギーレベル |
-| `peakFocus` | 最も集中できる時間帯 |
-| `afternoonDip` | 午後の眠気パターン |
+| `deepFocus` | 最も集中できる時間帯 |
+| `afternoonEase` | 午後の眠気パターン |
 | `bedTime` | 理想的な就寝時間 |
 | `sleepQuality` | 睡眠の質 |
 
@@ -113,8 +113,8 @@ Chronotype 専用ルーターは存在しない。`userSettings` ルーターの
 | レベル | Tailwind クラス | CSS変数 |
 |--------|---------------|---------|
 | warmup | `bg-chronotype-warmup` | `--chronotype-warmup` |
-| peak | `bg-chronotype-peak` | `--chronotype-peak` |
-| dip | `bg-chronotype-dip` | `--chronotype-dip` |
+| deep | `bg-chronotype-deep` | `--chronotype-deep` |
+| ease | `bg-chronotype-ease` | `--chronotype-ease` |
 | recovery | `bg-chronotype-recovery` | `--chronotype-recovery` |
 | winddown | `bg-chronotype-winddown` | `--chronotype-winddown` |
 

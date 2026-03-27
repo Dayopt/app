@@ -7,6 +7,7 @@ import '../src/styles/globals.css';
 import { DocsTemplate } from './DocsTemplate';
 import { ThemedDocsContainer } from './ThemedDocsContainer';
 import { dayoptDarkTheme, dayoptLightTheme } from './dayoptTheme';
+import { StorybookThemeProvider } from './mocks/theme';
 import { TRPCMockProvider } from './mocks/trpc';
 import './storybook-overrides.css';
 
@@ -100,13 +101,15 @@ const preview: Preview = {
       }
 
       return (
-        <TRPCMockProvider>
-          <NextIntlClientProvider locale="ja" messages={messages}>
-            <main>
-              <Story />
-            </main>
-          </NextIntlClientProvider>
-        </TRPCMockProvider>
+        <StorybookThemeProvider>
+          <TRPCMockProvider>
+            <NextIntlClientProvider locale="ja" messages={messages}>
+              <main>
+                <Story />
+              </main>
+            </NextIntlClientProvider>
+          </TRPCMockProvider>
+        </StorybookThemeProvider>
       );
     },
   ],

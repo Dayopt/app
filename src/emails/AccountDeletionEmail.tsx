@@ -7,61 +7,79 @@
 
 import { Body, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
 export interface AccountDeletionEmailProps {
   userName: string;
   deletionDate: string;
+  locale?: EmailLocale;
   appUrl?: string;
 }
 
 export function AccountDeletionEmail({
   userName,
   deletionDate,
-  appUrl = 'https://dayopt.app',
+  locale = 'en',
+  appUrl = 'https://app.dayopt.app',
 }: AccountDeletionEmailProps) {
+  const t = createEmailTranslator(locale);
+  const supportEmail = t('emailCommon.supportEmail');
+  const appLinkText = 'app.dayopt.app';
+
+  const mistakeLine = t('accountDeletion.mistakeLine', { supportEmail });
+  const [mistakeBefore, mistakeAfter] = mistakeLine.split(supportEmail);
+
+  const recreateLine = t('accountDeletion.recreateLine', { appLink: appLinkText });
+  const [recreateBefore, recreateAfter] = recreateLine.split(appLinkText);
+
   return (
     <Html>
       <Head />
       <Body style={styles.main}>
         <Container style={styles.container}>
           <Section style={styles.section}>
-            <Text style={styles.heading}>Account deleted</Text>
-            <Text style={styles.paragraph}>Hi {userName || 'there'},</Text>
+            <Text style={styles.heading}>{t('accountDeletion.heading')}</Text>
             <Text style={styles.paragraph}>
-              Your Dayopt account has been successfully deleted as of {deletionDate}.
+              {userName
+                ? t('emailCommon.greeting', { userName })
+                : t('emailCommon.greetingFallback')}
             </Text>
-            <Text style={styles.paragraph}>The following data has been permanently removed:</Text>
+            <Text style={styles.paragraph}>{t('accountDeletion.body', { deletionDate })}</Text>
+            <Text style={styles.paragraph}>{t('accountDeletion.dataRemovedIntro')}</Text>
             <Section style={styles.infoBox}>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - All plans and time records
+                - {t('accountDeletion.dataPlans')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>- Tags and categories</Text>
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - Notification preferences
+                - {t('accountDeletion.dataTags')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0' }}>- Profile information</Text>
+              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
+                - {t('accountDeletion.dataNotifications')}
+              </Text>
+              <Text style={{ ...styles.paragraph, margin: '0' }}>
+                - {t('accountDeletion.dataProfile')}
+              </Text>
             </Section>
             <Text style={styles.paragraph}>
-              If you didn&apos;t request this deletion or believe this was a mistake, please contact
-              us immediately at{' '}
-              <Link style={styles.link} href="mailto:support@dayopt.app">
-                support@dayopt.app
+              {mistakeBefore}
+              <Link style={styles.link} href={`mailto:${supportEmail}`}>
+                {supportEmail}
               </Link>
-              .
+              {mistakeAfter}
             </Text>
             <Text style={styles.paragraph}>
-              You&apos;re welcome to create a new account at any time at{' '}
+              {recreateBefore}
               <Link style={styles.link} href={appUrl}>
-                dayopt.app
+                {appLinkText}
               </Link>
-              .
+              {recreateAfter}
             </Text>
             <Text style={styles.footer}>
-              Thank you for using Dayopt.
+              {t('accountDeletion.thankYou')}
               <br />
               <br />
-              The Dayopt Team
+              {t('emailCommon.teamSignature')}
             </Text>
           </Section>
         </Container>

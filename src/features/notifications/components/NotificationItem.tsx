@@ -9,7 +9,7 @@ import type { NotificationType } from '../schemas';
 interface NotificationItemProps {
   id: string;
   type: NotificationType;
-  planTitle?: string | undefined;
+  entryTitle?: string | undefined;
   isRead: boolean;
   createdAt: string;
   locale: 'ja' | 'en';
@@ -40,7 +40,7 @@ const typeColors: Record<NotificationType, string> = {
 export function NotificationItem({
   id,
   type,
-  planTitle,
+  entryTitle,
   isRead,
   createdAt,
   locale,
@@ -73,9 +73,7 @@ export function NotificationItem({
 
   return (
     <div
-      className={`rounded-2xl px-4 py-2 transition-colors ${
-        !isRead ? 'bg-state-active' : 'hover:bg-state-hover'
-      }`}
+      className="group hover:bg-state-hover rounded-2xl px-4 py-2 transition-colors"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role={!isRead ? 'button' : undefined}
@@ -88,20 +86,26 @@ export function NotificationItem({
         {/* コンテンツ */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h4 className="truncate text-sm font-normal">{planTitle ?? type}</h4>
+            <h4
+              className={`truncate text-sm ${
+                !isRead ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
+              }`}
+            >
+              {entryTitle ?? type}
+            </h4>
             {!isRead && (
-              <span className="bg-primary h-1.5 w-1.5 shrink-0 rounded-full" aria-label="Unread" />
+              <span className="bg-primary size-2 shrink-0 rounded-full" aria-label="Unread" />
             )}
           </div>
           <span className="text-muted-foreground mt-1 block text-xs">{formatTime(createdAt)}</span>
         </div>
 
-        {/* 削除ボタン */}
+        {/* 削除ボタン（hover時のみ表示） */}
         <Button
           variant="ghost"
           size="sm"
           icon
-          className="shrink-0"
+          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(id);

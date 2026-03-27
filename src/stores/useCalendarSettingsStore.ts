@@ -3,7 +3,6 @@ import { devtools, persist } from 'zustand/middleware';
 
 import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
-import { listenToTimezoneChange } from '@/lib/timezone-listener';
 import { platformStorage } from '@/lib/zustand/storage';
 import type { ChronotypeSettings as ChronotypeSettingsState } from '@/types/chronotype';
 
@@ -37,6 +36,7 @@ export interface CalendarSettings {
 
   // クロノタイプ設定
   chronotype: ChronotypeSettingsState;
+  chronotypeGradient: { light: string | null; dark: string | null };
 
   // Plan/Record表示設定
   planRecordMode: 'plan' | 'record' | 'both';
@@ -58,10 +58,11 @@ interface CalendarSettingsStore extends CalendarSettings {
 }
 
 const defaultSettings: CalendarSettings = {
-  timezone: 'Asia/Tokyo', // デフォルトはJST、useEffectで実際の値に更新
+  timezone:
+    typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
   showUTCOffset: true,
   timeFormat: '24h',
-  dateFormat: 'yyyy/MM/dd', // デフォルトは日本式
+  dateFormat: 'yyyy-MM-dd', // ISO 8601（国際標準）
   defaultView: 'week', // デフォルトは週表示
   weekStartsOn: 1, // 月曜始まり
   defaultDuration: 60,
@@ -69,6 +70,7 @@ const defaultSettings: CalendarSettings = {
   showWeekNumbers: false,
   showWeekends: true, // デフォルトは週末も表示
   chronotype: { ...DEFAULT_CHRONOTYPE_SETTINGS },
+  chronotypeGradient: { light: null, dark: null },
   planRecordMode: 'both',
   sleepSchedule: {
     enabled: true,
@@ -82,20 +84,7 @@ const defaultSettings: CalendarSettings = {
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(
     persist(
-      (set, get) => {
-        // タイムゾーン変更リスナーをセットアップ
-        if (typeof window !== 'undefined') {
-          listenToTimezoneChange((newTimezone) => {
-            const currentState = get();
-            if (currentState.timezone !== newTimezone) {
-              set({ ...currentState, timezone: newTimezone });
-            }
-          });
-
-          // クリーンアップ関数は保存されない（Zustandの制約）
-          // 必要に応じて手動でクリーンアップ
-        }
-
+      (set) => {
         return {
           ...defaultSettings,
 

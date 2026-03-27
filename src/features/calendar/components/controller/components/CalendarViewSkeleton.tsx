@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  */
 export function CalendarViewSkeleton() {
   return (
-    <div className="bg-background relative flex h-full w-full flex-1 flex-col overflow-hidden">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden">
       {/* 時間グリッド領域（24時間分のスロット） */}
       <div className="flex flex-1 overflow-hidden">
         {/* 時間ラベル列 */}

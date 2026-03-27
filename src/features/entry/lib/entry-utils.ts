@@ -3,6 +3,9 @@
  * Helper functions for router operations
  */
 
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
+
+import { tzIsSameDay } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 
 /**
@@ -22,16 +25,20 @@ export function removeUndefinedFields<T extends Record<string, unknown>>(obj: T)
  * Normalize date-time consistency for entries
  *
  * Rules:
- * 1. Same-day entries: start_time and end_time must have the same UTC date portion
- * 2. Midnight crossing (end_time on next day): cap end_time at 23:59:59 of start_time's date
+ * 1. Same-day entries: start_time and end_time must be on the same day in user TZ
+ * 2. Midnight crossing (end_time on next day in user TZ): cap end_time at 23:59:59 of start_time's date
  * 3. If end_time is before start_time after normalization, set end_time = start_time
  *
+ * @param timezone - ユーザーのタイムゾーン（デフォルト: 'UTC'）
  * @returns 'capped' if end_time was capped at 23:59:59 due to midnight crossing, undefined otherwise
  */
-export function normalizeDateTimeConsistency(data: {
-  start_time?: string | null;
-  end_time?: string | null;
-}): 'capped' | undefined {
+export function normalizeDateTimeConsistency(
+  data: {
+    start_time?: string | null;
+    end_time?: string | null;
+  },
+  timezone = 'UTC',
+): 'capped' | undefined {
   // Only process if both start_time and end_time exist
   if (!data.start_time || !data.end_time) {
     return undefined;
@@ -40,19 +47,12 @@ export function normalizeDateTimeConsistency(data: {
   const startDate = new Date(data.start_time);
   const endDate = new Date(data.end_time);
 
-  // Get date parts (UTC — server/SSR環境でもブラウザと同じ結果を保証)
-  const startYear = startDate.getUTCFullYear();
-  const startMonth = startDate.getUTCMonth();
-  const startDay = startDate.getUTCDate();
-
-  const endYear = endDate.getUTCFullYear();
-  const endMonth = endDate.getUTCMonth();
-  const endDay = endDate.getUTCDate();
-
-  // Consistency check: skip if already consistent
-  const datesMatch = startYear === endYear && startMonth === endMonth && startDay === endDay;
   const endAfterStart = endDate.getTime() >= startDate.getTime();
 
+  // ユーザーTZで同日かどうかを判定
+  const datesMatch = tzIsSameDay(startDate, endDate, timezone);
+
+  // Consistency check: skip if already consistent
   if (datesMatch && endAfterStart) {
     return undefined;
   }
@@ -61,30 +61,29 @@ export function normalizeDateTimeConsistency(data: {
 
   let result: 'capped' | undefined;
 
-  // 1. Midnight crossing: end_time is on a different (later) date
+  // 1. Midnight crossing: end_time is on a different (later) date in user TZ
   //    Cap at 23:59:59.999 of start_time's date instead of creating a zero-duration block
   if (!datesMatch && endAfterStart) {
-    const cappedEnd = new Date(Date.UTC(startYear, startMonth, startDay, 23, 59, 59, 999));
+    const startDateStr = formatInTimeZone(startDate, timezone, 'yyyy-MM-dd');
+    const cappedEnd = fromZonedTime(new Date(`${startDateStr}T23:59:59.999`), timezone);
     data.end_time = cappedEnd.toISOString();
     result = 'capped';
     logger.debug('[normalizeDateTimeConsistency] Midnight crossing - capped end_time to 23:59:59');
     return result;
   }
 
-  // 2. Align end_time's date with start_time (preserve time) for other mismatches
+  // 2. ユーザーTZで日付が異なる（後退している）場合: end_time の日付を start_time の日付に合わせる
   if (!datesMatch) {
-    const newEndDate = new Date(endDate);
-    newEndDate.setUTCFullYear(startYear);
-    newEndDate.setUTCMonth(startMonth);
-    newEndDate.setUTCDate(startDay);
+    const startDateStr = formatInTimeZone(startDate, timezone, 'yyyy-MM-dd');
+    const endTimeStr = formatInTimeZone(endDate, timezone, 'HH:mm:ss.SSS');
+    const newEndDate = fromZonedTime(new Date(`${startDateStr}T${endTimeStr}`), timezone);
     data.end_time = newEndDate.toISOString();
   }
 
   // 3. If end_time is before start_time, set to same time as start_time
   const finalEndDate = new Date(data.end_time);
   if (finalEndDate.getTime() < startDate.getTime()) {
-    const fixedEndDate = new Date(startDate);
-    data.end_time = fixedEndDate.toISOString();
+    data.end_time = startDate.toISOString();
   }
 
   return result;

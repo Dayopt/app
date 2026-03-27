@@ -18,9 +18,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../../types/calendar.types';
@@ -254,7 +254,7 @@ export function ViewSwitcher({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => useSettingsStore.getState().open('display')}>
+            <DropdownMenuItem onClick={() => useShellStore.getState().openSettings('display')}>
               {t('calendar.views.generalSettings')}
             </DropdownMenuItem>
           </DropdownMenuSubContent>

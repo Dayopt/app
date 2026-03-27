@@ -9,19 +9,21 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
-import { ChronotypeBackground } from '@/features/chronotype';
+import { getChronotypeProfile } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';
+import { CurrentTimeLine } from '../grid/CurrentTimeLine';
+import { NowBadge } from '../grid/CurrentTimeLine/NowBadge';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
+import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
 import { useSleepHoursLayout } from '../hooks/useSleepHoursLayout';
-
-import { TIME_COLUMN_WIDTH } from '../constants/grid.constants';
 import { TimezoneOffset } from './TimezoneOffset';
 
 /** ScrollableCalendarLayout コンポーネントのプロパティ */
@@ -127,10 +129,20 @@ export const ScrollableCalendarLayout = ({
   });
 
   // 現在時刻線ロジック（フック利用）
-  const { currentTime, currentTimePosition, currentTimeLineColor } = useCurrentTimeLine({
+  const { currentTime, currentTimePosition } = useCurrentTimeLine({
     hourHeight: HOUR_HEIGHT,
     showCurrentTime,
   });
+
+  // Chronotype gradient（hook 内で DB フォールバック + クライアント生成）
+  const gradientCss = useChronotypeGradient();
+
+  // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
+  const chronotype = useCalendarSettingsStore((s) => s.chronotype);
+  const chronotypeZones = useMemo(() => {
+    if (!chronotype.enabled) return undefined;
+    return getChronotypeProfile(chronotype.type, chronotype.customZones).productivityZones;
+  }, [chronotype]);
 
   // 現在時刻のフォーマット（HH:mm）
   const formattedCurrentTime = currentTime.toLocaleTimeString('ja-JP', {
@@ -184,26 +196,25 @@ export const ScrollableCalendarLayout = ({
         {/* 時間軸列 */}
         {showTimeColumn && (
           <div
-            className="border-border bg-background sticky left-0 z-10 shrink-0 border-r"
+            className="border-border sticky left-0 z-10 shrink-0 border-r"
             style={{ width: timeColumnWidth }}
           >
             <div className="relative h-full overflow-hidden">
-              <ChronotypeBackground startHour={0} endHour={24} hourHeight={HOUR_HEIGHT} />
               <TimeColumn
                 startHour={0}
                 endHour={24}
                 hourHeight={HOUR_HEIGHT}
                 format="24h"
                 className="h-full"
+                zones={chronotypeZones}
               />
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
                 <div
-                  className="pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold text-white"
+                  className="bg-primary pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold text-white"
                   style={{
                     top: `${currentTimePosition}px`,
                     transform: 'translateY(-50%)',
-                    backgroundColor: currentTimeLineColor || 'var(--primary)',
                   }}
                   aria-hidden="true"
                 >
@@ -216,6 +227,15 @@ export const ScrollableCalendarLayout = ({
 
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
+          {/* Chronotype gradient 背景 */}
+          {gradientCss && (
+            <div
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{ backgroundImage: gradientCss }}
+              aria-hidden="true"
+            />
+          )}
+
           {/* メインコンテンツ（flex で横並びを維持） */}
           <div className="relative flex h-full" role={enableKeyboardNavigation ? 'row' : undefined}>
             {children}
@@ -236,59 +256,28 @@ export const ScrollableCalendarLayout = ({
             </div>
           )}
 
-          {/* 現在時刻線 - 全ての列に表示 */}
+          {/* 現在時刻線 + Now Badge */}
           {shouldShowCurrentTimeLine && displayDates && displayDates.length > 0 ? (
             <>
-              {/* 全列に薄い線を表示 */}
-              <div
-                className={cn(
-                  'pointer-events-none absolute z-40 h-px',
-                  !currentTimeLineColor && 'bg-primary/70',
-                )}
-                style={{
-                  top: `${currentTimePosition}px`,
-                  left: 0,
-                  right: 0,
-                  ...(currentTimeLineColor && {
-                    backgroundColor: currentTimeLineColor,
-                    opacity: 0.5,
-                  }),
-                }}
+              <CurrentTimeLine
+                hourHeight={HOUR_HEIGHT}
+                displayDates={displayDates}
+                viewMode={viewMode}
+                showDot={viewMode !== 'day'}
               />
-
-              {/* 今日の列のみ濃い線を上書き */}
-              {hasToday && todayColumnPosition ? (
-                <>
-                  {/* 横線 - 今日の列のみ濃く */}
-                  <div
-                    className={cn(
-                      'pointer-events-none absolute z-40 h-0.5 shadow-sm',
-                      !currentTimeLineColor && 'bg-primary',
-                    )}
-                    style={{
-                      top: `${currentTimePosition}px`,
-                      left: todayColumnPosition.left,
-                      width: todayColumnPosition.width,
-                      ...(currentTimeLineColor && { backgroundColor: currentTimeLineColor }),
-                    }}
-                  />
-
-                  {/* ドット - dayビュー以外で表示 */}
-                  {viewMode !== 'day' && (
-                    <div
-                      className={cn(
-                        'border-background pointer-events-none absolute z-40 h-2 w-2 rounded-full border shadow-md',
-                        !currentTimeLineColor && 'bg-primary',
-                      )}
-                      style={{
-                        top: `${currentTimePosition - 4}px`,
-                        left: todayColumnPosition.left === 0 ? '-4px' : todayColumnPosition.left,
-                        ...(currentTimeLineColor && { backgroundColor: currentTimeLineColor }),
-                      }}
-                    />
-                  )}
-                </>
-              ) : null}
+              {/* Now Badge（deep/ease ゾーン内のみ、今日の列に配置） */}
+              {hasToday && todayColumnPosition && (
+                <div
+                  className="pointer-events-none absolute"
+                  style={{
+                    top: `${currentTimePosition}px`,
+                    left: todayColumnPosition.left,
+                    zIndex: Z_INDEX.CURRENT_TIME,
+                  }}
+                >
+                  <NowBadge currentHour={currentTime.getHours() + currentTime.getMinutes() / 60} />
+                </div>
+              )}
             </>
           ) : null}
         </div>

@@ -2,9 +2,142 @@
   "entry": {
     "untitled": "Untitled",
     "toast": {
+      "created": "\"{title}\" created",
+      "createFailed": "Failed to create: {error}",
+      "updated": "Updated",
+      "timeOverlap": "An entry already exists in this time slot",
+      "updateFailed": "Failed to update",
+      "deleted": "Deleted",
+      "deleteFailed": "Failed to delete: {error}",
+      "bulkUpdated": "{count, plural, one {1 item} other {# items}} updated",
+      "bulkUpdateFailed": "Failed to bulk update: {error}",
+      "bulkDeleted": "{count, plural, one {1 item} other {# items}} deleted",
+      "bulkDeleteFailed": "Failed to bulk delete: {error}",
+      "tagsAdded": "Tags added",
+      "tagsAddFailed": "Failed to add tags: {error}",
+      "statusChanged": "Status changed to {status}",
+      "statusChangedCount": "Status changed for {count, plural, one {1 item} other {# items}}",
+      "statusChangeFailed": "Failed to change status",
+      "archivedCount": "{count, plural, one {1 item} other {# items}} archived",
+      "archiveFailed": "Failed to archive",
+      "deletedCount": "{count, plural, one {1 item} other {# items}} deleted",
       "restored": "Restored",
       "restoreFailed": "Failed to restore",
       "conflict": "This entry was modified elsewhere. Reload to see the latest version."
+    },
+    "sidebar": {
+      "tabs": {
+        "calendar": "Calendar",
+        "list": "List"
+      },
+      "list": {
+        "nav": {
+          "plan": "Entry"
+        }
+      }
+    },
+    "open": "Open",
+    "editDetails": "Edit details",
+    "delete": {
+      "confirmTitle": "Delete this entry?",
+      "confirmTitleWithName": "Delete {name}?",
+      "description": "This action cannot be undone. The entry will be permanently deleted and removed from calendar.",
+      "warningIrreversible": "This action cannot be undone",
+      "afterDeletion": "After deletion",
+      "willBeDeleted": "The entry will be permanently deleted",
+      "willBeRemovedFromCalendar": "It will be removed from calendar",
+      "confirm": "Delete",
+      "deleting": "Deleting..."
+    },
+    "status": {
+      "label": "Status",
+      "backlog": "Backlog",
+      "ready": "Ready",
+      "active": "Active",
+      "wait": "Wait",
+      "closed": "Closed",
+      "cancel": "Cancel"
+    },
+    "inspector": {
+      "addTitle": "Add title",
+      "editDescription": "Edit description",
+      "addDescription": "Add description",
+      "addDescriptionPlaceholder": "Add description...",
+      "create": "Create Entry",
+      "createRecord": "Create Entry",
+      "markComplete": "Mark complete",
+      "markIncomplete": "Mark incomplete",
+      "completeOptions": "Complete options",
+      "completeAndCreate": "Complete + Create Entry",
+      "timeConflict": "Time overlaps",
+      "toast": {
+        "tagsSaveFailed": "Failed to save tags",
+        "timeOverlap": "Time overlaps with another event",
+        "createFailed": "Failed to create entry",
+        "saveFailed": "Failed to save"
+      },
+      "noTitle": "(No title)",
+      "notFound": "Entry not found",
+      "noData": "No data found",
+      "menu": {
+        "duplicate": "Duplicate",
+        "copyId": "Copy ID",
+        "copyLink": "Copy link",
+        "openNewTab": "Open in new tab"
+      },
+      "tags": {
+        "add": "Add tag"
+      },
+      "time": {
+        "date": "Date",
+        "planned": "Planned",
+        "actual": "Actual",
+        "sameAsPlanned": "Not yet",
+        "noPlanned": "Lived, not planned",
+        "duration": "Duration",
+        "diff": "Diff",
+        "fulfillment": "Fulfillment",
+        "fulfillmentLow": "Fulfillment: Low",
+        "fulfillmentMedium": "Fulfillment: Medium",
+        "fulfillmentHigh": "Fulfillment: High",
+        "fulfillmentTooltipLow": "Not great",
+        "fulfillmentTooltipMedium": "Okay",
+        "fulfillmentTooltipHigh": "Fulfilling"
+      },
+      "note": {
+        "label": "Note",
+        "placeholder": "Add a note...",
+        "upcomingPlaceholder": "What do you plan to do?",
+        "pastPlaceholder": "Quick note on what you did..."
+      },
+      "records": {
+        "link": "Link entry",
+        "unlink": "Unlink entry",
+        "search": "Search entries...",
+        "noMatch": "No matching entries",
+        "addNew": "Add work log"
+      },
+      "recordCreate": {
+        "titlePlaceholder": "What did you do?",
+        "titleLabel": "Entry title",
+        "timeOverlap": "Time overlaps with existing entry",
+        "failed": "Failed to create entry",
+        "linkEntry": "Link to entry",
+        "unlinkEntry": "Unlink from entry",
+        "searchEntries": "Search entries...",
+        "noEntries": "No entries found",
+        "fulfillmentTooltip": "Fulfillment: {score}/5 (long press to reset)",
+        "fulfillmentTap": "Fulfillment (tap to add)",
+        "fulfillmentLabel": "Fulfillment: {score}/5",
+        "addNew": "Add new entry"
+      }
+    },
+    "view": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete \"{name}\"?",
+      "deleteConfirmDescription": "This view configuration will be deleted. This action cannot be undone.",
+      "deleteConfirm": "Delete"
     }
   }
 }

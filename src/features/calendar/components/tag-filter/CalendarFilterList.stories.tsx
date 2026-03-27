@@ -3,7 +3,7 @@
  *
  * タグフィルターサイドバー（Googleカレンダーの「マイカレンダー」相当）。
  * tRPC で tags.list / entries.getTagStats をモック。
- * useCalendarFilterStore / useTagCacheStore は setState で初期化。
+ * useCalendarFilterStore は setState で初期化。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';

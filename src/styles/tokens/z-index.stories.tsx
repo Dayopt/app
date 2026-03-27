@@ -108,19 +108,19 @@ function LayerRow({
 // ビジュアルスタック表示
 function VisualStack() {
   const visualLayers = [
-    { name: 'tooltip', color: 'bg-destructive/80', value: 9999 },
-    { name: 'overlay-confirm', color: 'bg-warning/90', value: 1400 },
-    { name: 'overlay-modal', color: 'bg-warning/70', value: 1300 },
-    { name: 'overlay-popover', color: 'bg-warning/50', value: 1200 },
-    { name: 'inspector', color: 'bg-info/80', value: 1100 },
-    { name: 'calendar-drag', color: 'bg-success/80', value: 1000 },
-    { name: 'context-menu', color: 'bg-primary/60', value: 350 },
-    { name: 'toast', color: 'bg-primary/50', value: 300 },
-    { name: 'confirm', color: 'bg-primary/40', value: 250 },
-    { name: 'modal', color: 'bg-primary/30', value: 200 },
-    { name: 'sheet', color: 'bg-primary/25', value: 150 },
-    { name: 'popover', color: 'bg-primary/20', value: 100 },
-    { name: 'dropdown', color: 'bg-primary/15', value: 50 },
+    { name: 'tooltip', color: 'bg-destructive', value: 9999 },
+    { name: 'overlay-confirm', color: 'bg-warning', value: 1400 },
+    { name: 'overlay-modal', color: 'bg-warning opacity-70', value: 1300 },
+    { name: 'overlay-popover', color: 'bg-warning opacity-50', value: 1200 },
+    { name: 'inspector', color: 'bg-info', value: 1100 },
+    { name: 'calendar-drag', color: 'bg-success', value: 1000 },
+    { name: 'context-menu', color: 'bg-primary opacity-80', value: 350 },
+    { name: 'toast', color: 'bg-primary opacity-70', value: 300 },
+    { name: 'confirm', color: 'bg-primary opacity-60', value: 250 },
+    { name: 'modal', color: 'bg-primary opacity-50', value: 200 },
+    { name: 'sheet', color: 'bg-primary opacity-40', value: 150 },
+    { name: 'popover', color: 'bg-primary opacity-30', value: 100 },
+    { name: 'dropdown', color: 'bg-primary opacity-20', value: 50 },
   ];
 
   return (

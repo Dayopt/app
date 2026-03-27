@@ -3,9 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CurrentTimeLine, CurrentTimeLineForColumn } from './CurrentTimeLine';
 
 /**
- * 現在時刻インジケーター線。
- * 日ビュー用（全幅）とカラム用（列内）の2バリアント。
- * 今日の列は濃い線+ドット、他の日は薄い線のみ。
+ * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-primary 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
  */
 const meta = {
   title: 'Features/Calendar/Views/Grid/CurrentTimeLine',
@@ -40,8 +38,6 @@ yesterday.setDate(today.getDate() - 1);
 export const Default: Story = {
   args: {
     hourHeight: 72,
-    timeColumnWidth: 56,
-    containerWidth: 600,
     showDot: true,
   },
   decorators: [
@@ -57,8 +53,6 @@ export const Default: Story = {
 export const WithoutDot: Story = {
   args: {
     hourHeight: 72,
-    timeColumnWidth: 56,
-    containerWidth: 600,
     showDot: false,
   },
   decorators: [
@@ -74,8 +68,6 @@ export const WithoutDot: Story = {
 export const WeekViewWithToday: Story = {
   args: {
     hourHeight: 72,
-    timeColumnWidth: 56,
-    containerWidth: 700,
     showDot: true,
     displayDates: [yesterday, today, tomorrow],
     viewMode: 'week',
@@ -93,8 +85,6 @@ export const WeekViewWithToday: Story = {
 export const WeekViewWithoutToday: Story = {
   args: {
     hourHeight: 72,
-    timeColumnWidth: 56,
-    containerWidth: 700,
     showDot: true,
     displayDates: [yesterday, new Date(yesterday.getTime() - 86400000)],
     viewMode: 'week',
@@ -113,7 +103,7 @@ export const WeekViewWithoutToday: Story = {
 export const ForColumnToday: Story = {
   render: () => (
     <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded border">
-      <CurrentTimeLineForColumn hourHeight={72} showDot={true} isToday={true} />
+      <CurrentTimeLineForColumn hourHeight={72} showDot isToday />
     </div>
   ),
 };
@@ -122,12 +112,7 @@ export const ForColumnToday: Story = {
 export const ForColumnOtherDay: Story = {
   render: () => (
     <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded border">
-      <CurrentTimeLineForColumn
-        hourHeight={72}
-        showDot={false}
-        isToday={false}
-        showOnOtherDays={true}
-      />
+      <CurrentTimeLineForColumn hourHeight={72} showDot={false} isToday={false} showOnOtherDays />
     </div>
   ),
 };
@@ -139,30 +124,19 @@ export const AllPatterns: Story = {
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">日ビュー（全幅・ドット付き）</p>
         <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded border">
-          <CurrentTimeLine
-            hourHeight={72}
-            timeColumnWidth={56}
-            containerWidth={600}
-            showDot={true}
-          />
+          <CurrentTimeLine hourHeight={72} showDot />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">週ビュー（複数日・今日を含む）</p>
         <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded border">
-          <CurrentTimeLine
-            hourHeight={72}
-            timeColumnWidth={56}
-            containerWidth={700}
-            showDot={true}
-            displayDates={[yesterday, today, tomorrow]}
-          />
+          <CurrentTimeLine hourHeight={72} showDot displayDates={[yesterday, today, tomorrow]} />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">カラム用・今日</p>
         <div className="bg-background border-border relative h-20 w-64 overflow-hidden rounded border">
-          <CurrentTimeLineForColumn hourHeight={72} showDot={true} isToday={true} />
+          <CurrentTimeLineForColumn hourHeight={72} showDot isToday />
         </div>
       </div>
       <div className="w-full space-y-2">
@@ -172,7 +146,7 @@ export const AllPatterns: Story = {
             hourHeight={72}
             showDot={false}
             isToday={false}
-            showOnOtherDays={true}
+            showOnOtherDays
           />
         </div>
       </div>

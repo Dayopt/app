@@ -8,7 +8,8 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { NotificationDropdown } from './components/NotificationDropdown';
+export { ActivityContent } from './components/ActivityContent';
+export { ActivityPopover } from './components/ActivityPopover';
 export { NotificationItem } from './components/NotificationItem';
 
 // =============================================================================
@@ -32,12 +33,13 @@ export type { Notification, NotificationEntity, NotificationType } from './types
 // =============================================================================
 export {
   checkBrowserNotificationSupport,
+  filterNotificationsByTab,
   getDateGroupKey,
   groupNotificationsByDate,
   requestNotificationPermission,
   showBrowserNotification,
 } from './utils/notification-helpers';
-export type { DateGroupKey, GroupedNotifications } from './utils/notification-helpers';
+export type { ActivityTab, DateGroupKey, GroupedNotifications } from './utils/notification-helpers';
 
 // =============================================================================
 // Transformers

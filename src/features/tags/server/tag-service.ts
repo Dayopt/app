@@ -270,6 +270,7 @@ export class TagService {
       .from('tags')
       .update(updateData)
       .eq('id', tagId)
+      .eq('user_id', userId)
       .select()
       .single();
 
@@ -432,12 +433,14 @@ export class TagService {
 
       if (!existingParent) {
         const representativeColor = matchingTags[0]?.color ?? 'blue';
+        const representativeIcon = matchingTags[0]?.icon ?? null;
         const { error: createError } = await this.supabase
           .from('tags')
           .insert({
             user_id: userId,
             name: prefix,
             color: representativeColor,
+            icon: representativeIcon,
             is_active: true,
             sort_order: 0,
           })
@@ -504,7 +507,8 @@ export class TagService {
       const { error: reassignError } = await this.supabase
         .from('entry_tags')
         .update({ tag_id: targetTagId })
-        .in('tag_id', tagIds);
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
 
       if (reassignError) {
         throw new TagServiceError(
@@ -517,14 +521,16 @@ export class TagService {
       const { data: entryTagRows } = await this.supabase
         .from('entry_tags')
         .select('entry_id')
-        .in('tag_id', tagIds);
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
 
       const entryIds = (entryTagRows ?? []).map((r) => r.entry_id);
 
       const { error: planTagsError } = await this.supabase
         .from('entry_tags')
         .delete()
-        .in('tag_id', tagIds);
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
 
       if (planTagsError) {
         throw new TagServiceError(
@@ -627,7 +633,8 @@ export class TagService {
       const { error: reassignError } = await this.supabase
         .from('entry_tags')
         .update({ tag_id: targetTagId })
-        .eq('tag_id', tagId);
+        .eq('tag_id', tagId)
+        .eq('user_id', userId);
 
       if (reassignError) {
         throw new TagServiceError(
@@ -641,12 +648,13 @@ export class TagService {
       const { data: entryTagRows } = await this.supabase
         .from('entry_tags')
         .select('entry_id')
-        .eq('tag_id', tagId);
+        .eq('tag_id', tagId)
+        .eq('user_id', userId);
 
       const entryIds = (entryTagRows ?? []).map((r) => r.entry_id);
 
       // entry_tags 削除（FK制約のため先に）
-      await this.supabase.from('entry_tags').delete().eq('tag_id', tagId);
+      await this.supabase.from('entry_tags').delete().eq('tag_id', tagId).eq('user_id', userId);
 
       // 関連エントリも削除
       if (entryIds.length > 0) {
@@ -655,7 +663,11 @@ export class TagService {
     }
 
     // タグ削除
-    const { error } = await this.supabase.from('tags').delete().eq('id', tagId);
+    const { error } = await this.supabase
+      .from('tags')
+      .delete()
+      .eq('id', tagId)
+      .eq('user_id', userId);
 
     if (error) {
       throw new TagServiceError('DELETE_FAILED', `Failed to delete tag: ${error.message}`);

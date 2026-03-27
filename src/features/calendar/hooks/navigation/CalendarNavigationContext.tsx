@@ -16,9 +16,47 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
-import { formatCalendarDateParam } from '../../lib/date-param';
+import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';
+import { isCalendarViewPath } from '../../lib/route-utils';
 import type { CalendarViewType } from '../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../types/calendar.types';
+
+// ── カレンダーページ判定・初期値計算（旧 useCalendarProviderProps） ──
+
+function isValidViewType(view: string): view is CalendarViewType {
+  if (['day', 'week'].includes(view)) return true;
+  const match = view.match(/^(\d+)day$/);
+  if (match) {
+    const n = parseInt(match[1]!);
+    return n >= 2 && n <= 9;
+  }
+  return false;
+}
+
+/** pathname と URL searchParams からカレンダーページ判定と初期値を計算 */
+function resolveCalendarProps(pathname: string) {
+  const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
+  const isCalendar = isCalendarViewPath(pathWithoutLocale);
+
+  if (!isCalendar) {
+    return {
+      isCalendarPage: false as const,
+      initialDate: new Date(),
+      initialView: 'week' as CalendarViewType,
+    };
+  }
+
+  const pathSegments = pathname.split('/');
+  const lastSegment = pathSegments[pathSegments.length - 1] ?? '';
+  const view: CalendarViewType = isValidViewType(lastSegment) ? lastSegment : 'day';
+
+  // SSR安全: window.location.search は client-only なので typeof チェック
+  const dateParam =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('date') : null;
+  const initialDate = parseCalendarDateParam(dateParam) ?? new Date();
+
+  return { isCalendarPage: true as const, initialDate, initialView: view };
+}
 
 interface CalendarNavigationContextValue {
   currentDate: Date;
@@ -32,19 +70,22 @@ interface CalendarNavigationContextValue {
 
 const CalendarNavigationContext = createContext<CalendarNavigationContextValue | null>(null);
 
-/** カレンダーナビゲーション状態を提供するコンテキストプロバイダー */
-export const CalendarNavigationProvider = ({
-  children,
-  initialDate = new Date(),
-  initialView = 'week' as CalendarViewType,
-  isCalendarPage = false,
-}: {
-  children: React.ReactNode;
-  initialDate?: Date;
-  initialView?: CalendarViewType;
-  isCalendarPage?: boolean;
-}) => {
-  const pathname = usePathname();
+/**
+ * カレンダーナビゲーション状態を提供するコンテキストプロバイダー
+ *
+ * pathname から isCalendarPage / initialDate / initialView を自動計算する。
+ * 外部から useSearchParams() を渡す必要がないため、
+ * 親コンポーネントの Suspense 境界を不要にする。
+ */
+export const CalendarNavigationProvider = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname() ?? '/';
+
+  // pathname + window.location.search からカレンダーページ判定と初期値を計算
+  const { isCalendarPage, initialDate, initialView } = useMemo(
+    () => resolveCalendarProps(pathname),
+    [pathname],
+  );
+
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [viewType, setViewType] = useState<CalendarViewType>(initialView);
 
@@ -69,11 +110,11 @@ export const CalendarNavigationProvider = ({
   React.useEffect(() => {
     currentDateRef.current = currentDate;
     // グローバルストアに同期（Palette等がカレンダー表示日を参照するため）
-    useCalendarNavigationStore.getState().setViewedDate(currentDate);
+    useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
   }, [currentDate]);
   React.useEffect(() => {
     viewTypeRef.current = viewType;
-    useCalendarNavigationStore.getState().setViewType(viewType);
+    useCalendarNavigationStore.getState()._syncViewType(viewType);
   }, [viewType]);
   React.useEffect(() => {
     localeRef.current = locale;

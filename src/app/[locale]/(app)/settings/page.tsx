@@ -27,9 +27,8 @@ import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { useLogout } from '@/shell/hooks/useLogout';
-import { useContactStore } from '@/shell/stores/useContactStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useSettingsStore } from '@/stores/useSettingsStore';
 
 /**
  * 設定ページのルート
@@ -45,8 +44,8 @@ export default function SettingsPage() {
   const locale = useLocale();
   const user = useAuthStore((s) => s.user);
   const { logout, isLoggingOut } = useLogout();
-  const openContact = useContactStore((s) => s.open);
-  const openSettings = useSettingsStore((s) => s.open);
+  const openContact = useShellStore((s) => s.openSheet);
+  const openSettings = useShellStore((s) => s.openSettings);
   const [legalOpen, setLegalOpen] = useState(false);
 
   const displayName = getDisplayName(user, t('navigation.navUser.account'));
@@ -88,7 +87,7 @@ export default function SettingsPage() {
       labelKey: 'settings.accountPage.contact',
       href: '#',
       icon: MessageSquare,
-      onPress: () => openContact(),
+      onPress: () => openContact({ type: 'contact' }),
     },
   ];
 
@@ -228,7 +227,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ログアウト */}
-      <div className="border-border border-t px-2 pt-1 pb-16">
+      <div className="border-border border-t px-2 pt-1 pb-24">
         <button
           type="button"
           onClick={logout}

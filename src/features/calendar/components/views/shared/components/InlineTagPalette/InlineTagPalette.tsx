@@ -111,7 +111,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   // 新規タグ作成 → エントリ作成
   const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null) => {
+    async (name: string, color?: string | null, icon?: string | null) => {
       if (!pendingSelection || isCreating) return;
 
       setIsCreating(true);
@@ -119,6 +119,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         const newTag = await createTagMutation.mutateAsync({
           name,
           color: resolveTagColor(color),
+          icon: icon ?? undefined,
         });
         // mutateAsync resolved → handleCreate で続行
         handleCreate(newTag.id, name);
@@ -182,11 +183,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 flex rounded-r-lg duration-100 motion-reduce:animate-none"
+          className="animate-in fade-in-0 zoom-in-95 absolute right-0 left-0 flex rounded-r-lg transition-colors duration-150 motion-reduce:animate-none"
           style={{
             top: selectionTop,
             height: selectionHeight,
-            transition: 'background-color 150ms ease',
           }}
         >
           {/* 左アクセントストリップ */}

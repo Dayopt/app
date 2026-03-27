@@ -256,7 +256,7 @@ function AvatarUpload({
               avatarVariants({ size }),
               isDragActive
                 ? 'border-primary bg-state-active'
-                : 'border-border bg-muted hover:border-primary/50 hover:bg-muted/80',
+                : 'border-border bg-muted hover:border-primary hover:bg-state-hover',
             )}
           >
             {isDragActive ? (

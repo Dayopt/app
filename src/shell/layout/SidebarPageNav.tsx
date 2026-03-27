@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
+import { useStatsFilterStore } from '@/features/stats';
 import { PageNav } from '@/shell/components/sidebar';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
@@ -29,6 +30,8 @@ export function SidebarPageNav() {
   // clientPage を直接読むことで、pushState 後の即座のUI更新を実現
   // usePathname() は Next.js のソフトナビゲーション完了まで遅延するため
   const clientPage = useClientRouterStore((s) => s.clientPage);
+  const statsGranularity = useStatsFilterStore((s) => s.granularity);
+  const statsDate = useStatsFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
 
@@ -53,9 +56,13 @@ export function SidebarPageNav() {
   const handleStatsClick = useCallback(() => {
     if (activePage === 'stats') return;
 
-    window.history.pushState(null, '', buildStatsPath(locale));
+    window.history.pushState(
+      null,
+      '',
+      buildStatsPath(locale, 'review', { granularity: statsGranularity, date: statsDate }),
+    );
     switchToPage('stats');
-  }, [activePage, locale, switchToPage]);
+  }, [activePage, locale, statsGranularity, statsDate, switchToPage]);
 
   return (
     <PageNav

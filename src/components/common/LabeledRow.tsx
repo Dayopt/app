@@ -39,7 +39,7 @@ export function LabeledRow({
     <div
       className={cn(
         'flex min-h-11 items-center gap-4 py-3',
-        isNavigate && 'active:bg-muted/50 cursor-pointer',
+        isNavigate && 'active:bg-state-pressed cursor-pointer',
         isAction && 'cursor-pointer',
       )}
     >

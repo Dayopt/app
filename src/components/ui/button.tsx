@@ -53,7 +53,7 @@ const buttonVariants = cva(
     'transition-colors',
     // フォーカス状態（アクセシビリティ）
     'outline-none',
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
     // 無効状態（aria-disabled推奨、disabled属性も対応）
     'disabled:pointer-events-none disabled:opacity-50',
     'aria-disabled:pointer-events-none aria-disabled:opacity-50',
@@ -65,7 +65,7 @@ const buttonVariants = cva(
       variant: {
         // 主要CTA - 最も強調されるボタン
         primary:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-hover',
+          'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-hover',
         // 副次アクション - ボーダー付きの控えめなボタン
         outline: [
           'border border-border text-foreground',
@@ -75,10 +75,9 @@ const buttonVariants = cva(
         ghost: 'text-foreground hover:bg-state-hover active:bg-state-hover',
         // 破壊的アクション - 削除、解除など
         destructive: [
-          'bg-destructive text-destructive-foreground shadow-sm',
+          'bg-destructive text-destructive-foreground',
           'hover:bg-destructive-hover active:bg-destructive-hover',
           'focus-visible:outline-destructive',
-          'dark:bg-destructive/60',
         ].join(' '),
       },
       size: {

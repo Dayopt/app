@@ -24,7 +24,7 @@ interface AppHeaderProps {
  */
 export function AppHeader({ leftSlot, children, rightSlot }: AppHeaderProps) {
   return (
-    <header className="bg-background h-12 px-4 py-2">
+    <header className="h-12 px-4 py-2">
       <div className="grid h-8 grid-cols-[auto_1fr_auto] items-center">
         {/* 左側 */}
         <div className="flex items-center">{leftSlot}</div>

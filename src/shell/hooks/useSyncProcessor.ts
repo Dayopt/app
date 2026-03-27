@@ -18,21 +18,22 @@ import type { SyncQueueEntry } from '@/lib/pwa/sync-queue';
 async function executeMutation(entry: SyncQueueEntry): Promise<void> {
   const parts = entry.procedure.split('.');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 動的パス解決のため不可避
-  let target: any = vanillaTrpc;
+  let target: Record<string, unknown> = vanillaTrpc as Record<string, unknown>;
 
   for (const part of parts) {
-    target = target[part];
-    if (!target) {
+    const next = target[part];
+    if (next === undefined || next === null || typeof next !== 'object') {
       throw new Error(`Unknown tRPC procedure: ${entry.procedure}`);
     }
+    target = next as Record<string, unknown>;
   }
 
-  if (typeof target.mutate !== 'function') {
+  const mutate = target['mutate'];
+  if (typeof mutate !== 'function') {
     throw new Error(`${entry.procedure} is not a mutation`);
   }
 
-  await target.mutate(entry.input);
+  await (mutate as (input: unknown) => Promise<unknown>)(entry.input);
 }
 
 /**

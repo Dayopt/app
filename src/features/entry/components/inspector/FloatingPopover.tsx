@@ -146,7 +146,7 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
         style={style}
         className={cn(
           'bg-card text-card-foreground z-inspector',
-          'surface-raised-heavy rounded-2xl',
+          'rounded-2xl shadow-lg',
           'flex max-h-[min(40rem,calc(100dvh-2rem))] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
           'animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none',
         )}

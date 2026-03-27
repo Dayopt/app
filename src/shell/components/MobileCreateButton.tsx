@@ -4,11 +4,11 @@ import { SquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
-import { useMobileCreateSheetStore } from '@/shell/stores/useMobileCreateSheetStore';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 /** モバイル用作成シート開閉ボタン（md:hidden） */
 export function MobileCreateButton() {
-  const setOpen = useMobileCreateSheetStore((s) => s.setOpen);
+  const openSheet = useShellStore((s) => s.openSheet);
   const t = useTranslations();
 
   return (
@@ -16,7 +16,7 @@ export function MobileCreateButton() {
       variant="ghost"
       icon
       className="size-8 md:hidden"
-      onClick={() => setOpen(true)}
+      onClick={() => openSheet({ type: 'mobileCreate' })}
       aria-label={t('navigation.sidebar.quickCreate')}
     >
       <SquarePlus className="size-5" />

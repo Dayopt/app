@@ -1,7 +1,7 @@
 /**
  * キュレート済みLucideアイコンリスト
  *
- * タグ用に厳選した約60個のアイコン。
+ * タグ用に厳選した48個のアイコン（8列×6行）。
  * lucide-react の `icons` オブジェクトのキーは PascalCase なので、
  * kebab-case → PascalCase 変換ユーティリティも提供。
  */
@@ -21,67 +21,66 @@ export const DEFAULT_TAG_ICON = 'tag';
 export const CURATED_ICONS: readonly string[] = [
   // デフォルト
   'tag',
-  // 仕事・生産性
+  // 仕事
   'briefcase',
   'laptop',
   'code',
   'file-text',
-  'mail',
-  'phone',
-  'video',
-  'monitor',
-  'calculator',
   'presentation',
+  // 会議・通話
+  'users',
+  'video',
+  'phone',
+  'mic',
+  // メール・事務
+  'mail',
+  'clipboard-list',
+  'calculator',
   // 学習
   'book-open',
   'graduation-cap',
-  'pen-tool',
   'brain',
-  'lightbulb',
-  'library',
   'notebook-pen',
-  'languages',
-  // 健康・運動
-  'heart',
+  // 運動
   'dumbbell',
   'bike',
   'footprints',
-  'apple',
-  'moon',
-  'sun',
-  'bed',
-  'activity',
-  // 生活・移動
-  'home',
-  'shopping-cart',
+  // 食事
+  'utensils',
+  'coffee',
+  // 移動
   'car',
   'train',
   'plane',
   'map-pin',
-  'clock',
+  // 生活
+  'home',
+  'shopping-cart',
   'wallet',
-  // 趣味・娯楽
+  // 休息
+  'moon',
+  'bed',
+  'sun',
+  'bath',
+  // 趣味
   'music',
-  'gamepad-2',
   'camera',
   'palette',
-  'film',
+  'gamepad-2',
   'headphones',
   'mountain',
-  // 食事
-  'utensils',
-  'coffee',
-  'wine',
-  'pizza',
-  'cookie',
-  'cup-soda',
-  // コミュニケーション
-  'users',
-  'message-circle',
+  // 社交
   'smile',
   'gift',
   'party-popper',
-  'phone-call',
+  'wine',
+  // 健康
+  'heart',
+  'apple',
+  // クリエイティブ
+  'lightbulb',
+  'pencil',
+  'sparkles',
 ] as const;
 
 /** キュレートアイコンかどうかチェック */

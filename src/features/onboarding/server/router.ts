@@ -12,7 +12,7 @@ import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
-import { PRESET_TAGS, generateSamplePlans } from '../lib/sample-plans';
+import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
 import type { PresetChronotypeType } from '@/types/chronotype';
 
@@ -73,6 +73,7 @@ export const onboardingRouter = createTRPCRouter({
       z.object({
         fullName: z.string().min(1).max(100),
         chronotypeType: chronotypeTypeSchema.optional(),
+        locale: z.enum(['en', 'ja']).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -93,18 +94,20 @@ export const onboardingRouter = createTRPCRouter({
         });
       }
 
-      // クロノタイプ設定（指定がある場合）
-      if (input.chronotypeType) {
+      // クロノタイプ設定 or ロケール設定（指定がある場合）
+      if (input.chronotypeType || input.locale) {
+        const settingsUpsert: Record<string, unknown> = { user_id: ctx.userId };
+        if (input.chronotypeType) {
+          settingsUpsert.chronotype_type = input.chronotypeType;
+          settingsUpsert.chronotype_enabled = true;
+        }
+        if (input.locale) {
+          settingsUpsert.preferred_locale = input.locale;
+        }
+
         const { error: settingsError } = await ctx.supabase
           .from('user_settings')
-          .upsert(
-            {
-              user_id: ctx.userId,
-              chronotype_type: input.chronotypeType,
-              chronotype_enabled: true,
-            },
-            { onConflict: 'user_id' },
-          )
+          .upsert(settingsUpsert as never, { onConflict: 'user_id' })
           .select()
           .single();
 
@@ -116,8 +119,8 @@ export const onboardingRouter = createTRPCRouter({
 
       // サンプルプラン生成（非ブロッキング）
       const chronotype = input.chronotypeType as PresetChronotypeType | undefined;
-      createSamplePlansForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
-        logger.error('Failed to create sample plans:', err);
+      createSampleEntriesForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
+        logger.error('Failed to create sample entries:', err);
       });
 
       return { success: true };
@@ -157,13 +160,13 @@ export const onboardingRouter = createTRPCRouter({
  * feature boundary制約のため entry/tag service は使わず直接挿入する。
  * 失敗してもオンボーディング完了を妨げない（logger.error のみ）。
  */
-async function createSamplePlansForUser(
+async function createSampleEntriesForUser(
   supabase: SupabaseClient<Database>,
   userId: string,
   chronotypeType: PresetChronotypeType | null,
 ): Promise<void> {
   const today = new Date();
-  const plans = generateSamplePlans(chronotypeType, today);
+  const plans = generateSampleEntries(chronotypeType, today);
 
   // ── Step 1: プリセットタグ作成 ──
   const tagEntries = Object.entries(PRESET_TAGS) as [

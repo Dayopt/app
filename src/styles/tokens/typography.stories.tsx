@@ -277,7 +277,7 @@ export const QuickReference: Story = {
             <li className="flex items-start gap-2">
               <span className="text-destructive">✗</span>
               <span>
-                任意値 <code className="text-xs">text-[17px]</code>
+                任意値 <code className="text-xs">{`text-[${'17px'}]`}</code>
               </span>
             </li>
           </ul>
@@ -313,15 +313,15 @@ export const DosDonts: Story = {
               <h3 className="text-destructive font-bold">Don&apos;t</h3>
               <div className="space-y-2">
                 <p className="font-bold" style={{ fontSize: '23px' }}>
-                  text-[23px]（任意値）
+                  {`text-[${'23px'}]`}（任意値）
                 </p>
-                <p style={{ fontSize: '15px' }}>text-[15px]（任意値）</p>
+                <p style={{ fontSize: '15px' }}>{`text-[${'15px'}]`}（任意値）</p>
                 <p className="text-muted-foreground" style={{ fontSize: '11px' }}>
-                  text-[11px]（任意値）
+                  {`text-[${'11px'}]`}（任意値）
                 </p>
               </div>
               <code className="text-muted-foreground block text-xs">
-                text-[23px]（任意値は禁止）
+                {`text-[${'23px'}]`}（任意値は禁止）
               </code>
             </div>
           </div>
@@ -400,7 +400,9 @@ export const DosDonts: Story = {
               <h3 className="text-destructive font-bold">Don&apos;t</h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground">text-gray-600（直接色指定）</p>
-                <p className="text-foreground/50">text-foreground/50（透明度）</p>
+                <p className="text-muted-foreground">
+                  text-muted-foreground（透明度の代わりにセマンティックトークン）
+                </p>
               </div>
             </div>
           </div>

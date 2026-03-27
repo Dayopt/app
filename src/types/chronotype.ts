@@ -5,9 +5,7 @@ export type ChronotypeType = 'lion' | 'bear' | 'wolf' | 'dolphin' | 'custom';
 
 export type PresetChronotypeType = Exclude<ChronotypeType, 'custom'>;
 
-export type ProductivityLevel = 'warmup' | 'peak' | 'dip' | 'recovery' | 'winddown';
-
-export type ChronotypeDisplayMode = 'border' | 'background' | 'both';
+export type ProductivityLevel = 'warmup' | 'deep' | 'ease' | 'recovery' | 'winddown';
 
 export interface ProductivityZone {
   startHour: number;
@@ -27,6 +25,4 @@ export interface ChronotypeSettings {
   enabled: boolean;
   type: ChronotypeType;
   customZones?: ProductivityZone[];
-  displayMode: ChronotypeDisplayMode;
-  opacity: number;
 }

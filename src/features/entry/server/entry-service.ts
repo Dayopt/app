@@ -1,7 +1,7 @@
 /**
  * Entries Service
  *
- * plans + records を統合した entries テーブルのビジネスロジック
+ * entries テーブルのビジネスロジック
  */
 
 import { logger } from '@/lib/logger';
@@ -150,14 +150,20 @@ export class EntryService {
   }): Promise<string[]> {
     const { userId, startTime, endTime, excludeEntryId } = options;
 
+    // 半開区間 [start, end) の重複判定
+    // 境界精度の問題を回避するため、1秒バッファを設けて lte/gte で比較
+    // （最小エントリ幅15分に対して1秒は十分安全なマージン）
+    const endTimeExclusive = new Date(new Date(endTime).getTime() - 1000).toISOString();
+    const startTimeExclusive = new Date(new Date(startTime).getTime() + 1000).toISOString();
+
     let query = this.supabase
       .from('entries')
       .select('id')
       .eq('user_id', userId)
       .not('start_time', 'is', null)
       .not('end_time', 'is', null)
-      .lt('start_time', endTime)
-      .gt('end_time', startTime);
+      .lte('start_time', endTimeExclusive)
+      .gte('end_time', startTimeExclusive);
 
     if (excludeEntryId) {
       query = query.neq('id', excludeEntryId);
@@ -177,10 +183,10 @@ export class EntryService {
    * エントリを作成
    */
   async create(options: CreateEntryOptions): Promise<EntryRow> {
-    const { userId, input, preventOverlappingEntries } = options;
+    const { userId, input, preventOverlappingEntries, timezone } = options;
 
-    // 日時の正規化
-    const normalizedInput = this.normalizeDateTimeFields(input);
+    // 日時の正規化（ユーザーTZで日跨ぎを判定）
+    const normalizedInput = this.normalizeDateTimeFields(input, timezone);
 
     const origin = normalizedInput.origin ?? 'planned';
 
@@ -226,7 +232,8 @@ export class EntryService {
    * エントリを更新
    */
   async update(options: UpdateEntryOptions): Promise<UpdateEntryResult> {
-    const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt } = options;
+    const { userId, entryId, input, preventOverlappingEntries, expectedUpdatedAt, timezone } =
+      options;
 
     // 既存データを取得
     const oldData = await this.getExistingEntry(entryId, userId);
@@ -244,8 +251,8 @@ export class EntryService {
       }
     }
 
-    // 日時の正規化
-    const normalizedInput = this.normalizeDateTimeFieldsForUpdate(input, oldData);
+    // 日時の正規化（ユーザーTZで日跨ぎを判定）
+    const normalizedInput = this.normalizeDateTimeFieldsForUpdate(input, oldData, timezone);
 
     // 重複チェック
     const finalStartTime =
@@ -377,7 +384,10 @@ export class EntryService {
     return { ...entryData, tagId };
   }
 
-  private normalizeDateTimeFields<T extends Record<string, unknown>>(input: T): T {
+  private normalizeDateTimeFields<T extends Record<string, unknown>>(
+    input: T,
+    timezone?: string,
+  ): T {
     const dateTimeData: {
       start_time?: string | null;
       end_time?: string | null;
@@ -390,7 +400,7 @@ export class EntryService {
     if (typedInput.start_time !== undefined) dateTimeData.start_time = typedInput.start_time;
     if (typedInput.end_time !== undefined) dateTimeData.end_time = typedInput.end_time;
 
-    normalizeDateTimeConsistency(dateTimeData);
+    normalizeDateTimeConsistency(dateTimeData, timezone);
 
     return {
       ...input,
@@ -401,6 +411,7 @@ export class EntryService {
   private normalizeDateTimeFieldsForUpdate<T extends Record<string, unknown>>(
     input: T,
     existingData: EntryRow | null,
+    timezone?: string,
   ): T {
     const typedInput = input as {
       start_time?: string | null;
@@ -423,7 +434,7 @@ export class EntryService {
     const endTimeValue = typedInput.end_time ?? existingData.end_time;
     if (endTimeValue !== undefined) mergedData.end_time = endTimeValue;
 
-    normalizeDateTimeConsistency(mergedData);
+    normalizeDateTimeConsistency(mergedData, timezone);
 
     const result = { ...input } as Record<string, unknown>;
 

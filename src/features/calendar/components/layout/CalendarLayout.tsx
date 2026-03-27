@@ -115,7 +115,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
           : '';
 
     return (
-      <div className={cn('calendar-layout bg-background flex h-full flex-col', className)}>
+      <div className={cn('calendar-layout flex h-full flex-col', className)}>
         {/* スクリーンリーダー用のページタイトル */}
         <h1 className="sr-only">{t('title')}</h1>
 

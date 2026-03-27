@@ -3,11 +3,39 @@ import { isThisMonth, isThisWeek, isToday, isYesterday } from 'date-fns';
 import { checkBrowserNotificationSupport } from '@/lib/browser-notification';
 import { logger } from '@/lib/logger';
 
+import type { NotificationType } from '../schemas';
+
 // Browser Notification API ラッパーを re-export
 export {
   checkBrowserNotificationSupport,
   requestNotificationPermission,
 } from '@/lib/browser-notification';
+
+// =============================================================================
+// Activity Tab フィルタリング
+// =============================================================================
+
+/** Activity Panel のタブ種別 */
+export type ActivityTab = 'all' | 'reminders' | 'ai';
+
+/** タブ → 通知タイプのマッピング（null = フィルタなし） */
+export const ACTIVITY_TAB_TYPE_MAP: Record<ActivityTab, NotificationType[] | null> = {
+  all: null,
+  reminders: ['reminder', 'overdue'],
+  ai: ['ai_insight', 'weekly_report', 'burnout_warning', 'energy_insight'],
+} as const;
+
+/**
+ * 通知をタブでフィルタリング
+ */
+export function filterNotificationsByTab<T extends { type: string }>(
+  notifications: T[],
+  tab: ActivityTab,
+): T[] {
+  const types = ACTIVITY_TAB_TYPE_MAP[tab];
+  if (!types) return notifications;
+  return notifications.filter((n) => types.includes(n.type as NotificationType));
+}
 
 /** 通知の日付グループキー */
 export type DateGroupKey = 'today' | 'yesterday' | 'thisWeek' | 'thisMonth' | 'older';
@@ -21,23 +49,30 @@ export interface GroupedNotifications<T> {
 
 /**
  * 日付からグループキーを取得
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
-export function getDateGroupKey(date: Date | string): DateGroupKey {
+export function getDateGroupKey(date: Date | string, weekStartsOn: 0 | 1 | 6 = 1): DateGroupKey {
   const d = typeof date === 'string' ? new Date(date) : date;
 
   if (isToday(d)) return 'today';
   if (isYesterday(d)) return 'yesterday';
-  if (isThisWeek(d, { weekStartsOn: 1 })) return 'thisWeek';
+  if (isThisWeek(d, { weekStartsOn })) return 'thisWeek';
   if (isThisMonth(d)) return 'thisMonth';
   return 'older';
 }
 
 /**
  * 通知を日付グループでグループ化
+ *
+ * weekStartsOn はユーザーの週開始曜日設定（0=日, 1=月, 6=土）。
+ * 省略時はデフォルト 1（月曜始まり）。
  */
 export function groupNotificationsByDate<T extends { created_at: string }>(
   notifications: T[],
   t: (key: string) => string,
+  weekStartsOn: 0 | 1 | 6 = 1,
 ): GroupedNotifications<T>[] {
   const groups: Record<DateGroupKey, T[]> = {
     today: [],
@@ -48,7 +83,7 @@ export function groupNotificationsByDate<T extends { created_at: string }>(
   };
 
   for (const notification of notifications) {
-    const key = getDateGroupKey(notification.created_at);
+    const key = getDateGroupKey(notification.created_at, weekStartsOn);
     groups[key].push(notification);
   }
 

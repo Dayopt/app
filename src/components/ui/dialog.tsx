@@ -31,7 +31,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     data-slot="dialog-overlay"
     className={cn(
-      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-overlay-modal fixed inset-0 motion-reduce:animate-none',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-overlay z-overlay-modal fixed inset-0 backdrop-blur-md data-[state=closed]:pointer-events-none motion-reduce:animate-none',
       className,
     )}
     {...props}
@@ -53,7 +53,7 @@ const DialogContent = ({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'bg-card surface-raised-heavy text-card-foreground z-overlay-modal fixed top-[50%] left-[50%] grid translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl p-6 duration-200',
+          'bg-card text-card-foreground z-overlay-modal fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl p-6 shadow-lg duration-200',
           // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限
           // max-wはclassNameで上書き可能（Storybook対応のためmin-w追加）
           !className?.includes('max-w-')

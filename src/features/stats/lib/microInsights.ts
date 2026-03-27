@@ -15,7 +15,7 @@ export type MicroInsightType =
   | 'estimation_bias'
   | 'hourly_fulfillment'
   | 'tag_fulfillment'
-  | 'peak_hour';
+  | 'deep_hour';
 
 /** Inspector に表示する1行インサイト */
 export interface MicroInsight {
@@ -50,7 +50,7 @@ export interface EntryStats {
   /** タグ別の平均見積もり超過分（tagId → avg deviation minutes, 3件以上） */
   tagEstimationBias: Map<string, number>;
   /** ピーク時間帯（chronotype 設定済みの場合） */
-  peakHours: Set<number> | null;
+  deepHours: Set<number> | null;
 }
 
 // =============================================================================
@@ -74,7 +74,7 @@ export function getEntryMicroInsight(entry: EntryContext, stats: EntryStats): Mi
     checkEstimationBias(entry, stats) ??
     checkHourlyFulfillment(entry, stats) ??
     checkTagFulfillment(entry, stats) ??
-    checkPeakHour(entry, stats) ??
+    checkDeepHour(entry, stats) ??
     null
   );
 }
@@ -153,12 +153,12 @@ function checkTagFulfillment(entry: EntryContext, stats: EntryStats): MicroInsig
 }
 
 /** ピーク時間帯通知 */
-function checkPeakHour(entry: EntryContext, stats: EntryStats): MicroInsight | null {
-  if (!stats.peakHours || stats.peakHours.size === 0) return null;
-  if (!stats.peakHours.has(entry.startHour)) return null;
+function checkDeepHour(entry: EntryContext, stats: EntryStats): MicroInsight | null {
+  if (!stats.deepHours || stats.deepHours.size === 0) return null;
+  if (!stats.deepHours.has(entry.startHour)) return null;
 
   return {
-    type: 'peak_hour',
-    messageKey: 'peakHour',
+    type: 'deep_hour',
+    messageKey: 'deepHour',
   };
 }

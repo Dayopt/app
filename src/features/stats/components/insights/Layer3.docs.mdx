@@ -116,7 +116,7 @@ reflections (
 │   └── tagBreakdown [{tagName, tagColor, minutes, entryCount}]
 ├── Chronotype 分析
 │   └── chronotypePhaseBreakdown [{phase, minutes, entryCount, avgFulfillment}]
-│       phase: 'warmup' | 'peak' | 'dip' | 'recovery' | 'winddown'
+│       phase: 'warmup' | 'deep' | 'ease' | 'recovery' | 'winddown'
 │       ※ ユーザーの chronotype_type + 時間帯マッピングから算出
 ├── 前期間比較
 │   ├── prev_totalMinutes, prev_avgFulfillment, prev_planRate
@@ -393,7 +393,7 @@ supabase/
 | Avg Fulfillment | 時間の質の評価 + トレンド分析 |
 | Plan Rate | 計画実行力の評価 + 改善提案 |
 | Estimation Accuracy | 見積もり精度のフィードバック |
-| Peak Utilization | chronotype活用度の分析 |
+| Deep Utilization | chronotype活用度の分析 |
 | Context Switches | 集中力パターンの指摘 |
 | Blank Rate | 余白の意図性に関する問いかけ |
 

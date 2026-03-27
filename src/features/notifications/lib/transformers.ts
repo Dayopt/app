@@ -7,8 +7,8 @@ export function transformNotificationEntity(entity: NotificationEntity): Notific
   return {
     id: entity.id,
     type: entity.type,
-    planId: entity.plan_id ?? undefined,
-    planTitle: entity.plans?.title ?? undefined,
+    entryId: entity.entry_id ?? undefined,
+    entryTitle: entity.entries?.title ?? undefined,
     isRead: entity.is_read,
     readAt: entity.read_at ? new Date(entity.read_at) : undefined,
     createdAt: new Date(entity.created_at),

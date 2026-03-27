@@ -6,16 +6,16 @@
  */
 
 import type {
+  DeepUtilizationData,
   EnergyMapRow,
   MetricDefinition,
   MetricFormat,
   MetricTrend,
   MetricValueParts,
-  PeakUtilizationData,
 } from '../types/metrics.types';
 
 // =============================================================================
-// Peak Utilization（ピーク活用率）
+// Deep Utilization（ピーク活用率）
 // =============================================================================
 
 /**
@@ -23,38 +23,38 @@ import type {
  *
  * ピーク活用率 = ピーク時間帯の実作業時間 / ピーク時間帯の利用可能時間
  */
-export function calculatePeakUtilization(
+export function calculateDeepUtilization(
   energyMap: EnergyMapRow[],
-  peakZones: ReadonlyArray<{ startHour: number; endHour: number }>,
+  deepZones: ReadonlyArray<{ startHour: number; endHour: number }>,
   daysInRange: number,
-): PeakUtilizationData {
-  if (peakZones.length === 0 || daysInRange <= 0) {
-    return { peakMinutes: 0, totalPeakAvailable: 0, peakUtilization: 0 };
+): DeepUtilizationData {
+  if (deepZones.length === 0 || daysInRange <= 0) {
+    return { deepMinutes: 0, totalDeepAvailable: 0, deepUtilization: 0 };
   }
 
   // ピーク時間帯に含まれるhourのセットを作成
-  const peakHours = new Set<number>();
-  for (const zone of peakZones) {
+  const deepHours = new Set<number>();
+  for (const zone of deepZones) {
     for (let h = zone.startHour; h <= zone.endHour; h++) {
-      peakHours.add(h);
+      deepHours.add(h);
     }
   }
 
   // ピーク時間帯のエネルギーマップデータを集計
-  let peakMinutes = 0;
+  let deepMinutes = 0;
   for (const row of energyMap) {
-    if (peakHours.has(row.hour)) {
-      peakMinutes += row.totalMinutes;
+    if (deepHours.has(row.hour)) {
+      deepMinutes += row.totalMinutes;
     }
   }
 
   // ピーク時間帯の利用可能時間 = ピーク時間数 × 60分 × 日数
-  const totalPeakAvailable = peakHours.size * 60 * daysInRange;
+  const totalDeepAvailable = deepHours.size * 60 * daysInRange;
 
   return {
-    peakMinutes,
-    totalPeakAvailable,
-    peakUtilization: totalPeakAvailable === 0 ? 0 : peakMinutes / totalPeakAvailable,
+    deepMinutes,
+    totalDeepAvailable,
+    deepUtilization: totalDeepAvailable === 0 ? 0 : deepMinutes / totalDeepAvailable,
   };
 }
 
@@ -189,7 +189,7 @@ export function getThresholdStatus(
   const { good, warning } = definition.thresholds;
 
   if (definition.trendPositive === 'up') {
-    // 高いほうが良い（planRate, peakUtilization）
+    // 高いほうが良い（entryRate, deepUtilization）
     if (value >= good) return 'good';
     if (value >= warning) return 'warning';
     return 'critical';

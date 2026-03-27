@@ -169,7 +169,7 @@
       "deleteGroup": {
         "label": "グループを削除",
         "title": "「{name}」グループを削除",
-        "description": "{count}個のタグが削除されます。プラン自体は削除されません。",
+        "description": "{count}個のタグが削除されます。エントリー自体は削除されません。",
         "success": "「{name}」グループを削除しました（{count}個のタグ）",
         "failed": "グループの削除に失敗しました"
       }
@@ -204,14 +204,14 @@
       "days": "日",
       "longestStreak": "最長: {days}日",
       "tag": "タグ",
-      "plan": "Plan",
+      "plan": "Entry",
       "done": "Done",
       "percent": "%",
       "total": "合計",
       "backToAll": "すべてのタグ",
       "noTagData": "この期間のタグデータがありません",
       "emptyTitle": "今週のデータがありません",
-      "emptyDescription": "プランとレコードを追加して進捗を確認しましょう",
+      "emptyDescription": "エントリーを追加して進捗を確認しましょう",
       "periodDay": "日",
       "periodWeek": "週",
       "periodMonth": "月",
@@ -235,7 +235,7 @@
         "weekends": "休日: {hours}",
         "hourlyDist": "時間帯別",
         "hourlyDistDesc": "活動の時間帯分布",
-        "hourlyPeak": "ピーク: {slot} ({hours})",
+        "hourlyDeep": "ピーク: {slot} ({hours})",
         "hourlyTotal": "合計 {hours}",
         "yearlyGrid": "年間カレンダー",
         "yearlyTotal": "合計 {hours}",
@@ -264,14 +264,14 @@
         "totalTimeDesc": "記録された合計時間",
         "avgFulfillment": "充実度平均",
         "avgFulfillmentDesc": "充実度スコアの平均",
-        "planRate": "計画率",
-        "planRateDesc": "計画済みエントリの割合",
+        "entryRate": "計画率",
+        "entryRateDesc": "計画済みエントリの割合",
         "streak": "ストリーク",
         "streakDesc": "現在の連続記録日数",
         "estimationAccuracy": "見積もり精度",
         "estimationAccuracyDesc": "予定時間との平均差",
-        "peakUtilization": "ピーク活用率",
-        "peakUtilizationDesc": "ピーク時間帯の活動率",
+        "deepUtilization": "ピーク活用率",
+        "deepUtilizationDesc": "ピーク時間帯の活動率",
         "contextSwitches": "コンテキストスイッチ",
         "contextSwitchesDesc": "1日あたりのタグ切替回数",
         "blankRate": "自由時間率",
@@ -287,9 +287,9 @@
         "entries": "{count}件"
       },
       "insights": {
-        "planRateLow": "この期間の活動の大半は計画外でした",
-        "planRateLowDetail": "翌日の計画を前夜に立ててみましょう",
-        "peakUtilizationLow": "ピーク時間帯がほとんど使われていません",
+        "entryRateLow": "この期間の活動の大半は計画外でした",
+        "entryRateLowDetail": "翌日の計画を前夜に立ててみましょう",
+        "deepUtilizationLow": "ピーク時間帯がほとんど使われていません",
         "contextSwitchesHigh": "タスク切替が多い期間でした",
         "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理してみましょう",
         "blankRateHigh": "空白時間が多めの期間でした",
@@ -301,7 +301,17 @@
         "hourlyFulfillmentLow": "この時間帯の充実度は平均より低い傾向があります",
         "tagFulfillmentHigh": "このタグの平均充実度は {score} — 全体より高めです",
         "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
-        "peakHour": "ピーク時間帯です — 集中作業に向いています"
+        "deepHour": "ピーク時間帯です — 集中作業に向いています"
+      }
+    },
+    "nowBadge": {
+      "inDeep": "In deep",
+      "inEase": "In ease"
+    },
+    "mobile": {
+      "touchHint": {
+        "title": "長押しで作成",
+        "description": "タイムライン上を長押しして新しいエントリーを作成"
       }
     },
     "timeGrid": {

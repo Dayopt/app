@@ -21,7 +21,7 @@ export function DeltaBadge({ current, previous, invertColor = false }: DeltaBadg
   return (
     <span
       className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${
-        isGood ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
+        isGood ? 'bg-success-tint text-success' : 'bg-destructive-tint text-destructive'
       }`}
     >
       {isPositive ? '+' : ''}

@@ -6,15 +6,15 @@
  *
  * @example
  * ```typescript
- * import { convertToTimezone, formatInTimezone, getUserTimezone } from '@/lib/date';
+ * import { convertToTimezone, formatInTimezone, getBrowserTimezone } from '@/lib/date';
  *
- * const userTz = getUserTimezone();
+ * const browserTz = getBrowserTimezone();
  * const localDate = convertToTimezone(utcDate, userTz);
  * const formatted = formatInTimezone(utcDate, userTz, 'yyyy-MM-dd HH:mm');
  * ```
  */
 
-import { format } from 'date-fns';
+import { startOfWeek as dfStartOfWeek, endOfMonth, format, startOfMonth } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 // ========================================
@@ -123,11 +123,14 @@ export function formatTimeWithTimezone(
 // ========================================
 
 /**
- * ユーザーのブラウザタイムゾーンを取得
+ * ブラウザのタイムゾーンを取得
+ *
+ * ストアに保存されたユーザー設定ではなく、ブラウザが報告するタイムゾーンを返す。
+ * ユーザーのタイムゾーンが必要な場合は Zustand ストアの timezone を使用すること。
  *
  * @returns タイムゾーン文字列（例: 'Asia/Tokyo'）
  */
-export function getUserTimezone(): string {
+export function getBrowserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
@@ -250,4 +253,127 @@ export function getCommonTimezones(): TimezoneInfo[] {
     { value: 'Australia/Sydney', label: 'Sydney (GMT+10)', offset: 10 },
     { value: 'Pacific/Auckland', label: 'Auckland (GMT+12)', offset: 12 },
   ].sort((a, b) => a.offset - b.offset);
+}
+
+// ========================================
+// TZ境界ヘルパー
+// ========================================
+
+/**
+ * ユーザーTZの0:00をUTC ISOで返す
+ *
+ * @param date - 基準日（任意TZ）
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns UTC ISO 8601文字列
+ */
+export function tzDayStart(date: Date, timezone: string): string {
+  const localDateStr = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${localDateStr}T00:00:00`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの23:59:59.999をUTC ISOで返す
+ *
+ * @param date - 基準日（任意TZ）
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns UTC ISO 8601文字列
+ */
+export function tzDayEnd(date: Date, timezone: string): string {
+  const localDateStr = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${localDateStr}T23:59:59.999`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの週初日0:00をUTC ISOで返す
+ *
+ * @param date - 基準日
+ * @param timezone - ユーザーのタイムゾーン
+ * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
+ * @returns UTC ISO 8601文字列
+ */
+export function tzWeekStart(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
+  const zonedDate = toZonedTime(date, timezone);
+  const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
+  const dateStr = format(weekStart, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${dateStr}T00:00:00`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの週末日23:59:59.999をUTC ISOで返す
+ *
+ * @param date - 基準日
+ * @param timezone - ユーザーのタイムゾーン
+ * @param weekStartsOn - 週の開始曜日（0=日, 1=月, 6=土）。デフォルト1
+ * @returns UTC ISO 8601文字列
+ */
+export function tzWeekEnd(date: Date, timezone: string, weekStartsOn: 0 | 1 | 6 = 1): string {
+  const zonedDate = toZonedTime(date, timezone);
+  const weekStart = dfStartOfWeek(zonedDate, { weekStartsOn });
+  const weekEndDate = new Date(weekStart);
+  weekEndDate.setDate(weekEndDate.getDate() + 6);
+  const dateStr = format(weekEndDate, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの月初0:00をUTC ISOで返す
+ *
+ * @param date - 基準日
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns UTC ISO 8601文字列
+ */
+export function tzMonthStart(date: Date, timezone: string): string {
+  const zonedDate = toZonedTime(date, timezone);
+  const monthStart = startOfMonth(zonedDate);
+  const dateStr = format(monthStart, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${dateStr}T00:00:00`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの月末23:59:59.999をUTC ISOで返す
+ *
+ * @param date - 基準日
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns UTC ISO 8601文字列
+ */
+export function tzMonthEnd(date: Date, timezone: string): string {
+  const zonedDate = toZonedTime(date, timezone);
+  const monthEndDate = endOfMonth(zonedDate);
+  const dateStr = format(monthEndDate, 'yyyy-MM-dd');
+  return fromZonedTime(new Date(`${dateStr}T23:59:59.999`), timezone).toISOString();
+}
+
+/**
+ * ユーザーTZの"今日"をYYYY-MM-DD文字列で返す
+ *
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns YYYY-MM-DD形式の文字列
+ */
+export function tzToday(timezone: string): string {
+  return formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+}
+
+/**
+ * 2つのUTC DateがユーザーTZで同じ日かどうか
+ *
+ * @param a - 比較対象1
+ * @param b - 比較対象2
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns 同一日ならtrue
+ */
+export function tzIsSameDay(a: Date, b: Date, timezone: string): boolean {
+  return (
+    formatInTimeZone(a, timezone, 'yyyy-MM-dd') === formatInTimeZone(b, timezone, 'yyyy-MM-dd')
+  );
+}
+
+/**
+ * ユーザーTZでの日付キー (YYYY-MM-DD)
+ *
+ * @param date - 対象日時
+ * @param timezone - ユーザーのタイムゾーン
+ * @returns YYYY-MM-DD形式の文字列
+ */
+export function tzGetDateKey(date: Date, timezone: string): string {
+  return formatInTimeZone(date, timezone, 'yyyy-MM-dd');
 }

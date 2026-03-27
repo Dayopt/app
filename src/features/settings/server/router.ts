@@ -6,11 +6,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import type { ChronotypeDisplayMode, ChronotypeType } from '@/features/chronotype';
+import type { ChronotypeType } from '@/features/chronotype';
 import {
   chronotypeCustomZonesSchema,
-  chronotypeDisplayModeSchema,
   chronotypeTypeSchema,
+  generateChronotypeGradient,
+  getChronotypeProfile,
 } from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
@@ -51,8 +52,6 @@ const userSettingsSchema = z.object({
   chronotypeEnabled: z.boolean().optional(),
   chronotypeType: chronotypeTypeSchema.optional(),
   chronotypeCustomZones: chronotypeCustomZonesSchema.optional(),
-  chronotypeDisplayMode: chronotypeDisplayModeSchema.optional(),
-  chronotypeOpacity: z.number().min(0).max(100).optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
@@ -80,6 +79,9 @@ const userSettingsSchema = z.object({
 
   // 価値観キーワードランキング（トップ5）
   rankedValues: z.array(z.string().max(50)).max(5).optional(),
+
+  // メール送信言語
+  preferredLocale: z.enum(['en', 'ja']).optional(),
 });
 
 /**
@@ -159,8 +161,8 @@ export const userSettingsRouter = createTRPCRouter({
             enabled: data.chronotype_enabled,
             type: data.chronotype_type as ChronotypeType,
             customZones: data.chronotype_custom_zones,
-            displayMode: data.chronotype_display_mode as ChronotypeDisplayMode,
-            opacity: data.chronotype_opacity,
+            gradientLight: data.chronotype_gradient_light,
+            gradientDark: data.chronotype_gradient_dark,
           },
           defaultView: (data as Record<string, unknown>).default_view as
             | 'day'
@@ -189,6 +191,8 @@ export const userSettingsRouter = createTRPCRouter({
               | 'custom',
             aiCustomStylePrompt: data.ai_custom_style_prompt ?? '',
           },
+          preferredLocale:
+            ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
       } catch (error) {
         return handleSettingsError('get', error);
@@ -239,10 +243,27 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.chronotypeType !== undefined) updateData.chronotype_type = input.chronotypeType;
         if (input.chronotypeCustomZones !== undefined)
           updateData.chronotype_custom_zones = input.chronotypeCustomZones;
-        if (input.chronotypeDisplayMode !== undefined)
-          updateData.chronotype_display_mode = input.chronotypeDisplayMode;
-        if (input.chronotypeOpacity !== undefined)
-          updateData.chronotype_opacity = input.chronotypeOpacity;
+
+        // Chronotype 設定変更時に gradient を再計算
+        if (
+          input.chronotypeType !== undefined ||
+          input.chronotypeCustomZones !== undefined ||
+          input.chronotypeEnabled !== undefined
+        ) {
+          const type = input.chronotypeType ?? 'bear';
+          const customZones = input.chronotypeCustomZones;
+          const profile = getChronotypeProfile(type, customZones);
+          const zones = profile.productivityZones;
+
+          if (input.chronotypeEnabled === false || zones.length === 0) {
+            updateData.chronotype_gradient_light = null;
+            updateData.chronotype_gradient_dark = null;
+          } else {
+            updateData.chronotype_gradient_light = generateChronotypeGradient(zones, 'light');
+            updateData.chronotype_gradient_dark = generateChronotypeGradient(zones, 'dark');
+          }
+        }
+
         if (input.defaultView !== undefined)
           (updateData as Record<string, unknown>).default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)
@@ -258,6 +279,8 @@ export const userSettingsRouter = createTRPCRouter({
           updateData.ai_custom_style_prompt = input.aiCustomStylePrompt;
         if (input.rankedValues !== undefined)
           updateData.personalization_ranked_values = input.rankedValues;
+        if (input.preferredLocale !== undefined)
+          (updateData as Record<string, unknown>).preferred_locale = input.preferredLocale;
 
         const { data, error } = await ctx.supabase
           .from('user_settings')

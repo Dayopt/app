@@ -140,7 +140,6 @@
       "icon": "アイコン",
       "selectColor": "色を選択: {color}",
       "selectIcon": "アイコンを選択",
-      "noIcon": "アイコンなし",
       "iconCategories": {
         "work": "仕事",
         "study": "学習",
@@ -176,7 +175,7 @@
       "confirmTitleWithName": "「{name}」を削除しますか？",
       "warningIrreversible": "この操作は取り消せません",
       "affectedItems": "影響を受けるアイテム",
-      "plans": "プラン",
+      "plans": "エントリー",
       "events": "イベント",
       "tasks": "タスク",
       "itemsCount": "{count}件",
@@ -285,8 +284,8 @@
       "addDescription": "説明を追加...",
       "previousTag": "前のタグ",
       "nextTag": "次のタグ",
-      "linkedRecords": "紐づくレコード ({count})",
-      "noLinkedRecords": "このタグに紐づくレコードはありません"
+      "linkedRecords": "紐づくエントリー ({count})",
+      "noLinkedRecords": "このタグに紐づくエントリーはありません"
     },
     "bulkMerge": {
       "title": "タグを統合",
@@ -303,7 +302,7 @@
     "merge": {
       "title": "タグを統合",
       "description": "「{source}」を別のタグに統合します",
-      "autoMergeDescription": "統合元のプランはすべて統合先のタグに引き継がれ、統合元のタグは自動的に削除されます。",
+      "autoMergeDescription": "統合元のエントリーはすべて統合先のタグに引き継がれ、統合元のタグは自動的に削除されます。",
       "targetTag": "統合先タグ",
       "selectTarget": "統合先を選択...",
       "noTargetSelected": "統合先を選択してください",
@@ -345,8 +344,8 @@
     },
     "detail": {
       "description": "説明",
-      "linkedPlans": "紐づいたプラン ({count})",
-      "noLinkedPlans": "このタグに紐づくプランはありません"
+      "linkedPlans": "紐づいたエントリー ({count})",
+      "noLinkedPlans": "このタグに紐づくエントリーはありません"
     }
   }
 }

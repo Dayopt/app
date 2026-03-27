@@ -2,11 +2,11 @@
 
 import React, { useCallback } from 'react';
 
-import { ChronotypeBackground } from '@/features/chronotype';
 import {
   EntryCard,
   computeActualTimeDiffOverlay,
   isNewEntry,
+  setInspectorAnchorRect,
   useEntryInspectorStore,
 } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
@@ -40,8 +40,6 @@ export interface CalendarGridContentProps {
   viewMode?: 'day' | '3day' | '5day' | 'week';
   /** この列の日付インデックス（DayView=0, Week/MultiDay=列番号） */
   dayIndex: number;
-  /** クロノタイプ背景の表示 */
-  showChronotypeBackground?: boolean;
   /** 重複チェック用の全イベント（週/複数日ビュー用） */
   allEventsForOverlapCheck?: CalendarEvent[];
   /** 表示日付リスト（週/複数日ビュー用） */
@@ -77,7 +75,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   entryStyles,
   viewMode = 'day',
   dayIndex,
-  showChronotypeBackground = false,
   allEventsForOverlapCheck,
   displayDates,
   onEntryClick,
@@ -90,7 +87,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 }: CalendarGridContentProps) {
   const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
-  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -100,7 +96,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
   const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
-  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedPlan);
+  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedEntry);
   const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
   const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
 
@@ -167,7 +163,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   return (
     <div
       className={cn(
-        'bg-background relative flex-1',
+        'relative flex-1',
         enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
         // WeekContent/MultiDayContent は h-full を持つ
         enableCrossDayDrag && 'h-full',
@@ -187,9 +183,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         plans={allEventsForOverlapCheck ?? entries}
       >
         <div className="absolute inset-0" style={{ height: gridHeight }}>
-          {showChronotypeBackground && (
-            <ChronotypeBackground startHour={0} endHour={24} hourHeight={HOUR_HEIGHT} />
-          )}
           {timeGrid}
         </div>
       </CalendarDragSelection>
@@ -281,7 +274,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
                   entry={entry}
                   tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
                   tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-                  onAnchorRect={setAnchorRect}
+                  onAnchorRect={setInspectorAnchorRect}
                   isMobile={isMobile}
                   position={{
                     top: 0,

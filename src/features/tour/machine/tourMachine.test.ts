@@ -17,7 +17,7 @@ const step1: TourStepDef = {
 };
 
 const step2: TourStepDef = {
-  id: 'grid-drag-plan',
+  id: 'grid-drag-entry',
   targetSelector: '[data-tour-target="grid-drag"]',
   placement: 'bottom',
   titleKey: 'tour.steps.gridDragPlan.title',
@@ -30,7 +30,7 @@ const step2: TourStepDef = {
 };
 
 const stepWithBeforeEnter: TourStepDef = {
-  id: 'plan-vs-record',
+  id: 'planned-vs-actual',
   targetSelector: '',
   placement: 'center',
   titleKey: 'tour.steps.planVsRecord.title',
@@ -117,7 +117,7 @@ describe('tourMachine', () => {
       };
       const next = transition(state, {
         type: 'BEFORE_ENTER_COMPLETE',
-        stepId: 'plan-vs-record',
+        stepId: 'planned-vs-actual',
       });
       expect(next.status).toBe('active');
     });

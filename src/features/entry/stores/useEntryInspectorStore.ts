@@ -18,6 +18,27 @@ export interface AnchorRect {
 }
 
 /**
+ * アンカー位置のモジュールスコープRef
+ *
+ * anchorRect はレイアウト計算用のため、リアクティブである必要がない。
+ * Zustandストアから分離し、不要な再レンダリングを防止する。
+ *
+ * 書き込み: CalendarGridContent / DayColumn（カードクリック時）
+ * 読み取り: EntryInspector（FloatingPopover配置計算時）
+ */
+export const inspectorAnchorRef: { current: AnchorRect | null } = { current: null };
+
+/** アンカー位置を設定（PlanCard クリック時に呼ぶ） */
+export function setInspectorAnchorRect(rect: AnchorRect): void {
+  inspectorAnchorRef.current = rect;
+}
+
+/** アンカー位置をクリア */
+export function clearInspectorAnchorRect(): void {
+  inspectorAnchorRef.current = null;
+}
+
+/**
  * Entry Inspector Store の状態
  */
 interface EntryInspectorState {
@@ -25,8 +46,6 @@ interface EntryInspectorState {
   isOpen: boolean;
   /** 対象エントリのID */
   entryId: string | null;
-  /** クリックされた要素の位置（Inspector の配置に使用） */
-  anchorRect: AnchorRect | null;
 }
 
 /**
@@ -37,8 +56,6 @@ interface EntryInspectorActions {
   openInspector: (entryId: string) => void;
   /** Inspector を閉じる */
   closeInspector: () => void;
-  /** アンカー位置を設定（PlanCard クリック時に呼ぶ） */
-  setAnchorRect: (rect: AnchorRect) => void;
 }
 
 /**
@@ -46,13 +63,12 @@ interface EntryInspectorActions {
  */
 type EntryInspectorStore = EntryInspectorState & EntryInspectorActions;
 
-/** Entry Inspector の開閉状態・対象エントリID・アンカー位置を管理するストア */
+/** Entry Inspector の開閉状態・対象エントリIDを管理するストア */
 export const useEntryInspectorStore = create<EntryInspectorStore>()(
   devtools(
     (set) => ({
       isOpen: false,
       entryId: null,
-      anchorRect: null,
 
       openInspector: (entryId) =>
         set(
@@ -69,18 +85,16 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('calendar-drag-cancel'));
         }
+        clearInspectorAnchorRect();
         set(
           {
             isOpen: false,
             entryId: null,
-            anchorRect: null,
           },
           false,
           'closeInspector',
         );
       },
-
-      setAnchorRect: (rect) => set({ anchorRect: rect }, false, 'setAnchorRect'),
     }),
     { name: 'entry-inspector-store', enabled: process.env.NODE_ENV !== 'production' },
   ),

@@ -1,6 +1,6 @@
 // CORS設定（Edge Function間で共有）
 
-const allowedOrigin = Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://dayopt.app';
+const allowedOrigin = Deno.env.get('NEXT_PUBLIC_APP_URL') || 'https://app.dayopt.app';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': allowedOrigin,

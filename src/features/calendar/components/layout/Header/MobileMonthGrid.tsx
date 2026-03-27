@@ -144,6 +144,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                     key={date.toISOString()}
                     type="button"
                     onClick={() => handleDateClick(date)}
+                    aria-label={format(date, 'yyyy-MM-dd')}
                     className={cn(
                       'flex h-10 items-center justify-center text-sm transition-colors',
                       !isCurrentMonth && 'text-muted-foreground',

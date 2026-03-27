@@ -64,6 +64,25 @@ async function isEntryCreateLimited(userId: string): Promise<boolean> {
 }
 
 // =============================================================================
+// ユーザータイムゾーン取得ヘルパー
+// =============================================================================
+
+/**
+ * user_settings からタイムゾーンを取得（失敗時は 'UTC' にフォールバック）
+ */
+async function getUserTimezone(
+  supabase: Parameters<typeof createEntryService>[0],
+  userId: string,
+): Promise<string> {
+  const { data } = await supabase
+    .from('user_settings')
+    .select('timezone')
+    .eq('user_id', userId)
+    .single();
+  return (data?.timezone as string | null | undefined) ?? 'UTC';
+}
+
+// =============================================================================
 // Inline Schemas
 // =============================================================================
 
@@ -145,10 +164,12 @@ export const entriesCoreRouter = createTRPCRouter({
       const service = createEntryService(ctx.supabase);
       try {
         const { tagId, ...entryInput } = input;
+        const timezone = await getUserTimezone(ctx.supabase, ctx.userId);
         const result = await service.create({
           userId: ctx.userId,
           input: entryInput,
           preventOverlappingEntries: true,
+          timezone,
         });
 
         // タグ指定時: エントリ作成と同時にタグを関連付け
@@ -169,7 +190,7 @@ export const entriesCoreRouter = createTRPCRouter({
         }
 
         captureBusinessEvent('entry.created', {
-          entryType: input.origin ?? 'plan',
+          entryType: input.origin ?? 'planned',
         });
         return result;
       } catch (error) {
@@ -190,12 +211,14 @@ export const entriesCoreRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const service = createEntryService(ctx.supabase);
       try {
+        const timezone = await getUserTimezone(ctx.supabase, ctx.userId);
         return await service.update({
           userId: ctx.userId,
           entryId: input.id,
           input: input.data,
           preventOverlappingEntries: true,
           expectedUpdatedAt: input.expectedUpdatedAt,
+          timezone,
         });
       } catch (error) {
         handleServiceError(error);

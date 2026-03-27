@@ -45,6 +45,7 @@ export const WeekGrid = ({
   className,
 }: WeekGridProps) => {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // レスポンシブな時間高さ
   const hourHeight = useResponsiveHourHeight();
@@ -95,11 +96,11 @@ export const WeekGrid = ({
   const weekNumber = React.useMemo(() => {
     const firstDate = weekDates[0];
     if (!firstDate) return undefined;
-    return getWeek(firstDate, { weekStartsOn: 1 });
-  }, [weekDates]);
+    return getWeek(firstDate, { weekStartsOn });
+  }, [weekDates, weekStartsOn]);
 
   const headerComponent = (
-    <div className="bg-background flex h-8 flex-1">
+    <div className="flex h-8 flex-1">
       {/* 7日分の日付ヘッダー */}
       {weekDates.map((date) => (
         <div
@@ -123,7 +124,7 @@ export const WeekGrid = ({
   );
 
   return (
-    <div className={cn('bg-background flex min-h-0 flex-1 flex-col', className)}>
+    <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       {/* 固定日付ヘッダー */}
       <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
 
@@ -154,7 +155,6 @@ export const WeekGrid = ({
                 entryStyles={entryStyles}
                 viewMode="week"
                 dayIndex={dayIndex}
-                showChronotypeBackground={true}
                 allEventsForOverlapCheck={events}
                 displayDates={weekDates}
                 onEntryClick={onEventClick}

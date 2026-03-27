@@ -6,12 +6,12 @@ import { useMemo } from 'react';
 import { PanelLeft } from 'lucide-react';
 
 import { DnDProvider, isCalendarViewPath } from '@/features/calendar';
-import { NotificationDropdown } from '@/features/notifications';
+import { ActivityPopover } from '@/features/notifications';
 import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
 import { Sidebar } from '@/shell/components/sidebar';
-import { usePageTitleStore } from '@/shell/stores/usePageTitleStore';
-import { useLayoutStore } from '@/stores/useLayoutStore';
+
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
@@ -34,9 +34,9 @@ interface DesktopLayoutProps {
  */
 export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const pathname = usePathname();
-  const isSidebarOpen = useLayoutStore.use.sidebarOpen();
-  const toggleSidebar = useLayoutStore.use.toggleSidebar();
-  const title = usePageTitleStore((state) => state.title);
+  const sidebar = useShellStore.use.sidebar();
+  const toggleSidebar = useShellStore.use.toggleSidebar();
+  const title = useShellStore.use.pageTitle();
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
@@ -45,7 +45,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   }, [pathname, locale]);
 
   // サイドバーが閉じているときに表示するトグルボタン
-  const sidebarToggle = !isSidebarOpen ? (
+  const sidebarToggle = !sidebar.open ? (
     <button
       type="button"
       onClick={toggleSidebar}
@@ -64,14 +64,11 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           <div
             className={cn(
               'h-full shrink-0 overflow-hidden transition-all duration-200',
-              isSidebarOpen ? 'w-64' : 'w-0',
+              sidebar.open ? 'w-64' : 'w-0',
             )}
           >
             <div className="h-full w-64">
-              <Sidebar
-                footerActions={<NotificationDropdown size="sm" />}
-                pageNav={<SidebarPageNav />}
-              >
+              <Sidebar footerActions={<ActivityPopover size="sm" />} pageNav={<SidebarPageNav />}>
                 <SidebarContent />
               </Sidebar>
             </div>

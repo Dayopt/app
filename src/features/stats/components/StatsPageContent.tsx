@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, UnderlineTabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/shell/components/AppHeader';
 
 import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
@@ -84,13 +84,15 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
       startTransition(() => {
         setActiveTab(newTab);
       });
-      window.history.pushState(null, '', `/${locale}/stats/${newTab}`);
+      // 既存の searchParams (g, d) を保持してタブのみ変更
+      const params = new URLSearchParams(window.location.search);
+      window.history.pushState(null, '', `/${locale}/stats/${newTab}?${params.toString()}`);
     },
     [locale, startTransition],
   );
 
   return (
-    <div className="bg-background flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
       <AppHeader
         rightSlot={
@@ -116,12 +118,12 @@ export function StatsPageContent({ tab }: StatsPageContentProps) {
         className="flex min-h-0 flex-1 flex-col"
       >
         <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
-          <UnderlineTabsTrigger value="review" className="text-base">
+          <TabsTrigger value="review" className="text-base">
             {t('calendar.stats.tabReview')}
-          </UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="progress" className="text-base">
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="text-base">
             {t('calendar.stats.tabProgress')}
-          </UnderlineTabsTrigger>
+          </TabsTrigger>
           {/* Insights タブは AI 分析実装後に復活予定 */}
         </TabsList>
 

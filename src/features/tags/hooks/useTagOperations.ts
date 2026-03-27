@@ -59,6 +59,7 @@ export function useTagOperations(tags: Tag[]) {
         await createTagMutation.mutateAsync({
           name: data.name,
           color: data.color,
+          icon: data.icon,
         });
       } catch (error) {
         logger.error('Failed to create tag:', error);

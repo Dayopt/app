@@ -1,7 +1,7 @@
 /**
  * Entry Mutations Hook（作成・更新・削除）
  *
- * plans + records を統合した entries テーブルに対する全操作を一元管理
+ * entries テーブルに対する全操作を一元管理
  * - Toast通知
  * - キャッシュ無効化（全ビュー自動更新）
  * - Zustandキャッシュ（即座の同期）
@@ -129,9 +129,9 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         openInspector(newEntry.id);
       } else if (!suppressCreateToast) {
         const displayTitle = newEntry.title || t('entry.untitled');
-        toast.success(t('plan.toast.created', { title: displayTitle }), {
+        toast.success(t('entry.toast.created', { title: displayTitle }), {
           action: {
-            label: t('plan.editDetails'),
+            label: t('entry.editDetails'),
             onClick: () => {
               openInspector(newEntry.id);
             },
@@ -161,15 +161,18 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       }
 
       // TIME_OVERLAPエラー（重複防止）
-      if (error.message.includes('既に予定があります') || error.message.includes('TIME_OVERLAP')) {
-        toast.error(t('plan.toast.timeOverlap'));
+      if (
+        error.message.includes('既にエントリがあります') ||
+        error.message.includes('TIME_OVERLAP')
+      ) {
+        toast.error(t('entry.toast.timeOverlap'));
         return;
       }
 
       const errorMessage = error.message.includes('validation.')
         ? t(error.message as Parameters<typeof t>[0])
         : error.message;
-      toast.error(t('plan.toast.createFailed', { error: errorMessage }));
+      toast.error(t('entry.toast.createFailed', { error: errorMessage }));
     },
     onSettled: () => {
       void utils.entries.list.invalidate();
@@ -318,12 +321,12 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
           },
         });
       } else if (
-        err.message.includes('既に予定があります') ||
+        err.message.includes('既にエントリがあります') ||
         err.message.includes('TIME_OVERLAP')
       ) {
-        toast.error(t('plan.toast.timeOverlap'));
+        toast.error(t('entry.toast.timeOverlap'));
       } else {
-        toast.error(t('plan.toast.updateFailed'));
+        toast.error(t('entry.toast.updateFailed'));
       }
 
       // エラー時: 全ての entries.list キャッシュをロールバック
@@ -381,7 +384,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
 
       // undo付きtoast（soft-deleteなのでrestore APIで同一ID・タグを完全復元）
       const displayTitle = previousEntry?.title || t('entry.untitled');
-      toast.success(t('plan.toast.deleted', { title: displayTitle }), {
+      toast.success(t('entry.toast.deleted', { title: displayTitle }), {
         duration: 6000,
         action: {
           label: t('common.undo'),
@@ -403,7 +406,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     },
     onError: (error, { id }, context) => {
       logger.error('[mutation:delete] onError', error);
-      toast.error(t('plan.toast.deleteFailed', { error: error.message }));
+      toast.error(t('entry.toast.deleteFailed', { error: error.message }));
 
       // エラー時: 全ての entries.list キャッシュをロールバック
       if (context?.previousEntriesList) {
@@ -450,11 +453,11 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       return { previousEntriesList };
     },
     onSuccess: (result) => {
-      toast.success(t('plan.toast.bulkUpdated', { count: result.count }));
+      toast.success(t('entry.toast.bulkUpdated', { count: result.count }));
       void utils.entries.list.invalidate(undefined, { refetchType: 'active' });
     },
     onError: (error, _variables, context) => {
-      toast.error(t('plan.toast.bulkUpdateFailed', { error: error.message }));
+      toast.error(t('entry.toast.bulkUpdateFailed', { error: error.message }));
       if (context?.previousEntriesList) {
         for (const [queryKey, data] of context.previousEntriesList) {
           queryClient.setQueryData(queryKey, data);
@@ -483,12 +486,12 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       return { previousEntriesList };
     },
     onSuccess: (result) => {
-      toast.success(t('plan.toast.bulkDeleted', { count: result.count }));
+      toast.success(t('entry.toast.bulkDeleted', { count: result.count }));
       closeInspector();
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
     },
     onError: (error, _variables, context) => {
-      toast.error(t('plan.toast.bulkDeleteFailed', { error: error.message }));
+      toast.error(t('entry.toast.bulkDeleteFailed', { error: error.message }));
       if (context?.previousEntriesList) {
         for (const [queryKey, data] of context.previousEntriesList) {
           queryClient.setQueryData(queryKey, data);
@@ -516,7 +519,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       return { previousEntries };
     },
     onSuccess: () => {
-      toast.success(t('plan.toast.tagsAdded'));
+      toast.success(t('entry.toast.tagsAdded'));
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getTagStats.invalidate();
     },
@@ -524,7 +527,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       if (context?.previousEntries) {
         utils.entries.list.setData(undefined, context.previousEntries);
       }
-      toast.error(t('plan.toast.tagsAddFailed', { error: error.message }));
+      toast.error(t('entry.toast.tagsAddFailed', { error: error.message }));
     },
   });
 

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
+import { useShellStore } from '@/shell/stores/useShellStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useLayoutStore } from '@/stores/useLayoutStore';
 
 import { Sidebar } from './Sidebar';
 
@@ -37,7 +37,7 @@ function MockSidebarContent() {
   return (
     <>
       <div className="p-3">
-        <div className="bg-muted/50 flex aspect-square w-full items-center justify-center rounded-lg">
+        <div className="bg-muted flex aspect-square w-full items-center justify-center rounded-lg">
           <span className="text-muted-foreground text-xs">Mini Calendar</span>
         </div>
       </div>
@@ -95,9 +95,9 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
   // Zustand storeと同期
   useEffect(() => {
     if (isOpen) {
-      useLayoutStore.setState({ sidebarOpen: true });
+      useShellStore.setState({ sidebar: { open: true, width: 256 } });
     } else {
-      useLayoutStore.setState({ sidebarOpen: false });
+      useShellStore.setState({ sidebar: { open: false, width: 256 } });
     }
   }, [isOpen]);
 

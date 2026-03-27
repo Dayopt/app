@@ -10,10 +10,10 @@ import type { CalendarEvent } from '../types/calendar.types';
  */
 
 export interface CalendarDragState {
-  /** ドラッグ中のプランID */
-  draggedPlanId: string | null;
-  /** ドラッグ中のプランデータ */
-  draggedPlan: CalendarEvent | null;
+  /** ドラッグ中のエントリーID */
+  draggedEntryId: string | null;
+  /** ドラッグ中のエントリーデータ */
+  draggedEntry: CalendarEvent | null;
   /** 元の日付インデックス */
   originalDateIndex: number;
   /** 現在のターゲット日付インデックス */
@@ -28,16 +28,18 @@ export interface CalendarDragState {
 
 interface CalendarDragActions {
   /** カレンダー内ドラッグ開始 */
-  startDrag: (planId: string, plan: CalendarEvent, dateIndex: number) => void;
+  startDrag: (entryId: string, entry: CalendarEvent, dateIndex: number) => void;
   /** ドラッグ中の状態更新 */
-  updateDrag: (updates: Partial<Omit<CalendarDragState, 'draggedPlanId' | 'draggedPlan'>>) => void;
+  updateDrag: (
+    updates: Partial<Omit<CalendarDragState, 'draggedEntryId' | 'draggedEntry'>>,
+  ) => void;
   /** ドラッグ終了 */
   endDrag: () => void;
 }
 
 const initialState: CalendarDragState = {
-  draggedPlanId: null,
-  draggedPlan: null,
+  draggedEntryId: null,
+  draggedEntry: null,
   originalDateIndex: 0,
   targetDateIndex: 0,
   isDragging: false,
@@ -49,10 +51,10 @@ const initialState: CalendarDragState = {
 export const useCalendarDragStore = create<CalendarDragState & CalendarDragActions>((set) => ({
   ...initialState,
 
-  startDrag: (planId, plan, dateIndex) =>
+  startDrag: (entryId, entry, dateIndex) =>
     set({
-      draggedPlanId: planId,
-      draggedPlan: plan,
+      draggedEntryId: entryId,
+      draggedEntry: entry,
       originalDateIndex: dateIndex,
       targetDateIndex: dateIndex,
       isDragging: true,

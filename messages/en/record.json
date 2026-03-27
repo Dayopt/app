@@ -1,12 +1,12 @@
 {
   "record": {
     "inspector": {
-      "title": "Record details",
-      "deleteConfirm": "Delete this record?",
-      "notFound": "Record not found",
-      "openPlan": "Open plan",
+      "title": "Entry details",
+      "deleteConfirm": "Delete this entry?",
+      "notFound": "Entry not found",
+      "openEntry": "Open entry",
       "toast": {
-        "timeOverlap": "Time overlaps with existing record",
+        "timeOverlap": "Time overlaps with existing entry",
         "saveFailed": "Failed to save",
         "tagsSaveFailed": "Failed to save tags"
       }

@@ -28,6 +28,7 @@
 /* ============================================
  * Animations
  * ============================================ */
+@import 'tw-animate-css';
 @import './animations.css';
 @import '../features/calendar/calendar.css';
 

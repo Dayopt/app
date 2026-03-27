@@ -33,7 +33,7 @@ interface TagRowProps {
   tagColor?: string | null | undefined;
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
-  onCreateAndSelect: (name: string, color?: string | null) => void;
+  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
   /** パレットに登録するコールバック（タグ+時間が有効な場合のみ表示） */
   onPinToPalette?: (() => void) | undefined;
   /** パレット登録済みかどうか */
@@ -70,8 +70,8 @@ export function TagRow({
   );
 
   const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null) => {
-      await onCreateAndSelect(name, color);
+    async (name: string, color?: string | null, icon?: string | null) => {
+      await onCreateAndSelect(name, color, icon);
       setSelectorOpen(false);
     },
     [onCreateAndSelect],
@@ -92,7 +92,7 @@ export function TagRow({
               <TagIcon
                 icon={tagIcon ?? null}
                 color={tagColor ?? colorClasses?.cssVar}
-                size="sm"
+                size="md"
                 className="flex-shrink-0"
               />
               <ColonTagLabel name={tagName} className="text-foreground" />

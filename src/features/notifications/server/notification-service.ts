@@ -103,14 +103,14 @@ export class NotificationService {
    * 通知を作成
    */
   async create(options: CreateNotificationOptions): Promise<NotificationRow> {
-    const { userId, type, planId } = options;
+    const { userId, type, entryId } = options;
 
     const { data: result, error } = await this.supabase
       .from('notifications')
       .insert({
         user_id: userId,
         type,
-        entry_id: planId,
+        entry_id: entryId,
       })
       .select()
       .single();

@@ -11,379 +11,340 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-export const AllElevations: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Elevation（高さ）</h1>
-      <p className="text-muted-foreground mb-8">
-        UI要素のz軸上の位置を表現。高いほど前面に浮き出る。
-      </p>
+export const Overview: Story = {
+  render: () => {
+    const levels = [
+      {
+        level: 'Sunken',
+        surface: 'bg-container / bg-muted',
+        shadow: 'none',
+        border: 'border-border',
+        usage: 'sidebar, footer, input, well',
+        lightL: '0.96 / 0.95',
+        darkL: '0.15 / 0.25',
+      },
+      {
+        level: 'Base',
+        surface: 'bg-background',
+        shadow: 'none',
+        border: '—',
+        usage: 'ページ地',
+        lightL: '0.98',
+        darkL: '0.18',
+      },
+      {
+        level: 'Raised',
+        surface: 'bg-card',
+        shadow: 'shadow-sm',
+        border: 'border-border-subtle',
+        usage: 'カード, セクション',
+        lightL: '1.00',
+        darkL: '0.22',
+      },
+      {
+        level: 'Overlay',
+        surface: 'bg-card',
+        shadow: 'shadow-card',
+        border: 'border-border-subtle',
+        usage: 'dropdown, popover, dialog',
+        lightL: '1.00',
+        darkL: '0.22',
+      },
+    ] as const;
 
-      <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Level 0</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-none" />
+    return (
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">Elevation（高さ）</h1>
+        <p className="text-muted-foreground mb-2 text-sm">
+          UI 要素の z 軸上の位置。surface色 + shadow + border のセットで表現する。
+        </p>
+        <p className="text-muted-foreground mb-8 text-sm">shadow 単体ではなく、3つの組み合わせ。</p>
+
+        {/* ── 設計原則 ── */}
+        <div className="bg-card border-border mb-8 rounded-xl border p-6">
+          <h2 className="mb-3 text-lg font-bold">設計原則</h2>
+          <div className="space-y-2 text-sm">
+            <p>
+              <span className="font-bold">Light:</span>{' '}
+              <span className="text-muted-foreground">shadow が奥行きの主役。面色差は補助。</span>
+            </p>
+            <p>
+              <span className="font-bold">Dark:</span>{' '}
+              <span className="text-muted-foreground">面色差が主役。shadow は補助。</span>
+            </p>
+            <p className="text-muted-foreground mt-3 text-xs">
+              この逆転が elevation 設計の核心。Light と Dark で「浮いて見える」仕組みが違う。
+            </p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-none</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            ベース面、
-            <br />
-            背景要素
-          </p>
         </div>
 
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Level 1</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-xs" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-xs</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            入力フィールド、
-            <br />
-            微細な境界
-          </p>
-        </div>
-
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Level 2</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-sm" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-sm</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            カード、
-            <br />
-            軽い浮き上がり
-          </p>
-        </div>
-
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Level 3</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-md" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-md</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            ホバー状態、
-            <br />
-            アクティブカード
-          </p>
-        </div>
-
-        <div className="text-center">
-          <p className="mb-2 text-xs font-bold">Level 4</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-lg" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-lg</code>
-          <p className="mt-2 text-xs font-bold">
-            ドロップダウン、
-            <br />
-            ポップオーバー
-          </p>
-        </div>
-
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Level 5</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card size-24 rounded-lg shadow-xl" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">shadow-xl</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            モーダル、
-            <br />
-            最前面要素
-          </p>
-        </div>
-      </div>
-    </div>
-  ),
-};
-
-export const PhysicalLighting: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Physical Lighting System</h1>
-      <p className="text-muted-foreground mb-8">
-        光源を上に固定し、微細なグラデーション・ハイライト・2層シャドウで奥行きを表現。
-        <br />
-        <span className="text-xs">
-          原則: ユーザーが気づかないこと。「なんかいい」は正解、「おしゃれ」は過剰。
-        </span>
-      </p>
-
-      <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
-        {/* Sunken */}
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Sunken</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-input surface-sunken w-48 rounded-lg p-3">
-              <span className="text-muted-foreground text-sm">入力フィールド</span>
+        {/* ── 4段階ライブプレビュー ── */}
+        <h3 className="mb-3 font-bold">4段階プレビュー</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Storybook ツールバーの 🌙 で切り替えると Light/Dark の見え方の違いが確認できます。
+        </p>
+        <div className="bg-background border-border mb-8 grid grid-cols-4 gap-6 rounded-xl border p-6">
+          {/* Sunken */}
+          <div className="text-center">
+            <div className="bg-container border-border flex h-24 items-center justify-center rounded-lg border">
+              <span className="text-muted-foreground text-xs">Sunken</span>
             </div>
+            <p className="mt-2 text-xs font-bold">Sunken</p>
+            <p className="text-muted-foreground text-xs">no shadow</p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">surface-sunken</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            input, textarea
-            <br />
-            凹み表現
-          </p>
-        </div>
-
-        {/* Flat */}
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Flat</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card surface-flat border-border size-24 rounded-lg border" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">surface-flat</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            Card, コンテンツ面
-            <br />
-            グラデーションのみ
-          </p>
-        </div>
-
-        {/* Raised */}
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Raised</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card surface-raised size-24 rounded-lg" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">surface-raised</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            dropdown, popover
-            <br />
-            ハイライト + 2層シャドウ
-          </p>
-        </div>
-
-        {/* Raised Heavy */}
-        <div className="text-center">
-          <p className="text-muted-foreground mb-2 text-xs">Raised Heavy</p>
-          <div className="flex h-28 items-center justify-center">
-            <div className="bg-card surface-raised-heavy size-24 rounded-lg" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">surface-raised-heavy</code>
-          <p className="text-muted-foreground mt-2 text-xs">
-            dialog, sheet, inspector
-            <br />
-            最大の浮き
-          </p>
-        </div>
-      </div>
-
-      {/* 比較セクション */}
-      <div className="mt-12">
-        <h2 className="mb-4 font-bold">Before / After 比較</h2>
-        <div className="grid grid-cols-2 gap-8">
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">Before（ベタ塗り + shadow-lg）</p>
-            <div className="bg-card border-border w-full rounded-2xl border p-6 shadow-lg">
-              <h3 className="mb-2 font-bold">カードタイトル</h3>
-              <p className="text-muted-foreground text-sm">フラットな背景色 + ドロップシャドウ</p>
+          {/* Base */}
+          <div className="text-center">
+            <div className="bg-background flex h-24 items-center justify-center rounded-lg">
+              <span className="text-muted-foreground text-xs">Base</span>
             </div>
+            <p className="mt-2 text-xs font-bold">Base</p>
+            <p className="text-muted-foreground text-xs">no shadow</p>
           </div>
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">After（surface-raised-heavy）</p>
-            <div className="bg-card surface-raised-heavy w-full rounded-2xl p-6">
-              <h3 className="mb-2 font-bold">カードタイトル</h3>
-              <p className="text-muted-foreground text-sm">
-                グラデーション + ハイライト + 2層シャドウ
+          {/* Raised */}
+          <div className="text-center">
+            <div
+              className="bg-card border-border-subtle flex h-24 items-center justify-center rounded-lg border"
+              style={{ boxShadow: 'var(--shadow-sm)' }}
+            >
+              <span className="text-muted-foreground text-xs">Raised</span>
+            </div>
+            <p className="mt-2 text-xs font-bold">Raised</p>
+            <p className="text-muted-foreground text-xs">shadow-sm</p>
+          </div>
+          {/* Overlay */}
+          <div className="text-center">
+            <div
+              className="bg-card border-border-subtle flex h-24 items-center justify-center rounded-lg border"
+              style={{ boxShadow: 'var(--shadow-card)' }}
+            >
+              <span className="text-muted-foreground text-xs">Overlay</span>
+            </div>
+            <p className="mt-2 text-xs font-bold">Overlay</p>
+            <p className="text-muted-foreground text-xs">shadow-card</p>
+          </div>
+        </div>
+
+        {/* ── Spec テーブル ── */}
+        <h3 className="mb-3 font-bold">Elevation レベル</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Level</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Surface</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Shadow</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Border</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">用途</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {levels.map(({ level, surface, shadow, border, usage }) => (
+                <tr key={level} className="border-border border-b">
+                  <td className="text-foreground px-4 py-2 text-xs font-bold">{level}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{surface}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{shadow}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{border}</td>
+                  <td className="px-4 py-2 text-xs">{usage}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Dark mode 比較 ── */}
+        <h3 className="mb-3 font-bold">Dark mode での見え方</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Light では shadow で区別。Dark では面色差(L値)で区別。
+        </p>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Level</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light L</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark L</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {levels.map(({ level, lightL, darkL }) => (
+                <tr key={level} className="border-border border-b">
+                  <td className="text-foreground px-4 py-2 text-xs font-bold">{level}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{lightL}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{darkL}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-muted-foreground mb-8 text-xs">
+          Dark の Raised と Overlay は同じ surface 色(L=0.22)。違いは shadow の強さと z-index。
+        </p>
+
+        {/* ── なぜ4段階か ── */}
+        <h3 className="mb-3 font-bold">なぜ 6段階 → 4段階か</h3>
+        <div className="bg-card border-border mb-6 rounded-xl border p-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="border-destructive space-y-2 border-l-4 pl-4">
+              <p className="text-destructive text-sm font-bold">旧: 6段階</p>
+              <p className="text-muted-foreground text-xs">
+                shadow-none / xs / sm / md / lg / xl
+                <br />
+                「この dropdown は shadow-lg? shadow-xl?」と毎回迷う
+              </p>
+            </div>
+            <div className="border-success space-y-2 border-l-4 pl-4">
+              <p className="text-success text-sm font-bold">新: 4段階</p>
+              <p className="text-muted-foreground text-xs">
+                背景に沈むか？→ Sunken
+                <br />
+                地面か？→ Base
+                <br />
+                浮くか？→ Raised
+                <br />
+                最前面か？→ Overlay
               </p>
             </div>
           </div>
+          <p className="text-muted-foreground mt-4 text-xs">
+            Color の Surface トークンと 1:1 で対応するので覚えることが増えない。
+          </p>
+        </div>
+
+        {/* ── z-index ── */}
+        <h3 className="mb-3 font-bold">z-index</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Sunken / Base / Raised → z-index 指定なし。Overlay のみ z-index 必須。
+        </p>
+        <div className="bg-card border-border rounded-xl border p-6">
+          <p className="text-muted-foreground text-sm">
+            Overlay の中でも dropdown(z-50) と modal(z-200) は見た目は同じ shadow-card
+            だが、スタッキング順序が違う。
+          </p>
         </div>
       </div>
-    </div>
-  ),
+    );
+  },
 };
 
 export const UseCases: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Surface Utilityの使い分け</h1>
-      <p className="text-muted-foreground mb-8">
-        UIの階層構造に応じてsurface-*を選択。高いほどユーザーの注目を集める。
+      <h1 className="mb-2 text-2xl font-bold">実装例</h1>
+      <p className="text-muted-foreground mb-8 text-sm">
+        各 elevation レベルの実装パターン。クラスをそのままコピペ可能。
       </p>
 
-      <div className="space-y-8">
-        <div>
-          <h2 className="mb-4 font-bold">
-            Sunken: 入力フィールド{' '}
-            <code className="text-muted-foreground text-xs">surface-sunken</code>
-          </h2>
-          <div className="bg-input surface-sunken w-64 rounded-lg p-4">
-            <span className="text-muted-foreground text-sm">テキストを入力...</span>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="mb-4 font-bold">
-            Flat: カード <code className="text-muted-foreground text-xs">surface-flat</code>
-          </h2>
-          <div className="bg-card surface-flat border-border w-64 rounded-lg border p-4">
-            <p className="font-bold">カードタイトル</p>
-            <p className="text-muted-foreground text-sm">コンテンツをグループ化</p>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="mb-4 font-bold">
-            Raised: ドロップダウン{' '}
-            <code className="text-muted-foreground text-xs">surface-raised</code>
-          </h2>
-          <div className="bg-card surface-raised w-48 rounded-lg p-2">
-            <div className="hover:bg-state-hover rounded px-4 py-2">メニュー1</div>
-            <div className="hover:bg-state-hover rounded px-4 py-2">メニュー2</div>
-            <div className="hover:bg-state-hover rounded px-4 py-2">メニュー3</div>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="mb-4 font-bold">
-            Raised Heavy: モーダル{' '}
-            <code className="text-muted-foreground text-xs">surface-raised-heavy</code>
-          </h2>
-          <div className="bg-card surface-raised-heavy w-80 rounded-2xl p-6">
-            <h3 className="mb-2 text-lg font-bold">モーダルタイトル</h3>
-            <p className="text-muted-foreground mb-4 text-sm">最前面でユーザーの操作を待つ</p>
-            <div className="flex justify-end gap-2">
-              <button className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm">
-                キャンセル
-              </button>
-              <button className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm">
-                確認
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ),
-};
-
-export const Glassmorphism: Story = {
-  render: () => (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Glassmorphism</h1>
-      <p className="text-muted-foreground mb-8">
-        半透明背景 + backdrop-blur による「ガラス」効果。3段階の透明度。
-      </p>
-
-      {/* 背景にグラデーションを配置してblur効果を見やすくする */}
-      <div className="relative overflow-hidden rounded-2xl p-8" style={{ minHeight: 400 }}>
-        {/* 装飾的な背景 */}
-        <div className="from-primary/30 via-info/20 to-warning/10 absolute inset-0 bg-gradient-to-br" />
-        <div className="bg-primary/40 absolute top-8 left-12 size-32 rounded-full blur-2xl" />
-        <div className="bg-info/30 absolute right-16 bottom-12 size-40 rounded-full blur-2xl" />
-        <div className="bg-warning/20 absolute top-1/2 left-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" />
-
-        {/* Glass パネル */}
-        <div className="relative grid grid-cols-3 gap-6">
-          <div className="text-center">
-            <p className="text-foreground mb-4 text-sm font-bold">Light</p>
-            <div className="glass-light rounded-xl p-6">
-              <p className="text-foreground text-sm font-medium">glass-light</p>
-              <p className="text-foreground/70 mt-1 text-xs">
-                ほぼ不透明
-                <br />
-                ツールバー、ヘッダー
-              </p>
-            </div>
-            <code className="bg-container mt-4 inline-block rounded px-2 py-1 text-xs">
-              glass-light
-            </code>
-          </div>
-
-          <div className="text-center">
-            <p className="text-foreground mb-4 text-sm font-bold">Medium</p>
-            <div className="glass-medium rounded-xl p-6">
-              <p className="text-foreground text-sm font-medium">glass-medium</p>
-              <p className="text-foreground/70 mt-1 text-xs">
-                半透明
-                <br />
-                パネル、サイドバー
-              </p>
-            </div>
-            <code className="bg-container mt-4 inline-block rounded px-2 py-1 text-xs">
-              glass-medium
-            </code>
-          </div>
-
-          <div className="text-center">
-            <p className="text-foreground mb-4 text-sm font-bold">Heavy</p>
-            <div className="glass-heavy rounded-xl p-6">
-              <p className="text-foreground text-sm font-medium">glass-heavy</p>
-              <p className="text-foreground/70 mt-1 text-xs">
-                強い透過
-                <br />
-                オーバーレイ、装飾
-              </p>
-            </div>
-            <code className="bg-container mt-4 inline-block rounded px-2 py-1 text-xs">
-              glass-heavy
-            </code>
-          </div>
-        </div>
-      </div>
-
-      {/* トークン一覧 */}
-      <div className="mt-8">
-        <h2 className="mb-4 font-bold">トークン一覧</h2>
-        <div className="bg-card border-border rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border border-b">
-                <th className="px-4 py-2 text-left font-medium">Utility</th>
-                <th className="px-4 py-2 text-left font-medium">背景透明度</th>
-                <th className="px-4 py-2 text-left font-medium">Blur</th>
-                <th className="px-4 py-2 text-left font-medium">用途</th>
-              </tr>
-            </thead>
-            <tbody className="divide-border divide-y">
-              <tr>
-                <td className="px-4 py-2">
-                  <code className="text-xs">glass-light</code>
-                </td>
-                <td className="text-muted-foreground px-4 py-2">60%</td>
-                <td className="text-muted-foreground px-4 py-2">16px (md)</td>
-                <td className="text-muted-foreground px-4 py-2">ツールバー、ヘッダー</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2">
-                  <code className="text-xs">glass-medium</code>
-                </td>
-                <td className="text-muted-foreground px-4 py-2">40%</td>
-                <td className="text-muted-foreground px-4 py-2">16px (md)</td>
-                <td className="text-muted-foreground px-4 py-2">パネル、サイドバー</td>
-              </tr>
-              <tr>
-                <td className="px-4 py-2">
-                  <code className="text-xs">glass-heavy</code>
-                </td>
-                <td className="text-muted-foreground px-4 py-2">20%</td>
-                <td className="text-muted-foreground px-4 py-2">24px (lg)</td>
-                <td className="text-muted-foreground px-4 py-2">オーバーレイ、装飾的背景</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* CSS変数 */}
-      <div className="mt-8">
-        <h2 className="mb-4 font-bold">Blur変数（カスタム併用時）</h2>
-        <p className="text-muted-foreground mb-4 text-sm">
-          デフォルトのblurを変更したい場合は <code className="text-xs">backdrop-blur-*</code>{' '}
-          を併用:
-        </p>
-        <div className="bg-container rounded-lg p-4">
-          <code className="text-xs">
-            --glass-blur-sm: 8px / --glass-blur-md: 16px / --glass-blur-lg: 24px
+      <div className="space-y-10">
+        {/* Sunken: サイドバー */}
+        <section>
+          <h2 className="mb-1 text-lg font-bold">Sunken: サイドバー</h2>
+          <code className="text-muted-foreground mb-3 block text-xs">
+            bg-container border-r border-border
           </code>
-        </div>
+          <div
+            className="bg-background border-border grid overflow-hidden rounded-xl border"
+            style={{ gridTemplateColumns: '200px 1fr', height: 160 }}
+          >
+            <aside
+              className="bg-container flex flex-col gap-2 border-r p-4"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <div className="bg-foreground h-2 w-3/4 rounded opacity-20" />
+              <div className="bg-foreground h-2 w-1/2 rounded opacity-20" />
+              <div className="bg-foreground h-2 w-2/3 rounded opacity-20" />
+            </aside>
+            <div className="p-4">
+              <div className="bg-foreground h-2 w-1/2 rounded opacity-10" />
+            </div>
+          </div>
+        </section>
+
+        {/* Sunken: Input */}
+        <section>
+          <h2 className="mb-1 text-lg font-bold">Sunken: 入力フィールド</h2>
+          <code className="text-muted-foreground mb-3 block text-xs">bg-muted rounded-lg</code>
+          <div className="bg-card border-border rounded-xl border p-6">
+            <div className="bg-muted w-64 rounded-lg px-4 py-2">
+              <span className="text-muted-foreground text-sm">テキストを入力...</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Raised: カード */}
+        <section>
+          <h2 className="mb-1 text-lg font-bold">Raised: カード</h2>
+          <code className="text-muted-foreground mb-3 block text-xs">
+            bg-card border border-border-subtle rounded-lg shadow-sm
+          </code>
+          <div className="bg-background rounded-xl p-6">
+            <div
+              className="bg-card border-border-subtle w-80 rounded-lg border p-6"
+              style={{ boxShadow: 'var(--shadow-sm)' }}
+            >
+              <h3 className="mb-2 font-bold">カードタイトル</h3>
+              <p className="text-muted-foreground text-sm">コンテンツをグループ化</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Overlay: ドロップダウン */}
+        <section>
+          <h2 className="mb-1 text-lg font-bold">Overlay: ドロップダウン</h2>
+          <code className="text-muted-foreground mb-3 block text-xs">
+            bg-card border border-border-subtle rounded-lg shadow-card z-50
+          </code>
+          <div className="bg-background rounded-xl p-6">
+            <div
+              className="bg-card border-border-subtle w-48 rounded-lg border p-2"
+              style={{ boxShadow: 'var(--shadow-card)' }}
+            >
+              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 1</div>
+              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 2</div>
+              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 3</div>
+            </div>
+          </div>
+        </section>
+
+        {/* Overlay: モーダル */}
+        <section>
+          <h2 className="mb-1 text-lg font-bold">Overlay: モーダル</h2>
+          <code className="text-muted-foreground mb-3 block text-xs">
+            bg-overlay（scrim） + bg-card shadow-card rounded-2xl z-50
+          </code>
+          <div className="relative overflow-hidden rounded-xl" style={{ height: 220 }}>
+            {/* 背景コンテンツ */}
+            <div className="bg-background absolute inset-0 p-6">
+              <div className="bg-foreground h-2 w-1/3 rounded opacity-10" />
+              <div className="bg-foreground mt-2 h-2 w-1/4 rounded opacity-10" />
+            </div>
+            {/* Scrim */}
+            <div className="bg-overlay absolute inset-0" />
+            {/* Dialog */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className="bg-card border-border-subtle w-72 rounded-2xl border p-6"
+                style={{ boxShadow: 'var(--shadow-card)' }}
+              >
+                <h3 className="mb-2 text-lg font-bold">モーダルタイトル</h3>
+                <p className="text-muted-foreground mb-4 text-sm">最前面でユーザーの操作を待つ</p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm"
+                  >
+                    確認
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   ),

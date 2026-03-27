@@ -47,6 +47,8 @@ export interface CreateEntryOptions {
   userId: string;
   input: CreateEntryInput;
   preventOverlappingEntries?: boolean;
+  /** ユーザーのタイムゾーン（日時正規化に使用。デフォルト: 'UTC'） */
+  timezone?: string | undefined;
 }
 
 /**
@@ -59,6 +61,8 @@ export interface UpdateEntryOptions {
   preventOverlappingEntries?: boolean;
   /** 楽観的ロック: クライアントが認識している updated_at（不一致なら CONFLICT） */
   expectedUpdatedAt?: string | undefined;
+  /** ユーザーのタイムゾーン（日時正規化に使用。デフォルト: 'UTC'） */
+  timezone?: string | undefined;
 }
 
 /**

@@ -3,7 +3,7 @@ import { fn } from 'storybook/test';
 
 import { PlanVsRecordContent } from './content/PlanVsRecordContent';
 
-/** PlanVsRecordContent — Plan vs Record をビジュアルで比較 */
+/** PlanVsRecordContent — 予定 vs 実績をビジュアルで比較 */
 const meta = {
   title: 'Features/Tour/PlanVsRecordContent',
   component: PlanVsRecordContent,

@@ -93,7 +93,7 @@ export const Overview: Story = {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive-hover">
                   削除
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -132,7 +132,7 @@ export const Overview: Story = {
             <AlertDialogContent className="static transform-none shadow-none">
               <AlertDialogHeader>
                 <div className="flex items-start gap-4">
-                  <div className="bg-destructive/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                  <div className="bg-destructive-tint flex size-10 shrink-0 items-center justify-center rounded-full">
                     <AlertTriangle className="text-destructive size-5" />
                   </div>
                   <div>
@@ -145,7 +145,7 @@ export const Overview: Story = {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive-hover">
                   <Trash2 className="mr-2 size-4" />
                   アカウントを削除
                 </AlertDialogAction>
@@ -169,7 +169,7 @@ export const Overview: Story = {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>編集を続ける</AlertDialogCancel>
-                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive-hover">
                   破棄して閉じる
                 </AlertDialogAction>
               </AlertDialogFooter>

@@ -1,36 +1,36 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { usePageTitleStore } from './usePageTitleStore';
+import { useShellStore } from './useShellStore';
 
-describe('usePageTitleStore', () => {
+describe('useShellStore - pageTitle', () => {
   beforeEach(() => {
-    usePageTitleStore.getState().clearTitle();
+    useShellStore.getState().clearPageTitle();
   });
 
   describe('初期状態', () => {
     it('タイトルが空文字', () => {
-      expect(usePageTitleStore.getState().title).toBe('');
+      expect(useShellStore.getState().pageTitle).toBe('');
     });
   });
 
-  describe('setTitle', () => {
+  describe('setPageTitle', () => {
     it('タイトルを設定できる', () => {
-      usePageTitleStore.getState().setTitle('Calendar');
-      expect(usePageTitleStore.getState().title).toBe('Calendar');
+      useShellStore.getState().setPageTitle('Calendar');
+      expect(useShellStore.getState().pageTitle).toBe('Calendar');
     });
 
     it('上書きできる', () => {
-      usePageTitleStore.getState().setTitle('Calendar');
-      usePageTitleStore.getState().setTitle('Records');
-      expect(usePageTitleStore.getState().title).toBe('Records');
+      useShellStore.getState().setPageTitle('Calendar');
+      useShellStore.getState().setPageTitle('Records');
+      expect(useShellStore.getState().pageTitle).toBe('Records');
     });
   });
 
-  describe('clearTitle', () => {
+  describe('clearPageTitle', () => {
     it('タイトルをクリアできる', () => {
-      usePageTitleStore.getState().setTitle('Settings');
-      usePageTitleStore.getState().clearTitle();
-      expect(usePageTitleStore.getState().title).toBe('');
+      useShellStore.getState().setPageTitle('Settings');
+      useShellStore.getState().clearPageTitle();
+      expect(useShellStore.getState().pageTitle).toBe('');
     });
   });
 });

@@ -724,9 +724,9 @@ export type Database = {
           business_hours_end: number;
           business_hours_start: number;
           chronotype_custom_zones: Json | null;
-          chronotype_display_mode: string;
           chronotype_enabled: boolean;
-          chronotype_opacity: number;
+          chronotype_gradient_dark: string | null;
+          chronotype_gradient_light: string | null;
           chronotype_type: string;
           color_scheme: string;
           created_at: string;
@@ -756,9 +756,9 @@ export type Database = {
           business_hours_end?: number;
           business_hours_start?: number;
           chronotype_custom_zones?: Json | null;
-          chronotype_display_mode?: string;
           chronotype_enabled?: boolean;
-          chronotype_opacity?: number;
+          chronotype_gradient_dark?: string | null;
+          chronotype_gradient_light?: string | null;
           chronotype_type?: string;
           color_scheme?: string;
           created_at?: string;
@@ -788,9 +788,9 @@ export type Database = {
           business_hours_end?: number;
           business_hours_start?: number;
           chronotype_custom_zones?: Json | null;
-          chronotype_display_mode?: string;
           chronotype_enabled?: boolean;
-          chronotype_opacity?: number;
+          chronotype_gradient_dark?: string | null;
+          chronotype_gradient_light?: string | null;
           chronotype_type?: string;
           color_scheme?: string;
           created_at?: string;

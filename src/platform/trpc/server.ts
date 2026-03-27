@@ -11,7 +11,7 @@
  *
  * export default async function Page() {
  *   const helpers = await createServerHelpers()
- *   await helpers.plans.list.prefetch()
+ *   await helpers.entries.list.prefetch()
  *
  *   return (
  *     <HydrationBoundary state={dehydrate(helpers.queryClient)}>
