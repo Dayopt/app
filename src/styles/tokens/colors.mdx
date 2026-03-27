@@ -11,106 +11,189 @@ tokens/colors.css のセマンティックトークン一覧。Tailwind クラ�
 
 ---
 
-## Surface（背景色・MD3準拠4段階）
+## カラー判断フロー
 
-Material Design 3 に基づく意味ベース設計。
-ダークモードでは高 elevation = 明るい（MD3 原則）。明度差は 3-6% で視認性を確保。
+新しいコンポーネントを作るとき、この 3 ステップでトークンを決める。
 
-| トークン | MD3 | 用途 |
-|----------|-----|------|
-| `bg-background` | Surface | ページ背景（基準レベル） |
-| `bg-surface-inset` | Container Low | card内セクション（background より 3% 暗い） |
-| `bg-container` | Container | サイドバー、セクション（inset より 3% 暗い） |
-| `bg-card` | Container High | カード、ダイアログ、ポップオーバー（container より 3% 暗い） |
-| `bg-overlay` | — | モーダル背景（半透明・MD3 scrim） |
+### Step 1: この面はどこにいる？（L軸 = 空間の階層）
+
+問い: 「ユーザーの視線がここに集まるべきか？」
+
+| 答え                                 | トークン        | 具体例                            |
+| ------------------------------------ | --------------- | --------------------------------- |
+| ここは裏方、常にいるけど主役じゃない | `bg-container`  | sidebar、footer、settings panel   |
+| ここが地面、基本の居場所             | `bg-background` | ページ全体、メインエリアの地      |
+| ここに注目してほしい、手前に浮く     | `bg-card`       | カード、dialog、popover、dropdown |
+| ここは入力を受ける窪み               | `bg-muted`      | input、textarea、well、badge の地 |
+
+> 迷ったときの補助判断: そのコンポーネントを消したら「あ、なくなった」と気づくか？
+> 気づくなら card（浮く）。気づかないなら container か muted（沈む）。
+>
+> shadow は [Elevation](?path=/docs/foundations-elevation--docs) で別途選ぶ。色の判断には含めない。
+
+### Step 2: 色をつける必要があるか？（H軸 = 意味）
+
+問い: 「この要素は状態や種別を色で伝える必要があるか？」
+
+必要ないなら Step 1 で終わり。neutral のまま。surface と text のトークンだけで完結する。
+**実際にはほとんどの UI がここで終わる。色は「意味がある場合だけ」つける。**
+
+色が必要なら、意味で hue が決まる:
+
+| 意味                   | トークン      | 色           | 使う場面                          |
+| ---------------------- | ------------- | ------------ | --------------------------------- |
+| アクション、リンク     | `primary`     | blue (H≈260) | CTA ボタン、リンク、ハイライト    |
+| 注意、警告             | `warning`     | amber (H70)  | 警告バナー、注意喚起              |
+| 成功、完了、ポジティブ | `success`     | green (H150) | 達成、+の差分                     |
+| エラー、削除、危険     | `destructive` | red (H25)    | 失敗、-の差分、destructive action |
+
+> `info` は neutral（グレー）。補足情報として区別したいが色で主張する必要がない場合に使う。
+>
+> 迷ったときの補助判断: 「この色を別の色に変えたら意味が変わるか？」
+> 変わるなら semantic color を使う。変わらないなら neutral のまま。
+
+### Step 3: どの強さで使う？（C軸 = 用途）
+
+問い: 「この色はどのくらい主張すべきか？」
+
+| 主張の度合い             | トークンパターン    | Tailwind クラス例                | 使う場面                                   |
+| ------------------------ | ------------------- | -------------------------------- | ------------------------------------------ |
+| 背景にうっすら敷く       | `{name}-tint`       | `bg-warning-tint`                | tint 背景、セクション背景                  |
+| はっきり色として見せる   | `{name}` (accent)   | `bg-destructive`, `text-primary` | アイコン、border、progress bar、塗りボタン |
+| 色のついたテキスト       | `text-{name}`       | `text-success`                   | ラベル、リンク、状態テキスト               |
+| 色の面の上に乗るテキスト | `{name}-foreground` | `text-destructive-foreground`    | 塗りボタンの文字、badge のテキスト         |
+
+> 迷ったときの補助判断: 「ここをグレーにしても機能するか？」
+> 機能するなら `-tint`（控えめ）で十分。グレーだと意味が消えるなら accent（はっきり）にする。
+
+### 全体をつなげると
+
+```
+新しいコンポーネントを作る
+  │
+  ├─ Step 1: この面はどこ？
+  │    → container / background / card / muted
+  │    （色なし。これだけで9割のUIは成立する）
+  │
+  ├─ Step 2: 色で意味を伝える必要ある？
+  │    → No → 終わり。neutral のまま
+  │    → Yes → primary / warning / success / destructive
+  │    （info は neutral。色ではなくアイコン・テキストで伝える）
+  │
+  └─ Step 3: どの強さ？
+       → 背景にうっすら → bg-{name}-tint
+       → はっきり見せる → bg-{name} / text-{name}
+       → 塗り面の上のテキスト → text-{name}-foreground
+```
+
+一番大事なのは、**Step 1 だけで終わるコンポーネントが大半**ということ。
+色は例外的に足すもので、デフォルトは neutral。これを守るだけで画面がうるさくならない。
+
+---
+
+## Surface（3段階 + muted）
+
+container(沈む) → background(基準) → card(浮く)。Dark: warm H60, C=0.008。
+
+| トークン        | 役割   | Light             | Dark (H60 C.008)       |
+| --------------- | ------ | ----------------- | ---------------------- |
+| `bg-container`  | 沈む   | `oklch(0.96 0 0)` | `oklch(0.15 0.008 60)` |
+| `bg-background` | 基準   | `oklch(0.98 0 0)` | `oklch(0.18 0.008 60)` |
+| `bg-card`       | 浮く   | `oklch(1.00 0 0)` | `oklch(0.22 0.008 60)` |
+| `bg-muted`      | 控えめ | `oklch(0.95 0 0)` | `oklch(0.25 0.008 60)` |
+| `bg-overlay`    | —      | `black / 0.32`    | `black / 0.50`         |
 
 ---
 
 ## テキスト
 
-| トークン | 用途 |
-|----------|------|
-| `text-foreground` | 主要テキスト（見出し、本文） |
-| `text-muted-foreground` | 補助テキスト（説明、キャプション） |
-| `text-primary` | リンク、アクション |
-| `text-destructive` | エラー、警告 |
-| `text-success` | 成功、完了 |
-| `text-card-foreground` | shadcn/ui 互換エイリアス（foreground と同値） |
+| トークン                | Light             | Dark                   | 用途               |
+| ----------------------- | ----------------- | ---------------------- | ------------------ |
+| `text-foreground`       | `oklch(0.13 0 0)` | `oklch(0.90 0.005 70)` | 主要テキスト       |
+| `text-muted-foreground` | `oklch(0.40 0 0)` | `oklch(0.68 0.005 60)` | 補助テキスト       |
+| `text-primary`          | —                 | —                      | リンク、アクション |
+| `text-destructive`      | —                 | —                      | エラー、警告       |
+| `text-success`          | —                 | —                      | 成功、完了         |
+| `text-card-foreground`  | = foreground      | = foreground           | shadcn/ui 互換     |
 
 ---
 
 ## Primary
 
-| トークン | 用途 |
-|----------|------|
-| `bg-primary` | 主要アクションの背景 |
+| トークン                  | 用途                 |
+| ------------------------- | -------------------- |
+| `bg-primary`              | 主要アクションの背景 |
 | `text-primary-foreground` | Primary 上のテキスト |
+
+> Primary = 「ユーザーアクションを促す要素」にのみ使用する。
+> ✅ CTA ボタン、リンク、フォーカスリング
+> ❌ 装飾、待機状態の背景、大面積の背景
 
 ---
 
-## Semantic（意味を持つ色）
+## Semantic（bg + accent 体系）
 
-WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト比を確保。
-ダークモードでは明度を上げ、foreground をダーク文字に反転して対応。
+destructive / warning / success は同じ L/C 構造で hue のみ変化。info は neutral（低彩度）。
 
-| トークン | 色 | 用途 |
-|----------|-----|------|
-| `bg-destructive` / `text-destructive-foreground` | 赤 (hue 25) | 削除、エラー |
-| `bg-warning` / `text-warning-foreground` | amber (hue 68) | 警告、注意 |
-| `bg-success` / `text-success-foreground` | 緑 (hue 149) | 成功、完了 |
-| `bg-info` / `text-info-foreground` | 青 (hue 250) | 情報、ヒント |
+| 色          | Hue     | Light accent           | Light bg                | Dark accent            | Dark bg                |
+| ----------- | ------- | ---------------------- | ----------------------- | ---------------------- | ---------------------- |
+| destructive | 25      | `oklch(0.58 0.16 25)`  | `oklch(0.96 0.015 25)`  | `oklch(0.62 0.14 25)`  | `oklch(0.22 0.03 25)`  |
+| warning     | 70      | `oklch(0.68 0.16 70)`  | `oklch(0.97 0.015 70)`  | `oklch(0.72 0.14 70)`  | `oklch(0.22 0.03 70)`  |
+| success     | 150     | `oklch(0.60 0.14 150)` | `oklch(0.95 0.02 150)`  | `oklch(0.65 0.12 150)` | `oklch(0.22 0.03 150)` |
+| info        | neutral | `oklch(0.55 0.02 260)` | `oklch(0.96 0.005 260)` | `oklch(0.65 0.02 260)` | `oklch(0.22 0.01 260)` |
 
-### ダークモードの foreground 反転
+クラス: accent → `text-{name}` / `bg-{name}`, tint → `bg-{name}-tint`
+`-foreground` は accent 背景上のテキスト用（light: white, dark: dark text）。
 
-ダークモードではセマンティックカラーの明度が上がるため、foreground を白→ダーク文字に反転。
-`text-{semantic}-foreground` は自動で切り替わるため、コンポーネント側の変更は不要。
+### 2パターンに統一
+
+セマンティックな色表現は以下の2パターンのみ。
+
+| パターン                 | クラス構成                           | 用途                       |
+| ------------------------ | ------------------------------------ | -------------------------- |
+| **アウトライン（推奨）** | `border-{color} text-{color}`        | バッジ、タグ、警告ボックス |
+| **塗り（アクション用）** | `bg-{color} text-{color}-foreground` | ボタン、アクション         |
+
+対応カラー: `primary`, `success`, `warning`, `destructive`, `info`
+
+### 置き換えルール
+
+Container系・不透明度ハードコードからの移行ルール。
+
+| 用途         | ❌ 旧（廃止）              | ✅ 新（推奨）                         |
+| ------------ | -------------------------- | ------------------------------------- |
+| バッジ       | `bg-*-container`           | `border-* text-*`                     |
+| 警告ボックス | `bg-destructive-container` | `border-destructive text-destructive` |
+| 選択状態     | `bg-primary-container`     | `bg-state-active`                     |
+| アイコン背景 | `bg-primary-container`     | `bg-state-active` / `bg-muted`        |
+| 不透明度背景 | `bg-warning/10`            | `border-warning text-warning`         |
 
 ---
 
 ## State（状態）
 
-| トークン | 用途 |
-|----------|------|
-| `bg-state-active` | 選択中・アクティブ状態（塗りつぶし） |
-| `text-state-active-foreground` | アクティブ状態のテキスト |
+| トークン                       | 用途                                 |
+| ------------------------------ | ------------------------------------ |
+| `bg-state-active`              | 選択中・アクティブ状態（塗りつぶし） |
+| `text-state-active-foreground` | アクティブ状態のテキスト             |
 
 ---
 
-## Chronotype（エネルギーフェーズ）
+## Border
 
-> **温度グラデーション設計**: 高エネルギー=暖色(amber)→低エネルギー=寒色(indigo)。
-> 覚醒時のエネルギー周期を 5 フェーズ（warmup→peak→dip→recovery→winddown）で表現。
+| トークン               | Light                 | Dark                  | 用途                 |
+| ---------------------- | --------------------- | --------------------- | -------------------- |
+| `border-border`        | `oklch(0 0 0 / 0.06)` | `oklch(1 0 0 / 0.07)` | card外枠、セクション |
+| `border-border-subtle` | `oklch(0 0 0 / 0.04)` | `oklch(1 0 0 / 0.05)` | card内部の区切り     |
 
-| トークン | Hue | 用途 |
-|----------|-----|------|
-| `bg-chronotype-warmup` | 145 (green) | ウォームアップ（起床後） |
-| `bg-chronotype-peak` | 85 (amber) | ピーク（最集中） |
-| `bg-chronotype-dip` | 250 (blue) | ディップ（エネルギー低下） |
-| `bg-chronotype-recovery` | 200 (cyan) | リカバリー（回復） |
-| `bg-chronotype-winddown` | 280 (indigo) | ウインドダウン（就寝準備） |
+> 入力フィールド背景は `bg-muted`。フォーカスリングは `focus-visible:ring-2 ring-primary`。
 
-### Tints（タイムライン背景用）
+### Shadow
 
-> 不透明度ルールの例外: base 色の H を共有しつつ L/C/alpha を導出。
-> Light: L=0.50, α=0.10-0.18 / Dark: L=0.70, α=0.05-0.13
-
-| トークン | 用途 |
-|----------|------|
-| `bg-chronotype-tint-warmup` | ウォームアップ背景 |
-| `bg-chronotype-tint-peak` | ピーク背景 |
-| `bg-chronotype-tint-dip` | ディップ背景 |
-| `bg-chronotype-tint-recovery` | リカバリー背景 |
-| `bg-chronotype-tint-winddown` | ウインドダウン背景 |
-
----
-
-## Border & Input
-
-| トークン | 用途 |
-|----------|------|
-| `border-border` | ボーダー（card 上でも視認できるコントラスト比） |
-| `bg-input` | 入力フィールド背景 |
-| `ring-ring` | フォーカスリング |
+| トークン      | Light                                           | Dark                               |
+| ------------- | ----------------------------------------------- | ---------------------------------- |
+| `shadow-sm`   | ring + `1px 3px oklch(0 0 0/0.03)`              | ring + `1px 4px oklch(0 0 0/0.18)` |
+| `shadow-card` | ring + `1px 2px` + `4px 16px oklch(0 0 0/0.05)` | ring + `2px 8px oklch(0 0 0/0.25)` |
 
 ---
 
@@ -122,10 +205,9 @@ WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト
 
 ## Calendar（カレンダー専用）
 
-| トークン | 用途 |
-|----------|------|
-| `bg-plan-box` / `border-plan-border` | Plan（予定）：sky blue 系 |
-| `bg-record-box` / `border-record-border` | Record（実績）：green 系 |
+| トークン           | 用途                                           |
+| ------------------ | ---------------------------------------------- |
+| `bg-entry-default` | Entry のデフォルト色（タグ未設定時・sky blue） |
 
 ---
 
@@ -133,18 +215,18 @@ WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト
 
 ユーザーがタグに設定できる 10 色のパレット。ダークモードでは明度を上げ、彩度を下げてアクセシビリティを確保。
 
-| トークン | 名前 | 備考 |
-|----------|------|------|
-| `bg-tag-blue` | Blue | デフォルト |
-| `bg-tag-green` | Green | |
-| `bg-tag-red` | Red | |
-| `bg-tag-amber` | Amber | |
-| `bg-tag-violet` | Violet | |
-| `bg-tag-pink` | Pink | |
-| `bg-tag-teal` | Teal | |
-| `bg-tag-orange` | Orange | |
-| `bg-tag-gray` | Gray | グループのデフォルト |
-| `bg-tag-indigo` | Indigo | |
+| トークン        | 名前   | 備考                 |
+| --------------- | ------ | -------------------- |
+| `bg-tag-blue`   | Blue   | デフォルト           |
+| `bg-tag-green`  | Green  |                      |
+| `bg-tag-red`    | Red    |                      |
+| `bg-tag-amber`  | Amber  |                      |
+| `bg-tag-violet` | Violet |                      |
+| `bg-tag-pink`   | Pink   |                      |
+| `bg-tag-teal`   | Teal   |                      |
+| `bg-tag-orange` | Orange |                      |
+| `bg-tag-gray`   | Gray   | グループのデフォルト |
+| `bg-tag-indigo` | Indigo |                      |
 
 タグバッジでは `border-tag-*` でボーダー色を設定。
 
@@ -152,11 +234,10 @@ WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト
 
 ## shadcn/ui 互換エイリアス
 
-| トークン | 実体 |
-|----------|------|
-| `bg-secondary` | `bg-container` のエイリアス |
-| `bg-muted` | `bg-container` のエイリアス |
-| `bg-accent` | `bg-state-active` のエイリアス |
+| トークン       | 実体                           |
+| -------------- | ------------------------------ |
+| `bg-secondary` | `bg-container` のエイリアス    |
+| `bg-accent`    | `bg-state-active` のエイリアス |
 
 ---
 
@@ -164,14 +245,14 @@ WCAG 2.1 AA 準拠。全ペアが card 背景上で 4.5:1+ のコントラスト
 
 foreground ベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
 
-| 状態 | トークン | 不透明度 | 用途 |
-|------|----------|---------|------|
-| Hover | `bg-state-hover` | 10% | マウスオーバー時 |
-| Focus | `bg-state-focus` | 12% | キーボードフォーカス時 |
-| Pressed | `bg-state-pressed` | 12% | クリック中 |
-| Selected | `bg-state-selected` | 12% | 選択状態 |
-| Dragged | `bg-state-dragged` | 16% | ドラッグ中 |
-| Active | `bg-state-active` | 塗り | 選択中（塗りつぶし） |
+| 状態     | トークン            | 不透明度 | 用途                   |
+| -------- | ------------------- | -------- | ---------------------- |
+| Hover    | `bg-state-hover`    | 10%      | マウスオーバー時       |
+| Focus    | `bg-state-focus`    | 12%      | キーボードフォーカス時 |
+| Pressed  | `bg-state-pressed`  | 12%      | クリック中             |
+| Selected | `bg-state-selected` | 12%      | 選択状態               |
+| Dragged  | `bg-state-dragged`  | 16%      | ドラッグ中             |
+| Active   | `bg-state-active`   | 塗り     | 選択中（塗りつぶし）   |
 
 ---
 
@@ -185,20 +266,20 @@ hover:bg-state-hover
 
 ### 塗りボタン用
 
-| ボタン種別 | クラス |
-|-----------|--------|
-| Primary | `bg-primary hover:bg-primary-hover` |
+| ボタン種別  | クラス                                      |
+| ----------- | ------------------------------------------- |
+| Primary     | `bg-primary hover:bg-primary-hover`         |
 | Destructive | `bg-destructive hover:bg-destructive-hover` |
-| Secondary | `bg-secondary hover:bg-secondary-hover` |
-| Warning | `bg-warning hover:bg-warning-hover` |
-| Success | `bg-success hover:bg-success-hover` |
-| Info | `bg-info hover:bg-info-hover` |
+| Secondary   | `bg-secondary hover:bg-secondary-hover`     |
+| Warning     | `bg-warning hover:bg-warning-hover`         |
+| Success     | `bg-success hover:bg-success-hover`         |
+| Info        | `bg-info hover:bg-info-hover`               |
 
 ### セマンティック Ghost
 
-| ボタン種別 | クラス |
-|-----------|--------|
-| Primary Ghost | `text-primary hover:bg-primary-state-hover` |
+| ボタン種別        | クラス                                              |
+| ----------------- | --------------------------------------------------- |
+| Primary Ghost     | `text-primary hover:bg-primary-state-hover`         |
 | Destructive Ghost | `text-destructive hover:bg-destructive-state-hover` |
 
 ### フォーカスリング（MD3 スタイル）
@@ -215,11 +296,11 @@ bg-state-active text-state-active-foreground
 
 ### リンク / テキストホバー
 
-| パターン | クラス |
-|---------|--------|
+| パターン   | クラス                                                                  |
+| ---------- | ----------------------------------------------------------------------- |
 | 下線リンク | `text-primary underline decoration-primary/30 hover:decoration-primary` |
-| ホバー下線 | `text-primary hover:underline` |
-| 色変化 | `text-muted-foreground hover:text-foreground` |
+| ホバー下線 | `text-primary hover:underline`                                          |
+| 色変化     | `text-muted-foreground hover:text-foreground`                           |
 
 ---
 
@@ -239,6 +320,24 @@ bg-state-active text-state-active-foreground
 
 理由: セマンティックトークンはダークモード対応を自動化し、デザイン変更時の一括修正を可能にする。
 
+### アウトラインパターンの実例
+
+```tsx
+// WarningBox（破壊的操作の警告）
+<div className="border-warning text-warning flex items-start gap-3 rounded-lg border p-4">
+  <AlertTriangle className="size-5" />
+  <div>この操作は取り消せません</div>
+</div>
+
+// InfoBox（補足情報）
+<div className="bg-container rounded-lg p-4">
+  <p className="text-sm font-bold mb-2">使用状況:</p>
+  <ul className="text-muted-foreground space-y-1 text-sm">
+    <li>Plans: 10件</li>
+  </ul>
+</div>
+```
+
 ### 適切なテキストコントラスト
 
 ```tsx
@@ -254,11 +353,11 @@ bg-state-active text-state-active-foreground
 ### Surface 階層を守る
 
 ```
-✅ background → surface-inset → container → card（親→子で暗くなる）
+✅ container(沈む) → background(基準) → card(浮く)
 ❌ card → background → container（逆転）
 ```
 
-理由: MD3 原則に基づく視覚的階層。card内のセクションには `bg-surface-inset` を使用。
+理由: 視覚的階層。入力欄等の控えめな面には `bg-muted` を使用。
 
 ### 状態を色で表現
 

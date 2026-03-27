@@ -268,7 +268,7 @@ export const UseCases: Story = {
 
 const SURFACES = [
   { name: 'background', bg: 'bg-background', desc: 'ページ背景' },
-  { name: 'surface-inset', bg: 'bg-surface-inset', desc: 'カード内セクション' },
+  { name: 'muted', bg: 'bg-muted', desc: '入力欄、well' },
   { name: 'container', bg: 'bg-container', desc: 'サイドバー、セクション' },
   { name: 'card', bg: 'bg-card', desc: 'カード、ダイアログ' },
 ] as const;

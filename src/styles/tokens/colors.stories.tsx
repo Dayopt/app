@@ -21,9 +21,12 @@ function extractToken(tailwindClass: string): string {
 function ColorSwatch({
   tailwindClass,
   description,
+  oklch,
 }: {
   tailwindClass: string;
   description?: string;
+  /** "light | dark" 形式の oklch 値 */
+  oklch?: string;
 }) {
   const token = extractToken(tailwindClass);
   return (
@@ -35,6 +38,7 @@ function ColorSwatch({
       <div className="min-w-0 flex-1">
         <code className="text-sm font-bold">{tailwindClass}</code>
         {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
+        {oklch && <p className="mt-0.5 font-mono text-xs opacity-40">{oklch}</p>}
       </div>
     </div>
   );
@@ -53,140 +57,614 @@ function ColorGroup({ title, children }: { title: string; children: React.ReactN
 export const AllColors: Story = {
   render: () => (
     <div>
-      <h1 className="mb-8 text-2xl font-bold">カラートークン</h1>
+      <h1 className="mb-4 text-2xl font-bold">カラートークン</h1>
 
-      <ColorGroup title="Surface（背景色・3段階 + muted）">
-        <ColorSwatch tailwindClass="bg-container" description="サイドバー、セクション（沈む）" />
-        <ColorSwatch tailwindClass="bg-background" description="ページ背景（基準）" />
+      {/* ── 設計原則 ── */}
+      <div className="bg-card border-border mb-10 rounded-xl border p-6">
+        <h2 className="mb-3 text-lg font-bold">設計原則</h2>
+        <p className="text-muted-foreground mb-4 text-sm">
+          oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
+        </p>
+        <div className="mb-4 space-y-1 font-mono text-sm">
+          <div>
+            <span className="text-muted-foreground">L軸</span> = 空間（浮く/沈む）
+          </div>
+          <div>
+            <span className="text-muted-foreground">H軸</span> = 意味（blue=info, amber=warning,
+            green=success, red=destructive）
+          </div>
+          <div>
+            <span className="text-muted-foreground">C軸</span> = 強度（tint=薄い, accent=強い）
+          </div>
+        </div>
+        <div className="text-muted-foreground space-y-1 text-xs">
+          <p>
+            <span className="text-foreground font-bold">判断フロー:</span> 1. この面はどこ？→
+            Surface（4択） 2. 色で意味を伝える？→ No なら neutral で終了 3. どの強さ？→ tint /
+            accent
+          </p>
+          <p>
+            <span className="text-foreground font-bold">Dark:</span> Surface — warm H60 C0.008。
+            テキストはオフホワイト L0.90（純白にしない）。Border — alpha-based（black/α, white/α）
+          </p>
+        </div>
+      </div>
+
+      {/* ━━ 1. Neutral ━━ */}
+      <h2 className="text-muted-foreground mb-6 text-xs font-bold tracking-widest uppercase">
+        1. Neutral — 9割のUIはここで完結
+      </h2>
+
+      <ColorGroup title="Surface">
+        <ColorSwatch
+          tailwindClass="bg-container"
+          description="沈む: sidebar, footer"
+          oklch="oklch(0.96 0 0) | oklch(0.15 0.008 60)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-background"
+          description="基準: page"
+          oklch="oklch(0.98 0 0) | oklch(0.18 0.008 60)"
+        />
         <ColorSwatch
           tailwindClass="bg-card"
-          description="カード、ダイアログ、ポップオーバー（浮く）"
-        />
-        <ColorSwatch tailwindClass="bg-muted" description="入力欄、well" />
-        <ColorSwatch tailwindClass="bg-overlay" description="モーダル背景（半透明）" />
-      </ColorGroup>
-
-      <ColorGroup title="テキスト">
-        <ColorSwatch tailwindClass="text-foreground" description="通常テキスト" />
-        <ColorSwatch tailwindClass="text-muted-foreground" description="控えめなテキスト" />
-        <ColorSwatch
-          tailwindClass="text-card-foreground"
-          description="shadcn/ui互換エイリアス（foregroundと同値）"
-        />
-      </ColorGroup>
-
-      <ColorGroup title="Primary">
-        <ColorSwatch tailwindClass="bg-primary" description="主要アクションの背景" />
-        <ColorSwatch tailwindClass="text-primary-foreground" description="Primary上のテキスト" />
-      </ColorGroup>
-
-      <ColorGroup title="State（状態）">
-        <ColorSwatch tailwindClass="bg-state-active" description="選択中・アクティブ状態" />
-        <ColorSwatch
-          tailwindClass="text-state-active-foreground"
-          description="アクティブ状態のテキスト"
-        />
-      </ColorGroup>
-
-      <ColorGroup title="Semantic（意味）">
-        <ColorSwatch tailwindClass="bg-success" description="成功、完了" />
-        <ColorSwatch tailwindClass="bg-warning" description="警告、注意" />
-        <ColorSwatch tailwindClass="bg-info" description="情報" />
-        <ColorSwatch tailwindClass="bg-destructive" description="削除、エラー" />
-      </ColorGroup>
-
-      <ColorGroup title="Border & Input">
-        <ColorSwatch
-          tailwindClass="border-border"
-          description="ボーダー（card上でも視認できるコントラスト比）"
-        />
-        <ColorSwatch tailwindClass="bg-input" description="入力フィールド背景" />
-        <ColorSwatch tailwindClass="ring-ring" description="フォーカスリング" />
-      </ColorGroup>
-
-      <ColorGroup title="Chart（グラフ）">
-        <ColorSwatch tailwindClass="bg-chart-1" />
-        <ColorSwatch tailwindClass="bg-chart-2" />
-        <ColorSwatch tailwindClass="bg-chart-3" />
-        <ColorSwatch tailwindClass="bg-chart-4" />
-        <ColorSwatch tailwindClass="bg-chart-5" />
-      </ColorGroup>
-
-      <ColorGroup title="Tag Colors（ダークモードで明度調整）">
-        <ColorSwatch tailwindClass="bg-tag-blue" description="Blue（デフォルト）" />
-        <ColorSwatch tailwindClass="bg-tag-green" description="Green" />
-        <ColorSwatch tailwindClass="bg-tag-red" description="Red" />
-        <ColorSwatch tailwindClass="bg-tag-amber" description="Amber" />
-        <ColorSwatch tailwindClass="bg-tag-violet" description="Violet" />
-        <ColorSwatch tailwindClass="bg-tag-pink" description="Pink" />
-        <ColorSwatch tailwindClass="bg-tag-teal" description="Teal" />
-        <ColorSwatch tailwindClass="bg-tag-orange" description="Orange" />
-        <ColorSwatch tailwindClass="bg-tag-gray" description="Gray" />
-        <ColorSwatch tailwindClass="bg-tag-indigo" description="Indigo" />
-      </ColorGroup>
-
-      <ColorGroup title="shadcn/ui互換エイリアス">
-        <ColorSwatch
-          tailwindClass="bg-secondary"
-          description="= bg-container のエイリアス（shadcn/ui互換）"
+          description="浮く: card, dialog"
+          oklch="oklch(1.00 0 0) | oklch(0.22 0.008 60)"
         />
         <ColorSwatch
           tailwindClass="bg-muted"
-          description="= bg-container のエイリアス（shadcn/ui互換）"
+          description="窪み: input, well"
+          oklch="oklch(0.95 0 0) | oklch(0.25 0.008 60)"
         />
         <ColorSwatch
-          tailwindClass="bg-accent"
-          description="= bg-state-active のエイリアス（shadcn/ui互換）"
+          tailwindClass="bg-overlay"
+          description="scrim: modal背景"
+          oklch="oklch(0 0 0 / 0.32) | oklch(0 0 0 / 0.50)"
         />
+      </ColorGroup>
+
+      <ColorGroup title="Text">
+        <ColorSwatch
+          tailwindClass="text-foreground"
+          description="主要"
+          oklch="oklch(0.13 0 0) | oklch(0.90 0.005 70)"
+        />
+        <ColorSwatch
+          tailwindClass="text-muted-foreground"
+          description="補助"
+          oklch="oklch(0.40 0 0) | oklch(0.68 0.005 60)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="Border">
+        <ColorSwatch
+          tailwindClass="border-border"
+          description="card外枠、セクション区切り"
+          oklch="oklch(0 0 0 / 0.06) | oklch(1 0 0 / 0.07)"
+        />
+        <ColorSwatch
+          tailwindClass="border-border-subtle"
+          description="card内部の区切り"
+          oklch="oklch(0 0 0 / 0.04) | oklch(1 0 0 / 0.05)"
+        />
+      </ColorGroup>
+
+      {/* ━━ 2. Semantic ━━ */}
+      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+        2. Semantic — 意味があるときだけ
+      </h2>
+      <p className="text-muted-foreground -mt-4 mb-6 text-xs">
+        destructive/warning/success は同じ L/C 構造で H だけ変化。info は neutral（低彩度）。
+      </p>
+
+      <ColorGroup title="Destructive (H25)">
+        <ColorSwatch
+          tailwindClass="bg-destructive-tint"
+          description="tint"
+          oklch="oklch(0.96 0.015 25) | oklch(0.22 0.03 25)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-destructive"
+          description="accent"
+          oklch="oklch(0.58 0.16 25) | oklch(0.62 0.14 25)"
+        />
+        <ColorSwatch
+          tailwindClass="text-destructive-foreground"
+          description="accent面上の文字"
+          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="Warning (H70)">
+        <ColorSwatch
+          tailwindClass="bg-warning-tint"
+          description="tint"
+          oklch="oklch(0.97 0.015 70) | oklch(0.22 0.03 70)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-warning"
+          description="accent"
+          oklch="oklch(0.68 0.16 70) | oklch(0.72 0.14 70)"
+        />
+        <ColorSwatch
+          tailwindClass="text-warning-foreground"
+          description="accent面上の文字"
+          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="Success (H150)">
+        <ColorSwatch
+          tailwindClass="bg-success-tint"
+          description="tint"
+          oklch="oklch(0.95 0.02 150) | oklch(0.22 0.03 150)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-success"
+          description="accent"
+          oklch="oklch(0.60 0.14 150) | oklch(0.65 0.12 150)"
+        />
+        <ColorSwatch
+          tailwindClass="text-success-foreground"
+          description="accent面上の文字"
+          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="Info (neutral)">
+        <ColorSwatch
+          tailwindClass="bg-info-tint"
+          description="tint（neutral）"
+          oklch="oklch(0.96 0.005 260) | oklch(0.22 0.01 260)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-info"
+          description="accent（neutral）"
+          oklch="oklch(0.55 0.02 260) | oklch(0.65 0.02 260)"
+        />
+        <ColorSwatch
+          tailwindClass="text-info-foreground"
+          description="accent面上の文字"
+          oklch="oklch(1 0 0) | oklch(0.15 0 0)"
+        />
+      </ColorGroup>
+
+      {/* ━━ 3. Primary ━━ */}
+      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+        3. Primary — ブランドアクション
+      </h2>
+
+      <ColorGroup title="Primary">
+        <ColorSwatch
+          tailwindClass="bg-primary"
+          description="主要アクションの背景"
+          oklch="oklch(0.45 0.14 260) | oklch(0.50 0.188 260)"
+        />
+        <ColorSwatch
+          tailwindClass="text-primary-foreground"
+          description="Primary上のテキスト"
+          oklch="oklch(1 0 0)"
+        />
+      </ColorGroup>
+
+      {/* ━━ 4. State ━━ */}
+      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+        4. State — インタラクション
+      </h2>
+      <p className="text-muted-foreground -mt-4 mb-6 text-xs">
+        foreground ベースの半透明オーバーレイ。oklch(from var(--foreground) l c h / α%)。
+      </p>
+
+      <ColorGroup title="State Layer（半透明）">
+        <ColorSwatch tailwindClass="bg-state-hover" description="hover" oklch="foreground / 10%" />
+        <ColorSwatch tailwindClass="bg-state-focus" description="focus" oklch="foreground / 12%" />
+        <ColorSwatch
+          tailwindClass="bg-state-pressed"
+          description="pressed"
+          oklch="foreground / 12%"
+        />
+        <ColorSwatch
+          tailwindClass="bg-state-selected"
+          description="selected"
+          oklch="foreground / 12%"
+        />
+        <ColorSwatch
+          tailwindClass="bg-state-dragged"
+          description="dragged"
+          oklch="foreground / 16%"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="State Active（塗りつぶし）">
+        <ColorSwatch
+          tailwindClass="bg-state-active"
+          description="選択中"
+          oklch="oklch(0.95 0.025 237) | oklch(0.45 0.14 266)"
+        />
+        <ColorSwatch
+          tailwindClass="text-state-active-foreground"
+          description="アクティブ状態テキスト"
+          oklch="oklch(0.38 0.14 266) | oklch(0.88 0.06 254)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="塗りボタン用ホバー（accent / 90%）">
+        <ColorSwatch
+          tailwindClass="bg-primary-hover"
+          description="primary"
+          oklch="oklch(from primary l c h / 90%)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-destructive-hover"
+          description="destructive"
+          oklch="oklch(from destructive l c h / 90%)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-warning-hover"
+          description="warning"
+          oklch="oklch(from warning l c h / 90%)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-success-hover"
+          description="success"
+          oklch="oklch(from success l c h / 90%)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-info-hover"
+          description="info"
+          oklch="oklch(from info l c h / 90%)"
+        />
+      </ColorGroup>
+
+      {/* ━━ 5. Domain ━━ */}
+      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+        5. Domain — Dayopt 固有
+      </h2>
+
+      <ColorGroup title="Tag Colors（oklch統一 L/C、Dark: L+0.13 C-0.03）">
+        <ColorSwatch
+          tailwindClass="bg-tag-blue"
+          description="Blue（デフォルト）"
+          oklch="oklch(0.65 0.18 240) | oklch(0.78 0.15 240)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-green"
+          description="Green"
+          oklch="oklch(0.65 0.18 145) | oklch(0.78 0.15 145)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-red"
+          description="Red"
+          oklch="oklch(0.65 0.18 25) | oklch(0.78 0.15 25)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-amber"
+          description="Amber"
+          oklch="oklch(0.65 0.18 80) | oklch(0.78 0.15 80)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-violet"
+          description="Violet"
+          oklch="oklch(0.65 0.18 310) | oklch(0.78 0.15 310)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-pink"
+          description="Pink"
+          oklch="oklch(0.65 0.18 350) | oklch(0.78 0.15 350)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-teal"
+          description="Teal"
+          oklch="oklch(0.65 0.13 185) | oklch(0.78 0.11 185)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-orange"
+          description="Orange"
+          oklch="oklch(0.65 0.18 55) | oklch(0.78 0.15 55)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-gray"
+          description="Gray"
+          oklch="oklch(0.55 0.02 250) | oklch(0.70 0.02 250)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-tag-indigo"
+          description="Indigo"
+          oklch="oklch(0.65 0.18 280) | oklch(0.78 0.15 280)"
+        />
+      </ColorGroup>
+
+      <ColorGroup title="Chart（比較用5色）">
+        <ColorSwatch tailwindClass="bg-chart-1" oklch="oklch(0.62 0.14 260)" />
+        <ColorSwatch tailwindClass="bg-chart-2" oklch="oklch(0.55 0.22 263)" />
+        <ColorSwatch tailwindClass="bg-chart-3" oklch="oklch(0.49 0.22 264)" />
+        <ColorSwatch tailwindClass="bg-chart-4" oklch="oklch(0.42 0.18 266)" />
+        <ColorSwatch tailwindClass="bg-chart-5" oklch="oklch(0.38 0.14 266)" />
+      </ColorGroup>
+
+      {/* ━━ 6. Aliases ━━ */}
+      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+        6. Aliases — shadcn/ui 互換
+      </h2>
+
+      <ColorGroup title="Aliases">
+        <ColorSwatch tailwindClass="bg-secondary" description="= bg-container" />
+        <ColorSwatch tailwindClass="bg-accent" description="= bg-state-active" />
+        <ColorSwatch tailwindClass="text-card-foreground" description="= text-foreground" />
       </ColorGroup>
     </div>
   ),
 };
 
 export const Surface: Story = {
-  render: () => (
-    <div>
-      <h2 className="mb-6 text-xl font-bold">Surface体系（GAFA準拠・3段階）</h2>
-      <p className="text-muted-foreground mb-8">
-        container(沈む) → background(基準) → card(浮く) の3段階 + muted(入力欄)。
-        <br />
-        ダークモードでは warm H60 (C=0.02) を適用。明度差は2-4%で視認性を確保。
-      </p>
+  render: () => {
+    const surfaces = [
+      {
+        token: 'container',
+        role: '沈む',
+        desc: 'サイドバー、セクション',
+        light: 'oklch(0.96 0 0)',
+        dark: 'oklch(0.15 0.008 60)',
+        bg: 'bg-container',
+      },
+      {
+        token: 'background',
+        role: '基準',
+        desc: 'ページ背景',
+        light: 'oklch(0.98 0 0)',
+        dark: 'oklch(0.18 0.008 60)',
+        bg: 'bg-background',
+      },
+      {
+        token: 'card',
+        role: '浮く',
+        desc: 'カード、ダイアログ',
+        light: 'oklch(1.00 0 0)',
+        dark: 'oklch(0.22 0.008 60)',
+        bg: 'bg-card',
+      },
+    ] as const;
 
-      <div className="space-y-4">
-        <div className="bg-container border-border rounded-lg border p-6">
-          <div className="font-bold">Container</div>
-          <div className="text-muted-foreground text-sm">
-            サイドバー、セクション（沈む — backgroundより暗い）
+    const texts = [
+      {
+        token: 'foreground',
+        role: '主要テキスト',
+        light: 'oklch(0.13 0 0)',
+        dark: 'oklch(0.90 0.005 70)',
+      },
+      {
+        token: 'muted-foreground',
+        role: '補助テキスト',
+        light: 'oklch(0.40 0 0)',
+        dark: 'oklch(0.68 0.005 60)',
+      },
+    ] as const;
+
+    const shadowValues = {
+      sm: {
+        light: '0 0 0 1px oklch(0 0 0/0.03), 0 1px 3px oklch(0 0 0/0.03)',
+        dark: '0 0 0 1px oklch(1 0 0/0.03), 0 1px 4px oklch(0 0 0/0.18)',
+      },
+      card: {
+        light:
+          '0 0 0 1px oklch(0 0 0/0.03), 0 1px 2px oklch(0 0 0/0.04), 0 4px 16px oklch(0 0 0/0.05)',
+        dark: '0 0 0 1px oklch(1 0 0/0.04), 0 2px 8px oklch(0 0 0/0.25)',
+      },
+    } as const;
+
+    return (
+      <div>
+        <h2 className="mb-2 text-xl font-bold">Surface 体系</h2>
+        <p className="text-muted-foreground mb-1 text-sm">
+          container(沈む) → background(基準) → card(浮く) + muted。Dark: warm H60 C=0.008。
+        </p>
+        <p className="text-muted-foreground mb-8 text-sm">
+          テキストは純白にしない（dark foreground L=0.90 オフホワイト, C=0.005, H=70）。
+        </p>
+
+        {/* ── Elevation bar: 左=暗い → 右=明るい ── */}
+        <h3 className="mb-3 font-bold">Elevation（左:沈む → 右:浮く）</h3>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Storybook ツールバーの 🌙 で Light/Dark を切り替えると全プレビューが連動します。
+        </p>
+        <div className="mb-2 flex gap-0 overflow-hidden rounded-xl">
+          {surfaces.map(({ token, bg, role }) => (
+            <div
+              key={token}
+              className={`${bg} flex flex-1 flex-col items-center justify-center py-8`}
+            >
+              <div className="text-foreground text-sm font-bold">{token}</div>
+              <div className="text-muted-foreground text-xs">← {role}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mb-8 flex overflow-hidden rounded-xl">
+          <div className="bg-muted flex flex-1 flex-col items-center justify-center py-4">
+            <div className="text-foreground text-sm font-bold">muted</div>
+            <div className="text-muted-foreground text-xs">入力欄・well</div>
           </div>
         </div>
 
-        <div className="bg-background border-border rounded-lg border p-6">
-          <div className="font-bold">Background</div>
-          <div className="text-muted-foreground text-sm">ページ背景（基準レベル）</div>
-        </div>
-
-        <div className="bg-card border-border rounded-lg border p-6">
-          <div className="font-bold">Card</div>
-          <div className="text-muted-foreground text-sm">
-            カード、ダイアログ、ポップオーバー（浮く — backgroundより明るい）
+        {/* ── App Layout Preview ── */}
+        <h3 className="mb-3 font-bold">Preview</h3>
+        <div
+          className="bg-background border-border mb-8 grid overflow-hidden rounded-xl border"
+          style={{ gridTemplateColumns: '80px 1fr', height: 200 }}
+        >
+          <div
+            className="bg-container flex flex-col gap-1 border-r p-3"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <div className="bg-foreground h-1.5 w-4/5 rounded opacity-25" />
+            <div className="bg-foreground h-1.5 w-3/5 rounded opacity-25" />
+            <div className="bg-foreground h-1.5 w-2/3 rounded opacity-25" />
+          </div>
+          <div className="flex flex-col gap-3 p-4">
+            <div
+              className="bg-card flex flex-1 flex-col gap-2 rounded-lg p-4"
+              style={{ boxShadow: 'var(--shadow-card)' }}
+            >
+              <div className="bg-foreground h-1.5 w-3/4 rounded opacity-15" />
+              <div className="bg-foreground h-1.5 w-1/2 rounded opacity-15" />
+              <div className="bg-muted h-7 rounded" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-muted border-border rounded-lg border p-6">
-          <div className="font-bold">Muted</div>
-          <div className="text-muted-foreground text-sm">入力欄、well</div>
+        {/* ── Spec Tables ── */}
+        <h3 className="mb-3 font-bold">Surface</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark (H60 C.008)</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {[
+                ...surfaces,
+                {
+                  token: 'muted',
+                  role: '控えめ',
+                  desc: '入力欄',
+                  light: 'oklch(0.95 0 0)',
+                  dark: 'oklch(0.25 0.008 60)',
+                  bg: 'bg-muted',
+                },
+              ].map(({ token, light, dark, role, bg }) => (
+                <tr key={token} className="border-border border-b">
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`${bg} border-border size-5 shrink-0 rounded border`} />
+                      <code className="text-foreground text-xs">{token}</code>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">{light}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{dark}</td>
+                  <td className="px-4 py-2 text-xs">← {role}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        <div className="bg-overlay border-border rounded-lg border p-6">
-          <div className="text-foreground font-bold">Overlay</div>
-          <div className="text-muted-foreground text-sm">
-            モーダル背景（半透明）。Dialog/Sheetの後ろに敷く背景幕。
-          </div>
+        <h3 className="mb-3 font-bold">Text</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {texts.map(({ token, light, dark, role }) => (
+                <tr key={token} className="border-border border-b">
+                  <td className="px-4 py-2">
+                    <code className="text-foreground text-xs">{token}</code>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">{light}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{dark}</td>
+                  <td className="px-4 py-2 text-xs">{role}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+
+        {/* Border + Shadow (visual + values) */}
+        <h3 className="mb-3 font-bold">Border / Shadow</h3>
+        <div className="bg-card border-border mb-2 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              <tr className="border-border border-b">
+                <td className="px-4 py-2">
+                  <code className="text-foreground text-xs">border</code>
+                </td>
+                <td className="px-4 py-2 font-mono text-xs">oklch(0 0 0 / 0.06)</td>
+                <td className="px-4 py-2 font-mono text-xs">oklch(1 0 0 / 0.07)</td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-4 py-2">
+                  <code className="text-foreground text-xs">shadow-sm</code>
+                </td>
+                <td className="px-4 py-2">
+                  <div
+                    className="bg-card inline-block size-8 rounded"
+                    style={{ boxShadow: 'var(--shadow-sm)' }}
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <div
+                    className="bg-card inline-block size-8 rounded"
+                    style={{ boxShadow: 'var(--shadow-sm)' }}
+                  />
+                </td>
+              </tr>
+              <tr className="border-border border-b">
+                <td className="px-4 py-2">
+                  <code className="text-foreground text-xs">shadow-card</code>
+                </td>
+                <td className="px-4 py-2">
+                  <div
+                    className="bg-card inline-block size-8 rounded"
+                    style={{ boxShadow: 'var(--shadow-card)' }}
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <div
+                    className="bg-card inline-block size-8 rounded"
+                    style={{ boxShadow: 'var(--shadow-card)' }}
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <details className="text-muted-foreground mb-6 text-xs">
+          <summary className="cursor-pointer py-2 font-bold">Shadow コピペ用 oklch 値</summary>
+          <div className="bg-card border-border mt-2 space-y-3 rounded-lg border p-4 font-mono">
+            <div>
+              <div className="text-foreground mb-1 font-sans text-xs font-bold">
+                shadow-sm (light)
+              </div>
+              <div className="break-all">{shadowValues.sm.light}</div>
+            </div>
+            <div>
+              <div className="text-foreground mb-1 font-sans text-xs font-bold">
+                shadow-sm (dark)
+              </div>
+              <div className="break-all">{shadowValues.sm.dark}</div>
+            </div>
+            <div>
+              <div className="text-foreground mb-1 font-sans text-xs font-bold">
+                shadow-card (light)
+              </div>
+              <div className="break-all">{shadowValues.card.light}</div>
+            </div>
+            <div>
+              <div className="text-foreground mb-1 font-sans text-xs font-bold">
+                shadow-card (dark)
+              </div>
+              <div className="break-all">{shadowValues.card.dark}</div>
+            </div>
+          </div>
+        </details>
       </div>
-    </div>
-  ),
+    );
+  },
 };
 
 export const Semantic: Story = {
@@ -194,31 +672,55 @@ export const Semantic: Story = {
     const semanticColors = [
       {
         name: 'Destructive',
+        hue: 25,
         bg: 'bg-destructive',
+        bgTint: 'bg-destructive-tint',
         text: 'text-destructive',
         fg: 'text-destructive-foreground',
         desc: '削除、エラー',
+        lightAccent: 'oklch(0.58 0.16 25)',
+        lightBg: 'oklch(0.96 0.015 25)',
+        darkAccent: 'oklch(0.62 0.14 25)',
+        darkBg: 'oklch(0.22 0.03 25)',
       },
       {
         name: 'Warning',
+        hue: 70,
         bg: 'bg-warning',
+        bgTint: 'bg-warning-tint',
         text: 'text-warning',
         fg: 'text-warning-foreground',
         desc: '警告、注意',
+        lightAccent: 'oklch(0.68 0.16 70)',
+        lightBg: 'oklch(0.97 0.015 70)',
+        darkAccent: 'oklch(0.72 0.14 70)',
+        darkBg: 'oklch(0.22 0.03 70)',
       },
       {
         name: 'Success',
+        hue: 150,
         bg: 'bg-success',
+        bgTint: 'bg-success-tint',
         text: 'text-success',
         fg: 'text-success-foreground',
         desc: '成功、完了',
+        lightAccent: 'oklch(0.60 0.14 150)',
+        lightBg: 'oklch(0.95 0.02 150)',
+        darkAccent: 'oklch(0.65 0.12 150)',
+        darkBg: 'oklch(0.22 0.03 150)',
       },
       {
         name: 'Info',
+        hue: 'neutral',
         bg: 'bg-info',
+        bgTint: 'bg-info-tint',
         text: 'text-info',
         fg: 'text-info-foreground',
-        desc: '情報、ヒント',
+        desc: '情報（neutral）',
+        lightAccent: 'oklch(0.55 0.02 260)',
+        lightBg: 'oklch(0.96 0.005 260)',
+        darkAccent: 'oklch(0.65 0.02 260)',
+        darkBg: 'oklch(0.22 0.01 260)',
       },
     ] as const;
 
@@ -226,21 +728,53 @@ export const Semantic: Story = {
       <div>
         <h2 className="mb-2 text-xl font-bold">Semantic Colors（bg + accent 体系）</h2>
         <p className="text-muted-foreground mb-6 text-sm">
-          4色とも同じ L/C 構造で hue のみ変化。accent(テキスト・アイコン用) + bg(tint背景用)
-          の2トークン体系。
+          destructive/warning/success は同じ L/C 構造で hue のみ変化。info は
+          neutral（低彩度）。accent(テキスト・アイコン用) + tint(薄い背景用) の2トークン体系。
         </p>
 
-        {/* 背景スウォッチ */}
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {semanticColors.map(({ name, bg, fg, desc }) => (
-            <div key={name} className="border-border rounded-lg border p-4 text-center">
-              <div className={`${bg} mb-2 flex h-12 items-center justify-center rounded`}>
-                <span className={`${fg} text-sm font-bold`}>Aa</span>
+        {/* accent + bg tint swatches */}
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          {semanticColors.map(({ name, bg, bgTint, fg, desc }) => (
+            <div key={name} className="border-border rounded-lg border p-4">
+              <div className={`${bg} mb-2 flex h-10 items-center justify-center rounded`}>
+                <span className={`${fg} text-sm font-bold`}>accent</span>
               </div>
-              <div className="text-foreground font-bold">{name}</div>
-              <div className="text-muted-foreground text-sm">{desc}</div>
+              <div className={`${bgTint} mb-2 flex h-10 items-center justify-center rounded`}>
+                <span className="text-foreground text-sm">bg</span>
+              </div>
+              <div className="text-foreground text-center font-bold">{name}</div>
+              <div className="text-muted-foreground text-center text-xs">{desc}</div>
             </div>
           ))}
+        </div>
+
+        {/* oklch spec table */}
+        <h3 className="mb-3 font-bold">oklch 値</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-4 py-3 text-left text-xs font-bold">色</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Hue</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light accent</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Light bg</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark accent</th>
+                <th className="px-4 py-3 text-left text-xs font-bold">Dark bg</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {semanticColors.map(({ name, hue, lightAccent, lightBg, darkAccent, darkBg }) => (
+                <tr key={name} className="border-border border-b">
+                  <td className="text-foreground px-4 py-2 text-xs font-bold">{name}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{hue}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{lightAccent}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{lightBg}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{darkAccent}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{darkBg}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* テキスト on Surface（コントラストチェック） */}
