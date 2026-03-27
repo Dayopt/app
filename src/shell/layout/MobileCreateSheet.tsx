@@ -189,7 +189,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
                 className={cn(
                   'flex items-center gap-2 rounded-lg px-3 py-2 text-left text-base transition-colors',
                   selectedTagId === tag.id
-                    ? 'bg-primary/10 text-foreground'
+                    ? 'bg-primary-state-selected text-foreground'
                     : 'text-foreground hover:bg-state-hover',
                 )}
               >

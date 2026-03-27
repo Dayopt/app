@@ -143,7 +143,7 @@ function ChronotypeSettingsDemo({
               <TimelineBarDemo zones={selectedProfile.productivityZones} />
             </div>
 
-            <div className="bg-success/10 flex items-center gap-2 rounded-2xl p-4">
+            <div className="bg-success-tint flex items-center gap-2 rounded-2xl p-4">
               <Star className="text-success h-4 w-4" />
               <div>
                 <span className="text-sm font-normal">Peak Time</span>

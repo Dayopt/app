@@ -61,6 +61,15 @@
   --color-chart-info: var(--info);
   --color-chart-muted: var(--muted-foreground);
 
+  /* Heatmap Scale（primary α段階 — SVG/セル背景用） */
+  --color-heatmap-scale-1: var(--heatmap-scale-1);
+  --color-heatmap-scale-2: var(--heatmap-scale-2);
+  --color-heatmap-scale-3: var(--heatmap-scale-3);
+  --color-heatmap-scale-4: var(--heatmap-scale-4);
+  --color-fulfillment-high: var(--fulfillment-high);
+  --color-fulfillment-mid: var(--fulfillment-mid);
+  --color-fulfillment-low: var(--fulfillment-low);
+
   /* ============================================
    * Shadow トークン
    * sm: 軽いエレベーション（ボタン、入力欄）

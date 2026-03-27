@@ -103,7 +103,7 @@ export const Scale: Story = {
         ].map(({ size, px, name, usage, highlight }) => (
           <div
             key={size}
-            className={`flex items-center gap-4 rounded-lg py-2 ${highlight ? 'bg-primary/5' : ''}`}
+            className={`flex items-center gap-4 rounded-lg py-2 ${highlight ? 'bg-muted' : ''}`}
           >
             <div className="w-20 text-right">
               <code className="bg-container rounded px-2 py-1 text-xs">{size}</code>
@@ -357,17 +357,17 @@ export const NestedSpacing: Story = {
                 </p>
 
                 <div className="flex gap-2">
-                  <div className="bg-primary/20 rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary/20 rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary/20 rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">最内側: p-2, gap-2 (8px)</p>
               </div>
 
               <div className="bg-container rounded-lg p-4">
                 <div className="flex gap-2">
-                  <div className="bg-primary/20 rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary/20 rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
                 </div>
               </div>
             </div>

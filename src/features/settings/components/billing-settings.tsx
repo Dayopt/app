@@ -243,7 +243,7 @@ export function BillingSettings() {
       {/* 支払い失敗警告（past_due 時のみ） */}
       {subscriptionStatus === 'past_due' && (
         <SectionCard>
-          <div className="bg-warning/10 flex items-center gap-3 rounded-lg p-4">
+          <div className="bg-warning-tint flex items-center gap-3 rounded-lg p-4">
             <AlertTriangle className="text-warning h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{t('settings.subscription.pastDueTitle')}</p>

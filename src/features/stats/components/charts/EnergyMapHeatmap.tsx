@@ -29,18 +29,18 @@ const HOURS = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => i + HO
 /** セルの色クラスを決定（5段階） */
 function getMinutesColorClass(minutes: number): string {
   if (minutes === 0) return 'bg-muted';
-  if (minutes < 15) return 'bg-primary/20';
-  if (minutes < 30) return 'bg-primary/40';
-  if (minutes < 45) return 'bg-primary/60';
-  return 'bg-primary/80';
+  if (minutes < 15) return 'bg-heatmap-scale-1';
+  if (minutes < 30) return 'bg-heatmap-scale-2';
+  if (minutes < 45) return 'bg-heatmap-scale-3';
+  return 'bg-heatmap-scale-4';
 }
 
 /** 充実度の色クラス（3段階スコア → 緑/黄/赤系） */
 function getFulfillmentColorClass(score: number | null, hasData: boolean): string {
   if (!hasData || score === null) return 'bg-muted';
-  if (score >= 2.5) return 'bg-success/60';
-  if (score >= 1.5) return 'bg-warning/60';
-  return 'bg-destructive/40';
+  if (score >= 2.5) return 'bg-fulfillment-high';
+  if (score >= 1.5) return 'bg-fulfillment-mid';
+  return 'bg-fulfillment-low';
 }
 
 /** hour×dow のルックアップマップを構築 */
@@ -196,25 +196,25 @@ export function EnergyMapHeatmap() {
               <span>{t('energyMapLess')}</span>
               <div className="flex gap-1">
                 <div className="bg-muted size-3 rounded" />
-                <div className="bg-primary/20 size-3 rounded" />
-                <div className="bg-primary/40 size-3 rounded" />
-                <div className="bg-primary/60 size-3 rounded" />
-                <div className="bg-primary/80 size-3 rounded" />
+                <div className="bg-heatmap-scale-1 size-3 rounded" />
+                <div className="bg-heatmap-scale-2 size-3 rounded" />
+                <div className="bg-heatmap-scale-3 size-3 rounded" />
+                <div className="bg-heatmap-scale-4 size-3 rounded" />
               </div>
               <span>{t('energyMapMore')}</span>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1">
-                <div className="bg-destructive/40 size-3 rounded" />
+                <div className="bg-fulfillment-low size-3 rounded" />
                 <span>1</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-warning/60 size-3 rounded" />
+                <div className="bg-fulfillment-mid size-3 rounded" />
                 <span>2</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-success/60 size-3 rounded" />
+                <div className="bg-fulfillment-high size-3 rounded" />
                 <span>3</span>
               </div>
             </>

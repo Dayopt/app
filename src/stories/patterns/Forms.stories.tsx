@@ -103,7 +103,7 @@ export const Overview: Story = {
 
           <div className="space-y-4">
             {/* エラーバナー */}
-            <div className="bg-destructive/10 border-destructive flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-destructive-tint border-destructive flex items-start gap-3 rounded-lg border p-4">
               <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
               <div>
                 <p className="text-destructive font-bold">保存に失敗しました</p>
@@ -123,7 +123,7 @@ export const Overview: Story = {
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`// フォーム上部にエラーバナー
-<div className="bg-destructive/10 border-destructive ...">
+<div className="bg-destructive-tint border-destructive ...">
   <AlertCircle className="text-destructive" />
   <div>
     <p className="text-destructive font-bold">保存に失敗しました</p>

@@ -172,7 +172,7 @@ function CreateTagFormView({
                 className={cn(
                   'rounded-full border px-3 py-1.5 text-sm transition-colors',
                   !selectedGroup
-                    ? 'border-primary bg-primary/10 text-foreground font-medium'
+                    ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                     : 'border-border hover:bg-state-hover text-muted-foreground',
                 )}
               >
@@ -186,7 +186,7 @@ function CreateTagFormView({
                   className={cn(
                     'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
                     selectedGroup === tag.name
-                      ? 'border-primary bg-primary/10 text-foreground font-medium'
+                      ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
                   )}
                 >

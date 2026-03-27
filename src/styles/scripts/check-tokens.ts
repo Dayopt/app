@@ -54,7 +54,6 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     pattern: 'bg-(primary|success|warning|destructive|info)/[0-9]',
     message: 'semantic 色の opacity 派生は禁止。tint トークンまたは state トークンを使用',
     suggestion: 'bg-success/10 → bg-success-tint, bg-primary/10 → bg-primary-state-selected',
-    warnOnly: true,
   },
 ];
 

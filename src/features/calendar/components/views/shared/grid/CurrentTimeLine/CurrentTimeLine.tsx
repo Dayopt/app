@@ -98,7 +98,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     >
       {/* 時刻線 - 今日は濃く、他の日は薄く */}
       <div
-        className={`h-full w-full shadow-sm ${columnInfo.isToday ? 'bg-primary' : 'bg-primary/70'}`}
+        className={`bg-primary h-full w-full shadow-sm ${columnInfo.isToday ? '' : 'opacity-70'}`}
       />
 
       {/* ドット（今日の場合のみ） */}
@@ -159,7 +159,7 @@ export const CurrentTimeLineForColumn = memo<{
       )}
 
       {/* 時刻線 - 今日は濃く、他の日は薄く */}
-      <div className={`w-full shadow-sm ${isToday ? 'bg-primary h-0.5' : 'bg-primary/70 h-px'}`} />
+      <div className={`bg-primary w-full shadow-sm ${isToday ? 'h-0.5' : 'h-px opacity-70'}`} />
     </div>
   );
 });

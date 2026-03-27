@@ -140,7 +140,7 @@ toast('カスタムメッセージ', {
 
           <div className="space-y-3">
             {/* Info */}
-            <div className="bg-info/10 border-info flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-info-tint border-info flex items-start gap-3 rounded-lg border p-4">
               <Info className="text-info mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-info font-bold">新機能</p>
@@ -149,7 +149,7 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Warning */}
-            <div className="bg-warning/10 border-warning flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-warning-tint border-warning flex items-start gap-3 rounded-lg border p-4">
               <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-warning font-bold">保存されていません</p>
@@ -158,7 +158,7 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Error */}
-            <div className="bg-destructive/10 border-destructive flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-destructive-tint border-destructive flex items-start gap-3 rounded-lg border p-4">
               <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-destructive font-bold">接続エラー</p>
@@ -169,7 +169,7 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Success */}
-            <div className="bg-success/10 border-success flex items-start gap-3 rounded-lg border p-4">
+            <div className="bg-success-tint border-success flex items-start gap-3 rounded-lg border p-4">
               <CheckCircle2 className="text-success mt-0.5 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-success font-bold">完了</p>

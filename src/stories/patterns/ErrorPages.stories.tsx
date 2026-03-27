@@ -44,7 +44,7 @@ function MockButton({
     <button
       className={
         variant === 'primary'
-          ? `bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium ${className}`
+          ? `bg-primary text-primary-foreground hover:bg-primary-hover rounded-md px-4 py-2 text-sm font-medium ${className}`
           : `border-border text-foreground hover:bg-state-hover rounded-md border px-4 py-2 text-sm font-medium ${className}`
       }
     >
@@ -240,7 +240,7 @@ function MockDefaultFallback() {
           An error report will be sent automatically.
         </p>
         <div className="flex justify-center gap-2">
-          <button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded px-4 py-2 transition-colors">
+          <button className="bg-primary text-primary-foreground hover:bg-primary-hover rounded px-4 py-2 transition-colors">
             Retry
           </button>
           <button className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded px-4 py-2 transition-colors">
@@ -270,7 +270,7 @@ function MockFeatureFallback({ featureName }: { featureName: string }) {
   return (
     <div className="border-border bg-surface-container rounded border p-4">
       <p className="text-foreground text-center">An error occurred in the {featureName} feature</p>
-      <button className="bg-primary text-primary-foreground hover:bg-primary/90 mx-auto mt-2 block rounded px-4 py-1 text-sm transition-colors">
+      <button className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded px-4 py-1 text-sm transition-colors">
         Reload Page
       </button>
     </div>

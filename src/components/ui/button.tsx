@@ -78,7 +78,6 @@ const buttonVariants = cva(
           'bg-destructive text-destructive-foreground',
           'hover:bg-destructive-hover active:bg-destructive-hover',
           'focus-visible:outline-destructive',
-          'dark:bg-destructive/60',
         ].join(' '),
       },
       size: {
