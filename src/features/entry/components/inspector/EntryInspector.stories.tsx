@@ -103,7 +103,7 @@ function InspectorContent({
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* Date */}
           <DateRow
-            label={t('plan.inspector.time.date')}
+            label={t('entry.inspector.time.date')}
             icon={Calendar}
             selectedDate={date}
             onDateChange={setDate}
@@ -111,7 +111,7 @@ function InspectorContent({
 
           {/* Planned time */}
           <TimeRow
-            label={t('plan.inspector.time.planned')}
+            label={t('entry.inspector.time.planned')}
             icon={Clock}
             startTime={plannedStart}
             endTime={plannedEnd}
@@ -121,7 +121,7 @@ function InspectorContent({
 
           {/* Actual time */}
           <TimeRow
-            label={t('plan.inspector.time.actual')}
+            label={t('entry.inspector.time.actual')}
             icon={Play}
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
@@ -137,13 +137,13 @@ function InspectorContent({
 
           {/* Fulfillment */}
           <FulfillmentRow
-            label={t('plan.inspector.time.fulfillment')}
+            label={t('entry.inspector.time.fulfillment')}
             score={fulfillment}
             onScoreChange={setFulfillment}
             scoreLabels={{
-              low: t('plan.inspector.time.fulfillmentLow'),
-              medium: t('plan.inspector.time.fulfillmentMedium'),
-              high: t('plan.inspector.time.fulfillmentHigh'),
+              low: t('entry.inspector.time.fulfillmentLow'),
+              medium: t('entry.inspector.time.fulfillmentMedium'),
+              high: t('entry.inspector.time.fulfillmentHigh'),
             }}
           />
 
@@ -152,11 +152,11 @@ function InspectorContent({
 
           {/* Note */}
           <NoteSection
-            label={t('plan.inspector.note.label')}
+            label={t('entry.inspector.note.label')}
             icon={StickyNote}
             note={note}
             onNoteChange={setNote}
-            placeholder={t('plan.inspector.note.placeholder')}
+            placeholder={t('entry.inspector.note.placeholder')}
           />
         </div>
       </div>
@@ -328,7 +328,7 @@ export const NotFound: Story = {
     return (
       <InspectorFrame>
         <div className="flex h-full flex-1 items-center justify-center py-16">
-          <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+          <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>
         </div>
       </InspectorFrame>
     );
@@ -439,7 +439,7 @@ export const AllPatterns: Story = {
           <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Not Found</p>
           <InspectorFrame>
             <div className="flex h-full flex-1 items-center justify-center py-16">
-              <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+              <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>
             </div>
           </InspectorFrame>
         </div>

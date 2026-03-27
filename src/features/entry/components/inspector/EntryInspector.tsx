@@ -77,7 +77,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
   });
 
   // --- コンテンツ（loading / empty / form） ---
-  const title = entry?.title || t('plan.inspector.noTitle');
+  const title = entry?.title || t('entry.inspector.noTitle');
   let content: React.ReactNode;
 
   if (isLoading) {
@@ -99,7 +99,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
   } else if (!entry) {
     content = (
       <div className="flex h-full flex-1 items-center justify-center">
-        <p className="text-muted-foreground">{t('plan.inspector.notFound')}</p>
+        <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>
       </div>
     );
   } else {

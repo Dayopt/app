@@ -1,95 +1,95 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  formatplanDate,
-  formatplanDateTime,
-  formatplanNumber,
+  formatEntryDate,
+  formatEntryDateTime,
+  formatEntryNumber,
   formatRelativeTime,
 } from './formatters';
 
 describe('formatters', () => {
-  describe('formatplanNumber', () => {
+  describe('formatEntryNumber', () => {
     it('TKT-YYYYMMDD-XXX形式を#TKT-XXXに変換する', () => {
-      expect(formatplanNumber('TKT-20241030-001')).toBe('#TKT-001');
+      expect(formatEntryNumber('TKT-20241030-001')).toBe('#TKT-001');
     });
 
     it('TKT-YYYYMMDD-XXX形式で3桁以上の番号も正しく変換する', () => {
-      expect(formatplanNumber('TKT-20241030-123')).toBe('#TKT-123');
+      expect(formatEntryNumber('TKT-20241030-123')).toBe('#TKT-123');
     });
 
     it('パーツが3つでない場合はそのまま#を付けて返す', () => {
-      expect(formatplanNumber('TKT-001')).toBe('#TKT-001');
+      expect(formatEntryNumber('TKT-001')).toBe('#TKT-001');
     });
 
     it('単一の文字列は#を付けて返す', () => {
-      expect(formatplanNumber('ABC')).toBe('#ABC');
+      expect(formatEntryNumber('ABC')).toBe('#ABC');
     });
   });
 
-  describe('formatplanDate', () => {
+  describe('formatEntryDate', () => {
     describe('日本語 (locale: ja)', () => {
       it('YYYY-MM-DD形式をYYYY/MM/DD形式に変換する', () => {
-        const result = formatplanDate('2025-01-15', 'ja');
+        const result = formatEntryDate('2025-01-15', 'ja');
         expect(result).toMatch(/2025\/1\/15/);
       });
 
       it('ISO 8601形式も正しく変換する', () => {
-        const result = formatplanDate('2025-12-25T00:00:00Z', 'ja');
+        const result = formatEntryDate('2025-12-25T00:00:00Z', 'ja');
         expect(result).toMatch(/2025\/12\/2[45]/);
       });
     });
 
     describe('英語 (locale: en)', () => {
       it('YYYY-MM-DD形式をMM DD, YYYY形式に変換する', () => {
-        const result = formatplanDate('2025-01-15', 'en');
+        const result = formatEntryDate('2025-01-15', 'en');
         expect(result).toMatch(/Jan 15, 2025/);
       });
 
       it('ISO 8601形式も正しく変換する', () => {
-        const result = formatplanDate('2025-12-25T00:00:00Z', 'en');
+        const result = formatEntryDate('2025-12-25T00:00:00Z', 'en');
         expect(result).toMatch(/Dec 2[45], 2025/);
       });
     });
 
     describe('デフォルト動作', () => {
       it('localeを指定しない場合はenがデフォルト', () => {
-        const result = formatplanDate('2025-01-15');
+        const result = formatEntryDate('2025-01-15');
         expect(result).toMatch(/Jan 15, 2025/);
       });
 
       it('nullの場合は-を返す', () => {
-        expect(formatplanDate(null)).toBe('-');
+        expect(formatEntryDate(null)).toBe('-');
       });
 
       it('undefinedの場合は-を返す', () => {
-        expect(formatplanDate(undefined)).toBe('-');
+        expect(formatEntryDate(undefined)).toBe('-');
       });
 
       it('空文字列の場合は-を返す', () => {
-        expect(formatplanDate('')).toBe('-');
+        expect(formatEntryDate('')).toBe('-');
       });
     });
   });
 
-  describe('formatplanDateTime', () => {
+  describe('formatEntryDateTime', () => {
     it('ISO 8601形式をYYYY/MM/DD HH:mmに変換する', () => {
       // ローカルタイムゾーンでテスト
       const date = new Date(2025, 0, 15, 9, 30); // 2025-01-15 09:30
       const isoString = date.toISOString();
-      const result = formatplanDateTime(isoString);
+      const result = formatEntryDateTime(isoString);
       expect(result).toBe('2025/01/15 09:30');
     });
 
     it('nullの場合は-を返す', () => {
-      expect(formatplanDateTime(null)).toBe('-');
+      expect(formatEntryDateTime(null)).toBe('-');
     });
 
     it('undefinedの場合は-を返す', () => {
-      expect(formatplanDateTime(undefined)).toBe('-');
+      expect(formatEntryDateTime(undefined)).toBe('-');
     });
 
     it('空文字列の場合は-を返す', () => {
-      expect(formatplanDateTime('')).toBe('-');
+      expect(formatEntryDateTime('')).toBe('-');
     });
   });
 

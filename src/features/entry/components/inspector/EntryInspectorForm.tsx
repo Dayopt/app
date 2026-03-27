@@ -189,7 +189,7 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* 日付 */}
           <DateRow
-            label={t('plan.inspector.time.date')}
+            label={t('entry.inspector.time.date')}
             icon={Calendar}
             selectedDate={scheduleDate}
             onDateChange={handleScheduleDateChange}
@@ -197,7 +197,7 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
 
           {/* 予定行 */}
           <TimeRow
-            label={t('plan.inspector.time.planned')}
+            label={t('entry.inspector.time.planned')}
             icon={Clock}
             startTime={startTime}
             endTime={endTime}
@@ -208,7 +208,7 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
 
           {/* 記録行 */}
           <TimeRow
-            label={t('plan.inspector.time.actual')}
+            label={t('entry.inspector.time.actual')}
             icon={Play}
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
@@ -223,18 +223,18 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
 
           {/* 充実度 */}
           <FulfillmentRow
-            label={t('plan.inspector.time.fulfillment')}
+            label={t('entry.inspector.time.fulfillment')}
             score={fulfillmentScore ?? null}
             onScoreChange={handleFulfillmentChange}
             scoreLabels={{
-              low: t('plan.inspector.time.fulfillmentLow'),
-              medium: t('plan.inspector.time.fulfillmentMedium'),
-              high: t('plan.inspector.time.fulfillmentHigh'),
+              low: t('entry.inspector.time.fulfillmentLow'),
+              medium: t('entry.inspector.time.fulfillmentMedium'),
+              high: t('entry.inspector.time.fulfillmentHigh'),
             }}
             tooltipLabels={{
-              low: t('plan.inspector.time.fulfillmentTooltipLow'),
-              medium: t('plan.inspector.time.fulfillmentTooltipMedium'),
-              high: t('plan.inspector.time.fulfillmentTooltipHigh'),
+              low: t('entry.inspector.time.fulfillmentTooltipLow'),
+              medium: t('entry.inspector.time.fulfillmentTooltipMedium'),
+              high: t('entry.inspector.time.fulfillmentTooltipHigh'),
             }}
           />
 
@@ -243,11 +243,11 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
 
           {/* メモ */}
           <NoteSection
-            label={t('plan.inspector.note.label')}
+            label={t('entry.inspector.note.label')}
             icon={StickyNote}
             note={entry.description || ''}
             onNoteChange={(text) => autoSave('description', text)}
-            placeholder={t('plan.inspector.note.placeholder')}
+            placeholder={t('entry.inspector.note.placeholder')}
           />
         </div>
       </div>
