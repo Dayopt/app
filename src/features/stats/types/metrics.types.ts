@@ -14,7 +14,7 @@ import type { TagColorName } from '@/lib/tag-colors';
 export type MetricId =
   | 'totalTime'
   | 'avgFulfillment'
-  | 'planRate'
+  | 'entryRate'
   | 'streak'
   | 'estimationAccuracy'
   | 'peakUtilization'
@@ -68,11 +68,11 @@ export interface MetricData {
 // tRPC Response Types（DB関数のレスポンス型）
 // =============================================================================
 
-/** プラン率の tRPC レスポンス型 */
-export interface PlanRateData {
+/** エントリー率の tRPC レスポンス型 */
+export interface EntryRateData {
   totalEntries: number;
   plannedEntries: number;
-  planRate: number;
+  entryRate: number;
 }
 
 /** 見積もり精度のタグ別 tRPC レスポンス型 */

@@ -52,7 +52,7 @@
     "heading": "Account deleted",
     "body": "Your Dayopt account has been successfully deleted as of {deletionDate}.",
     "dataRemovedIntro": "The following data has been permanently removed:",
-    "dataPlans": "All plans and time records",
+    "dataPlans": "All entries and time records",
     "dataTags": "Tags and categories",
     "dataNotifications": "Notification preferences",
     "dataProfile": "Profile information",
@@ -61,20 +61,20 @@
     "thankYou": "Thank you for using Dayopt."
   },
   "reminder": {
-    "subject": "Reminder: {planTitle}",
-    "heading": "Plan Reminder",
-    "body": "Your plan is starting now:",
-    "labelPlan": "Plan",
+    "subject": "Reminder: {entryTitle}",
+    "heading": "Entry Reminder",
+    "body": "Your entry is starting now:",
+    "labelPlan": "Entry",
     "labelStartsAt": "Starts at",
     "ctaButton": "View Calendar"
   },
   "overdue": {
-    "subject": "Overdue: {planTitle}",
-    "heading": "Plan Overdue",
-    "body": "The following plan has passed its scheduled end time and hasn't been completed:",
-    "labelPlan": "Plan",
+    "subject": "Overdue: {entryTitle}",
+    "heading": "Entry Overdue",
+    "body": "The following entry has passed its scheduled end time and hasn't been completed:",
+    "labelPlan": "Entry",
     "labelWasDueBy": "Was due by",
-    "rescheduleHint": "You can reschedule this plan or mark it as complete from your calendar.",
+    "rescheduleHint": "You can reschedule this entry or mark it as complete from your calendar.",
     "ctaButton": "View Calendar"
   },
   "trialStart": {

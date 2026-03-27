@@ -8,10 +8,11 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { CHRONOTYPE_EMOJI, CHRONOTYPE_LEVEL_ORDER } from '../lib/constants';
+import { CHRONOTYPE_EMOJI } from '../lib/constants';
 import { getPeakHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import { SectionCard } from '@/components/common/SectionCard';
@@ -73,16 +74,27 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
         {segments.map((segment, index) => (
           <div
             key={index}
-            className="bg-primary flex-1 transition-colors"
+            className={cn(
+              'flex-1 transition-colors',
+              segment.level === 'peak' && 'bg-warning-tint',
+              segment.level === 'dip' && 'bg-info-tint',
+              segment.level !== 'peak' && segment.level !== 'dip' && 'bg-muted',
+            )}
             title={`${segment.hour}:00 - ${segment.label}`}
           />
         ))}
       </div>
 
       <div className="flex flex-wrap gap-4 text-xs">
-        {CHRONOTYPE_LEVEL_ORDER.map((level) => (
+        {(['peak', 'dip'] as const).map((level) => (
           <div key={level} className="flex items-center gap-1">
-            <div className="bg-primary h-3 w-3 rounded" />
+            <div
+              className={cn(
+                'h-3 w-3 rounded',
+                level === 'peak' && 'bg-warning-tint',
+                level === 'dip' && 'bg-info-tint',
+              )}
+            />
             <span className="text-muted-foreground">
               {t(`settings.chronotype.levels.${level}`)}
             </span>

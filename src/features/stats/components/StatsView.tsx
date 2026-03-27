@@ -50,7 +50,7 @@ export function StatsView({ className }: StatsViewProps) {
   }, [timeByTag.data]);
 
   // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない
-  const planRate = api.entries.getPlanRate.useQuery(dateRange);
+  const entryRate = api.entries.getEntryRate.useQuery(dateRange);
   const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
   const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
   const contextSwitches = api.entries.getContextSwitches.useQuery(dateRange);
@@ -59,7 +59,7 @@ export function StatsView({ className }: StatsViewProps) {
   const ruleInsights = useMemo(() => {
     const current: Partial<Record<MetricId, number>> = {};
 
-    if (planRate.data) current.planRate = planRate.data.planRate;
+    if (entryRate.data) current.entryRate = entryRate.data.entryRate;
     if (contextSwitches.data) current.contextSwitches = contextSwitches.data.avgPerDay;
     if (blankRate.data) current.blankRate = blankRate.data.blankRate;
 
@@ -89,7 +89,7 @@ export function StatsView({ className }: StatsViewProps) {
     // 前期間比較は未実装のため null
     return evaluateRuleInsights(current, null);
   }, [
-    planRate.data,
+    entryRate.data,
     estimationAccuracy.data,
     energyMap.data,
     contextSwitches.data,
@@ -100,9 +100,9 @@ export function StatsView({ className }: StatsViewProps) {
 
   // 全クエリがロード完了かつデータが空の場合に空状態を表示
   // エラー・フェッチ中は空状態を表示しない（エラーは FeatureErrorBoundary に委任）
-  const isAllLoaded = !timeByTag.isPending && !planRate.isPending;
-  const isFetching = timeByTag.isFetching || planRate.isFetching;
-  const hasError = timeByTag.isError || planRate.isError;
+  const isAllLoaded = !timeByTag.isPending && !entryRate.isPending;
+  const isFetching = timeByTag.isFetching || entryRate.isFetching;
+  const hasError = timeByTag.isError || entryRate.isError;
   const hasNoData = isAllLoaded && !isFetching && !hasError && tagSegments.length === 0;
 
   if (hasNoData) {

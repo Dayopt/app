@@ -11,19 +11,19 @@ describe('transformers', () => {
         id: 'notif-1',
         user_id: 'user-1',
         type: 'reminder',
-        plan_id: 'plan-1',
+        entry_id: 'plan-1',
         is_read: false,
         read_at: null,
         created_at: '2025-01-01T00:00:00Z',
-        plans: { title: 'ミーティング' },
+        entries: { title: 'ミーティング' },
       };
 
       const result = transformNotificationEntity(entity);
 
       expect(result.id).toBe('notif-1');
       expect(result.type).toBe('reminder');
-      expect(result.planId).toBe('plan-1');
-      expect(result.planTitle).toBe('ミーティング');
+      expect(result.entryId).toBe('plan-1');
+      expect(result.entryTitle).toBe('ミーティング');
       expect(result.isRead).toBe(false);
       expect(result.readAt).toBeUndefined();
       expect(result.createdAt).toBeInstanceOf(Date);
@@ -34,17 +34,17 @@ describe('transformers', () => {
         id: 'notif-1',
         user_id: 'user-1',
         type: 'reminder',
-        plan_id: null,
+        entry_id: null,
         is_read: true,
         read_at: '2025-01-02T00:00:00Z',
         created_at: '2025-01-01T00:00:00Z',
-        plans: null,
+        entries: null,
       };
 
       const result = transformNotificationEntity(entity);
 
-      expect(result.planId).toBeUndefined();
-      expect(result.planTitle).toBeUndefined();
+      expect(result.entryId).toBeUndefined();
+      expect(result.entryTitle).toBeUndefined();
       expect(result.readAt).toBeInstanceOf(Date);
     });
   });
@@ -56,21 +56,21 @@ describe('transformers', () => {
           id: 'notif-1',
           user_id: 'user-1',
           type: 'reminder',
-          plan_id: 'plan-1',
+          entry_id: 'plan-1',
           is_read: false,
           read_at: null,
           created_at: '2025-01-01T00:00:00Z',
-          plans: { title: 'タスクA' },
+          entries: { title: 'タスクA' },
         },
         {
           id: 'notif-2',
           user_id: 'user-1',
           type: 'overdue',
-          plan_id: 'plan-2',
+          entry_id: 'plan-2',
           is_read: true,
           read_at: null,
           created_at: '2025-01-02T00:00:00Z',
-          plans: { title: 'タスクB' },
+          entries: { title: 'タスクB' },
         },
       ];
 

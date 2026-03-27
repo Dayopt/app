@@ -44,21 +44,21 @@ type Story = StoryObj<typeof meta>;
 export const Reminder: Story = {
   args: {
     type: 'reminder',
-    planTitle: 'ミーティングの準備',
+    entryTitle: 'ミーティングの準備',
   },
 };
 
 export const Overdue: Story = {
   args: {
     type: 'overdue',
-    planTitle: 'レポート提出',
+    entryTitle: 'レポート提出',
   },
 };
 
 export const Read: Story = {
   args: {
     type: 'reminder',
-    planTitle: 'ミーティングの準備',
+    entryTitle: 'ミーティングの準備',
     isRead: true,
     createdAt: oneHourAgo,
   },
@@ -67,7 +67,7 @@ export const Read: Story = {
 export const Deleting: Story = {
   args: {
     type: 'reminder',
-    planTitle: 'タスク完了',
+    entryTitle: 'タスク完了',
     isRead: true,
     isDeleting: true,
   },
@@ -77,7 +77,7 @@ export const Deleting: Story = {
 export const AiInsight: Story = {
   args: {
     type: 'ai_insight',
-    planTitle: 'AI が新しいインサイトを生成しました',
+    entryTitle: 'AI が新しいインサイトを生成しました',
   },
 };
 
@@ -85,7 +85,7 @@ export const AiInsight: Story = {
 export const WeeklyReport: Story = {
   args: {
     type: 'weekly_report',
-    planTitle: '先週の週次レポートが届きました',
+    entryTitle: '先週の週次レポートが届きました',
     createdAt: yesterday,
     isRead: false,
   },
@@ -95,7 +95,7 @@ export const WeeklyReport: Story = {
 export const BurnoutWarning: Story = {
   args: {
     type: 'burnout_warning',
-    planTitle: '過負荷の兆候が検出されました',
+    entryTitle: '過負荷の兆候が検出されました',
     createdAt: oneHourAgo,
   },
 };
@@ -104,7 +104,7 @@ export const BurnoutWarning: Story = {
 export const EnergyInsight: Story = {
   args: {
     type: 'energy_insight',
-    planTitle: 'あなたのエネルギーパターンに変化があります',
+    entryTitle: 'あなたのエネルギーパターンに変化があります',
   },
 };
 
@@ -112,49 +112,49 @@ export const EnergyInsight: Story = {
 export const AllTypes: Story = {
   args: {
     type: 'reminder',
-    planTitle: '',
+    entryTitle: '',
   },
   render: (args) => (
     <div className="space-y-1">
-      <NotificationItem {...args} id="1" type="reminder" planTitle="リマインダー" />
+      <NotificationItem {...args} id="1" type="reminder" entryTitle="リマインダー" />
       <NotificationItem
         {...args}
         id="2"
         type="overdue"
-        planTitle="期限超過タスク"
+        entryTitle="期限超過タスク"
         createdAt={yesterday}
       />
       <NotificationItem
         {...args}
         id="3"
         type="ai_insight"
-        planTitle="AI が新しいインサイトを生成しました"
+        entryTitle="AI が新しいインサイトを生成しました"
       />
       <NotificationItem
         {...args}
         id="4"
         type="weekly_report"
-        planTitle="先週の週次レポートが届きました"
+        entryTitle="先週の週次レポートが届きました"
         createdAt={yesterday}
       />
       <NotificationItem
         {...args}
         id="5"
         type="burnout_warning"
-        planTitle="過負荷の兆候が検出されました"
+        entryTitle="過負荷の兆候が検出されました"
         createdAt={oneHourAgo}
       />
       <NotificationItem
         {...args}
         id="6"
         type="energy_insight"
-        planTitle="あなたのエネルギーパターンに変化があります"
+        entryTitle="あなたのエネルギーパターンに変化があります"
       />
       <NotificationItem
         {...args}
         id="7"
         type="reminder"
-        planTitle="既読のリマインダー"
+        entryTitle="既読のリマインダー"
         isRead={true}
         createdAt={yesterday}
       />

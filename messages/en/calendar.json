@@ -264,8 +264,8 @@
         "totalTimeDesc": "Total tracked time",
         "avgFulfillment": "Avg Fulfillment",
         "avgFulfillmentDesc": "Average fulfillment score",
-        "planRate": "Plan Rate",
-        "planRateDesc": "Ratio of planned entries",
+        "entryRate": "Entry Rate",
+        "entryRateDesc": "Ratio of planned entries",
         "streak": "Streak",
         "streakDesc": "Current streak",
         "estimationAccuracy": "Estimation Accuracy",
@@ -287,8 +287,8 @@
         "entries": "{count} entries"
       },
       "insights": {
-        "planRateLow": "Most activities in this period were unplanned",
-        "planRateLowDetail": "Try planning tomorrow's schedule the night before",
+        "entryRateLow": "Most activities in this period were unplanned",
+        "entryRateLowDetail": "Try planning tomorrow's schedule the night before",
         "peakUtilizationLow": "Peak hours were mostly unused",
         "contextSwitchesHigh": "Many context switches in this period",
         "contextSwitchesHighDetail": "Try batching similar tasks together",

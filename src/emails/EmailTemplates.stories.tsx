@@ -315,13 +315,13 @@ export const Reminder: Story = {
     <BilingualEmailPreview
       enElement={ReminderEmail({
         userName: 'Tomoya',
-        planTitle: 'Weekly team meeting',
+        entryTitle: 'Weekly team meeting',
         startTime: '10:00 AM',
         locale: 'en',
       })}
       jaElement={ReminderEmail({
         userName: 'Tomoya',
-        planTitle: 'ウィークリーチームミーティング',
+        entryTitle: 'ウィークリーチームミーティング',
         startTime: '10:00',
         locale: 'ja',
       })}
@@ -336,13 +336,13 @@ export const Overdue: Story = {
     <BilingualEmailPreview
       enElement={OverdueEmail({
         userName: 'Tomoya',
-        planTitle: 'Submit project report',
+        entryTitle: 'Submit project report',
         endTime: '5:00 PM',
         locale: 'en',
       })}
       jaElement={OverdueEmail({
         userName: 'Tomoya',
-        planTitle: 'プロジェクトレポートを提出',
+        entryTitle: 'プロジェクトレポートを提出',
         endTime: '17:00',
         locale: 'ja',
       })}

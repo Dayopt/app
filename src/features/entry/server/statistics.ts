@@ -348,9 +348,9 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // Phase 1: KPI Metrics
   // ---------------------------------------------------------------------------
 
-  /** 計画率: origin='planned' / 全エントリ */
-  getPlanRate: protectedProcedure
-    .meta({ description: '計画率KPI（計画エントリ / 全エントリ）' })
+  /** エントリ率: origin='planned' / 全エントリ */
+  getEntryRate: protectedProcedure
+    .meta({ description: 'エントリ率KPI（計画エントリ / 全エントリ）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
       try {
@@ -384,10 +384,10 @@ export const entriesStatisticsRouter = createTRPCRouter({
         return {
           totalEntries: result?.totalEntries ?? 0,
           plannedEntries: result?.plannedEntries ?? 0,
-          planRate: result?.planRate ?? 0,
+          entryRate: result?.planRate ?? 0,
         };
       } catch (error) {
-        handleStatsError('getPlanRate', error);
+        handleStatsError('getEntryRate', error);
       }
     }),
 
@@ -768,10 +768,10 @@ export const entriesStatisticsRouter = createTRPCRouter({
             avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? null,
             entryCount: result?.avgFulfillment?.entryCount ?? 0,
           },
-          planRate: {
+          entryRate: {
             totalEntries: result?.planRate?.totalEntries ?? 0,
             plannedEntries: result?.planRate?.plannedEntries ?? 0,
-            planRate: result?.planRate?.planRate ?? 0,
+            entryRate: result?.planRate?.planRate ?? 0,
           },
           contextSwitches: {
             totalSwitches: result?.contextSwitches?.totalSwitches ?? 0,

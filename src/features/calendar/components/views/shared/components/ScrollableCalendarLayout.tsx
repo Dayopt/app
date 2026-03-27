@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
+import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
@@ -126,10 +127,14 @@ export const ScrollableCalendarLayout = ({
   });
 
   // 現在時刻線ロジック（フック利用）
-  const { currentTime, currentTimePosition, currentTimeLineColor } = useCurrentTimeLine({
-    hourHeight: HOUR_HEIGHT,
-    showCurrentTime,
-  });
+  const { currentTime, currentTimePosition, currentTimeLineColor, currentZone } =
+    useCurrentTimeLine({
+      hourHeight: HOUR_HEIGHT,
+      showCurrentTime,
+    });
+
+  // Chronotype gradient（hook 内で DB フォールバック + クライアント生成）
+  const gradientCss = useChronotypeGradient();
 
   // 現在時刻のフォーマット（HH:mm）
   const formattedCurrentTime = currentTime.toLocaleTimeString('ja-JP', {
@@ -217,6 +222,15 @@ export const ScrollableCalendarLayout = ({
 
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
+          {/* Chronotype gradient 背景 */}
+          {gradientCss && (
+            <div
+              className="pointer-events-none absolute inset-0 z-0"
+              style={{ backgroundImage: gradientCss }}
+              aria-hidden="true"
+            />
+          )}
+
           {/* メインコンテンツ（flex で横並びを維持） */}
           <div className="relative flex h-full" role={enableKeyboardNavigation ? 'row' : undefined}>
             {children}
@@ -292,6 +306,30 @@ export const ScrollableCalendarLayout = ({
               ) : null}
             </>
           ) : null}
+
+          {/* Chronotype ゾーンバッジ（Now Line のすぐ下、今日の列の右端寄り） */}
+          {shouldShowCurrentTimeLine && hasToday && currentZone && todayColumnPosition && (
+            <div
+              className="pointer-events-none absolute z-50"
+              style={{
+                top: `${currentTimePosition + 6}px`,
+                left: todayColumnPosition.left,
+                width: todayColumnPosition.width,
+              }}
+            >
+              <div className="flex justify-end px-1">
+                <span
+                  className={cn(
+                    'rounded-full px-2 py-0.5 text-xs font-bold shadow-sm',
+                    currentZone === 'peak' && 'bg-warning-tint text-warning',
+                    currentZone === 'dip' && 'bg-info-tint text-info',
+                  )}
+                >
+                  {currentZone === 'peak' ? 'In peak zone' : 'In dip zone'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ export type {
   BlankRateData,
   ContextSwitchData,
   EnergyMapRow,
+  EntryRateData,
   EstimationAccuracyData,
   MetricData,
   MetricDefinition,
@@ -32,7 +33,6 @@ export type {
   MetricTrend,
   MetricValueParts,
   PeakUtilizationData,
-  PlanRateData,
 } from './types/metrics.types';
 export type { StatsViewProps } from './types/stats.types';
 

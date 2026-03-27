@@ -1,10 +1,10 @@
 {
   "record": {
     "inspector": {
-      "title": "Record詳細",
-      "deleteConfirm": "このRecordを削除しますか？",
-      "notFound": "Recordが見つかりません",
-      "openPlan": "Planを開く",
+      "title": "エントリー詳細",
+      "deleteConfirm": "このエントリーを削除しますか？",
+      "notFound": "エントリーが見つかりません",
+      "openPlan": "エントリーを開く",
       "toast": {
         "timeOverlap": "時間が重複しています",
         "saveFailed": "保存に失敗しました",

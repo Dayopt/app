@@ -31,7 +31,7 @@ export const PRESET_TAGS: Record<PresetTagKey, PresetTagDefinition> = {
 // サンプルプランテンプレート
 // ─────────────────────────────────────────────────────────
 
-interface SamplePlanTemplate {
+interface SampleEntryTemplate {
   title: string;
   offsetHours: number;
   durationMinutes: number;
@@ -54,7 +54,7 @@ const PEAK_START_HOURS: Record<PresetChronotypeType, number> = {
  * ピーク開始時刻を基準に相対配置。
  * 例: bear (peak=10:00) → Morning Run 08:00, Draft Proposal 10:00, ...
  */
-const SAMPLE_TEMPLATES: SamplePlanTemplate[] = [
+const SAMPLE_TEMPLATES: SampleEntryTemplate[] = [
   { title: 'Morning Run', offsetHours: -2, durationMinutes: 30, tagKey: 'exercise' },
   {
     title: 'Draft Proposal',
@@ -76,7 +76,7 @@ const SAMPLE_TEMPLATES: SamplePlanTemplate[] = [
   { title: 'Yoga', offsetHours: 8, durationMinutes: 45, tagKey: 'exercise' },
 ];
 
-export interface GeneratedSamplePlan {
+export interface GeneratedSampleEntry {
   title: string;
   startTime: string;
   endTime: string;
@@ -92,10 +92,10 @@ export interface GeneratedSamplePlan {
  * @param date - プランを配置する日付
  * @returns サンプルプランの配列
  */
-export function generateSamplePlans(
+export function generateSampleEntries(
   chronotypeType: PresetChronotypeType | null,
   date: Date,
-): GeneratedSamplePlan[] {
+): GeneratedSampleEntry[] {
   const type = chronotypeType ?? 'bear';
   const peakStart = PEAK_START_HOURS[type];
 

@@ -12,7 +12,7 @@ import * as styles from './styles';
 
 export interface OverdueEmailProps {
   userName: string;
-  planTitle: string;
+  entryTitle: string;
   endTime: string;
   locale?: EmailLocale;
   appUrl?: string;
@@ -20,7 +20,7 @@ export interface OverdueEmailProps {
 
 export function OverdueEmail({
   userName,
-  planTitle,
+  entryTitle,
   endTime,
   locale = 'en',
   appUrl = 'https://app.dayopt.app',
@@ -45,7 +45,7 @@ export function OverdueEmail({
             <Text style={styles.paragraph}>{t('overdue.body')}</Text>
             <Section style={styles.infoBox}>
               <Text style={styles.infoBoxLabel}>{t('overdue.labelPlan')}</Text>
-              <Text style={styles.infoBoxValue}>{planTitle}</Text>
+              <Text style={styles.infoBoxValue}>{entryTitle}</Text>
               <Text style={{ ...styles.infoBoxLabel, marginTop: '12px' }}>
                 {t('overdue.labelWasDueBy')}
               </Text>

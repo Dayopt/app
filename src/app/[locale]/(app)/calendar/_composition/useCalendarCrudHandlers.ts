@@ -3,8 +3,8 @@
 /**
  * Calendar CRUD Handlers Hook
  *
- * Plan のクリック・作成・更新・削除・コンテキストメニュー操作を担当。
- * キーボードショートカット（Plan操作系）もここに集約。
+ * Entry のクリック・作成・更新・削除・コンテキストメニュー操作を担当。
+ * キーボードショートカット（Entry操作系）もここに集約。
  */
 
 import { useCallback, useMemo } from 'react';
@@ -15,8 +15,8 @@ import type { CalendarEvent } from '@/features/calendar';
 import {
   useCalendarEventKeyboard,
   useCalendarHandlers,
-  usePlanContextActions,
-  usePlanOperations,
+  useEntryContextActions,
+  useEntryOperations,
 } from '@/features/calendar';
 import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 
@@ -25,8 +25,8 @@ import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 // =============================================================================
 
 export interface CalendarCrudHandlersInput {
-  /** Inspector で選択中の Plan ID */
-  selectedPlanId: string | null;
+  /** Inspector で選択中の Entry ID */
+  selectedEntryId: string | null;
   /** フィルタ済みイベント一覧（キーボード操作でタイトル取得に使用） */
   filteredEvents: CalendarEvent[];
   /** 現在の表示日付（キーボード操作で過去日判定に使用） */
@@ -34,8 +34,8 @@ export interface CalendarCrudHandlersInput {
 }
 
 export interface CalendarCrudHandlersResult {
-  disabledPlanId: string | null;
-  onPlanClick: (plan: CalendarEvent) => void;
+  disabledEntryId: string | null;
+  onEntryClick: (entry: CalendarEvent) => void;
   onTimeRangeSelect: (selection: {
     date: Date;
     startHour: number;
@@ -43,13 +43,13 @@ export interface CalendarCrudHandlersResult {
     endHour: number;
     endMinute: number;
   }) => void;
-  onUpdatePlan: (
-    planIdOrPlan: string | CalendarEvent,
+  onUpdateEntry: (
+    entryIdOrEntry: string | CalendarEvent,
     updates?: { startTime: Date; endTime: Date },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
-  onDeletePlan: (planId: string) => void;
-  getAddToPaletteHandler: (plan: CalendarEvent) => ((plan: CalendarEvent) => void) | undefined;
-  onDeletePlanConfirm: (plan: CalendarEvent) => void;
+  onDeleteEntry: (entryId: string) => void;
+  getAddToPaletteHandler: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
+  onDeleteEntryConfirm: (entry: CalendarEvent) => void;
 }
 
 // =============================================================================
@@ -57,24 +57,25 @@ export interface CalendarCrudHandlersResult {
 // =============================================================================
 
 export function useCalendarCrudHandlers({
-  selectedPlanId,
+  selectedEntryId,
   filteredEvents,
   currentDate,
 }: CalendarCrudHandlersInput): CalendarCrudHandlersResult {
   // =========================================================================
   // Calendar Handlers（click, create, drag-select）
   // =========================================================================
-  const { handlePlanClick, handleDateTimeRangeSelect, disabledPlanId } = useCalendarHandlers();
+  const { handleEntryClick, handleDateTimeRangeSelect, disabledEntryId } = useCalendarHandlers();
 
   // =========================================================================
-  // Plan Operations（CRUD）
+  // Entry Operations（CRUD）
   // =========================================================================
-  const { handlePlanDelete: deletePlan, handleUpdatePlan: handlePlanUpdate } = usePlanOperations();
+  const { handleEntryDelete: deleteEntry, handleUpdateEntry: handleEntryUpdate } =
+    useEntryOperations();
 
   // =========================================================================
   // Context Actions（右クリックメニュー）
   // =========================================================================
-  const { handleDeletePlan: handleDeletePlanConfirm } = usePlanContextActions();
+  const { handleDeleteEntry: handleDeleteEntryConfirm } = useEntryContextActions();
 
   // =========================================================================
   // Palette Pin（コンテキストメニューから「パレットに追加」）
@@ -83,19 +84,19 @@ export function useCalendarCrudHandlers({
   const { pinItem } = usePaletteMutations();
 
   const handleAddToPalette = useCallback(
-    (plan: CalendarEvent) => {
-      if (!plan.tagId || !plan.duration) return;
-      pinItem(plan.tagId, plan.duration);
+    (entry: CalendarEvent) => {
+      if (!entry.tagId || !entry.duration) return;
+      pinItem(entry.tagId, entry.duration);
     },
     [pinItem],
   );
 
   /** エントリのtag+durationがパレットに登録済みかを判定し、未登録時のみコールバックを返す */
   const getAddToPaletteHandler = useCallback(
-    (plan: CalendarEvent) => {
-      if (!plan.tagId || !plan.duration) return undefined;
+    (entry: CalendarEvent) => {
+      if (!entry.tagId || !entry.duration) return undefined;
       const isPinned = paletteItems?.some(
-        (item) => item.tag_id === plan.tagId && item.duration_minutes === plan.duration,
+        (item) => item.tag_id === entry.tagId && item.duration_minutes === entry.duration,
       );
       if (isPinned) return undefined;
       return handleAddToPalette;
@@ -104,9 +105,9 @@ export function useCalendarCrudHandlers({
   );
 
   // =========================================================================
-  // Plan Keyboard Shortcuts
+  // Entry Keyboard Shortcuts
   // =========================================================================
-  const getInitialPlanData = useCallback((): { start_time?: string; end_time?: string } => {
+  const getInitialEntryData = useCallback((): { start_time?: string; end_time?: string } => {
     const now = new Date();
     const start = startOfHour(now);
     const end = addHours(start, 1);
@@ -116,51 +117,51 @@ export function useCalendarCrudHandlers({
     };
   }, []);
 
-  const getSelectedPlanTitle = useCallback(() => {
-    if (!selectedPlanId) return null;
-    const plan = filteredEvents.find((p) => p.id === selectedPlanId);
-    return plan?.title ?? null;
-  }, [selectedPlanId, filteredEvents]);
+  const getSelectedEntryTitle = useCallback(() => {
+    if (!selectedEntryId) return null;
+    const entry = filteredEvents.find((p) => p.id === selectedEntryId);
+    return entry?.title ?? null;
+  }, [selectedEntryId, filteredEvents]);
 
-  const getSelectedPlanForCopy = useCallback(() => {
-    if (!selectedPlanId) return null;
-    const plan = filteredEvents.find((p) => p.id === selectedPlanId);
-    if (!plan) return null;
+  const getSelectedEntryForCopy = useCallback(() => {
+    if (!selectedEntryId) return null;
+    const entry = filteredEvents.find((p) => p.id === selectedEntryId);
+    if (!entry) return null;
 
-    const startHour = plan.startDate?.getHours() ?? 0;
-    const startMinute = plan.startDate?.getMinutes() ?? 0;
+    const startHour = entry.startDate?.getHours() ?? 0;
+    const startMinute = entry.startDate?.getMinutes() ?? 0;
     const duration =
-      plan.endDate && plan.startDate
-        ? (plan.endDate.getTime() - plan.startDate.getTime()) / 60000
+      entry.endDate && entry.startDate
+        ? (entry.endDate.getTime() - entry.startDate.getTime()) / 60000
         : 60;
 
     return {
-      title: plan.title,
-      description: plan.description ?? null,
+      title: entry.title,
+      description: entry.description ?? null,
       startHour,
       startMinute,
       duration,
-      tagId: plan.tagId,
+      tagId: entry.tagId,
     };
-  }, [selectedPlanId, filteredEvents]);
+  }, [selectedEntryId, filteredEvents]);
 
   const getPasteDateForKeyboard = useCallback(() => {
     return currentDate;
   }, [currentDate]);
 
-  const deletePlanAsync = useCallback(
-    async (planId: string) => {
-      deletePlan(planId);
+  const deleteEntryAsync = useCallback(
+    async (entryId: string) => {
+      deleteEntry(entryId);
     },
-    [deletePlan],
+    [deleteEntry],
   );
 
   useCalendarEventKeyboard({
     enabled: true,
-    onDeletePlan: deletePlanAsync,
-    getSelectedPlanTitle,
-    getInitialPlanData,
-    getSelectedPlanForCopy,
+    onDeleteEntry: deleteEntryAsync,
+    getSelectedEntryTitle,
+    getInitialEntryData,
+    getSelectedEntryForCopy,
     getPasteDateForKeyboard,
   });
 
@@ -169,22 +170,22 @@ export function useCalendarCrudHandlers({
   // =========================================================================
   return useMemo(
     () => ({
-      disabledPlanId,
-      onPlanClick: handlePlanClick,
+      disabledEntryId,
+      onEntryClick: handleEntryClick,
       onTimeRangeSelect: handleDateTimeRangeSelect,
-      onUpdatePlan: handlePlanUpdate,
-      onDeletePlan: deletePlan,
+      onUpdateEntry: handleEntryUpdate,
+      onDeleteEntry: deleteEntry,
       getAddToPaletteHandler,
-      onDeletePlanConfirm: handleDeletePlanConfirm,
+      onDeleteEntryConfirm: handleDeleteEntryConfirm,
     }),
     [
-      disabledPlanId,
-      handlePlanClick,
+      disabledEntryId,
+      handleEntryClick,
       handleDateTimeRangeSelect,
-      handlePlanUpdate,
-      deletePlan,
+      handleEntryUpdate,
+      deleteEntry,
       getAddToPaletteHandler,
-      handleDeletePlanConfirm,
+      handleDeleteEntryConfirm,
     ],
   );
 }

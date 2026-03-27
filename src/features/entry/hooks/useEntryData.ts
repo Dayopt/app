@@ -37,7 +37,7 @@ export interface EntrySortOptions {
  * @internal テスト用にエクスポート
  */
 /** APIから返されるエントリデータの型（テスト用エクスポート） */
-export type PlanWithTagIds = EntryWithTags;
+export type EntryWithTagIds = EntryWithTags;
 
 /**
  * エントリアイテム
@@ -99,7 +99,7 @@ function matchesScheduleFilter(
  * @param entry - 変換元のエントリデータ
  * @returns Board/Table表示用のEntryItem
  */
-export function planToPlanItem(entry: PlanWithTagIds): EntryItem {
+export function entryToEntryItem(entry: EntryWithTagIds): EntryItem {
   // 時間位置ベースでステータスを導出
   const entryState = getEntryState({ start_time: entry.start_time, end_time: entry.end_time });
   const status: EntryStatus = entryState === 'past' ? 'closed' : 'open';
@@ -137,7 +137,7 @@ export function useEntryData(filters: EntryDataFilters = {}, sort?: EntrySortOpt
   // フィルタリング・ソートをメモ化
   const items = useMemo(() => {
     let result: EntryItem[] =
-      entriesData?.map((entry) => planToPlanItem(entry as PlanWithTagIds)) || [];
+      entriesData?.map((entry) => entryToEntryItem(entry as EntryWithTagIds)) || [];
 
     // ステータスフィルタリング
     if (filters.status) {

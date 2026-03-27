@@ -484,24 +484,24 @@ export const emailRouter = createTRPCRouter({
       z.object({
         email: z.string().email(),
         userName: z.string().min(1),
-        planTitle: z.string().min(1),
+        entryTitle: z.string().min(1),
         startTime: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
         await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending reminder email', { planTitle: input.planTitle, userId: ctx.userId });
+        logger.info('Sending reminder email', { entryTitle: input.entryTitle, userId: ctx.userId });
 
         const locale = await getUserLocale(ctx.supabase, ctx.userId);
         const t = createEmailTranslator(locale);
 
         return sendEmail({
           to: input.email,
-          subject: t('reminder.subject', { planTitle: input.planTitle }),
+          subject: t('reminder.subject', { entryTitle: input.entryTitle }),
           react: ReminderEmail({
             userName: input.userName,
-            planTitle: input.planTitle,
+            entryTitle: input.entryTitle,
             startTime: input.startTime,
             locale,
             appUrl: APP_URL,
@@ -522,24 +522,24 @@ export const emailRouter = createTRPCRouter({
       z.object({
         email: z.string().email(),
         userName: z.string().min(1),
-        planTitle: z.string().min(1),
+        entryTitle: z.string().min(1),
         endTime: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       try {
         await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending overdue email', { planTitle: input.planTitle, userId: ctx.userId });
+        logger.info('Sending overdue email', { entryTitle: input.entryTitle, userId: ctx.userId });
 
         const locale = await getUserLocale(ctx.supabase, ctx.userId);
         const t = createEmailTranslator(locale);
 
         return sendEmail({
           to: input.email,
-          subject: t('overdue.subject', { planTitle: input.planTitle }),
+          subject: t('overdue.subject', { entryTitle: input.entryTitle }),
           react: OverdueEmail({
             userName: input.userName,
-            planTitle: input.planTitle,
+            entryTitle: input.entryTitle,
             endTime: input.endTime,
             locale,
             appUrl: APP_URL,

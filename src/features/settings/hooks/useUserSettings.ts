@@ -82,6 +82,10 @@ export function useUserSettings() {
         defaultDuration: dbSettings.defaultDuration,
         snapInterval: dbSettings.snapInterval,
         chronotype: chronotypeSettings,
+        chronotypeGradient: {
+          light: dbSettings.chronotype.gradientLight ?? null,
+          dark: dbSettings.chronotype.gradientDark ?? null,
+        },
         planRecordMode: dbSettings.planRecordMode,
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),

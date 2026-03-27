@@ -76,8 +76,8 @@ export const HoursAndMinutes: Story = {
   ),
 };
 
-/** 短い予定（15分）の超過。 */
-export const ShortPlan: Story = {
+/** 短いエントリー（15分）の超過。 */
+export const ShortEntry: Story = {
   render: () => (
     <div className="w-80">
       <TimeDiffBar plannedMinutes={15} actualMinutes={20} />
@@ -85,8 +85,8 @@ export const ShortPlan: Story = {
   ),
 };
 
-/** 長い予定（2時間）の未達。 */
-export const LongPlan: Story = {
+/** 長いエントリー（2時間）の未達。 */
+export const LongEntry: Story = {
   render: () => (
     <div className="w-80">
       <TimeDiffBar plannedMinutes={120} actualMinutes={100} />

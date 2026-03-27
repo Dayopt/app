@@ -7,7 +7,12 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import type { ChronotypeType } from '@/features/chronotype';
-import { chronotypeCustomZonesSchema, chronotypeTypeSchema } from '@/features/chronotype';
+import {
+  chronotypeCustomZonesSchema,
+  chronotypeTypeSchema,
+  generateChronotypeGradient,
+  getChronotypeProfile,
+} from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
@@ -156,6 +161,8 @@ export const userSettingsRouter = createTRPCRouter({
             enabled: data.chronotype_enabled,
             type: data.chronotype_type as ChronotypeType,
             customZones: data.chronotype_custom_zones,
+            gradientLight: data.chronotype_gradient_light,
+            gradientDark: data.chronotype_gradient_dark,
           },
           defaultView: (data as Record<string, unknown>).default_view as
             | 'day'
@@ -236,6 +243,27 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.chronotypeType !== undefined) updateData.chronotype_type = input.chronotypeType;
         if (input.chronotypeCustomZones !== undefined)
           updateData.chronotype_custom_zones = input.chronotypeCustomZones;
+
+        // Chronotype 設定変更時に gradient を再計算
+        if (
+          input.chronotypeType !== undefined ||
+          input.chronotypeCustomZones !== undefined ||
+          input.chronotypeEnabled !== undefined
+        ) {
+          const type = input.chronotypeType ?? 'bear';
+          const customZones = input.chronotypeCustomZones;
+          const profile = getChronotypeProfile(type, customZones);
+          const zones = profile.productivityZones;
+
+          if (input.chronotypeEnabled === false || zones.length === 0) {
+            updateData.chronotype_gradient_light = null;
+            updateData.chronotype_gradient_dark = null;
+          } else {
+            updateData.chronotype_gradient_light = generateChronotypeGradient(zones, 'light');
+            updateData.chronotype_gradient_dark = generateChronotypeGradient(zones, 'dark');
+          }
+        }
+
         if (input.defaultView !== undefined)
           (updateData as Record<string, unknown>).default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)

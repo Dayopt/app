@@ -16,7 +16,7 @@ export const TOUR_STEPS: TourStepDef[] = [
     descriptionKey: 'tour.steps.intro.description',
   },
   {
-    id: 'grid-drag-plan',
+    id: 'grid-drag-entry',
     targetSelector: '[data-tour-target="grid-drag"]',
     placement: 'bottom',
     titleKey: 'tour.steps.gridDragPlan.title',
@@ -29,7 +29,7 @@ export const TOUR_STEPS: TourStepDef[] = [
     },
   },
   {
-    id: 'select-tag-plan',
+    id: 'select-tag-entry',
     targetSelector: '[data-tour-target="grid-drag"]',
     placement: 'bottom',
     titleKey: 'tour.steps.selectTagPlan.title',
@@ -49,12 +49,12 @@ export const TOUR_STEPS: TourStepDef[] = [
     contentKey: 'tag-explain',
   },
   {
-    id: 'plan-vs-record',
+    id: 'planned-vs-actual',
     targetSelector: '',
     placement: 'center',
     titleKey: 'tour.steps.planVsRecord.title',
     descriptionKey: 'tour.steps.planVsRecord.description',
-    contentKey: 'plan-vs-record-visual',
+    contentKey: 'planned-vs-actual-visual',
   },
 ];
 

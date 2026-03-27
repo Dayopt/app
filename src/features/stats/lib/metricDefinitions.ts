@@ -28,8 +28,8 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     trendPositive: 'up',
     icon: Sparkles,
   },
-  planRate: {
-    id: 'planRate',
+  entryRate: {
+    id: 'entryRate',
     format: 'percentage',
     trendPositive: 'up',
     thresholds: { good: 0.7, warning: 0.4 },
@@ -74,7 +74,7 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
 export const METRIC_ORDER: MetricId[] = [
   'totalTime',
   'avgFulfillment',
-  'planRate',
+  'entryRate',
   'streak',
   'estimationAccuracy',
   'peakUtilization',

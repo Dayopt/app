@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Entry 用 Zod スキーマ（plans + records を統合）
+// Entry 用 Zod スキーマ
 
 /** エントリ発生源スキーマ（"planned" のみ許可） */
 export const entryOriginSchema = z.literal('planned');

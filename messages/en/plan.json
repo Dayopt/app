@@ -7,7 +7,7 @@
       },
       "list": {
         "nav": {
-          "plan": "Plan"
+          "plan": "Entry"
         }
       }
     },
@@ -35,12 +35,12 @@
     "open": "Open",
     "editDetails": "Edit details",
     "delete": {
-      "confirmTitle": "Delete this plan?",
+      "confirmTitle": "Delete this entry?",
       "confirmTitleWithName": "Delete {name}?",
-      "description": "This action cannot be undone. The plan will be permanently deleted and removed from calendar.",
+      "description": "This action cannot be undone. The entry will be permanently deleted and removed from calendar.",
       "warningIrreversible": "This action cannot be undone",
       "afterDeletion": "After deletion",
-      "willBeDeleted": "The plan will be permanently deleted",
+      "willBeDeleted": "The entry will be permanently deleted",
       "willBeRemovedFromCalendar": "It will be removed from calendar",
       "confirm": "Delete",
       "deleting": "Deleting..."
@@ -59,21 +59,21 @@
       "editDescription": "Edit description",
       "addDescription": "Add description",
       "addDescriptionPlaceholder": "Add description...",
-      "createPlan": "Create Plan",
-      "createRecord": "Create Record",
+      "createPlan": "Create Entry",
+      "createRecord": "Create Entry",
       "markComplete": "Mark complete",
       "markIncomplete": "Mark incomplete",
       "completeOptions": "Complete options",
-      "completeAndCreateRecord": "Complete + Create Record",
+      "completeAndCreateRecord": "Complete + Create Entry",
       "timeConflict": "Time overlaps",
       "toast": {
         "tagsSaveFailed": "Failed to save tags",
         "timeOverlap": "Time overlaps with another event",
-        "createFailed": "Failed to create plan",
+        "createFailed": "Failed to create entry",
         "saveFailed": "Failed to save"
       },
       "noTitle": "(No title)",
-      "notFound": "Plan not found",
+      "notFound": "Entry not found",
       "noData": "No data found",
       "menu": {
         "duplicate": "Duplicate",
@@ -86,7 +86,7 @@
       },
       "time": {
         "date": "Date",
-        "planned": "Plan",
+        "planned": "Planned",
         "actual": "Actual",
         "sameAsPlanned": "Not yet",
         "noPlanned": "Lived, not planned",
@@ -107,25 +107,25 @@
         "pastPlaceholder": "Quick note on what you did..."
       },
       "records": {
-        "link": "Link record",
-        "unlink": "Unlink record",
-        "search": "Search records...",
-        "noMatch": "No matching records",
+        "link": "Link entry",
+        "unlink": "Unlink entry",
+        "search": "Search entries...",
+        "noMatch": "No matching entries",
         "addNew": "Add work log"
       },
       "recordCreate": {
         "titlePlaceholder": "What did you do?",
-        "titleLabel": "Record title",
-        "timeOverlap": "Time overlaps with existing record",
-        "failed": "Failed to create record",
-        "linkPlan": "Link to plan",
-        "unlinkPlan": "Unlink from plan",
-        "searchPlan": "Search plans...",
-        "noPlans": "No plans found",
+        "titleLabel": "Entry title",
+        "timeOverlap": "Time overlaps with existing entry",
+        "failed": "Failed to create entry",
+        "linkPlan": "Link to entry",
+        "unlinkPlan": "Unlink from entry",
+        "searchPlan": "Search entries...",
+        "noPlans": "No entries found",
         "fulfillmentTooltip": "Fulfillment: {score}/5 (long press to reset)",
         "fulfillmentTap": "Fulfillment (tap to add)",
         "fulfillmentLabel": "Fulfillment: {score}/5",
-        "addNewPlan": "Add new plan"
+        "addNewPlan": "Add new entry"
       }
     },
     "view": {

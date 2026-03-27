@@ -7,7 +7,7 @@
       },
       "list": {
         "nav": {
-          "plan": "Plan"
+          "plan": "エントリー"
         }
       }
     },
@@ -35,12 +35,12 @@
     "open": "開く",
     "editDetails": "詳細を編集",
     "delete": {
-      "confirmTitle": "プランを削除しますか？",
+      "confirmTitle": "エントリーを削除しますか？",
       "confirmTitleWithName": "{name}を削除しますか？",
-      "description": "この操作は取り消せません。プランは完全に削除され、カレンダーからも削除されます。",
+      "description": "この操作は取り消せません。エントリーは完全に削除され、カレンダーからも削除されます。",
       "warningIrreversible": "この操作は取り消せません",
       "afterDeletion": "削除すると",
-      "willBeDeleted": "プランが完全に削除されます",
+      "willBeDeleted": "エントリーが完全に削除されます",
       "willBeRemovedFromCalendar": "カレンダーから削除されます",
       "confirm": "削除",
       "deleting": "削除中..."
@@ -59,21 +59,21 @@
       "editDescription": "説明を編集",
       "addDescription": "説明を追加",
       "addDescriptionPlaceholder": "説明を追加...",
-      "createPlan": "Plan 作成",
-      "createRecord": "Record 作成",
+      "createPlan": "エントリーを作成",
+      "createRecord": "エントリーを作成",
       "markComplete": "完了にする",
       "markIncomplete": "未完了に戻す",
       "completeOptions": "完了オプション",
-      "completeAndCreateRecord": "完了 + Record作成",
+      "completeAndCreateRecord": "完了 + エントリー作成",
       "timeConflict": "時間が重複しています",
       "toast": {
         "tagsSaveFailed": "タグの保存に失敗しました",
         "timeOverlap": "時間が重複しています",
-        "createFailed": "Planの作成に失敗しました",
+        "createFailed": "エントリーの作成に失敗しました",
         "saveFailed": "保存に失敗しました"
       },
       "noTitle": "（タイトルなし）",
-      "notFound": "プランが見つかりません",
+      "notFound": "エントリーが見つかりません",
       "noData": "データが見つかりません",
       "menu": {
         "duplicate": "複製する",
@@ -107,25 +107,25 @@
         "pastPlaceholder": "やったことをひとこと..."
       },
       "records": {
-        "link": "Recordを紐付け",
-        "unlink": "Record紐付けを解除",
-        "search": "Recordを検索...",
-        "noMatch": "一致するRecordがありません",
+        "link": "エントリーを紐付け",
+        "unlink": "エントリー紐付けを解除",
+        "search": "エントリーを検索...",
+        "noMatch": "一致するエントリーがありません",
         "addNew": "作業ログを追加"
       },
       "recordCreate": {
         "titlePlaceholder": "何をした？",
-        "titleLabel": "記録タイトル",
+        "titleLabel": "エントリータイトル",
         "timeOverlap": "時間が重複しています",
-        "failed": "Recordの作成に失敗しました",
-        "linkPlan": "Planに紐付け",
-        "unlinkPlan": "Plan紐付けを解除",
-        "searchPlan": "Planを検索...",
-        "noPlans": "Planがありません",
+        "failed": "エントリーの作成に失敗しました",
+        "linkPlan": "エントリーに紐付け",
+        "unlinkPlan": "エントリー紐付けを解除",
+        "searchPlan": "エントリーを検索...",
+        "noPlans": "エントリーがありません",
         "fulfillmentTooltip": "充実度: {score}/5（長押しでリセット）",
         "fulfillmentTap": "充実度（タップで加算）",
         "fulfillmentLabel": "充実度: {score}/5",
-        "addNewPlan": "予定を追加"
+        "addNewPlan": "エントリーを追加"
       }
     },
     "view": {

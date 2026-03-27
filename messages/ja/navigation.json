@@ -16,8 +16,8 @@
       "resize": "サイズを変更",
       "navigation": {
         "calendar": "カレンダー",
-        "plan": "Plan",
-        "record": "Record",
+        "plan": "エントリー",
+        "record": "エントリー",
         "tags": "タグ",
         "stats": "統計",
         "settings": "設定",

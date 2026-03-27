@@ -17,11 +17,11 @@ type Story = StoryObj<typeof meta>;
 
 const MOCK_INSIGHTS: RuleInsight[] = [
   {
-    metricId: 'planRate',
+    metricId: 'entryRate',
     type: 'threshold',
     severity: 'warning',
-    messageKey: 'planRateLow',
-    detailKey: 'planRateLowDetail',
+    messageKey: 'entryRateLow',
+    detailKey: 'entryRateLowDetail',
   },
   {
     metricId: 'peakUtilization',
@@ -55,11 +55,11 @@ export const WarningsOnly: Story = {
         detailKey: 'contextSwitchesHighDetail',
       },
       {
-        metricId: 'planRate',
+        metricId: 'entryRate',
         type: 'trend',
         severity: 'warning',
         messageKey: 'trendWorse',
-        messageParams: { label: 'Plan Rate', pct: 30 },
+        messageParams: { label: 'Entry Rate', pct: 30 },
       },
     ],
   },
@@ -74,14 +74,14 @@ export const WithCritical: Story = {
         type: 'threshold',
         severity: 'critical',
         messageKey: 'blankRateHigh',
-        detailKey: 'planRateLowDetail',
+        detailKey: 'entryRateLowDetail',
       },
       {
-        metricId: 'planRate',
+        metricId: 'entryRate',
         type: 'threshold',
         severity: 'warning',
-        messageKey: 'planRateLow',
-        detailKey: 'planRateLowDetail',
+        messageKey: 'entryRateLow',
+        detailKey: 'entryRateLowDetail',
       },
     ],
   },
@@ -113,11 +113,11 @@ export const AllPatterns: Story = {
               detailKey: 'contextSwitchesHighDetail',
             },
             {
-              metricId: 'planRate',
+              metricId: 'entryRate',
               type: 'trend',
               severity: 'warning',
               messageKey: 'trendWorse',
-              messageParams: { label: 'Plan Rate', pct: 30 },
+              messageParams: { label: 'Entry Rate', pct: 30 },
             },
           ]}
         />

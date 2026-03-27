@@ -12,7 +12,7 @@ import { tzWeekEnd, tzWeekStart } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 
 import type { ChronotypeType } from '@/features/chronotype';
-import type { AIContext, AIContextPlan, AIContextRecord, AISupabaseClient } from './types';
+import type { AIContext, AIContextEntry, AIContextPastEntry, AISupabaseClient } from './types';
 
 /**
  * AIコンテキストを組み立てる
@@ -121,8 +121,8 @@ export async function buildAIContext(
   // タグIDから名前のマッピング
   const tagMap = new Map(tags.map((t) => [t.id, t.name]));
 
-  // 今日のプラン整形（AIContextPlan 形式を維持して後方互換性を保つ）
-  const todayPlans: AIContextPlan[] = todayEntries.map((e) => ({
+  // 今日のエントリー整形（AIContextEntry 形式）
+  const todayContextEntries: AIContextEntry[] = todayEntries.map((e) => ({
     title: e.title ?? '',
     startTime: e.start_time ?? '',
     endTime: e.end_time ?? '',
@@ -132,8 +132,8 @@ export async function buildAIContext(
       [],
   }));
 
-  // 最近のレコード整形（AIContextRecord 形式を維持して後方互換性を保つ）
-  const recentRecords: AIContextRecord[] = recentEntries.map((e) => ({
+  // 最近の過去エントリー整形（AIContextPastEntry 形式）
+  const recentContextEntries: AIContextPastEntry[] = recentEntries.map((e) => ({
     title: e.title ?? '',
     durationMinutes: e.duration_minutes ?? 0,
     fulfillmentScore: e.fulfillment_score,
@@ -141,27 +141,27 @@ export async function buildAIContext(
   }));
 
   // 今週の planned 時間（分）
-  let planWeeklyMinutes = 0;
+  let plannedWeeklyMinutes = 0;
   for (const entry of weeklyPlanned) {
     if (entry.start_time && entry.end_time) {
       const start = new Date(entry.start_time);
       const end = new Date(entry.end_time);
       const minutes = (end.getTime() - start.getTime()) / MS_PER_MINUTE;
       if (minutes > 0) {
-        planWeeklyMinutes += minutes;
+        plannedWeeklyMinutes += minutes;
       }
     }
   }
 
   // 今週のエントリ時間（分）
-  let recordWeeklyMinutes = 0;
+  let actualWeeklyMinutes = 0;
   for (const entry of weeklyUnplanned) {
     if (entry.duration_minutes) {
-      recordWeeklyMinutes += entry.duration_minutes;
+      actualWeeklyMinutes += entry.duration_minutes;
     } else if (entry.start_time && entry.end_time) {
       const diffMs = new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime();
       if (diffMs > 0) {
-        recordWeeklyMinutes += diffMs / MS_PER_MINUTE;
+        actualWeeklyMinutes += diffMs / MS_PER_MINUTE;
       }
     }
   }
@@ -180,11 +180,11 @@ export async function buildAIContext(
     rankedValues,
     aiStyle,
     aiCustomStylePrompt,
-    todayPlans,
-    recentRecords,
+    todayEntries: todayContextEntries,
+    recentEntries: recentContextEntries,
     weeklyMinutes: {
-      plan: Math.round(planWeeklyMinutes),
-      record: Math.round(recordWeeklyMinutes),
+      planned: Math.round(plannedWeeklyMinutes),
+      actual: Math.round(actualWeeklyMinutes),
     },
     timezone: settings?.timezone ?? 'UTC',
     chronotype: {

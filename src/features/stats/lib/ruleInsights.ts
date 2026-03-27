@@ -36,7 +36,7 @@ export type MetricValues = Partial<Record<MetricId, number>>;
 
 /** ルールインサイトの判定閾値設定 */
 export interface RuleThresholds {
-  planRate: { low: number };
+  entryRate: { low: number };
   peakUtilization: { low: number };
   contextSwitches: { high: number };
   blankRate: { high: number };
@@ -51,7 +51,7 @@ export interface RuleThresholds {
 // =============================================================================
 
 const DEFAULT_THRESHOLDS: RuleThresholds = {
-  planRate: { low: 0.5 },
+  entryRate: { low: 0.5 },
   peakUtilization: { low: 0.3 },
   contextSwitches: { high: 8 },
   blankRate: { high: 0.6 },
@@ -102,14 +102,14 @@ function evaluateThresholdRules(
   t: RuleThresholds,
   insights: RuleInsight[],
 ): void {
-  const planRate = current.planRate;
-  if (planRate != null && planRate < t.planRate.low) {
+  const entryRate = current.entryRate;
+  if (entryRate != null && entryRate < t.entryRate.low) {
     insights.push({
-      metricId: 'planRate',
+      metricId: 'entryRate',
       type: 'threshold',
       severity: 'warning',
-      messageKey: 'planRateLow',
-      detailKey: 'planRateLowDetail',
+      messageKey: 'entryRateLow',
+      detailKey: 'entryRateLowDetail',
     });
   }
 
@@ -153,7 +153,7 @@ function evaluateThresholdRules(
 const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
   { id: 'totalTime', worseDirection: 'down' },
   { id: 'avgFulfillment', worseDirection: 'down' },
-  { id: 'planRate', worseDirection: 'down' },
+  { id: 'entryRate', worseDirection: 'down' },
   { id: 'peakUtilization', worseDirection: 'down' },
   { id: 'estimationAccuracy', worseDirection: 'up' },
   { id: 'contextSwitches', worseDirection: 'up' },
@@ -163,7 +163,7 @@ const TREND_METRICS: Array<{ id: MetricId; worseDirection: 'down' | 'up' }> = [
 const METRIC_LABELS: Record<MetricId, string> = {
   totalTime: 'Total Time',
   avgFulfillment: 'Avg Fulfillment',
-  planRate: 'Plan Rate',
+  entryRate: 'Entry Rate',
   streak: 'Streak',
   estimationAccuracy: 'Estimation Accuracy',
   peakUtilization: 'Peak Utilization',

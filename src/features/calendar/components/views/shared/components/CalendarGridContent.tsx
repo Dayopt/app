@@ -96,7 +96,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
   const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
-  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedPlan);
+  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedEntry);
   const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
   const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
 

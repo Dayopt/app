@@ -1,24 +1,24 @@
 /**
  * Sample Plans Unit Tests
  *
- * generateSamplePlansのビジネスロジックをテスト
+ * generateSampleEntriesのビジネスロジックをテスト
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { generateSamplePlans, PRESET_TAGS } from '../lib/sample-plans';
+import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
-describe('generateSamplePlans', () => {
+describe('generateSampleEntries', () => {
   const testDate = new Date('2026-03-24T00:00:00');
 
   it('should generate 7 sample plans', () => {
-    const plans = generateSamplePlans('bear', testDate);
+    const plans = generateSampleEntries('bear', testDate);
 
     expect(plans).toHaveLength(7);
   });
 
   it('should use bear peak time (10:00) for bear chronotype', () => {
-    const plans = generateSamplePlans('bear', testDate);
+    const plans = generateSampleEntries('bear', testDate);
 
     // First plan: Morning Run, offset -2h from peak 10:00 → 08:00
     const morningRun = plans[0]!;
@@ -29,7 +29,7 @@ describe('generateSamplePlans', () => {
   });
 
   it('should use lion peak time (7:00) for lion chronotype', () => {
-    const plans = generateSamplePlans('lion', testDate);
+    const plans = generateSampleEntries('lion', testDate);
 
     // First plan: Morning Run, offset -2h from peak 7:00 → 05:00
     const morningRun = plans[0]!;
@@ -38,7 +38,7 @@ describe('generateSamplePlans', () => {
   });
 
   it('should use wolf peak time (15:00) for wolf chronotype', () => {
-    const plans = generateSamplePlans('wolf', testDate);
+    const plans = generateSampleEntries('wolf', testDate);
 
     // First plan: Morning Run, offset -2h from peak 15:00 → 13:00
     const morningRun = plans[0]!;
@@ -47,7 +47,7 @@ describe('generateSamplePlans', () => {
   });
 
   it('should use dolphin peak time (8:00) for dolphin chronotype', () => {
-    const plans = generateSamplePlans('dolphin', testDate);
+    const plans = generateSampleEntries('dolphin', testDate);
 
     // First plan: Morning Run, offset -2h from peak 8:00 → 06:00
     const morningRun = plans[0]!;
@@ -56,14 +56,14 @@ describe('generateSamplePlans', () => {
   });
 
   it('should default to bear when chronotype is null', () => {
-    const plansNull = generateSamplePlans(null, testDate);
-    const plansBear = generateSamplePlans('bear', testDate);
+    const plansNull = generateSampleEntries(null, testDate);
+    const plansBear = generateSampleEntries('bear', testDate);
 
     expect(plansNull).toEqual(plansBear);
   });
 
   it('should set correct endTime based on duration', () => {
-    const plans = generateSamplePlans('bear', testDate);
+    const plans = generateSampleEntries('bear', testDate);
 
     // Morning Run: 30 minutes
     const morningRun = plans[0]!;
@@ -80,7 +80,7 @@ describe('generateSamplePlans', () => {
   });
 
   it('should include correct tag keys', () => {
-    const plans = generateSamplePlans('bear', testDate);
+    const plans = generateSampleEntries('bear', testDate);
 
     const tagKeys = plans.map((p) => p.tagKey);
     expect(tagKeys).toContain('exercise');
@@ -91,7 +91,7 @@ describe('generateSamplePlans', () => {
   });
 
   it('should set description and reminderMinutes correctly', () => {
-    const plans = generateSamplePlans('bear', testDate);
+    const plans = generateSampleEntries('bear', testDate);
 
     // Draft Proposal has reminderMinutes: 5
     const proposal = plans[1]!;

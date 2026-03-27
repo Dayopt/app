@@ -12,11 +12,11 @@
       },
       "selectTagPlan": {
         "title": "Pick a tag",
-        "description": "Choose a tag — it becomes the name and color of your plan"
+        "description": "Choose a tag — it becomes the name and color of your entry"
       },
       "explainTags": {
         "title": "Tags are your titles",
-        "description": "Just pick a tag to create a plan or record. There's no title field — the tag is the name.",
+        "description": "Just pick a tag to create an entry. There's no title field — the tag is the name.",
         "examples": {
           "deepWork": "Deep Work",
           "exercise": "Exercise",
@@ -42,7 +42,7 @@
     "done": {
       "title": "You're all set!",
       "description": "Plan your time, then record what actually happened. The difference is calculated automatically.",
-      "cta": "Create your first plan"
+      "cta": "Create your first entry"
     },
     "next": "Next",
     "back": "Back",

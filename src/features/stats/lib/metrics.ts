@@ -189,7 +189,7 @@ export function getThresholdStatus(
   const { good, warning } = definition.thresholds;
 
   if (definition.trendPositive === 'up') {
-    // 高いほうが良い（planRate, peakUtilization）
+    // 高いほうが良い（entryRate, peakUtilization）
     if (value >= good) return 'good';
     if (value >= warning) return 'warning';
     return 'critical';

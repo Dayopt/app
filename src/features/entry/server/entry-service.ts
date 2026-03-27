@@ -1,7 +1,7 @@
 /**
  * Entries Service
  *
- * plans + records を統合した entries テーブルのビジネスロジック
+ * entries テーブルのビジネスロジック
  */
 
 import { logger } from '@/lib/logger';

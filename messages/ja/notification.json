@@ -65,13 +65,13 @@
       "tip": "ブラウザ通知はアプリを開いている時のみ動作します。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れます。",
       "defaultReminder": {
         "label": "開始時通知のデフォルト",
-        "description": "新規プラン作成時に開始時通知を自動でONにする"
+        "description": "新規エントリー作成時に開始時通知を自動でONにする"
       },
       "typeSection": {
         "title": "通知タイプ",
         "dailyInsights": {
           "label": "デイリーインサイト",
-          "description": "計画率や空白時間などの日次分析通知"
+          "description": "エントリー率や空白時間などの日次分析通知"
         },
         "energyInsights": {
           "label": "エネルギーインサイト",

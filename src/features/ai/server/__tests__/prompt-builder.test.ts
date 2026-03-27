@@ -20,9 +20,9 @@ function createMinimalContext(overrides?: Partial<AIContext>): AIContext {
     aiCustomStylePrompt: '',
     rankedValues: [],
     values: {},
-    todayPlans: [],
-    recentRecords: [],
-    weeklyMinutes: { plan: 0, record: 0 },
+    todayEntries: [],
+    recentEntries: [],
+    weeklyMinutes: { planned: 0, actual: 0 },
     timezone: 'Asia/Tokyo',
     chronotype: {
       type: 'bear',
@@ -368,10 +368,10 @@ describe('buildSystemPrompt', () => {
     });
   });
 
-  describe("Today's Schedule (todayPlans)", () => {
+  describe("Today's Schedule (todayEntries)", () => {
     it("should include Today's Schedule section when plans exist", () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Team standup',
             startTime: '2024-01-15T09:00:00Z',
@@ -388,7 +388,7 @@ describe('buildSystemPrompt', () => {
 
     it('should format times as HH:MM-HH:MM', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Morning review',
             startTime: '2024-01-15T08:30:00Z',
@@ -407,7 +407,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include plan title in schedule', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Deep work session',
             startTime: '2024-01-15T10:00:00Z',
@@ -424,7 +424,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include status in brackets', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Task',
             startTime: '2024-01-15T14:00:00Z',
@@ -441,7 +441,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include tags when present', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Lunch meeting',
             startTime: '2024-01-15T12:00:00Z',
@@ -458,7 +458,7 @@ describe('buildSystemPrompt', () => {
 
     it('should filter out empty tag strings', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Task',
             startTime: '2024-01-15T15:00:00Z',
@@ -476,7 +476,7 @@ describe('buildSystemPrompt', () => {
 
     it('should omit tags brackets when no tags', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Task',
             startTime: '2024-01-15T15:00:00Z',
@@ -494,7 +494,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include multiple plans', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Morning standup',
             startTime: '2024-01-15T09:00:00Z',
@@ -526,24 +526,24 @@ describe('buildSystemPrompt', () => {
     });
 
     it('should show "No plans scheduled" when plans are empty', () => {
-      const context = createMinimalContext({ todayPlans: [] });
+      const context = createMinimalContext({ todayEntries: [] });
       const prompt = buildSystemPrompt(context);
 
       expect(prompt).toContain('No plans scheduled for today');
     });
 
     it("should always include Today's Schedule section even when empty", () => {
-      const context = createMinimalContext({ todayPlans: [] });
+      const context = createMinimalContext({ todayEntries: [] });
       const prompt = buildSystemPrompt(context);
 
       expect(prompt).toContain("## Today's Schedule");
     });
   });
 
-  describe('Recent Activity (recentRecords)', () => {
+  describe('Recent Activity (recentEntries)', () => {
     it('should include Recent Activity section when records exist', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Work session',
             durationMinutes: 120,
@@ -560,7 +560,7 @@ describe('buildSystemPrompt', () => {
 
     it('should format duration as hours and minutes', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 90,
@@ -576,7 +576,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle hours without minutes', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 120,
@@ -593,7 +593,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle minutes only', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 45,
@@ -609,7 +609,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include fulfillment score when present', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 60,
@@ -625,7 +625,7 @@ describe('buildSystemPrompt', () => {
 
     it('should omit fulfillment when score is null', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 60,
@@ -644,7 +644,7 @@ describe('buildSystemPrompt', () => {
 
     it('should include multiple records', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Morning work',
             durationMinutes: 120,
@@ -666,7 +666,7 @@ describe('buildSystemPrompt', () => {
     });
 
     it('should not include Recent Activity section when records are empty', () => {
-      const context = createMinimalContext({ recentRecords: [] });
+      const context = createMinimalContext({ recentEntries: [] });
       const prompt = buildSystemPrompt(context);
 
       expect(prompt).not.toContain('## Recent Activity');
@@ -683,7 +683,7 @@ describe('buildSystemPrompt', () => {
 
     it('should convert minutes to hours in decimal format', () => {
       const context = createMinimalContext({
-        weeklyMinutes: { plan: 2400, record: 1800 },
+        weeklyMinutes: { planned: 2400, actual: 1800 },
       });
       const prompt = buildSystemPrompt(context);
 
@@ -693,7 +693,7 @@ describe('buildSystemPrompt', () => {
 
     it('should show 0.0h for zero minutes', () => {
       const context = createMinimalContext({
-        weeklyMinutes: { plan: 0, record: 0 },
+        weeklyMinutes: { planned: 0, actual: 0 },
       });
       const prompt = buildSystemPrompt(context);
 
@@ -702,7 +702,7 @@ describe('buildSystemPrompt', () => {
 
     it('should format partial hours correctly', () => {
       const context = createMinimalContext({
-        weeklyMinutes: { plan: 90, record: 150 },
+        weeklyMinutes: { planned: 90, actual: 150 },
       });
       const prompt = buildSystemPrompt(context);
 
@@ -712,7 +712,7 @@ describe('buildSystemPrompt', () => {
 
     it('should distinguish planned and recorded time', () => {
       const context = createMinimalContext({
-        weeklyMinutes: { plan: 3000, record: 2400 },
+        weeklyMinutes: { planned: 3000, actual: 2400 },
       });
       const prompt = buildSystemPrompt(context);
 
@@ -814,7 +814,7 @@ describe('buildSystemPrompt', () => {
           health: { text: 'Regular exercise and good sleep', importance: 8 },
           family: { text: '', importance: 8 },
         },
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Team standup',
             startTime: '2024-01-15T09:00:00Z',
@@ -830,7 +830,7 @@ describe('buildSystemPrompt', () => {
             tags: ['focus', 'development'],
           },
         ],
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Project work',
             durationMinutes: 180,
@@ -838,7 +838,7 @@ describe('buildSystemPrompt', () => {
             workedAt: '2024-01-14T09:00:00Z',
           },
         ],
-        weeklyMinutes: { plan: 4200, record: 3600 },
+        weeklyMinutes: { planned: 4200, actual: 3600 },
         timezone: 'Asia/Tokyo',
         tags: [
           { name: 'work', color: '#FF0000' },
@@ -864,7 +864,7 @@ describe('buildSystemPrompt', () => {
     it('should produce consistently formatted markdown', () => {
       const context = createMinimalContext({
         rankedValues: ['integrity'],
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Task',
             startTime: '2024-01-15T09:00:00Z',
@@ -887,7 +887,7 @@ describe('buildSystemPrompt', () => {
       const context = createMinimalContext({
         rankedValues: ['integrity'],
         values: { career: { text: '', importance: 8 } },
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Task',
             startTime: '2024-01-15T09:00:00Z',
@@ -923,7 +923,7 @@ describe('buildSystemPrompt', () => {
   describe('Edge cases', () => {
     it('should handle very long plan titles', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title:
               'This is an extremely long task title that might wrap across multiple lines in the interface',
@@ -943,7 +943,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle special characters in plan titles', () => {
       const context = createMinimalContext({
-        todayPlans: [
+        todayEntries: [
           {
             title: 'Review "Q1 2024" roadmap & priorities',
             startTime: '2024-01-15T09:00:00Z',
@@ -960,7 +960,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle very large duration values', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Marathon work session',
             durationMinutes: 1440, // 24 hours
@@ -976,7 +976,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle single minute duration', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Quick task',
             durationMinutes: 1,
@@ -992,7 +992,7 @@ describe('buildSystemPrompt', () => {
 
     it('should handle zero fulfillment score', () => {
       const context = createMinimalContext({
-        recentRecords: [
+        recentEntries: [
           {
             title: 'Task',
             durationMinutes: 60,

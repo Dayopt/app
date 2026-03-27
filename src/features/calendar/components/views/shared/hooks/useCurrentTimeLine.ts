@@ -6,6 +6,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { getActiveZoneLevel, getChronotypeProfile } from '@/features/chronotype';
+import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+
 /** useCurrentTimeLine フックのオプション */
 interface UseCurrentTimeLineOptions {
   hourHeight: number;
@@ -17,6 +20,8 @@ interface UseCurrentTimeLineReturn {
   currentTime: Date;
   currentTimePosition: number;
   currentTimeLineColor: string | null;
+  /** 現在時刻が peak/dip ゾーン内にある場合のレベル */
+  currentZone: 'peak' | 'dip' | null;
 }
 
 /**
@@ -51,9 +56,19 @@ export const useCurrentTimeLine = ({
     return () => clearInterval(timer);
   }, [showCurrentTime]);
 
+  // Chronotype ゾーン判定
+  const chronotype = useCalendarSettingsStore((s) => s.chronotype);
+  const currentZone = useMemo(() => {
+    if (!chronotype.enabled) return null;
+    const profile = getChronotypeProfile(chronotype.type, chronotype.customZones);
+    const hour = currentTime.getHours() + currentTime.getMinutes() / 60;
+    return getActiveZoneLevel(profile.productivityZones, hour);
+  }, [chronotype, currentTime]);
+
   return {
     currentTime,
     currentTimePosition,
     currentTimeLineColor: null,
+    currentZone,
   };
 };

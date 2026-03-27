@@ -36,6 +36,7 @@ export interface CalendarSettings {
 
   // クロノタイプ設定
   chronotype: ChronotypeSettingsState;
+  chronotypeGradient: { light: string | null; dark: string | null };
 
   // Plan/Record表示設定
   planRecordMode: 'plan' | 'record' | 'both';
@@ -69,6 +70,7 @@ const defaultSettings: CalendarSettings = {
   showWeekNumbers: false,
   showWeekends: true, // デフォルトは週末も表示
   chronotype: { ...DEFAULT_CHRONOTYPE_SETTINGS },
+  chronotypeGradient: { light: null, dark: null },
   planRecordMode: 'both',
   sleepSchedule: {
     enabled: true,

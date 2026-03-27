@@ -12,7 +12,7 @@ import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 
-import { PRESET_TAGS, generateSamplePlans } from '../lib/sample-plans';
+import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
 import type { PresetChronotypeType } from '@/types/chronotype';
 
@@ -119,8 +119,8 @@ export const onboardingRouter = createTRPCRouter({
 
       // サンプルプラン生成（非ブロッキング）
       const chronotype = input.chronotypeType as PresetChronotypeType | undefined;
-      createSamplePlansForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
-        logger.error('Failed to create sample plans:', err);
+      createSampleEntriesForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
+        logger.error('Failed to create sample entries:', err);
       });
 
       return { success: true };
@@ -160,13 +160,13 @@ export const onboardingRouter = createTRPCRouter({
  * feature boundary制約のため entry/tag service は使わず直接挿入する。
  * 失敗してもオンボーディング完了を妨げない（logger.error のみ）。
  */
-async function createSamplePlansForUser(
+async function createSampleEntriesForUser(
   supabase: SupabaseClient<Database>,
   userId: string,
   chronotypeType: PresetChronotypeType | null,
 ): Promise<void> {
   const today = new Date();
-  const plans = generateSamplePlans(chronotypeType, today);
+  const plans = generateSampleEntries(chronotypeType, today);
 
   // ── Step 1: プリセットタグ作成 ──
   const tagEntries = Object.entries(PRESET_TAGS) as [

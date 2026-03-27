@@ -65,13 +65,13 @@
       "tip": "Browser notifications only work when the app is open. Enable email or push notifications to stay informed anytime.",
       "defaultReminder": {
         "label": "Default start notification",
-        "description": "Automatically enable start notification for new plans"
+        "description": "Automatically enable start notification for new entries"
       },
       "typeSection": {
         "title": "Notification types",
         "dailyInsights": {
           "label": "Daily insights",
-          "description": "Daily analysis alerts for plan rate, blank time, etc."
+          "description": "Daily analysis alerts for entry rate, blank time, etc."
         },
         "energyInsights": {
           "label": "Energy insights",

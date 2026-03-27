@@ -190,7 +190,7 @@ export const entriesCoreRouter = createTRPCRouter({
         }
 
         captureBusinessEvent('entry.created', {
-          entryType: input.origin ?? 'plan',
+          entryType: input.origin ?? 'planned',
         });
         return result;
       } catch (error) {

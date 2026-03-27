@@ -25,11 +25,11 @@ interface AvgFulfillmentData {
   entryCount: number;
 }
 
-/** getPlanRate の戻り値 */
-interface PlanRateData {
+/** getEntryRate の戻り値 */
+interface EntryRateData {
   totalEntries: number;
   plannedEntries: number;
-  planRate: number;
+  entryRate: number;
 }
 
 /** getEstimationAccuracy の戻り値（配列） */
@@ -69,7 +69,7 @@ interface BlankRateData {
 interface StatsMockData {
   cumulativeTime?: CumulativeTimeData;
   avgFulfillment?: AvgFulfillmentData;
-  planRate?: PlanRateData;
+  entryRate?: EntryRateData;
   estimationAccuracy?: EstimationAccuracyData;
   energyMap?: EnergyMapData;
   contextSwitches?: ContextSwitchesData;
@@ -94,7 +94,7 @@ function createStatsMockLink(data: StatsMockData): TRPCLink<AppRouter> {
           const responseMap: Record<string, unknown> = {
             'entries.getCumulativeTime': data.cumulativeTime,
             'entries.getAvgFulfillment': data.avgFulfillment,
-            'entries.getPlanRate': data.planRate,
+            'entries.getEntryRate': data.entryRate,
             'entries.getEstimationAccuracy': data.estimationAccuracy ?? [],
             'entries.getEnergyMap': data.energyMap ?? [],
             'entries.getContextSwitches': data.contextSwitches,
@@ -174,7 +174,7 @@ const MOCK_ENERGY_MAP_PREV: EnergyMapData = [
 const MOCK_WITH_DATA: StatsMockData = {
   cumulativeTime: { totalMinutes: 2295 }, // 38h 15m
   avgFulfillment: { avgFulfillment: 3.8, entryCount: 42 },
-  planRate: { totalEntries: 58, plannedEntries: 42, planRate: 0.72 },
+  entryRate: { totalEntries: 58, plannedEntries: 42, entryRate: 0.72 },
   estimationAccuracy: [
     {
       tagId: 'tag-work',
@@ -209,7 +209,7 @@ const MOCK_WITH_DATA: StatsMockData = {
 const MOCK_HIGH_PERFORMANCE: StatsMockData = {
   cumulativeTime: { totalMinutes: 3150 }, // 52h 30m
   avgFulfillment: { avgFulfillment: 4.5, entryCount: 60 },
-  planRate: { totalEntries: 65, plannedEntries: 62, planRate: 0.95 },
+  entryRate: { totalEntries: 65, plannedEntries: 62, entryRate: 0.95 },
   estimationAccuracy: [
     {
       tagId: 'tag-work',
@@ -284,7 +284,7 @@ type Story = StoryObj<typeof meta>;
 /**
  * データありの典型的な振り返りタブ
  *
- * 7つのメトリクス（totalTime / avgFulfillment / planRate /
+ * 7つのメトリクス（totalTime / avgFulfillment / entryRate /
  * estimationAccuracy / peakUtilization / contextSwitches / blankRate）が
  * TrendBadge 付きでグリッド表示される。
  */
@@ -342,7 +342,7 @@ export const Loading: Story = {
 /**
  * 高パフォーマンスユーザー
  *
- * planRate 95% / avgFulfillment 4.5 / estimationAccuracy ±5分など、
+ * entryRate 95% / avgFulfillment 4.5 / estimationAccuracy ±5分など、
  * 全メトリクスが良好な状態。
  */
 export const HighPerformance: Story = {
@@ -394,7 +394,7 @@ export const TrendUp: Story = {
           data={{
             cumulativeTime: { totalMinutes: 3000 },
             avgFulfillment: { avgFulfillment: 4.2, entryCount: 50 },
-            planRate: { totalEntries: 70, plannedEntries: 63, planRate: 0.9 },
+            entryRate: { totalEntries: 70, plannedEntries: 63, entryRate: 0.9 },
             estimationAccuracy: [
               {
                 tagId: 'tag-work',

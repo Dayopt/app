@@ -9,7 +9,7 @@ import type { NotificationType } from '../schemas';
 interface NotificationItemProps {
   id: string;
   type: NotificationType;
-  planTitle?: string | undefined;
+  entryTitle?: string | undefined;
   isRead: boolean;
   createdAt: string;
   locale: 'ja' | 'en';
@@ -40,7 +40,7 @@ const typeColors: Record<NotificationType, string> = {
 export function NotificationItem({
   id,
   type,
-  planTitle,
+  entryTitle,
   isRead,
   createdAt,
   locale,
@@ -91,7 +91,7 @@ export function NotificationItem({
                 !isRead ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
               }`}
             >
-              {planTitle ?? type}
+              {entryTitle ?? type}
             </h4>
             {!isRead && (
               <span className="bg-primary size-2 shrink-0 rounded-full" aria-label="Unread" />

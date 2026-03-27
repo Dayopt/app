@@ -10,14 +10,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| 実装範囲 | サーバーサイド専用（クライアントコンポーネントなし） |
-| プロバイダー | Anthropic / OpenAI（切り替え可能） |
-| 無料枠モデル | claude-haiku-4-5-20251001（月30リクエスト固定） |
-| コンテキスト取得 | Promise.all 並列フェッチ（設定・今日のエントリ・直近7日・週間統計・タグ） |
-| ツール呼び出し | Vercel AI SDK v6 `tool()` — 4種類のオンデマンド検索ツール |
-| タイトルサジェスト | entries テーブルをタイトルでグループ化し、使用頻度・最終使用日でソート |
+| 項目               | 値                                                                        |
+| ------------------ | ------------------------------------------------------------------------- |
+| 実装範囲           | サーバーサイド専用（クライアントコンポーネントなし）                      |
+| プロバイダー       | Anthropic / OpenAI（切り替え可能）                                        |
+| 無料枠モデル       | claude-haiku-4-5-20251001（月30リクエスト固定）                           |
+| コンテキスト取得   | Promise.all 並列フェッチ（設定・今日のエントリ・直近7日・週間統計・タグ） |
+| ツール呼び出し     | Vercel AI SDK v6 `tool()` — 4種類のオンデマンド検索ツール                 |
+| タイトルサジェスト | entries テーブルをタイトルでグループ化し、使用頻度・最終使用日でソート    |
 
 ---
 
@@ -51,35 +51,35 @@ AI feature はサーバーサイド専用のため Zustand ストアを持たな
 
 ### tRPC ルーター
 
-| エンドポイント | タイプ | 説明 |
-|-------------|-------|------|
-| `suggestions.recentTitles` | query | 最近のユニークタイトル+タグ組み合わせ（最大30件） |
+| エンドポイント             | タイプ | 説明                                              |
+| -------------------------- | ------ | ------------------------------------------------- |
+| `suggestions.recentTitles` | query  | 最近のユニークタイトル+タグ組み合わせ（最大30件） |
 
 #### `suggestions.recentTitles` 入力スキーマ
 
-| フィールド | 型 | 説明 |
-|-----------|----|------|
-| `search` | `string?` | タイトル部分一致フィルター（最大200文字） |
-| `limit` | `number?` | 取得件数（1〜30、デフォルト20） |
-| `type` | `'plan' \| 'record'?` | エントリ種別フィルター |
+| フィールド | 型                       | 説明                                      |
+| ---------- | ------------------------ | ----------------------------------------- |
+| `search`   | `string?`                | タイトル部分一致フィルター（最大200文字） |
+| `limit`    | `number?`                | 取得件数（1〜30、デフォルト20）           |
+| `type`     | `'planned' \| 'actual'?` | エントリ種別フィルター                    |
 
 ### サーバー公開関数
 
-| 関数 | 説明 |
-|------|------|
-| `buildAIContext(supabase, userId)` | AIContext を構築（並列フェッチ） |
-| `buildSystemPrompt(context)` | AIContext → システムプロンプト文字列（純粋関数） |
-| `createAITools(supabase, userId)` | Vercel AI SDK ToolSet を生成 |
-| `createAIUsageService(supabase)` | 無料枠管理サービスを生成 |
+| 関数                               | 説明                                             |
+| ---------------------------------- | ------------------------------------------------ |
+| `buildAIContext(supabase, userId)` | AIContext を構築（並列フェッチ）                 |
+| `buildSystemPrompt(context)`       | AIContext → システムプロンプト文字列（純粋関数） |
+| `createAITools(supabase, userId)`  | Vercel AI SDK ToolSet を生成                     |
+| `createAIUsageService(supabase)`   | 無料枠管理サービスを生成                         |
 
 ### AIツールセット（`createAITools`）
 
-| ツール名 | 説明 |
-|---------|------|
-| `searchPlans` | 日付範囲・テキストでエントリ検索 |
-| `searchPastEntries` | 過去エントリを充実度スコア込みで検索 |
-| `getStatistics` | 期間別サマリー統計（week / month / year / all） |
-| `getTagStats` | タグ別エントリ件数・最終使用日 |
+| ツール名            | 説明                                            |
+| ------------------- | ----------------------------------------------- |
+| `searchPlans`       | 日付範囲・テキストでエントリ検索                |
+| `searchPastEntries` | 過去エントリを充実度スコア込みで検索            |
+| `getStatistics`     | 期間別サマリー統計（week / month / year / all） |
+| `getTagStats`       | タグ別エントリ件数・最終使用日                  |
 
 ---
 
@@ -87,12 +87,12 @@ AI feature はサーバーサイド専用のため Zustand ストアを持たな
 
 ### サポートモデル一覧
 
-| プロバイダー | モデルID | 表示名 | 用途 |
-|------------|---------|--------|------|
-| Anthropic | `claude-sonnet-4-5-20250929` | Sonnet 4.5 | デフォルト（バランス型） |
-| Anthropic | `claude-haiku-4-5-20251001` | Haiku 4.5 | 無料枠固定モデル |
-| OpenAI | `gpt-4o` | GPT-4o | 高性能 |
-| OpenAI | `gpt-4o-mini` | GPT-4o mini | OpenAI デフォルト |
+| プロバイダー | モデルID                     | 表示名      | 用途                     |
+| ------------ | ---------------------------- | ----------- | ------------------------ |
+| Anthropic    | `claude-sonnet-4-5-20250929` | Sonnet 4.5  | デフォルト（バランス型） |
+| Anthropic    | `claude-haiku-4-5-20251001`  | Haiku 4.5   | 無料枠固定モデル         |
+| OpenAI       | `gpt-4o`                     | GPT-4o      | 高性能                   |
+| OpenAI       | `gpt-4o-mini`                | GPT-4o mini | OpenAI デフォルト        |
 
 ### 無料枠ルール
 
@@ -107,17 +107,17 @@ AI feature はサーバーサイド専用のため Zustand ストアを持たな
 
 `buildAIContext()` が組み立てる `AIContext` の主要フィールド：
 
-| フィールド | 型 | 説明 |
-|-----------|----|------|
-| `values` | `Record<string, { text, importance }>` | 12領域の価値観スコア |
-| `rankedValues` | `string[]` | 価値観キーワードのランキング（最重要コンテキスト） |
-| `aiStyle` | `'coach' \| 'analyst' \| 'friendly' \| 'custom'` | コミュニケーションスタイル |
-| `todayPlans` | `AIContextPlan[]` | 今日のプラン（最大20件） |
-| `recentRecords` | `AIContextRecord[]` | 直近7日のエントリ（最大10件） |
-| `weeklyMinutes` | `{ plan, record }` | 今週の計画・記録時間（分） |
-| `timezone` | `string` | ユーザータイムゾーン |
-| `chronotype` | `{ type, enabled }` | クロノタイプ設定 |
-| `tags` | `{ name, color }[]` | アクティブタグ一覧（最大50件） |
+| フィールド      | 型                                               | 説明                                               |
+| --------------- | ------------------------------------------------ | -------------------------------------------------- |
+| `values`        | `Record<string, { text, importance }>`           | 12領域の価値観スコア                               |
+| `rankedValues`  | `string[]`                                       | 価値観キーワードのランキング（最重要コンテキスト） |
+| `aiStyle`       | `'coach' \| 'analyst' \| 'friendly' \| 'custom'` | コミュニケーションスタイル                         |
+| `todayEntries`  | `AIContextEntry[]`                               | 今日のエントリー（最大20件）                       |
+| `recentEntries` | `AIContextPastEntry[]`                           | 直近7日の過去エントリー（最大10件）                |
+| `weeklyMinutes` | `{ planned, actual }`                            | 今週の計画・実績時間（分）                         |
+| `timezone`      | `string`                                         | ユーザータイムゾーン                               |
+| `chronotype`    | `{ type, enabled }`                              | クロノタイプ設定                                   |
+| `tags`          | `{ name, color }[]`                              | アクティブタグ一覧（最大50件）                     |
 
 ---
 
@@ -125,14 +125,14 @@ AI feature はサーバーサイド専用のため Zustand ストアを持たな
 
 ### ai_usage テーブル
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `id` | UUID | PK |
-| `user_id` | UUID | FK → auth.users |
-| `month` | TEXT | 年月（`YYYY-MM` 形式） |
-| `request_count` | INT | 当月リクエスト数 |
-| `created_at` | TIMESTAMPTZ | 作成日時 |
-| `updated_at` | TIMESTAMPTZ | 更新日時 |
+| カラム          | 型          | 説明                   |
+| --------------- | ----------- | ---------------------- |
+| `id`            | UUID        | PK                     |
+| `user_id`       | UUID        | FK → auth.users        |
+| `month`         | TEXT        | 年月（`YYYY-MM` 形式） |
+| `request_count` | INT         | 当月リクエスト数       |
+| `created_at`    | TIMESTAMPTZ | 作成日時               |
+| `updated_at`    | TIMESTAMPTZ | 更新日時               |
 
 - **RLS**: `auth.uid() = user_id`
 - **ユニーク制約**: `(user_id, month)` — 1ユーザー×1月で1レコード
@@ -140,12 +140,12 @@ AI feature はサーバーサイド専用のため Zustand ストアを持たな
 
 ### user_settings テーブル（AI関連カラム）
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `ai_communication_style` | TEXT | コミュニケーションスタイル（`coach` 等） |
-| `ai_custom_style_prompt` | TEXT | カスタムスタイルのプロンプト文字列 |
-| `personalization_values` | JSONB | 12領域の価値観データ |
-| `personalization_ranked_values` | TEXT[] | 価値観キーワードランキング |
+| カラム                          | 型     | 説明                                     |
+| ------------------------------- | ------ | ---------------------------------------- |
+| `ai_communication_style`        | TEXT   | コミュニケーションスタイル（`coach` 等） |
+| `ai_custom_style_prompt`        | TEXT   | カスタムスタイルのプロンプト文字列       |
+| `personalization_values`        | JSONB  | 12領域の価値観データ                     |
+| `personalization_ranked_values` | TEXT[] | 価値観キーワードランキング               |
 
 ---
 

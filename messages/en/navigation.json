@@ -16,8 +16,8 @@
       "resize": "Resize",
       "navigation": {
         "calendar": "Calendar",
-        "plan": "Plan",
-        "record": "Record",
+        "plan": "Entry",
+        "record": "Entry",
         "tags": "Tags",
         "stats": "Stats",
         "settings": "Settings",

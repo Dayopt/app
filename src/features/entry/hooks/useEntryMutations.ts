@@ -1,7 +1,7 @@
 /**
  * Entry Mutations Hook（作成・更新・削除）
  *
- * plans + records を統合した entries テーブルに対する全操作を一元管理
+ * entries テーブルに対する全操作を一元管理
  * - Toast通知
  * - キャッシュ無効化（全ビュー自動更新）
  * - Zustandキャッシュ（即座の同期）

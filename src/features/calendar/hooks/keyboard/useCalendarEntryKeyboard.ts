@@ -16,14 +16,14 @@ import { registerShortcuts } from './shortcut-registry';
 interface UseCalendarEventKeyboardOptions {
   /** ショートカットを有効にするか */
   enabled?: boolean;
-  /** 現在選択中（Inspector表示中）のプランを削除する関数 */
-  onDeletePlan?: (planId: string) => Promise<void>;
-  /** 現在選択中のプランのタイトルを取得する関数 */
-  getSelectedPlanTitle?: () => string | null;
-  /** 新規プラン作成時の初期データ取得関数（現在の日時など） */
-  getInitialPlanData?: () => { start_time?: string; end_time?: string } | undefined;
-  /** 現在選択中のプランのコピー情報を取得する関数 */
-  getSelectedPlanForCopy?: () => {
+  /** 現在選択中（Inspector表示中）のエントリーを削除する関数 */
+  onDeleteEntry?: (entryId: string) => Promise<void>;
+  /** 現在選択中のエントリーのタイトルを取得する関数 */
+  getSelectedEntryTitle?: () => string | null;
+  /** 新規エントリー作成時の初期データ取得関数（現在の日時など） */
+  getInitialEntryData?: () => { start_time?: string; end_time?: string } | undefined;
+  /** 現在選択中のエントリーのコピー情報を取得する関数 */
+  getSelectedEntryForCopy?: () => {
     title: string;
     description: string | null;
     startHour: number;
@@ -36,22 +36,22 @@ interface UseCalendarEventKeyboardOptions {
 }
 
 /**
- * カレンダー用プラン操作キーボードショートカット
+ * カレンダー用エントリー操作キーボードショートカット
  *
  * Google Calendar互換のショートカット：
- * - Delete / Backspace: 選択中のプランを削除
- * - C: 新規プラン作成（現在時刻）
- * - Shift + C: 新規プラン作成（時刻指定なし）
- * - Cmd/Ctrl + C: 選択中のプランをコピー
- * - Cmd/Ctrl + V: コピーしたプランをペースト（ドラフトモード）
+ * - Delete / Backspace: 選択中エントリーを削除
+ * - C: 新規エントリー作成（現在時刻）
+ * - Shift + C: 新規エントリー作成（時刻指定なし）
+ * - Cmd/Ctrl + C: 選択中のエントリーをコピー
+ * - Cmd/Ctrl + V: コピーしたエントリーをペースト（ドラフトモード）
  * - Escape: Inspectorを閉じる
  */
 export function useCalendarEventKeyboard({
   enabled = true,
-  onDeletePlan,
-  getSelectedPlanTitle,
-  getInitialPlanData,
-  getSelectedPlanForCopy,
+  onDeleteEntry,
+  getSelectedEntryTitle,
+  getInitialEntryData,
+  getSelectedEntryForCopy,
   getPasteDateForKeyboard,
 }: UseCalendarEventKeyboardOptions) {
   const t = useTranslations();
@@ -61,10 +61,10 @@ export function useCalendarEventKeyboard({
   const timezone = useCalendarSettingsStore((s: { timezone: string }) => s.timezone);
 
   // コールバックの最新値を参照
-  const onDeletePlanRef = useRef(onDeletePlan);
-  const getSelectedPlanTitleRef = useRef(getSelectedPlanTitle);
-  const getInitialPlanDataRef = useRef(getInitialPlanData);
-  const getSelectedPlanForCopyRef = useRef(getSelectedPlanForCopy);
+  const onDeleteEntryRef = useRef(onDeleteEntry);
+  const getSelectedEntryTitleRef = useRef(getSelectedEntryTitle);
+  const getInitialEntryDataRef = useRef(getInitialEntryData);
+  const getSelectedEntryForCopyRef = useRef(getSelectedEntryForCopy);
   const getPasteDateForKeyboardRef = useRef(getPasteDateForKeyboard);
   const createEntryRef = useRef(createEntry);
   const isOpenRef = useRef(isOpen);
@@ -75,10 +75,10 @@ export function useCalendarEventKeyboard({
   const timezoneRef = useRef(timezone);
 
   useEffect(() => {
-    onDeletePlanRef.current = onDeletePlan;
-    getSelectedPlanTitleRef.current = getSelectedPlanTitle;
-    getInitialPlanDataRef.current = getInitialPlanData;
-    getSelectedPlanForCopyRef.current = getSelectedPlanForCopy;
+    onDeleteEntryRef.current = onDeleteEntry;
+    getSelectedEntryTitleRef.current = getSelectedEntryTitle;
+    getInitialEntryDataRef.current = getInitialEntryData;
+    getSelectedEntryForCopyRef.current = getSelectedEntryForCopy;
     getPasteDateForKeyboardRef.current = getPasteDateForKeyboard;
     createEntryRef.current = createEntry;
     isOpenRef.current = isOpen;
@@ -88,10 +88,10 @@ export function useCalendarEventKeyboard({
     tRef.current = t;
     timezoneRef.current = timezone;
   }, [
-    onDeletePlan,
-    getSelectedPlanTitle,
-    getInitialPlanData,
-    getSelectedPlanForCopy,
+    onDeleteEntry,
+    getSelectedEntryTitle,
+    getInitialEntryData,
+    getSelectedEntryForCopy,
     getPasteDateForKeyboard,
     createEntry,
     isOpen,
@@ -128,13 +128,13 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Delete',
-        description: '選択中プランを削除',
+        description: '選択中エントリーを削除',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && entryIdRef.current) {
             e.preventDefault();
-            const deleteCallback = onDeletePlanRef.current;
+            const deleteCallback = onDeleteEntryRef.current;
             if (deleteCallback) {
               void deleteCallback(entryIdRef.current);
               closeInspectorRef.current();
@@ -144,13 +144,13 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Backspace',
-        description: '選択中プランを削除（Backspace）',
+        description: '選択中エントリーを削除（Backspace）',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && entryIdRef.current) {
             e.preventDefault();
-            const deleteCallback = onDeletePlanRef.current;
+            const deleteCallback = onDeleteEntryRef.current;
             if (deleteCallback) {
               void deleteCallback(entryIdRef.current);
               closeInspectorRef.current();
@@ -160,15 +160,15 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Cmd+C',
-        description: '選択中プランをコピー',
+        description: '選択中エントリーをコピー',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           if (isOpenRef.current && entryIdRef.current) {
-            const planData = getSelectedPlanForCopyRef.current?.();
-            if (planData) {
+            const entryData = getSelectedEntryForCopyRef.current?.();
+            if (entryData) {
               e.preventDefault();
-              useEntryClipboardStore.getState().copyEntry(planData);
+              useEntryClipboardStore.getState().copyEntry(entryData);
               toast.success(tRef.current('common.toast.copied'));
             }
           }
@@ -176,7 +176,7 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Cmd+V',
-        description: 'コピーしたプランをペースト',
+        description: 'コピーしたエントリーをペースト',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
@@ -220,13 +220,13 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'C',
-        description: '新規プラン作成',
+        description: '新規エントリー作成',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;
           e.preventDefault();
 
-          const initialData = e.shiftKey ? undefined : getInitialPlanDataRef.current?.();
+          const initialData = e.shiftKey ? undefined : getInitialEntryDataRef.current?.();
           createEntryRef.current
             .mutateAsync({
               title: '',
@@ -245,7 +245,7 @@ export function useCalendarEventKeyboard({
       },
       {
         key: 'Shift+C',
-        description: '新規プラン作成（時刻指定なし）',
+        description: '新規エントリー作成（時刻指定なし）',
         priority: 0,
         handler: (e) => {
           if (isInDialogOrInspector()) return;

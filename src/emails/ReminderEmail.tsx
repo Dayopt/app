@@ -12,7 +12,7 @@ import * as styles from './styles';
 
 export interface ReminderEmailProps {
   userName: string;
-  planTitle: string;
+  entryTitle: string;
   startTime: string;
   locale?: EmailLocale;
   appUrl?: string;
@@ -20,7 +20,7 @@ export interface ReminderEmailProps {
 
 export function ReminderEmail({
   userName,
-  planTitle,
+  entryTitle,
   startTime,
   locale = 'en',
   appUrl = 'https://app.dayopt.app',
@@ -45,7 +45,7 @@ export function ReminderEmail({
             <Text style={styles.paragraph}>{t('reminder.body')}</Text>
             <Section style={styles.infoBox}>
               <Text style={styles.infoBoxLabel}>{t('reminder.labelPlan')}</Text>
-              <Text style={styles.infoBoxValue}>{planTitle}</Text>
+              <Text style={styles.infoBoxValue}>{entryTitle}</Text>
               <Text style={{ ...styles.infoBoxLabel, marginTop: '12px' }}>
                 {t('reminder.labelStartsAt')}
               </Text>

@@ -13,7 +13,7 @@ export const notificationTypeSchema = z.enum([
 /** 通知作成リクエストのZodスキーマ */
 export const createNotificationSchema = z.object({
   type: notificationTypeSchema,
-  plan_id: z.string().uuid(),
+  entry_id: z.string().uuid(),
 });
 
 /** 通知更新（既読化など）のZodスキーマ */

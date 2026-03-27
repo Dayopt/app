@@ -90,7 +90,7 @@ export function useCalendarData({
     [viewDateRange, timezone],
   );
 
-  // entries を取得（plans + records 統合、単一クエリ）
+  // entries を取得（単一クエリ）
   const {
     data: entriesData,
     error: entriesError,

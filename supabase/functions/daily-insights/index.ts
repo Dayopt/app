@@ -12,7 +12,7 @@ import type { ActiveUser, DailySnapshot } from '../_shared/types.ts';
 // =============================================================================
 
 const THRESHOLDS = {
-  planRate: { low: 0.5 },
+  entryRate: { low: 0.5 },
   peakUtilization: { low: 0.3 },
   contextSwitches: { high: 8 },
   blankRate: { high: 0.6 },
@@ -32,7 +32,7 @@ type NotificationType = 'ai_insight' | 'energy_insight' | 'burnout_warning';
 interface KpiSummary {
   cumulativeTime: { totalMinutes: number };
   avgFulfillment: { avgFulfillment: number | null; entryCount: number };
-  planRate: { totalEntries: number; plannedEntries: number; planRate: number };
+  entryRate: { totalEntries: number; plannedEntries: number; entryRate: number };
   contextSwitches: { totalSwitches: number; avgPerDay: number };
   blankRate: {
     availableMinutes: number;
@@ -57,14 +57,14 @@ function evaluateThresholds(kpi: KpiSummary): NotificationRow[] {
   const notifications: Omit<NotificationRow, 'user_id'>[] = [];
 
   // 最低限のデータがあるか（エントリ0件なら通知しない）
-  if (kpi.planRate.totalEntries === 0) return [];
+  if (kpi.entryRate.totalEntries === 0) return [];
 
-  // 計画率が低い
-  if (kpi.planRate.planRate < THRESHOLDS.planRate.low) {
+  // エントリ率が低い
+  if (kpi.entryRate.entryRate < THRESHOLDS.entryRate.low) {
     notifications.push({
       type: 'ai_insight',
       is_read: false,
-      data: { rule: 'planRate_low', value: kpi.planRate.planRate },
+      data: { rule: 'entryRate_low', value: kpi.entryRate.entryRate },
     });
   }
 
@@ -205,8 +205,24 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const kpi = kpiData as KpiSummary | null;
-        if (!kpi) continue;
+        // DB RPC は planRate キーで返すため、entryRate にマッピング
+        const rawKpi = kpiData as {
+          cumulativeTime: KpiSummary['cumulativeTime'];
+          avgFulfillment: KpiSummary['avgFulfillment'];
+          planRate: { totalEntries: number; plannedEntries: number; planRate: number };
+          contextSwitches: KpiSummary['contextSwitches'];
+          blankRate: KpiSummary['blankRate'];
+        } | null;
+        if (!rawKpi) continue;
+
+        const kpi: KpiSummary = {
+          ...rawKpi,
+          entryRate: {
+            totalEntries: rawKpi.planRate.totalEntries,
+            plannedEntries: rawKpi.planRate.plannedEntries,
+            entryRate: rawKpi.planRate.planRate,
+          },
+        };
 
         // 3. 閾値判定
         const thresholdNotifications = evaluateThresholds(kpi);

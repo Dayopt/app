@@ -167,11 +167,11 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
       };
     }
 
-    if (cur?.planRate) {
-      map.planRate = {
-        id: 'planRate',
-        value: cur.planRate.planRate,
-        trend: computeTrend(cur.planRate.planRate, prev?.planRate?.planRate, 'up'),
+    if (cur?.entryRate) {
+      map.entryRate = {
+        id: 'entryRate',
+        value: cur.entryRate.entryRate,
+        trend: computeTrend(cur.entryRate.entryRate, prev?.entryRate?.entryRate, 'up'),
       };
     }
 

@@ -52,7 +52,7 @@
     "heading": "アカウントが削除されました",
     "body": "{deletionDate} をもって、Dayopt アカウントが正常に削除されました。",
     "dataRemovedIntro": "以下のデータが完全に削除されました：",
-    "dataPlans": "すべてのプランと時間記録",
+    "dataPlans": "すべてのエントリーと時間記録",
     "dataTags": "タグとカテゴリ",
     "dataNotifications": "通知設定",
     "dataProfile": "プロフィール情報",
@@ -61,20 +61,20 @@
     "thankYou": "Dayopt をご利用いただきありがとうございました。"
   },
   "reminder": {
-    "subject": "リマインダー：{planTitle}",
-    "heading": "プランのリマインダー",
-    "body": "プランの開始時刻になりました：",
-    "labelPlan": "プラン",
+    "subject": "リマインダー：{entryTitle}",
+    "heading": "エントリーのリマインダー",
+    "body": "エントリーの開始時刻になりました：",
+    "labelPlan": "エントリー",
     "labelStartsAt": "開始時刻",
     "ctaButton": "カレンダーを開く"
   },
   "overdue": {
-    "subject": "期限超過：{planTitle}",
-    "heading": "プランが期限を超過しています",
-    "body": "以下のプランが予定終了時刻を過ぎましたが、まだ完了していません：",
-    "labelPlan": "プラン",
+    "subject": "期限超過：{entryTitle}",
+    "heading": "エントリーが期限を超過しています",
+    "body": "以下のエントリーが予定終了時刻を過ぎましたが、まだ完了していません：",
+    "labelPlan": "エントリー",
     "labelWasDueBy": "予定終了時刻",
-    "rescheduleHint": "カレンダーからプランの再スケジュールまたは完了にできます。",
+    "rescheduleHint": "カレンダーからエントリーの再スケジュールまたは完了にできます。",
     "ctaButton": "カレンダーを開く"
   },
   "trialStart": {
