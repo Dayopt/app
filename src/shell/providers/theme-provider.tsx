@@ -33,6 +33,23 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
+/**
+ * theme-color メタタグをCSS変数 --background から動的に同期
+ * oklchトークンの値がそのまま反映されるため、hex手書き管理が不要
+ */
+function syncThemeColor() {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+  if (!bg) return;
+
+  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    document.head.appendChild(meta);
+  }
+  meta.content = bg;
+}
+
 // カラースキーム適用（コンポーネント外に定義して参照安定性を確保）
 function applyColorScheme(scheme: ColorScheme, _currentTheme: 'light' | 'dark') {
   const root = window.document.documentElement;
@@ -156,6 +173,9 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
 
     // Apply color scheme CSS variables
     applyColorScheme(colorScheme, newResolvedTheme);
+
+    // theme-color メタタグをCSSトークンから同期
+    syncThemeColor();
   }, [theme, colorScheme]);
 
   // Listen for system theme changes
@@ -171,6 +191,7 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(newResolvedTheme);
       applyColorScheme(colorScheme, newResolvedTheme);
+      syncThemeColor();
     };
 
     mediaQuery.addEventListener('change', handleChange);
