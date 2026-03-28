@@ -458,16 +458,8 @@ export function useDragSelection({
       const p = propsRef.current;
       const handler = p.onDoubleClickProp || p.onTimeRangeSelect;
 
-      // touch-pending: シングルタップ → 即時選択
+      // touch-pending: シングルタップは無視（長押しのみでエントリー作成）
       if (mode.type === 'touch-pending') {
-        const touch = e.changedTouches[0];
-        if (touch && handler && containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          const y = touch.clientY - rect.top;
-          const tapTime = pixelsToTimeRaw(y, p.hourHeight);
-          p.tap();
-          handler(createInstantSelection(tapTime, p.date, p.defaultDuration));
-        }
         dispatch({ type: 'TOUCH_END' });
         return;
       }
