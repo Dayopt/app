@@ -18,6 +18,7 @@ import {
   formatTimeString,
   pixelsToTime as pixelsToTimeRaw,
 } from '../../../../../interaction/time-math';
+import { checkClientSideOverlap } from '../../../../../lib/overlap';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
 import type { CalendarEvent } from '../../../../../types/calendar.types';
@@ -223,7 +224,7 @@ export function useDragSelection({
   disabled = false,
   onTimeRangeSelect,
   onDoubleClick: onDoubleClickProp,
-  plans: _plans = [],
+  plans = [],
   hourHeight = HOUR_HEIGHT,
 }: UseDragSelectionOptions): UseDragSelectionReturn {
   const defaultDuration = useCalendarSettingsStore((state) => state.defaultDuration);
@@ -245,6 +246,7 @@ export function useDragSelection({
     onDoubleClickProp,
     hourHeight,
     tap,
+    plans,
   });
   // eslint-disable-next-line react-hooks/refs -- ref mirrors: レンダー中に同期し、イベントハンドラーでのみ読み取る
   propsRef.current = {
@@ -255,6 +257,7 @@ export function useDragSelection({
     onDoubleClickProp,
     hourHeight,
     tap,
+    plans,
   };
 
   const pixelsToTime = useCallback((y: number) => pixelsToTimeRaw(y, hourHeight), [hourHeight]);
@@ -477,6 +480,21 @@ export function useDragSelection({
       if (mode.hasDragged && !mode.isOverlapping && p.onTimeRangeSelect) {
         p.onTimeRangeSelect({ date: p.date, ...sel });
       } else if (handler) {
+        // クライアント側overlap検出（サーバーエラーを未然に防ぐ）
+        const startTime = new Date(p.date);
+        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
+        const endTotal = Math.min(
+          sel.startHour * 60 + sel.startMinute + p.defaultDuration,
+          24 * 60 - 1,
+        );
+        const endTime = new Date(p.date);
+        endTime.setHours(Math.floor(endTotal / 60), endTotal % 60, 0, 0);
+
+        if (checkClientSideOverlap(p.plans, '', startTime, endTime)) {
+          dispatch({ type: 'CANCEL' });
+          return;
+        }
+
         handler(
           createInstantSelection(
             { hour: sel.startHour, minute: sel.startMinute },
