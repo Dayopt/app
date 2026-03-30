@@ -220,8 +220,7 @@
       "thisYear": "今年",
       "tabReview": "振り返り",
       "tabProgress": "進捗",
-      "tabInsights": "インサイト",
-      "insightsComingSoon": "AIインサイトは準備中です",
+      "tabInsights": "発見",
       "charts": {
         "monthlyTrend": "月次トレンド",
         "monthlyTrendDesc": "過去12ヶ月",
@@ -302,6 +301,22 @@
         "tagFulfillmentHigh": "このタグの平均充実度は {score} — 全体より高めです",
         "tagFulfillmentLow": "このタグの平均充実度は {score} — 全体より低めです",
         "deepHour": "ピーク時間帯です — 集中作業に向いています"
+      },
+      "discoveries": {
+        "loading": "読み込み中…",
+        "emptyTitle": "まだ発見がありません",
+        "emptyDescription": "もう少しデータが貯まると、あなたのパターンが見えてきます",
+        "timePatternHighFulfillment": "{day}の{hour}時台は、充実度が高い傾向があります",
+        "bestEstimationTag": "この期間で最も見積もりが正確だったタグは「{tagName}」でした（平均誤差 {deviation}分）",
+        "blankTimeIncrease": "空白時間が前期間より {minutes}分 増えています",
+        "blankTimeDecrease": "空白時間が前期間より {minutes}分 減っています",
+        "topTagUsage": "この期間の {percentage}% の時間を「{tagName}」に使っています（{hours}時間）",
+        "consistentRecording": "この期間、{rate}%の日に記録があります",
+        "categoryTimePattern": "時間パターン",
+        "categoryPlanningAccuracy": "見積もり精度",
+        "categoryTrendComparison": "期間比較",
+        "categoryTagAffinity": "タグ傾向",
+        "categoryConsistency": "記録の継続"
       }
     },
     "nowBadge": {
