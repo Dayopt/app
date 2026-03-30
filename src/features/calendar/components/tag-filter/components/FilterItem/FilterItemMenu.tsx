@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, FolderUp, Merge, Palette, Pencil, Smile, Trash2 } from 'lucide-react';
+import { BarChart3, Eye, FolderUp, Merge, Palette, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ColorPaletteMenuItems } from '@/components/ui/color-palette-picker';
@@ -43,6 +43,7 @@ interface FilterItemMenuProps {
   onChangeGroup?: ((newGroup: string | null) => void) | undefined;
   onOpenMergeModal: () => void;
   onShowOnlyTag: () => void;
+  onViewStats?: (() => void) | undefined;
   onDeleteTag: (() => void) | undefined;
 }
 
@@ -60,6 +61,7 @@ export function FilterItemMenu({
   onChangeGroup,
   onOpenMergeModal,
   onShowOnlyTag,
+  onViewStats,
   onDeleteTag,
 }: FilterItemMenuProps) {
   const t = useTranslations();
@@ -166,6 +168,14 @@ export function FilterItemMenu({
         <Eye className="mr-2 size-4" />
         {t('calendar.filter.showOnlyThis')}
       </DropdownMenuItem>
+
+      {/* 統計を見る */}
+      {onViewStats && (
+        <DropdownMenuItem onClick={onViewStats}>
+          <BarChart3 className="mr-2 size-4" />
+          {t('calendar.filter.viewStats')}
+        </DropdownMenuItem>
+      )}
 
       {/* 削除 */}
       {onDeleteTag && (

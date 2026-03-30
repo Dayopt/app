@@ -683,6 +683,7 @@ function SortableTagItem({
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
                 }
                 onShowOnlyTag={() => showOnlyTag(tag.id)}
+                onViewStats={() => {}}
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>
