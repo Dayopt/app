@@ -2,27 +2,20 @@
 
 import React, { useCallback } from 'react';
 
-import {
-  EntryCard,
-  computeActualTimeDiffOverlay,
-  isNewEntry,
-  setInspectorAnchorRect,
-  useEntryInspectorStore,
-} from '@/features/entry';
+import { EntryCard } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
-import { useTranslations } from 'next-intl';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
-import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
+import { EntryRenderer } from './EntryRenderer';
 import { InlineTagPalette } from './InlineTagPalette';
 
 // ========================================
@@ -86,9 +79,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   dataTourTarget,
   className,
 }: CalendarGridContentProps) {
-  const t = useTranslations();
-  const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
-  const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -146,15 +136,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     [entries, getTagById, isMobile],
   );
 
-  // エントリ右クリックハンドラー
-  const handleEntryContextMenu = useCallback(
-    (entry: CalendarEvent, mouseEvent: React.MouseEvent) => {
-      if (isDragging || isResizing) return;
-      onEntryContextMenu?.(entry, mouseEvent);
-    },
-    [onEntryContextMenu, isDragging, isResizing],
-  );
-
   // 時間グリッド
   const timeGrid = React.useMemo(
     () =>
@@ -173,7 +154,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       className={cn(
         'relative flex-1',
         enableCrossDayDrag && isDragging ? 'overflow-visible' : 'overflow-hidden',
-        // WeekContent/MultiDayContent は h-full を持つ
         enableCrossDayDrag && 'h-full',
         className,
       )}
@@ -203,145 +183,29 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
           const entryDragging = isDragging && (state as { entryId: string }).entryId === entry.id;
           const entryResizing = isResizing && (state as { entryId: string }).entryId === entry.id;
-          const currentTop = parseFloat(style.top?.toString() || '0');
-          const currentHeight = parseFloat(style.height?.toString() || '20');
-
-          // ドラッグ中は元位置にファントム（半透明シルエット）を残す
-          const adjustedStyle: React.CSSProperties = entryDragging
-            ? { ...style, opacity: 0.3 }
-            : getAdjustedStyle(style, entry.id, state);
-
-          // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
-          let finalStyle: React.CSSProperties = adjustedStyle;
-          let finalHeight: number;
-
-          if (enableCrossDayDrag) {
-            const overlay = computeActualTimeDiffOverlay(entry, HOUR_HEIGHT);
-            const overlayAdjustedStyle = {
-              ...adjustedStyle,
-              top: `${parseFloat(adjustedStyle.top?.toString() || '0') - overlay.topShift}px`,
-              height: `${parseFloat(adjustedStyle.height?.toString() || '20') + overlay.heightDelta}px`,
-            };
-
-            // 日付間移動中のエントリは元のカラムで半透明
-            const isMovingToOtherDate =
-              isSourceColumnMovingAway && globalDraggedEntryId === entry.id;
-
-            finalStyle = isMovingToOtherDate
-              ? { ...overlayAdjustedStyle, opacity: 0.3 }
-              : overlayAdjustedStyle;
-
-            finalHeight =
-              entryResizing && state.mode === 'resizing'
-                ? state.snappedHeight
-                : currentHeight + overlay.heightDelta;
-          } else {
-            finalHeight =
-              entryResizing && state.mode === 'resizing' ? state.snappedHeight : currentHeight;
-          }
 
           return (
-            <div
+            <EntryRenderer
               key={entry.id}
-              style={finalStyle}
-              className="pointer-events-none absolute"
-              data-entry-wrapper="true"
-            >
-              <div
-                className="pointer-events-auto absolute inset-0 rounded"
-                data-entry-block="true"
-                tabIndex={0}
-                role="button"
-                aria-label={entry.title || t('entry.untitled')}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onEntryClick?.(entry);
-                  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const currentIndex = entries.indexOf(entry);
-                    const nextIndex =
-                      e.key === 'ArrowDown'
-                        ? Math.min(currentIndex + 1, entries.length - 1)
-                        : Math.max(currentIndex - 1, 0);
-                    if (nextIndex !== currentIndex) {
-                      const nextWrapper = e.currentTarget
-                        .closest('[data-calendar-grid]')
-                        ?.querySelectorAll<HTMLElement>('[data-entry-block]');
-                      nextWrapper?.[nextIndex]?.focus();
-                    }
-                  }
-                }}
-                onMouseDown={(e) => {
-                  if (e.button === 0) {
-                    handlers.handlePointerDown(
-                      entry.id,
-                      e,
-                      {
-                        top: currentTop,
-                        left: 0,
-                        width: 100,
-                        height: currentHeight,
-                      },
-                      enableCrossDayDrag ? dayIndex : undefined,
-                    );
-                  }
-                }}
-                onTouchStart={(e) => {
-                  handlers.handleTouchStart(
-                    entry.id,
-                    e,
-                    {
-                      top: currentTop,
-                      left: 0,
-                      width: 100,
-                      height: currentHeight,
-                    },
-                    enableCrossDayDrag ? dayIndex : undefined,
-                  );
-                }}
-              >
-                <EntryCard
-                  entry={entry}
-                  tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
-                  tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-                  onAnchorRect={setInspectorAnchorRect}
-                  isMobile={isMobile}
-                  position={{
-                    top: 0,
-                    left: 0,
-                    width: 100,
-                    height: finalHeight,
-                  }}
-                  onContextMenu={(p: CalendarEvent, e: React.MouseEvent) =>
-                    handleEntryContextMenu(p, e)
-                  }
-                  onResizeStart={(
-                    p: CalendarEvent,
-                    direction: 'top' | 'bottom',
-                    e: React.MouseEvent | React.TouchEvent,
-                  ) =>
-                    handlers.handleResizeStart(p.id, direction, e, {
-                      top: currentTop,
-                      left: 0,
-                      width: 100,
-                      height: currentHeight,
-                    })
-                  }
-                  isDragging={entryDragging}
-                  isResizing={entryResizing}
-                  isActive={isInspectorOpen && inspectorEntryId === entry.id}
-                  previewTime={getPreviewTime(entry.id, state)}
-                  hourHeight={HOUR_HEIGHT}
-                  {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
-                  className={cn(
-                    'h-full w-full',
-                    entryDragging ? 'cursor-grabbing' : 'cursor-grab',
-                    isNewEntry(entry.id) && 'animate-entry-pop',
-                  )}
-                />
-              </div>
-            </div>
+              entry={entry}
+              style={style}
+              hourHeight={HOUR_HEIGHT}
+              enableCrossDayDrag={enableCrossDayDrag}
+              dayIndex={dayIndex}
+              isDragging={isDragging}
+              isResizing={isResizing}
+              entryDragging={entryDragging}
+              entryResizing={entryResizing}
+              interactionState={state}
+              globalDraggedEntryId={globalDraggedEntryId}
+              isSourceColumnMovingAway={isSourceColumnMovingAway}
+              onEntryClick={onEntryClick}
+              onEntryContextMenu={onEntryContextMenu}
+              onPointerDown={handlers.handlePointerDown}
+              onTouchStart={handlers.handleTouchStart}
+              onResizeStart={handlers.handleResizeStart}
+              entries={entries}
+            />
           );
         })}
 
