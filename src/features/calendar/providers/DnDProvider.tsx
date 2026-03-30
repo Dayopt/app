@@ -189,7 +189,7 @@ export const DnDProvider = ({ children }: DnDProviderProps) => {
           if (draggedEntry?.start_time && draggedEntry?.end_time) {
             const startMs = new Date(draggedEntry.start_time).getTime();
             const endMs = new Date(draggedEntry.end_time).getTime();
-            durationMinutes = Math.max(15, Math.round((endMs - startMs) / 60000));
+            durationMinutes = Math.max(15, Math.round((endMs - startMs) / (15 * 60000)) * 15);
           }
 
           const [year, month, day] = dateStr.split('-').map(Number);

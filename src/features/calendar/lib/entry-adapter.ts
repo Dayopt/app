@@ -10,6 +10,19 @@ import { getEntryState } from '@/features/entry';
 import { tzIsSameDay } from '@/lib/date/timezone';
 import type { CalendarEvent } from '../types/calendar.types';
 
+/** 分を15分単位に丸め、秒・ミリ秒を0にする（TZ変換の丸め誤差を吸収） */
+function snapMinutes(date: Date): Date {
+  const d = new Date(date);
+  const minutes = d.getMinutes();
+  const seconds = d.getSeconds();
+  // 30秒以上なら繰り上げ
+  const rounded = seconds >= 30 ? minutes + 1 : minutes;
+  // 15分単位にスナップ
+  const snapped = Math.round(rounded / 15) * 15;
+  d.setMinutes(snapped, 0, 0);
+  return d;
+}
+
 /**
  * EntryをCalendarEvent型に変換
  *
@@ -21,8 +34,8 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     return null;
   }
 
-  const startDate = new Date(entry.start_time);
-  const endDate = new Date(entry.end_time);
+  const startDate = snapMinutes(new Date(entry.start_time));
+  const endDate = snapMinutes(new Date(entry.end_time));
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
   const entryState = getEntryState(entry);
