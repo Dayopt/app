@@ -39,6 +39,7 @@ export type { StatsViewProps } from './types/stats.types';
 // =============================================================================
 // Lib
 // =============================================================================
+export { TagDetailPage } from './components/tag-detail/TagDetailPage';
 export { METRIC_DEFINITIONS, METRIC_ORDER } from './lib/metricDefinitions';
 export {
   calculateDeepUtilization,
@@ -47,3 +48,4 @@ export {
   getMetricTrend,
 } from './lib/metrics';
 export { prefetchStatsData } from './lib/prefetch';
+export { prefetchTagDetailData } from './lib/prefetchTagDetail';

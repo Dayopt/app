@@ -334,7 +334,12 @@
         "accuracyTrend": "見積もり精度の推移",
         "recentBlocks": "直近のブロック",
         "deviation": "誤差",
-        "noEntries": "エントリがありません"
+        "noEntries": "エントリがありません",
+        "entries": "件",
+        "planRate": "計画率",
+        "fulfillment": "充実度",
+        "whenSection": "いつやっているか",
+        "qualitySection": "どれだけうまくいっているか"
       }
     },
     "nowBadge": {

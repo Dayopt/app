@@ -334,7 +334,12 @@
         "accuracyTrend": "Estimation Accuracy Trend",
         "recentBlocks": "Recent Blocks",
         "deviation": "deviation",
-        "noEntries": "No entries"
+        "noEntries": "No entries",
+        "entries": "entries",
+        "planRate": "Plan rate",
+        "fulfillment": "Fulfillment",
+        "whenSection": "When",
+        "qualitySection": "Quality"
       }
     },
     "nowBadge": {
