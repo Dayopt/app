@@ -114,6 +114,9 @@
   --color-chronotype-ease: var(--chronotype-ease);
   --color-chronotype-deep-tint: var(--chronotype-deep-tint);
   --color-chronotype-ease-tint: var(--chronotype-ease-tint);
+
+  /* Now Indicator */
+  --color-now-indicator: var(--now-indicator);
 }
 
 /* ============================================

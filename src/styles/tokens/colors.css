@@ -134,6 +134,9 @@
   /* Chronotype — 設定パネル TimelineBar 等の背景 tint */
   --chronotype-deep-tint: oklch(0.96 0.02 70);
   --chronotype-ease-tint: oklch(0.96 0.02 150);
+
+  /* Now Indicator — 現在時刻線・ドット・ラベル */
+  --now-indicator: oklch(0.55 0.17 25);
 }
 
 /* ダークモード */
@@ -225,6 +228,9 @@
   /* Chronotype — 設定パネル TimelineBar 等の背景 tint */
   --chronotype-deep-tint: oklch(0.25 0.03 70);
   --chronotype-ease-tint: oklch(0.25 0.03 150);
+
+  /* Now Indicator — 現在時刻線・ドット・ラベル */
+  --now-indicator: oklch(0.65 0.15 25);
 
   /* Borders & Inputs */
   --border: oklch(1 0 0 / 0.07);

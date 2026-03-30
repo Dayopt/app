@@ -137,7 +137,7 @@ export function BottomTabBar() {
 
   return (
     <nav
-      className="bg-background z-bottom-tab pb-safe fixed inset-x-0 bottom-0 shadow-md"
+      className="bg-surface-container z-bottom-tab pb-safe fixed inset-x-0 bottom-0 shadow-md"
       aria-label={t('common.aria.pageNavigation')}
     >
       <div className="flex h-14 items-center justify-around">

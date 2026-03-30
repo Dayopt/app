@@ -31,7 +31,7 @@ export const HOUR_LINE_COLOR = 'border-border';
 export const HALF_HOUR_LINE_COLOR = 'border-border/50'; // より薄い線用
 
 /** 現在時刻線のTailwindクラス */
-export const CURRENT_TIME_LINE_COLOR = 'bg-foreground';
+export const CURRENT_TIME_LINE_COLOR = 'bg-now-indicator';
 /** 現在時刻ドットのサイズ（px） */
 export const CURRENT_TIME_DOT_SIZE = 6; // 現在時刻のドットサイズ(px)
 
