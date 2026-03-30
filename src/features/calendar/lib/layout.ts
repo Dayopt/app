@@ -178,15 +178,12 @@ export function calculateGroupLayout(entries: TimedEntry[]): EntryLayout[] {
 }
 
 /**
- * 2つのエントリが重複しているかを判定
+ * 2つのエントリが時間的に重複しているかを判定
+ *
+ * 接触のみ（一方の end === 他方の start）は重複としない
  */
 export function isOverlapping(entry1: TimedEntry, entry2: TimedEntry): boolean {
-  const start1 = new Date(entry1.start);
-  const end1 = new Date(entry1.end);
-  const start2 = new Date(entry2.start);
-  const end2 = new Date(entry2.end);
-
-  return start1 < end2 && start2 < end1;
+  return entry1.start < entry2.end && entry2.start < entry1.end;
 }
 
 /**
@@ -227,12 +224,8 @@ export function calculateMaxConcurrent(entries: TimedEntry[]): number {
 // エントリカード配置
 // ========================================
 
-/**
- * エントリが時間的に重複しているか判定
- */
-export function entriesOverlap(entry1: TimedEntry, entry2: TimedEntry): boolean {
-  return !(entry1.end <= entry2.start || entry2.end <= entry1.start);
-}
+/** @deprecated isOverlapping を使用 */
+export const entriesOverlap = isOverlapping;
 
 /**
  * エントリグループを検出（重複するエントリをグループ化）
@@ -246,7 +239,7 @@ export function detectOverlapGroups(entries: TimedEntry[]): TimedEntry[][] {
   for (const entry of sortedEntries) {
     let added = false;
     for (const group of groups) {
-      if (group.some((p) => entriesOverlap(p, entry))) {
+      if (group.some((p) => isOverlapping(p, entry))) {
         group.push(entry);
         added = true;
         break;
