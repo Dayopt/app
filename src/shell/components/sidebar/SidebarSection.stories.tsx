@@ -8,12 +8,11 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { BarChart3, CalendarDays, ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
+import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { getTagColorClasses } from '@/lib/tag-colors';
-import { cn } from '@/lib/utils';
 
 import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
@@ -62,40 +61,6 @@ function TagRow({
         }}
       />
       <span className="ml-1 min-w-0 flex-1 truncate">{name}</span>
-    </div>
-  );
-}
-
-/** PageNav と同一構造のモック */
-function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 'stats' }) {
-  return (
-    <div className="bg-muted flex h-9 items-center gap-1 rounded-lg p-1" role="tablist">
-      <button
-        role="tab"
-        aria-selected={activePage === 'calendar'}
-        className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
-          activePage === 'calendar'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        <CalendarDays className="size-4" />
-        <span>カレンダー</span>
-      </button>
-      <button
-        role="tab"
-        aria-selected={activePage === 'stats'}
-        className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
-          activePage === 'stats'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        <BarChart3 className="size-4" />
-        <span>統計</span>
-      </button>
     </div>
   );
 }
@@ -256,17 +221,12 @@ export const WithAction: Story = {
   ],
 };
 
-/** サイドバー全体再現 — ヘッダー + PageNav + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
+/** サイドバー全体再現 — ヘッダー + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
 export const FullSidebar: Story = {
   args: { title: '', children: null },
   render: () => (
     <SidebarShell>
       <MockSidebarHeader />
-
-      {/* Page Navigation */}
-      <div className="shrink-0 px-2 pb-2">
-        <MockPageNav />
-      </div>
 
       {/* Sidebar scroll area: gap-4 (16px) between sections */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
@@ -371,9 +331,6 @@ export const AllPatterns: Story = {
         </p>
         <SidebarShell>
           <MockSidebarHeader />
-          <div className="shrink-0 px-2 pb-2">
-            <MockPageNav />
-          </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
             <div className="px-2">
               <SidebarSection title="カレンダー" defaultOpen>

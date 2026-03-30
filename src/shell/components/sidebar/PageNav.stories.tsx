@@ -1,7 +1,7 @@
 /**
  * PageNav Stories
  *
- * サイドバー上部のページナビゲーション（Calendar / Stats セグメントコントロール）。
+ * ヘッダー右端のページナビゲーション（Calendar / Stats セグメントコントロール）。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -14,13 +14,13 @@ import { cn } from '@/lib/utils';
 // ストーリーでは同じ見た目の静的モックを使用する。
 
 // ─────────────────────────────────────────────────────────
-// モック: PageNav の見た目を再現
+// モック: PageNav の見た目を再現（outline スタイル）
 // ─────────────────────────────────────────────────────────
 
 function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 'stats' }) {
   return (
     <div
-      className="bg-muted flex h-9 items-center gap-1 rounded-lg p-1"
+      className="border-border flex items-center rounded-md border"
       role="tablist"
       aria-label="Page navigation"
     >
@@ -28,26 +28,26 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         role="tab"
         aria-selected={activePage === 'calendar'}
         className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
+          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
           activePage === 'calendar'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <CalendarDays className="size-4" />
+        <CalendarDays className="size-3.5" />
         <span>カレンダー</span>
       </button>
       <button
         role="tab"
         aria-selected={activePage === 'stats'}
         className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
+          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
           activePage === 'stats'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <BarChart3 className="size-4" />
+        <BarChart3 className="size-3.5" />
         <span>統計</span>
       </button>
     </div>
@@ -58,9 +58,9 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
 // Meta
 // ─────────────────────────────────────────────────────────
 
-/** PageNav — サイドバー上部のページナビゲーション。Calendar/Stats のセグメントコントロール。 */
+/** PageNav — ヘッダー右端のページナビゲーション。Calendar/Stats のセグメントコントロール。 */
 const meta = {
-  title: 'Components/Shell/Sidebar/PageNav',
+  title: 'Components/Shell/PageNav',
   component: MockPageNav,
   parameters: {
     layout: 'centered',
@@ -80,13 +80,6 @@ export const CalendarActive: Story = {
   args: {
     activePage: 'calendar',
   },
-  decorators: [
-    (Story) => (
-      <div className="w-[240px]">
-        <Story />
-      </div>
-    ),
-  ],
 };
 
 /** 統計がアクティブ。 */
@@ -94,13 +87,6 @@ export const StatsActive: Story = {
   args: {
     activePage: 'stats',
   },
-  decorators: [
-    (Story) => (
-      <div className="w-[240px]">
-        <Story />
-      </div>
-    ),
-  ],
 };
 
 /** 全パターン一覧。 */
@@ -109,15 +95,11 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <div>
         <p className="text-muted-foreground mb-2 text-xs font-medium">Calendar Active</p>
-        <div className="w-[240px]">
-          <MockPageNav activePage="calendar" />
-        </div>
+        <MockPageNav activePage="calendar" />
       </div>
       <div>
         <p className="text-muted-foreground mb-2 text-xs font-medium">Stats Active</p>
-        <div className="w-[240px]">
-          <MockPageNav activePage="stats" />
-        </div>
+        <MockPageNav activePage="stats" />
       </div>
     </div>
   ),
