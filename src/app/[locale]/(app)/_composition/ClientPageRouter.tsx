@@ -6,7 +6,6 @@ import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath } from '@/features/calendar';
-import type { StatsTab } from '@/features/stats';
 import { StatsPageContent } from '@/features/stats';
 import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
@@ -51,22 +50,8 @@ function CalendarClientView() {
   return <CalendarViewClient translations={translations} />;
 }
 
-const VALID_STATS_TABS: StatsTab[] = ['review', 'progress', 'insights'];
-
-function extractStatsTab(pathname: string): StatsTab {
-  const pathWithoutLocale = stripLocale(pathname);
-  const segments = pathWithoutLocale.split('/');
-  // /stats/overview → segments = ['', 'stats', 'overview']
-  const tab = segments[2];
-  if (tab && (VALID_STATS_TABS as string[]).includes(tab)) {
-    return tab as StatsTab;
-  }
-  return 'review';
-}
-
-function StatsClientView({ pathname }: { pathname: string }) {
-  const tab = extractStatsTab(pathname);
-  return <StatsPageContent tab={tab} headerRightExtra={<SidebarPageNav />} />;
+function StatsClientView() {
+  return <StatsPageContent headerRightExtra={<SidebarPageNav />} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +73,7 @@ interface ClientPageRouterProps {
  * ChatGPT ライクな「Sidebar 静止 / メインのみ切り替え」体験を実現する。
  */
 export function ClientPageRouter({ children }: ClientPageRouterProps) {
-  const pathname = usePathname() ?? '/';
+  usePathname(); // popstate 以外のナビゲーション時にも再レンダリングを発火させるために維持
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
@@ -115,7 +100,7 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
   }
 
   if (clientPage === 'stats') {
-    return <StatsClientView pathname={pathname} />;
+    return <StatsClientView />;
   }
 
   return <>{children}</>;

@@ -9,10 +9,18 @@ export type StatsTab = 'review' | 'progress' | 'insights';
 export type StatsGranularity = 'day' | 'week' | 'month' | 'year';
 
 interface StatsFilterState {
+  /** アクティブタブ */
+  tab: StatsTab;
+  /** 選択中のタグID（ドリルダウン用、null=全体表示） */
+  selectedTagId: string | null;
   /** 表示粒度 */
   granularity: StatsGranularity;
   /** ナビゲーション基準日 */
   currentDate: Date;
+  /** タブを変更 */
+  setTab: (tab: StatsTab) => void;
+  /** タグを選択（ドリルダウン） */
+  selectTag: (tagId: string | null) => void;
   /** 粒度を変更 */
   setGranularity: (granularity: StatsGranularity) => void;
   /** 基準日を設定 */
@@ -47,8 +55,12 @@ function navigateDate(
 
 /** Stats フィルター状態を管理する Zustand ストア */
 export const useStatsFilterStore = create<StatsFilterState>((set, get) => ({
+  tab: 'review',
+  selectedTagId: null,
   granularity: 'week',
   currentDate: new Date(),
+  setTab: (tab) => set({ tab, selectedTagId: null }),
+  selectTag: (tagId) => set({ selectedTagId: tagId }),
   setGranularity: (granularity) => set({ granularity }),
   setCurrentDate: (date) => set({ currentDate: date }),
   navigate: (direction) => {

@@ -1,12 +1,13 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
-import { Suspense, useCallback, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
+import { Suspense, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
 
 import { DateNavigator } from '@/components/common/DateNavigator';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
+import { DateRangeDisplay } from '@/components/ui/date-range-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/shell/components/AppHeader';
@@ -14,8 +15,8 @@ import { AppHeader } from '@/shell/components/AppHeader';
 import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import { StatsDateDisplay } from './layout/StatsDateDisplay';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
+import { useStatsDateDisplayProps } from './layout/useStatsDateDisplayProps';
 
 /** Stats タブの遅延読み込み用 Skeleton */
 function StatsTabSkeleton() {
@@ -29,7 +30,6 @@ function StatsTabSkeleton() {
 }
 
 // recharts (~200KB) を含むタブビューを遅延読み込み
-// アクティブタブのみ読み込むことでバンドルサイズを削減
 const StatsView = dynamic(() => import('./StatsView').then((m) => ({ default: m.StatsView })), {
   loading: () => <StatsTabSkeleton />,
 });
@@ -41,10 +41,15 @@ const InsightsView = dynamic(
   () => import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
   { loading: () => <StatsTabSkeleton /> },
 );
+const TagDetailView = dynamic(
+  () =>
+    import('./tag-detail/TagDetailPageContent').then((m) => ({
+      default: m.TagDetailPageContent,
+    })),
+  { loading: () => <StatsTabSkeleton /> },
+);
 
 interface StatsPageContentProps {
-  /** URL から決定されたアクティブタブ */
-  tab: StatsTab;
   /** ヘッダー右端に追加表示する要素（PageNav等） */
   headerRightExtra?: React.ReactNode;
 }
@@ -59,39 +64,39 @@ const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
 /**
  * Stats ページのクライアントエントリポイント
  *
- * Review / Progress / Insights の3タブ構成。タブはURLベースで切り替え。
+ * 全状態をクエリパラメータで管理:
+ * - ?tab=review|progress|insights
+ * - ?tag=tagId（Review内のタグドリルダウン）
+ * - ?g=day|week|month|year
+ * - ?d=YYYY-MM-DD
  */
-export function StatsPageContent({ tab, headerRightExtra }: StatsPageContentProps) {
+export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
   const t = useTranslations();
-  const locale = useLocale();
-  const [activeTab, setActiveTab] = useState<StatsTab>(tab);
-
-  // recharts等の重いコンポーネント切替をtransitionとしてマーク
-  // タブ切替中もUIが応答的に保たれる
   const [, startTransition] = useTransition();
 
   // URL searchParams ↔ Zustand store の双方向同期
   useStatsFilterSync();
 
+  const tab = useStatsFilterStore((s) => s.tab);
+  const selectedTagId = useStatsFilterStore((s) => s.selectedTagId);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
+  const setTab = useStatsFilterStore((s) => s.setTab);
   const setGranularity = useStatsFilterStore((s) => s.setGranularity);
   const navigate = useStatsFilterStore((s) => s.navigate);
 
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
+  const dateDisplayProps = useStatsDateDisplayProps(currentDate, granularity);
 
-  const handleTabChange = useCallback(
-    (value: string) => {
-      const newTab = value as StatsTab;
-      startTransition(() => {
-        setActiveTab(newTab);
-      });
-      // 既存の searchParams (g, d) を保持してタブのみ変更
-      const params = new URLSearchParams(window.location.search);
-      window.history.pushState(null, '', `/${locale}/stats/${newTab}?${params.toString()}`);
-    },
-    [locale, startTransition],
-  );
+  const handleTabChange = (value: string) => {
+    const newTab = value as StatsTab;
+    startTransition(() => {
+      setTab(newTab);
+    });
+  };
+
+  // タグドリルダウン中は Review タブ内に TagDetailView を表示
+  const showTagDetail = tab === 'review' && selectedTagId !== null;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -100,7 +105,7 @@ export function StatsPageContent({ tab, headerRightExtra }: StatsPageContentProp
         rightSlot={
           <div className="hidden items-center gap-4 md:flex">
             <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
-            {activeTab === 'review' && (
+            {(tab === 'review' || showTagDetail) && (
               <StatsGranularitySelector
                 granularity={granularity}
                 onGranularityChange={setGranularity}
@@ -110,51 +115,58 @@ export function StatsPageContent({ tab, headerRightExtra }: StatsPageContentProp
           </div>
         }
       >
-        <StatsDateDisplay currentDate={currentDate} granularity={granularity} />
+        <DateRangeDisplay {...dateDisplayProps} />
       </AppHeader>
 
-      {/* タブバー */}
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
-          <TabsTrigger value="review" className="text-base">
-            {t('calendar.stats.tabReview')}
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="text-base">
-            {t('calendar.stats.tabProgress')}
-          </TabsTrigger>
-          <TabsTrigger value="insights" className="text-base">
-            {t('calendar.stats.tabInsights')}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="stats">
+      {showTagDetail ? (
+        /* タグドリルダウン: タブバーの代わりに TagDetailView を表示 */
+        <div className="flex min-h-0 flex-1 flex-col">
+          <FeatureErrorBoundary featureName="tag-detail">
             <Suspense fallback={<StatsTabSkeleton />}>
-              <StatsView />
+              <TagDetailView tagId={selectedTagId} />
             </Suspense>
           </FeatureErrorBoundary>
-        </TabsContent>
+        </div>
+      ) : (
+        /* 通常タブ表示 */
+        <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
+          <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
+            <TabsTrigger value="review" className="text-base">
+              {t('calendar.stats.tabReview')}
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="text-base">
+              {t('calendar.stats.tabProgress')}
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="text-base">
+              {t('calendar.stats.tabInsights')}
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="progress" className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="stats-progress">
-            <Suspense fallback={<StatsTabSkeleton />}>
-              <ProgressView />
-            </Suspense>
-          </FeatureErrorBoundary>
-        </TabsContent>
+          <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
+            <FeatureErrorBoundary featureName="stats">
+              <Suspense fallback={<StatsTabSkeleton />}>
+                <StatsView />
+              </Suspense>
+            </FeatureErrorBoundary>
+          </TabsContent>
 
-        <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="stats-insights">
-            <Suspense fallback={<StatsTabSkeleton />}>
-              <InsightsView />
-            </Suspense>
-          </FeatureErrorBoundary>
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="progress" className="flex min-h-0 flex-1 flex-col">
+            <FeatureErrorBoundary featureName="stats-progress">
+              <Suspense fallback={<StatsTabSkeleton />}>
+                <ProgressView />
+              </Suspense>
+            </FeatureErrorBoundary>
+          </TabsContent>
+
+          <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
+            <FeatureErrorBoundary featureName="stats-insights">
+              <Suspense fallback={<StatsTabSkeleton />}>
+                <InsightsView />
+              </Suspense>
+            </FeatureErrorBoundary>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
