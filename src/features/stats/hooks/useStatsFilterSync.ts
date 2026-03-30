@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
+
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 
@@ -51,9 +53,18 @@ export function useStatsFilterSync() {
   const selectTag = useStatsFilterStore((s) => s.selectTag);
   const setGranularity = useStatsFilterStore((s) => s.setGranularity);
   const setCurrentDate = useStatsFilterStore((s) => s.setCurrentDate);
+  const consumePendingTag = useClientRouterStore((s) => s.consumePendingTag);
 
   // 初回同期済みフラグ（Store→URL同期が初回URL→Store同期より先に走るのを防ぐ）
   const initializedRef = useRef(false);
+
+  // ClientPageRouter 経由のタグドリルダウン遷移を消費
+  useEffect(() => {
+    const pending = consumePendingTag();
+    if (pending) {
+      selectTag(pending);
+    }
+  });
 
   // URL → Store: 初回マウント時のみ
   useEffect(() => {
