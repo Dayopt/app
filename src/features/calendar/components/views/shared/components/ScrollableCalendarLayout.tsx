@@ -13,7 +13,9 @@ import React, { useCallback, useMemo } from 'react';
 
 import { getChronotypeProfile } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
+
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { formatTimeString } from '../../../../interaction/time-math';
 
 import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
@@ -144,12 +146,13 @@ export const ScrollableCalendarLayout = ({
     return getChronotypeProfile(chronotype.type, chronotype.customZones).productivityZones;
   }, [chronotype]);
 
-  // 現在時刻のフォーマット（HH:mm）
-  const formattedCurrentTime = currentTime.toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  // 現在時刻のフォーマット（設定に応じて 24h/12h）
+  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const formattedCurrentTime = formatTimeString(
+    currentTime.getHours(),
+    currentTime.getMinutes(),
+    timeFormat,
+  );
 
   // グリッドクリックハンドラー
   const handleGridClick = useCallback(
