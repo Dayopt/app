@@ -13,6 +13,7 @@ import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
@@ -85,6 +86,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   dataTourTarget,
   className,
 }: CalendarGridContentProps) {
+  const t = useTranslations();
   const inspectorEntryId = useEntryInspectorStore((state) => state.entryId);
   const isInspectorOpen = useEntryInspectorStore((state) => state.isOpen);
   const { getTagById } = useTagsMap();
@@ -95,10 +97,19 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
-  const isGlobalDragging = useCalendarDragStore((s) => s.isDragging);
-  const globalDraggedEntry = useCalendarDragStore((s) => s.draggedEntry);
-  const globalTargetDateIndex = useCalendarDragStore((s) => s.targetDateIndex);
-  const globalOriginalDateIndex = useCalendarDragStore((s) => s.originalDateIndex);
+
+  // 自カラムに関係するドラッグ状態のみ購読（他カラムの変更で再レンダーしない）
+  const dragInfo = useCalendarDragStore((s) => {
+    if (!s.isDragging) return null;
+    // このカラムが元位置 or ターゲットの場合のみ詳細を返す
+    if (s.originalDateIndex !== dayIndex && s.targetDateIndex !== dayIndex) return null;
+    return {
+      draggedEntryId: s.draggedEntryId,
+      isMovingAway: s.originalDateIndex === dayIndex && s.targetDateIndex !== dayIndex,
+    };
+  });
+  const globalDraggedEntryId = dragInfo?.draggedEntryId ?? null;
+  const isSourceColumnMovingAway = dragInfo?.isMovingAway ?? false;
 
   // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
@@ -198,7 +209,10 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
           const currentTop = parseFloat(style.top?.toString() || '0');
           const currentHeight = parseFloat(style.height?.toString() || '20');
 
-          const adjustedStyle = getAdjustedStyle(style, entry.id, state);
+          // ドラッグ中は元位置にファントム（半透明シルエット）を残す
+          const adjustedStyle: React.CSSProperties = entryDragging
+            ? { ...style, opacity: 0.3 }
+            : getAdjustedStyle(style, entry.id, state);
 
           // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
           let finalStyle: React.CSSProperties = adjustedStyle;
@@ -214,9 +228,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
             // 日付間移動中のエントリは元のカラムで半透明
             const isMovingToOtherDate =
-              isGlobalDragging &&
-              globalDraggedEntry?.id === entry.id &&
-              globalTargetDateIndex !== globalOriginalDateIndex;
+              isSourceColumnMovingAway && globalDraggedEntryId === entry.id;
 
             finalStyle = isMovingToOtherDate
               ? { ...overlayAdjustedStyle, opacity: 0.3 }
@@ -241,6 +253,28 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               <div
                 className="pointer-events-auto absolute inset-0 rounded"
                 data-entry-block="true"
+                tabIndex={0}
+                role="button"
+                aria-label={entry.title || t('entry.untitled')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onEntryClick?.(entry);
+                  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const currentIndex = entries.indexOf(entry);
+                    const nextIndex =
+                      e.key === 'ArrowDown'
+                        ? Math.min(currentIndex + 1, entries.length - 1)
+                        : Math.max(currentIndex - 1, 0);
+                    if (nextIndex !== currentIndex) {
+                      const nextWrapper = e.currentTarget
+                        .closest('[data-calendar-grid]')
+                        ?.querySelectorAll<HTMLElement>('[data-entry-block]');
+                      nextWrapper?.[nextIndex]?.focus();
+                    }
+                  }
+                }}
                 onMouseDown={(e) => {
                   if (e.button === 0) {
                     handlers.handlePointerDown(
