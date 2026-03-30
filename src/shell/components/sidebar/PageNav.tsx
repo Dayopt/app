@@ -13,14 +13,14 @@ interface PageNavProps {
   className?: string;
 }
 
-/** サイドバー上部のページナビゲーション（Calendar / Stats セグメントコントロール） */
+/** ページナビゲーション（Calendar / Stats セグメントコントロール） */
 export function PageNav({ activePage, onCalendarClick, onStatsClick, className }: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
   return (
     <div
-      className={cn('flex items-center gap-1', className)}
+      className={cn('border-border flex items-center rounded-md border', className)}
       role="tablist"
       aria-label={tAria('pageNavigation')}
     >
@@ -29,14 +29,13 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'calendar'}
         onClick={onCalendarClick}
         className={cn(
-          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-colors',
-          'hover:bg-state-hover',
+          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
           activePage === 'calendar'
             ? 'bg-state-selected text-foreground font-medium'
-            : 'text-muted-foreground',
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <CalendarDays className="size-4" />
+        <CalendarDays className="size-3.5" />
         <span>{t('calendar')}</span>
       </button>
       <button
@@ -44,14 +43,13 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'stats'}
         onClick={onStatsClick}
         className={cn(
-          'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-colors',
-          'hover:bg-state-hover',
+          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
           activePage === 'stats'
             ? 'bg-state-selected text-foreground font-medium'
-            : 'text-muted-foreground',
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <BarChart3 className="size-4" />
+        <BarChart3 className="size-3.5" />
         <span>{t('stats')}</span>
       </button>
     </div>

@@ -14,6 +14,7 @@ import { PanelLeft } from 'lucide-react';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
+import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
@@ -110,6 +111,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onSettingsChange={composition.onSettingsChange}
           onDateSelect={composition.onDateSelect}
           leftSlot={sidebarToggle}
+          rightSlot={<SidebarPageNav />}
         />
       </FeatureErrorBoundary>
     </div>

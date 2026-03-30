@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { isCalendarViewPath } from '@/features/calendar';
 import type { StatsTab } from '@/features/stats';
 import { StatsPageContent } from '@/features/stats';
+import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
@@ -65,7 +66,7 @@ function extractStatsTab(pathname: string): StatsTab {
 
 function StatsClientView({ pathname }: { pathname: string }) {
   const tab = extractStatsTab(pathname);
-  return <StatsPageContent tab={tab} />;
+  return <StatsPageContent tab={tab} headerRightExtra={<SidebarPageNav />} />;
 }
 
 // ---------------------------------------------------------------------------
