@@ -9,7 +9,8 @@ import { TagRow } from './TagRow';
  * TagRow — タグ表示・選択行
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
- * タグ未設定時は「タグを追加」を表示。右側にオプションで削除ボタンを配置。
+ * タグ未設定時は「タグを追加」を表示。
+ * 右側に「…」メニュー（パレット登録/解除・統計・削除）を配置。
  */
 const meta = {
   title: 'Features/Entry/Inspector/TagRow',
@@ -63,8 +64,8 @@ export const NoTag: Story = {
   ),
 };
 
-/** タグ設定済み（青）。カラードット + タグ名が表示される。 */
-export const WithBlueTag: Story = {
+/** タグ設定済み（青）+ …メニュー（パレット追加・統計・削除）。 */
+export const WithMenu: Story = {
   render: () => (
     <div className="w-72">
       <TagRow
@@ -73,28 +74,54 @@ export const WithBlueTag: Story = {
         tagColorClasses={blueTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
+        onPinToPalette={fn()}
+        isPinnedInPalette={false}
+        onViewStats={fn()}
+        onDelete={fn()}
       />
     </div>
   ),
 };
 
-/** タグ設定済み（赤）。 */
-export const WithRedTag: Story = {
+/** パレット登録済み → …メニューに「パレットから解除」が表示される。 */
+export const PinnedInPalette: Story = {
+  render: () => (
+    <div className="w-72">
+      <TagRow
+        tagId="tag-blue-id"
+        tagName="仕事"
+        tagColorClasses={blueTag}
+        onTagChange={fn()}
+        onCreateAndSelect={fn()}
+        onPinToPalette={fn()}
+        onUnpinFromPalette={fn()}
+        isPinnedInPalette={true}
+        onViewStats={fn()}
+        onDelete={fn()}
+      />
+    </div>
+  ),
+};
+
+/** コロン記法タグ。›セパレーター表示される。 */
+export const ColonTag: Story = {
   render: () => (
     <div className="w-72">
       <TagRow
         tagId="tag-red-id"
-        tagName="プライベート"
+        tagName="開発:API"
         tagColorClasses={redTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
+        onViewStats={fn()}
+        onDelete={fn()}
       />
     </div>
   ),
 };
 
-/** タグ設定済み（緑）。 */
-export const WithGreenTag: Story = {
+/** 削除のみ（パレット・統計なし）。 */
+export const DeleteOnly: Story = {
   render: () => (
     <div className="w-72">
       <TagRow
@@ -103,13 +130,14 @@ export const WithGreenTag: Story = {
         tagColorClasses={greenTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
+        onDelete={fn()}
       />
     </div>
   ),
 };
 
-/** 削除ボタンあり（タグ設定済み）。 */
-export const WithDeleteButton: Story = {
+/** メニューなし（タグのみ）。 */
+export const NoMenu: Story = {
   render: () => (
     <div className="w-72">
       <TagRow
@@ -118,17 +146,7 @@ export const WithDeleteButton: Story = {
         tagColorClasses={blueTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        onDelete={fn()}
       />
-    </div>
-  ),
-};
-
-/** 削除ボタンあり（タグ未設定）。 */
-export const NoTagWithDeleteButton: Story = {
-  render: () => (
-    <div className="w-72">
-      <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} onDelete={fn()} />
     </div>
   ),
 };
@@ -138,45 +156,72 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">NoTag（未設定）</p>
+        <p className="text-muted-foreground text-xs font-medium">タグ未設定</p>
         <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithTag（タグあり・青）</p>
+        <p className="text-muted-foreground text-xs font-medium">フルメニュー（未登録）</p>
         <TagRow
           tagId="tag-1"
           tagName="仕事"
           tagColorClasses={blueTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
+          onPinToPalette={fn()}
+          isPinnedInPalette={false}
+          onViewStats={fn()}
+          onDelete={fn()}
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithTag（タグあり・赤）</p>
+        <p className="text-muted-foreground text-xs font-medium">
+          フルメニュー（パレット登録済み）
+        </p>
         <TagRow
           tagId="tag-2"
           tagName="プライベート"
           tagColorClasses={redTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
+          onPinToPalette={fn()}
+          onUnpinFromPalette={fn()}
+          isPinnedInPalette={true}
+          onViewStats={fn()}
+          onDelete={fn()}
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">
-          WithDeleteButton（削除ボタンあり）
-        </p>
+        <p className="text-muted-foreground text-xs font-medium">コロン記法タグ</p>
         <TagRow
-          tagId="tag-1"
-          tagName="仕事"
-          tagColorClasses={blueTag}
+          tagId="tag-3"
+          tagName="開発:API"
+          tagColorClasses={greenTag}
+          onTagChange={fn()}
+          onCreateAndSelect={fn()}
+          onViewStats={fn()}
+          onDelete={fn()}
+        />
+      </div>
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs font-medium">削除のみ</p>
+        <TagRow
+          tagId="tag-4"
+          tagName="運動"
+          tagColorClasses={greenTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
           onDelete={fn()}
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">NoTag + DeleteButton</p>
-        <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} onDelete={fn()} />
+        <p className="text-muted-foreground text-xs font-medium">メニューなし</p>
+        <TagRow
+          tagId="tag-5"
+          tagName="読書"
+          tagColorClasses={blueTag}
+          onTagChange={fn()}
+          onCreateAndSelect={fn()}
+        />
       </div>
     </div>
   ),

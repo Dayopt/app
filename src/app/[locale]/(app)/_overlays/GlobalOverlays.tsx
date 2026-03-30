@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -52,6 +52,7 @@ const TourOrchestrator = dynamic(
  */
 export function GlobalOverlays() {
   const t = useTranslations();
+  const locale = useLocale();
 
   // ツアー: ステップバリデーション（現在は空）
   const stepValidators: StepValidators = useMemo(() => ({}), []);
@@ -79,7 +80,7 @@ export function GlobalOverlays() {
   }, [settingsOpen, contactOpen, closeInspector]);
 
   // Inspector → パレット連携（feature 間の接続は Composition Layer で行う）
-  const { pinItem } = usePaletteMutations();
+  const { pinItem, unpinItem } = usePaletteMutations();
   const { data: paletteItems } = usePaletteItems();
 
   const handlePinToPalette = useCallback(
@@ -88,6 +89,19 @@ export function GlobalOverlays() {
       toast.success(t('common.actions.addedToPalette'));
     },
     [pinItem, t],
+  );
+
+  const handleUnpinFromPalette = useCallback(
+    (tagId: string, durationMinutes: number) => {
+      if (!paletteItems) return;
+      const item = paletteItems.find(
+        (i) => i.tag_id === tagId && i.duration_minutes === durationMinutes,
+      );
+      if (!item) return;
+      unpinItem(item.id);
+      toast.success(t('common.actions.removedFromPalette'));
+    },
+    [paletteItems, unpinItem, t],
   );
 
   const checkIsPinned = useCallback(
@@ -100,6 +114,14 @@ export function GlobalOverlays() {
     [paletteItems],
   );
 
+  // Inspector → Stats 画面ナビゲーション
+  const handleViewStats = useCallback(
+    (tagId: string) => {
+      window.location.href = `/${locale}/stats?tag=${tagId}`;
+    },
+    [locale],
+  );
+
   return (
     <>
       <ContactDialog
@@ -109,7 +131,12 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <EntryInspector onPinToPalette={handlePinToPalette} isPinnedInPalette={checkIsPinned} />
+      <EntryInspector
+        onPinToPalette={handlePinToPalette}
+        onUnpinFromPalette={handleUnpinFromPalette}
+        isPinnedInPalette={checkIsPinned}
+        onViewStats={handleViewStats}
+      />
       <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>
