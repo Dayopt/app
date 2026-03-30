@@ -98,18 +98,15 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
 
-  // 自カラムに関係するドラッグ状態のみ購読（他カラムの変更で再レンダーしない）
-  const dragInfo = useCalendarDragStore((s) => {
-    if (!s.isDragging) return null;
-    // このカラムが元位置 or ターゲットの場合のみ詳細を返す
-    if (s.originalDateIndex !== dayIndex && s.targetDateIndex !== dayIndex) return null;
-    return {
-      draggedEntryId: s.draggedEntryId,
-      isMovingAway: s.originalDateIndex === dayIndex && s.targetDateIndex !== dayIndex,
-    };
-  });
-  const globalDraggedEntryId = dragInfo?.draggedEntryId ?? null;
-  const isSourceColumnMovingAway = dragInfo?.isMovingAway ?? false;
+  // 自カラムに関係するドラッグ状態のみ購読（プリミティブ値で参照安定性を確保）
+  const globalDraggedEntryId = useCalendarDragStore((s) =>
+    s.isDragging && (s.originalDateIndex === dayIndex || s.targetDateIndex === dayIndex)
+      ? s.draggedEntryId
+      : null,
+  );
+  const isSourceColumnMovingAway = useCalendarDragStore(
+    (s) => s.isDragging && s.originalDateIndex === dayIndex && s.targetDateIndex !== dayIndex,
+  );
 
   // 統合インタラクション（drag/resize/click）
   const { state, handlers } = useInteraction({
