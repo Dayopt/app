@@ -5,7 +5,7 @@
  *   now-line (absolute, flex)
  *     ├── now-dot (6×6px, rounded-full)
  *     └── now-bar (h-0.5, flex-1)
- *   色: bg-primary（Light: blue accent, Dark: amber accent）
+ *   色: bg-foreground（テーマのforeground色）
  *   z-index: Z_INDEX.CURRENT_TIME (15)
  */
 
@@ -103,7 +103,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
         {/* now-dot */}
         {showDot && columnInfo.isToday && (
           <div
-            className="bg-primary shrink-0 rounded-full"
+            className="bg-foreground shrink-0 rounded-full"
             style={{
               width: `${CURRENT_TIME_DOT_SIZE}px`,
               height: `${CURRENT_TIME_DOT_SIZE}px`,
@@ -113,7 +113,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
         )}
 
         {/* now-bar */}
-        <div className={`bg-primary h-0.5 flex-1 ${columnInfo.isToday ? '' : 'opacity-40'}`} />
+        <div className={`bg-foreground h-0.5 flex-1 ${columnInfo.isToday ? '' : 'opacity-40'}`} />
       </div>
     </div>
   );
@@ -170,7 +170,7 @@ export const CurrentTimeLineForColumn = memo<{
         {/* now-dot */}
         {showDot && isToday && (
           <div
-            className="bg-primary shrink-0 rounded-full"
+            className="bg-foreground shrink-0 rounded-full"
             style={{
               width: `${CURRENT_TIME_DOT_SIZE}px`,
               height: `${CURRENT_TIME_DOT_SIZE}px`,
@@ -180,7 +180,7 @@ export const CurrentTimeLineForColumn = memo<{
         )}
 
         {/* now-bar */}
-        <div className={`bg-primary h-0.5 flex-1 ${isToday ? '' : 'opacity-40'}`} />
+        <div className={`bg-foreground h-0.5 flex-1 ${isToday ? '' : 'opacity-40'}`} />
       </div>
     </div>
   );

@@ -134,7 +134,7 @@ export const ScrollableCalendarLayout = ({
     showCurrentTime,
   });
 
-  // Chronotype gradient（hook 内で DB フォールバック + クライアント生成）
+  // Chronotype gradient（ゾーン外は transparent で bg-background を透過）
   const gradientCss = useChronotypeGradient();
 
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
@@ -211,7 +211,7 @@ export const ScrollableCalendarLayout = ({
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
                 <div
-                  className="bg-primary pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold text-white"
+                  className="text-foreground pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold"
                   style={{
                     top: `${currentTimePosition}px`,
                     transform: 'translateY(-50%)',
@@ -227,7 +227,7 @@ export const ScrollableCalendarLayout = ({
 
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
-          {/* Chronotype gradient 背景 */}
+          {/* Chronotype gradient 背景（ゾーン外は transparent） */}
           {gradientCss && (
             <div
               className="pointer-events-none absolute inset-0 z-0"

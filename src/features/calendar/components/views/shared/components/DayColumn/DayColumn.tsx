@@ -8,8 +8,7 @@ import { Plus } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import React, { memo, useMemo } from 'react';
 
-import { isWeekend } from '@/lib/date';
-import { GRID_BACKGROUND, HOUR_HEIGHT } from '../../constants/grid.constants';
+import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
@@ -24,7 +23,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   events,
   hourHeight = HOUR_HEIGHT,
   isToday: _isTodayProp,
-  isWeekend: isWeekendProp,
+  isWeekend: _isWeekendProp,
   onTimeClick,
   onEventClick,
   onEventContextMenu,
@@ -34,9 +33,6 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
-
-  // 今日・週末の判定（propsで上書き可能）
-  const isWeekendActual = isWeekendProp ?? isWeekend(date);
 
   // この日のエントリをフィルタリング
   const dayEntries = useMemo(() => {
@@ -73,9 +69,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   // カラムのスタイル
   const columnClasses = [
     'relative flex-1 min-w-0',
-    GRID_BACKGROUND,
     'border-r border-border last:border-r-0',
-    isWeekendActual ? 'bg-container' : '',
     className,
   ]
     .filter(Boolean)
