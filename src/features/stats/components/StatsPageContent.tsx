@@ -101,21 +101,18 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
-      <AppHeader
-        rightSlot={
-          <div className="hidden items-center gap-4 md:flex">
-            <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
-            {(tab === 'review' || showTagDetail) && (
-              <StatsGranularitySelector
-                granularity={granularity}
-                onGranularityChange={setGranularity}
-              />
-            )}
-            {headerRightExtra}
-          </div>
-        }
-      >
-        <DateRangeDisplay {...dateDisplayProps} />
+      <AppHeader rightSlot={headerRightExtra}>
+        <div className="flex items-center gap-2">
+          <DateRangeDisplay {...dateDisplayProps} />
+          <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
+          {(tab === 'review' || showTagDetail) && (
+            <StatsGranularitySelector
+              className="ml-2"
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+            />
+          )}
+        </div>
       </AppHeader>
 
       {showTagDetail ? (
