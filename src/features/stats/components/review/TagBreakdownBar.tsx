@@ -4,6 +4,7 @@ import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface TagSegment {
+  tagId: string;
   tagName: string;
   tagColor: TagColorName;
   minutes: number;
@@ -13,6 +14,8 @@ interface TagBreakdownBarProps {
   segments: TagSegment[];
   /** 表示モード: bar = 積み上げバー, list = バー + ラベルリスト */
   mode?: 'bar' | 'list';
+  /** タグクリック時のコールバック */
+  onTagClick?: (tagId: string) => void;
   className?: string;
 }
 
@@ -22,7 +25,12 @@ interface TagBreakdownBarProps {
  * Review タブで期間内のタグ別時間配分を視覚的に表示。
  * segments が空の場合は何も表示しない。
  */
-export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreakdownBarProps) {
+export function TagBreakdownBar({
+  segments,
+  mode = 'list',
+  onTagClick,
+  className,
+}: TagBreakdownBarProps) {
   if (segments.length === 0) return null;
 
   const totalMinutes = segments.reduce((sum, s) => sum + s.minutes, 0);
@@ -39,11 +47,16 @@ export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreak
           const pct = (seg.minutes / totalMinutes) * 100;
           if (pct < 1) return null;
           return (
-            <div
+            <button
+              type="button"
               key={seg.tagName}
-              className="h-full first:rounded-l-full last:rounded-r-full"
+              className={cn(
+                'h-full first:rounded-l-full last:rounded-r-full',
+                onTagClick && 'cursor-pointer transition-opacity hover:opacity-80',
+              )}
               style={{ width: `${pct}%`, backgroundColor: `var(--tag-${seg.tagColor})` }}
               title={`${seg.tagName}: ${formatMinutes(seg.minutes)} (${Math.round(pct)}%)`}
+              onClick={() => onTagClick?.(seg.tagId)}
             />
           );
         })}
@@ -55,7 +68,15 @@ export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreak
           {sorted.map((seg) => {
             const pct = Math.round((seg.minutes / totalMinutes) * 100);
             return (
-              <div key={seg.tagName} className="flex items-center gap-1.5 text-xs">
+              <button
+                type="button"
+                key={seg.tagName}
+                className={cn(
+                  'flex items-center gap-1.5 text-xs',
+                  onTagClick && 'hover:bg-accent/50 cursor-pointer rounded-sm transition-colors',
+                )}
+                onClick={() => onTagClick?.(seg.tagId)}
+              >
                 <span
                   className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: `var(--tag-${seg.tagColor})` }}
@@ -64,7 +85,7 @@ export function TagBreakdownBar({ segments, mode = 'list', className }: TagBreak
                 <span className="text-muted-foreground">
                   {formatMinutes(seg.minutes)} ({pct}%)
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>

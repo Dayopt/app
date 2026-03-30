@@ -2,7 +2,7 @@
 
 import { BarChart3 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
@@ -40,14 +40,24 @@ export function StatsView({ className }: StatsViewProps) {
   // タグ別内訳
   const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
 
+  const selectTag = useStatsFilterStore((s) => s.selectTag);
+
   const tagSegments = useMemo(() => {
     if (!timeByTag.data) return [];
     return timeByTag.data.map((tag) => ({
+      tagId: tag.tagId,
       tagName: tag.name,
       tagColor: resolveTagColor(tag.color),
       minutes: Math.round(tag.hours * 60),
     }));
   }, [timeByTag.data]);
+
+  const handleTagClick = useCallback(
+    (tagId: string) => {
+      selectTag(tagId);
+    },
+    [selectTag],
+  );
 
   // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない
   const entryRate = api.entries.getEntryRate.useQuery(dateRange);
@@ -124,7 +134,7 @@ export function StatsView({ className }: StatsViewProps) {
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
           {/* タグ別時間内訳 */}
-          <TagBreakdownBar segments={tagSegments} />
+          <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
 
           {/* KPI メトリクス */}
           <StatsMetricsGrid />

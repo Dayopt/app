@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -415,6 +415,7 @@ function SortableTagItem({
   findTagByName: (name: string) => Tag | undefined;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tag.id,
   });
@@ -425,6 +426,13 @@ function SortableTagItem({
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
+
+  const navigateToTagStats = useCallback(
+    (tagId: string) => {
+      window.location.href = `/${locale}/stats?tag=${tagId}`;
+    },
+    [locale],
+  );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
@@ -605,6 +613,7 @@ function SortableTagItem({
             onAddTagToGroup={() => openTagCreateModal(currentGroup)}
             onRenameGroup={() => setShowGroupRenameDialog(true)}
             onUngroupTags={handleUngroupTags}
+            onViewStats={() => navigateToTagStats(parentTag?.id ?? tag.id)}
             onDeleteGroup={handleDeleteGroup}
           />
         )}
@@ -683,7 +692,7 @@ function SortableTagItem({
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
                 }
                 onShowOnlyTag={() => showOnlyTag(tag.id)}
-                onViewStats={() => {}}
+                onViewStats={() => navigateToTagStats(tag.id)}
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>

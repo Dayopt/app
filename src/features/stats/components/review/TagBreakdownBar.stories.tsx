@@ -14,11 +14,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const MOCK_SEGMENTS = [
-  { tagName: 'Work', tagColor: 'blue' as const, minutes: 1200 },
-  { tagName: 'Study', tagColor: 'violet' as const, minutes: 480 },
-  { tagName: 'Exercise', tagColor: 'green' as const, minutes: 240 },
-  { tagName: 'Reading', tagColor: 'amber' as const, minutes: 120 },
-  { tagName: 'Other', tagColor: 'gray' as const, minutes: 60 },
+  { tagId: '1', tagName: 'Work', tagColor: 'blue' as const, minutes: 1200 },
+  { tagId: '2', tagName: 'Study', tagColor: 'violet' as const, minutes: 480 },
+  { tagId: '3', tagName: 'Exercise', tagColor: 'green' as const, minutes: 240 },
+  { tagId: '4', tagName: 'Reading', tagColor: 'amber' as const, minutes: 120 },
+  { tagId: '5', tagName: 'Other', tagColor: 'gray' as const, minutes: 60 },
 ];
 
 /** リスト表示（バー + 凡例） */
@@ -41,8 +41,8 @@ export const BarOnly: Story = {
 export const TwoTags: Story = {
   args: {
     segments: [
-      { tagName: 'Work', tagColor: 'blue' as const, minutes: 900 },
-      { tagName: 'Personal', tagColor: 'pink' as const, minutes: 300 },
+      { tagId: '1', tagName: 'Work', tagColor: 'blue' as const, minutes: 900 },
+      { tagId: '2', tagName: 'Personal', tagColor: 'pink' as const, minutes: 300 },
     ],
   },
 };
@@ -69,8 +69,8 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-3 text-xs font-medium">TwoTags（タグ2つ）</p>
         <TagBreakdownBar
           segments={[
-            { tagName: 'Work', tagColor: 'blue', minutes: 900 },
-            { tagName: 'Personal', tagColor: 'pink', minutes: 300 },
+            { tagId: '1', tagName: 'Work', tagColor: 'blue', minutes: 900 },
+            { tagId: '2', tagName: 'Personal', tagColor: 'pink', minutes: 300 },
           ]}
         />
       </div>
