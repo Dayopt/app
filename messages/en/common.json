@@ -21,7 +21,8 @@
         "dayRangeSameMonth": "{start}-{end} {monthYear}",
         "dayRangeDiffMonth": "{startDay} {startMonth} - {endDay} {endMonth} {year}",
         "dayRangeDiffYear": "{startDay} {startMonth} {startYear} - {endDay} {endMonth} {endYear}",
-        "year": "{year}"
+        "year": "{year}",
+        "yearOnly": "yyyy"
       },
       "hourLabel": "{hour}:00",
       "weekdaysNarrow": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
