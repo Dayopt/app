@@ -1,5 +1,6 @@
 'use client';
 
+import { PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useTransition } from 'react';
 
@@ -11,6 +12,7 @@ import { DateRangeDisplay } from '@/components/ui/date-range-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AppHeader } from '@/shell/components/AppHeader';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import { useStatsFilterSync } from '../hooks/useStatsFilterSync';
 import type { StatsGranularity, StatsTab } from '../stores/useStatsFilterStore';
@@ -85,6 +87,20 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
   const setGranularity = useStatsFilterStore((s) => s.setGranularity);
   const navigate = useStatsFilterStore((s) => s.navigate);
 
+  // サイドバーが閉じているときにトグルボタンを表示
+  const sidebarOpen = useShellStore.use.sidebar().open;
+  const toggleSidebar = useShellStore.use.toggleSidebar();
+  const sidebarToggle = !sidebarOpen ? (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      aria-label="Open sidebar"
+    >
+      <PanelLeft className="size-4" />
+    </button>
+  ) : null;
+
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
   const dateDisplayProps = useStatsDateDisplayProps(currentDate, granularity);
 
@@ -101,7 +117,7 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
-      <AppHeader rightSlot={headerRightExtra}>
+      <AppHeader leftSlot={sidebarToggle} rightSlot={headerRightExtra}>
         <div className="flex items-center gap-2">
           <DateRangeDisplay {...dateDisplayProps} />
           <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
