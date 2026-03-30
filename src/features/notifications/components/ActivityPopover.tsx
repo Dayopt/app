@@ -97,7 +97,7 @@ export function ActivityPopover({ size = 'default' }: ActivityPopoverProps) {
         >
           {/* ヘッダー: タブ + 設定 */}
           <div className="flex shrink-0 items-center justify-between px-4 pt-4 pb-2">
-            <TabsList className="h-auto gap-4 rounded-none border-transparent bg-transparent p-0">
+            <TabsList className="h-auto rounded-none border-transparent bg-transparent p-0">
               {TABS.map((tab) => (
                 <TabsTrigger key={tab} value={tab}>
                   {t(`notification.tabs.${tab}`)}

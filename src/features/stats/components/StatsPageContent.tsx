@@ -121,7 +121,7 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
 
       {/* タブ表示 */}
       <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
+        <TabsList className="h-10 w-full justify-start rounded-none border-none bg-transparent px-4">
           <TabsTrigger value="review" className="text-base">
             {t('calendar.stats.tabReview')}
           </TabsTrigger>

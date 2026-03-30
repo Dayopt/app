@@ -19,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <Tabs defaultValue="account" className="w-96">
-      <TabsList className="h-auto gap-4 rounded-none border-b border-transparent bg-transparent p-0">
+      <TabsList className="h-auto rounded-none border-b border-transparent bg-transparent p-0">
         <TabsTrigger value="account">アカウント</TabsTrigger>
         <TabsTrigger value="password">パスワード</TabsTrigger>
       </TabsList>
@@ -55,7 +55,7 @@ export const Default: Story = {
 export const ThreeTabs: Story = {
   render: () => (
     <Tabs defaultValue="overview" className="w-[500px]">
-      <TabsList className="h-auto gap-4 rounded-none border-b border-transparent bg-transparent p-0">
+      <TabsList className="h-auto rounded-none border-b border-transparent bg-transparent p-0">
         <TabsTrigger value="overview">概要</TabsTrigger>
         <TabsTrigger value="activity">アクティビティ</TabsTrigger>
         <TabsTrigger value="settings">設定</TabsTrigger>
