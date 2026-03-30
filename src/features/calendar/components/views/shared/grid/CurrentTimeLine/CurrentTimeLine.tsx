@@ -13,7 +13,7 @@
 
 import { memo, useMemo } from 'react';
 
-import { tzIsSameDay } from '@/lib/date/timezone';
+import { convertToTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { timeToPixels } from '../../../../../lib/grid';
 import { CURRENT_TIME_DOT_SIZE, HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
@@ -34,8 +34,11 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   timeColumnWidth: _timeColumnWidth = 64,
   containerWidth: _containerWidth = 800,
 }) {
-  const currentTime = useCurrentTime({ updateInterval });
+  const rawTime = useCurrentTime({ updateInterval });
   const timezone = useCalendarSettingsStore((state) => state.timezone);
+
+  // ユーザーTZに変換してから位置計算（ブラウザTZと異なる場合に正しい位置を表示）
+  const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
 
   // 現在時刻のY座標を計算
   const topPosition = timeToPixels(currentTime, hourHeight);
@@ -45,9 +48,8 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     if (!displayDates || displayDates.length === 0) {
       return true;
     }
-    const now = new Date();
-    return displayDates.some((date) => tzIsSameDay(date, now, timezone));
-  }, [displayDates, timezone]);
+    return displayDates.some((date) => tzIsSameDay(date, rawTime, timezone));
+  }, [displayDates, rawTime, timezone]);
 
   // 今日の列位置を計算（複数日表示の場合）
   const columnInfo = useMemo(() => {
@@ -55,8 +57,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
       return { left: 0, width: '100%', isToday: hasToday };
     }
 
-    const now = new Date();
-    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, now, timezone));
+    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, rawTime, timezone));
 
     if (todayIndex === -1) {
       if (showOnOtherDays) {
@@ -73,7 +74,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
       width: `${columnWidthPct}%`,
       isToday: true,
     };
-  }, [displayDates, hasToday, showOnOtherDays, timezone]);
+  }, [displayDates, hasToday, showOnOtherDays, rawTime, timezone]);
 
   // 表示範囲外なら非表示
   const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;
@@ -143,7 +144,11 @@ export const CurrentTimeLineForColumn = memo<{
   startHour = 0,
   endHour = 24,
 }) {
-  const currentTime = useCurrentTime({ updateInterval: 60000 });
+  const rawTime = useCurrentTime({ updateInterval: 60000 });
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
+
+  // ユーザーTZに変換
+  const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
 
   const topPosition = timeToPixels(currentTime, hourHeight);
 
