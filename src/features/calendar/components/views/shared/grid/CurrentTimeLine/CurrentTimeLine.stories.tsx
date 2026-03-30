@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CurrentTimeLine, CurrentTimeLineForColumn } from './CurrentTimeLine';
 
 /**
- * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-primary 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
+ * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-now-indicator 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
  */
 const meta = {
   title: 'Features/Calendar/Views/Grid/CurrentTimeLine',

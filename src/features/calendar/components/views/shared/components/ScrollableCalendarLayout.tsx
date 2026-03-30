@@ -211,7 +211,7 @@ export const ScrollableCalendarLayout = ({
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
                 <div
-                  className="text-now-indicator pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold"
+                  className="bg-now-indicator text-now-indicator-foreground pointer-events-none absolute right-1 z-20 rounded px-1 py-0.5 text-xs font-bold"
                   style={{
                     top: `${currentTimePosition}px`,
                     transform: 'translateY(-50%)',

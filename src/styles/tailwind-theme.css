@@ -117,6 +117,7 @@
 
   /* Now Indicator */
   --color-now-indicator: var(--now-indicator);
+  --color-now-indicator-foreground: var(--now-indicator-foreground);
 }
 
 /* ============================================
