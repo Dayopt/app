@@ -11,11 +11,6 @@
 export { CalendarController } from './components/CalendarController';
 
 // =============================================================================
-// Providers
-// =============================================================================
-export { DnDProvider } from './providers/DnDProvider';
-
-// =============================================================================
 // Layout Components
 // =============================================================================
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
