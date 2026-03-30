@@ -39,6 +39,12 @@ export {
 } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
+// Contexts
+// =============================================================================
+export { useCalendarEntryActions } from './contexts/CalendarEntryActionsContext';
+export type { CalendarEntryActions } from './contexts/CalendarEntryActionsContext';
+
+// =============================================================================
 // Hooks
 // =============================================================================
 export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
