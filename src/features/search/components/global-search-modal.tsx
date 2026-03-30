@@ -26,6 +26,23 @@ interface GlobalSearchModalProps {
   onClose: () => void;
 }
 
+/** コロン記法タグ名を › セパレーター表示しつつ検索ハイライトを適用 */
+function HighlightedTagName({ name, query }: { name: string; query: string }) {
+  const colonIdx = name.indexOf(':');
+  if (colonIdx === -1) return <HighlightedText text={name} query={query} />;
+  const prefix = name.slice(0, colonIdx);
+  const suffix = name.slice(colonIdx + 1);
+  return (
+    <>
+      <span className="text-muted-foreground">
+        <HighlightedText text={prefix} query={query} />
+      </span>
+      <span className="text-muted-foreground mx-1">›</span>
+      <HighlightedText text={suffix} query={query} />
+    </>
+  );
+}
+
 /** グローバル検索モーダル（タグ検索 + エントリ検索、Cmd/Ctrl+K で開閉） */
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const t = useTranslations('common.search');
@@ -132,7 +149,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                   >
                     <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                     <span className="truncate">
-                      <HighlightedText text={tag.name} query={query} />
+                      <HighlightedTagName name={tag.name} query={query} />
                     </span>
                   </CommandItem>
                 ))}
@@ -159,7 +176,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           {tag && (
                             <span className="truncate font-medium">
-                              <HighlightedText text={tag.name} query={query} />
+                              <HighlightedTagName name={tag.name} query={query} />
                             </span>
                           )}
                           {startDate && (

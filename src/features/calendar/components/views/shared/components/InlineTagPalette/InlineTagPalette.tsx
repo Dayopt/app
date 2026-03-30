@@ -15,6 +15,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
@@ -215,13 +216,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             {selectionHeight < 40 ? (
               <div className="flex h-full items-center px-2">
                 <span className="text-foreground truncate text-xs font-normal">
-                  {hoveredTag ? displayName : timeLabel}
+                  {hoveredTag ? <ColonTagLabel name={displayName} /> : timeLabel}
                 </span>
               </div>
             ) : (
               <div className="flex h-full flex-col gap-1 p-2">
                 <span className="text-foreground text-sm leading-tight font-normal">
-                  {displayName}
+                  {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
                 </span>
                 <span className="text-muted-foreground text-xs leading-tight tabular-nums">
                   {timeLabel}

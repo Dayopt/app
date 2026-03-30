@@ -5,8 +5,9 @@ import { useTranslations } from 'next-intl';
 import { Suspense } from 'react';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTag } from '@/features/tags';
+import { TagIcon, useTag } from '@/features/tags';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -36,7 +37,7 @@ export function TagDetailPageContent({ tagId }: TagDetailPageContentProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Back nav + Tag name */}
-      <div className="border-border flex h-10 items-center gap-2 border-b px-4">
+      <div className="flex h-10 items-center gap-2 px-4">
         <button
           type="button"
           className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
@@ -48,10 +49,12 @@ export function TagDetailPageContent({ tagId }: TagDetailPageContentProps) {
         <span className="text-muted-foreground/40">|</span>
         {tag ? (
           <div className="flex items-center gap-2">
-            {tag.icon && <span className="text-base">{tag.icon}</span>}
-            <span className="text-sm font-bold" style={{ color: `var(--tag-${tagColor})` }}>
-              {tag.name}
-            </span>
+            <TagIcon icon={tag.icon} color={tagColor} size="sm" />
+            <ColonTagLabel
+              name={tag.name}
+              className="text-sm font-bold"
+              style={{ color: `var(--tag-${tagColor})` }}
+            />
           </div>
         ) : (
           <Skeleton className="h-5 w-24" />

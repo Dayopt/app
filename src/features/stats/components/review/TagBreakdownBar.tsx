@@ -1,5 +1,6 @@
 'use client';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -81,7 +82,7 @@ export function TagBreakdownBar({
                   className="size-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: `var(--tag-${seg.tagColor})` }}
                 />
-                <span className="text-foreground">{seg.tagName}</span>
+                <ColonTagLabel name={seg.tagName} className="text-foreground" />
                 <span className="text-muted-foreground">
                   {formatMinutes(seg.minutes)} ({pct}%)
                 </span>
