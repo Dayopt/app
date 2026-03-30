@@ -62,14 +62,17 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     ? scrollRect.top + state.snappedTop - scrollTop
     : columnRect.top + state.snappedTop;
 
+  // transform で位置指定（GPU合成レイヤーでレイアウトトリガーを回避）
   const style: React.CSSProperties = {
     position: 'fixed',
-    top: viewportTop,
-    left: columnRect.left,
+    top: 0,
+    left: 0,
     width: columnRect.width,
     height: state.originalPosition.height,
     zIndex: 9999,
-    transition: 'top 50ms ease-out, left 100ms ease-out',
+    transform: `translate(${columnRect.left}px, ${viewportTop}px)`,
+    transition: 'transform 50ms ease-out',
+    willChange: 'transform',
   };
 
   const content = renderGhost?.({
