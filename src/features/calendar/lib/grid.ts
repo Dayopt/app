@@ -23,17 +23,17 @@ export interface EventStyle {
   zIndex: number;
 }
 
+// コア計算は interaction/time-math.ts に委譲（プリミティブ版が正規ソース）
+import { timeToPixels as timeToPixelsPrimitive } from '../interaction/time-math';
+
 /**
- * 時刻をピクセル位置に変換
+ * 時刻をピクセル位置に変換（Date版）
  * @param time - 変換する時刻
  * @param hourHeight - 1時間の高さ（デフォルト: 72px）
  * @returns Y座標（px）
  */
 export function timeToPixels(time: Date, hourHeight: number = DEFAULT_HOUR_HEIGHT): number {
-  const hours = time.getHours();
-  const minutes = time.getMinutes();
-  const totalMinutes = hours * 60 + minutes;
-  return (totalMinutes * hourHeight) / 60;
+  return timeToPixelsPrimitive(time.getHours(), time.getMinutes(), hourHeight);
 }
 
 /**
