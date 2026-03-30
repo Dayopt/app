@@ -138,6 +138,7 @@
   /* Now Indicator — 現在時刻線・ドット・ラベル */
   --now-indicator: oklch(0.55 0.17 25);
   --now-indicator-foreground: oklch(1 0 0);
+  --now-indicator-muted: oklch(0.55 0.17 25 / 0.3);
 }
 
 /* ダークモード */
@@ -233,6 +234,7 @@
   /* Now Indicator — 現在時刻線・ドット・ラベル */
   --now-indicator: oklch(0.65 0.15 25);
   --now-indicator-foreground: oklch(1 0 0);
+  --now-indicator-muted: oklch(0.65 0.15 25 / 0.3);
 
   /* Borders & Inputs */
   --border: oklch(1 0 0 / 0.07);

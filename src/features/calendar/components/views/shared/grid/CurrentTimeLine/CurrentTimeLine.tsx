@@ -26,7 +26,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   showDot = true,
   updateInterval = 60000,
   displayDates,
-  showOnOtherDays = true,
+  showOnOtherDays = false,
   viewMode: _viewMode = 'day',
   startHour = 0,
   endHour = 24,
@@ -51,30 +51,11 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     return displayDates.some((date) => tzIsSameDay(date, rawTime, timezone));
   }, [displayDates, rawTime, timezone]);
 
-  // 今日の列位置を計算（複数日表示の場合）
-  const columnInfo = useMemo(() => {
-    if (!displayDates || displayDates.length <= 1) {
-      return { left: 0, width: '100%', isToday: hasToday };
-    }
-
-    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, rawTime, timezone));
-
-    if (todayIndex === -1) {
-      if (showOnOtherDays) {
-        return { left: 0, width: '100%', isToday: false };
-      }
-      return null;
-    }
-
-    const columnWidthPct = 100 / displayDates.length;
-    const leftPct = todayIndex * columnWidthPct;
-
-    return {
-      left: `${leftPct}%`,
-      width: `${columnWidthPct}%`,
-      isToday: true,
-    };
-  }, [displayDates, hasToday, showOnOtherDays, rawTime, timezone]);
+  // 今日の列インデックス（複数日表示の場合）
+  const todayIndex = useMemo(() => {
+    if (!displayDates || displayDates.length <= 1) return -1;
+    return displayDates.findIndex((date) => tzIsSameDay(date, rawTime, timezone));
+  }, [displayDates, rawTime, timezone]);
 
   // 表示範囲外なら非表示
   const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;
@@ -82,27 +63,62 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     return null;
   }
 
-  if (!columnInfo) {
-    return null;
+  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
+  const isMultiDay = displayDates && displayDates.length > 1;
+
+  // 複数日表示: 全列に線を引き、本日だけ強調
+  if (isMultiDay) {
+    if (todayIndex === -1 && !showOnOtherDays) return null;
+
+    return (
+      <div
+        className={`pointer-events-none absolute left-0 w-full ${className}`}
+        style={{
+          top: `${topPosition}px`,
+          zIndex: Z_INDEX.CURRENT_TIME,
+        }}
+        aria-hidden="true"
+      >
+        <div className="flex items-center">
+          {displayDates.map((date, i) => {
+            const isToday = i === todayIndex;
+            return (
+              <div key={date.toISOString()} className="flex flex-1 items-center">
+                {isToday && showDot && (
+                  <div
+                    className="bg-now-indicator shrink-0 rounded-full"
+                    style={{
+                      width: `${CURRENT_TIME_DOT_SIZE}px`,
+                      height: `${CURRENT_TIME_DOT_SIZE}px`,
+                      marginLeft: `-${dotOffset}px`,
+                    }}
+                  />
+                )}
+                <div
+                  className={`h-0.5 flex-1 ${isToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
-  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
+  // 単日表示
+  if (!hasToday && !showOnOtherDays) return null;
 
   return (
     <div
-      className={`pointer-events-none absolute ${className}`}
+      className={`pointer-events-none absolute left-0 w-full ${className}`}
       style={{
         top: `${topPosition}px`,
-        left: typeof columnInfo.left === 'number' ? `${columnInfo.left}px` : columnInfo.left,
-        width: columnInfo.width,
         zIndex: Z_INDEX.CURRENT_TIME,
       }}
       aria-hidden="true"
     >
-      {/* now-line: dot + bar */}
       <div className="flex items-center">
-        {/* now-dot */}
-        {showDot && columnInfo.isToday && (
+        {showDot && hasToday && (
           <div
             className="bg-now-indicator shrink-0 rounded-full"
             style={{
@@ -112,10 +128,8 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
             }}
           />
         )}
-
-        {/* now-bar */}
         <div
-          className={`bg-now-indicator h-0.5 flex-1 ${columnInfo.isToday ? '' : 'opacity-40'}`}
+          className={`h-0.5 flex-1 ${hasToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
         />
       </div>
     </div>
@@ -140,7 +154,7 @@ export const CurrentTimeLineForColumn = memo<{
   showDot = false,
   className = '',
   isToday = true,
-  showOnOtherDays = true,
+  showOnOtherDays = false,
   startHour = 0,
   endHour = 24,
 }) {
@@ -187,7 +201,9 @@ export const CurrentTimeLineForColumn = memo<{
         )}
 
         {/* now-bar */}
-        <div className={`bg-now-indicator h-0.5 flex-1 ${isToday ? '' : 'opacity-40'}`} />
+        <div
+          className={`h-0.5 flex-1 ${isToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
+        />
       </div>
     </div>
   );

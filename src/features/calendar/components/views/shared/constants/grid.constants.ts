@@ -53,7 +53,7 @@ export const GRID_BORDER = 'border-border';
 export const Z_INDEX = {
   GRID_LINES: 0,
   EVENTS: 10,
-  CURRENT_TIME: 15,
+  CURRENT_TIME: 29,
   DRAGGING: 30,
   POPOVER: 40,
   MODAL: 50,
