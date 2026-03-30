@@ -13,7 +13,7 @@ import { computePreviousDateRange, computeStatsDateRange } from '../utils/comput
  * ⚠ computeStatsDateRange を使用して日付文字列を生成する。
  *   サーバー/クライアント間で同じクエリキーを生成し、キャッシュヒットを保証するため。
  */
-export async function prefetchStatsData(options?: { tagId?: string }) {
+export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
 
   const now = new Date();
@@ -41,18 +41,6 @@ export async function prefetchStatsData(options?: { tagId?: string }) {
       helpers.entries.getEnergyMap.prefetch(dateRange),
       helpers.entries.getEnergyMap.prefetch(prevDateRange),
     ];
-
-    // タグドリルダウン: ?tag=tagId がある場合はタグ固有クエリも並列プリフェッチ
-    if (options?.tagId) {
-      const tagDateRange = { tagId: options.tagId, ...dateRange };
-      queries.push(
-        helpers.entries.getTagCumulativeTime.prefetch(tagDateRange),
-        helpers.entries.getTagAvgFulfillment.prefetch(tagDateRange),
-        helpers.entries.getTagPlanRate.prefetch(tagDateRange),
-        helpers.entries.getTagHourlyDistribution.prefetch(tagDateRange),
-        helpers.entries.getTagDowDistribution.prefetch(tagDateRange),
-      );
-    }
 
     await Promise.all(queries);
   } catch {

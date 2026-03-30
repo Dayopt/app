@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
@@ -43,7 +44,6 @@ import {
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../TagRenameDialog';
@@ -427,14 +427,13 @@ function SortableTagItem({
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
-  const switchToTagStats = useClientRouterStore((s) => s.switchToTagStats);
+  const router = useRouter();
 
   const navigateToTagStats = useCallback(
     (tagId: string) => {
-      window.history.pushState(null, '', `/${locale}/stats?tag=${tagId}`);
-      switchToTagStats(tagId);
+      router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [locale, switchToTagStats],
+    [router, locale],
   );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,

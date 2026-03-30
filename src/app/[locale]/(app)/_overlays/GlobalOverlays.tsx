@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 
@@ -53,6 +54,7 @@ const TourOrchestrator = dynamic(
 export function GlobalOverlays() {
   const t = useTranslations();
   const locale = useLocale();
+  const router = useRouter();
 
   // ツアー: ステップバリデーション（現在は空）
   const stepValidators: StepValidators = useMemo(() => ({}), []);
@@ -114,12 +116,12 @@ export function GlobalOverlays() {
     [paletteItems],
   );
 
-  // Inspector → Stats 画面ナビゲーション
+  // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
-      window.location.href = `/${locale}/stats?tag=${tagId}`;
+      router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [locale],
+    [router, locale],
   );
 
   return (

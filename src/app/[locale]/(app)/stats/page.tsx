@@ -24,8 +24,8 @@ export async function generateMetadata({
 }
 
 /** データプリフェッチ + ハイドレーション */
-async function StatsContent({ tagId }: { tagId?: string }) {
-  const { dehydratedState } = await prefetchStatsData(tagId ? { tagId } : undefined);
+async function StatsContent() {
+  const { dehydratedState } = await prefetchStatsData();
 
   return (
     <HydrationBoundary state={dehydratedState}>
@@ -34,12 +34,10 @@ async function StatsContent({ tagId }: { tagId?: string }) {
   );
 }
 
-const StatsPage = async ({ searchParams }: { searchParams: Promise<{ tag?: string }> }) => {
-  const { tag } = await searchParams;
-
+const StatsPage = async () => {
   return (
     <Suspense fallback={<StatsTabLoading />}>
-      <StatsContent {...(tag ? { tagId: tag } : {})} />
+      <StatsContent />
     </Suspense>
   );
 };

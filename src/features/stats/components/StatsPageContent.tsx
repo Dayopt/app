@@ -43,13 +43,6 @@ const InsightsView = dynamic(
   () => import('./insights/InsightsView').then((m) => ({ default: m.InsightsView })),
   { loading: () => <StatsTabSkeleton /> },
 );
-const TagDetailView = dynamic(
-  () =>
-    import('./tag-detail/TagDetailPageContent').then((m) => ({
-      default: m.TagDetailPageContent,
-    })),
-  { loading: () => <StatsTabSkeleton /> },
-);
 
 interface StatsPageContentProps {
   /** ヘッダー右端に追加表示する要素（PageNav等） */
@@ -68,7 +61,6 @@ const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
  *
  * 全状態をクエリパラメータで管理:
  * - ?tab=review|progress|insights
- * - ?tag=tagId（Review内のタグドリルダウン）
  * - ?g=day|week|month|year
  * - ?d=YYYY-MM-DD
  */
@@ -80,7 +72,6 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
   useStatsFilterSync();
 
   const tab = useStatsFilterStore((s) => s.tab);
-  const selectedTagId = useStatsFilterStore((s) => s.selectedTagId);
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const setTab = useStatsFilterStore((s) => s.setTab);
@@ -111,9 +102,6 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
     });
   };
 
-  // タグドリルダウン中は Review タブ内に TagDetailView を表示
-  const showTagDetail = tab === 'review' && selectedTagId !== null;
-
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
@@ -121,7 +109,7 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
         <div className="flex items-center gap-2">
           <DateRangeDisplay {...dateDisplayProps} />
           <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
-          {(tab === 'review' || showTagDetail) && (
+          {tab === 'review' && (
             <StatsGranularitySelector
               className="ml-2"
               granularity={granularity}
@@ -131,55 +119,44 @@ export function StatsPageContent({ headerRightExtra }: StatsPageContentProps) {
         </div>
       </AppHeader>
 
-      {showTagDetail ? (
-        /* タグドリルダウン: タブバーの代わりに TagDetailView を表示 */
-        <div className="flex min-h-0 flex-1 flex-col">
-          <FeatureErrorBoundary featureName="tag-detail">
+      {/* タブ表示 */}
+      <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
+          <TabsTrigger value="review" className="text-base">
+            {t('calendar.stats.tabReview')}
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="text-base">
+            {t('calendar.stats.tabProgress')}
+          </TabsTrigger>
+          <TabsTrigger value="insights" className="text-base">
+            {t('calendar.stats.tabInsights')}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
+          <FeatureErrorBoundary featureName="stats">
             <Suspense fallback={<StatsTabSkeleton />}>
-              <TagDetailView tagId={selectedTagId} />
+              <StatsView />
             </Suspense>
           </FeatureErrorBoundary>
-        </div>
-      ) : (
-        /* 通常タブ表示 */
-        <Tabs value={tab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
-          <TabsList className="h-10 w-full justify-start gap-4 rounded-none border-none bg-transparent px-4">
-            <TabsTrigger value="review" className="text-base">
-              {t('calendar.stats.tabReview')}
-            </TabsTrigger>
-            <TabsTrigger value="progress" className="text-base">
-              {t('calendar.stats.tabProgress')}
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="text-base">
-              {t('calendar.stats.tabInsights')}
-            </TabsTrigger>
-          </TabsList>
+        </TabsContent>
 
-          <TabsContent value="review" className="flex min-h-0 flex-1 flex-col">
-            <FeatureErrorBoundary featureName="stats">
-              <Suspense fallback={<StatsTabSkeleton />}>
-                <StatsView />
-              </Suspense>
-            </FeatureErrorBoundary>
-          </TabsContent>
+        <TabsContent value="progress" className="flex min-h-0 flex-1 flex-col">
+          <FeatureErrorBoundary featureName="stats-progress">
+            <Suspense fallback={<StatsTabSkeleton />}>
+              <ProgressView />
+            </Suspense>
+          </FeatureErrorBoundary>
+        </TabsContent>
 
-          <TabsContent value="progress" className="flex min-h-0 flex-1 flex-col">
-            <FeatureErrorBoundary featureName="stats-progress">
-              <Suspense fallback={<StatsTabSkeleton />}>
-                <ProgressView />
-              </Suspense>
-            </FeatureErrorBoundary>
-          </TabsContent>
-
-          <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
-            <FeatureErrorBoundary featureName="stats-insights">
-              <Suspense fallback={<StatsTabSkeleton />}>
-                <InsightsView />
-              </Suspense>
-            </FeatureErrorBoundary>
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value="insights" className="flex min-h-0 flex-1 flex-col">
+          <FeatureErrorBoundary featureName="stats-insights">
+            <Suspense fallback={<StatsTabSkeleton />}>
+              <InsightsView />
+            </Suspense>
+          </FeatureErrorBoundary>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

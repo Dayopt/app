@@ -1,7 +1,8 @@
 'use client';
 
 import { BarChart3 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import { resolveTagColor } from '@/lib/tag-colors';
@@ -40,7 +41,8 @@ export function StatsView({ className }: StatsViewProps) {
   // タグ別内訳
   const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
 
-  const selectTag = useStatsFilterStore((s) => s.selectTag);
+  const locale = useLocale();
+  const router = useRouter();
 
   const tagSegments = useMemo(() => {
     if (!timeByTag.data) return [];
@@ -54,9 +56,9 @@ export function StatsView({ className }: StatsViewProps) {
 
   const handleTagClick = useCallback(
     (tagId: string) => {
-      selectTag(tagId);
+      router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [selectTag],
+    [router, locale],
   );
 
   // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない
