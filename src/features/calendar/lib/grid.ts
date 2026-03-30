@@ -148,6 +148,28 @@ export function getDurationInMinutes(start: Date, end: Date): number {
 }
 
 // ========================================
+// Layout → Position Conversion
+// ========================================
+
+/** EntryLayout から top/height を計算する共通関数 */
+const ENTRY_PADDING = 2;
+
+export function layoutEntryToVerticalPosition(
+  start: Date,
+  end: Date,
+  hourHeight: number,
+): { top: number; height: number } {
+  const startHour = start.getHours() + start.getMinutes() / 60;
+  const endHour = end.getHours() + end.getMinutes() / 60;
+  const duration = Math.max(endHour - startHour, 0.25); // 最小15分
+
+  const top = startHour * hourHeight;
+  const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_EVENT_HEIGHT);
+
+  return { top, height };
+}
+
+// ========================================
 // Time Slot Generation
 // ========================================
 

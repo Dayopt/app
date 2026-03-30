@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { isSameDay } from 'date-fns';
 
+import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
 import { calculateEntryLayouts, type EntryLayout } from '../../../../lib/layout';
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
@@ -13,9 +14,6 @@ import type {
   UseWeekEntriesReturn,
   WeekEntryPosition,
 } from '../WeekView.types';
-
-const ENTRY_PADDING = 2; // エントリ間のパディング
-const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
 /**
  * 週ビューでのエントリ位置計算専用フック
@@ -106,16 +104,11 @@ export function useWeekEntries({
       // EntryLayoutをWeekEntryPositionに変換
       layouts.forEach((layout: EntryLayout, index: number) => {
         const entry = layout.entry as CalendarEvent;
-        const startDate = new Date(layout.entry.start);
-        const endDate = new Date(layout.entry.end);
-
-        const startHour = startDate.getHours() + startDate.getMinutes() / 60;
-        const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-        const duration = Math.max(endHour - startHour, 0.25); // 最小15分
-
-        // 位置計算
-        const top = startHour * hourHeight;
-        const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
+        const { top, height } = layoutEntryToVerticalPosition(
+          new Date(layout.entry.start),
+          new Date(layout.entry.end),
+          hourHeight,
+        );
 
         // 日列内でのleft/widthを計算（dayColumnWidth内でlayout.left/widthを適用）
         const columnWidth = dayColumnWidth / layout.totalColumns;
