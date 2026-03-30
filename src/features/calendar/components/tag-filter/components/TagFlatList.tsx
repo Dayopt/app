@@ -645,13 +645,15 @@ function SortableTagItem({
               onPointerDown={(e) => e.stopPropagation()}
               aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
               className={cn(
-                'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded transition-opacity before:absolute before:-inset-2 before:content-['']",
                 checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
                 isMobile && 'opacity-100',
               )}
             >
               {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
             </button>
+
+            <div className="w-1 shrink-0" />
 
             {/* Menu */}
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
