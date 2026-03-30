@@ -59,7 +59,7 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
         <div
           key={`hour-${hour}`}
           className={cn(
-            'relative flex w-full items-start pr-2 pl-4 text-sm select-none',
+            'relative flex w-full items-start justify-end pr-2 text-sm select-none',
             textClass,
           )}
           style={{ height: `${hourHeight}px` }}
