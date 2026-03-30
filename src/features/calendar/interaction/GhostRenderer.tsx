@@ -118,7 +118,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     };
 
     return createPortal(
-      <div className="pointer-events-none rounded-lg shadow-md" style={style}>
+      <div className="shadow-card pointer-events-none rounded-lg" style={style}>
         {snapBack.content}
       </div>,
       document.body,
@@ -168,7 +168,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
   return createPortal(
     <div
       className={cn(
-        'pointer-events-none rounded-lg opacity-85 shadow-md',
+        'shadow-card pointer-events-none rounded-lg opacity-85',
         state.isOverlapping && 'ring-destructive ring-2',
       )}
       style={style}

@@ -185,7 +185,7 @@ function DropdownMenuSubContent({
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        'bg-card text-card-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-overlay-popover min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden overscroll-contain rounded-lg p-1 shadow-md motion-reduce:animate-none',
+        'bg-card text-card-foreground border-border-subtle data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-overlay-popover shadow-card min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden overscroll-contain rounded-lg border p-1 motion-reduce:animate-none',
         className,
       )}
       {...props}

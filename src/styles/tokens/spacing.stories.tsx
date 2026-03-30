@@ -214,7 +214,7 @@ export const ComponentPatterns: Story = {
         {/* モーダル */}
         <div>
           <h2 className="mb-4 font-bold">モーダル/ダイアログ</h2>
-          <div className="bg-card border-border w-80 rounded-2xl border p-6 shadow-xl">
+          <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border p-6">
             <h3 className="text-lg font-bold">モーダルタイトル</h3>
             <p className="text-muted-foreground mt-2 text-sm">
               モーダルは広めの余白で重要性を強調。

@@ -59,7 +59,7 @@ const SheetContent = ({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'bg-card text-card-foreground z-sheet fixed flex flex-col gap-4 shadow-lg transition ease-in-out motion-reduce:transition-none',
+          'bg-card text-card-foreground z-sheet shadow-card fixed flex flex-col gap-4 transition ease-in-out motion-reduce:transition-none',
           'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
           'data-[state=closed]:duration-300 data-[state=open]:duration-500',
           'focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2',

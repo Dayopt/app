@@ -20,7 +20,7 @@ const LoadingIcon = () => <Loader2 className="size-5 animate-spin" />;
  * - 背景: card（共通）
  * - 枠線: タイプ別カラー（success/error/warning/info）
  * - 角丸: 8px（radius-md）
- * - 影: shadow-lg
+ * - 影: shadow-card
  * - パディング: 16px
  * - ギャップ: 8px
  * - タイトル: 14px、bold、foreground
@@ -56,7 +56,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         unstyled: true,
         classNames: {
           toast:
-            'grid grid-cols-[auto_1fr_auto] gap-4 items-start w-full p-4 rounded-lg border shadow-md bg-card text-foreground border-border',
+            'grid grid-cols-[auto_1fr_auto] gap-4 items-start w-full p-4 rounded-lg border shadow-card bg-card text-foreground border-border-subtle',
           icon: 'row-start-1 col-start-1 [&_svg]:size-5',
           loader: '!static !inset-auto !transform-none',
           content:

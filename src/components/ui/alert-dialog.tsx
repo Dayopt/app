@@ -36,7 +36,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        'border-border bg-card text-card-foreground z-overlay-confirm fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 shadow-lg duration-200',
+        'border-border-subtle bg-card text-card-foreground z-overlay-confirm shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200',
         // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限（Storybook対応）
         'w-full max-w-[calc(100vw-2rem)] min-w-80 sm:max-w-lg',
         'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',

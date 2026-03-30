@@ -387,7 +387,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
           <PopoverTrigger asChild>{popoverTrigger}</PopoverTrigger>
           <PopoverContent
             className={cn(
-              'bg-card border-border w-auto border p-0',
+              'bg-card border-border-subtle w-auto border p-0 shadow-sm',
               popoverClassName,
               popoverZIndex,
             )}

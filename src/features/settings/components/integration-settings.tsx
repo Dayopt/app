@@ -171,7 +171,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
       {/* AI設定 */}
       <SectionCard title={t('settings.integrations.ai.title')}>
         <div className="space-y-4">
-          <div className="bg-card border-border rounded-lg border p-4">
+          <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
             <p className="text-muted-foreground text-sm">
               {t('settings.integrations.ai.description')}
             </p>
@@ -288,7 +288,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
           <Switch checked={syncEnabled} onCheckedChange={handleSyncChange} />
         </LabeledRow>
         {syncEnabled && (
-          <div className="bg-card border-border mt-4 rounded-lg border p-4">
+          <div className="bg-card border-border-subtle mt-4 rounded-lg border p-4 shadow-sm">
             <p className="text-muted-foreground text-sm">
               {t('settings.integrations.sync.description')}
             </p>
@@ -302,7 +302,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
       {/* API連携 */}
       <SectionCard title={t('settings.integrations.api.title')}>
         <div className="space-y-4">
-          <div className="bg-card border-border rounded-lg border p-4">
+          <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
             <p className="text-muted-foreground text-sm">
               {t('settings.integrations.api.description')}
             </p>

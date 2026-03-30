@@ -435,7 +435,7 @@ interface RankItemOverlayProps {
 
 function RankItemOverlay({ label }: RankItemOverlayProps) {
   return (
-    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-md">
+    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-sm">
       <span className="text-foreground flex-1 text-sm">{label}</span>
       <GripVertical className="text-muted-foreground size-4" />
     </div>

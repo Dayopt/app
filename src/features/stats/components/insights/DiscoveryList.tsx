@@ -60,7 +60,7 @@ export function DiscoveryList({ discoveries, className }: DiscoveryListProps) {
       {items.map((item, i) => (
         <div
           key={`${item.category}-${item.messageKey}-${i}`}
-          className="bg-card rounded-lg px-4 py-3"
+          className="bg-card border-border-subtle rounded-lg border px-4 py-3 shadow-sm"
         >
           <p className="text-muted-foreground text-xs">{t(CATEGORY_KEYS[item.category])}</p>
           <p className="text-foreground mt-0.5 text-sm">

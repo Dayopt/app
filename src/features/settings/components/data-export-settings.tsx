@@ -58,7 +58,7 @@ export const DataExportSettings = memo(function DataExportSettings() {
       <SectionCard title={t('settings.dataControls.export.title')}>
         <div className="space-y-4">
           {/* エクスポート対象の説明 */}
-          <div className="bg-card border-border rounded-lg border p-4">
+          <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
             <h4 className="mb-2 flex items-center gap-2 text-sm font-normal">
               <FileJson className="h-4 w-4" />
               {t('settings.dataControls.export.includedDataTitle')}
@@ -111,7 +111,7 @@ export const DataExportSettings = memo(function DataExportSettings() {
           <Switch checked={autoBackup} onCheckedChange={handleAutoBackupChange} disabled />
         </LabeledRow>
         {autoBackup && (
-          <div className="bg-card border-border mt-4 rounded-lg border p-4">
+          <div className="bg-card border-border-subtle mt-4 rounded-lg border p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <History className="text-muted-foreground h-4 w-4" />
               <span className="text-sm">{t('settings.dataControls.backup.lastBackup')}</span>

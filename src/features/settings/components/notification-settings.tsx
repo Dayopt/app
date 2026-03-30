@@ -261,7 +261,7 @@ export function NotificationSettings() {
       </SectionCard>
 
       {/* ヒント情報 */}
-      <div className="bg-card border-border rounded-lg border p-4">
+      <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
         <p className="text-muted-foreground text-sm">{t('notification.settings.tip')}</p>
       </div>
     </div>

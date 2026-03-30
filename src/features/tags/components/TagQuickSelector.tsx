@@ -615,7 +615,7 @@ export function TagQuickSelector({
         aria-modal="false"
         aria-label={t('tagSelector.title')}
         className={cn(
-          'bg-card border-border absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border shadow-lg',
+          'bg-card border-border-subtle shadow-card absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border',
           'animate-in fade-in duration-150',
         )}
         style={position ? { top: position.top, left: position.left } : undefined}

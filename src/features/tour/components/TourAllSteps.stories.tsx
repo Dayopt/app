@@ -110,7 +110,7 @@ function StepWrapper({ label, children }: { label: string; children: React.React
   return (
     <div>
       <p className="text-muted-foreground mb-2 text-xs font-medium">{label}</p>
-      <div className="bg-card w-80 rounded-xl p-6 shadow-lg">{children}</div>
+      <div className="bg-card w-80 rounded-xl p-6 shadow-sm">{children}</div>
     </div>
   );
 }

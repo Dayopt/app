@@ -38,7 +38,7 @@ export function RuleInsightList({ insights, className }: RuleInsightListProps) {
         return (
           <div
             key={`${insight.metricId}-${insight.type}-${i}`}
-            className="bg-card flex items-start gap-2.5 rounded-lg px-3 py-2.5"
+            className="bg-card border-border-subtle flex items-start gap-2.5 rounded-lg border px-3 py-2.5 shadow-sm"
           >
             <Icon className={cn('mt-0.5 size-4 shrink-0', style.color)} />
             <div className="min-w-0 flex-1">

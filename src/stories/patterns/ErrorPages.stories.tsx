@@ -81,7 +81,7 @@ function Section({
 function MockRootError({ errorMessage }: { errorMessage: string }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-8">
-      <div className="bg-card border-border w-full max-w-md rounded-2xl border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-destructive mb-2 text-2xl font-bold">Something went wrong</h1>
           <p className="text-muted-foreground">
@@ -168,7 +168,7 @@ function MockCalendarError({ errorMessage }: { errorMessage: string }) {
 function MockNotFound() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-8">
-      <div className="bg-card border-border w-full max-w-md rounded-2xl border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-foreground mb-2 text-2xl font-bold">Page not found</h1>
           <p className="text-muted-foreground">
@@ -185,7 +185,7 @@ function MockNotFound() {
 function MockMaintenance() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-4">
-      <div className="bg-card border-border w-full max-w-[28rem] rounded-lg border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-[28rem] rounded-lg border p-8 shadow-sm">
         <div className="mb-6 flex justify-center">
           <div className="bg-muted flex size-16 items-center justify-center rounded-full">
             <svg

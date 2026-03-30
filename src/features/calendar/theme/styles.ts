@@ -67,7 +67,7 @@ export const calendarStyles: CalendarStyles = {
     shadow: {
       default: '', // 通常時：shadowなし（フラットデザイン）
       hover: '', // ホバー時：shadowなし
-      dragging: 'shadow-lg', // ドラッグ時：浮いていることを示す
+      dragging: 'shadow-card', // ドラッグ時：浮いていることを示す
     },
   },
 

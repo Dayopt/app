@@ -141,7 +141,7 @@ function ActivityPanelPreview({ defaultTab = 'all' }: { defaultTab?: ActivityTab
   const [activeTab, setActiveTab] = useState<ActivityTab>(defaultTab);
 
   return (
-    <div className="bg-card text-card-foreground w-80 rounded-lg shadow-md">
+    <div className="bg-card text-card-foreground shadow-card w-80 rounded-lg">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <TabsList>

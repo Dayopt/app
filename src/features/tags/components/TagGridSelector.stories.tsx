@@ -247,7 +247,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
 
             {/* ドロップダウン */}
             {groupOpen && (
-              <div className="border-border bg-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border shadow-md">
+              <div className="border-border-subtle bg-card shadow-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border">
                 <button
                   type="button"
                   onClick={() => {
@@ -435,7 +435,7 @@ function SelectorFrame({
   timeLabel?: string;
 }) {
   return (
-    <div className="bg-card w-[360px] overflow-hidden rounded-2xl shadow-lg">
+    <div className="bg-card shadow-card w-[360px] overflow-hidden rounded-2xl">
       <div className="px-4 pt-4 pb-2">
         <h2 className="text-lg font-bold">{title ?? 'タグを選択'}</h2>
         {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}

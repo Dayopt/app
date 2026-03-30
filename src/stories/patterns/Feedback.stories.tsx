@@ -72,7 +72,7 @@ export const Overview: Story = {
 
           <div className="space-y-3">
             {/* Success Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <CheckCircle2 className="text-success size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存しました</p>
@@ -83,7 +83,7 @@ export const Overview: Story = {
             </div>
 
             {/* Error Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <AlertCircle className="text-destructive size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存に失敗しました</p>
@@ -95,7 +95,7 @@ export const Overview: Story = {
             </div>
 
             {/* Info Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <Info className="text-info size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">更新があります</p>

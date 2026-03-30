@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils';
 
 /** Inspector風コンテナ（400px幅） */
 export function InspectorFrame({ children }: { children: React.ReactNode }) {
-  return <div className="bg-card w-[400px] overflow-hidden rounded-2xl shadow-lg">{children}</div>;
+  return (
+    <div className="bg-card shadow-card w-[400px] overflow-hidden rounded-2xl">{children}</div>
+  );
 }
 
 /** Plan紐付けボタン（静的表示 / Storybook用モック） */

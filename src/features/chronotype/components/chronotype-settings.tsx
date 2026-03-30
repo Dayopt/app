@@ -123,7 +123,9 @@ function TypeCard({
       onClick={onSelect}
       className={cn(
         'flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition-colors',
-        isSelected ? 'border-foreground bg-card' : 'border-border hover:border-foreground/30',
+        isSelected
+          ? 'border-border-subtle bg-card shadow-sm'
+          : 'border-border hover:border-foreground/30',
       )}
     >
       <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>

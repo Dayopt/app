@@ -37,12 +37,21 @@ function InspectorURLSyncHandler() {
 interface EntryInspectorProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
   onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレットから解除コールバック（Composition Layer から注入） */
+  onUnpinFromPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
   /** パレット登録済みチェック関数（Composition Layer から注入） */
   isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
+  /** 統計を見るコールバック（Composition Layer から注入） */
+  onViewStats?: ((tagId: string) => void) | undefined;
 }
 
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
-export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspectorProps) {
+export function EntryInspector({
+  onPinToPalette,
+  onUnpinFromPalette,
+  isPinnedInPalette,
+  onViewStats,
+}: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -104,7 +113,12 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
     );
   } else {
     content = (
-      <EntryInspectorForm onPinToPalette={onPinToPalette} isPinnedInPalette={isPinnedInPalette} />
+      <EntryInspectorForm
+        onPinToPalette={onPinToPalette}
+        onUnpinFromPalette={onUnpinFromPalette}
+        isPinnedInPalette={isPinnedInPalette}
+        onViewStats={onViewStats}
+      />
     );
   }
 
@@ -123,7 +137,7 @@ export function EntryInspector({ onPinToPalette, isPinnedInPalette }: EntryInspe
 
       {isMobile ? (
         <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DrawerContent className="bg-card z-modal flex flex-col gap-0 overflow-hidden rounded-t-xl p-0 [&>div:first-child]:hidden">
+          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-xl p-0 [&>div:first-child]:hidden">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
             <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
               <div className="bg-border h-1.5 w-16 rounded-full" />
