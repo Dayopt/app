@@ -13,7 +13,7 @@ import { computePreviousDateRange, computeStatsDateRange } from '../utils/comput
  * ⚠ computeStatsDateRange を使用して日付文字列を生成する。
  *   サーバー/クライアント間で同じクエリキーを生成し、キャッシュヒットを保証するため。
  */
-export async function prefetchStatsData() {
+export async function prefetchStatsData(options?: { tagId?: string }) {
   const helpers = await createServerHelpers();
 
   const now = new Date();
@@ -25,7 +25,7 @@ export async function prefetchStatsData() {
   const prevDateRange = computePreviousDateRange(now, 'week', serverTimezone);
 
   try {
-    await Promise.all([
+    const queries = [
       // Overview charts
       helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
       helpers.entries.getTimeByTag.prefetch(dateRange),
@@ -40,7 +40,21 @@ export async function prefetchStatsData() {
       helpers.entries.getEstimationAccuracy.prefetch(prevDateRange),
       helpers.entries.getEnergyMap.prefetch(dateRange),
       helpers.entries.getEnergyMap.prefetch(prevDateRange),
-    ]);
+    ];
+
+    // タグドリルダウン: ?tag=tagId がある場合はタグ固有クエリも並列プリフェッチ
+    if (options?.tagId) {
+      const tagDateRange = { tagId: options.tagId, ...dateRange };
+      queries.push(
+        helpers.entries.getTagCumulativeTime.prefetch(tagDateRange),
+        helpers.entries.getTagAvgFulfillment.prefetch(tagDateRange),
+        helpers.entries.getTagPlanRate.prefetch(tagDateRange),
+        helpers.entries.getTagHourlyDistribution.prefetch(tagDateRange),
+        helpers.entries.getTagDowDistribution.prefetch(tagDateRange),
+      );
+    }
+
+    await Promise.all(queries);
   } catch {
     // 認証エラー等の場合はprefetchをスキップ（白ページ防止）
     // クライアント側のtRPCがリトライ or 認証リダイレクトを処理する

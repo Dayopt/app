@@ -329,7 +329,12 @@
         "hourlyDistribution": "Hourly Distribution",
         "dayOfWeek": "Day of Week",
         "noData": "No data for this period",
-        "noChildTags": "No child tags"
+        "noChildTags": "No child tags",
+        "fulfillmentDistribution": "Fulfillment Distribution",
+        "accuracyTrend": "Estimation Accuracy Trend",
+        "recentBlocks": "Recent Blocks",
+        "deviation": "deviation",
+        "noEntries": "No entries"
       }
     },
     "nowBadge": {

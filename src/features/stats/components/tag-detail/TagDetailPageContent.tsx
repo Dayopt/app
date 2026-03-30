@@ -13,9 +13,12 @@ import { cn } from '@/lib/utils';
 
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { ChildTagBreakdown } from './ChildTagBreakdown';
+import { TagAccuracyTrendChart } from './TagAccuracyTrendChart';
 import { TagDetailSummaryCards } from './TagDetailSummaryCards';
 import { TagDowChart } from './TagDowChart';
+import { TagFulfillmentDistribution } from './TagFulfillmentDistribution';
 import { TagHourlyChart } from './TagHourlyChart';
+import { TagRecentBlocks } from './TagRecentBlocks';
 
 interface TagDetailPageContentProps {
   tagId: string;
@@ -25,7 +28,6 @@ interface TagDetailPageContentProps {
  * タグ詳細ドリルダウンビュー
  *
  * Review タブ内のサブビューとして表示される。
- * ← 戻るボタン + サマリーカード → 子タグ内訳 → 時間帯分布 → 曜日分布
  */
 export function TagDetailPageContent({ tagId }: TagDetailPageContentProps) {
   const t = useTranslations('calendar.stats.tagDetail');
@@ -76,19 +78,37 @@ export function TagDetailPageContent({ tagId }: TagDetailPageContentProps) {
             </Suspense>
           </FeatureErrorBoundary>
 
+          <FeatureErrorBoundary featureName="tag-detail-accuracy">
+            <Suspense fallback={<Skeleton className="h-48 w-full rounded-xl" />}>
+              <TagAccuracyTrendChart tagId={tagId} />
+            </Suspense>
+          </FeatureErrorBoundary>
+
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
+            <FeatureErrorBoundary featureName="tag-detail-fulfillment">
+              <Suspense fallback={<Skeleton className="h-32 w-full rounded-xl" />}>
+                <TagFulfillmentDistribution tagId={tagId} />
+              </Suspense>
+            </FeatureErrorBoundary>
+
             <FeatureErrorBoundary featureName="tag-detail-hourly">
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-xl" />}>
                 <TagHourlyChart tagId={tagId} />
               </Suspense>
             </FeatureErrorBoundary>
-
-            <FeatureErrorBoundary featureName="tag-detail-dow">
-              <Suspense fallback={<Skeleton className="h-44 w-full rounded-xl" />}>
-                <TagDowChart tagId={tagId} />
-              </Suspense>
-            </FeatureErrorBoundary>
           </div>
+
+          <FeatureErrorBoundary featureName="tag-detail-dow">
+            <Suspense fallback={<Skeleton className="h-44 w-full rounded-xl" />}>
+              <TagDowChart tagId={tagId} />
+            </Suspense>
+          </FeatureErrorBoundary>
+
+          <FeatureErrorBoundary featureName="tag-detail-recent">
+            <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
+              <TagRecentBlocks tagId={tagId} />
+            </Suspense>
+          </FeatureErrorBoundary>
         </div>
       </div>
     </div>

@@ -321,4 +321,156 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         handleTagStatsError('getChildTagBreakdown', error);
       }
     }),
+
+  // ---------------------------------------------------------------------------
+  // Tag Fulfillment Distribution
+  // ---------------------------------------------------------------------------
+
+  getTagFulfillmentDistribution: protectedProcedure
+    .meta({ description: 'タグ別充実度分布' })
+    .input(tagDateRangeInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        const { data, error } = await traceDbQuery(
+          'tag_stats.get_tag_fulfillment_distribution',
+          async () =>
+            supabase.rpc(
+              'get_tag_fulfillment_distribution' as never,
+              {
+                p_user_id: userId,
+                p_tag_id: input.tagId,
+                p_start_date: input.startDate ?? null,
+                p_end_date: input.endDate ?? null,
+              } as never,
+            ),
+        );
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to fetch tag fulfillment distribution: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const rows = (data ?? []) as Array<{ score: number; count: number }>;
+        return rows.map((row) => ({
+          score: row.score,
+          count: row.count,
+        }));
+      } catch (error) {
+        handleTagStatsError('getTagFulfillmentDistribution', error);
+      }
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Tag Accuracy Trend
+  // ---------------------------------------------------------------------------
+
+  getTagAccuracyTrend: protectedProcedure
+    .meta({ description: 'タグ別見積もり精度推移' })
+    .input(
+      tagDateRangeInput.extend({
+        bucket: z.enum(['week', 'month', 'day']).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        const { data, error } = await traceDbQuery('tag_stats.get_tag_accuracy_trend', async () =>
+          supabase.rpc(
+            'get_tag_accuracy_trend' as never,
+            {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              p_start_date: input.startDate ?? null,
+              p_end_date: input.endDate ?? null,
+              p_bucket: input.bucket ?? 'week',
+            } as never,
+          ),
+        );
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to fetch tag accuracy trend: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const rows = (data ?? []) as Array<{
+          bucket: string;
+          avg_deviation: number;
+          entry_count: number;
+        }>;
+        return rows.map((row) => ({
+          bucket: row.bucket,
+          avgDeviation: row.avg_deviation,
+          entryCount: row.entry_count,
+        }));
+      } catch (error) {
+        handleTagStatsError('getTagAccuracyTrend', error);
+      }
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Tag Recent Entries
+  // ---------------------------------------------------------------------------
+
+  getTagRecentEntries: protectedProcedure
+    .meta({ description: 'タグの直近エントリ一覧' })
+    .input(
+      z.object({
+        tagId: z.string().uuid(),
+        limit: z.number().int().min(1).max(50).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        const { data, error } = await traceDbQuery('tag_stats.get_tag_recent_entries', async () =>
+          supabase.rpc(
+            'get_tag_recent_entries' as never,
+            {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              p_limit: input.limit ?? 10,
+            } as never,
+          ),
+        );
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to fetch tag recent entries: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        const rows = (data ?? []) as Array<{
+          entry_id: string;
+          title: string | null;
+          start_time: string;
+          end_time: string;
+          duration_minutes: number;
+          planned_minutes: number | null;
+          fulfillment_score: number | null;
+        }>;
+        return rows.map((row) => ({
+          entryId: row.entry_id,
+          title: row.title,
+          startTime: row.start_time,
+          endTime: row.end_time,
+          durationMinutes: row.duration_minutes,
+          plannedMinutes: row.planned_minutes,
+          fulfillmentScore: row.fulfillment_score,
+        }));
+      } catch (error) {
+        handleTagStatsError('getTagRecentEntries', error);
+      }
+    }),
 });
