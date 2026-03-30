@@ -318,6 +318,18 @@
         "categoryTrendComparison": "期間比較",
         "categoryTagAffinity": "タグ傾向",
         "categoryConsistency": "記録の継続"
+      },
+      "tagDetail": {
+        "backToReview": "振り返り",
+        "totalTime": "合計時間",
+        "estimationAccuracy": "見積もり精度",
+        "avgFulfillment": "充実度",
+        "planningRate": "計画率",
+        "childTags": "子タグの内訳",
+        "hourlyDistribution": "よく使う時間帯",
+        "dayOfWeek": "曜日分布",
+        "noData": "この期間のデータがありません",
+        "noChildTags": "子タグはありません"
       }
     },
     "nowBadge": {

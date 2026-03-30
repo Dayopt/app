@@ -318,6 +318,18 @@
         "categoryTrendComparison": "Period comparison",
         "categoryTagAffinity": "Tag affinity",
         "categoryConsistency": "Consistency"
+      },
+      "tagDetail": {
+        "backToReview": "Review",
+        "totalTime": "Total Time",
+        "estimationAccuracy": "Estimation Accuracy",
+        "avgFulfillment": "Fulfillment",
+        "planningRate": "Planning Rate",
+        "childTags": "Child Tags",
+        "hourlyDistribution": "Hourly Distribution",
+        "dayOfWeek": "Day of Week",
+        "noData": "No data for this period",
+        "noChildTags": "No child tags"
       }
     },
     "nowBadge": {

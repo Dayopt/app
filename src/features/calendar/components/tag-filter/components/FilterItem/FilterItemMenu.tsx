@@ -157,6 +157,9 @@ export function FilterItemMenu({
         </DropdownMenuSub>
       )}
 
+      {/* --- アクション --- */}
+      <DropdownMenuSeparator />
+
       {/* マージ */}
       <DropdownMenuItem onClick={onOpenMergeModal}>
         <Merge className="mr-2 size-4" />
@@ -177,7 +180,7 @@ export function FilterItemMenu({
         </DropdownMenuItem>
       )}
 
-      {/* 削除 */}
+      {/* --- 破壊的操作 --- */}
       {onDeleteTag && (
         <>
           <DropdownMenuSeparator />
