@@ -51,7 +51,225 @@ const childTagInput = z.object({
 // Router
 // =============================================================================
 
+// =============================================================================
+// Consolidated Input
+// =============================================================================
+
+const tagOverviewInput = z.object({
+  tagId: z.string().uuid(),
+  tagName: z.string().min(1),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
+});
+
+const tagTimelineInput = z.object({
+  tagId: z.string().uuid(),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
+  bucket: z.enum(['week', 'month', 'day']).optional(),
+  recentLimit: z.number().int().min(1).max(50).optional(),
+});
+
 export const entriesTagStatisticsRouter = createTRPCRouter({
+  // ---------------------------------------------------------------------------
+  // Consolidated: Tag Overview (7 DB calls in parallel)
+  // ---------------------------------------------------------------------------
+
+  getTagOverview: protectedProcedure
+    .meta({ description: 'タグ詳細ページ用統合概要データ' })
+    .input(tagOverviewInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+        const rpcParams = {
+          p_user_id: userId,
+          p_tag_id: input.tagId,
+          p_start_date: input.startDate ?? null,
+          p_end_date: input.endDate ?? null,
+        } as never;
+
+        // コロン記法のprefixを抽出（子タグ取得用）
+        const colonIndex = input.tagName.indexOf(':');
+        const prefix = colonIndex >= 0 ? input.tagName.substring(0, colonIndex) : input.tagName;
+
+        const [
+          cumulativeRes,
+          fulfillmentRes,
+          planRateRes,
+          fulfillmentDistRes,
+          hourlyRes,
+          dowRes,
+          childRes,
+        ] = await traceDbQuery('tag_stats.get_tag_overview', () =>
+          Promise.all([
+            supabase.rpc('get_tag_cumulative_time' as never, rpcParams),
+            supabase.rpc('get_tag_avg_fulfillment' as never, rpcParams),
+            supabase.rpc('get_tag_plan_rate' as never, rpcParams),
+            supabase.rpc('get_tag_fulfillment_distribution' as never, rpcParams),
+            supabase.rpc('get_tag_hourly_distribution' as never, rpcParams),
+            supabase.rpc('get_tag_dow_distribution' as never, rpcParams),
+            supabase.rpc(
+              'get_child_tag_breakdown' as never,
+              {
+                p_user_id: userId,
+                p_prefix: prefix,
+                p_start_date: input.startDate ?? null,
+                p_end_date: input.endDate ?? null,
+              } as never,
+            ),
+          ]),
+        );
+
+        // cumulative time
+        const cumulative = cumulativeRes.data as { totalMinutes: number } | null;
+        const totalMinutes = cumulative?.totalMinutes ?? 0;
+
+        // avg fulfillment
+        const fulfillment = fulfillmentRes.data as {
+          avgFulfillment: number | null;
+          entryCount: number;
+        } | null;
+
+        // plan rate
+        const planRate = planRateRes.data as {
+          totalEntries: number;
+          plannedEntries: number;
+          planRate: number;
+        } | null;
+
+        // fulfillment distribution
+        const fulfillmentDistRows = (fulfillmentDistRes.data ?? []) as Array<{
+          score: number;
+          count: number;
+        }>;
+
+        // hourly distribution
+        const hourlyRows = (hourlyRes.data ?? []) as Array<{
+          hour: number;
+          total_minutes: number;
+        }>;
+        const hourlyMinutes: number[] = new Array(24).fill(0);
+        for (const row of hourlyRows) {
+          if (row.hour >= 0 && row.hour < 24) hourlyMinutes[row.hour] = row.total_minutes;
+        }
+
+        // dow distribution
+        const dowRows = (dowRes.data ?? []) as Array<{ dow: number; total_minutes: number }>;
+        const dowMinutes: number[] = new Array(7).fill(0);
+        for (const row of dowRows) {
+          if (row.dow >= 0 && row.dow < 7) dowMinutes[row.dow] = row.total_minutes;
+        }
+        const mondayFirst = [1, 2, 3, 4, 5, 6, 0];
+
+        // child tags
+        const childRows = (childRes.data ?? []) as Array<{
+          tag_id: string;
+          tag_name: string;
+          tag_color: string;
+          hours: number;
+        }>;
+
+        return {
+          totalMinutes,
+          entryCount: fulfillment?.entryCount ?? 0,
+          avgFulfillment: fulfillment?.avgFulfillment ?? null,
+          totalEntries: planRate?.totalEntries ?? 0,
+          plannedEntries: planRate?.plannedEntries ?? 0,
+          planRate: planRate?.planRate ?? 0,
+          fulfillmentDist: fulfillmentDistRows,
+          hourly: hourlyMinutes.map((minutes, hour) => ({
+            hour,
+            minutes: Math.round(minutes * 10) / 10,
+          })),
+          dow: mondayFirst.map((dayIndex) => ({
+            dow: dayIndex,
+            minutes: Math.round((dowMinutes[dayIndex] ?? 0) * 10) / 10,
+          })),
+          childTags: childRows.map((row) => ({
+            tagId: row.tag_id,
+            name: row.tag_name,
+            color: row.tag_color,
+            hours: row.hours,
+          })),
+        };
+      } catch (error) {
+        handleTagStatsError('getTagOverview', error);
+      }
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Consolidated: Tag Timeline (2 DB calls in parallel)
+  // ---------------------------------------------------------------------------
+
+  getTagTimeline: protectedProcedure
+    .meta({ description: 'タグ詳細ページ用タイムラインデータ' })
+    .input(tagTimelineInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        const [trendRes, recentRes] = await traceDbQuery('tag_stats.get_tag_timeline', () =>
+          Promise.all([
+            supabase.rpc(
+              'get_tag_accuracy_trend' as never,
+              {
+                p_user_id: userId,
+                p_tag_id: input.tagId,
+                p_start_date: input.startDate ?? null,
+                p_end_date: input.endDate ?? null,
+                p_bucket: input.bucket ?? 'week',
+              } as never,
+            ),
+            supabase.rpc(
+              'get_tag_recent_entries' as never,
+              {
+                p_user_id: userId,
+                p_tag_id: input.tagId,
+                p_limit: input.recentLimit ?? 8,
+              } as never,
+            ),
+          ]),
+        );
+
+        // accuracy trend
+        const trendRows = (trendRes.data ?? []) as Array<{
+          bucket: string;
+          avg_deviation: number;
+          entry_count: number;
+        }>;
+
+        // recent entries
+        const recentRows = (recentRes.data ?? []) as Array<{
+          entry_id: string;
+          title: string | null;
+          start_time: string;
+          end_time: string;
+          duration_minutes: number;
+          planned_minutes: number | null;
+          fulfillment_score: number | null;
+        }>;
+
+        return {
+          trend: trendRows.map((row) => ({
+            bucket: row.bucket,
+            avgDeviation: row.avg_deviation,
+            entryCount: row.entry_count,
+          })),
+          recentEntries: recentRows.map((row) => ({
+            entryId: row.entry_id,
+            title: row.title,
+            startTime: row.start_time,
+            endTime: row.end_time,
+            durationMinutes: row.duration_minutes,
+            plannedMinutes: row.planned_minutes,
+            fulfillmentScore: row.fulfillment_score,
+          })),
+        };
+      } catch (error) {
+        handleTagStatsError('getTagTimeline', error);
+      }
+    }),
+
   // ---------------------------------------------------------------------------
   // Tag Cumulative Time
   // ---------------------------------------------------------------------------
