@@ -16,7 +16,7 @@ import { EntryCard, isNewEntry, setInspectorAnchorRect } from '@/features/entry'
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { filterEntriesByDate, sortTimedEntries } from '../../utils/entryPositioning';
+import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
   date,
