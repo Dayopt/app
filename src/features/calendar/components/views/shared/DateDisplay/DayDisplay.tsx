@@ -71,7 +71,7 @@ export const DayDisplay = memo<DayDisplayProps>(function DayDisplay({
   const headerClasses = generateHeaderClasses(isToday, isSelected, isWeekend, onClick, className);
 
   // 日付の表示形式
-  const dateDisplay = formatDate(date, format);
+  const dateDisplay = formatDate(date, format, locale);
 
   return onClick ? (
     <button

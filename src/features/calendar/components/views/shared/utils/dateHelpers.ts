@@ -6,40 +6,28 @@
  */
 
 /**
- * 日付をフォーマット（カレンダービュー用）
- *
- * 日本語固有のフォーマット（「1日(月)」など）
+ * 日付をフォーマット（カレンダービュー用・ロケール対応）
  */
-export function formatDate(date: Date, format: 'short' | 'long' | 'numeric' = 'short'): string {
-  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-  const months = [
-    '1月',
-    '2月',
-    '3月',
-    '4月',
-    '5月',
-    '6月',
-    '7月',
-    '8月',
-    '9月',
-    '10月',
-    '11月',
-    '12月',
-  ];
-
-  const day = date.getDate();
-  const weekday = weekdays[date.getDay()];
-  const month = months[date.getMonth()];
+export function formatDate(
+  date: Date,
+  format: 'short' | 'long' | 'numeric' = 'short',
+  locale: string = 'ja',
+): string {
+  const dateLocale = locale === 'ja' ? 'ja-JP' : 'en-US';
 
   switch (format) {
     case 'numeric':
-      return `${day}`;
+      return `${date.getDate()}`;
     case 'short':
-      return `${day}日(${weekday})`;
+      return date.toLocaleDateString(dateLocale, { day: 'numeric', weekday: 'short' });
     case 'long':
-      return `${month}${day}日(${weekday})`;
+      return date.toLocaleDateString(dateLocale, {
+        month: 'short',
+        day: 'numeric',
+        weekday: 'short',
+      });
     default:
-      return `${day}`;
+      return `${date.getDate()}`;
   }
 }
 
