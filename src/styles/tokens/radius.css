@@ -1,10 +1,8 @@
 /* ============================================
- * ボーダー半径（8pxグリッド準拠）
+ * ボーダー半径（4段階: 0 / 8 / 16 / full）
  * ============================================ */
 @theme {
-  --radius-sm: 0.25rem; /* 4px - 例外: 小要素用 */
-  --radius-md: 0.5rem; /* 8px */
-  --radius-xl: 1rem; /* 16px */
-  --radius-2xl: 1.5rem; /* 24px */
+  --radius-lg: 0.5rem; /* 8px  — 標準 */
+  --radius-2xl: 1rem; /* 16px — modal, dialog */
   --radius-full: 9999px;
 }
