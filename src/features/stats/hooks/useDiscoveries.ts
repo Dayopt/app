@@ -2,75 +2,62 @@
 
 import { useMemo } from 'react';
 
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-
 import { evaluateDiscoveries } from '../lib/discoveries';
-import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import type { DiscoveryInput } from '../types/discovery.types';
-import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
+import type { DiscoveryInput, StatsOverviewData } from '../types/discovery.types';
+import type { StatsPageData } from '../types/metrics.types';
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+/** StatsPageData.overview → StatsOverviewData に変換 */
+function toOverviewData(o: StatsPageData['overview']): StatsOverviewData {
+  return {
+    cumulativeTime: { totalMinutes: o.totalMinutes },
+    avgFulfillment: { avgFulfillment: o.avgFulfillment, entryCount: o.entryCount },
+    entryRate: {
+      totalEntries: o.totalEntries,
+      plannedEntries: o.plannedEntries,
+      entryRate: o.planRate,
+    },
+    contextSwitches: { totalSwitches: 0, avgPerDay: 0 },
+    blankRate: { availableMinutes: 0, scheduledMinutes: 0, blankMinutes: 0, blankRate: 0 },
+  };
+}
 
 // =============================================================================
 // Hook
 // =============================================================================
 
 /**
- * useDiscoveries — 「小さな発見」の取得・評価を一括処理
+ * useDiscoveries — 「小さな発見」の評価
  *
- * 既存の tRPC クエリを再利用（TanStack Query キャッシュ共有）。
- * Review/Progress タブ訪問済みなら追加リクエスト 0。
+ * 統合クエリ StatsPageData から全データを受け取り、ルールベースの発見を評価。
  */
-export function useDiscoveries() {
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
-
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-  const prevDateRange = useMemo(
-    () => computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  // 既存エンドポイントを再利用（キャッシュ共有で重複リクエストなし）
-  const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
-  const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
-  const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
-  const overview = api.entries.getStatsOverview.useQuery(dateRange);
-  const prevOverview = api.entries.getStatsOverview.useQuery(prevDateRange);
-
-  const isLoading =
-    energyMap.isPending ||
-    estimationAccuracy.isPending ||
-    timeByTag.isPending ||
-    overview.isPending;
-
+export function useDiscoveries(pageData: StatsPageData | undefined) {
   const discoveries = useMemo(() => {
-    if (!energyMap.data || !overview.data) return [];
+    if (!pageData) return [];
 
     const input: DiscoveryInput = {
-      energyMap: energyMap.data,
-      estimationAccuracy: (estimationAccuracy.data ?? []).map((row) => ({
+      energyMap: pageData.energyMap,
+      estimationAccuracy: pageData.estimationAccuracy.map((row) => ({
         tagId: row.tagId,
         tagName: row.tagName,
         avgDeviationMinutes: row.avgDeviationMinutes,
         entryCount: row.entryCount,
       })),
-      timeByTag: (timeByTag.data ?? []).map((row) => ({
+      timeByTag: pageData.timeByTag.map((row) => ({
         tagId: row.tagId,
         name: row.name,
         hours: row.hours,
         color: row.color,
       })),
-      overview: overview.data,
-      prevOverview: prevOverview.data ?? null,
+      overview: toOverviewData(pageData.overview),
+      prevOverview: toOverviewData(pageData.prevOverview),
     };
 
     return evaluateDiscoveries(input);
-  }, [energyMap.data, estimationAccuracy.data, timeByTag.data, overview.data, prevOverview.data]);
+  }, [pageData]);
 
-  return { discoveries, isLoading };
+  return { discoveries, isLoading: !pageData };
 }

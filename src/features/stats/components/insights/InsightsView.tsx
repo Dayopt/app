@@ -6,18 +6,19 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
 import { useDiscoveries } from '../../hooks/useDiscoveries';
+import { useStatsPageData } from '../../hooks/useStatsPageData';
 import type { StatsViewProps } from '../../types/stats.types';
 import { DiscoveryList } from './DiscoveryList';
 
 /**
  * InsightsView — 「小さな発見」ビュー（Insights タブ）
  *
- * ルールベースのパターン観察を静かに表示する。
- * 押しつけない。見たいときに見る。
+ * 統合クエリ getStatsPageData からデータを取得し、ルールベースの発見を評価。
  */
 export function InsightsView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats.discoveries');
-  const { discoveries, isLoading } = useDiscoveries();
+  const { data: pageData } = useStatsPageData();
+  const { discoveries, isLoading } = useDiscoveries(pageData);
 
   if (isLoading) {
     return (

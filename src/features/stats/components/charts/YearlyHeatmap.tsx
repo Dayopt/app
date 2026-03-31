@@ -1,27 +1,22 @@
 'use client';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import CalendarHeatmap from 'react-calendar-heatmap';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
 
 import { formatHours } from '../../utils/formatHours';
 
-import 'react-calendar-heatmap/dist/styles.css';
-
-type HeatmapValue = {
-  date: string;
-  hours: number;
-};
-
-/** 年間の日別記録をGitHub草風カレンダーヒートマップで表示 */
+/**
+ * 年間ヒートマップ（CSS grid 実装、ライブラリ不使用）
+ *
+ * GitHub 風の 53列×7行グリッド。年ナビゲーション内蔵。
+ * getDailyHours は年パラメータが動的なため統合クエリに含められず、個別 useQuery を維持。
+ */
 export function YearlyHeatmap() {
   const t = useTranslations('calendar.stats.charts');
   const currentYear = new Date().getFullYear();
@@ -29,126 +24,114 @@ export function YearlyHeatmap() {
 
   const { data, isPending } = api.entries.getDailyHours.useQuery({ year });
 
-  const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year, 11, 31);
+  const totalHours = (data ?? []).reduce((sum, d) => sum + (d.hours ?? 0), 0);
 
-  const values: HeatmapValue[] = data ?? [];
-  const totalHours = values.reduce((sum, v) => sum + v.hours, 0);
+  // 日付 → hours のマップ
+  const hoursMap = new Map<string, number>();
+  for (const d of data ?? []) {
+    // DB関数は 'day' キー、型によっては 'date' キーの場合もある
+    const key = (d as { day?: string; date?: string }).day ?? (d as { date?: string }).date ?? '';
+    hoursMap.set(key, d.hours);
+  }
 
-  if (isPending) {
-    return (
-      <Card className="border-none">
-        <CardHeader>
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-40" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-32 w-full" />
-        </CardContent>
-      </Card>
-    );
+  // グリッドセル生成: 1/1 から 12/31
+  const jan1 = new Date(year, 0, 1);
+  const dec31 = new Date(year, 11, 31);
+  const startDow = jan1.getDay(); // 0=Sun
+
+  // 全セル（パディング含む）
+  const cells: Array<{ date: string | null; hours: number }> = [];
+  // 先頭パディング（1/1 が日曜でない場合）
+  for (let i = 0; i < startDow; i++) {
+    cells.push({ date: null, hours: 0 });
+  }
+  // 各日
+  const d = new Date(jan1);
+  while (d <= dec31) {
+    const dateStr = d.toISOString().split('T')[0]!;
+    cells.push({ date: dateStr, hours: hoursMap.get(dateStr) ?? 0 });
+    d.setDate(d.getDate() + 1);
+  }
+
+  // 色スケール
+  function getColorClass(hours: number, hasDate: boolean): string {
+    if (!hasDate) return 'bg-transparent';
+    if (hours === 0) return 'bg-muted';
+    if (hours < 1) return 'bg-heatmap-scale-1';
+    if (hours < 3) return 'bg-heatmap-scale-2';
+    if (hours < 5) return 'bg-heatmap-scale-3';
+    return 'bg-heatmap-scale-4';
   }
 
   return (
     <Card className="border-none">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div>
-          <CardTitle>{t('yearlyGrid')}</CardTitle>
-          <CardDescription>
-            {year} - {t('yearlyTotal', { hours: formatHours(totalHours) })}
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            icon
-            onClick={() => setYear(year - 1)}
-            disabled={year <= 2020}
-            aria-label="Previous year"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <span className="min-w-16 text-center text-sm font-normal">{year}</span>
-          <Button
-            variant="ghost"
-            icon
-            onClick={() => setYear(year + 1)}
-            disabled={year >= currentYear}
-            aria-label="Next year"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>{t('yearlyGrid')}</CardTitle>
+            <CardDescription>
+              {isPending ? '...' : t('yearlyTotal', { hours: formatHours(totalHours) })}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-8"
+              onClick={() => setYear((y) => y - 1)}
+              disabled={year <= 2020}
+              aria-label="Previous year"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <span className="text-foreground min-w-12 text-center text-sm font-medium">{year}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-8"
+              onClick={() => setYear((y) => y + 1)}
+              disabled={year >= currentYear}
+              aria-label="Next year"
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="yearly-heatmap -mx-2 overflow-x-auto px-2 sm:mx-0 sm:overflow-visible sm:px-0">
-          <div className="min-w-[650px]">
-            <CalendarHeatmap
-              startDate={startDate}
-              endDate={endDate}
-              values={values}
-              classForValue={(value) => {
-                const v = value as HeatmapValue | undefined;
-                if (!v || !v.hours || v.hours === 0) {
-                  return 'color-empty';
-                }
-                if (v.hours < 1) return 'color-scale-1';
-                if (v.hours < 3) return 'color-scale-2';
-                if (v.hours < 5) return 'color-scale-3';
-                return 'color-scale-4';
+        {isPending ? (
+          <Skeleton className="h-24 w-full" />
+        ) : (
+          <>
+            <div
+              className="grid gap-[2px]"
+              style={{
+                gridTemplateColumns: 'repeat(53, 1fr)',
+                gridTemplateRows: 'repeat(7, 1fr)',
+                gridAutoFlow: 'column',
               }}
-              titleForValue={(value) => {
-                const v = value as HeatmapValue | undefined;
-                if (!v || !v.date) return '';
-                return `${v.date}: ${formatHours(v.hours || 0)}`;
-              }}
-              showWeekdayLabels
-              gutterSize={2}
-            />
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="text-muted-foreground mt-4 flex items-center justify-end gap-2 text-xs">
-          <span>{t('yearlyLess')}</span>
-          <div className="flex gap-1">
-            <div className={cn('bg-muted size-3 rounded-lg')} />
-            <div className={cn('bg-heatmap-scale-1 size-3 rounded-lg')} />
-            <div className={cn('bg-heatmap-scale-2 size-3 rounded-lg')} />
-            <div className={cn('bg-heatmap-scale-3 size-3 rounded-lg')} />
-            <div className={cn('bg-heatmap-scale-4 size-3 rounded-lg')} />
-          </div>
-          <span>{t('yearlyMore')}</span>
-        </div>
+            >
+              {cells.map((cell, i) => (
+                <div
+                  key={i}
+                  className={`aspect-square rounded-sm ${getColorClass(cell.hours, cell.date !== null)}`}
+                  title={cell.date ? `${cell.date}: ${formatHours(cell.hours)}` : undefined}
+                />
+              ))}
+            </div>
+            {/* 凡例 */}
+            <div className="mt-2 flex items-center justify-end gap-1 text-xs">
+              <span className="text-muted-foreground">{t('yearlyLess')}</span>
+              <div className="bg-muted size-3 rounded-sm" />
+              <div className="bg-heatmap-scale-1 size-3 rounded-sm" />
+              <div className="bg-heatmap-scale-2 size-3 rounded-sm" />
+              <div className="bg-heatmap-scale-3 size-3 rounded-sm" />
+              <div className="bg-heatmap-scale-4 size-3 rounded-sm" />
+              <span className="text-muted-foreground">{t('yearlyMore')}</span>
+            </div>
+          </>
+        )}
       </CardContent>
-
-      <style jsx global>{`
-        .yearly-heatmap .react-calendar-heatmap {
-          font-size: 10px;
-        }
-        .yearly-heatmap .react-calendar-heatmap text {
-          fill: var(--color-muted-foreground);
-        }
-        .yearly-heatmap .react-calendar-heatmap .color-empty {
-          fill: var(--color-muted);
-        }
-        .yearly-heatmap .react-calendar-heatmap .color-scale-1 {
-          fill: var(--heatmap-scale-1);
-        }
-        .yearly-heatmap .react-calendar-heatmap .color-scale-2 {
-          fill: var(--heatmap-scale-2);
-        }
-        .yearly-heatmap .react-calendar-heatmap .color-scale-3 {
-          fill: var(--heatmap-scale-3);
-        }
-        .yearly-heatmap .react-calendar-heatmap .color-scale-4 {
-          fill: var(--heatmap-scale-4);
-        }
-        .yearly-heatmap .react-calendar-heatmap rect:hover {
-          stroke: var(--foreground);
-          stroke-width: 1px;
-        }
-      `}</style>
     </Card>
   );
 }

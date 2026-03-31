@@ -1,57 +1,33 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
-
-import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
 import { formatHours } from '../../utils/formatHours';
 
-const chartConfig = {
-  hours: {
-    label: 'Hours',
-    color: 'var(--primary)',
-  },
-} satisfies ChartConfig;
+const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0];
 
-/** 曜日別の記録時間を棒グラフで表示 */
-export function DayOfWeekChart() {
+interface DayOfWeekChartProps {
+  data: Array<{ dow: number; totalMinutes: number }>;
+}
+
+/**
+ * 曜日別の記録時間を縦棒グラフで表示（CSS実装、ライブラリ不使用）
+ */
+export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
   const t = useTranslations('calendar.stats.charts');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-  const queryInput = dateRange;
-  const { data, isPending } = api.entries.getDayOfWeekDistribution.useQuery(queryInput);
 
-  if (isPending) {
-    return (
-      <Card className="border-none">
-        <CardHeader>
-          <CardTitle>{t('dayOfWeek')}</CardTitle>
-          <CardDescription>{t('dayOfWeekDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-48 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const dowMap = new Map(data.map((d) => [d.dow, d.totalMinutes]));
+  const ordered = MONDAY_FIRST.map((dow) => ({
+    day: DOW_LABELS[dow] ?? '',
+    hours: (dowMap.get(dow) ?? 0) / 60,
+  }));
 
-  if (!data || data.length === 0) {
+  const hasData = ordered.some((d) => d.hours > 0);
+
+  if (!hasData) {
     return (
       <Card className="border-none">
         <CardHeader>
@@ -67,41 +43,41 @@ export function DayOfWeekChart() {
     );
   }
 
-  const firstItem = data[0];
-  const maxDay = firstItem
-    ? data.reduce((max, item) => (item.hours > max.hours ? item : max), firstItem)
-    : undefined;
-
-  const weekdayHours = data.slice(0, 5).reduce((sum, item) => sum + item.hours, 0);
-  const weekendHours = data.slice(5).reduce((sum, item) => sum + item.hours, 0);
+  const maxHours = Math.max(...ordered.map((d) => d.hours));
+  const busiest = ordered.reduce((max, d) => (d.hours > max.hours ? d : max), ordered[0]!);
+  const weekdayHours = ordered.slice(0, 5).reduce((sum, d) => sum + d.hours, 0);
+  const weekendHours = ordered.slice(5).reduce((sum, d) => sum + d.hours, 0);
 
   return (
     <Card className="border-none">
       <CardHeader>
         <CardTitle>{t('dayOfWeek')}</CardTitle>
         <CardDescription>
-          {t('dayOfWeekBusiest', {
-            day: maxDay?.day ?? '',
-            hours: formatHours(maxDay?.hours ?? 0),
-          })}
+          {t('dayOfWeekBusiest', { day: busiest.day, hours: formatHours(busiest.hours) })}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={data} margin={{ left: 0, right: 16 }}>
-            <XAxis dataKey="day" tickLine={false} tickMargin={10} axisLine={false} />
-            <YAxis hide />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent formatter={(value) => formatHours(Number(value))} hideLabel />
-              }
-            />
-            <Bar dataKey="hours" fill="var(--color-hours)" radius={5} />
-          </BarChart>
-        </ChartContainer>
-
-        <div className="text-muted-foreground mt-2 flex justify-center gap-4 text-xs">
+        <div className="flex h-32 items-end gap-1">
+          {ordered.map((d) => {
+            const pct = maxHours > 0 ? (d.hours / maxHours) * 100 : 0;
+            return (
+              <div
+                key={d.day}
+                className="flex flex-1 flex-col items-center gap-1"
+                title={`${d.day}: ${formatHours(d.hours)}`}
+              >
+                <div className="flex w-full flex-1 items-end">
+                  <div
+                    className="bg-primary w-full rounded-t-sm transition-all"
+                    style={{ height: `${Math.max(pct, 2)}%` }}
+                  />
+                </div>
+                <span className="text-muted-foreground text-xs">{d.day}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-muted-foreground mt-3 flex justify-center gap-4 text-xs">
           <span>{t('weekdays', { hours: formatHours(weekdayHours) })}</span>
           <span>{t('weekends', { hours: formatHours(weekendHours) })}</span>
         </div>

@@ -2,15 +2,11 @@
 
 import { TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
+import { useStatsPageData } from '../../hooks/useStatsPageData';
 import type { StatsViewProps } from '../../types/stats.types';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
 import { DayOfWeekChart } from '../charts/DayOfWeekChart';
 import { EnergyMapHeatmap } from '../charts/EnergyMapHeatmap';
 import { HourlyDistributionChart } from '../charts/HourlyDistributionChart';
@@ -20,27 +16,18 @@ import { YearlyHeatmap } from '../charts/YearlyHeatmap';
 /**
  * ProgressView - 進捗ビュー（Progress タブ）
  *
- * 累積・長期トレンド。ヒートマップ + 月次トレンド + 時間帯分布 + 曜日別。
+ * 統合クエリ getStatsPageData から全データを取得し、チャートに props で配る。
+ * YearlyHeatmap のみ年ナビゲーションがあるため自前 useQuery を維持。
  */
 export function ProgressView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const { data: pageData, isPending, isFetching, isError } = useStatsPageData();
 
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  // TanStack Query キャッシュ共有: StatsView と同じクエリのため追加リクエストは発生しない
-  const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
-  const isAllLoaded = !timeByTag.isPending;
-  const isFetching = timeByTag.isFetching;
-  const hasError = timeByTag.isError;
   const hasNoData =
-    isAllLoaded && !isFetching && !hasError && (!timeByTag.data || timeByTag.data.length === 0);
+    !isPending &&
+    !isFetching &&
+    !isError &&
+    (!pageData?.timeByTag || pageData.timeByTag.length === 0);
 
   if (hasNoData) {
     return (
@@ -63,13 +50,13 @@ export function ProgressView({ className }: StatsViewProps) {
           <YearlyHeatmap />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <MonthlyTrendChart />
-            <DayOfWeekChart />
+            <MonthlyTrendChart data={pageData?.monthlyTrend ?? []} />
+            <DayOfWeekChart data={pageData?.dow ?? []} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <HourlyDistributionChart />
-            <EnergyMapHeatmap />
+            <HourlyDistributionChart data={pageData?.hourly ?? []} />
+            <EnergyMapHeatmap data={pageData?.energyMap ?? []} />
           </div>
         </div>
       </div>

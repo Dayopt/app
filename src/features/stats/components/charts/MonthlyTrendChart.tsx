@@ -1,49 +1,22 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
-
-import { Area, AreaChart, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { computeMonthCount } from '../../utils/computeDateRange';
 import { formatHours } from '../../utils/formatHours';
 
-const chartConfig = {
-  hours: {
-    label: 'Hours',
-    color: 'var(--primary)',
-  },
-} satisfies ChartConfig;
+interface MonthlyTrendChartProps {
+  data: Array<{ month: string; hours: number }>;
+}
 
-/** 月次の記録時間トレンドをエリアチャートで表示 */
-export function MonthlyTrendChart() {
+/**
+ * 月次トレンドを SVG 折れ線 + グラデーション塗りで表示（ライブラリ不使用）
+ */
+export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
   const t = useTranslations('calendar.stats.charts');
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const months = useMemo(() => computeMonthCount(granularity), [granularity]);
-  const queryInput = months ? { months } : undefined;
-  const { data, isPending } = api.entries.getMonthlyTrend.useQuery(queryInput);
 
-  if (isPending) {
-    return (
-      <Card className="border-none">
-        <CardHeader>
-          <CardTitle>{t('monthlyTrend')}</CardTitle>
-          <CardDescription>{t('monthlyTrendDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-48 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
     return (
       <Card className="border-none">
         <CardHeader>
@@ -59,15 +32,37 @@ export function MonthlyTrendChart() {
     );
   }
 
-  const totalHours = data.reduce((sum, item) => sum + item.hours, 0);
-  const avgHours = totalHours / data.length;
-  const lastMonth = data[data.length - 1];
-  const prevMonth = data[data.length - 2];
+  const maxHours = Math.max(...data.map((d) => d.hours), 1);
+  const totalHours = data.reduce((sum, d) => sum + d.hours, 0);
+  const avgHours = data.length > 0 ? totalHours / data.length : 0;
 
-  let trendText = '';
-  if (lastMonth && prevMonth && prevMonth.hours > 0) {
-    const change = ((lastMonth.hours - prevMonth.hours) / prevMonth.hours) * 100;
-    trendText = change >= 0 ? `+${change.toFixed(0)}%` : `${change.toFixed(0)}%`;
+  // SVG 座標
+  const W = 300;
+  const H = 120;
+  const PAD_X = 10;
+  const PAD_TOP = 10;
+  const PAD_BOTTOM = 24;
+
+  const points = data.map((d, i) => ({
+    x: PAD_X + (i / Math.max(data.length - 1, 1)) * (W - PAD_X * 2),
+    y: PAD_TOP + (1 - d.hours / maxHours) * (H - PAD_TOP - PAD_BOTTOM),
+    label: d.month.slice(-2),
+    hours: d.hours,
+  }));
+
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const firstPoint = points[0]!;
+  const lastPoint = points[points.length - 1]!;
+  const fillPath = `M${firstPoint.x},${firstPoint.y} ${points.map((p) => `L${p.x},${p.y}`).join(' ')} L${lastPoint.x},${H - PAD_BOTTOM} L${firstPoint.x},${H - PAD_BOTTOM} Z`;
+
+  let momText = '';
+  if (data.length >= 2) {
+    const last = data[data.length - 1]!.hours;
+    const prev = data[data.length - 2]!.hours;
+    if (prev > 0) {
+      const change = ((last - prev) / prev) * 100;
+      momText = t('monthlyMoM', { change: `${change > 0 ? '+' : ''}${change.toFixed(0)}%` });
+    }
   }
 
   return (
@@ -75,50 +70,44 @@ export function MonthlyTrendChart() {
       <CardHeader>
         <CardTitle>{t('monthlyTrend')}</CardTitle>
         <CardDescription>
-          {t('monthlyAvg', { avg: formatHours(avgHours) })}{' '}
-          {trendText && t('monthlyMoM', { change: trendText })}
+          {t('monthlyAvg', { avg: formatHours(avgHours) })}
+          {momText && ` ${momText}`}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
-          <AreaChart
-            accessibilityLayer
-            data={data}
-            margin={{ left: 0, right: 16, top: 10, bottom: 0 }}
-          >
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value: string) => value}
-            />
-            <YAxis hide />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  formatter={(value) => formatHours(Number(value))}
-                  labelFormatter={(label) => `${label}`}
-                />
-              }
-            />
-            <defs>
-              <linearGradient id="fillHours" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-hours)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-hours)" stopOpacity={0.1} />
-              </linearGradient>
-            </defs>
-            <Area
-              dataKey="hours"
-              type="monotone"
-              fill="url(#fillHours)"
-              stroke="var(--color-hours)"
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ChartContainer>
-
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={t('monthlyTrend')}>
+          <defs>
+            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          <path d={fillPath} fill="url(#trendFill)" />
+          <polyline
+            points={polyline}
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {points.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--primary)">
+              <title>{`${p.label}: ${formatHours(p.hours)}`}</title>
+            </circle>
+          ))}
+          {points.map((p, i) => (
+            <text
+              key={i}
+              x={p.x}
+              y={H - 4}
+              textAnchor="middle"
+              className="fill-muted-foreground text-[10px]"
+            >
+              {p.label}
+            </text>
+          ))}
+        </svg>
         <div className="text-muted-foreground mt-2 text-center text-xs">
           {t('annualTotal', { total: formatHours(totalHours) })}
         </div>
