@@ -20,7 +20,10 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
 
   return (
     <div
-      className={cn('border-border flex items-center rounded-full border', className)}
+      className={cn(
+        'border-border flex items-center overflow-hidden rounded-full border',
+        className,
+      )}
       role="tablist"
       aria-label={tAria('pageNavigation')}
     >
@@ -29,13 +32,13 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'calendar'}
         onClick={onCalendarClick}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-l-full px-3 text-sm transition-colors',
+          'flex h-8 items-center justify-center gap-2 px-3 text-sm transition-colors',
           activePage === 'calendar'
             ? 'bg-primary-state-selected text-foreground font-medium'
-            : 'text-muted-foreground hover:bg-state-hover hover:rounded-r-none',
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <CalendarDays className="size-3.5" />
+        <CalendarDays className="size-4" />
         <span>{t('calendar')}</span>
       </button>
       <button
@@ -43,13 +46,13 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'stats'}
         onClick={onStatsClick}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-r-full px-3 text-sm transition-colors',
+          'flex h-8 items-center justify-center gap-2 px-3 text-sm transition-colors',
           activePage === 'stats'
             ? 'bg-primary-state-selected text-foreground font-medium'
-            : 'text-muted-foreground hover:bg-state-hover hover:rounded-l-none',
+            : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
-        <BarChart3 className="size-3.5" />
+        <BarChart3 className="size-4" />
         <span>{t('stats')}</span>
       </button>
     </div>
