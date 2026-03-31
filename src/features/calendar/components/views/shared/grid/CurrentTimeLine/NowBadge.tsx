@@ -35,7 +35,7 @@ export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
   const arrow = zoneLevel === 'deep' ? '↗' : '↘';
 
   return (
-    <span className={`${colorClass} absolute -top-5 left-2 text-sm font-medium whitespace-nowrap`}>
+    <span className={`${colorClass} absolute -top-6 left-2 text-sm font-medium whitespace-nowrap`}>
       {arrow} {label}
     </span>
   );

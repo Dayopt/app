@@ -103,7 +103,7 @@ export function TagDeleteStrategyDialog({
 
             {availableTags.length > 5 ? (
               <div className="relative">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
