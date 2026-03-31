@@ -456,7 +456,7 @@ export function useDragSelection({
       });
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
+    const onTouchEnd = (_e: TouchEvent) => {
       clearTimer();
       const p = propsRef.current;
       const handler = p.onDoubleClickProp || p.onTimeRangeSelect;
