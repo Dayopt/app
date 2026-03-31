@@ -154,7 +154,7 @@ export const GridPreview: Story = {
     valueParts: { primary: '', unit: '' },
   },
   render: () => (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <MetricCard
         label="Total Time"
         valueParts={{ primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' }}
@@ -223,7 +223,7 @@ export const GridLoading: Story = {
     valueParts: { primary: '', unit: '' },
   },
   render: () => (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       <MetricCard
         label="Total Time"
         valueParts={{ primary: '-', unit: '' }}
@@ -247,7 +247,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Default（基本表示）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">Default（基本表示）</p>
         <MetricCard
           label="Entry Rate"
           valueParts={{ primary: '72', unit: '%' }}
@@ -257,7 +257,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           TrendUpPositive（上昇・良い変化）
         </p>
         <MetricCard
@@ -270,7 +270,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           TrendDownPositive（下降・良い変化）
         </p>
         <MetricCard
@@ -281,7 +281,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           TrendUpNegative（上昇・悪い変化）
         </p>
         <MetricCard
@@ -292,7 +292,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           TrendDownNegative（下降・悪い変化）
         </p>
         <MetricCard
@@ -303,7 +303,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">TrendFlat（横ばい）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">TrendFlat（横ばい）</p>
         <MetricCard
           label="Context Switches"
           valueParts={{ primary: '3.2', unit: '' }}
@@ -312,13 +312,13 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           Loading（ローディング状態）
         </p>
         <MetricCard label="Entry Rate" valueParts={{ primary: '-', unit: '' }} isLoading />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">NoData（データなし）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">NoData（データなし）</p>
         <MetricCard
           label="Estimation Accuracy"
           valueParts={{ primary: '-', unit: '' }}
@@ -326,7 +326,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           MinutesValue（時間表示・分）
         </p>
         <MetricCard
@@ -337,7 +337,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           HoursMinutesValue（時間表示・時間+分）
         </p>
         <MetricCard
@@ -347,7 +347,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           FulfillmentValue（充実度スコア）
         </p>
         <MetricCard
@@ -358,7 +358,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           HeroTotalTime（Hero: 合計時間）
         </p>
         <MetricCard
@@ -370,7 +370,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           HeroStreak（Hero: ストリーク）
         </p>
         <MetricCard
@@ -381,10 +381,10 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           GridPreview（8カード横並び）
         </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MetricCard
             label="Total Time"
             valueParts={{ primary: '38', unit: 'h', secondary: '15', secondaryUnit: 'm' }}
@@ -445,10 +445,10 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           GridLoading（全ローディング状態）
         </p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MetricCard
             label="Total Time"
             valueParts={{ primary: '-', unit: '' }}

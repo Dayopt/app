@@ -27,7 +27,7 @@ export function TrendBadge({ trend, size = 'sm', className }: TrendBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-0.5 font-medium',
+        'inline-flex items-center gap-1 font-medium',
         size === 'sm' ? 'text-sm' : 'text-base',
         trend.isPositive ? 'text-success' : 'text-destructive',
         className,

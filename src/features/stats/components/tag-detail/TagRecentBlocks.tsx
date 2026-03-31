@@ -83,7 +83,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
             return (
               <div
                 key={entry.entryId}
-                className="border-border flex items-center gap-3 py-2.5 not-last:border-b"
+                className="border-border flex items-center gap-2 py-2 not-last:border-b"
               >
                 <span className="text-muted-foreground w-10 text-xs">
                   {formatDate(entry.startTime)}

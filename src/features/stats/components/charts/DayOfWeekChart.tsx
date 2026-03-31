@@ -77,7 +77,7 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
             );
           })}
         </div>
-        <div className="text-muted-foreground mt-3 flex justify-center gap-4 text-xs">
+        <div className="text-muted-foreground mt-4 flex justify-center gap-4 text-xs">
           <span>{t('weekdays', { hours: formatHours(weekdayHours) })}</span>
           <span>{t('weekends', { hours: formatHours(weekendHours) })}</span>
         </div>

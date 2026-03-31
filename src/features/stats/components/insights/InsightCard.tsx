@@ -27,7 +27,7 @@ interface InsightCardProps {
 export function InsightCard({ insight, className }: InsightCardProps) {
   return (
     <Card className={cn('gap-0 border-none py-0', className)}>
-      <CardContent className="flex flex-col gap-5 p-5">
+      <CardContent className="flex flex-col gap-4 p-4">
         {/* Title */}
         <h3 className="text-foreground text-lg font-semibold">{insight.title}</h3>
 
@@ -35,7 +35,7 @@ export function InsightCard({ insight, className }: InsightCardProps) {
         {insight.comparison && <ComparisonBadge comparison={insight.comparison} />}
 
         {/* Findings */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {insight.findings.map((finding, i) => (
             <FindingItem key={`${finding.category}-${i}`} finding={finding} />
           ))}
@@ -51,8 +51,8 @@ export function InsightCard({ insight, className }: InsightCardProps) {
         )}
 
         {/* Question */}
-        <div className="bg-muted flex items-start gap-2.5 rounded-lg p-3">
-          <MessageCircleQuestion className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+        <div className="bg-muted flex items-start gap-2 rounded-lg p-4">
+          <MessageCircleQuestion className="text-muted-foreground mt-1 size-4 shrink-0" />
           <p className="text-muted-foreground text-sm italic">{insight.question}</p>
         </div>
       </CardContent>
@@ -71,15 +71,15 @@ function FindingItem({ finding }: { finding: InsightFinding }) {
         <SentimentBadge sentiment={finding.sentiment} />
         <span className="text-foreground text-sm font-medium">{finding.headline}</span>
       </div>
-      <p className="text-muted-foreground pl-0.5 text-sm">{finding.detail}</p>
+      <p className="text-muted-foreground pl-1 text-sm">{finding.detail}</p>
     </div>
   );
 }
 
 function SuggestionItem({ suggestion }: { suggestion: InsightSuggestion }) {
   return (
-    <div className="flex items-start gap-2.5">
-      <Lightbulb className="text-primary mt-0.5 size-4 shrink-0" />
+    <div className="flex items-start gap-2">
+      <Lightbulb className="text-primary mt-1 size-4 shrink-0" />
       <div className="min-w-0 flex-1">
         <p className="text-foreground text-sm">{suggestion.action}</p>
         <p className="text-muted-foreground text-xs">{suggestion.rationale}</p>
@@ -96,7 +96,7 @@ const COMPARISON_STYLES: Record<InsightComparison['direction'], string> = {
 
 function ComparisonBadge({ comparison }: { comparison: InsightComparison }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       <ArrowRight className={cn('size-3.5', COMPARISON_STYLES[comparison.direction])} />
       <span className={cn('text-sm font-medium', COMPARISON_STYLES[comparison.direction])}>
         {comparison.summary}

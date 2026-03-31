@@ -179,7 +179,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
         </div>
 
         {/* Legend */}
-        <div className="text-muted-foreground mt-3 flex items-center justify-end gap-2 text-xs">
+        <div className="text-muted-foreground mt-4 flex items-center justify-end gap-2 text-xs">
           {mode === 'minutes' ? (
             <>
               <span>{t('energyMapLess')}</span>

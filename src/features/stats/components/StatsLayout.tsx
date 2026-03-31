@@ -17,6 +17,7 @@ import { useShellStore } from '@/shell/stores/useShellStore';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
+import { MobileStatsHeader } from './layout/MobileStatsHeader';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
 import { useStatsDateDisplayProps } from './layout/useStatsDateDisplayProps';
 
@@ -163,7 +164,7 @@ export function StatsLayout({
 
   const tabLinkClass = (isActive: boolean) =>
     cn(
-      'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
+      'relative inline-flex items-center justify-center rounded-lg px-2 py-1 text-base font-normal whitespace-nowrap transition-all',
       'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
       isActive
         ? 'text-foreground after:bg-foreground'
@@ -172,23 +173,35 @@ export function StatsLayout({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <AppHeader leftSlot={sidebarToggle} rightSlot={headerRightExtra}>
-        <div className="flex items-center gap-2">
-          <DateRangeDisplay {...dateDisplayProps} />
-          <DateNavigator onNavigate={handleNavigate} todayLabel={todayLabel} arrowSize="md" />
-          {showGranularity && (
-            <StatsGranularitySelector
-              className="ml-2"
-              granularity={granularity}
-              onGranularityChange={handleGranularityChange}
-            />
-          )}
-        </div>
-      </AppHeader>
+      {/* モバイルヘッダー */}
+      <MobileStatsHeader
+        dateDisplayProps={dateDisplayProps}
+        granularity={granularity}
+        showGranularity={showGranularity}
+        onNavigate={handleNavigate}
+        onGranularityChange={handleGranularityChange}
+      />
+
+      {/* デスクトップヘッダー */}
+      <div className="hidden md:block">
+        <AppHeader leftSlot={sidebarToggle} rightSlot={headerRightExtra}>
+          <div className="flex items-center gap-2">
+            <DateRangeDisplay {...dateDisplayProps} />
+            <DateNavigator onNavigate={handleNavigate} todayLabel={todayLabel} arrowSize="md" />
+            {showGranularity && (
+              <StatsGranularitySelector
+                className="ml-2"
+                granularity={granularity}
+                onGranularityChange={handleGranularityChange}
+              />
+            )}
+          </div>
+        </AppHeader>
+      </div>
 
       {/* タブナビゲーション */}
       <nav
-        className="flex h-10 w-full items-center justify-start gap-0 bg-transparent px-4"
+        className="scrollbar-hide flex h-10 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4"
         role="tablist"
       >
         {/* 固定3タブ */}
@@ -221,7 +234,7 @@ export function StatsLayout({
             <button
               type="button"
               onClick={handleCloseTagTab}
-              className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 flex size-5 items-center justify-center rounded transition-colors"
+              className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-1 flex size-5 items-center justify-center rounded transition-colors"
               aria-label="Close tag tab"
             >
               <X className="size-3" />

@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>;
 
 const tabClass = (isActive: boolean) =>
   cn(
-    'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
+    'relative inline-flex items-center justify-center rounded-lg px-2 py-1 text-base font-normal whitespace-nowrap transition-all',
     'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
     isActive
       ? 'text-foreground after:bg-foreground'
@@ -78,7 +78,7 @@ function TabBar({
           <button
             type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 flex size-5 items-center justify-center rounded transition-colors"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-1 flex size-5 items-center justify-center rounded transition-colors"
             aria-label="Close tag tab"
           >
             <svg

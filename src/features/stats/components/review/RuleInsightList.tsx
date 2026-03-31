@@ -38,15 +38,15 @@ export function RuleInsightList({ insights, className }: RuleInsightListProps) {
         return (
           <div
             key={`${insight.metricId}-${insight.type}-${i}`}
-            className="bg-card border-border-subtle flex items-start gap-2.5 rounded-lg border px-3 py-2.5 shadow-sm"
+            className="bg-card border-border-subtle flex items-start gap-2 rounded-lg border px-4 py-2 shadow-sm"
           >
-            <Icon className={cn('mt-0.5 size-4 shrink-0', style.color)} />
+            <Icon className={cn('mt-1 size-4 shrink-0', style.color)} />
             <div className="min-w-0 flex-1">
               <p className="text-foreground text-sm">
                 {t(insight.messageKey, insight.messageParams)}
               </p>
               {insight.detailKey && (
-                <p className="text-muted-foreground mt-0.5 text-xs">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {t(insight.detailKey, insight.detailParams)}
                 </p>
               )}

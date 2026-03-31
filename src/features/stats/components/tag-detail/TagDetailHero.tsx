@@ -100,7 +100,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
 
       {/* 子タグバー */}
       {childTags.length > 0 && totalChildHours > 0 && (
-        <div className="mt-3">
+        <div className="mt-4">
           <div className="flex h-2 w-full overflow-hidden rounded-full">
             {childTags.map((child) => {
               const widthPercent = (child.hours / totalChildHours) * 100;
@@ -119,7 +119,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
               );
             })}
           </div>
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+          <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1">
             {childTags.map((child) => {
               const color = resolveTagColor(child.color);
               return (

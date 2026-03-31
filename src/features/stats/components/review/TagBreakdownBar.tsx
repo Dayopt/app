@@ -73,7 +73,7 @@ export function TagBreakdownBar({
                 type="button"
                 key={seg.tagName}
                 className={cn(
-                  'flex items-center gap-1.5 text-xs',
+                  'flex items-center gap-1 text-xs',
                   onTagClick && 'hover:bg-accent/50 cursor-pointer rounded-lg transition-colors',
                 )}
                 onClick={() => onTagClick?.(seg.tagId)}

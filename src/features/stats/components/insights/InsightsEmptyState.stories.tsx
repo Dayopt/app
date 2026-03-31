@@ -79,7 +79,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           NoRecords（記録なし・前回記録あり）
         </p>
         <InsightsEmptyState
@@ -91,7 +91,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           NoRecordsNewUser（記録なし・新規ユーザー）
         </p>
         <InsightsEmptyState
@@ -101,7 +101,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           InsufficientDataOneDay（データ不足・1日分）
         </p>
         <InsightsEmptyState
@@ -112,7 +112,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           InsufficientDataTwoDays（データ不足・2日分）
         </p>
         <InsightsEmptyState
@@ -126,7 +126,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-4 text-xs font-medium">
           PendingGeneration（生成待ち）
         </p>
         <InsightsEmptyState
