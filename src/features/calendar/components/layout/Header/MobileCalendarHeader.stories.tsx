@@ -64,7 +64,7 @@ export const ExpandedDefault: Story = {
           {Array.from({ length: 12 }, (_, i) => (
             <div
               key={i}
-              className="text-muted-foreground flex items-center gap-3 px-4 py-3 text-sm"
+              className="text-muted-foreground flex items-center gap-4 px-4 py-4 text-sm"
             >
               <span className="w-12 shrink-0 text-right tabular-nums">{7 + i}:00</span>
               <div className="bg-muted h-px flex-1" />
@@ -98,14 +98,14 @@ export const GridSwipe: Story = {
         <div className="text-muted-foreground flex gap-2 p-4 text-sm">
           <button
             type="button"
-            className="bg-state-hover rounded-lg px-3 py-1"
+            className="bg-state-hover rounded-lg px-4 py-1"
             onClick={() => setDate((d) => addMonths(d, -1))}
           >
             前月
           </button>
           <button
             type="button"
-            className="bg-state-hover rounded-lg px-3 py-1"
+            className="bg-state-hover rounded-lg px-4 py-1"
             onClick={() => setDate((d) => addMonths(d, 1))}
           >
             次月

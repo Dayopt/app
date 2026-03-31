@@ -631,7 +631,7 @@ function SortableTagItem({
               isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
-              isGrouped && 'pl-3',
+              isGrouped && 'pl-4',
               !checked && 'opacity-50',
             )}
           >
@@ -644,7 +644,7 @@ function SortableTagItem({
               content={tag.name}
               side="top"
               disabled={menuOpen}
-              wrapperClassName="ml-1.5 min-w-0 flex-1"
+              wrapperClassName="ml-2 min-w-0 flex-1"
             >
               <span className="min-w-0 truncate">{displayLabel}</span>
             </HoverTooltip>

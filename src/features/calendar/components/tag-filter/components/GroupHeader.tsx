@@ -120,7 +120,7 @@ export function GroupHeader({
       <span className="ml-2 shrink-0">
         <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
       </span>
-      <span className="ml-1.5 min-w-0 truncate">{label}</span>
+      <span className="ml-2 min-w-0 truncate">{label}</span>
       <ChevronRight
         className={cn(
           'text-muted-foreground ml-1 size-4 shrink-0 transition-transform',

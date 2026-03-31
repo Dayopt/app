@@ -109,7 +109,7 @@ export function ViewSwitcherList() {
       </button>
 
       {daysExpanded && (
-        <div className="flex flex-col gap-0.5 pl-4">
+        <div className="flex flex-col gap-1 pl-4">
           {DAY_COUNTS.map((count) => {
             const view = `${count}day` as CalendarViewType;
             const isActive = currentView === view;
@@ -120,7 +120,7 @@ export function ViewSwitcherList() {
                 type="button"
                 onClick={() => handleSelect(view)}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-lg px-4 py-1.5 text-left text-sm transition-colors',
+                  'flex w-full items-center justify-between rounded-lg px-4 py-2 text-left text-sm transition-colors',
                   'text-muted-foreground hover:bg-state-hover hover:text-foreground',
                   isActive && 'text-foreground font-normal',
                 )}
@@ -128,7 +128,7 @@ export function ViewSwitcherList() {
                 <span>{t('calendar.views.multiday', { count })}</span>
                 <div className="flex items-center gap-2">
                   {isActive && <Check className="text-primary size-4" />}
-                  <span className="bg-surface-container text-muted-foreground rounded-lg px-2 py-0.5 font-mono text-xs">
+                  <span className="bg-surface-container text-muted-foreground rounded-lg px-2 py-1 font-mono text-xs">
                     {count}
                   </span>
                 </div>
