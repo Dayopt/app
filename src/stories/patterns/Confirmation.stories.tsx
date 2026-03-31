@@ -40,36 +40,36 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">操作</th>
-                  <th className="py-3 text-left font-bold">確認</th>
-                  <th className="py-3 text-left font-bold">理由</th>
+                  <th className="py-2 text-left font-bold">操作</th>
+                  <th className="py-2 text-left font-bold">確認</th>
+                  <th className="py-2 text-left font-bold">理由</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3">削除</td>
-                  <td className="text-destructive py-3 font-bold">必須</td>
-                  <td className="py-3">不可逆操作</td>
+                  <td className="py-2">削除</td>
+                  <td className="text-destructive py-2 font-bold">必須</td>
+                  <td className="py-2">不可逆操作</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">アカウント削除</td>
-                  <td className="text-destructive py-3 font-bold">必須 + 再入力</td>
-                  <td className="py-3">致命的な不可逆操作</td>
+                  <td className="py-2">アカウント削除</td>
+                  <td className="text-destructive py-2 font-bold">必須 + 再入力</td>
+                  <td className="py-2">致命的な不可逆操作</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">ログアウト</td>
-                  <td className="text-warning py-3 font-bold">推奨</td>
-                  <td className="py-3">未保存データの損失</td>
+                  <td className="py-2">ログアウト</td>
+                  <td className="text-warning py-2 font-bold">推奨</td>
+                  <td className="py-2">未保存データの損失</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">大量更新</td>
-                  <td className="text-warning py-3 font-bold">推奨</td>
-                  <td className="py-3">影響範囲が大きい</td>
+                  <td className="py-2">大量更新</td>
+                  <td className="text-warning py-2 font-bold">推奨</td>
+                  <td className="py-2">影響範囲が大きい</td>
                 </tr>
                 <tr>
-                  <td className="py-3">保存・作成</td>
-                  <td className="py-3">不要</td>
-                  <td className="py-3">取り消し可能</td>
+                  <td className="py-2">保存・作成</td>
+                  <td className="py-2">不要</td>
+                  <td className="py-2">取り消し可能</td>
                 </tr>
               </tbody>
             </table>
@@ -211,31 +211,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">操作</th>
-                  <th className="py-3 text-left font-bold">キャンセル</th>
-                  <th className="py-3 text-left font-bold">実行</th>
+                  <th className="py-2 text-left font-bold">操作</th>
+                  <th className="py-2 text-left font-bold">キャンセル</th>
+                  <th className="py-2 text-left font-bold">実行</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3">削除</td>
-                  <td className="py-3">キャンセル</td>
-                  <td className="text-destructive py-3">削除</td>
+                  <td className="py-2">削除</td>
+                  <td className="py-2">キャンセル</td>
+                  <td className="text-destructive py-2">削除</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">変更破棄</td>
-                  <td className="py-3">編集を続ける</td>
-                  <td className="text-destructive py-3">破棄して閉じる</td>
+                  <td className="py-2">変更破棄</td>
+                  <td className="py-2">編集を続ける</td>
+                  <td className="text-destructive py-2">破棄して閉じる</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">ログアウト</td>
-                  <td className="py-3">キャンセル</td>
-                  <td className="py-3">ログアウト</td>
+                  <td className="py-2">ログアウト</td>
+                  <td className="py-2">キャンセル</td>
+                  <td className="py-2">ログアウト</td>
                 </tr>
                 <tr>
-                  <td className="py-3">送信</td>
-                  <td className="py-3">キャンセル</td>
-                  <td className="py-3">送信</td>
+                  <td className="py-2">送信</td>
+                  <td className="py-2">キャンセル</td>
+                  <td className="py-2">送信</td>
                 </tr>
               </tbody>
             </table>
@@ -249,7 +249,7 @@ export const Overview: Story = {
             確認ダイアログを開くボタン。破壊的操作はvariant=&quot;destructive&quot;。
           </p>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button variant="destructive">
               <Trash2 className="mr-2 size-4" />
               削除

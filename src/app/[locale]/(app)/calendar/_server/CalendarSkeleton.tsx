@@ -30,7 +30,7 @@ export function CalendarSkeleton() {
       {/* Timeline skeleton */}
       <div className="flex-1 space-y-1 overflow-hidden p-4">
         {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3">
+          <div key={i} className="flex items-center gap-2">
             <Skeleton className="h-4 w-10 flex-shrink-0" />
             <div className="border-border h-14 flex-1 border-t" />
           </div>

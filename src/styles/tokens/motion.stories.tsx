@@ -331,12 +331,12 @@ export const Loading: Story = {
         <section className="bg-card border-border rounded-xl border p-6">
           <h2 className="mb-4 text-lg font-bold">カードスケルトン</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="border-border space-y-3 rounded-lg border p-4">
+            <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-4 w-3/4 rounded" />
               <div className="animate-shimmer h-3 w-full rounded" />
               <div className="animate-shimmer h-3 w-5/6 rounded" />
             </div>
-            <div className="border-border space-y-3 rounded-lg border p-4">
+            <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-32 rounded-lg" />
               <div className="animate-shimmer h-4 w-2/3 rounded" />
               <div className="animate-shimmer h-3 w-full rounded" />
@@ -347,9 +347,9 @@ export const Loading: Story = {
         {/* リスト */}
         <section className="bg-card border-border rounded-xl border p-6">
           <h2 className="mb-4 text-lg font-bold">リストスケルトン</h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex items-center gap-2">
                 <div className="animate-shimmer size-10 shrink-0 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <div className="animate-shimmer h-4 w-1/3 rounded" />

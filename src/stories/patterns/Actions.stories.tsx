@@ -46,31 +46,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">トリガー</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">トリガー</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Primary Button</td>
-                  <td className="py-3">主要アクション（保存、作成）</td>
-                  <td className="py-3">常時表示</td>
+                  <td className="py-2 font-bold">Primary Button</td>
+                  <td className="py-2">主要アクション（保存、作成）</td>
+                  <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Secondary Button</td>
-                  <td className="py-3">副次アクション（キャンセル）</td>
-                  <td className="py-3">常時表示</td>
+                  <td className="py-2 font-bold">Secondary Button</td>
+                  <td className="py-2">副次アクション（キャンセル）</td>
+                  <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Dropdown Menu</td>
-                  <td className="py-3">複数の関連アクション</td>
-                  <td className="py-3">ボタンクリック</td>
+                  <td className="py-2 font-bold">Dropdown Menu</td>
+                  <td className="py-2">複数の関連アクション</td>
+                  <td className="py-2">ボタンクリック</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">Split Button</td>
-                  <td className="py-3">デフォルト＋追加オプション</td>
-                  <td className="py-3">ボタン/矢印クリック</td>
+                  <td className="py-2 font-bold">Split Button</td>
+                  <td className="py-2">デフォルト＋追加オプション</td>
+                  <td className="py-2">ボタン/矢印クリック</td>
                 </tr>
               </tbody>
             </table>
@@ -88,34 +88,34 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">サイズ</th>
-                  <th className="py-3 text-left font-bold">高さ</th>
-                  <th className="py-3 text-left font-bold">テキスト</th>
-                  <th className="py-3 text-left font-bold">アイコン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">サイズ</th>
+                  <th className="py-2 text-left font-bold">高さ</th>
+                  <th className="py-2 text-left font-bold">テキスト</th>
+                  <th className="py-2 text-left font-bold">アイコン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">sm</td>
-                  <td className="py-3">32px (h-8)</td>
-                  <td className="py-3">14px (text-sm)</td>
-                  <td className="py-3">16px (size-4)</td>
-                  <td className="py-3">コンパクトUI、ツールバー</td>
+                  <td className="py-2 font-bold">sm</td>
+                  <td className="py-2">32px (h-8)</td>
+                  <td className="py-2">14px (text-sm)</td>
+                  <td className="py-2">16px (size-4)</td>
+                  <td className="py-2">コンパクトUI、ツールバー</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">default</td>
-                  <td className="py-3">36px (h-9)</td>
-                  <td className="py-3">14px (text-sm)</td>
-                  <td className="py-3">16px (size-4)</td>
-                  <td className="py-3">標準的なアクション</td>
+                  <td className="py-2 font-bold">default</td>
+                  <td className="py-2">36px (h-9)</td>
+                  <td className="py-2">14px (text-sm)</td>
+                  <td className="py-2">16px (size-4)</td>
+                  <td className="py-2">標準的なアクション</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">lg</td>
-                  <td className="py-3">44px (h-11)</td>
-                  <td className="py-3">16px (text-base)</td>
-                  <td className="py-3">20px (size-5)</td>
-                  <td className="py-3">CTA、モバイル主要</td>
+                  <td className="py-2 font-bold">lg</td>
+                  <td className="py-2">44px (h-11)</td>
+                  <td className="py-2">16px (text-base)</td>
+                  <td className="py-2">20px (size-5)</td>
+                  <td className="py-2">CTA、モバイル主要</td>
                 </tr>
               </tbody>
             </table>
@@ -352,7 +352,7 @@ export const Overview: Story = {
             複数選択時に表示されるアクションバー。
           </p>
 
-          <div className="bg-muted flex items-center justify-between rounded-lg px-4 py-3">
+          <div className="bg-muted flex items-center justify-between rounded-lg px-4 py-2">
             <span className="text-sm font-medium">3件を選択中</span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
@@ -389,32 +389,32 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">アクション</th>
-                  <th className="py-3 text-left font-bold">ショートカット</th>
+                  <th className="py-2 text-left font-bold">アクション</th>
+                  <th className="py-2 text-left font-bold">ショートカット</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3">新規作成</td>
-                  <td className="py-3">
+                  <td className="py-2">新規作成</td>
+                  <td className="py-2">
                     <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘N</kbd>
                   </td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">保存</td>
-                  <td className="py-3">
+                  <td className="py-2">保存</td>
+                  <td className="py-2">
                     <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘S</kbd>
                   </td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3">削除</td>
-                  <td className="py-3">
+                  <td className="py-2">削除</td>
+                  <td className="py-2">
                     <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘⌫</kbd>
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-3">検索</td>
-                  <td className="py-3">
+                  <td className="py-2">検索</td>
+                  <td className="py-2">
                     <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘K</kbd>
                   </td>
                 </tr>

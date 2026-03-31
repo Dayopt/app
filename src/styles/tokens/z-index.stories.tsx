@@ -92,13 +92,13 @@ function LayerRow({
   description: string;
 }) {
   return (
-    <div className="border-border flex items-center gap-4 border-b py-3">
+    <div className="border-border flex items-center gap-4 border-b py-2">
       <div className="w-16 text-right">
         <span className="text-muted-foreground font-mono text-sm">{value}</span>
       </div>
       <div className="flex-1">
         <code className="bg-container rounded px-2 py-1 text-sm font-bold">{tailwind}</code>
-        <span className="text-muted-foreground ml-3 text-sm">{name}</span>
+        <span className="text-muted-foreground ml-2 text-sm">{name}</span>
       </div>
       <div className="text-muted-foreground text-sm">{description}</div>
     </div>

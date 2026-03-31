@@ -25,10 +25,10 @@ function StepCard({
   linkLabel: string;
 }) {
   return (
-    <div className="bg-card border-border rounded-xl border p-5">
+    <div className="bg-card border-border rounded-xl border p-4">
       <div className="text-muted-foreground mb-1 text-xs font-bold">Step {step}</div>
       <h3 className="mb-2 font-bold">{title}</h3>
-      <p className="text-muted-foreground mb-3 text-sm">{description}</p>
+      <p className="text-muted-foreground mb-2 text-sm">{description}</p>
       <a href={href} className="text-primary text-sm underline">
         {linkLabel} →
       </a>
@@ -105,8 +105,8 @@ export const DesignSystem: Story = {
         </p>
 
         {/* ── 設計の核心 ── */}
-        <div className="bg-card border-border mb-10 rounded-xl border p-6">
-          <h2 className="mb-3 text-lg font-bold">設計の核心</h2>
+        <div className="bg-card border-border mb-8 rounded-xl border p-6">
+          <h2 className="mb-4 text-lg font-bold">設計の核心</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
           </p>
@@ -133,7 +133,7 @@ export const DesignSystem: Story = {
 
         {/* ── 判断フロー ── */}
         <h2 className="mb-4 text-lg font-bold">コンポーネントを作るときの判断フロー</h2>
-        <div className="mb-10 grid gap-4 md:grid-cols-2">
+        <div className="mb-8 grid gap-4 md:grid-cols-2">
           <StepCard
             step={1}
             title="この面はどこにいる？"
@@ -166,7 +166,7 @@ export const DesignSystem: Story = {
 
         {/* ── ページ一覧 ── */}
         <h2 className="mb-4 text-lg font-bold">ページ一覧と役割</h2>
-        <div className="mb-10 space-y-6">
+        <div className="mb-8 space-y-6">
           <div>
             <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
               見た目を決める（Step 1-3）
@@ -175,7 +175,7 @@ export const DesignSystem: Story = {
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-3 font-bold">
+                    <td className="text-foreground px-4 py-2 font-bold">
                       <a
                         href="?path=/story/foundations-colors--all-colors"
                         className="text-primary underline"
@@ -183,12 +183,12 @@ export const DesignSystem: Story = {
                         Colors
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td className="px-4 py-2 text-xs">
                       何色か。Surface / Text / Semantic のトークン定義
                     </td>
                   </tr>
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-3 font-bold">
+                    <td className="text-foreground px-4 py-2 font-bold">
                       <a
                         href="?path=/story/foundations-elevation--overview"
                         className="text-primary underline"
@@ -196,7 +196,7 @@ export const DesignSystem: Story = {
                         Elevation
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td className="px-4 py-2 text-xs">
                       どう浮くか。surface色 + shadow + border のセット
                     </td>
                   </tr>
@@ -213,7 +213,7 @@ export const DesignSystem: Story = {
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-3 font-bold">
+                    <td className="text-foreground px-4 py-2 font-bold">
                       <a
                         href="?path=/story/foundations-states--overview"
                         className="text-primary underline"
@@ -221,12 +221,12 @@ export const DesignSystem: Story = {
                         States
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td className="px-4 py-2 text-xs">
                       どう動くか。hover / focus のデモと実装パターン
                     </td>
                   </tr>
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-3 font-bold">
+                    <td className="text-foreground px-4 py-2 font-bold">
                       <a
                         href="?path=/story/foundations-zindex--all-layers"
                         className="text-primary underline"
@@ -234,7 +234,7 @@ export const DesignSystem: Story = {
                         Z-Index
                       </a>
                     </td>
-                    <td className="px-4 py-3 text-xs">重なり順。Overlay レベルの要素だけが使う</td>
+                    <td className="px-4 py-2 text-xs">重なり順。Overlay レベルの要素だけが使う</td>
                   </tr>
                 </tbody>
               </table>
@@ -281,12 +281,12 @@ export const DesignSystem: Story = {
                     },
                   ].map(({ name, href, desc }) => (
                     <tr key={name} className="border-border border-b">
-                      <td className="text-foreground px-4 py-3 font-bold">
+                      <td className="text-foreground px-4 py-2 font-bold">
                         <a href={href} className="text-primary underline">
                           {name}
                         </a>
                       </td>
-                      <td className="px-4 py-3 text-xs">{desc}</td>
+                      <td className="px-4 py-2 text-xs">{desc}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -297,10 +297,10 @@ export const DesignSystem: Story = {
 
         {/* ── よくある判断の例 ── */}
         <h2 className="mb-4 text-lg font-bold">よくある判断の例</h2>
-        <div className="mb-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {examples.map(({ title, steps }) => (
-            <div key={title} className="bg-card border-border rounded-xl border p-5">
-              <h3 className="mb-3 text-sm font-bold">{title}</h3>
+            <div key={title} className="bg-card border-border rounded-xl border p-4">
+              <h3 className="mb-2 text-sm font-bold">{title}</h3>
               <ul className="space-y-1">
                 {steps.map((step) => (
                   <li key={step} className="text-muted-foreground text-xs">

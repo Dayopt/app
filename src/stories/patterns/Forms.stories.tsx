@@ -75,7 +75,7 @@ export const Overview: Story = {
             <Field>
               <FieldLabel>メールアドレス</FieldLabel>
               <div className="relative">
-                <Input defaultValue="user@example.com" className="border-success pr-10" readOnly />
+                <Input defaultValue="user@example.com" className="border-success pr-8" readOnly />
                 <CheckCircle2 className="text-success absolute top-1/2 right-3 size-4 -translate-y-1/2" />
               </div>
               <FieldSupportText className="text-success">保存しました</FieldSupportText>
@@ -86,7 +86,7 @@ export const Overview: Story = {
             {`<Field>
   <FieldLabel>メールアドレス</FieldLabel>
   <div className="relative">
-    <Input className="border-success pr-10" />
+    <Input className="border-success pr-8" />
     <CheckCircle2 className="text-success absolute right-3 ..." />
   </div>
   <FieldSupportText className="text-success">保存しました</FieldSupportText>
@@ -103,8 +103,8 @@ export const Overview: Story = {
 
           <div className="space-y-4">
             {/* エラーバナー */}
-            <div className="bg-destructive-tint border-destructive flex items-start gap-3 rounded-lg border p-4">
-              <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
+            <div className="bg-destructive-tint border-destructive flex items-start gap-2 rounded-lg border p-4">
+              <AlertCircle className="text-destructive mt-1 size-5 shrink-0" />
               <div>
                 <p className="text-destructive font-bold">保存に失敗しました</p>
                 <p className="text-destructive text-sm">

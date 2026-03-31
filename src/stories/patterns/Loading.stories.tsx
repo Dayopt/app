@@ -29,31 +29,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">推奨時間</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">推奨時間</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Skeleton</td>
-                  <td className="py-3">コンテンツのレイアウトプレビュー</td>
-                  <td className="py-3">300ms〜3s</td>
+                  <td className="py-2 font-bold">Skeleton</td>
+                  <td className="py-2">コンテンツのレイアウトプレビュー</td>
+                  <td className="py-2">300ms〜3s</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Spinner</td>
-                  <td className="py-3">短時間の処理、ボタン内</td>
-                  <td className="py-3">〜2s</td>
+                  <td className="py-2 font-bold">Spinner</td>
+                  <td className="py-2">短時間の処理、ボタン内</td>
+                  <td className="py-2">〜2s</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Progress</td>
-                  <td className="py-3">進捗が計測可能な長時間処理</td>
-                  <td className="py-3">3s〜</td>
+                  <td className="py-2 font-bold">Progress</td>
+                  <td className="py-2">進捗が計測可能な長時間処理</td>
+                  <td className="py-2">3s〜</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">Pulse</td>
-                  <td className="py-3">画像やメディアの読み込み</td>
-                  <td className="py-3">〜5s</td>
+                  <td className="py-2 font-bold">Pulse</td>
+                  <td className="py-2">画像やメディアの読み込み</td>
+                  <td className="py-2">〜5s</td>
                 </tr>
               </tbody>
             </table>
@@ -70,8 +70,8 @@ export const Overview: Story = {
           <div className="grid gap-6 md:grid-cols-2">
             {/* カードスケルトン */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">カード</h3>
-              <div className="border-border space-y-3 rounded-lg border p-4">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">カード</h3>
+              <div className="border-border space-y-2 rounded-lg border p-4">
                 <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
                 <div className="animate-shimmer h-3 w-full rounded-lg" />
                 <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
@@ -80,10 +80,10 @@ export const Overview: Story = {
 
             {/* リストスケルトン */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">リスト</h3>
-              <div className="space-y-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">リスト</h3>
+              <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
+                  <div key={i} className="flex items-center gap-2">
                     <div className="animate-shimmer size-10 shrink-0 rounded-full" />
                     <div className="flex-1 space-y-2">
                       <div className="animate-shimmer h-4 w-1/3 rounded-lg" />
@@ -96,13 +96,13 @@ export const Overview: Story = {
 
             {/* 画像スケルトン */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">画像</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">画像</h3>
               <div className="animate-shimmer aspect-video rounded-lg" />
             </div>
 
             {/* テーブルスケルトン */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">テーブル</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">テーブル</h3>
               <div className="space-y-2">
                 <div className="border-border flex gap-4 border-b pb-2">
                   <div className="animate-shimmer h-4 w-1/4 rounded-lg" />
@@ -157,8 +157,8 @@ export const Overview: Story = {
             </div>
           </div>
 
-          <h3 className="mt-6 mb-3 text-sm font-bold">ボタン内Spinner</h3>
-          <div className="flex gap-3">
+          <h3 className="mt-6 mb-2 text-sm font-bold">ボタン内Spinner</h3>
+          <div className="flex gap-2">
             <button
               type="button"
               disabled

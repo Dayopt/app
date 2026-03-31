@@ -306,7 +306,7 @@ function Rule({ type, children }: { type: 'do' | 'dont'; children: React.ReactNo
 
   return (
     <div className="flex items-start gap-2 text-sm">
-      <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} />
+      <Icon className={`mt-1 size-4 shrink-0 ${color}`} />
       <span className={textColor}>{children}</span>
     </div>
   );

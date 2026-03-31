@@ -14,7 +14,7 @@ export function StatusIndicator({ status }: StatusIndicatorProps) {
   const config = statusConfig[status];
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       <div className={`size-2 rounded-full ${config.className}`} />
       <span className="text-muted-foreground text-xs">{config.label}</span>
     </div>

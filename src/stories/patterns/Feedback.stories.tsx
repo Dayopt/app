@@ -32,31 +32,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">例</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">例</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Toast</td>
-                  <td className="py-3">一時的な通知。自動で消える。</td>
-                  <td className="py-3">「保存しました」「コピーしました」</td>
+                  <td className="py-2 font-bold">Toast</td>
+                  <td className="py-2">一時的な通知。自動で消える。</td>
+                  <td className="py-2">「保存しました」「コピーしました」</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Alert</td>
-                  <td className="py-3">重要な情報。ユーザー操作で消す。</td>
-                  <td className="py-3">「変更を保存していません」</td>
+                  <td className="py-2 font-bold">Alert</td>
+                  <td className="py-2">重要な情報。ユーザー操作で消す。</td>
+                  <td className="py-2">「変更を保存していません」</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Inline Message</td>
-                  <td className="py-3">フィールド固有のフィードバック。</td>
-                  <td className="py-3">「メールアドレスが無効です」</td>
+                  <td className="py-2 font-bold">Inline Message</td>
+                  <td className="py-2">フィールド固有のフィードバック。</td>
+                  <td className="py-2">「メールアドレスが無効です」</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">AlertDialog</td>
-                  <td className="py-3">確認が必要な破壊的操作。</td>
-                  <td className="py-3">「本当に削除しますか？」</td>
+                  <td className="py-2 font-bold">AlertDialog</td>
+                  <td className="py-2">確認が必要な破壊的操作。</td>
+                  <td className="py-2">「本当に削除しますか？」</td>
                 </tr>
               </tbody>
             </table>
@@ -70,9 +70,9 @@ export const Overview: Story = {
             一時的な通知。右下に表示され、数秒後に自動で消える。
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Success Toast */}
-            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-2 rounded-lg border p-4">
               <CheckCircle2 className="text-success size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存しました</p>
@@ -83,7 +83,7 @@ export const Overview: Story = {
             </div>
 
             {/* Error Toast */}
-            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-2 rounded-lg border p-4">
               <AlertCircle className="text-destructive size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存に失敗しました</p>
@@ -95,7 +95,7 @@ export const Overview: Story = {
             </div>
 
             {/* Info Toast */}
-            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-2 rounded-lg border p-4">
               <Info className="text-info size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">更新があります</p>
@@ -138,10 +138,10 @@ toast('カスタムメッセージ', {
             ページ上部に表示する重要な情報。ユーザー操作で閉じる。
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Info */}
-            <div className="bg-info-tint border-info flex items-start gap-3 rounded-lg border p-4">
-              <Info className="text-info mt-0.5 size-5 shrink-0" />
+            <div className="bg-info-tint border-info flex items-start gap-2 rounded-lg border p-4">
+              <Info className="text-info mt-1 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-info font-bold">新機能</p>
                 <p className="text-info text-sm">タグのマージ機能が追加されました。</p>
@@ -149,8 +149,8 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Warning */}
-            <div className="bg-warning-tint border-warning flex items-start gap-3 rounded-lg border p-4">
-              <AlertTriangle className="text-warning mt-0.5 size-5 shrink-0" />
+            <div className="bg-warning-tint border-warning flex items-start gap-2 rounded-lg border p-4">
+              <AlertTriangle className="text-warning mt-1 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-warning font-bold">保存されていません</p>
                 <p className="text-warning text-sm">変更内容を保存してください。</p>
@@ -158,8 +158,8 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Error */}
-            <div className="bg-destructive-tint border-destructive flex items-start gap-3 rounded-lg border p-4">
-              <AlertCircle className="text-destructive mt-0.5 size-5 shrink-0" />
+            <div className="bg-destructive-tint border-destructive flex items-start gap-2 rounded-lg border p-4">
+              <AlertCircle className="text-destructive mt-1 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-destructive font-bold">接続エラー</p>
                 <p className="text-destructive text-sm">
@@ -169,8 +169,8 @@ toast('カスタムメッセージ', {
             </div>
 
             {/* Success */}
-            <div className="bg-success-tint border-success flex items-start gap-3 rounded-lg border p-4">
-              <CheckCircle2 className="text-success mt-0.5 size-5 shrink-0" />
+            <div className="bg-success-tint border-success flex items-start gap-2 rounded-lg border p-4">
+              <CheckCircle2 className="text-success mt-1 size-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-success font-bold">完了</p>
                 <p className="text-success text-sm">すべての変更が保存されました。</p>
@@ -207,7 +207,7 @@ toast('カスタムメッセージ', {
         {/* 実装例 */}
         <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">実装例</h2>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <Button
               onClick={() => {
                 toast.success('保存しました');
