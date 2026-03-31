@@ -82,7 +82,7 @@ function TabBar({
             aria-label="Close tag tab"
           >
             <svg
-              className="size-3"
+              className="size-3.5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

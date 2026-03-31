@@ -144,8 +144,8 @@ export const Overview: Story = {
 
           <div className="flex flex-wrap items-center gap-6">
             <div className="space-y-2 text-center">
-              <Spinner className="size-3" />
-              <p className="text-muted-foreground text-xs">size-3</p>
+              <Spinner className="size-3.5" />
+              <p className="text-muted-foreground text-xs">size-3.5</p>
             </div>
             <div className="space-y-2 text-center">
               <Spinner />
@@ -188,7 +188,7 @@ export const Overview: Story = {
 
 // インライン
 <div className="flex items-center gap-2">
-  <Spinner className="size-3" />
+  <Spinner className="size-3.5" />
   <span>読み込み中...</span>
 </div>`}
           </pre>

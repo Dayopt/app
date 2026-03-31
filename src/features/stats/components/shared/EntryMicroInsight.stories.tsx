@@ -23,7 +23,7 @@ const meta = {
       <div className="bg-card max-w-sm rounded-lg p-4">
         {/* Inspector 風のコンテキスト */}
         <div className="flex items-center gap-2">
-          <span className="bg-primary size-3 rounded-full" />
+          <span className="bg-primary size-3.5 rounded-full" />
           <span className="text-foreground text-sm font-medium">朝のコーディング</span>
         </div>
         <div className="mt-2">
@@ -125,7 +125,7 @@ export const AllPatterns: Story = {
         </p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -148,7 +148,7 @@ export const AllPatterns: Story = {
         </p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -171,7 +171,7 @@ export const AllPatterns: Story = {
         </p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -193,7 +193,7 @@ export const AllPatterns: Story = {
         </p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -215,7 +215,7 @@ export const AllPatterns: Story = {
         </p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -236,7 +236,7 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-4 text-xs font-medium">DeepHour（ピーク時間帯）</p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">
@@ -256,7 +256,7 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-4 text-xs font-medium">NoInsight（null・非表示）</p>
         <div className="bg-card max-w-sm rounded-lg p-4">
           <div className="flex items-center gap-2">
-            <span className="bg-primary size-3 rounded-full" />
+            <span className="bg-primary size-3.5 rounded-full" />
             <span className="text-foreground text-sm font-medium">朝のコーディング</span>
           </div>
           <div className="mt-2">

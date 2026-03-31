@@ -237,7 +237,7 @@ export function StatsLayout({
               className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-1 flex size-5 items-center justify-center rounded transition-colors"
               aria-label="Close tag tab"
             >
-              <X className="size-3" />
+              <X className="size-3.5" />
             </button>
           </div>
         )}

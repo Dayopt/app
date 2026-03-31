@@ -216,7 +216,7 @@ export const Overview: Story = {
 <Badge variant="secondary">
   タグ名
   <button onClick={onRemove}>
-    <X className="size-3" />
+    <X className="size-3.5" />
   </button>
 </Badge>`}
           </pre>
@@ -327,7 +327,7 @@ function MultiSelectChips() {
           className="cursor-pointer"
           onClick={() => toggle(option)}
         >
-          {selected.includes(option) && <Check className="mr-1 size-3" />}
+          {selected.includes(option) && <Check className="mr-1 size-3.5" />}
           {labels[option]}
         </Badge>
       ))}
@@ -356,7 +356,7 @@ function RemovableChips() {
             onClick={() => remove(tag)}
             className="hover:bg-muted ml-1 rounded-full p-1"
           >
-            <X className="size-3" />
+            <X className="size-3.5" />
           </button>
         </Badge>
       ))}

@@ -166,7 +166,7 @@ export const Overview: Story = {
     <Badge key={filter} variant="secondary">
       {filter}
       <button onClick={() => removeFilter(filter)}>
-        <X className="size-3" />
+        <X className="size-3.5" />
       </button>
     </Badge>
   ))}
@@ -437,7 +437,7 @@ function FilterSearch() {
                 onClick={() => removeFilter(filter)}
                 className="hover:bg-muted ml-1 rounded-full p-1"
               >
-                <X className="size-3" />
+                <X className="size-3.5" />
               </button>
             </Badge>
           ))}

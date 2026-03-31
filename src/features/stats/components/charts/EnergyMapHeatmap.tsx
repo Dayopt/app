@@ -184,26 +184,26 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
             <>
               <span>{t('energyMapLess')}</span>
               <div className="flex gap-1">
-                <div className="bg-muted size-3 rounded-lg" />
-                <div className="bg-heatmap-scale-1 size-3 rounded-lg" />
-                <div className="bg-heatmap-scale-2 size-3 rounded-lg" />
-                <div className="bg-heatmap-scale-3 size-3 rounded-lg" />
-                <div className="bg-heatmap-scale-4 size-3 rounded-lg" />
+                <div className="bg-muted size-3.5 rounded-lg" />
+                <div className="bg-heatmap-scale-1 size-3.5 rounded-lg" />
+                <div className="bg-heatmap-scale-2 size-3.5 rounded-lg" />
+                <div className="bg-heatmap-scale-3 size-3.5 rounded-lg" />
+                <div className="bg-heatmap-scale-4 size-3.5 rounded-lg" />
               </div>
               <span>{t('energyMapMore')}</span>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-low size-3 rounded-lg" />
+                <div className="bg-fulfillment-low size-3.5 rounded-lg" />
                 <span>1</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-mid size-3 rounded-lg" />
+                <div className="bg-fulfillment-mid size-3.5 rounded-lg" />
                 <span>2</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-high size-3 rounded-lg" />
+                <div className="bg-fulfillment-high size-3.5 rounded-lg" />
                 <span>3</span>
               </div>
             </>

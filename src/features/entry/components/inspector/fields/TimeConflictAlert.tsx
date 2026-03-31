@@ -16,7 +16,7 @@ export function TimeConflictAlert({ message }: TimeConflictAlertProps) {
       role="alert"
       aria-live="assertive"
     >
-      <AlertCircle className="size-3 flex-shrink-0" />
+      <AlertCircle className="size-3.5 flex-shrink-0" />
       <span>{message}</span>
     </div>
   );

@@ -238,7 +238,7 @@ function ImportanceDots({ value, onChange }: { value: number; onChange: (v: numb
           key={dot}
           type="button"
           className={cn(
-            'size-3 rounded-full transition-colors',
+            'size-3.5 rounded-full transition-colors',
             dot <= value ? 'bg-primary' : 'bg-muted',
           )}
           onClick={() => onChange(dot)}

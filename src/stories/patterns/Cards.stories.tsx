@@ -216,15 +216,15 @@ export const Overview: Story = {
                 <p className="text-muted-foreground text-sm">プロジェクトAの進捗をまとめる</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/15
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     2h
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Tag className="size-3" />
+                    <Tag className="size-3.5" />
                     仕事
                   </span>
                 </div>
@@ -243,11 +243,11 @@ export const Overview: Story = {
                 <p className="text-muted-foreground text-sm">資料の確認と質問事項の整理</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/14
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     1h
                   </span>
                 </div>
@@ -266,11 +266,11 @@ export const Overview: Story = {
                 <p className="text-muted-foreground text-sm">PR #123 のレビュー</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-destructive flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/12
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     30m
                   </span>
                 </div>

@@ -54,7 +54,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
         style={{ top, height, zIndex: 1000 }}
       >
         <div className="flex items-center gap-1 px-2 py-1">
-          <Ban className="text-destructive-foreground size-3 flex-shrink-0" />
+          <Ban className="text-destructive-foreground size-3.5 flex-shrink-0" />
           <span className="text-destructive-foreground text-xs font-medium">
             {t('toast.conflict')}
           </span>
