@@ -3,20 +3,16 @@
 import { BarChart3 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+import { useStatsPageData } from '../hooks/useStatsPageData';
 import { calculateDeepUtilization } from '../lib/metrics';
 import { evaluateRuleInsights } from '../lib/ruleInsights';
-import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import type { MetricId } from '../types/metrics.types';
 import type { StatsViewProps } from '../types/stats.types';
-import { computeStatsDateRange } from '../utils/computeDateRange';
 import { StatsMetricsGrid } from './insights/StatsMetricsGrid';
 import { RuleInsightList } from './review/RuleInsightList';
 import { TagBreakdownBar } from './review/TagBreakdownBar';
@@ -24,62 +20,46 @@ import { TagBreakdownBar } from './review/TagBreakdownBar';
 /**
  * StatsView - 振り返りビュー（Review タブ）
  *
+ * 統合クエリ getStatsPageData から全データを取得。
  * 上から: タグ別内訳 → KPIメトリクス → 気づき
- * 「何に時間を使った → 数値 → 改善ヒント」のストーリー構成。
  */
 export function StatsView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
-
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  // タグ別内訳
-  const timeByTag = api.entries.getTimeByTag.useQuery(dateRange);
-
   const locale = useLocale();
   const router = useRouter();
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
-  const tagSegments = useMemo(() => {
-    if (!timeByTag.data) return [];
-    return timeByTag.data.map((tag) => ({
-      tagId: tag.tagId,
-      tagName: tag.name,
-      tagColor: resolveTagColor(tag.color),
-      minutes: Math.round(tag.hours * 60),
-    }));
-  }, [timeByTag.data]);
+  const {
+    data: pageData,
+    isPending,
+    isFetching,
+    isError,
+    dateRange,
+    prevDateRange,
+  } = useStatsPageData();
 
-  const handleTagClick = useCallback(
-    (tagId: string) => {
-      resetToServer();
-      router.push(`/${locale}/stats/tags/${tagId}`);
-    },
-    [router, locale, resetToServer],
-  );
+  const tagSegments = pageData?.timeByTag
+    ? pageData.timeByTag.map((tag) => ({
+        tagId: tag.tagId,
+        tagName: tag.name,
+        tagColor: resolveTagColor(tag.color),
+        minutes: Math.round(tag.hours * 60),
+      }))
+    : [];
 
-  // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない
-  const entryRate = api.entries.getEntryRate.useQuery(dateRange);
-  const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
-  const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
-  const contextSwitches = api.entries.getContextSwitches.useQuery(dateRange);
-  const blankRate = api.entries.getBlankRate.useQuery(dateRange);
+  const handleTagClick = (tagId: string) => {
+    router.push(`/${locale}/stats/tags/${tagId}`);
+  };
 
   const ruleInsights = useMemo(() => {
+    if (!pageData) return [];
     const current: Partial<Record<MetricId, number>> = {};
 
-    if (entryRate.data) current.entryRate = entryRate.data.entryRate;
-    if (contextSwitches.data) current.contextSwitches = contextSwitches.data.avgPerDay;
-    if (blankRate.data) current.blankRate = blankRate.data.blankRate;
+    current.entryRate = pageData.overview.planRate;
+    current.contextSwitches = pageData.contextSwitches.avgPerDay;
+    current.blankRate = pageData.blankRate.blankRate;
 
     // ピーク活用率
-    if (energyMap.data && dateRange.startDate && dateRange.endDate) {
+    if (pageData.energyMap.length > 0 && dateRange.startDate && dateRange.endDate) {
       const defaultDeepZones = [{ startHour: 9, endHour: 14 }];
       const start = new Date(dateRange.startDate);
       const end = new Date(dateRange.endDate);
@@ -87,38 +67,29 @@ export function StatsView({ className }: StatsViewProps) {
         1,
         Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
       );
-      const deep = calculateDeepUtilization(energyMap.data, defaultDeepZones, daysInRange);
+      const deep = calculateDeepUtilization(pageData.energyMap, defaultDeepZones, daysInRange);
       if (deep) current.deepUtilization = deep.deepUtilization;
     }
 
     // 見積もり精度
-    if (estimationAccuracy.data && estimationAccuracy.data.length > 0) {
-      const totalDev = estimationAccuracy.data.reduce(
+    if (pageData.estimationAccuracy.length > 0) {
+      const totalDev = pageData.estimationAccuracy.reduce(
         (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
         0,
       );
-      const totalEntries = estimationAccuracy.data.reduce((sum, item) => sum + item.entryCount, 0);
+      const totalEntries = pageData.estimationAccuracy.reduce(
+        (sum, item) => sum + item.entryCount,
+        0,
+      );
       if (totalEntries > 0) current.estimationAccuracy = totalDev / totalEntries;
     }
 
-    // 前期間比較は未実装のため null
     return evaluateRuleInsights(current, null);
-  }, [
-    entryRate.data,
-    estimationAccuracy.data,
-    energyMap.data,
-    contextSwitches.data,
-    blankRate.data,
-    dateRange.startDate,
-    dateRange.endDate,
-  ]);
+  }, [pageData, dateRange.startDate, dateRange.endDate]);
 
-  // 全クエリがロード完了かつデータが空の場合に空状態を表示
-  // エラー・フェッチ中は空状態を表示しない（エラーは FeatureErrorBoundary に委任）
-  const isAllLoaded = !timeByTag.isPending && !entryRate.isPending;
-  const isFetching = timeByTag.isFetching || entryRate.isFetching;
-  const hasError = timeByTag.isError || entryRate.isError;
-  const hasNoData = isAllLoaded && !isFetching && !hasError && tagSegments.length === 0;
+  // 空状態判定
+  const isAllLoaded = !isPending;
+  const hasNoData = isAllLoaded && !isFetching && !isError && tagSegments.length === 0;
 
   if (hasNoData) {
     return (
@@ -142,9 +113,13 @@ export function StatsView({ className }: StatsViewProps) {
           <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
 
           {/* KPI メトリクス */}
-          <StatsMetricsGrid />
+          <StatsMetricsGrid
+            pageData={pageData}
+            dateRange={dateRange}
+            prevDateRange={prevDateRange}
+          />
 
-          {/* 閾値ベースの気づき（問題がある場合のみ表示） */}
+          {/* 閾値ベースの気づき */}
           <RuleInsightList insights={ruleInsights} />
         </div>
       </div>

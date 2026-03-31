@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 
 import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {
@@ -13,9 +12,13 @@ import {
   getMetricTrend,
   getThresholdStatus,
 } from '../lib/metrics';
-import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import type { EnergyMapRow, MetricData, MetricId, MetricTrend } from '../types/metrics.types';
-import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
+import type {
+  EnergyMapRow,
+  MetricData,
+  MetricId,
+  MetricTrend,
+  StatsPageData,
+} from '../types/metrics.types';
 
 // =============================================================================
 // Helpers
@@ -85,95 +88,71 @@ export interface UseStatsMetricsResult {
 /**
  * useStatsMetrics — KPI メトリクスの取得・正規化・フォーマットを一括処理
  *
- * 統合エンドポイント `getStatsOverview` を使い、14→2クエリに削減。
- * estimationAccuracy と energyMap（deepUtilization）は個別クエリが必要。
+ * 統合エンドポイント `getStatsPageData` から全データを受け取り、
+ * 8 メトリクスをカード用に正規化する。
  */
-export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResult {
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
-
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-  const prevDateRange = useMemo(
-    () => computePreviousDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  // === 統合クエリ（5 KPI を 1 RPC で取得） ===
-  const overview = api.entries.getStatsOverview.useQuery(dateRange);
-  const prevOverview = api.entries.getStatsOverview.useQuery(prevDateRange);
-
-  // === 個別クエリ（統合に含められないもの） ===
-  const estimationAccuracy = api.entries.getEstimationAccuracy.useQuery(dateRange);
-  const prevEstimationAccuracy = api.entries.getEstimationAccuracy.useQuery(prevDateRange);
-  const energyMap = api.entries.getEnergyMap.useQuery(dateRange);
-  const prevEnergyMap = api.entries.getEnergyMap.useQuery(prevDateRange);
+export function useStatsMetrics(
+  t: (key: string) => string,
+  pageData: StatsPageData | undefined,
+  dateRange: { startDate: string; endDate: string },
+  prevDateRange: { startDate: string; endDate: string },
+): UseStatsMetricsResult {
   const streakQuery = api.entries.getStreak.useQuery();
 
-  const isLoading = overview.isPending || estimationAccuracy.isPending || energyMap.isPending;
+  const isLoading = !pageData;
 
   // ピーク活用率
   const deepUtilization = useMemo(
-    () => computeDeepFromEnergyMap(energyMap.data, dateRange.startDate, dateRange.endDate),
-    [energyMap.data, dateRange.startDate, dateRange.endDate],
+    () => computeDeepFromEnergyMap(pageData?.energyMap, dateRange.startDate, dateRange.endDate),
+    [pageData?.energyMap, dateRange.startDate, dateRange.endDate],
   );
   const prevDeepUtilization = useMemo(
     () =>
-      computeDeepFromEnergyMap(prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate),
-    [prevEnergyMap.data, prevDateRange.startDate, prevDateRange.endDate],
+      computeDeepFromEnergyMap(
+        pageData?.prevEnergyMap,
+        prevDateRange.startDate,
+        prevDateRange.endDate,
+      ),
+    [pageData?.prevEnergyMap, prevDateRange.startDate, prevDateRange.endDate],
   );
 
   // 見積もり精度
   const avgDeviation = useMemo(
-    () => computeAvgDeviation(estimationAccuracy.data),
-    [estimationAccuracy.data],
+    () => computeAvgDeviation(pageData?.estimationAccuracy),
+    [pageData?.estimationAccuracy],
   );
   const prevAvgDeviation = useMemo(
-    () => computeAvgDeviation(prevEstimationAccuracy.data),
-    [prevEstimationAccuracy.data],
+    () => computeAvgDeviation(pageData?.prevEstimationAccuracy),
+    [pageData?.prevEstimationAccuracy],
   );
 
   // メトリクスマップ構築
   const metricsMap = useMemo((): Partial<Record<MetricId, MetricData>> => {
     const map: Partial<Record<MetricId, MetricData>> = {};
-    const cur = overview.data;
-    const prev = prevOverview.data;
+    if (!pageData) return map;
 
-    if (cur?.cumulativeTime) {
-      map.totalTime = {
-        id: 'totalTime',
-        value: cur.cumulativeTime.totalMinutes,
-        trend: computeTrend(
-          cur.cumulativeTime.totalMinutes,
-          prev?.cumulativeTime?.totalMinutes,
-          'up',
-        ),
-      };
-    }
+    const cur = pageData.overview;
+    const prev = pageData.prevOverview;
 
-    if (cur?.avgFulfillment?.avgFulfillment != null) {
+    map.totalTime = {
+      id: 'totalTime',
+      value: cur.totalMinutes,
+      trend: computeTrend(cur.totalMinutes, prev.totalMinutes, 'up'),
+    };
+
+    if (cur.avgFulfillment != null) {
       map.avgFulfillment = {
         id: 'avgFulfillment',
-        value: cur.avgFulfillment.avgFulfillment,
-        trend: computeTrend(
-          cur.avgFulfillment.avgFulfillment,
-          prev?.avgFulfillment?.avgFulfillment,
-          'up',
-        ),
+        value: cur.avgFulfillment,
+        trend: computeTrend(cur.avgFulfillment, prev.avgFulfillment, 'up'),
       };
     }
 
-    if (cur?.entryRate) {
-      map.entryRate = {
-        id: 'entryRate',
-        value: cur.entryRate.entryRate,
-        trend: computeTrend(cur.entryRate.entryRate, prev?.entryRate?.entryRate, 'up'),
-      };
-    }
+    map.entryRate = {
+      id: 'entryRate',
+      value: cur.planRate,
+      trend: computeTrend(cur.planRate, prev.planRate, 'up'),
+    };
 
     if (streakQuery.data) {
       map.streak = {
@@ -203,30 +182,21 @@ export function useStatsMetrics(t: (key: string) => string): UseStatsMetricsResu
       };
     }
 
-    if (cur?.contextSwitches) {
-      map.contextSwitches = {
-        id: 'contextSwitches',
-        value: cur.contextSwitches.avgPerDay,
-        trend: computeTrend(
-          cur.contextSwitches.avgPerDay,
-          prev?.contextSwitches?.avgPerDay,
-          'down',
-        ),
-      };
-    }
+    map.contextSwitches = {
+      id: 'contextSwitches',
+      value: pageData.contextSwitches.avgPerDay,
+      trend: computeTrend(pageData.contextSwitches.avgPerDay, undefined, 'down'),
+    };
 
-    if (cur?.blankRate) {
-      map.blankRate = {
-        id: 'blankRate',
-        value: cur.blankRate.blankRate,
-        trend: computeTrend(cur.blankRate.blankRate, prev?.blankRate?.blankRate, 'neutral'),
-      };
-    }
+    map.blankRate = {
+      id: 'blankRate',
+      value: pageData.blankRate.blankRate,
+      trend: computeTrend(pageData.blankRate.blankRate, undefined, 'neutral'),
+    };
 
     return map;
   }, [
-    overview.data,
-    prevOverview.data,
+    pageData,
     avgDeviation,
     prevAvgDeviation,
     deepUtilization,
