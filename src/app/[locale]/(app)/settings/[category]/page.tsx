@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 
-import { ChevronLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -56,9 +56,9 @@ export default function SettingsCategoryPage() {
     <>
       <AppHeader
         leftSlot={
-          <Button variant="ghost" icon asChild>
+          <Button variant="ghost" size="sm" icon asChild className="-ml-2">
             <Link href="/settings" aria-label={t('common.back')}>
-              <ChevronLeft className="size-5" />
+              <ArrowLeft className="size-5" />
             </Link>
           </Button>
         }
