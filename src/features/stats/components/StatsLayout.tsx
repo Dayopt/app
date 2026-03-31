@@ -216,7 +216,7 @@ export function StatsLayout({
               className={tabLinkClass(activeTab === 'tag')}
             >
               <TagIcon icon={tagTab.tagIcon} color={tagTab.tagColor} size="sm" />
-              <ColonTagLabel name={tagTab.tagName} className="ml-1" />
+              <ColonTagLabel name={tagTab.tagName} className="ml-1 text-sm" />
             </Link>
             <button
               type="button"
