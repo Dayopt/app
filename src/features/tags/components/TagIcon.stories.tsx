@@ -50,7 +50,7 @@ export const WithoutIcon: Story = {
 /** 各色 × アイコン: 全10色でアイコン表示 */
 export const AllColorsWithIcon: Story = {
   render: () => (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-4">
       {TAG_COLOR_NAMES.map((color) => (
         <div key={color} className="flex flex-col items-center gap-1">
           <TagIcon icon="briefcase" color={color} size="md" />
@@ -64,7 +64,7 @@ export const AllColorsWithIcon: Story = {
 /** 各色 × ドット: 全10色でドット表示 */
 export const AllColorsDot: Story = {
   render: () => (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-4">
       {TAG_COLOR_NAMES.map((color) => (
         <div key={color} className="flex flex-col items-center gap-1">
           <TagIcon icon={null} color={color} size="md" />
@@ -94,7 +94,7 @@ export const VariousIcons: Story = {
     return (
       <div className="flex flex-wrap items-start gap-4">
         {examples.map(({ icon, color, label }) => (
-          <div key={label} className="flex flex-col items-center gap-1.5">
+          <div key={label} className="flex flex-col items-center gap-1">
             <div
               className="flex size-12 items-center justify-center rounded-2xl"
               style={{

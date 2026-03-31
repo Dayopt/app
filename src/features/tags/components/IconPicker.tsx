@@ -38,7 +38,7 @@ export function IconPicker({ value, onChange, color }: IconPickerProps) {
   return (
     <div className="space-y-2">
       {/* フラットグリッド */}
-      <div className="grid grid-cols-8 gap-0.5">
+      <div className="grid grid-cols-8 gap-0">
         {CURATED_ICONS.map((iconName) => {
           const pascal = kebabToPascal(iconName);
           const LucideIcon = icons[pascal as keyof typeof icons];
@@ -52,7 +52,7 @@ export function IconPicker({ value, onChange, color }: IconPickerProps) {
               type="button"
               onClick={() => handleSelect(iconName)}
               className={cn(
-                'flex items-center justify-center rounded-lg p-1.5 transition-colors',
+                'flex items-center justify-center rounded-lg p-2 transition-colors',
                 isSelected ? 'ring-primary bg-state-hover ring-2' : 'hover:bg-state-hover',
               )}
               aria-label={iconName}

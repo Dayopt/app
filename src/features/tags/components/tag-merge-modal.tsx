@@ -180,7 +180,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-2">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -211,7 +211,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
 
     return (
       <div
-        className="max-h-[50vh] overflow-y-auto px-4 py-3"
+        className="max-h-[50vh] overflow-y-auto px-4 py-2"
         role="radiogroup"
         aria-label={t('calendar.filter.mergeTag.title')}
       >
@@ -259,7 +259,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
       )}
 
       {/* Footer */}
-      <ActionFooter className="border-border border-t px-4 py-3">
+      <ActionFooter className="border-border border-t px-4 py-2">
         <Button variant="outline" onClick={onClose} disabled={mergeTagMutation.isPending}>
           {t('common.actions.cancel')}
         </Button>
@@ -360,7 +360,7 @@ function TagGridCell({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,
@@ -372,7 +372,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
         <span className="truncate">{displayName ?? tag.name}</span>
         {hasChildren && <span className="text-muted-foreground shrink-0 text-xs">›</span>}
       </span>

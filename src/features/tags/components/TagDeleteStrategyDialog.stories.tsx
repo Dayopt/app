@@ -199,7 +199,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           エントリ数件のタグ削除（開いた状態）
         </p>
         <TagDeleteStrategyDialog
@@ -212,7 +212,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           タグが多い場合（検索バー表示、開いた状態）
         </p>
         <TagDeleteStrategyDialog
@@ -225,7 +225,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           付け替え先タグが1件のみ（開いた状態）
         </p>
         <TagDeleteStrategyDialog

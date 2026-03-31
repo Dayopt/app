@@ -289,12 +289,12 @@ export function TagCreateModal({
             <Field>
               <FieldLabel>{t('tags.form.group')}</FieldLabel>
               <FieldSupportText>{t('tags.form.groupSupportText')}</FieldSupportText>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 <button
                   type="button"
                   onClick={() => setSelectedGroup(null)}
                   className={cn(
-                    'rounded-full border px-3 py-1.5 text-sm transition-colors',
+                    'rounded-full border px-2 py-1 text-sm transition-colors',
                     !selectedGroup
                       ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
@@ -308,7 +308,7 @@ export function TagCreateModal({
                     type="button"
                     onClick={() => setSelectedGroup(group.name)}
                     className={cn(
-                      'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                      'flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors',
                       selectedGroup === group.name
                         ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                         : 'border-border hover:bg-state-hover text-muted-foreground',

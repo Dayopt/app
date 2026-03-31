@@ -43,7 +43,7 @@ function TagGridCell({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,
@@ -53,7 +53,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
         <span className="truncate">{displayName}</span>
         {hasChildren && (
           <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
@@ -142,7 +142,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
           </span>
         </button>
 
-        <div className="grid grid-cols-4 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-2">
           {parentTag && !parentTag.id.startsWith('__virtual_') && (
             <TagGridCell
               tag={parentTag}

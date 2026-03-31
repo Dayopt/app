@@ -260,13 +260,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-8 p-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           インタラクティブ（ボタンでモーダルを開く）
         </p>
         <InteractiveTagMerge />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">タグが少ない状態</p>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">タグが少ない状態</p>
         <InteractiveTagMerge tags={MOCK_TAGS.slice(0, 3)} />
       </div>
     </div>

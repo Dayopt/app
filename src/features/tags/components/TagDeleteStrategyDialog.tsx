@@ -108,12 +108,12 @@ export function TagDeleteStrategyDialog({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('deleteStrategy.searchTags')}
-                  className="pl-9"
+                  className="pl-8"
                 />
               </div>
             ) : null}
 
-            <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-lg border p-1">
+            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-1">
               {filteredTags.map((tag) => {
                 const isSelected = targetTagId === tag.id;
 
@@ -123,7 +123,7 @@ export function TagDeleteStrategyDialog({
                     type="button"
                     onClick={() => setTargetTagId(tag.id)}
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                      'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors',
                       isSelected
                         ? 'bg-state-selected text-foreground'
                         : 'hover:bg-state-hover text-foreground',
@@ -135,7 +135,7 @@ export function TagDeleteStrategyDialog({
                 );
               })}
               {filteredTags.length === 0 ? (
-                <p className="text-muted-foreground px-3 py-2 text-center text-xs">
+                <p className="text-muted-foreground px-4 py-2 text-center text-xs">
                   {t('page.noTags')}
                 </p>
               ) : null}

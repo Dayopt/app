@@ -41,7 +41,7 @@ export const Default: Story = {
         <p className="text-muted-foreground mb-2 text-xs font-medium">コロンタグ</p>
         <div className="space-y-1">
           {colonTags.map((name) => (
-            <div key={name} className="flex items-center gap-3 text-sm">
+            <div key={name} className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground w-40 shrink-0 truncate text-xs">{name}</span>
               <span className="text-foreground">→</span>
               <ColonTagLabel name={name} />
@@ -53,7 +53,7 @@ export const Default: Story = {
         <p className="text-muted-foreground mb-2 text-xs font-medium">フラットタグ（変化なし）</p>
         <div className="space-y-1">
           {flatTags.map((name) => (
-            <div key={name} className="flex items-center gap-3 text-sm">
+            <div key={name} className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground w-40 shrink-0 truncate text-xs">{name}</span>
               <span className="text-foreground">→</span>
               <ColonTagLabel name={name} />
@@ -149,7 +149,7 @@ export const InBlockItemContext: Story = {
       <p className="text-muted-foreground mb-1 text-xs">コロンタグ</p>
       <BlockItem tagName="開発:API" tagColor="blue" durationMinutes={60} onClick={fn()} />
       <BlockItem tagName="仕事:定例MTG" tagColor="green" durationMinutes={30} onClick={fn()} />
-      <p className="text-muted-foreground mt-3 mb-1 text-xs">フラットタグ（変化なし）</p>
+      <p className="text-muted-foreground mt-2 mb-1 text-xs">フラットタグ（変化なし）</p>
       <BlockItem tagName="運動" tagColor="amber" durationMinutes={45} onClick={fn()} />
       <BlockItem tagName="休憩" tagColor="orange" durationMinutes={15} onClick={fn()} />
     </div>
