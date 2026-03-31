@@ -5,6 +5,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
 import storybook from 'eslint-plugin-storybook'
+import tailwindcss from 'eslint-plugin-tailwindcss'
 
 const eslintConfig = defineConfig([
   // Next.js公式推奨設定（React, React Hooks, Core Web Vitals）
@@ -26,6 +27,15 @@ const eslintConfig = defineConfig([
     'src/platform/i18n/scripts/**',
     'src/styles/scripts/**',
   ]),
+
+  // Tailwind CSS: 任意値(arbitrary value)の使用を警告
+  {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    plugins: { tailwindcss },
+    rules: {
+      'tailwindcss/no-arbitrary-value': 'warn',
+    },
+  },
 
   // TypeScript用カスタムルール
   {
