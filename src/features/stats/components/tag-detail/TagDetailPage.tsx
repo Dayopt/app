@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
@@ -14,6 +14,7 @@ import { TagIcon, useTag } from '@/features/tags';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
+import { useShellStore } from '@/shell/stores/useShellStore';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
@@ -28,6 +29,7 @@ import { TagRecentBlocks } from './TagRecentBlocks';
 
 interface TagDetailPageProps {
   tagId: string;
+  headerRightExtra?: React.ReactNode;
 }
 
 const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
@@ -43,7 +45,7 @@ const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
  * /stats/tags/[tagId] のクライアントエントリポイント。
  * ナラティブ構造: Hero → Patterns → Quality → Timeline → Recent
  */
-export function TagDetailPage({ tagId }: TagDetailPageProps) {
+export function TagDetailPage({ tagId, headerRightExtra }: TagDetailPageProps) {
   const t = useTranslations();
   const router = useRouter();
 
@@ -57,36 +59,25 @@ export function TagDetailPage({ tagId }: TagDetailPageProps) {
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
   const dateDisplayProps = useStatsDateDisplayProps(currentDate, granularity);
 
+  // サイドバーが閉じているときにトグルボタンを表示
+  const sidebarOpen = useShellStore.use.sidebar().open;
+  const toggleSidebar = useShellStore.use.toggleSidebar();
+  const sidebarToggle = !sidebarOpen ? (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
+      aria-label="Open sidebar"
+    >
+      <PanelLeft className="size-4" />
+    </button>
+  ) : null;
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       {/* ヘッダー */}
-      <AppHeader
-        leftSlot={
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground mr-2 flex items-center transition-colors"
-            onClick={() => router.back()}
-            aria-label={t('calendar.stats.tagDetail.backToReview')}
-          >
-            <ArrowLeft className="size-5" />
-          </button>
-        }
-      >
+      <AppHeader leftSlot={sidebarToggle} rightSlot={headerRightExtra}>
         <div className="flex items-center gap-2">
-          {/* タグ名 */}
-          {tag ? (
-            <div className="flex items-center gap-1.5">
-              <TagIcon icon={tag.icon} color={tagColor} size="sm" />
-              <ColonTagLabel
-                name={tag.name}
-                className="text-sm font-bold"
-                style={{ color: `var(--tag-${tagColor})` }}
-              />
-            </div>
-          ) : (
-            <Skeleton className="h-5 w-20" />
-          )}
-          <span className="text-muted-foreground/30">|</span>
           <DateRangeDisplay {...dateDisplayProps} />
           <DateNavigator onNavigate={navigate} todayLabel={todayLabel} arrowSize="md" />
           <StatsGranularitySelector
@@ -100,6 +91,29 @@ export function TagDetailPage({ tagId }: TagDetailPageProps) {
       {/* コンテンツ */}
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-6 p-4">
+          {/* パンくず: Stats > タグ名 */}
+          <nav className="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => router.back()}
+            >
+              {t('calendar.stats.tagDetail.backToReview')}
+            </button>
+            <span className="text-muted-foreground/50">/</span>
+            {tag ? (
+              <div className="flex items-center gap-1.5">
+                <TagIcon icon={tag.icon} color={tagColor} size="sm" />
+                <ColonTagLabel
+                  name={tag.name}
+                  className="font-bold"
+                  style={{ color: `var(--tag-${tagColor})` }}
+                />
+              </div>
+            ) : (
+              <Skeleton className="h-4 w-20" />
+            )}
+          </nav>
           {/* ① Hero: 合計時間 + KPI + 子タグバー */}
           <FeatureErrorBoundary featureName="tag-detail-hero">
             <Suspense fallback={<Skeleton className="h-28 w-full rounded-xl" />}>
