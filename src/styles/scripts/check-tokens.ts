@@ -67,6 +67,20 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion:
       'text-foreground/80 → text-muted-foreground, border-border/50 → border-border-subtle',
   },
+  // スペーシンググリッド準拠（8px + 4pxサブグリッド）
+  // 許可値: 0(0px), 1(4px), 2(8px), 4(16px), 6(24px), 8(32px), 12(48px), 16(64px), 24(96px)
+  {
+    pattern:
+      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(0\\.5|1\\.5|2\\.5|3\\.5)',
+    message: 'OFF-GRID スペーシング（小数値）。8pxグリッド準拠の値を使用',
+    suggestion: '*-0.5(2px) → *-0/*-1, *-1.5(6px) → *-1/*-2, *-2.5(10px) → *-2, *-3.5(14px) → *-4',
+  },
+  {
+    pattern:
+      '(^|[^a-z])(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|gap-x|gap-y|space-x|space-y)-(3|5|7|9|10|11|13|14)([^0-9.]|$)',
+    message: 'OFF-GRID スペーシング（禁止整数値）。8pxグリッド準拠の値を使用',
+    suggestion: '*-3(12px) → *-2/*-4, *-5(20px) → *-4/*-6, *-7(28px) → *-6/*-8, *-9(36px) → *-8',
+  },
 ];
 
 let hasViolations = false;
