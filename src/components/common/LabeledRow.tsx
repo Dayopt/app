@@ -38,7 +38,7 @@ export function LabeledRow({
   const content = (
     <div
       className={cn(
-        'flex min-h-11 items-center gap-4 py-3',
+        'flex min-h-11 items-center gap-4 py-2',
         isNavigate && 'active:bg-state-pressed cursor-pointer',
         isAction && 'cursor-pointer',
       )}
@@ -46,7 +46,7 @@ export function LabeledRow({
       <div className="min-w-0 flex-1">
         <div className={cn('text-base', isAction && 'text-destructive')}>{label}</div>
         {description ? (
-          <div className="text-muted-foreground mt-0.5 text-sm">{description}</div>
+          <div className="text-muted-foreground mt-1 text-sm">{description}</div>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">

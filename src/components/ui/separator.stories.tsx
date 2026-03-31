@@ -38,7 +38,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="w-full max-w-md">
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Horizontal（デフォルト）</p>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">Horizontal（デフォルト）</p>
         <div className="space-y-4">
           <p className="text-foreground text-sm">上のコンテンツ</p>
           <Separator />
@@ -47,7 +47,7 @@ export const AllPatterns: Story = {
       </div>
 
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Vertical</p>
+        <p className="text-muted-foreground mb-2 text-xs font-medium">Vertical</p>
         <div className="flex h-8 items-center gap-4">
           <span className="text-foreground text-sm">左</span>
           <Separator orientation="vertical" />
