@@ -4,10 +4,11 @@ import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { parseColonTag } from '@/features/tags';
 import { resolveTagColor } from '@/lib/tag-colors';
+import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { api } from '@/platform/trpc';
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../../utils/computeDateRange';
 
@@ -21,6 +22,8 @@ interface TagDetailHeroProps {
  *
  * 合計時間を大きく表示 + サブメトリクス（エントリ数、計画率、充実度）
  * 子タグがある場合はスタックバーも表示
+ *
+ * 個別クエリを使用し、下のチャートコンポーネントとTanStack Queryキャッシュを共有。
  */
 export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
   const t = useTranslations('calendar.stats.tagDetail');
@@ -34,23 +37,35 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
     [currentDate, granularity, timezone, weekStartsOn],
   );
 
-  const { data, isPending } = api.entries.getTagOverview.useQuery({
-    tagId,
-    tagName,
-    ...dateRange,
-  });
+  const tagDateRange = { tagId, ...dateRange };
+
+  const cumulative = api.entries.getTagCumulativeTime.useQuery(tagDateRange);
+  const fulfillment = api.entries.getTagAvgFulfillment.useQuery(tagDateRange);
+  const planRate = api.entries.getTagPlanRate.useQuery(tagDateRange);
+
+  // コロン記法の場合のみ子タグ取得
+  const parsed = tagName ? parseColonTag(tagName) : null;
+  const hasColonPrefix = parsed?.prefix != null && parsed?.suffix != null;
+  const childBreakdown = api.entries.getChildTagBreakdown.useQuery(
+    { prefix: parsed?.prefix ?? '', ...dateRange },
+    { enabled: hasColonPrefix },
+  );
+
+  const isPending = cumulative.isPending || fulfillment.isPending || planRate.isPending;
 
   if (isPending) {
     return <Skeleton className="h-28 w-full rounded-xl" />;
   }
 
-  if (!data) return null;
+  const totalMinutes = cumulative.data?.totalMinutes ?? 0;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+  const entryCount = fulfillment.data?.entryCount ?? 0;
+  const avgFulfillment = fulfillment.data?.avgFulfillment ?? null;
+  const planRatePercent = Math.round((planRate.data?.planRate ?? 0) * 100);
 
-  const hours = Math.floor(data.totalMinutes / 60);
-  const minutes = Math.round(data.totalMinutes % 60);
-  const planRatePercent = Math.round(data.planRate * 100);
-  const hasChildren = data.childTags.length > 0;
-  const totalChildHours = data.childTags.reduce((sum, c) => sum + c.hours, 0);
+  const childTags = childBreakdown.data ?? [];
+  const totalChildHours = childTags.reduce((sum, c) => sum + c.hours, 0);
 
   return (
     <div className="bg-card border-border-subtle rounded-xl border p-4 shadow-sm">
@@ -71,23 +86,23 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
       {/* サブメトリクス */}
       <div className="text-muted-foreground mt-2 flex gap-4 text-sm">
         <span>
-          {data.entryCount} {t('entries')}
+          {entryCount} {t('entries')}
         </span>
         <span>
           {t('planRate')} {planRatePercent}%
         </span>
-        {data.avgFulfillment !== null && (
+        {avgFulfillment !== null && (
           <span>
-            {t('fulfillment')} {data.avgFulfillment.toFixed(1)}
+            {t('fulfillment')} {avgFulfillment.toFixed(1)}
           </span>
         )}
       </div>
 
       {/* 子タグバー */}
-      {hasChildren && totalChildHours > 0 && (
+      {childTags.length > 0 && totalChildHours > 0 && (
         <div className="mt-3">
           <div className="flex h-2 w-full overflow-hidden rounded-full">
-            {data.childTags.map((child) => {
+            {childTags.map((child) => {
               const widthPercent = (child.hours / totalChildHours) * 100;
               if (widthPercent < 1) return null;
               const color = resolveTagColor(child.color);
@@ -105,7 +120,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
             })}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-            {data.childTags.map((child) => {
+            {childTags.map((child) => {
               const color = resolveTagColor(child.color);
               return (
                 <span

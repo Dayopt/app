@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { prefetchTagDetailData, TagDetailPage } from '@/features/stats';
 import type { Locale } from '@/platform/i18n/routing';
 import { HydrationBoundary } from '@/platform/trpc/server';
+import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 
 import StatsTabLoading from '../../[tab]/loading';
 
@@ -25,13 +26,11 @@ export async function generateMetadata({
 
 /** データプリフェッチ + ハイドレーション */
 async function TagDetailContent({ tagId }: { tagId: string }) {
-  // タグの存在確認は TagDetailPage 内で useTag フックが行う
-  // SSR ではプリフェッチのみ実施（タグ名は空文字でフォールバック）
-  const { dehydratedState } = await prefetchTagDetailData(tagId, '');
+  const { dehydratedState } = await prefetchTagDetailData(tagId);
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <TagDetailPage tagId={tagId} />
+      <TagDetailPage tagId={tagId} headerRightExtra={<SidebarPageNav />} />
     </HydrationBoundary>
   );
 }
@@ -39,7 +38,6 @@ async function TagDetailContent({ tagId }: { tagId: string }) {
 const TagDetailRoute = async ({ params }: { params: Promise<{ tagId: string }> }) => {
   const { tagId } = await params;
 
-  // UUID バリデーション
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tagId)) {
     notFound();
   }
