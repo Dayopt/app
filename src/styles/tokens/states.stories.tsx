@@ -52,12 +52,6 @@ export const Overview: Story = {
                     usage: 'マウスオーバー時',
                   },
                   {
-                    state: 'Focus',
-                    token: 'bg-state-focus',
-                    opacity: '12%',
-                    usage: 'キーボードフォーカス時',
-                  },
-                  {
                     state: 'Pressed',
                     token: 'bg-state-pressed',
                     opacity: '12%',

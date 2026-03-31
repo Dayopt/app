@@ -262,7 +262,6 @@ export const AllColors: Story = {
 
       <ColorGroup title="State Layer（半透明）">
         <ColorSwatch tailwindClass="bg-state-hover" description="hover" oklch="foreground / 10%" />
-        <ColorSwatch tailwindClass="bg-state-focus" description="focus" oklch="foreground / 12%" />
         <ColorSwatch
           tailwindClass="bg-state-pressed"
           description="pressed"

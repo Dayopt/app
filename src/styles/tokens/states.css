@@ -5,7 +5,6 @@
  * ============================================ */
 @theme inline {
   --color-state-hover: oklch(from var(--foreground) l c h / 10%);
-  --color-state-focus: oklch(from var(--foreground) l c h / 12%);
   --color-state-pressed: oklch(from var(--foreground) l c h / 12%);
   --color-state-selected: oklch(from var(--foreground) l c h / 12%);
   --color-state-dragged: oklch(from var(--foreground) l c h / 16%);

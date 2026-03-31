@@ -146,7 +146,7 @@ export const EventContextMenu = ({
               "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
               item.dangerous
                 ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
-                : "text-foreground hover:bg-state-hover focus:bg-state-focus [&_svg:not([class*='text-'])]:text-muted-foreground",
+                : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
             )}
           >
             <IconComponent />
