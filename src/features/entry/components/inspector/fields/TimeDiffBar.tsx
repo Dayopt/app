@@ -37,7 +37,7 @@ export function TimeDiffBar({ plannedMinutes, actualMinutes }: TimeDiffBarProps)
       </div>
       <span
         className={cn(
-          'shrink-0 rounded-lg px-1.5 py-0.5 text-xs font-medium tabular-nums',
+          'shrink-0 rounded-lg px-1 py-0 text-xs font-medium tabular-nums',
           diffMinutes > 0
             ? 'bg-warning-tint text-warning'
             : diffMinutes < 0

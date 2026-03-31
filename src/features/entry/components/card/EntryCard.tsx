@@ -331,7 +331,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               ? 'flex items-center px-2 text-xs'
               : 'flex items-center px-2 text-xs'
             : isMobile
-              ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
+              ? 'flex items-start gap-1 px-2 pt-2 text-sm'
               : 'p-2 text-sm',
           colorClasses ? colorClasses.tint : 'bg-muted',
         )}

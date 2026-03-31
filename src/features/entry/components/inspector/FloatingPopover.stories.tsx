@@ -33,7 +33,7 @@ function InspectorPlaceholder() {
       <p className="text-muted-foreground text-xs">詳細情報がここに表示されます。</p>
       <button
         type="button"
-        className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-sm"
+        className="bg-primary text-primary-foreground rounded-lg px-2 py-2 text-sm"
       >
         保存
       </button>
@@ -118,7 +118,7 @@ export const AllPatterns: Story = {
         FloatingPopover は fixed 配置のため、各 Story を個別に確認してください。
         以下は参考として各バリアントのリストです。
       </p>
-      <ul className="text-muted-foreground list-disc pl-5 text-xs leading-6">
+      <ul className="text-muted-foreground list-disc pl-4 text-xs leading-6">
         <li>Centered — anchorRect なし、画面中央</li>
         <li>AnchoredLeft — 左側アンカー、パネルは右に</li>
         <li>AnchoredRight — 右側アンカー、パネルは左に</li>

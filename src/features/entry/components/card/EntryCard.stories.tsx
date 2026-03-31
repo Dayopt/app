@@ -103,7 +103,7 @@ export const CompactLayout: Story = {
           position={{ ...basePosition, height: 30 }}
         />
       </Slot>
-      <p className="text-muted-foreground text-xs">モバイル（px-1.5）</p>
+      <p className="text-muted-foreground text-xs">モバイル（px-2）</p>
       <Slot height={30}>
         <EntryCard
           entry={baseEntry}
