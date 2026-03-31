@@ -160,28 +160,32 @@ export function StatsLayout({
         </div>
       </AppHeader>
 
-      {/* タブナビゲーション（パスベース） */}
-      <nav className="flex h-10 items-center gap-4 px-4" role="tablist">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={cn(
-              'relative pb-2 text-base transition-colors',
-              activeTab === tab.id
-                ? 'text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => handleTabClick(tab.path)}
-          >
-            {t(tab.labelKey)}
-            {activeTab === tab.id && (
-              <span className="bg-primary absolute inset-x-0 bottom-0 h-0.5 rounded-full" />
-            )}
-          </button>
-        ))}
+      {/* タブナビゲーション（パスベース、TabsTrigger と同じスタイル） */}
+      <nav
+        className="flex h-10 w-full items-center justify-start gap-4 rounded-none border-none bg-transparent px-4"
+        role="tablist"
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={cn(
+                'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
+                'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
+                isActive
+                  ? 'text-foreground after:bg-foreground'
+                  : 'text-muted-foreground hover:bg-state-hover after:bg-transparent',
+              )}
+              onClick={() => handleTabClick(tab.path)}
+            >
+              {t(tab.labelKey)}
+            </button>
+          );
+        })}
       </nav>
 
       {/* タブコンテンツ */}
