@@ -27,6 +27,8 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   const pathWithoutLocale = stripLocale(pathname);
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
+  // /stats/tags/[tagId] は独立ページなのでクライアントルーターから除外
+  if (pathWithoutLocale.startsWith('/stats/tags/')) return null;
   if (pathWithoutLocale.startsWith('/stats')) return 'stats';
   return null;
 }
@@ -73,14 +75,12 @@ interface ClientPageRouterProps {
  * ChatGPT ライクな「Sidebar 静止 / メインのみ切り替え」体験を実現する。
  */
 export function ClientPageRouter({ children }: ClientPageRouterProps) {
-  usePathname(); // popstate 以外のナビゲーション時にも再レンダリングを発火させるために維持
+  const pathname = usePathname();
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   // ブラウザ戻る/進む時: popstate イベントで clientPage を同期
-  // pathname の useEffect ではなく popstate を直接リスンすることで、
-  // pushState による遷移（PageNav）と区別し race condition を防ぐ
   useEffect(() => {
     const handlePopState = () => {
       const pageType = getPageType(window.location.pathname);
@@ -94,6 +94,13 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [switchToPage, resetToServer]);
+
+  // router.push で URL が変わった場合、clientPage と実際のパスが不一致なら
+  // サーバーレンダリングにフォールバック（例: /stats → /stats/tags/[tagId]）
+  const actualPageType = getPageType(pathname);
+  if (clientPage && clientPage !== actualPageType) {
+    return <>{children}</>;
+  }
 
   if (clientPage === 'calendar') {
     return <CalendarClientView />;

@@ -44,6 +44,7 @@ import {
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../TagRenameDialog';
@@ -428,12 +429,14 @@ function SortableTagItem({
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
   const router = useRouter();
+  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   const navigateToTagStats = useCallback(
     (tagId: string) => {
+      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale],
+    [router, locale, resetToServer],
   );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,

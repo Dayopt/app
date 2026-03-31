@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { calculateDeepUtilization } from '../lib/metrics';
@@ -43,6 +44,7 @@ export function StatsView({ className }: StatsViewProps) {
 
   const locale = useLocale();
   const router = useRouter();
+  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   const tagSegments = useMemo(() => {
     if (!timeByTag.data) return [];
@@ -56,9 +58,10 @@ export function StatsView({ className }: StatsViewProps) {
 
   const handleTagClick = useCallback(
     (tagId: string) => {
+      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale],
+    [router, locale, resetToServer],
   );
 
   // RuleInsightList 用: TanStack Query がキャッシュを共有するため重複リクエストは発生しない

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
 import { usePaletteItems, usePaletteMutations } from '@/features/palette';
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useShellStore } from '@/shell/stores/useShellStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
@@ -55,6 +56,7 @@ export function GlobalOverlays() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   // ツアー: ステップバリデーション（現在は空）
   const stepValidators: StepValidators = useMemo(() => ({}), []);
@@ -119,9 +121,10 @@ export function GlobalOverlays() {
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
+      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale],
+    [router, locale, resetToServer],
   );
 
   return (
