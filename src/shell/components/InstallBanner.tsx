@@ -21,7 +21,7 @@ export function InstallBanner({ onInstall, onDismiss }: InstallBannerProps) {
 
   return (
     <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 left-4 z-50 md:bottom-4 md:left-auto md:w-96">
-      <div className="bg-card border-border-subtle shadow-card flex items-center gap-3 rounded-2xl border p-4">
+      <div className="bg-card border-border-subtle shadow-card flex items-center gap-2 rounded-2xl border p-4">
         <Download className="text-primary h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-foreground truncate text-sm font-normal">{t('installTitle')}</p>

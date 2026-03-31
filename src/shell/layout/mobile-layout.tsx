@@ -52,8 +52,8 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
           </AppHeader>
         )}
 
-        {/* Main Content（BottomTabBar分の余白をpb-14で確保） */}
-        <MainContentWrapper className="pb-14">{children}</MainContentWrapper>
+        {/* Main Content（BottomTabBar分の余白をpb-16で確保） */}
+        <MainContentWrapper className="pb-16">{children}</MainContentWrapper>
       </div>
 
       {/* 作成ボトムシート（Palette + RecentBlocks） */}

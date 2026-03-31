@@ -49,7 +49,7 @@ function StubPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         role="tab"
         aria-selected={activePage === 'calendar'}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1 rounded-lg px-4 text-sm transition-colors',
           activePage === 'calendar'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',
@@ -62,7 +62,7 @@ function StubPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         role="tab"
         aria-selected={activePage === 'stats'}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1 rounded-lg px-4 text-sm transition-colors',
           activePage === 'stats'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',

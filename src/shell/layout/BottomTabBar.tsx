@@ -151,7 +151,7 @@ export function BottomTabBar() {
               aria-current={isActive ? 'page' : undefined}
               onClick={tab.onClick}
               className={cn(
-                'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 transition-colors',
+                'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
               )}
             >
