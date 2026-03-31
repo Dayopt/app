@@ -210,7 +210,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex items-start gap-12">
       <div>
-        <p className="text-muted-foreground mb-3 text-center text-xs">Trigger</p>
+        <p className="text-muted-foreground mb-2 text-center text-xs">Trigger</p>
         <PaletteAddDemo pinnedItems={MOCK_PINNED_ITEMS} />
       </div>
     </div>

@@ -46,9 +46,9 @@ export function TagExplainContent({
       </div>
 
       {/* タグ例 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {examples.map((example) => (
-          <div key={example.name} className="flex items-center gap-1.5">
+          <div key={example.name} className="flex items-center gap-1">
             <span className={`${example.color} size-2.5 rounded-full`} />
             <span className="text-foreground text-xs font-medium">{example.name}</span>
           </div>

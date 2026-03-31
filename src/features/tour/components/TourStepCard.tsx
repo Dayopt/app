@@ -29,7 +29,7 @@ export function TourStepCard({
   const t = useTranslations();
 
   return (
-    <div className="flex flex-col gap-3" role="dialog" aria-label={t(titleKey)}>
+    <div className="flex flex-col gap-2" role="dialog" aria-label={t(titleKey)}>
       <div>
         <p className="text-muted-foreground text-xs">
           {t('tour.step', { current: currentStep, total: totalSteps })}

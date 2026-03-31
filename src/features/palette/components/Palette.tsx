@@ -103,7 +103,7 @@ export function Palette({ onAddClick }: PaletteProps) {
     <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={addTrigger}>
         {!hasItems && (
-          <div className="text-muted-foreground space-y-2 px-2 py-3 text-xs">
+          <div className="text-muted-foreground space-y-2 px-2 py-4 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
             <p>{t('sidebar.palette.emptyHint')}</p>
           </div>

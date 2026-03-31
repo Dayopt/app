@@ -127,12 +127,12 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
           {t(`settings.chronotype.quiz.questions.${question.id}.title`)}
         </h4>
 
-        <RadioGroup value={selectedOption} onValueChange={handleSelect} className="gap-3">
+        <RadioGroup value={selectedOption} onValueChange={handleSelect} className="gap-4">
           {question.options.map((option) => (
             <label
               key={option.id}
               className={
-                'border-border hover:bg-state-hover flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-colors' +
+                'border-border hover:bg-state-hover flex cursor-pointer items-center gap-4 rounded-2xl border p-4 transition-colors' +
                 (selectedOption === option.id ? ' bg-state-hover border-primary' : '')
               }
             >

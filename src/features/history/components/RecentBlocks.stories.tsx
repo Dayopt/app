@@ -29,7 +29,7 @@ function RecentBlocksStory({
       <SidebarSection title="履歴" defaultOpen>
         {items.length === 0 ? (
           /* 実キー: sidebar.recentBlocks.empty + sidebar.recentBlocks.emptyHint */
-          <div className="px-2 py-3">
+          <div className="px-2 py-4">
             <p className="text-muted-foreground text-xs">まだ履歴がありません</p>
             <p className="text-muted-foreground mt-1 text-xs">
               カレンダーにブロックを追加すると自動で表示されます
