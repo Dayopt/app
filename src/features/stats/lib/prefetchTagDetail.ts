@@ -2,31 +2,30 @@ import { headers } from 'next/headers';
 
 import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
 
+import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../utils/computeDateRange';
 
 /**
  * タグ詳細ページ用 prefetch
  *
- * クライアントのコンポーネントが使う個別クエリと同じキーでプリフェッチし、
- * ハイドレーション時にキャッシュヒットさせる。
+ * URL searchParams から読み取った granularity を使い、
+ * クライアント側と同じクエリキーでプリフェッチ → キャッシュヒット保証。
  */
-export async function prefetchTagDetailData(tagId: string) {
+export async function prefetchTagDetailData(tagId: string, granularity: StatsGranularity = 'week') {
   const helpers = await createServerHelpers();
 
   const now = new Date();
   const headersList = await headers();
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
-  const dateRange = computeStatsDateRange(now, 'week', serverTimezone);
+  const dateRange = computeStatsDateRange(now, granularity, serverTimezone);
 
   const tagDateRange = { tagId, ...dateRange };
 
   try {
     await Promise.all([
-      // Hero で使用する3クエリ
       helpers.entries.getTagCumulativeTime.prefetch(tagDateRange),
       helpers.entries.getTagAvgFulfillment.prefetch(tagDateRange),
       helpers.entries.getTagPlanRate.prefetch(tagDateRange),
-      // チャートで使用するクエリ
       helpers.entries.getTagHourlyDistribution.prefetch(tagDateRange),
       helpers.entries.getTagDowDistribution.prefetch(tagDateRange),
       helpers.entries.getTagFulfillmentDistribution.prefetch(tagDateRange),
