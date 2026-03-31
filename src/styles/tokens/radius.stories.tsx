@@ -16,13 +16,13 @@ export const AllRadius: Story = {
     <div>
       <h1 className="mb-6 text-2xl font-bold">Border Radius（角丸）</h1>
       <p className="text-muted-foreground mb-8">
-        8の倍数ベースで統一。選択肢を5種類に絞り、迷わないデザインシステム。
+        4段階のみ。「modal/dialog だけ 16px、それ以外は 8px」が基本ルール。
       </p>
 
-      <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-none" />
-          <code className="bg-container rounded px-2 py-1 text-xs">rounded-none</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-none</code>
           <p className="mt-2 text-xs font-bold">0px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             タブのアクティブ状態、
@@ -32,19 +32,8 @@ export const AllRadius: Story = {
         </div>
 
         <div className="text-center">
-          <div className="bg-primary mx-auto mb-2 size-24 rounded" />
-          <code className="bg-container rounded px-2 py-1 text-xs">rounded</code>
-          <p className="mt-2 text-xs font-bold">4px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            インラインタグ、
-            <br />
-            小さなバッジ、チップ
-          </p>
-        </div>
-
-        <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-lg" />
-          <code className="bg-container rounded px-2 py-1 text-xs">rounded-lg</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-lg</code>
           <p className="mt-2 text-xs font-bold">8px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             <strong>標準</strong>: ボタン、
@@ -55,18 +44,14 @@ export const AllRadius: Story = {
 
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-2xl" />
-          <code className="bg-container rounded px-2 py-1 text-xs">rounded-2xl</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-2xl</code>
           <p className="mt-2 text-xs font-bold">16px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            モーダル、ダイアログ、
-            <br />
-            大きなパネル
-          </p>
+          <p className="text-muted-foreground mt-1 text-xs">モーダル、ダイアログ</p>
         </div>
 
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-full" />
-          <code className="bg-container rounded px-2 py-1 text-xs">rounded-full</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-full</code>
           <p className="mt-2 text-xs font-bold">9999px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             アバター、ピル型ボタン、
@@ -133,13 +118,58 @@ export const UseCases: Story = {
         <div>
           <h2 className="mb-4 font-bold">バッジ・タグ</h2>
           <div className="flex gap-2">
-            <span className="border-primary text-primary rounded border px-2 py-1 text-xs">
-              rounded
+            <span className="border-primary text-primary rounded-lg border px-2 py-1 text-xs">
+              rounded-lg
             </span>
             <span className="border-primary text-primary rounded-full border px-2 py-1 text-xs">
               rounded-full
             </span>
           </div>
+        </div>
+      </div>
+    </div>
+  ),
+};
+
+export const ElevationMapping: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-6 text-2xl font-bold">Elevation × Radius</h1>
+      <p className="text-muted-foreground mb-8">
+        modal/dialog だけ rounded-2xl (16px)、それ以外は rounded-lg (8px) で統一。
+      </p>
+
+      <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="text-center">
+          <div className="bg-container border-border mx-auto mb-2 flex h-24 w-36 items-center justify-center rounded-lg border p-4">
+            <span className="text-muted-foreground text-sm">Sunken</span>
+          </div>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-lg</code>
+          <p className="text-muted-foreground mt-1 text-xs">sidebar, input</p>
+        </div>
+
+        <div className="text-center">
+          <div className="bg-card border-border-subtle mx-auto mb-2 flex h-24 w-36 items-center justify-center rounded-lg border p-4 shadow-sm">
+            <span className="text-muted-foreground text-sm">Raised</span>
+          </div>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-lg</code>
+          <p className="text-muted-foreground mt-1 text-xs">card, セクション</p>
+        </div>
+
+        <div className="text-center">
+          <div className="bg-card border-border-subtle shadow-card mx-auto mb-2 flex h-24 w-36 items-center justify-center rounded-lg border p-4">
+            <span className="text-muted-foreground text-sm">Overlay (小)</span>
+          </div>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-lg</code>
+          <p className="text-muted-foreground mt-1 text-xs">dropdown, popover</p>
+        </div>
+
+        <div className="text-center">
+          <div className="bg-card border-border-subtle shadow-card mx-auto mb-2 flex h-24 w-36 items-center justify-center rounded-2xl border p-4">
+            <span className="text-muted-foreground text-sm">Overlay (大)</span>
+          </div>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-2xl</code>
+          <p className="text-muted-foreground mt-1 text-xs">modal, dialog</p>
         </div>
       </div>
     </div>
@@ -153,7 +183,7 @@ export const PartialRadius: Story = {
       <p className="text-muted-foreground mb-8">
         隣接要素の結合など、特定のコーナーのみ角丸にする場合に使用。
         <br />
-        基本トークンと同じサイズ（4px, 8px, 16px）のみ許可。
+        基本トークンと同じサイズ（8px, 16px）のみ許可。
       </p>
 
       <div className="space-y-8">
@@ -170,8 +200,8 @@ export const PartialRadius: Story = {
             </button>
           </div>
           <p className="text-muted-foreground mt-2 text-xs">
-            <code className="bg-container rounded px-1">rounded-l-lg</code> +{' '}
-            <code className="bg-container rounded px-1">rounded-r-lg</code>
+            <code className="bg-container rounded-lg px-1">rounded-l-lg</code> +{' '}
+            <code className="bg-container rounded-lg px-1">rounded-r-lg</code>
           </p>
         </div>
 
@@ -189,47 +219,47 @@ export const PartialRadius: Story = {
             </div>
           </div>
           <p className="text-muted-foreground mt-2 text-xs">
-            範囲の開始: <code className="bg-container rounded px-1">rounded-l-lg</code>
-            、終了: <code className="bg-container rounded px-1">rounded-r-lg</code>
+            範囲の開始: <code className="bg-container rounded-lg px-1">rounded-l-lg</code>
+            、終了: <code className="bg-container rounded-lg px-1">rounded-r-lg</code>
           </p>
         </div>
 
         <div>
           <h2 className="mb-4 font-bold">許可されている部分Radius</h2>
           <p className="text-muted-foreground mb-4 text-xs">
-            基本トークンと同じサイズのみ: 4px, 8px, 16px
+            基本トークンと同じサイズのみ: 8px, 16px
           </p>
           <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="text-center">
-              <div className="bg-primary mx-auto mb-2 size-16 rounded-l" />
-              <code className="bg-container rounded px-1 text-xs">rounded-l</code>
-              <p className="text-muted-foreground text-xs">4px</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-primary mx-auto mb-2 size-16 rounded-r" />
-              <code className="bg-container rounded px-1 text-xs">rounded-r</code>
-              <p className="text-muted-foreground text-xs">4px</p>
-            </div>
-            <div className="text-center">
               <div className="bg-primary mx-auto mb-2 size-16 rounded-l-lg" />
-              <code className="bg-container rounded px-1 text-xs">rounded-l-lg</code>
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-l-lg</code>
               <p className="text-muted-foreground text-xs">8px</p>
             </div>
             <div className="text-center">
               <div className="bg-primary mx-auto mb-2 size-16 rounded-r-lg" />
-              <code className="bg-container rounded px-1 text-xs">rounded-r-lg</code>
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-r-lg</code>
+              <p className="text-muted-foreground text-xs">8px</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-primary mx-auto mb-2 size-16 rounded-t-lg" />
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-t-lg</code>
+              <p className="text-muted-foreground text-xs">8px</p>
+            </div>
+            <div className="text-center">
+              <div className="bg-primary mx-auto mb-2 size-16 rounded-b-lg" />
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-b-lg</code>
               <p className="text-muted-foreground text-xs">8px</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="text-center">
               <div className="bg-primary mx-auto mb-2 size-16 rounded-t-2xl" />
-              <code className="bg-container rounded px-1 text-xs">rounded-t-2xl</code>
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-t-2xl</code>
               <p className="text-muted-foreground text-xs">16px</p>
             </div>
             <div className="text-center">
               <div className="bg-primary mx-auto mb-2 size-16 rounded-b-2xl" />
-              <code className="bg-container rounded px-1 text-xs">rounded-b-2xl</code>
+              <code className="bg-container rounded-lg px-1 text-xs">rounded-b-2xl</code>
               <p className="text-muted-foreground text-xs">16px</p>
             </div>
           </div>

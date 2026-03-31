@@ -39,8 +39,15 @@ paths:
 
 ## Border Radius
 
-- `radius.css` で定義済みのスケールを使用: `rounded-sm`(4px), `rounded-md`(8px), `rounded-xl`(16px), `rounded-2xl`(24px), `rounded-full`
+- 4段階のみ: `rounded-none`(0), `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`
+- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止
 - 任意値 (`rounded-[Xpx]`) は禁止
+- **Elevation との対応:**
+  - Sunken (sidebar, input) → `rounded-lg` (8px)
+  - Raised (card, セクション) → `rounded-lg` (8px)
+  - Overlay (dropdown, popover) → `rounded-lg` (8px)
+  - Overlay (modal, dialog) → `rounded-2xl` (16px)
+  - 原則: Overlay の中でも画面中央に出る大きな面だけ `rounded-2xl`。それ以外は `rounded-lg` で統一
 
 ## Typography
 
