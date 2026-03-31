@@ -181,10 +181,10 @@ Container系・不透明度ハードコードからの移行ルール。
 
 ## Border
 
-| トークン               | Light                 | Dark                  | 用途                 |
-| ---------------------- | --------------------- | --------------------- | -------------------- |
-| `border-border`        | `oklch(0 0 0 / 0.06)` | `oklch(1 0 0 / 0.07)` | card外枠、セクション |
-| `border-border-subtle` | `oklch(0 0 0 / 0.04)` | `oklch(1 0 0 / 0.05)` | card内部の区切り     |
+| トークン               | Light                 | Dark                  | 用途                                         |
+| ---------------------- | --------------------- | --------------------- | -------------------------------------------- |
+| `border-border`        | `oklch(0 0 0 / 0.06)` | `oklch(1 0 0 / 0.07)` | 構造的な区切り（sidebar, input, divider）    |
+| `border-border-subtle` | `oklch(0 0 0 / 0.04)` | `oklch(1 0 0 / 0.05)` | Raised/Overlay の縁（card, dialog, popover） |
 
 > 入力フィールド背景は `bg-muted`。フォーカスリングは `focus-visible:ring-2 ring-primary`。
 
