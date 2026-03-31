@@ -10,6 +10,7 @@ import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
+import { TagIcon } from '@/features/tags';
 import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 // ─────────────────────────────────────────────────────────
@@ -40,9 +41,8 @@ function RecentBlocksStory({
             <BlockItem
               key={`${item.tagId}-${item.durationMinutes}`}
               tagName={item.tagName}
-              tagColor={item.tagColor}
+              iconSlot={<TagIcon icon={null} color={item.tagColor} size="sm" />}
               durationMinutes={item.durationMinutes}
-              dotVariant="outline"
               onClick={fn()}
               menuSlot={
                 onPinItem ? (

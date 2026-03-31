@@ -7,6 +7,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { TagIcon } from '@/features/tags';
 import { BlockItem } from '@/shell/components/sidebar';
 
 import { PaletteItemMenu } from './PaletteItemMenu';
@@ -33,7 +34,7 @@ export const InBlockItem: Story = {
     <div className="w-64">
       <BlockItem
         tagName="仕事"
-        tagColor="blue"
+        iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
         durationMinutes={args.currentDuration}
         onClick={fn()}
         menuSlot={<PaletteItemMenu {...args} />}
@@ -49,7 +50,7 @@ export const Duration30m: Story = {
     <div className="w-64">
       <BlockItem
         tagName="勉強"
-        tagColor="green"
+        iconSlot={<TagIcon icon="book-open" color="green" size="sm" />}
         durationMinutes={args.currentDuration}
         onClick={fn()}
         menuSlot={<PaletteItemMenu {...args} />}
@@ -67,7 +68,7 @@ export const AllPatterns: Story = {
         <div className="w-64">
           <BlockItem
             tagName="仕事"
-            tagColor="blue"
+            iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
             durationMinutes={60}
             onClick={fn()}
             menuSlot={
@@ -86,7 +87,7 @@ export const AllPatterns: Story = {
         <div className="w-64">
           <BlockItem
             tagName="休憩"
-            tagColor="orange"
+            iconSlot={<TagIcon icon="coffee" color="orange" size="sm" />}
             durationMinutes={15}
             onClick={fn()}
             menuSlot={

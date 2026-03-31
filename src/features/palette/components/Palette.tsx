@@ -113,7 +113,6 @@ export function Palette({ onAddClick }: PaletteProps) {
           <div key={item.id}>
             <BlockItem
               tagName={item.tag.name}
-              tagColor={item.tag.color}
               durationMinutes={item.duration_minutes}
               iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
               onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
@@ -133,8 +132,8 @@ export function Palette({ onAddClick }: PaletteProps) {
           <div key={item.id}>
             <BlockItem
               tagName={t('sidebar.palette.tagDeleted')}
-              tagColor="gray"
               durationMinutes={item.duration_minutes}
+              iconSlot={<TagIcon icon={null} color="gray" size="sm" />}
               disabled
               menuSlot={
                 <HoverTooltip content={t('sidebar.palette.remove')}>

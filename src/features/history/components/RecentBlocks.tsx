@@ -58,7 +58,6 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
               <BlockItem
                 key={`${item.tagId}-${item.durationMinutes}`}
                 tagName={item.tag.name}
-                tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
                 iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
                 onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}

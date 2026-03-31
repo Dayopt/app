@@ -6,6 +6,7 @@ import type { CalendarEvent } from '@/types/calendar-event';
 import { BlockItem } from '@/shell/components/sidebar/BlockItem';
 
 import { EntryCardContent } from '../../entry/components/card/EntryCardContent';
+import { TagIcon } from './TagIcon';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 
@@ -147,11 +148,31 @@ export const InBlockItemContext: Story = {
   render: () => (
     <div className="w-64 space-y-1">
       <p className="text-muted-foreground mb-1 text-xs">コロンタグ</p>
-      <BlockItem tagName="開発:API" tagColor="blue" durationMinutes={60} onClick={fn()} />
-      <BlockItem tagName="仕事:定例MTG" tagColor="green" durationMinutes={30} onClick={fn()} />
+      <BlockItem
+        tagName="開発:API"
+        iconSlot={<TagIcon icon="code" color="blue" size="sm" />}
+        durationMinutes={60}
+        onClick={fn()}
+      />
+      <BlockItem
+        tagName="仕事:定例MTG"
+        iconSlot={<TagIcon icon="users" color="green" size="sm" />}
+        durationMinutes={30}
+        onClick={fn()}
+      />
       <p className="text-muted-foreground mt-2 mb-1 text-xs">フラットタグ（変化なし）</p>
-      <BlockItem tagName="運動" tagColor="amber" durationMinutes={45} onClick={fn()} />
-      <BlockItem tagName="休憩" tagColor="orange" durationMinutes={15} onClick={fn()} />
+      <BlockItem
+        tagName="運動"
+        iconSlot={<TagIcon icon="dumbbell" color="amber" size="sm" />}
+        durationMinutes={45}
+        onClick={fn()}
+      />
+      <BlockItem
+        tagName="休憩"
+        iconSlot={<TagIcon icon="coffee" color="orange" size="sm" />}
+        durationMinutes={15}
+        onClick={fn()}
+      />
     </div>
   ),
 };

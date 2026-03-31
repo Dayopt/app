@@ -14,6 +14,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { getTagColorClasses } from '@/lib/tag-colors';
 
+import { TagIcon } from '@/features/tags';
+
 import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
 
@@ -101,7 +103,7 @@ function MockSidebarFooter() {
         <div className="flex items-center gap-2">
           <div className="bg-primary size-6 rounded-full" />
           <span className="text-sm">Tomoya</span>
-          <ChevronRight className="text-muted-foreground size-3" />
+          <ChevronRight className="text-muted-foreground size-3.5" />
         </div>
       </div>
     </div>
@@ -169,8 +171,18 @@ export const Default: Story = {
     defaultOpen: true,
     children: (
       <div className="space-y-1">
-        <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
-        <BlockItem tagName="勉強" tagColor="green" durationMinutes={30} onClick={noop} />
+        <BlockItem
+          tagName="仕事"
+          iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+          durationMinutes={60}
+          onClick={noop}
+        />
+        <BlockItem
+          tagName="勉強"
+          iconSlot={<TagIcon icon={null} color="green" size="sm" />}
+          durationMinutes={30}
+          onClick={noop}
+        />
       </div>
     ),
   },
@@ -188,7 +200,14 @@ export const Collapsed: Story = {
   args: {
     title: 'セクション',
     defaultOpen: false,
-    children: <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />,
+    children: (
+      <BlockItem
+        tagName="仕事"
+        iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+        durationMinutes={60}
+        onClick={noop}
+      />
+    ),
   },
   decorators: [
     (Story) => (
@@ -207,8 +226,18 @@ export const WithAction: Story = {
     action: <ActionButton />,
     children: (
       <div className="space-y-1">
-        <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
-        <BlockItem tagName="運動" tagColor="teal" durationMinutes={30} onClick={noop} />
+        <BlockItem
+          tagName="仕事"
+          iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+          durationMinutes={60}
+          onClick={noop}
+        />
+        <BlockItem
+          tagName="運動"
+          iconSlot={<TagIcon icon={null} color="teal" size="sm" />}
+          durationMinutes={30}
+          onClick={noop}
+        />
       </div>
     ),
   },
@@ -252,36 +281,43 @@ export const FullSidebar: Story = {
           </SidebarSection>
         </div>
 
-        {/* パレット（塗りドット） */}
+        {/* パレット */}
         <div className="w-full min-w-0 overflow-hidden px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-            <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
-            <BlockItem tagName="Exercise" tagColor="teal" durationMinutes={30} onClick={noop} />
+            <BlockItem
+              tagName="Work"
+              iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
+              durationMinutes={60}
+              onClick={noop}
+            />
+            <BlockItem
+              tagName="Exercise"
+              iconSlot={<TagIcon icon="dumbbell" color="teal" size="sm" />}
+              durationMinutes={30}
+              onClick={noop}
+            />
           </SidebarSection>
         </div>
 
-        {/* 履歴（中抜きドット） */}
+        {/* 履歴 */}
         <div className="w-full min-w-0 overflow-hidden px-2">
           <SidebarSection title="履歴" defaultOpen>
             <BlockItem
               tagName="Work"
-              tagColor="blue"
+              iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
               durationMinutes={45}
-              dotVariant="outline"
               onClick={noop}
             />
             <BlockItem
               tagName="Learning"
-              tagColor="green"
+              iconSlot={<TagIcon icon="book-open" color="green" size="sm" />}
               durationMinutes={30}
-              dotVariant="outline"
               onClick={noop}
             />
             <BlockItem
               tagName="Life"
-              tagColor="amber"
+              iconSlot={<TagIcon icon="heart" color="amber" size="sm" />}
               durationMinutes={15}
-              dotVariant="outline"
               onClick={noop}
             />
           </SidebarSection>
@@ -304,8 +340,18 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs font-medium">Default（開いた状態）</p>
         <div className="w-64 px-2">
           <SidebarSection title="セクション" defaultOpen>
-            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
-            <BlockItem tagName="勉強" tagColor="green" durationMinutes={30} onClick={noop} />
+            <BlockItem
+              tagName="仕事"
+              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+              durationMinutes={60}
+              onClick={noop}
+            />
+            <BlockItem
+              tagName="勉強"
+              iconSlot={<TagIcon icon={null} color="green" size="sm" />}
+              durationMinutes={30}
+              onClick={noop}
+            />
           </SidebarSection>
         </div>
       </div>
@@ -313,7 +359,12 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs font-medium">Collapsed（閉じた状態）</p>
         <div className="w-64 px-2">
           <SidebarSection title="セクション">
-            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+            <BlockItem
+              tagName="仕事"
+              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+              durationMinutes={60}
+              onClick={noop}
+            />
           </SidebarSection>
         </div>
       </div>
@@ -321,7 +372,12 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs font-medium">WithAction（+ボタン付き）</p>
         <div className="w-64 px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-            <BlockItem tagName="仕事" tagColor="blue" durationMinutes={60} onClick={noop} />
+            <BlockItem
+              tagName="仕事"
+              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+              durationMinutes={60}
+              onClick={noop}
+            />
           </SidebarSection>
         </div>
       </div>
@@ -350,16 +406,20 @@ export const AllPatterns: Story = {
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
               <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
-                <BlockItem tagName="Work" tagColor="blue" durationMinutes={60} onClick={noop} />
+                <BlockItem
+                  tagName="Work"
+                  iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
+                  durationMinutes={60}
+                  onClick={noop}
+                />
               </SidebarSection>
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
               <SidebarSection title="履歴" defaultOpen>
                 <BlockItem
                   tagName="Work"
-                  tagColor="blue"
+                  iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
                   durationMinutes={45}
-                  dotVariant="outline"
                   onClick={noop}
                 />
               </SidebarSection>
