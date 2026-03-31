@@ -20,7 +20,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
 
   return (
     <div
-      className={cn('border-border flex items-center rounded-md border', className)}
+      className={cn('border-border flex items-center rounded-lg border', className)}
       role="tablist"
       aria-label={tAria('pageNavigation')}
     >
@@ -29,7 +29,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'calendar'}
         onClick={onCalendarClick}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
           activePage === 'calendar'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',
@@ -43,7 +43,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         aria-selected={activePage === 'stats'}
         onClick={onStatsClick}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
           activePage === 'stats'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',

@@ -34,7 +34,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-3xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">確認が必要な操作</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -77,7 +77,7 @@ export const Overview: Story = {
         </section>
 
         {/* 削除確認 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">削除確認ダイアログ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             何を削除するか明示。アクションボタンは赤で強調。
@@ -124,7 +124,7 @@ export const Overview: Story = {
         </section>
 
         {/* 危険な操作 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">危険な操作（アイコン付き）</h2>
           <p className="text-muted-foreground mb-4 text-sm">特に重要な操作は警告アイコンで強調。</p>
 
@@ -155,7 +155,7 @@ export const Overview: Story = {
         </section>
 
         {/* 変更破棄 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">変更破棄の確認</h2>
           <p className="text-muted-foreground mb-4 text-sm">編集中の内容を破棄する場合。</p>
 
@@ -178,7 +178,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -205,7 +205,7 @@ export const Overview: Story = {
         </section>
 
         {/* ボタンラベル例 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ボタンラベルの例</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -243,7 +243,7 @@ export const Overview: Story = {
         </section>
 
         {/* インラインアクション */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">トリガーボタンの例</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             確認ダイアログを開くボタン。破壊的操作はvariant=&quot;destructive&quot;。

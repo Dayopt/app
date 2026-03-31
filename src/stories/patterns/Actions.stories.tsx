@@ -40,7 +40,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -78,7 +78,7 @@ export const Overview: Story = {
         </section>
 
         {/* ボタンサイズ */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ボタンサイズ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             3種類のサイズ。用途に応じて使い分け。
@@ -162,7 +162,7 @@ export const Overview: Story = {
         </section>
 
         {/* プライマリアクション */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">プライマリアクション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             画面で最も重要なアクション。1つだけ配置。
@@ -188,7 +188,7 @@ export const Overview: Story = {
         </section>
 
         {/* ドロップダウンメニュー */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ドロップダウンメニュー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             複数の関連アクションをグループ化。ボタンクリックで展開。
@@ -285,7 +285,7 @@ export const Overview: Story = {
         </section>
 
         {/* スプリットボタン */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">スプリットボタン</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             デフォルトアクション＋追加オプション。頻繁に使うアクションを素早く実行。
@@ -346,7 +346,7 @@ export const Overview: Story = {
         </section>
 
         {/* 一括アクション */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">一括アクション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             複数選択時に表示されるアクションバー。
@@ -379,7 +379,7 @@ export const Overview: Story = {
         </section>
 
         {/* キーボードショートカット */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">キーボードショートカット</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             メニュー項目にショートカットを表示。パワーユーザー向け。
@@ -397,25 +397,25 @@ export const Overview: Story = {
                 <tr className="border-border border-b">
                   <td className="py-3">新規作成</td>
                   <td className="py-3">
-                    <kbd className="bg-muted rounded px-2 py-1 text-xs">⌘N</kbd>
+                    <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘N</kbd>
                   </td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-3">保存</td>
                   <td className="py-3">
-                    <kbd className="bg-muted rounded px-2 py-1 text-xs">⌘S</kbd>
+                    <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘S</kbd>
                   </td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-3">削除</td>
                   <td className="py-3">
-                    <kbd className="bg-muted rounded px-2 py-1 text-xs">⌘⌫</kbd>
+                    <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘⌫</kbd>
                   </td>
                 </tr>
                 <tr>
                   <td className="py-3">検索</td>
                   <td className="py-3">
-                    <kbd className="bg-muted rounded px-2 py-1 text-xs">⌘K</kbd>
+                    <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘K</kbd>
                   </td>
                 </tr>
               </tbody>
@@ -424,7 +424,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

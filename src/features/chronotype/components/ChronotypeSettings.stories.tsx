@@ -128,7 +128,7 @@ function ChronotypeSettingsDemo({
                 type="button"
                 onClick={() => handleSelectType(type)}
                 className={cn(
-                  'flex flex-1 flex-col items-center gap-1 rounded-xl border p-3 transition-colors',
+                  'flex flex-1 flex-col items-center gap-1 rounded-2xl border p-3 transition-colors',
                   enabled && selectedType === type
                     ? 'border-foreground bg-card'
                     : 'border-border hover:border-foreground/30',
@@ -149,7 +149,7 @@ function ChronotypeSettingsDemo({
               <TimelineBarDemo zones={selectedProfile.productivityZones} />
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-xl p-4">
+                <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-2xl p-4">
                   <span className="bg-chronotype-deep/20 text-chronotype-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                     ↗
                   </span>
@@ -161,7 +161,7 @@ function ChronotypeSettingsDemo({
                     <p className="text-muted-foreground text-xs leading-none">Best for Deep Work</p>
                   </div>
                 </div>
-                <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-xl p-4">
+                <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-2xl p-4">
                   <span className="bg-chronotype-ease/20 text-chronotype-ease flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                     ↘
                   </span>

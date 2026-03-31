@@ -627,7 +627,7 @@ function SortableTagItem({
         {!(isFirstInGroup && collapsed) && (
           <div
             className={cn(
-              'group/item flex items-center rounded text-sm',
+              'group/item flex items-center rounded-lg text-sm',
               isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
@@ -659,7 +659,7 @@ function SortableTagItem({
               onPointerDown={(e) => e.stopPropagation()}
               aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
               className={cn(
-                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded transition-opacity before:absolute before:-inset-2 before:content-['']",
+                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
                 checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
                 isMobile && 'opacity-100',
               )}
@@ -675,7 +675,7 @@ function SortableTagItem({
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >

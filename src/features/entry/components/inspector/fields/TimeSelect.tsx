@@ -144,7 +144,7 @@ export function TimeSelect({
                   aria-selected={option === value}
                   type="button"
                   className={cn(
-                    'hover:bg-state-hover w-full rounded-md px-3 py-2.5 text-left text-sm transition-colors',
+                    'hover:bg-state-hover w-full rounded-lg px-3 py-2.5 text-left text-sm transition-colors',
                     index === highlightedIndex
                       ? 'bg-state-selected'
                       : option === value

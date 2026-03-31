@@ -169,7 +169,7 @@ export const AllPatterns: Story = {
             共通ボーダーで囲み、内部はdivide-xで区切る。h-8（sm）、ボタンはh-fullで伸ばす。
           </p>
           <div className="flex items-center gap-4">
-            <div className="divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-md border">
+            <div className="divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-lg border">
               <button
                 type="button"
                 className="text-muted-foreground hover:bg-state-hover flex h-full w-8 items-center justify-center transition-colors"
@@ -191,7 +191,7 @@ export const AllPatterns: Story = {
                 <ChevronRight className="size-4" />
               </button>
             </div>
-            <div className="divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-md border">
+            <div className="divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-lg border">
               <button
                 type="button"
                 className="text-muted-foreground hover:bg-state-hover flex h-full w-8 items-center justify-center transition-colors"

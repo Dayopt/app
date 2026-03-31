@@ -129,7 +129,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
           <div className="relative">
             <CommandInput placeholder={t('placeholder')} value={query} onValueChange={setQuery} />
             <div className="absolute top-1/2 right-3 hidden -translate-y-1/2 items-center gap-1 md:flex">
-              <kbd className="bg-surface-container text-muted-foreground inline-flex h-6 items-center gap-1 rounded border px-2 font-mono text-xs font-normal opacity-100 select-none">
+              <kbd className="bg-surface-container text-muted-foreground inline-flex h-6 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-normal opacity-100 select-none">
                 ESC
               </kbd>
             </div>

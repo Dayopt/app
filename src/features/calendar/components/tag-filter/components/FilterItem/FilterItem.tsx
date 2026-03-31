@@ -116,7 +116,7 @@ export function FilterItem({
   const content = (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded text-sm [@media(pointer:coarse)]:min-h-11',
+        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded-lg text-sm [@media(pointer:coarse)]:min-h-11',
         disabled && 'cursor-not-allowed opacity-50',
         dragHandleProps && 'cursor-grab active:cursor-grabbing',
         !dragHandleProps && !disabled && 'cursor-pointer',
@@ -152,7 +152,7 @@ export function FilterItem({
             <button
               type="button"
               aria-label={t('calendar.filter.tagMenu')}
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-3 before:content-[''] [@media(hover:none)]:opacity-100"
+              className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-3 before:content-[''] [@media(hover:none)]:opacity-100"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />

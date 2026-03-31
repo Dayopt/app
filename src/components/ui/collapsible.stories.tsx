@@ -23,7 +23,7 @@ export const AllPatterns: Story = {
       <div className="border-border rounded-lg border">
         <Collapsible defaultOpen>
           <CollapsibleTrigger asChild>
-            <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded transition-colors">
+            <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded-lg transition-colors">
               <div className="text-muted-foreground flex h-8 min-w-0 items-center px-2 text-left text-xs font-bold">
                 <span className="truncate">セクションタイトル</span>
                 <ChevronRight className="ml-1 size-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-90" />
@@ -32,8 +32,8 @@ export const AllPatterns: Story = {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="space-y-1 px-2 pb-2">
-              <div className="hover:bg-state-hover rounded px-2 py-2 text-sm">アイテム1</div>
-              <div className="hover:bg-state-hover rounded px-2 py-2 text-sm">アイテム2</div>
+              <div className="hover:bg-state-hover rounded-lg px-2 py-2 text-sm">アイテム1</div>
+              <div className="hover:bg-state-hover rounded-lg px-2 py-2 text-sm">アイテム2</div>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -44,7 +44,7 @@ export const AllPatterns: Story = {
           <CollapsibleTrigger asChild>
             <div className="flex h-10 w-full cursor-pointer items-center gap-2 px-4 transition-colors">
               <div className="border-border-subtle h-px flex-1 border-t" />
-              <div className="hover:bg-state-hover flex items-center gap-1 rounded px-2 py-1 transition-colors">
+              <div className="hover:bg-state-hover flex items-center gap-1 rounded-lg px-2 py-1 transition-colors">
                 <Clock className="text-muted-foreground size-3" />
                 <span className="text-muted-foreground text-xs">Records (3)</span>
                 <ChevronDown className="text-muted-foreground size-3 transition-transform [[data-state=open]_&]:rotate-180" />

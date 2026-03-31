@@ -63,7 +63,7 @@ export function ColonTagLabel({
     case 'chip':
       return (
         <span className={cn('inline-flex min-w-0 items-center gap-1', className)} style={style}>
-          <span className="bg-muted shrink-0 rounded px-1 text-xs leading-normal">{prefix}</span>
+          <span className="bg-muted shrink-0 rounded-lg px-1 text-xs leading-normal">{prefix}</span>
           <span className="truncate">{suffix}</span>
         </span>
       );

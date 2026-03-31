@@ -11,7 +11,7 @@ export function DeltaBadge({ current, previous, invertColor = false }: DeltaBadg
   const delta = current - previous;
   if (delta === 0) {
     return (
-      <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-xs">±0</span>
+      <span className="bg-muted text-muted-foreground rounded-lg px-1.5 py-0.5 text-xs">±0</span>
     );
   }
 
@@ -20,7 +20,7 @@ export function DeltaBadge({ current, previous, invertColor = false }: DeltaBadg
 
   return (
     <span
-      className={`rounded-md px-1.5 py-0.5 text-xs font-medium ${
+      className={`rounded-lg px-1.5 py-0.5 text-xs font-medium ${
         isGood ? 'bg-success-tint text-success' : 'bg-destructive-tint text-destructive'
       }`}
     >

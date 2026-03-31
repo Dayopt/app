@@ -97,7 +97,7 @@ export function MobileCreateSheet() {
       setActiveSnapPoint={setSnap}
       fadeFromIndex={0}
     >
-      <DrawerContent className="max-h-[unset] rounded-t-xl">
+      <DrawerContent className="max-h-[unset] rounded-t-2xl">
         <VisuallyHidden asChild>
           <DrawerTitle>Create</DrawerTitle>
         </VisuallyHidden>
@@ -165,7 +165,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
         <button
           type="button"
           onClick={onBack}
-          className="text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded"
+          className="text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-lg"
           aria-label={t('common.actions.back')}
         >
           <ArrowLeft className="size-5" />

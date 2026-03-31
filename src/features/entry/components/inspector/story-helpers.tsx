@@ -42,7 +42,7 @@ export function MockPlanLinkButton({ planName }: { planName?: string | undefined
         {hasPlan && (
           <button
             type="button"
-            className="hover:bg-state-hover mr-1 rounded p-1 transition-colors"
+            className="hover:bg-state-hover mr-1 rounded-lg p-1 transition-colors"
             aria-label="Plan紐付けを解除"
           >
             <X className="size-4" />

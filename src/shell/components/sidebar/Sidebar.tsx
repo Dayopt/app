@@ -49,7 +49,7 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
             alt="Dayopt"
             width={20}
             height={20}
-            className="rounded"
+            className="rounded-lg"
           />
           <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
         </div>

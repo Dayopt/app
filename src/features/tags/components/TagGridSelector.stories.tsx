@@ -81,7 +81,7 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
       )}
@@ -109,7 +109,7 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >

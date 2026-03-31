@@ -172,7 +172,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                   <p className="mb-2 text-sm font-normal">
                     {t('settings.account.mfa.setup.manualEntry')}
                   </p>
-                  <code className="bg-muted block rounded p-2 text-xs">{secret}</code>
+                  <code className="bg-muted block rounded-lg p-2 text-xs">{secret}</code>
                 </div>
               )}
 

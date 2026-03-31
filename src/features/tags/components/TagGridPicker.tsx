@@ -43,7 +43,7 @@ function TagGridCell({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,

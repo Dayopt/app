@@ -50,7 +50,7 @@ function Label({ children }: { children: React.ReactNode }) {
 /** Docs用の解説ブロック。 */
 function DocsNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-muted-foreground border-border mb-4 rounded-md border p-4 text-xs leading-relaxed">
+    <div className="text-muted-foreground border-border mb-4 rounded-lg border p-4 text-xs leading-relaxed">
       {children}
     </div>
   );

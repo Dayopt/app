@@ -140,7 +140,7 @@ export function Palette({ onAddClick }: PaletteProps) {
                 <HoverTooltip content={t('sidebar.palette.remove')}>
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-destructive flex size-6 shrink-0 items-center justify-center rounded transition-colors"
+                    className="text-muted-foreground hover:text-destructive flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors"
                     onClick={() => unpinItem(item.id)}
                     aria-label={t('sidebar.palette.remove')}
                   >

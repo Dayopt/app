@@ -28,7 +28,7 @@ export function AnimalCard({
     <button
       type="button"
       onClick={() => onSelect(type)}
-      className={`border-border hover:bg-state-hover flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors ${
+      className={`border-border hover:bg-state-hover flex flex-col items-center gap-2 rounded-2xl border p-4 transition-colors ${
         isSelected ? 'bg-state-hover border-primary ring-primary/20 ring-2' : ''
       }`}
     >

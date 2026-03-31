@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 'stats' }) {
   return (
     <div
-      className="border-border flex items-center rounded-md border"
+      className="border-border flex items-center rounded-lg border"
       role="tablist"
       aria-label="Page navigation"
     >
@@ -28,7 +28,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         role="tab"
         aria-selected={activePage === 'calendar'}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
           activePage === 'calendar'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',
@@ -41,7 +41,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         role="tab"
         aria-selected={activePage === 'stats'}
         className={cn(
-          'flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-sm transition-colors',
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
           activePage === 'stats'
             ? 'bg-state-selected text-foreground font-medium'
             : 'text-muted-foreground hover:bg-state-hover',

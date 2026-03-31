@@ -29,7 +29,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -67,7 +67,7 @@ export const Overview: Story = {
         </section>
 
         {/* 単一選択（Radio） */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">単一選択（Radio）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             排他的な選択。常に1つだけ選択される。
@@ -124,7 +124,7 @@ export const Overview: Story = {
         </section>
 
         {/* 複数選択（Checkbox） */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">複数選択（Checkbox）</h2>
           <p className="text-muted-foreground mb-4 text-sm">複数選択可能。0個以上を選択できる。</p>
 
@@ -176,7 +176,7 @@ export const Overview: Story = {
         </section>
 
         {/* チップ選択 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">チップ選択（Chips）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タグやフィルターに最適。視覚的にコンパクト。
@@ -223,7 +223,7 @@ export const Overview: Story = {
         </section>
 
         {/* リスト選択 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">リスト選択</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             リスト内のアイテムを選択。一括操作に使用。
@@ -247,7 +247,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

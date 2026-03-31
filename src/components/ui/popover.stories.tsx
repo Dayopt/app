@@ -185,7 +185,7 @@ export const WithAnchor: Story = {
               <button
                 key={option}
                 type="button"
-                className={`hover:bg-state-hover w-full rounded px-2 py-1 text-left text-sm ${
+                className={`hover:bg-state-hover w-full rounded-lg px-2 py-1 text-left text-sm ${
                   option === value ? 'bg-state-selected' : ''
                 }`}
                 onClick={() => {

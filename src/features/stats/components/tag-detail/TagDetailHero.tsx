@@ -54,7 +54,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
   const isPending = cumulative.isPending || fulfillment.isPending || planRate.isPending;
 
   if (isPending) {
-    return <Skeleton className="h-28 w-full rounded-xl" />;
+    return <Skeleton className="h-28 w-full rounded-2xl" />;
   }
 
   const totalMinutes = cumulative.data?.totalMinutes ?? 0;
@@ -68,7 +68,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
   const totalChildHours = childTags.reduce((sum, c) => sum + c.hours, 0);
 
   return (
-    <div className="bg-card border-border-subtle rounded-xl border p-4 shadow-sm">
+    <div className="bg-card border-border-subtle rounded-2xl border p-4 shadow-sm">
       {/* メイン数字 */}
       <div className="flex items-baseline gap-2">
         <span className="text-3xl font-bold tabular-nums">

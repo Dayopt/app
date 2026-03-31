@@ -52,7 +52,7 @@ export function ChildTagBreakdown({ tagName }: ChildTagBreakdownProps) {
   }
 
   if (isPending) {
-    return <Skeleton className="h-32 w-full rounded-xl" />;
+    return <Skeleton className="h-32 w-full rounded-2xl" />;
   }
 
   const totalHours = data.reduce((sum, child) => sum + child.hours, 0);
@@ -74,7 +74,7 @@ export function ChildTagBreakdown({ tagName }: ChildTagBreakdownProps) {
                 <div className="mb-1 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span
-                      className="size-2 shrink-0 rounded-sm"
+                      className="size-2 shrink-0 rounded-lg"
                       style={{ backgroundColor: `var(--tag-${color})` }}
                     />
                     <span className="text-foreground text-sm font-medium">{displayName}</span>

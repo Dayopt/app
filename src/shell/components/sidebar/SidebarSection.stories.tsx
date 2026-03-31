@@ -26,7 +26,7 @@ function ActionButton() {
   return (
     <button
       type="button"
-      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded"
+      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
       onClick={fn()}
       aria-label="Add"
     >
@@ -50,7 +50,7 @@ function TagRow({
 }) {
   const colorClasses = getTagColorClasses(color);
   return (
-    <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm">
+    <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm">
       <Checkbox
         checked={checked}
         aria-label={name}
@@ -70,20 +70,20 @@ function MockSidebarHeader() {
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-2">
       <div className="flex items-center gap-2 pl-2">
-        <div className="bg-primary size-5 rounded" />
+        <div className="bg-primary size-5 rounded-lg" />
         <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
       </div>
       <div className="flex items-center">
         <button
           type="button"
-          className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
           aria-label="Search"
         >
           <Search className="text-muted-foreground size-4" />
         </button>
         <button
           type="button"
-          className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
           aria-label="Close sidebar"
         >
           <PanelLeft className="text-muted-foreground size-4" />
@@ -114,7 +114,7 @@ function MockThemeToggle() {
     <div className="flex items-center gap-1 px-2 py-2">
       <button
         type="button"
-        className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+        className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
         aria-label="Toggle theme"
       >
         <Moon className="text-muted-foreground size-4" />

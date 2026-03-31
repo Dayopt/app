@@ -142,7 +142,7 @@ export const EventContextMenu = ({
             key={item.label}
             onClick={() => handleAction(item.action)}
             className={cn(
-              'flex w-full cursor-default items-center gap-2 rounded px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
+              'flex w-full cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
               "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
               item.dangerous
                 ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'

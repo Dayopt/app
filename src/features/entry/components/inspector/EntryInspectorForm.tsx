@@ -206,7 +206,7 @@ export function EntryInspectorForm({
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-muted mt-3 rounded-xl">
+      <div className="bg-muted mt-3 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* 日付 */}
           <DateRow

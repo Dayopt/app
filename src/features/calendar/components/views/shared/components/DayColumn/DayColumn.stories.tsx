@@ -108,7 +108,7 @@ export const TodayWithEvents: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded border">
+      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -125,7 +125,7 @@ export const Empty: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded border">
+      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -142,7 +142,7 @@ export const Weekend: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded border">
+      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -159,7 +159,7 @@ export const Weekday: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded border">
+      <div className="border-border relative h-[600px] w-48 overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -177,7 +177,7 @@ export const Compact: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border relative h-[400px] w-48 overflow-hidden rounded border">
+      <div className="border-border relative h-[400px] w-48 overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -194,7 +194,7 @@ export const AllPatterns: Story = {
     <div className="flex items-start gap-4">
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">今日（エントリあり）</p>
-        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded border">
+        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}
             events={mockEvents}
@@ -208,7 +208,7 @@ export const AllPatterns: Story = {
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">空（今日）</p>
-        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded border">
+        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}
             events={[]}
@@ -221,7 +221,7 @@ export const AllPatterns: Story = {
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">週末（空）</p>
-        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded border">
+        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={nextSaturday}
             events={[]}
@@ -234,7 +234,7 @@ export const AllPatterns: Story = {
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">コンパクト（48px）</p>
-        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded border">
+        <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}
             events={mockEvents}

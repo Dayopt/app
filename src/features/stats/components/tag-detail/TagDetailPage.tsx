@@ -191,7 +191,7 @@ export function TagDetailPage({
           </nav>
           {/* ① Hero: 合計時間 + KPI + 子タグバー */}
           <FeatureErrorBoundary featureName="tag-detail-hero">
-            <Suspense fallback={<Skeleton className="h-28 w-full rounded-xl" />}>
+            <Suspense fallback={<Skeleton className="h-28 w-full rounded-2xl" />}>
               <TagDetailHero tagId={tagId} tagName={tag?.name ?? ''} />
             </Suspense>
           </FeatureErrorBoundary>
@@ -203,12 +203,12 @@ export function TagDetailPage({
             </h3>
             <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
               <FeatureErrorBoundary featureName="tag-detail-hourly">
-                <Suspense fallback={<Skeleton className="h-44 w-full rounded-xl" />}>
+                <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
                   <TagHourlyChart tagId={tagId} />
                 </Suspense>
               </FeatureErrorBoundary>
               <FeatureErrorBoundary featureName="tag-detail-dow">
-                <Suspense fallback={<Skeleton className="h-44 w-full rounded-xl" />}>
+                <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
                   <TagDowChart tagId={tagId} />
                 </Suspense>
               </FeatureErrorBoundary>
@@ -222,12 +222,12 @@ export function TagDetailPage({
             </h3>
             <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
               <FeatureErrorBoundary featureName="tag-detail-fulfillment">
-                <Suspense fallback={<Skeleton className="h-32 w-full rounded-xl" />}>
+                <Suspense fallback={<Skeleton className="h-32 w-full rounded-2xl" />}>
                   <TagFulfillmentDistribution tagId={tagId} />
                 </Suspense>
               </FeatureErrorBoundary>
               <FeatureErrorBoundary featureName="tag-detail-accuracy">
-                <Suspense fallback={<Skeleton className="h-48 w-full rounded-xl" />}>
+                <Suspense fallback={<Skeleton className="h-48 w-full rounded-2xl" />}>
                   <TagAccuracyTrendChart tagId={tagId} />
                 </Suspense>
               </FeatureErrorBoundary>
@@ -236,7 +236,7 @@ export function TagDetailPage({
 
           {/* ④ Recent: 直近のブロック */}
           <FeatureErrorBoundary featureName="tag-detail-recent">
-            <Suspense fallback={<Skeleton className="h-40 w-full rounded-xl" />}>
+            <Suspense fallback={<Skeleton className="h-40 w-full rounded-2xl" />}>
               <TagRecentBlocks tagId={tagId} />
             </Suspense>
           </FeatureErrorBoundary>

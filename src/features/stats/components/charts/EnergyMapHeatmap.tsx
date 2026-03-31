@@ -112,7 +112,7 @@ export function EnergyMapHeatmap() {
             type="button"
             onClick={() => setMode('minutes')}
             className={cn(
-              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'minutes'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted',
@@ -124,7 +124,7 @@ export function EnergyMapHeatmap() {
             type="button"
             onClick={() => setMode('fulfillment')}
             className={cn(
-              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'fulfillment'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted',
@@ -168,7 +168,7 @@ export function EnergyMapHeatmap() {
                     <div
                       key={`${hour}-${DOW_KEYS[di]}`}
                       className={cn(
-                        'aspect-square rounded-sm transition-colors',
+                        'aspect-square rounded-lg transition-colors',
                         colorClass,
                         (row?.entryCount ?? 0) <= 1 && row && 'opacity-60',
                       )}
@@ -195,26 +195,26 @@ export function EnergyMapHeatmap() {
             <>
               <span>{t('energyMapLess')}</span>
               <div className="flex gap-1">
-                <div className="bg-muted size-3 rounded" />
-                <div className="bg-heatmap-scale-1 size-3 rounded" />
-                <div className="bg-heatmap-scale-2 size-3 rounded" />
-                <div className="bg-heatmap-scale-3 size-3 rounded" />
-                <div className="bg-heatmap-scale-4 size-3 rounded" />
+                <div className="bg-muted size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-1 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-2 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-3 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-4 size-3 rounded-lg" />
               </div>
               <span>{t('energyMapMore')}</span>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-low size-3 rounded" />
+                <div className="bg-fulfillment-low size-3 rounded-lg" />
                 <span>1</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-mid size-3 rounded" />
+                <div className="bg-fulfillment-mid size-3 rounded-lg" />
                 <span>2</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-high size-3 rounded" />
+                <div className="bg-fulfillment-high size-3 rounded-lg" />
                 <span>3</span>
               </div>
             </>

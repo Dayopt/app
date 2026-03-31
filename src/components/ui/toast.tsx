@@ -69,7 +69,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           ),
           cancelButton: buttonVariants({ variant: 'outline', size: 'sm' }),
           closeButton:
-            'row-start-1 col-start-3 justify-self-end -mt-1 -mr-1 p-1 rounded-md text-muted-foreground bg-transparent border-0 hover:bg-state-hover transition-colors [&_svg]:size-5',
+            'row-start-1 col-start-3 justify-self-end -mt-1 -mr-1 p-1 rounded-lg text-muted-foreground bg-transparent border-0 hover:bg-state-hover transition-colors [&_svg]:size-5',
           success:
             '!border-success [&_[data-icon]]:text-success [&_[data-action]]:!bg-success [&_[data-action]]:!text-success-foreground [&_[data-action]]:!border-0',
           error:

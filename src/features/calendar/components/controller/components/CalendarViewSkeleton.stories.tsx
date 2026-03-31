@@ -62,13 +62,13 @@ export const AllPatterns: Story = {
     <div className="flex w-full flex-col items-start gap-8">
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">標準（600px）</p>
-        <div className="border-border h-[600px] w-full overflow-hidden rounded border">
+        <div className="border-border h-[600px] w-full overflow-hidden rounded-lg border">
           <CalendarViewSkeleton />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">モバイル（375×300px）</p>
-        <div className="border-border h-[300px] w-[375px] overflow-hidden rounded border">
+        <div className="border-border h-[300px] w-[375px] overflow-hidden rounded-lg border">
           <CalendarViewSkeleton />
         </div>
       </div>

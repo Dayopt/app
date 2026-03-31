@@ -99,7 +99,7 @@ function InspectorContent({
       {microInsight && <div className="mt-1.5 px-0.5">{microInsight}</div>}
 
       {/* Schedule card */}
-      <div className="bg-muted mt-3 rounded-xl">
+      <div className="bg-muted mt-3 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* Date */}
           <DateRow

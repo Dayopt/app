@@ -52,7 +52,7 @@ export function IconPicker({ value, onChange, color }: IconPickerProps) {
               type="button"
               onClick={() => handleSelect(iconName)}
               className={cn(
-                'flex items-center justify-center rounded-md p-1.5 transition-colors',
+                'flex items-center justify-center rounded-lg p-1.5 transition-colors',
                 isSelected ? 'ring-primary bg-state-hover ring-2' : 'hover:bg-state-hover',
               )}
               aria-label={iconName}

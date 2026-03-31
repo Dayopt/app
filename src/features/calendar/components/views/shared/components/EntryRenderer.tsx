@@ -136,7 +136,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   return (
     <div style={finalStyle} className="pointer-events-none absolute" data-entry-wrapper="true">
       <div
-        className="pointer-events-auto absolute inset-0 rounded"
+        className="pointer-events-auto absolute inset-0 rounded-lg"
         data-entry-block="true"
         tabIndex={0}
         role="button"

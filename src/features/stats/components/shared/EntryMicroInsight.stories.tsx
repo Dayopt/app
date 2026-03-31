@@ -29,7 +29,7 @@ const meta = {
         <div className="mt-1.5">
           <Story />
         </div>
-        <div className="bg-muted mt-3 rounded-xl p-3">
+        <div className="bg-muted mt-3 rounded-2xl p-3">
           <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
         </div>
       </div>
@@ -137,7 +137,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -160,7 +160,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -182,7 +182,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -204,7 +204,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -227,7 +227,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -247,7 +247,7 @@ export const AllPatterns: Story = {
               }}
             />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>
@@ -262,7 +262,7 @@ export const AllPatterns: Story = {
           <div className="mt-1.5">
             <EntryMicroInsight insight={null} />
           </div>
-          <div className="bg-muted mt-3 rounded-xl p-3">
+          <div className="bg-muted mt-3 rounded-2xl p-3">
             <span className="text-muted-foreground text-xs">10:00 - 12:00</span>
           </div>
         </div>

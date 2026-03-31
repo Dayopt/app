@@ -24,7 +24,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 基本パターン */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">基本パターン</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             アイコン + メッセージ + アクションボタンの構成。
@@ -64,7 +64,7 @@ export const Overview: Story = {
         </section>
 
         {/* 検索結果なし */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">検索結果なし</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             検索やフィルターで結果がない場合。検索語の見直しを促す。
@@ -83,7 +83,7 @@ export const Overview: Story = {
         </section>
 
         {/* フィルター結果なし */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">フィルター結果なし</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フィルター適用後に該当データがない場合。
@@ -102,7 +102,7 @@ export const Overview: Story = {
         </section>
 
         {/* 受信トレイ空 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">完了状態</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             すべて処理済みの場合。ポジティブなメッセージで達成感を演出。
@@ -120,7 +120,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -145,7 +145,7 @@ export const Overview: Story = {
         </section>
 
         {/* 実装例 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">実装例</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
             {`// Empty State コンポーネントパターン

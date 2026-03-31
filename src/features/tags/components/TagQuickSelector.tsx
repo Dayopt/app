@@ -245,7 +245,7 @@ function TagGridCell({
       }
       onMouseLeave={onHoverEnd}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,
@@ -449,7 +449,7 @@ function TagQuickSelectorContent({
             type="button"
             onClick={() => setView({ type: 'create' })}
             className={cn(
-              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
               'active:scale-95 active:transition-transform',
             )}
           >
