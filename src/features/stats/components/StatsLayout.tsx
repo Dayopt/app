@@ -162,7 +162,7 @@ export function StatsLayout({
 
       {/* タブナビゲーション（パスベース、TabsTrigger と同じスタイル） */}
       <nav
-        className="flex h-10 w-full items-center justify-start gap-4 rounded-none border-none bg-transparent px-4"
+        className="flex h-10 w-full items-center justify-start gap-0 bg-transparent px-4"
         role="tablist"
       >
         {TABS.map((tab) => {
