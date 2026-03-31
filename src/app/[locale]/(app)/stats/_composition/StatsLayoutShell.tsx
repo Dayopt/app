@@ -2,15 +2,23 @@
 
 import { usePathname } from 'next/navigation';
 
+import type { TagTabInfo } from '@/features/stats';
 import { StatsLayout } from '@/features/stats';
+import { useTag } from '@/features/tags';
+import { resolveTagColor } from '@/lib/tag-colors';
 
-type StatsTabId = 'review' | 'progress' | 'insights';
+type StatsTabId = 'review' | 'progress' | 'insights' | 'tag';
 
-function getActiveTab(pathname: string): StatsTabId | null {
-  if (pathname.includes('/stats/review')) return 'review';
+function extractTagId(pathname: string): string | null {
+  const match = pathname.match(/\/stats\/tags\/([^/?]+)/);
+  return match?.[1] ?? null;
+}
+
+function getActiveTab(pathname: string): StatsTabId {
+  if (pathname.includes('/stats/tags/')) return 'tag';
   if (pathname.includes('/stats/progress')) return 'progress';
   if (pathname.includes('/stats/insights')) return 'insights';
-  return null;
+  return 'review';
 }
 
 interface StatsLayoutShellProps {
@@ -22,21 +30,32 @@ interface StatsLayoutShellProps {
  * Stats レイアウトシェル（Composition Layer）
  *
  * pathname からアクティブタブを判定し、StatsLayout に渡す。
- * /stats/tags/[tagId] の場合はタブバーなしで children のみ表示。
+ * /stats/tags/[tagId] の場合は動的4つ目タブとして表示。
  */
 export function StatsLayoutShell({ headerRightExtra, children }: StatsLayoutShellProps) {
   const pathname = usePathname();
   const activeTab = getActiveTab(pathname);
+  const tagId = extractTagId(pathname);
 
-  // タグ詳細ページなどタブに該当しないルートは children をそのまま表示
-  if (!activeTab) {
-    return <>{children}</>;
-  }
+  // タグ情報を取得（tag ページ以外では空文字 → staleTime で無駄なリクエストは発生しない）
+  const { data: tag } = useTag(tagId ?? '___skip___');
+
+  const tagTab: TagTabInfo | undefined = tagId
+    ? {
+        tagId,
+        tagName: tag?.name ?? '...',
+        tagIcon: tag?.icon ?? null,
+        tagColor: resolveTagColor(tag?.color ?? null),
+      }
+    : undefined;
+
+  const showGranularity = activeTab === 'review' || activeTab === 'tag';
 
   return (
     <StatsLayout
       activeTab={activeTab}
-      showGranularity={activeTab === 'review'}
+      tagTab={tagTab}
+      showGranularity={showGranularity}
       headerRightExtra={headerRightExtra}
     >
       {children}

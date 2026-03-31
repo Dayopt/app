@@ -8,7 +8,6 @@ import type { StatsGranularity } from '@/features/stats';
 import { prefetchTagDetailData, TagDetailPage } from '@/features/stats';
 import type { Locale } from '@/platform/i18n/routing';
 import { HydrationBoundary } from '@/platform/trpc/server';
-import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,12 +43,7 @@ async function TagDetailContent({
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <TagDetailPage
-        tagId={tagId}
-        initialGranularity={granularity}
-        initialDateStr={dateStr}
-        headerRightExtra={<SidebarPageNav />}
-      />
+      <TagDetailPage tagId={tagId} initialGranularity={granularity} initialDateStr={dateStr} />
     </HydrationBoundary>
   );
 }

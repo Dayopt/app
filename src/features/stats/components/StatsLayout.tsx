@@ -1,13 +1,15 @@
 'use client';
 
-import { PanelLeft } from 'lucide-react';
+import { PanelLeft, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
 import { DateNavigator } from '@/components/common/DateNavigator';
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { DateRangeDisplay } from '@/components/ui/date-range-display';
+import { TagIcon } from '@/features/tags';
 import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
@@ -18,9 +20,9 @@ import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
 import { useStatsDateDisplayProps } from './layout/useStatsDateDisplayProps';
 
-type StatsTabId = 'review' | 'progress' | 'insights';
+type StatsTabId = 'review' | 'progress' | 'insights' | 'tag';
 
-const TABS: { id: StatsTabId; path: string; labelKey: string }[] = [
+const FIXED_TABS: { id: Exclude<StatsTabId, 'tag'>; path: string; labelKey: string }[] = [
   { id: 'review', path: '/stats/review', labelKey: 'calendar.stats.tabReview' },
   { id: 'progress', path: '/stats/progress', labelKey: 'calendar.stats.tabProgress' },
   { id: 'insights', path: '/stats/insights', labelKey: 'calendar.stats.tabInsights' },
@@ -37,8 +39,17 @@ function formatDateParam(date: Date): string {
   return date.toISOString().split('T')[0]!;
 }
 
+/** 動的タグタブの情報 */
+export interface TagTabInfo {
+  tagId: string;
+  tagName: string;
+  tagIcon: string | null;
+  tagColor: string;
+}
+
 interface StatsLayoutProps {
   activeTab: StatsTabId;
+  tagTab?: TagTabInfo | undefined;
   showGranularity?: boolean;
   headerRightExtra?: React.ReactNode;
   children: React.ReactNode;
@@ -48,10 +59,11 @@ interface StatsLayoutProps {
  * Stats 共通レイアウト
  *
  * ヘッダー（日付ナビ + 粒度セレクタ）+ タブナビゲーション（パスベース）+ children。
- * 各タブページがこのレイアウトでラップする。
+ * タグ詳細は動的4つ目タブとして表示。
  */
 export function StatsLayout({
   activeTab,
+  tagTab,
   showGranularity = false,
   headerRightExtra,
   children,
@@ -59,6 +71,7 @@ export function StatsLayout({
   const t = useTranslations();
   const pathname = usePathname();
   const locale = useLocale();
+  const router = useRouter();
 
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
@@ -98,7 +111,6 @@ export function StatsLayout({
 
       store.setCurrentDate(newDate);
 
-      // URL も更新
       const params = new URLSearchParams(window.location.search);
       params.set('g', g);
       params.set('d', formatDateParam(newDate));
@@ -130,6 +142,11 @@ export function StatsLayout({
     [locale, granularity, currentDate],
   );
 
+  // タグタブを閉じる → review に戻る
+  const handleCloseTagTab = useCallback(() => {
+    router.push(buildTabHref('/stats/review'));
+  }, [router, buildTabHref]);
+
   // サイドバートグル
   const sidebarOpen = useShellStore.use.sidebar().open;
   const toggleSidebar = useShellStore.use.toggleSidebar();
@@ -143,6 +160,15 @@ export function StatsLayout({
       <PanelLeft className="size-4" />
     </button>
   ) : null;
+
+  const tabLinkClass = (isActive: boolean) =>
+    cn(
+      'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
+      'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
+      isActive
+        ? 'text-foreground after:bg-foreground'
+        : 'text-muted-foreground hover:bg-state-hover after:bg-transparent',
+    );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -160,32 +186,48 @@ export function StatsLayout({
         </div>
       </AppHeader>
 
-      {/* タブナビゲーション（パスベース、TabsTrigger と同じスタイル） */}
+      {/* タブナビゲーション */}
       <nav
         className="flex h-10 w-full items-center justify-start gap-0 bg-transparent px-4"
         role="tablist"
       >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
+        {/* 固定3タブ */}
+        {FIXED_TABS.map((tab) => (
+          <Link
+            key={tab.id}
+            href={buildTabHref(tab.path)}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            prefetch
+            className={tabLinkClass(activeTab === tab.id)}
+          >
+            {t(tab.labelKey)}
+          </Link>
+        ))}
+
+        {/* 動的タグタブ */}
+        {tagTab && (
+          <div className="flex items-center">
             <Link
-              key={tab.id}
-              href={buildTabHref(tab.path)}
+              href={buildTabHref(`/stats/tags/${tagTab.tagId}`)}
               role="tab"
-              aria-selected={isActive}
+              aria-selected={activeTab === 'tag'}
               prefetch
-              className={cn(
-                'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
-                'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
-                isActive
-                  ? 'text-foreground after:bg-foreground'
-                  : 'text-muted-foreground hover:bg-state-hover after:bg-transparent',
-              )}
+              className={tabLinkClass(activeTab === 'tag')}
             >
-              {t(tab.labelKey)}
+              <TagIcon icon={tagTab.tagIcon} color={tagTab.tagColor} size="sm" />
+              <ColonTagLabel name={tagTab.tagName} className="ml-1" />
             </Link>
-          );
-        })}
+            <button
+              type="button"
+              onClick={handleCloseTagTab}
+              className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 flex size-5 items-center justify-center rounded transition-colors"
+              aria-label="Close tag tab"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* タブコンテンツ */}

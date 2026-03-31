@@ -11,6 +11,7 @@
 export { InsightsView } from './components/insights/InsightsView';
 export { ProgressView } from './components/progress/ProgressView';
 export { StatsLayout } from './components/StatsLayout';
+export type { TagTabInfo } from './components/StatsLayout';
 export { StatsView } from './components/StatsView';
 
 // =============================================================================
