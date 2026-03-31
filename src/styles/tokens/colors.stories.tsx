@@ -145,12 +145,12 @@ export const AllColors: Story = {
         <ColorSwatch
           tailwindClass="border-border"
           description="構造的な区切り（sidebar, input, divider）"
-          oklch="oklch(0 0 0 / 0.06) | oklch(1 0 0 / 0.07)"
+          oklch="oklch(0 0 0 / 0.12) | oklch(1 0 0 / 0.12)"
         />
         <ColorSwatch
           tailwindClass="border-border-subtle"
           description="Raised/Overlayの縁（card, dialog, popover）"
-          oklch="oklch(0 0 0 / 0.04) | oklch(1 0 0 / 0.05)"
+          oklch="oklch(0 0 0 / 0.06) | oklch(1 0 0 / 0.07)"
         />
       </ColorGroup>
 
