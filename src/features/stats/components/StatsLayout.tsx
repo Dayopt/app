@@ -2,7 +2,8 @@
 
 import { PanelLeft } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCallback } from 'react';
 
 import { DateNavigator } from '@/components/common/DateNavigator';
@@ -56,7 +57,6 @@ export function StatsLayout({
   children,
 }: StatsLayoutProps) {
   const t = useTranslations();
-  const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
 
@@ -119,15 +119,15 @@ export function StatsLayout({
     [setGranularity, currentDate, pathname],
   );
 
-  // タブ遷移: 期間パラメータを維持したままパスを変更
-  const handleTabClick = useCallback(
+  // タブリンクの href を生成（期間パラメータを維持）
+  const buildTabHref = useCallback(
     (tabPath: string) => {
       const params = new URLSearchParams();
       params.set('g', granularity);
       params.set('d', formatDateParam(currentDate));
-      router.push(`/${locale}${tabPath}?${params.toString()}`);
+      return `/${locale}${tabPath}?${params.toString()}`;
     },
-    [router, locale, granularity, currentDate],
+    [locale, granularity, currentDate],
   );
 
   // サイドバートグル
@@ -168,11 +168,12 @@ export function StatsLayout({
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
-            <button
+            <Link
               key={tab.id}
-              type="button"
+              href={buildTabHref(tab.path)}
               role="tab"
               aria-selected={isActive}
+              prefetch
               className={cn(
                 'relative inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-base font-normal whitespace-nowrap transition-all',
                 'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
@@ -180,10 +181,9 @@ export function StatsLayout({
                   ? 'text-foreground after:bg-foreground'
                   : 'text-muted-foreground hover:bg-state-hover after:bg-transparent',
               )}
-              onClick={() => handleTabClick(tab.path)}
             >
               {t(tab.labelKey)}
-            </button>
+            </Link>
           );
         })}
       </nav>
