@@ -37,8 +37,9 @@ describe('matchesDateRangeFilter', () => {
   });
 
   it('this_monthは先月の日付にマッチしない', () => {
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    // 月末オーバーフロー回避: 先月の1日を使う（3/31 → setMonth(-1) → 2/31 → 3/3 になる問題）
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     expect(matchesDateRangeFilter(lastMonth.toISOString(), 'this_month')).toBe(false);
   });
 });
