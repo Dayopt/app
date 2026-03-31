@@ -3,13 +3,12 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import type { StatsGranularity } from '@/features/stats';
 import { prefetchTagDetailData, TagDetailPage } from '@/features/stats';
 import type { Locale } from '@/platform/i18n/routing';
 import { HydrationBoundary } from '@/platform/trpc/server';
 import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
-
-import StatsTabLoading from '../../[tab]/loading';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,7 +73,7 @@ const TagDetailRoute = async ({
   const dateStr = d ?? formatDateParam(new Date());
 
   return (
-    <Suspense fallback={<StatsTabLoading />}>
+    <Suspense fallback={<Skeleton className="h-full w-full" />}>
       <TagDetailContent tagId={tagId} granularity={granularity} dateStr={dateStr} />
     </Suspense>
   );

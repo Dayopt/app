@@ -6,8 +6,6 @@ import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath } from '@/features/calendar';
-import { StatsPageContent } from '@/features/stats';
-import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
@@ -27,9 +25,8 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   const pathWithoutLocale = stripLocale(pathname);
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
-  // /stats/tags/[tagId] は独立ページなのでクライアントルーターから除外
-  if (pathWithoutLocale.startsWith('/stats/tags/')) return null;
-  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  // Stats は全ルートが独立ページ（/stats/review, /stats/progress, /stats/insights, /stats/tags/[id]）
+  // クライアントルーターではなく Next.js のサーバーレンダリングを使用
   return null;
 }
 
@@ -52,10 +49,6 @@ function CalendarClientView() {
   return <CalendarViewClient translations={translations} />;
 }
 
-function StatsClientView() {
-  return <StatsPageContent headerRightExtra={<SidebarPageNav />} />;
-}
-
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -69,7 +62,8 @@ interface ClientPageRouterProps {
  *
  * 初回ロード / リロード時は Next.js が SSR した {children} をそのまま表示。
  * PageNav が pushState + useClientRouterStore.switchToPage() を呼ぶと、
- * CalendarViewClient / StatsPageContent をクライアントサイドで直接レンダリングする。
+ * CalendarViewClient をクライアントサイドで直接レンダリングする。
+ * Stats は全ルートが独立ページのため、クライアントルーターを経由しない。
  *
  * これにより router.push() のサーバーラウンドトリップを回避し、
  * ChatGPT ライクな「Sidebar 静止 / メインのみ切り替え」体験を実現する。
@@ -104,10 +98,6 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
 
   if (clientPage === 'calendar') {
     return <CalendarClientView />;
-  }
-
-  if (clientPage === 'stats') {
-    return <StatsClientView />;
   }
 
   return <>{children}</>;

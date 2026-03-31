@@ -2,21 +2,14 @@ import { create } from 'zustand';
 
 import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 
-/** Stats のタブ */
-export type StatsTab = 'review' | 'progress' | 'insights';
-
 /** Stats の表示粒度 */
 export type StatsGranularity = 'day' | 'week' | 'month' | 'year';
 
 interface StatsFilterState {
-  /** アクティブタブ */
-  tab: StatsTab;
   /** 表示粒度 */
   granularity: StatsGranularity;
   /** ナビゲーション基準日 */
   currentDate: Date;
-  /** タブを変更 */
-  setTab: (tab: StatsTab) => void;
   /** 粒度を変更 */
   setGranularity: (granularity: StatsGranularity) => void;
   /** 基準日を設定 */
@@ -51,10 +44,8 @@ function navigateDate(
 
 /** Stats フィルター状態を管理する Zustand ストア */
 export const useStatsFilterStore = create<StatsFilterState>((set, get) => ({
-  tab: 'review',
   granularity: 'week',
   currentDate: new Date(),
-  setTab: (tab) => set({ tab }),
   setGranularity: (granularity) => set({ granularity }),
   setCurrentDate: (date) => set({ currentDate: date }),
   navigate: (direction) => {

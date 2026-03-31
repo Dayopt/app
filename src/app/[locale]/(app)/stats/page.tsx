@@ -1,45 +1,10 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 
-import { StatsPageContent, prefetchStatsData } from '@/features/stats';
-import type { Locale } from '@/platform/i18n/routing';
-import { HydrationBoundary } from '@/platform/trpc/server';
-import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
-
-import StatsTabLoading from './[tab]/loading';
-
-export const dynamic = 'force-dynamic';
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale?: Locale }>;
-}): Promise<Metadata> {
-  const { locale = 'ja' } = await params;
-  const t = await getTranslations({ locale, namespace: 'calendar' });
-  return {
-    title: t('views.stats'),
-  };
-}
-
-/** データプリフェッチ + ハイドレーション */
-async function StatsContent() {
-  const { dehydratedState } = await prefetchStatsData();
-
-  return (
-    <HydrationBoundary state={dehydratedState}>
-      <StatsPageContent headerRightExtra={<SidebarPageNav />} />
-    </HydrationBoundary>
-  );
-}
-
-const StatsPage = async () => {
-  return (
-    <Suspense fallback={<StatsTabLoading />}>
-      <StatsContent />
-    </Suspense>
-  );
+/**
+ * /stats → /stats/review にリダイレクト
+ */
+const StatsIndexRedirect = () => {
+  redirect('/stats/review');
 };
 
-export default StatsPage;
+export default StatsIndexRedirect;

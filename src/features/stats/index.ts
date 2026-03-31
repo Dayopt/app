@@ -8,14 +8,16 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { StatsPageContent } from './components/StatsPageContent';
+export { InsightsView } from './components/insights/InsightsView';
+export { ProgressView } from './components/progress/ProgressView';
+export { StatsLayout } from './components/StatsLayout';
 export { StatsView } from './components/StatsView';
 
 // =============================================================================
 // Stores
 // =============================================================================
 export { useStatsFilterStore } from './stores/useStatsFilterStore';
-export type { StatsGranularity, StatsTab } from './stores/useStatsFilterStore';
+export type { StatsGranularity } from './stores/useStatsFilterStore';
 
 // =============================================================================
 // Types
