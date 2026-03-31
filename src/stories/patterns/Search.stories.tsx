@@ -89,7 +89,7 @@ export const Overview: Story = {
             <div>
               <h3 className="text-muted-foreground mb-2 text-sm font-bold">アイコン付き</h3>
               <div className="relative max-w-md">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input placeholder="検索..." className="pl-8" />
               </div>
             </div>
@@ -102,9 +102,9 @@ export const Overview: Story = {
             <div>
               <h3 className="text-muted-foreground mb-2 text-sm font-bold">ショートカット表示</h3>
               <div className="relative max-w-md">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input placeholder="検索..." className="pr-16 pl-8" />
-                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-lg px-2 py-1 text-xs">
+                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 rounded-lg px-2 py-1 text-xs">
                   ⌘K
                 </kbd>
               </div>
@@ -113,7 +113,7 @@ export const Overview: Story = {
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`<div className="relative">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4" />
+  <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4" />
   <Input placeholder="検索..." className="pl-8" />
 </div>`}
           </pre>
@@ -266,7 +266,7 @@ function SearchWithClear() {
 
   return (
     <div className="relative max-w-md">
-      <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
       <Input
         placeholder="検索..."
         className="pr-8 pl-8"
@@ -276,7 +276,7 @@ function SearchWithClear() {
       {query && (
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2"
           onClick={() => setQuery('')}
         >
           <X className="size-4" />
@@ -394,7 +394,7 @@ function FilterSearch() {
     <div className="space-y-2">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
           <Input
             placeholder="検索..."
             className="pl-8"

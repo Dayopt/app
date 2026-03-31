@@ -1229,7 +1229,7 @@ function TimelinePreview({
         return (
           <div
             key={hour}
-            className={`absolute left-3 text-xs ${
+            className={`absolute left-4 text-xs ${
               zone?.level === 'deep'
                 ? 'text-chronotype-deep font-bold'
                 : zone?.level === 'ease'
@@ -1250,7 +1250,7 @@ function TimelinePreview({
         .map((z) => (
           <div
             key={z.level}
-            className={`absolute right-3 text-xs font-bold ${
+            className={`absolute right-4 text-xs font-bold ${
               z.level === 'deep' ? 'text-chronotype-deep' : 'text-chronotype-ease'
             }`}
             style={{ top: `${((z.startHour + z.endHour) / 2 / 24) * 100}%` }}

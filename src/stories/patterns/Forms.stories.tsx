@@ -76,7 +76,7 @@ export const Overview: Story = {
               <FieldLabel>メールアドレス</FieldLabel>
               <div className="relative">
                 <Input defaultValue="user@example.com" className="border-success pr-8" readOnly />
-                <CheckCircle2 className="text-success absolute top-1/2 right-3 size-4 -translate-y-1/2" />
+                <CheckCircle2 className="text-success absolute top-1/2 right-4 size-4 -translate-y-1/2" />
               </div>
               <FieldSupportText className="text-success">保存しました</FieldSupportText>
             </Field>
@@ -87,7 +87,7 @@ export const Overview: Story = {
   <FieldLabel>メールアドレス</FieldLabel>
   <div className="relative">
     <Input className="border-success pr-8" />
-    <CheckCircle2 className="text-success absolute right-3 ..." />
+    <CheckCircle2 className="text-success absolute right-4 ..." />
   </div>
   <FieldSupportText className="text-success">保存しました</FieldSupportText>
 </Field>`}

@@ -46,7 +46,7 @@ export const AllPatterns: Story = {
             />
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2"
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
             >
