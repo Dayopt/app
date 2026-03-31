@@ -371,7 +371,7 @@ const ICalFeedSection = memo(function ICalFeedSection() {
             <div className="bg-container flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl">
               <Rss className="text-primary h-5 w-5" />
             </div>
-            <div className="min-w-0 flex-1 space-y-3">
+            <div className="min-w-0 flex-1 space-y-4">
               <p className="text-muted-foreground text-sm">
                 {t('settings.integrations.icalFeed.description')}
               </p>

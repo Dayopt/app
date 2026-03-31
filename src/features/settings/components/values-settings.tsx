@@ -191,7 +191,7 @@ function ValueCategoryCollapsible({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="hover:bg-state-hover flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-colors">
+      <CollapsibleTrigger className="hover:bg-state-hover flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left transition-colors">
         {open ? (
           <ChevronDown className="text-muted-foreground size-4 shrink-0" />
         ) : (
@@ -208,7 +208,7 @@ function ValueCategoryCollapsible({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="space-y-3 px-3 pt-1 pb-3 pl-9">
+        <div className="space-y-4 px-4 pt-1 pb-4 pl-8">
           <p className="text-muted-foreground text-xs">
             {t(`settings.values.categories.${category}Prompt`)}
           </p>

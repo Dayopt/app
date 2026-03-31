@@ -210,7 +210,7 @@ function TimezoneListReference() {
     <div className="max-w-2xl">
       <SectionCard title="対応タイムゾーン一覧 (17ゾーン)">
         {TIMEZONES.map((tz) => (
-          <div key={tz.value} className="flex items-center justify-between px-2 py-2.5">
+          <div key={tz.value} className="flex items-center justify-between px-2 py-2">
             <span className="text-foreground text-sm">{tz.label}</span>
             <code className="text-muted-foreground text-xs">{tz.value}</code>
           </div>

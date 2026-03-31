@@ -80,7 +80,7 @@ export function AIStyleSettings() {
     return (
       <SectionCard title={t('settings.aiStyle.title')}>
         <Skeleton className="mb-4 h-4 w-64" />
-        <div className="space-y-3">
+        <div className="space-y-4">
           {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} className="h-16 w-full rounded-2xl" />
           ))}
@@ -96,7 +96,7 @@ export function AIStyleSettings() {
       <RadioGroup
         value={autoSave.values.aiStyle}
         onValueChange={handleStyleChange}
-        className="space-y-3"
+        className="space-y-4"
       >
         {AI_COMMUNICATION_STYLES.map((style) => (
           <StyleCard key={style} style={style} isSelected={autoSave.values.aiStyle === style} />
@@ -134,11 +134,11 @@ function StyleCard({ style, isSelected }: StyleCardProps) {
     <Label
       htmlFor={`ai-style-${style}`}
       className={cn(
-        'border-border flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
+        'border-border flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-colors',
         isSelected && 'border-primary bg-state-active',
       )}
     >
-      <RadioGroupItem value={style} id={`ai-style-${style}`} className="mt-0.5" />
+      <RadioGroupItem value={style} id={`ai-style-${style}`} className="mt-1" />
       <div className="flex-1">
         <div className="text-foreground text-sm font-normal">{t(`settings.aiStyle.${style}`)}</div>
         <div className="text-muted-foreground text-xs">{t(`settings.aiStyle.${style}Desc`)}</div>

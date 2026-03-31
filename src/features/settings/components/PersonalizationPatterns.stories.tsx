@@ -266,7 +266,7 @@ function SortableRankItem({ id, rank, label }: { id: string; rank: number; label
       ref={setDroppableNodeRef}
       style={style}
       className={cn(
-        'border-border bg-background flex items-center gap-3 rounded-lg border px-3 py-2',
+        'border-border bg-background flex items-center gap-2 rounded-lg border px-4 py-2',
         isDragging && 'opacity-40',
       )}
     >
@@ -429,7 +429,7 @@ function ValueRankingDemo() {
               createPortal(
                 <DragOverlay dropAnimation={dropAnimationConfig} modifiers={[adjustTranslate]}>
                   {activeId ? (
-                    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-sm">
+                    <div className="border-primary bg-background flex items-center gap-2 rounded-lg border-2 px-4 py-2 shadow-sm">
                       <span className="text-foreground flex-1 text-sm">
                         {KEYWORD_MAP[activeId] ?? activeId}
                       </span>
@@ -454,17 +454,17 @@ function AIStyleDemo() {
       <p className="text-muted-foreground mb-4 text-sm">
         チャットパネルでAIがどのようにコミュニケーションするかを選んでください。
       </p>
-      <RadioGroup value={style} onValueChange={setStyle} className="space-y-3">
+      <RadioGroup value={style} onValueChange={setStyle} className="space-y-4">
         {AI_STYLES.map((s) => (
           <Label
             key={s.value}
             htmlFor={`ai-style-${s.value}`}
             className={cn(
-              'border-border flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors',
+              'border-border flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-colors',
               style === s.value && 'border-primary bg-state-active',
             )}
           >
-            <RadioGroupItem value={s.value} id={`ai-style-${s.value}`} className="mt-0.5" />
+            <RadioGroupItem value={s.value} id={`ai-style-${s.value}`} className="mt-1" />
             <div className="flex-1">
               <div className="text-foreground text-sm font-normal">{s.label}</div>
               <div className="text-muted-foreground text-xs">{s.desc}</div>

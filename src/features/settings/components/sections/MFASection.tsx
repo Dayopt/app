@@ -234,7 +234,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                 <p className="text-destructive text-xs">
                   {t('settings.account.mfa.recoveryCodes.exhaustedWarning')}
                 </p>
-                <div className="mt-3">
+                <div className="mt-4">
                   <Button
                     variant="destructive"
                     onClick={requestRegenerateRecoveryCodes}
