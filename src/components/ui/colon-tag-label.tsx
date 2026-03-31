@@ -6,6 +6,7 @@ interface ColonTagLabelProps {
   name: string;
   variant?: ColonTagLabelVariant;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /** コロンの前後を分割する（最初のコロンのみ） */
@@ -25,18 +26,27 @@ function splitColon(name: string): { prefix: string; suffix: string | null } {
  * - **suffix-only**: suffix 部分のみ表示
  * - **chip**: prefix を小チップ（背景付き）+ suffix
  */
-export function ColonTagLabel({ name, variant = 'separator', className }: ColonTagLabelProps) {
+export function ColonTagLabel({
+  name,
+  variant = 'separator',
+  className,
+  style,
+}: ColonTagLabelProps) {
   const { prefix, suffix } = splitColon(name);
 
   // コロンなしタグはそのまま表示
   if (suffix === null) {
-    return <span className={cn('truncate', className)}>{name}</span>;
+    return (
+      <span className={cn('truncate', className)} style={style}>
+        {name}
+      </span>
+    );
   }
 
   switch (variant) {
     case 'separator':
       return (
-        <span className={cn('truncate', className)}>
+        <span className={cn('truncate', className)} style={style}>
           <span className="text-muted-foreground">{prefix}</span>
           <span className="text-muted-foreground mx-1">›</span>
           <span>{suffix}</span>
@@ -44,12 +54,16 @@ export function ColonTagLabel({ name, variant = 'separator', className }: ColonT
       );
 
     case 'suffix-only':
-      return <span className={cn('truncate', className)}>{suffix}</span>;
+      return (
+        <span className={cn('truncate', className)} style={style}>
+          {suffix}
+        </span>
+      );
 
     case 'chip':
       return (
-        <span className={cn('inline-flex min-w-0 items-center gap-1', className)}>
-          <span className="bg-muted shrink-0 rounded px-1 text-xs leading-normal">{prefix}</span>
+        <span className={cn('inline-flex min-w-0 items-center gap-1', className)} style={style}>
+          <span className="bg-muted shrink-0 rounded-lg px-1 text-xs leading-normal">{prefix}</span>
           <span className="truncate">{suffix}</span>
         </span>
       );

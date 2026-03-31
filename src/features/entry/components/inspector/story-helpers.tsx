@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils';
 
 /** Inspector風コンテナ（400px幅） */
 export function InspectorFrame({ children }: { children: React.ReactNode }) {
-  return <div className="bg-card w-[400px] overflow-hidden rounded-2xl shadow-lg">{children}</div>;
+  return (
+    <div className="bg-card shadow-card w-[400px] overflow-hidden rounded-2xl">{children}</div>
+  );
 }
 
 /** Plan紐付けボタン（静的表示 / Storybook用モック） */
@@ -40,7 +42,7 @@ export function MockPlanLinkButton({ planName }: { planName?: string | undefined
         {hasPlan && (
           <button
             type="button"
-            className="hover:bg-state-hover mr-1 rounded p-1 transition-colors"
+            className="hover:bg-state-hover mr-1 rounded-lg p-1 transition-colors"
             aria-label="Plan紐付けを解除"
           >
             <X className="size-4" />

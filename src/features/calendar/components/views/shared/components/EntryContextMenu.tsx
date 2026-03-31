@@ -125,7 +125,7 @@ export const EventContextMenu = ({
       ref={menuRef}
       role="menu"
       aria-label={t('calendar.contextMenu.title')}
-      className="bg-card text-card-foreground border-border animate-in fade-in-0 zoom-in-95 z-context-menu fixed min-w-[12rem] rounded-lg border p-1 shadow-md motion-reduce:animate-none"
+      className="bg-card text-card-foreground border-border-subtle animate-in fade-in-0 zoom-in-95 z-context-menu shadow-card fixed min-w-[12rem] rounded-lg border p-1 motion-reduce:animate-none"
       style={{
         left: adjustedPosition.x,
         top: adjustedPosition.y,
@@ -142,11 +142,11 @@ export const EventContextMenu = ({
             key={item.label}
             onClick={() => handleAction(item.action)}
             className={cn(
-              'flex w-full cursor-default items-center gap-2 rounded px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
+              'flex w-full cursor-default items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
               "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
               item.dangerous
                 ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
-                : "text-foreground hover:bg-state-hover focus:bg-state-focus [&_svg:not([class*='text-'])]:text-muted-foreground",
+                : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
             )}
           >
             <IconComponent />

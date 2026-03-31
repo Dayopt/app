@@ -115,3 +115,78 @@ export interface EnergyMapRow {
   totalMinutes: number;
   entryCount: number;
 }
+
+// =============================================================================
+// Unified Stats Page Data（統合クエリレスポンス型）
+// =============================================================================
+
+/** get_stats_page_data DB関数の統合レスポンス型 */
+export interface StatsPageData {
+  overview: {
+    totalMinutes: number;
+    avgFulfillment: number | null;
+    entryCount: number;
+    totalEntries: number;
+    plannedEntries: number;
+    planRate: number;
+  };
+  prevOverview: {
+    totalMinutes: number;
+    avgFulfillment: number | null;
+    entryCount: number;
+    totalEntries: number;
+    plannedEntries: number;
+    planRate: number;
+  };
+  contextSwitches: {
+    totalSwitches: number;
+    avgPerDay: number;
+  };
+  blankRate: {
+    availableMinutes: number;
+    scheduledMinutes: number;
+    blankRate: number;
+  };
+  timeByTag: Array<{
+    tagId: string;
+    name: string;
+    color: string;
+    hours: number;
+  }>;
+  hourly: Array<{
+    hour: number;
+    totalMinutes: number;
+  }>;
+  dow: Array<{
+    dow: number;
+    totalMinutes: number;
+  }>;
+  energyMap: EnergyMapRow[];
+  estimationAccuracy: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    avgPlannedMinutes: number;
+    avgActualMinutes: number;
+    avgDeviationMinutes: number;
+    entryCount: number;
+  }>;
+  prevEstimationAccuracy: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    avgPlannedMinutes: number;
+    avgActualMinutes: number;
+    avgDeviationMinutes: number;
+    entryCount: number;
+  }>;
+  prevEnergyMap: EnergyMapRow[];
+  dailyHours: Array<{
+    day: string;
+    hours: number;
+  }>;
+  monthlyTrend: Array<{
+    month: string;
+    hours: number;
+  }>;
+}

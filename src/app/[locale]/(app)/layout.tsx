@@ -24,6 +24,7 @@ import { GlobalOverlays } from './_overlays/GlobalOverlays';
 const APP_NAMESPACES = [
   'common',
   'calendar',
+  'entry',
   'plan',
   'record',
   'tags',

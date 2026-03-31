@@ -245,7 +245,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 rounded"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 rounded-lg"
             onClick={handlePrevMonth}
             aria-label={tActions('previousMonth')}
           >
@@ -294,7 +294,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -mr-0.5 rounded"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -mr-0.5 rounded-lg"
             onClick={handleNextMonth}
             aria-label={tActions('nextMonth')}
           >
@@ -387,7 +387,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
           <PopoverTrigger asChild>{popoverTrigger}</PopoverTrigger>
           <PopoverContent
             className={cn(
-              'bg-card border-border w-auto border p-0',
+              'bg-card border-border-subtle w-auto border p-0 shadow-sm',
               popoverClassName,
               popoverZIndex,
             )}

@@ -23,17 +23,17 @@ export interface EventStyle {
   zIndex: number;
 }
 
+// コア計算は interaction/time-math.ts に委譲（プリミティブ版が正規ソース）
+import { timeToPixels as timeToPixelsPrimitive } from '../interaction/time-math';
+
 /**
- * 時刻をピクセル位置に変換
+ * 時刻をピクセル位置に変換（Date版）
  * @param time - 変換する時刻
  * @param hourHeight - 1時間の高さ（デフォルト: 72px）
  * @returns Y座標（px）
  */
 export function timeToPixels(time: Date, hourHeight: number = DEFAULT_HOUR_HEIGHT): number {
-  const hours = time.getHours();
-  const minutes = time.getMinutes();
-  const totalMinutes = hours * 60 + minutes;
-  return (totalMinutes * hourHeight) / 60;
+  return timeToPixelsPrimitive(time.getHours(), time.getMinutes(), hourHeight);
 }
 
 /**
@@ -145,6 +145,28 @@ export function roundToQuarterHour(
  */
 export function getDurationInMinutes(start: Date, end: Date): number {
   return Math.max(0, (end.getTime() - start.getTime()) / MS_PER_MINUTE);
+}
+
+// ========================================
+// Layout → Position Conversion
+// ========================================
+
+/** EntryLayout から top/height を計算する共通関数 */
+const ENTRY_PADDING = 2;
+
+export function layoutEntryToVerticalPosition(
+  start: Date,
+  end: Date,
+  hourHeight: number,
+): { top: number; height: number } {
+  const startHour = start.getHours() + start.getMinutes() / 60;
+  const endHour = end.getHours() + end.getMinutes() / 60;
+  const duration = Math.max(endHour - startHour, 0.25); // 最小15分
+
+  const top = startHour * hourHeight;
+  const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_EVENT_HEIGHT);
+
+  return { top, height };
 }
 
 // ========================================

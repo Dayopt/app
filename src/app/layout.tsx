@@ -54,7 +54,7 @@ const notoSansJP = Noto_Sans_JP({
  * @see https://css-tricks.com/the-notch-and-css/
  *
  * - viewportFit: 'cover' → iPhone X以降のノッチ/Dynamic Island対応
- * - themeColor → ステータスバーの色（ライト/ダークモード対応）
+ * - themeColor → ThemeProviderで動的に設定（oklchトークンから自動取得）
  */
 export const viewport: Viewport = {
   width: 'device-width',
@@ -62,10 +62,6 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: 'cover',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1a' },
-  ],
 };
 
 /**

@@ -49,13 +49,13 @@ export function DefaultErrorFallback({
         <div className="flex justify-center gap-2">
           <button
             onClick={onRetry}
-            className="bg-primary text-primary-foreground hover:bg-primary-hover rounded px-4 py-2 transition-colors"
+            className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 transition-colors"
           >
             {t('error.boundary.retry')}
           </button>
           <button
             onClick={onReload}
-            className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded px-4 py-2 transition-colors"
+            className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded-lg px-4 py-2 transition-colors"
           >
             {t('error.boundary.reload')}
           </button>
@@ -91,13 +91,13 @@ export function FeatureErrorFallback({ featureName }: { featureName: string }) {
   const t = useTranslations();
 
   return (
-    <div className="border-border bg-surface-container rounded border p-4">
+    <div className="border-border bg-surface-container rounded-lg border p-4">
       <p className="text-foreground text-center">
         {t('error.boundary.featureError', { feature: featureName })}
       </p>
       <button
         onClick={() => window.location.reload()}
-        className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded px-4 py-1 text-sm transition-colors"
+        className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded-lg px-4 py-1 text-sm transition-colors"
       >
         {t('error.boundary.reload')}
       </button>

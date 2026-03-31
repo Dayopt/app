@@ -30,7 +30,7 @@ export function TourStepSheet({
     <Sheet open>
       <SheetContent
         side="bottom"
-        className="z-tour rounded-t-xl"
+        className="z-tour rounded-t-2xl"
         showCloseButton={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}

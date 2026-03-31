@@ -28,7 +28,7 @@ export const Default: Story = {};
 /** フィルターリストのヘッダー内での表示コンテキスト。 */
 export const InContext: Story = {
   render: () => (
-    <div className="border-border flex w-48 items-center justify-between rounded border px-2 py-1">
+    <div className="border-border flex w-48 items-center justify-between rounded-lg border px-2 py-1">
       <span className="text-foreground text-sm font-medium">タグ</span>
       <CreateTagButton />
     </div>
@@ -45,7 +45,7 @@ export const AllPatterns: Story = {
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">ヘッダー内コンテキスト</p>
-        <div className="border-border flex w-48 items-center justify-between rounded border px-2 py-1">
+        <div className="border-border flex w-48 items-center justify-between rounded-lg border px-2 py-1">
           <span className="text-foreground text-sm font-medium">タグ</span>
           <CreateTagButton />
         </div>

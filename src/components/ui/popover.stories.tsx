@@ -185,7 +185,7 @@ export const WithAnchor: Story = {
               <button
                 key={option}
                 type="button"
-                className={`hover:bg-state-hover w-full rounded px-2 py-1 text-left text-sm ${
+                className={`hover:bg-state-hover w-full rounded-lg px-2 py-1 text-left text-sm ${
                   option === value ? 'bg-state-selected' : ''
                 }`}
                 onClick={() => {
@@ -241,7 +241,7 @@ export const WithList: Story = {
               <button
                 key={item.id}
                 type="button"
-                className="group hover:bg-state-hover focus-visible:bg-state-focus grid w-full cursor-pointer grid-cols-[2.5rem_1fr_auto] items-center gap-2 px-4 py-2 text-left transition-colors duration-150 focus-visible:outline-none"
+                className="group hover:bg-state-hover focus-visible:bg-state-hover grid w-full cursor-pointer grid-cols-[2.5rem_1fr_auto] items-center gap-2 px-4 py-2 text-left transition-colors duration-150 focus-visible:outline-none"
               >
                 <span className="text-muted-foreground text-right text-sm tabular-nums">
                   {item.date}

@@ -106,22 +106,16 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
   const locale = pathname?.split('/')[1] || 'ja';
   const localeRef = useRef(locale);
 
-  // concurrent mode安全: render中のref代入ではなくuseEffectで同期
+  // ref同期 + グローバルストア同期（1つのeffectに統合）
   React.useEffect(() => {
     currentDateRef.current = currentDate;
-    // グローバルストアに同期（Palette等がカレンダー表示日を参照するため）
-    useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
-  }, [currentDate]);
-  React.useEffect(() => {
     viewTypeRef.current = viewType;
-    useCalendarNavigationStore.getState()._syncViewType(viewType);
-  }, [viewType]);
-  React.useEffect(() => {
     localeRef.current = locale;
-  }, [locale]);
-  React.useEffect(() => {
     isMobileRef.current = isMobile;
-  }, [isMobile]);
+    // Palette等がカレンダー表示日/ビュータイプを参照するためグローバルに同期
+    useCalendarNavigationStore.getState()._syncViewedDate(currentDate);
+    useCalendarNavigationStore.getState()._syncViewType(viewType);
+  }, [currentDate, viewType, locale, isMobile]);
 
   // モバイルでday以外のビューが設定された場合、強制的にdayに切替
   // （URL直アクセスやブラウザ戻る/進むでweek URLに遷移した場合のガード）

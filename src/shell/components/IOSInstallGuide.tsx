@@ -23,7 +23,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
 
   return (
     <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 left-4 z-50 md:bottom-4 md:left-auto md:w-96">
-      <div className="bg-card border-border rounded-2xl border p-4 shadow-md">
+      <div className="bg-card border-border-subtle shadow-card rounded-2xl border p-4">
         <div className="mb-3 flex items-start justify-between gap-2">
           <p className="text-foreground text-sm font-medium">{t('iosInstallTitle')}</p>
           <button

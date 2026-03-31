@@ -33,7 +33,7 @@ function InspectorPlaceholder() {
       <p className="text-muted-foreground text-xs">詳細情報がここに表示されます。</p>
       <button
         type="button"
-        className="bg-primary text-primary-foreground rounded px-3 py-1.5 text-sm"
+        className="bg-primary text-primary-foreground rounded-lg px-3 py-1.5 text-sm"
       >
         保存
       </button>
@@ -101,7 +101,7 @@ export const WithScrollContent: Story = {
     <FloatingPopover onClose={fn()} title="エントリ詳細（スクロール）">
       <div className="flex flex-col gap-2 p-4">
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="border-border rounded border p-2 text-sm">
+          <div key={i} className="border-border rounded-lg border p-2 text-sm">
             フィールド {i + 1}
           </div>
         ))}

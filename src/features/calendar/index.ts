@@ -11,11 +11,6 @@
 export { CalendarController } from './components/CalendarController';
 
 // =============================================================================
-// Providers
-// =============================================================================
-export { DnDProvider } from './providers/DnDProvider';
-
-// =============================================================================
 // Layout Components
 // =============================================================================
 export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
@@ -42,6 +37,12 @@ export {
   CalendarNavigationProvider,
   useCalendarNavigation,
 } from './hooks/navigation/CalendarNavigationContext';
+
+// =============================================================================
+// Contexts
+// =============================================================================
+export { useCalendarEntryActions } from './contexts/CalendarEntryActionsContext';
+export type { CalendarEntryActions } from './contexts/CalendarEntryActionsContext';
 
 // =============================================================================
 // Hooks

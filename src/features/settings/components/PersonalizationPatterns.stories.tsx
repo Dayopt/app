@@ -429,7 +429,7 @@ function ValueRankingDemo() {
               createPortal(
                 <DragOverlay dropAnimation={dropAnimationConfig} modifiers={[adjustTranslate]}>
                   {activeId ? (
-                    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-lg">
+                    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-sm">
                       <span className="text-foreground flex-1 text-sm">
                         {KEYWORD_MAP[activeId] ?? activeId}
                       </span>

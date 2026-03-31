@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CurrentTimeLine, CurrentTimeLineForColumn } from './CurrentTimeLine';
 
 /**
- * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-primary 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
+ * 現在時刻インジケーター線。dot(6px) + bar(2px) 構造、bg-now-indicator 色。日ビュー用（全幅）とカラム用（列内）の2バリアント。startHour/endHour で範囲外非表示。
  */
 const meta = {
   title: 'Features/Calendar/Views/Grid/CurrentTimeLine',
@@ -42,7 +42,7 @@ export const Default: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded border">
+      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -57,7 +57,7 @@ export const WithoutDot: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded border">
+      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -74,7 +74,7 @@ export const WeekViewWithToday: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded border">
+      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -92,7 +92,7 @@ export const WeekViewWithoutToday: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded border">
+      <div className="bg-background border-border relative h-32 w-full overflow-hidden rounded-lg border">
         <Story />
       </div>
     ),
@@ -102,7 +102,7 @@ export const WeekViewWithoutToday: Story = {
 /** カラム用（列内）・今日。ドット表示あり。 */
 export const ForColumnToday: Story = {
   render: () => (
-    <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded border">
+    <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded-lg border">
       <CurrentTimeLineForColumn hourHeight={72} showDot isToday />
     </div>
   ),
@@ -111,7 +111,7 @@ export const ForColumnToday: Story = {
 /** カラム用（列内）・今日以外。薄い線のみ。 */
 export const ForColumnOtherDay: Story = {
   render: () => (
-    <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded border">
+    <div className="bg-background border-border relative h-32 w-48 overflow-hidden rounded-lg border">
       <CurrentTimeLineForColumn hourHeight={72} showDot={false} isToday={false} showOnOtherDays />
     </div>
   ),
@@ -123,25 +123,25 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">日ビュー（全幅・ドット付き）</p>
-        <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded border">
+        <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded-lg border">
           <CurrentTimeLine hourHeight={72} showDot />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">週ビュー（複数日・今日を含む）</p>
-        <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded border">
+        <div className="bg-background border-border relative h-20 w-full overflow-hidden rounded-lg border">
           <CurrentTimeLine hourHeight={72} showDot displayDates={[yesterday, today, tomorrow]} />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">カラム用・今日</p>
-        <div className="bg-background border-border relative h-20 w-64 overflow-hidden rounded border">
+        <div className="bg-background border-border relative h-20 w-64 overflow-hidden rounded-lg border">
           <CurrentTimeLineForColumn hourHeight={72} showDot isToday />
         </div>
       </div>
       <div className="w-full space-y-2">
         <p className="text-muted-foreground text-xs font-medium">カラム用・今日以外（薄い線）</p>
-        <div className="bg-background border-border relative h-20 w-64 overflow-hidden rounded border">
+        <div className="bg-background border-border relative h-20 w-64 overflow-hidden rounded-lg border">
           <CurrentTimeLineForColumn
             hourHeight={72}
             showDot={false}

@@ -21,7 +21,8 @@
         "dayRangeSameMonth": "{monthYear} {start}〜{end}日",
         "dayRangeDiffMonth": "{year}年 {startMonth}月{startDay}日 - {endMonth}月{endDay}日",
         "dayRangeDiffYear": "{startYear}年{startMonth}月{startDay}日 - {endYear}年{endMonth}月{endDay}日",
-        "year": "{year}年"
+        "year": "{year}年",
+        "yearOnly": "yyyy'年'"
       },
       "hourLabel": "{hour}時",
       "weekdaysNarrow": ["日", "月", "火", "水", "木", "金", "土"],
@@ -95,7 +96,9 @@
       "options": "オプション",
       "addToPalette": "パレットに追加",
       "addedToPalette": "パレットに追加しました",
-      "alreadyInPalette": "パレットに登録済み"
+      "removeFromPalette": "パレットから解除",
+      "removedFromPalette": "パレットから解除しました",
+      "more": "その他の操作"
     },
     "confirm": {
       "delete": {

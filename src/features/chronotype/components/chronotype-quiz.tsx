@@ -132,7 +132,7 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
             <label
               key={option.id}
               className={
-                'border-border hover:bg-state-hover flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors' +
+                'border-border hover:bg-state-hover flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-colors' +
                 (selectedOption === option.id ? ' bg-state-hover border-primary' : '')
               }
             >

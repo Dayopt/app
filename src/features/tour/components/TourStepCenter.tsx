@@ -41,7 +41,7 @@ export function TourStepCenter({
 
   return (
     <div className="z-tour fixed inset-0 flex items-center justify-center">
-      <div className="bg-card animate-in fade-in zoom-in-95 mx-4 w-full max-w-80 rounded-xl p-6 shadow-md duration-150">
+      <div className="bg-card animate-in fade-in zoom-in-95 mx-4 w-full max-w-80 rounded-2xl p-6 shadow-sm duration-150">
         {contentKey === 'tag-explain' ? (
           <TagExplainContent {...contentProps} />
         ) : contentKey === 'planned-vs-actual-visual' ? (

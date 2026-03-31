@@ -46,14 +46,14 @@ export default function RootError({ error, reset }: ErrorProps) {
 
   return (
     <div className="bg-background fixed inset-0 flex items-center justify-center overflow-auto p-4">
-      <div className="bg-card border-border w-full max-w-md rounded-2xl border p-8 shadow-md">
+      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-destructive mb-2 text-2xl font-bold">{ERROR_TEXT.title}</h1>
           <p className="text-muted-foreground">{ERROR_TEXT.description}</p>
         </div>
 
         {error.digest && (
-          <div className="bg-surface-container mb-4 rounded p-4 text-xs">
+          <div className="bg-surface-container mb-4 rounded-lg p-4 text-xs">
             <p className="text-muted-foreground">
               {ERROR_TEXT.errorId}: <code className="font-mono">{error.digest}</code>
             </p>
@@ -62,10 +62,10 @@ export default function RootError({ error, reset }: ErrorProps) {
 
         {process.env.NODE_ENV === 'development' && (
           <details className="mb-6">
-            <summary className="text-muted-foreground hover:bg-state-hover -mx-1 cursor-pointer rounded px-1 text-sm transition-colors">
+            <summary className="text-muted-foreground hover:bg-state-hover -mx-1 cursor-pointer rounded-lg px-1 text-sm transition-colors">
               {ERROR_TEXT.showDetails}
             </summary>
-            <div className="bg-surface-container mt-4 rounded p-4">
+            <div className="bg-surface-container mt-4 rounded-lg p-4">
               <p className="mb-2 text-xs font-bold">{error.name}</p>
               <pre className="text-muted-foreground max-h-40 overflow-auto text-xs">
                 {error.message}

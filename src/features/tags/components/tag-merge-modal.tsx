@@ -302,7 +302,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         aria-modal="false"
         aria-label={t('calendar.filter.mergeTag.title')}
         className={cn(
-          'bg-card border-border absolute flex flex-col border shadow-lg',
+          'bg-card border-border-subtle shadow-card absolute flex flex-col border',
           'animate-in fade-in duration-150',
           'top-1/2 left-1/2 max-h-[70vh] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl',
         )}
@@ -360,7 +360,7 @@ function TagGridCell({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,

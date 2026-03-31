@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import {
+  BarChart3,
   ChevronRight,
   Eye,
   EyeOff,
@@ -48,6 +49,7 @@ interface GroupHeaderProps {
   onAddTagToGroup?: (() => void) | undefined;
   onRenameGroup?: (() => void) | undefined;
   onUngroupTags?: (() => void) | undefined;
+  onViewStats?: (() => void) | undefined;
   onDeleteGroup?: (() => void) | undefined;
 }
 
@@ -72,6 +74,7 @@ export function GroupHeader({
   onAddTagToGroup,
   onRenameGroup,
   onUngroupTags,
+  onViewStats,
   onDeleteGroup,
 }: GroupHeaderProps) {
   const t = useTranslations();
@@ -105,7 +108,7 @@ export function GroupHeader({
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded text-sm font-medium',
+        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium',
         isMobile ? 'h-11' : 'h-8',
         menuOpen && 'bg-state-selected',
         !checked && !indeterminate && 'opacity-50',
@@ -136,7 +139,7 @@ export function GroupHeader({
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
-          'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
           checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
           isMobile && 'opacity-100',
         )}
@@ -147,13 +150,15 @@ export function GroupHeader({
         {checked || indeterminate ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
       </button>
 
+      <div className="w-1 shrink-0" />
+
       {/* Menu */}
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             aria-label={t('calendar.filter.tagMenu')}
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
           >
@@ -210,6 +215,9 @@ export function GroupHeader({
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
               )}
+              {/* --- アクション --- */}
+              <DropdownMenuSeparator />
+
               {onUngroupTags && (
                 <DropdownMenuItem onClick={onUngroupTags}>
                   <Unlink className="mr-2 size-4" />
@@ -220,6 +228,14 @@ export function GroupHeader({
                 <Eye className="mr-2 size-4" />
                 {t('calendar.filter.showOnlyThis')}
               </DropdownMenuItem>
+              {onViewStats && (
+                <DropdownMenuItem onClick={onViewStats}>
+                  <BarChart3 className="mr-2 size-4" />
+                  {t('calendar.filter.viewStats')}
+                </DropdownMenuItem>
+              )}
+
+              {/* --- 破壊的操作 --- */}
               {onDeleteGroup && (
                 <>
                   <DropdownMenuSeparator />

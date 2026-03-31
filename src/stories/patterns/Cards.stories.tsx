@@ -40,7 +40,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -78,7 +78,7 @@ export const Overview: Story = {
         </section>
 
         {/* 基本カード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">基本カード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             情報をグループ化。タイトル、説明、コンテンツで構成。
@@ -131,7 +131,7 @@ export const Overview: Story = {
         </section>
 
         {/* アクションカード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">アクションカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ヘッダーにアクションボタン。CardActionで右上に配置。
@@ -197,7 +197,7 @@ export const Overview: Story = {
         </section>
 
         {/* ステータスカード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ステータスカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タスクやプロジェクトの状態を表示。バッジとメタ情報。
@@ -280,7 +280,7 @@ export const Overview: Story = {
         </section>
 
         {/* メトリクスカード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">メトリクスカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             数値・統計を強調表示。トレンドアイコンで変化を表現。
@@ -322,7 +322,7 @@ export const Overview: Story = {
         </section>
 
         {/* カードグリッド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">カードグリッド</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             レスポンシブなカードレイアウト。grid + gap で配置。
@@ -348,7 +348,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

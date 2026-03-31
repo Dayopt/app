@@ -14,6 +14,7 @@ import { PanelLeft } from 'lucide-react';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
+import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarComposition } from './useCalendarComposition';
 
@@ -78,7 +79,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
                 <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-primary text-primary-foreground rounded px-4 py-2 transition-opacity hover:opacity-80"
+                  className="bg-primary text-primary-foreground rounded-lg px-4 py-2 transition-opacity hover:opacity-80"
                 >
                   {translations.reloadButton}
                 </button>
@@ -110,6 +111,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onSettingsChange={composition.onSettingsChange}
           onDateSelect={composition.onDateSelect}
           leftSlot={sidebarToggle}
+          rightSlot={<SidebarPageNav />}
         />
       </FeatureErrorBoundary>
     </div>

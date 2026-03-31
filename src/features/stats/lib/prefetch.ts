@@ -5,20 +5,17 @@ import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
 import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
 
 /**
- * Stats ビュー用 prefetch
+ * Stats ページ用 prefetch
  *
- * デフォルト粒度（week）の日付範囲 + 前期間（TrendBadge 用）を事前取得する。
- * KPI は統合エンドポイント getStatsOverview で 1 RPC にまとめる。
- *
- * ⚠ computeStatsDateRange を使用して日付文字列を生成する。
- *   サーバー/クライアント間で同じクエリキーを生成し、キャッシュヒットを保証するため。
+ * 3 クエリで全タブのデータを事前取得:
+ * 1. getStatsPageData: 統合クエリ（Review/Progress/Insights 全データ）
+ * 2. getStreak: 連続記録日数（期間非依存のため統合不可）
+ * 3. getDailyHours: 年間ヒートマップ（年パラメータが動的なため統合不可）
  */
 export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
 
   const now = new Date();
-  // middleware が `user-tz` Cookie から転送した `x-user-timezone` ヘッダーを使用
-  // 初回アクセス時（Cookie未設定）は UTC にフォールバック
   const headersList = await headers();
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
   const dateRange = computeStatsDateRange(now, 'week', serverTimezone);
@@ -26,24 +23,19 @@ export async function prefetchStatsData() {
 
   try {
     await Promise.all([
-      // Overview charts
+      helpers.entries.getStatsPageData.prefetch({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        prevStart: prevDateRange.startDate,
+        prevEnd: prevDateRange.endDate,
+        year: now.getFullYear(),
+        monthlyMonths: 3,
+      }),
+      helpers.entries.getStreak.prefetch(),
       helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
-      helpers.entries.getTimeByTag.prefetch(dateRange),
-      helpers.entries.getHourlyDistribution.prefetch(dateRange),
-      helpers.entries.getDayOfWeekDistribution.prefetch(dateRange),
-      helpers.entries.getMonthlyTrend.prefetch({ months: 3 }),
-      // KPI unified（現在 + 前期間 = 2 RPC、旧: 14 RPC）
-      helpers.entries.getStatsOverview.prefetch(dateRange),
-      helpers.entries.getStatsOverview.prefetch(prevDateRange),
-      // 個別クエリ（統合に含められないもの）
-      helpers.entries.getEstimationAccuracy.prefetch(dateRange),
-      helpers.entries.getEstimationAccuracy.prefetch(prevDateRange),
-      helpers.entries.getEnergyMap.prefetch(dateRange),
-      helpers.entries.getEnergyMap.prefetch(prevDateRange),
     ]);
   } catch {
-    // 認証エラー等の場合はprefetchをスキップ（白ページ防止）
-    // クライアント側のtRPCがリトライ or 認証リダイレクトを処理する
+    // 認証エラー等はスキップ（クライアント側でリトライ）
   }
 
   return { helpers, dehydratedState: dehydrate(helpers.queryClient) };

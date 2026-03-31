@@ -26,8 +26,13 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
   },
   {
     pattern: 'rounded-\\[[0-9]+px\\]',
-    message: '角丸はトークンを使用 (rounded-sm, rounded-md 等)',
-    suggestion: 'rounded-[2px] → rounded-sm',
+    message: '角丸の任意値は禁止。rounded-lg (8px) / rounded-2xl (16px) を使用',
+    suggestion: 'rounded-[8px] → rounded-lg',
+  },
+  {
+    pattern: '(?<![a-z0-9-])rounded(?:-sm|-md|-xl|-xs|-3xl)(?![a-z0-9-])',
+    message: '廃止された角丸クラス。rounded-lg (8px) / rounded-2xl (16px) を使用',
+    suggestion: 'rounded-sm → rounded-lg, rounded-xl → rounded-2xl',
   },
   {
     pattern: 'h-\\[(1|2)px\\]',

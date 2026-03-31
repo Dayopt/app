@@ -2,9 +2,6 @@ import { create } from 'zustand';
 
 import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 
-/** Stats のタブ */
-export type StatsTab = 'review' | 'progress' | 'insights';
-
 /** Stats の表示粒度 */
 export type StatsGranularity = 'day' | 'week' | 'month' | 'year';
 

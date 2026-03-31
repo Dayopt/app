@@ -2,15 +2,13 @@ import { useMemo } from 'react';
 
 import { isSameDay, isValid } from 'date-fns';
 
+import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 import { HOUR_HEIGHT } from '../constants/grid.constants';
 
 import { useEntryLayoutCalculator, type EntryLayout } from './useEntryLayoutCalculator';
-
-const ENTRY_PADDING = 2; // エントリ間のパディング
-const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
 interface UseViewEntriesOptions {
   date: Date;
@@ -86,16 +84,11 @@ export function useViewEntries({
   // レイアウト情報をEntryPositionに変換
   const entryPositions = useMemo((): EntryPosition[] => {
     return entryLayouts.map((layout: EntryLayout, index: number) => {
-      const startDate = new Date(layout.entry.start);
-      const endDate = new Date(layout.entry.end);
-
-      const startHour = startDate.getHours() + startDate.getMinutes() / 60;
-      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-      const duration = Math.max(endHour - startHour, 0.25); // 最小15分
-
-      // 位置計算
-      const top = startHour * hourHeight;
-      const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
+      const { top, height } = layoutEntryToVerticalPosition(
+        new Date(layout.entry.start),
+        new Date(layout.entry.end),
+        hourHeight,
+      );
 
       return {
         plan: layout.entry as CalendarEvent,

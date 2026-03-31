@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { format, isSameDay, isValid } from 'date-fns';
 
+import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
@@ -9,9 +10,6 @@ import { HOUR_HEIGHT as DEFAULT_HOUR_HEIGHT } from '../constants/grid.constants'
 
 import { useEntryLayoutCalculator, type EntryLayout } from './useEntryLayoutCalculator';
 import type { EntryPosition } from './useViewEntries';
-
-const ENTRY_PADDING = 2; // エントリ間のパディング
-const MIN_ENTRY_HEIGHT = 20; // 最小エントリ高さ
 
 /** useMultiDayEntryPositions フックのオプション */
 interface UseMultiDayEntryPositionsOptions {
@@ -90,6 +88,15 @@ export function useMultiDayEntryPositions({
     return converted;
   }, [entriesByDate]);
 
+  // O(1)ルックアップ用Map（allConvertedEntries.find() の O(n*m) を回避）
+  const entryMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent>();
+    for (const item of allConvertedEntries) {
+      map.set(item.id, item.entry);
+    }
+    return map;
+  }, [allConvertedEntries]);
+
   // 日付ごとにレイアウト計算
   // useEntryLayoutCalculatorはフックなので、日付ごとに呼べない
   // 代わりに全エントリを一度に渡し、後で日付ごとに分離
@@ -105,19 +112,12 @@ export function useMultiDayEntryPositions({
   // レイアウト情報をEntryPositionに変換
   const entryPositions = useMemo((): EntryPosition[] => {
     return entryLayouts.map((layout: EntryLayout, index: number) => {
-      const originalEntry = allConvertedEntries.find((p) => p.id === layout.entry.id);
-      const entry = originalEntry?.entry || (layout.entry as CalendarEvent);
-
-      const startDate = new Date(layout.entry.start);
-      const endDate = new Date(layout.entry.end);
-
-      const startHour = startDate.getHours() + startDate.getMinutes() / 60;
-      const endHour = endDate.getHours() + endDate.getMinutes() / 60;
-      const duration = Math.max(endHour - startHour, 0.25); // 最小15分
-
-      // 位置計算
-      const top = startHour * hourHeight;
-      const height = Math.max(duration * hourHeight - ENTRY_PADDING, MIN_ENTRY_HEIGHT);
+      const entry = entryMap.get(layout.entry.id) ?? (layout.entry as CalendarEvent);
+      const { top, height } = layoutEntryToVerticalPosition(
+        new Date(layout.entry.start),
+        new Date(layout.entry.end),
+        hourHeight,
+      );
 
       return {
         plan: entry,
@@ -131,7 +131,7 @@ export function useMultiDayEntryPositions({
         opacity: layout.totalColumns > 1 ? 0.95 : 1.0,
       };
     });
-  }, [entryLayouts, allConvertedEntries, hourHeight]);
+  }, [entryLayouts, entryMap, hourHeight]);
 
   return {
     entryPositions,

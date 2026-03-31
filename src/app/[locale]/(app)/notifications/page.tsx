@@ -49,7 +49,7 @@ export default function NotificationsPage() {
 
       {/* タブ + コンテンツ */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
-        <TabsList className="h-auto gap-4 rounded-none border-transparent bg-transparent p-0 px-4 pt-2">
+        <TabsList className="h-auto rounded-none border-transparent bg-transparent p-0 px-4 pt-2">
           {TABS.map((tab) => (
             <TabsTrigger key={tab} value={tab}>
               {t(`notification.tabs.${tab}`)}

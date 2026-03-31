@@ -44,8 +44,8 @@ function MockButton({
     <button
       className={
         variant === 'primary'
-          ? `bg-primary text-primary-foreground hover:bg-primary-hover rounded-md px-4 py-2 text-sm font-medium ${className}`
-          : `border-border text-foreground hover:bg-state-hover rounded-md border px-4 py-2 text-sm font-medium ${className}`
+          ? `bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-medium ${className}`
+          : `border-border text-foreground hover:bg-state-hover rounded-lg border px-4 py-2 text-sm font-medium ${className}`
       }
     >
       {children}
@@ -81,7 +81,7 @@ function Section({
 function MockRootError({ errorMessage }: { errorMessage: string }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-8">
-      <div className="bg-card border-border w-full max-w-md rounded-2xl border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-destructive mb-2 text-2xl font-bold">Something went wrong</h1>
           <p className="text-muted-foreground">
@@ -89,10 +89,10 @@ function MockRootError({ errorMessage }: { errorMessage: string }) {
           </p>
         </div>
         <details className="mb-6">
-          <summary className="text-muted-foreground hover:bg-state-hover -mx-1 cursor-pointer rounded px-1 text-sm transition-colors">
+          <summary className="text-muted-foreground hover:bg-state-hover -mx-1 cursor-pointer rounded-lg px-1 text-sm transition-colors">
             Show details
           </summary>
-          <div className="bg-surface-container mt-4 rounded p-4">
+          <div className="bg-surface-container mt-4 rounded-lg p-4">
             <p className="mb-2 text-xs font-bold">Error</p>
             <pre className="text-muted-foreground max-h-40 overflow-auto text-xs">
               {errorMessage}
@@ -168,7 +168,7 @@ function MockCalendarError({ errorMessage }: { errorMessage: string }) {
 function MockNotFound() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-8">
-      <div className="bg-card border-border w-full max-w-md rounded-2xl border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-foreground mb-2 text-2xl font-bold">Page not found</h1>
           <p className="text-muted-foreground">
@@ -185,7 +185,7 @@ function MockNotFound() {
 function MockMaintenance() {
   return (
     <div className="flex min-h-[50vh] items-center justify-center p-4">
-      <div className="bg-card border-border w-full max-w-[28rem] rounded-lg border p-8 shadow-lg">
+      <div className="bg-card border-border-subtle w-full max-w-[28rem] rounded-lg border p-8 shadow-sm">
         <div className="mb-6 flex justify-center">
           <div className="bg-muted flex size-16 items-center justify-center rounded-full">
             <svg
@@ -207,7 +207,7 @@ function MockMaintenance() {
         <div className="mb-6 text-center">
           <h1 className="text-foreground mb-2 text-2xl font-bold">Under Maintenance</h1>
         </div>
-        <div className="bg-muted mb-6 rounded p-4">
+        <div className="bg-muted mb-6 rounded-lg p-4">
           <p className="text-foreground mb-2 text-sm">
             We&apos;re currently performing system maintenance.
           </p>
@@ -240,10 +240,10 @@ function MockDefaultFallback() {
           An error report will be sent automatically.
         </p>
         <div className="flex justify-center gap-2">
-          <button className="bg-primary text-primary-foreground hover:bg-primary-hover rounded px-4 py-2 transition-colors">
+          <button className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 transition-colors">
             Retry
           </button>
-          <button className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded px-4 py-2 transition-colors">
+          <button className="bg-surface-container text-muted-foreground hover:bg-state-hover rounded-lg px-4 py-2 transition-colors">
             Reload Page
           </button>
         </div>
@@ -268,9 +268,9 @@ function MockDevFallback({ componentName }: { componentName?: string }) {
 /** 機能エラー用フォールバック */
 function MockFeatureFallback({ featureName }: { featureName: string }) {
   return (
-    <div className="border-border bg-surface-container rounded border p-4">
+    <div className="border-border bg-surface-container rounded-lg border p-4">
       <p className="text-foreground text-center">An error occurred in the {featureName} feature</p>
-      <button className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded px-4 py-1 text-sm transition-colors">
+      <button className="bg-primary text-primary-foreground hover:bg-primary-hover mx-auto mt-2 block rounded-lg px-4 py-1 text-sm transition-colors">
         Reload Page
       </button>
     </div>
@@ -291,7 +291,7 @@ export const Overview: Story = {
         と、React ErrorBoundary のフォールバックUI。7コンポーネント構成。
       </p>
 
-      <div className="bg-card border-border mb-8 rounded-xl border p-6">
+      <div className="bg-card border-border mb-8 rounded-2xl border p-6">
         <h2 className="mb-4 text-lg font-bold">ページレベルエラー</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           Next.js App Router の error.tsx /
@@ -349,7 +349,7 @@ export const Overview: Story = {
         </div>
       </div>
 
-      <div className="bg-card border-border rounded-xl border p-6">
+      <div className="bg-card border-border rounded-2xl border p-6">
         <h2 className="mb-4 text-lg font-bold">ErrorBoundary フォールバック</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           React ErrorBoundary がキャッチしたエラー時のフォールバックUI。Sentry連携で自動レポート。

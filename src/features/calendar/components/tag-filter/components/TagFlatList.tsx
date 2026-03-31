@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
@@ -21,7 +22,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -43,6 +44,7 @@ import {
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../TagRenameDialog';
@@ -415,6 +417,7 @@ function SortableTagItem({
   findTagByName: (name: string) => Tag | undefined;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tag.id,
   });
@@ -425,6 +428,16 @@ function SortableTagItem({
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
+  const router = useRouter();
+  const resetToServer = useClientRouterStore((s) => s.resetToServer);
+
+  const navigateToTagStats = useCallback(
+    (tagId: string) => {
+      resetToServer();
+      router.push(`/${locale}/stats/tags/${tagId}`);
+    },
+    [router, locale, resetToServer],
+  );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
@@ -605,6 +618,7 @@ function SortableTagItem({
             onAddTagToGroup={() => openTagCreateModal(currentGroup)}
             onRenameGroup={() => setShowGroupRenameDialog(true)}
             onUngroupTags={handleUngroupTags}
+            onViewStats={() => navigateToTagStats(parentTag?.id ?? tag.id)}
             onDeleteGroup={handleDeleteGroup}
           />
         )}
@@ -613,7 +627,7 @@ function SortableTagItem({
         {!(isFirstInGroup && collapsed) && (
           <div
             className={cn(
-              'group/item flex items-center rounded text-sm',
+              'group/item flex items-center rounded-lg text-sm',
               isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
@@ -645,7 +659,7 @@ function SortableTagItem({
               onPointerDown={(e) => e.stopPropagation()}
               aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
               className={cn(
-                'text-muted-foreground hover:text-foreground flex size-6 shrink-0 items-center justify-center rounded transition-opacity',
+                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
                 checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
                 isMobile && 'opacity-100',
               )}
@@ -653,13 +667,15 @@ function SortableTagItem({
               {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
             </button>
 
+            <div className="w-1 shrink-0" />
+
             {/* Menu */}
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -681,6 +697,7 @@ function SortableTagItem({
                   openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
                 }
                 onShowOnlyTag={() => showOnlyTag(tag.id)}
+                onViewStats={() => navigateToTagStats(tag.id)}
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>

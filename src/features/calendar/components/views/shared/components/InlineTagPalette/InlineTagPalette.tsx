@@ -10,10 +10,12 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { isSameDay } from 'date-fns';
-import { useTranslations } from 'next-intl';
+import { format, isSameDay } from 'date-fns';
+import { enUS, ja } from 'date-fns/locale';
+import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
@@ -21,6 +23,7 @@ import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { formatTimeString } from '../../../../../interaction/time-math';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';
@@ -38,6 +41,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const locale = useLocale();
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
 
@@ -147,6 +151,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [clearPendingSelection],
   );
 
+  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;
   if (date && !isSameDay(date, pendingSelection.date)) return null;
@@ -160,9 +166,12 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const selectionHeight = (endMinutes - startMinutes) * (hourHeight / 60);
 
   // 時間ラベル + 合計時間
-  const formatTime = (h: number, m: number) =>
-    `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-  const timeLabel = `${formatTime(startHour, startMinute)} – ${formatTime(endHour, endMinute)}`;
+  const timeLabel = `${formatTimeString(startHour, startMinute, timeFormat)} – ${formatTimeString(endHour, endMinute, timeFormat)}`;
+
+  // タグピッカーヘッダー用の日付+時間ラベル（例: "3/30 (日) 14:00 – 15:30"）
+  const dateFnsLocale = locale === 'ja' ? ja : enUS;
+  const datePattern = locale === 'ja' ? 'M/d (E)' : 'E, MMM d';
+  const pickerTimeLabel = `${format(pendingSelection.date, datePattern, { locale: dateFnsLocale })} ${timeLabel}`;
 
   // ホバー中タグの色を解決
   const accentColor = hoveredTag
@@ -207,13 +216,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             {selectionHeight < 40 ? (
               <div className="flex h-full items-center px-2">
                 <span className="text-foreground truncate text-xs font-normal">
-                  {hoveredTag ? displayName : timeLabel}
+                  {hoveredTag ? <ColonTagLabel name={displayName} /> : timeLabel}
                 </span>
               </div>
             ) : (
               <div className="flex h-full flex-col gap-1 p-2">
                 <span className="text-foreground text-sm leading-tight font-normal">
-                  {displayName}
+                  {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
                 </span>
                 <span className="text-muted-foreground text-xs leading-tight tabular-nums">
                   {timeLabel}
@@ -232,6 +241,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         onCreateAndSelect={handleCreateAndSelect}
         onTagHover={handleTagHover}
         anchorRef={highlightRef}
+        timeLabel={pickerTimeLabel}
       />
     </>
   );

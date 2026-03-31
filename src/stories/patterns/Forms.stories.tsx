@@ -26,7 +26,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-3xl gap-8">
         {/* バリデーションエラー */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">バリデーションエラー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フィールド単位でエラーを表示。エラーメッセージは具体的に。
@@ -65,7 +65,7 @@ export const Overview: Story = {
         </section>
 
         {/* 成功状態 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">成功状態</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             保存成功時のインラインフィードバック。
@@ -95,7 +95,7 @@ export const Overview: Story = {
         </section>
 
         {/* サーバーエラー */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">サーバーエラー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フォーム全体のエラーはフォーム上部に表示。
@@ -134,7 +134,7 @@ export const Overview: Story = {
         </section>
 
         {/* ヘルプテキスト */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ヘルプテキスト</h2>
           <p className="text-muted-foreground mb-4 text-sm">入力前にユーザーを支援する補足説明。</p>
 
@@ -154,7 +154,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

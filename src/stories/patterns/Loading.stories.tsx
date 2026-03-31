@@ -23,7 +23,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -61,7 +61,7 @@ export const Overview: Story = {
         </section>
 
         {/* Skeleton */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">Skeleton（推奨）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             コンテンツの形状を模したローディング。レイアウトシフトを防ぐ。
@@ -72,9 +72,9 @@ export const Overview: Story = {
             <div>
               <h3 className="text-muted-foreground mb-3 text-sm font-bold">カード</h3>
               <div className="border-border space-y-3 rounded-lg border p-4">
-                <div className="animate-shimmer h-4 w-3/4 rounded" />
-                <div className="animate-shimmer h-3 w-full rounded" />
-                <div className="animate-shimmer h-3 w-5/6 rounded" />
+                <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
+                <div className="animate-shimmer h-3 w-full rounded-lg" />
+                <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
               </div>
             </div>
 
@@ -86,8 +86,8 @@ export const Overview: Story = {
                   <div key={i} className="flex items-center gap-3">
                     <div className="animate-shimmer size-10 shrink-0 rounded-full" />
                     <div className="flex-1 space-y-2">
-                      <div className="animate-shimmer h-4 w-1/3 rounded" />
-                      <div className="animate-shimmer h-3 w-2/3 rounded" />
+                      <div className="animate-shimmer h-4 w-1/3 rounded-lg" />
+                      <div className="animate-shimmer h-3 w-2/3 rounded-lg" />
                     </div>
                   </div>
                 ))}
@@ -105,15 +105,15 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-3 text-sm font-bold">テーブル</h3>
               <div className="space-y-2">
                 <div className="border-border flex gap-4 border-b pb-2">
-                  <div className="animate-shimmer h-4 w-1/4 rounded" />
-                  <div className="animate-shimmer h-4 w-1/3 rounded" />
-                  <div className="animate-shimmer h-4 w-1/4 rounded" />
+                  <div className="animate-shimmer h-4 w-1/4 rounded-lg" />
+                  <div className="animate-shimmer h-4 w-1/3 rounded-lg" />
+                  <div className="animate-shimmer h-4 w-1/4 rounded-lg" />
                 </div>
                 {[1, 2].map((i) => (
                   <div key={i} className="flex gap-4 py-2">
-                    <div className="animate-shimmer h-3 w-1/4 rounded" />
-                    <div className="animate-shimmer h-3 w-1/3 rounded" />
-                    <div className="animate-shimmer h-3 w-1/4 rounded" />
+                    <div className="animate-shimmer h-3 w-1/4 rounded-lg" />
+                    <div className="animate-shimmer h-3 w-1/3 rounded-lg" />
+                    <div className="animate-shimmer h-3 w-1/4 rounded-lg" />
                   </div>
                 ))}
               </div>
@@ -122,12 +122,12 @@ export const Overview: Story = {
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`// Skeletonパターン
-<div className="animate-shimmer h-4 w-3/4 rounded" />
+<div className="animate-shimmer h-4 w-3/4 rounded-lg" />
 
 // 複数行
 <div className="space-y-2">
-  <div className="animate-shimmer h-4 w-full rounded" />
-  <div className="animate-shimmer h-4 w-2/3 rounded" />
+  <div className="animate-shimmer h-4 w-full rounded-lg" />
+  <div className="animate-shimmer h-4 w-2/3 rounded-lg" />
 </div>
 
 // 円形（アバター）
@@ -136,7 +136,7 @@ export const Overview: Story = {
         </section>
 
         {/* Spinner */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">Spinner</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             短時間の処理に使用。ボタン内やインライン表示に最適。
@@ -195,7 +195,7 @@ export const Overview: Story = {
         </section>
 
         {/* Pulse */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">Pulse（フォールバック）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             シンプルなフェード効果。shimmerが使えない場合のフォールバック。
@@ -204,20 +204,20 @@ export const Overview: Story = {
           <div className="flex gap-4">
             <div className="bg-muted h-24 w-24 animate-pulse rounded-lg" />
             <div className="space-y-2">
-              <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-              <div className="bg-muted h-3 w-48 animate-pulse rounded" />
-              <div className="bg-muted h-3 w-40 animate-pulse rounded" />
+              <div className="bg-muted h-4 w-32 animate-pulse rounded-lg" />
+              <div className="bg-muted h-3 w-48 animate-pulse rounded-lg" />
+              <div className="bg-muted h-3 w-40 animate-pulse rounded-lg" />
             </div>
           </div>
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`// Pulseパターン（shimmerより軽量）
-<div className="bg-muted h-4 animate-pulse rounded" />`}
+<div className="bg-muted h-4 animate-pulse rounded-lg" />`}
           </pre>
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

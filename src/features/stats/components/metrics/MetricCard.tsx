@@ -48,14 +48,14 @@ export function MetricCard({
       <Card className={cn('gap-0 border-none py-0', isHero && 'col-span-2')}>
         <CardContent className="p-3 md:p-6">
           <div className="animate-pulse space-y-2">
-            <div className="bg-muted h-3 w-16 rounded" />
+            <div className="bg-muted h-3 w-16 rounded-lg" />
             <div
               className={cn(
-                'bg-muted rounded',
+                'bg-muted rounded-lg',
                 isHero ? 'h-8 w-20 md:h-11 md:w-24' : 'h-8 w-14 md:h-11 md:w-16',
               )}
             />
-            <div className="bg-muted h-3 w-12 rounded" />
+            <div className="bg-muted h-3 w-12 rounded-lg" />
           </div>
         </CardContent>
       </Card>

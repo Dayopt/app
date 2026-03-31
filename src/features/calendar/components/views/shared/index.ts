@@ -82,7 +82,6 @@ export { sortEventsByDateKeys } from './utils/entrySorting';
 
 // ===== 定数 =====
 export {
-  GRID_BACKGROUND,
   HALF_HOUR_LINE_COLOR,
   HOUR_HEIGHT,
   HOUR_LINE_COLOR,

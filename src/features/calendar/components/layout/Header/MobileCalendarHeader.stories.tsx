@@ -98,14 +98,14 @@ export const GridSwipe: Story = {
         <div className="text-muted-foreground flex gap-2 p-4 text-sm">
           <button
             type="button"
-            className="bg-state-hover rounded-md px-3 py-1"
+            className="bg-state-hover rounded-lg px-3 py-1"
             onClick={() => setDate((d) => addMonths(d, -1))}
           >
             前月
           </button>
           <button
             type="button"
-            className="bg-state-hover rounded-md px-3 py-1"
+            className="bg-state-hover rounded-lg px-3 py-1"
             onClick={() => setDate((d) => addMonths(d, 1))}
           >
             次月

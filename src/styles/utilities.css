@@ -33,3 +33,26 @@
 @utility grid-rows-expanded {
   grid-template-rows: 1fr;
 }
+
+/* ============================================
+ * カレンダーグリッド ノイズテクスチャ
+ *
+ * 空のタイムスロットに紙のような質感を与える。
+ * SVG feTurbulence によるフラクタルノイズ。
+ * エントリカード(z-10)の下、pointer-events無効。
+ * ============================================ */
+.calendar-grid-texture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+:is(.dark) .calendar-grid-texture::after {
+  opacity: 0.06;
+}

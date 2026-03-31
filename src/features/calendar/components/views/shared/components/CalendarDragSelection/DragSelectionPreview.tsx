@@ -50,7 +50,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   if (isOverlapping) {
     return (
       <div
-        className="bg-destructive border-destructive pointer-events-none absolute right-2 left-0 rounded border"
+        className="bg-destructive border-destructive pointer-events-none absolute right-2 left-0 rounded-lg border"
         style={{ top, height, zIndex: 1000 }}
       >
         <div className="flex items-center gap-1 px-2 py-1">

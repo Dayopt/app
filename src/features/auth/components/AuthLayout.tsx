@@ -20,7 +20,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex min-h-dvh items-center justify-center p-2">
-      <div className="bg-card lg:ring-border w-full max-w-sm p-6 lg:rounded-2xl lg:p-8 lg:shadow-xs lg:ring-1">
+      <div className="bg-card lg:border-border-subtle w-full max-w-sm p-6 lg:rounded-2xl lg:border lg:p-8 lg:shadow-sm">
         {children}
       </div>
     </main>

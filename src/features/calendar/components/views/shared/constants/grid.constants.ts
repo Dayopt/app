@@ -31,7 +31,7 @@ export const HOUR_LINE_COLOR = 'border-border';
 export const HALF_HOUR_LINE_COLOR = 'border-border/50'; // より薄い線用
 
 /** 現在時刻線のTailwindクラス */
-export const CURRENT_TIME_LINE_COLOR = 'bg-primary';
+export const CURRENT_TIME_LINE_COLOR = 'bg-now-indicator';
 /** 現在時刻ドットのサイズ（px） */
 export const CURRENT_TIME_DOT_SIZE = 6; // 現在時刻のドットサイズ(px)
 
@@ -46,8 +46,6 @@ export const SCROLL_TO_HOUR = 8; // 初期表示時にスクロールする時�
 /** スクロールの動作設定 */
 export const SCROLL_BEHAVIOR = 'smooth' as const;
 
-/** グリッド背景のTailwindクラス */
-export const GRID_BACKGROUND = 'bg-background';
 /** グリッドボーダーのTailwindクラス */
 export const GRID_BORDER = 'border-border';
 
@@ -55,7 +53,7 @@ export const GRID_BORDER = 'border-border';
 export const Z_INDEX = {
   GRID_LINES: 0,
   EVENTS: 10,
-  CURRENT_TIME: 15,
+  CURRENT_TIME: 29,
   DRAGGING: 30,
   POPOVER: 40,
   MODAL: 50,

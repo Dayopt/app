@@ -8,14 +8,17 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { StatsPageContent } from './components/StatsPageContent';
+export { InsightsView } from './components/insights/InsightsView';
+export { ProgressView } from './components/progress/ProgressView';
+export { StatsLayout } from './components/StatsLayout';
+export type { TagTabInfo } from './components/StatsLayout';
 export { StatsView } from './components/StatsView';
 
 // =============================================================================
 // Stores
 // =============================================================================
 export { useStatsFilterStore } from './stores/useStatsFilterStore';
-export type { StatsGranularity, StatsTab } from './stores/useStatsFilterStore';
+export type { StatsGranularity } from './stores/useStatsFilterStore';
 
 // =============================================================================
 // Types
@@ -39,6 +42,7 @@ export type { StatsViewProps } from './types/stats.types';
 // =============================================================================
 // Lib
 // =============================================================================
+export { TagDetailPage } from './components/tag-detail/TagDetailPage';
 export { METRIC_DEFINITIONS, METRIC_ORDER } from './lib/metricDefinitions';
 export {
   calculateDeepUtilization,
@@ -47,3 +51,4 @@ export {
   getMetricTrend,
 } from './lib/metrics';
 export { prefetchStatsData } from './lib/prefetch';
+export { prefetchTagDetailData } from './lib/prefetchTagDetail';

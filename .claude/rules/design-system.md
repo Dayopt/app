@@ -1,3 +1,9 @@
+---
+paths:
+  - 'src/**/*.tsx'
+  - 'src/**/*.css'
+---
+
 # デザインシステムルール
 
 ## 色
@@ -10,12 +16,20 @@
 
 ## Elevation / Shadow
 
-- **Tailwind標準の `shadow-*` クラスを使用**
-  - `shadow-inner` → input, well（凹み）
-  - （shadow なし） → card, コンテンツ面
-  - `shadow-md` → dropdown, popover, toast
-  - `shadow-lg` → dialog, sheet, inspector, modal
-  - `shadow-none` → リセット用
+- Elevation レベル（4段階）
+
+| レベル  | Surface       | Shadow      | Border                      | 用途                             |
+| ------- | ------------- | ----------- | --------------------------- | -------------------------------- |
+| Sunken  | bg-container  | なし        | border-border               | sidebar, footer                  |
+| Base    | bg-background | なし        | —                           | ページ地                         |
+| Raised  | bg-card       | shadow-sm   | border border-border-subtle | stat card, セクション内カード    |
+| Overlay | bg-card       | shadow-card | border border-border-subtle | dropdown, popover, dialog, modal |
+
+- **判断基準:**
+  - Raised: ページと一緒にスクロールする要素
+  - Overlay: ページの上に重なる要素。下のコンテンツを覆う
+- **入力系:** `shadow-inner`（input, well）は Elevation とは別。`shadow-none` はリセット用
+- `shadow-md` / `shadow-lg` / `shadow-xl` は使用禁止。`shadow-sm` と `shadow-card` の2種のみ
 
 ## Spacing
 
@@ -25,8 +39,15 @@
 
 ## Border Radius
 
-- `radius.css` で定義済みのスケールを使用: `rounded-sm`(4px), `rounded-md`(8px), `rounded-xl`(16px), `rounded-2xl`(24px), `rounded-full`
+- 4段階のみ: `rounded-none`(0), `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`
+- `rounded-sm`, `rounded-md`, `rounded-xl`, bare `rounded` は禁止
 - 任意値 (`rounded-[Xpx]`) は禁止
+- **Elevation との対応:**
+  - Sunken (sidebar, input) → `rounded-lg` (8px)
+  - Raised (card, セクション) → `rounded-lg` (8px)
+  - Overlay (dropdown, popover) → `rounded-lg` (8px)
+  - Overlay (modal, dialog) → `rounded-2xl` (16px)
+  - 原則: Overlay の中でも画面中央に出る大きな面だけ `rounded-2xl`。それ以外は `rounded-lg` で統一
 
 ## Typography
 

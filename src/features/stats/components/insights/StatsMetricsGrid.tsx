@@ -3,16 +3,23 @@
 import { useTranslations } from 'next-intl';
 
 import { useStatsMetrics } from '../../hooks/useStatsMetrics';
+import type { StatsPageData } from '../../types/metrics.types';
 import { MetricCard } from '../metrics/MetricCard';
+
+interface StatsMetricsGridProps {
+  pageData: StatsPageData | undefined;
+  dateRange: { startDate: string; endDate: string };
+  prevDateRange: { startDate: string; endDate: string };
+}
 
 /**
  * StatsMetricsGrid — KPIメトリクスをグリッド表示
  *
- * useStatsMetrics() フックで統合エンドポイントからデータ取得。
+ * 統合データ `StatsPageData` を受け取り、メトリクスカードを描画。
  */
-export function StatsMetricsGrid() {
+export function StatsMetricsGrid({ pageData, dateRange, prevDateRange }: StatsMetricsGridProps) {
   const t = useTranslations('calendar.stats.metrics');
-  const { cards, isLoading } = useStatsMetrics(t);
+  const { cards, isLoading } = useStatsMetrics(t, pageData, dateRange, prevDateRange);
 
   if (cards.length === 0) return null;
 

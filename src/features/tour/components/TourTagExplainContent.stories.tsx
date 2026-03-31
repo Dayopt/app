@@ -20,7 +20,7 @@ const meta = {
   },
   decorators: [
     (Story) => (
-      <div className="bg-card w-80 rounded-xl p-6 shadow-lg">
+      <div className="bg-card w-80 rounded-2xl p-6 shadow-sm">
         <Story />
       </div>
     ),

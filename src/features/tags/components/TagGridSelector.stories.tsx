@@ -81,7 +81,7 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
       )}
@@ -109,7 +109,7 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >
@@ -247,7 +247,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
 
             {/* ドロップダウン */}
             {groupOpen && (
-              <div className="border-border bg-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border shadow-md">
+              <div className="border-border-subtle bg-card shadow-card absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border">
                 <button
                   type="button"
                   onClick={() => {
@@ -425,11 +425,20 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
 // Frame wrapper (PC: card, Mobile: Drawer)
 // ─────────────────────────────────────────────────────────
 
-function SelectorFrame({ children, title }: { children: React.ReactNode; title?: string }) {
+function SelectorFrame({
+  children,
+  title,
+  timeLabel,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  timeLabel?: string;
+}) {
   return (
-    <div className="bg-card w-[360px] overflow-hidden rounded-2xl shadow-lg">
+    <div className="bg-card shadow-card w-[360px] overflow-hidden rounded-2xl">
       <div className="px-4 pt-4 pb-2">
         <h2 className="text-lg font-bold">{title ?? 'タグを選択'}</h2>
+        {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
       </div>
       {children}
     </div>
@@ -466,7 +475,7 @@ export const GridDefault: Story = {
   render: function GridDefaultStory() {
     const [selected, setSelected] = useState<string | null>(null);
     return (
-      <SelectorFrame>
+      <SelectorFrame timeLabel="3/30 (日) 09:00 – 10:00">
         <TagGridSelector
           tags={MOCK_TAGS}
           selectedId={selected}
@@ -601,8 +610,9 @@ export const MobileDrawer: Story = {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="max-h-[80vh]">
-          <div className="flex items-center justify-center px-4 pt-4 pb-2">
+          <div className="flex flex-col items-center px-4 pt-4 pb-2">
             <DrawerTitle className="text-lg font-bold">タグを選択</DrawerTitle>
+            <p className="text-muted-foreground text-sm">3/30 (日) 14:00 – 15:00</p>
           </div>
           <TagGridSelector
             tags={MOCK_TAGS}

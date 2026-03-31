@@ -45,7 +45,7 @@ function MockSidebarContent() {
         {['Day', 'Week', 'Month'].map((label) => (
           <div
             key={label}
-            className="text-muted-foreground hover:bg-state-hover rounded-md px-3 py-1.5 text-sm"
+            className="text-muted-foreground hover:bg-state-hover rounded-lg px-3 py-1.5 text-sm"
           >
             {label}
           </div>
@@ -102,7 +102,7 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
   }, [isOpen]);
 
   return (
-    <div className="border-border flex h-[500px] w-[800px] overflow-hidden rounded-xl border">
+    <div className="border-border flex h-[500px] w-[800px] overflow-hidden rounded-2xl border">
       {/* サイドバー（実コンポーネント） */}
       <div
         className="shrink-0 overflow-hidden transition-all duration-200"

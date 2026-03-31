@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
 
 /**
- * /stats → /stats/overview にリダイレクト
+ * /stats → /stats/review にリダイレクト
  */
-const StatsPage = () => {
-  redirect('stats/review');
+const StatsIndexRedirect = () => {
+  redirect('/stats/review');
 };
 
-export default StatsPage;
+export default StatsIndexRedirect;

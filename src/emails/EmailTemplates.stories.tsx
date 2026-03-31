@@ -144,7 +144,7 @@ export const Guidelines: Story = {
           {Object.entries(colors).map(([name, hex]) => (
             <div key={name} className="flex items-center gap-3">
               <div
-                className="border-border size-8 shrink-0 rounded border"
+                className="border-border size-8 shrink-0 rounded-lg border"
                 style={{ backgroundColor: hex }}
               />
               <div>

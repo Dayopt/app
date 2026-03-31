@@ -6,8 +6,6 @@ import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath } from '@/features/calendar';
-import type { StatsTab } from '@/features/stats';
-import { StatsPageContent } from '@/features/stats';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
@@ -27,7 +25,8 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   const pathWithoutLocale = stripLocale(pathname);
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
-  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  // Stats は全ルートが独立ページ（/stats/review, /stats/progress, /stats/insights, /stats/tags/[id]）
+  // クライアントルーターではなく Next.js のサーバーレンダリングを使用
   return null;
 }
 
@@ -50,24 +49,6 @@ function CalendarClientView() {
   return <CalendarViewClient translations={translations} />;
 }
 
-const VALID_STATS_TABS: StatsTab[] = ['review', 'progress', 'insights'];
-
-function extractStatsTab(pathname: string): StatsTab {
-  const pathWithoutLocale = stripLocale(pathname);
-  const segments = pathWithoutLocale.split('/');
-  // /stats/overview → segments = ['', 'stats', 'overview']
-  const tab = segments[2];
-  if (tab && (VALID_STATS_TABS as string[]).includes(tab)) {
-    return tab as StatsTab;
-  }
-  return 'review';
-}
-
-function StatsClientView({ pathname }: { pathname: string }) {
-  const tab = extractStatsTab(pathname);
-  return <StatsPageContent tab={tab} />;
-}
-
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -81,20 +62,19 @@ interface ClientPageRouterProps {
  *
  * 初回ロード / リロード時は Next.js が SSR した {children} をそのまま表示。
  * PageNav が pushState + useClientRouterStore.switchToPage() を呼ぶと、
- * CalendarViewClient / StatsPageContent をクライアントサイドで直接レンダリングする。
+ * CalendarViewClient をクライアントサイドで直接レンダリングする。
+ * Stats は全ルートが独立ページのため、クライアントルーターを経由しない。
  *
  * これにより router.push() のサーバーラウンドトリップを回避し、
  * ChatGPT ライクな「Sidebar 静止 / メインのみ切り替え」体験を実現する。
  */
 export function ClientPageRouter({ children }: ClientPageRouterProps) {
-  const pathname = usePathname() ?? '/';
+  const pathname = usePathname();
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   // ブラウザ戻る/進む時: popstate イベントで clientPage を同期
-  // pathname の useEffect ではなく popstate を直接リスンすることで、
-  // pushState による遷移（PageNav）と区別し race condition を防ぐ
   useEffect(() => {
     const handlePopState = () => {
       const pageType = getPageType(window.location.pathname);
@@ -109,12 +89,15 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [switchToPage, resetToServer]);
 
-  if (clientPage === 'calendar') {
-    return <CalendarClientView />;
+  // router.push で URL が変わった場合、clientPage と実際のパスが不一致なら
+  // サーバーレンダリングにフォールバック（例: /stats → /stats/tags/[tagId]）
+  const actualPageType = getPageType(pathname);
+  if (clientPage && clientPage !== actualPageType) {
+    return <>{children}</>;
   }
 
-  if (clientPage === 'stats') {
-    return <StatsClientView pathname={pathname} />;
+  if (clientPage === 'calendar') {
+    return <CalendarClientView />;
   }
 
   return <>{children}</>;

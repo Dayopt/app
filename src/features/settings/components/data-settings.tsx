@@ -215,7 +215,7 @@ function RestoreSection() {
     <SectionCard title={t('title')}>
       <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
 
-      <div className="border-border flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8">
+      <div className="border-border flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8">
         <Upload className="text-muted-foreground mb-2 h-8 w-8" />
         <p className="text-muted-foreground text-sm">{t('dropzone')}</p>
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" disabled />

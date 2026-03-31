@@ -46,7 +46,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -79,7 +79,7 @@ export const Overview: Story = {
         </section>
 
         {/* 基本検索 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">基本検索</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             シンプルな検索入力。アイコン付きで視認性を確保。
@@ -104,7 +104,7 @@ export const Overview: Story = {
               <div className="relative max-w-md">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input placeholder="検索..." className="pr-16 pl-9" />
-                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded px-2 py-0.5 text-xs">
+                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-lg px-2 py-0.5 text-xs">
                   ⌘K
                 </kbd>
               </div>
@@ -120,7 +120,7 @@ export const Overview: Story = {
         </section>
 
         {/* グローバル検索 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">グローバル検索（⌘K）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タグとブロックを横断検索。空状態ではタグ一覧、入力時はタグ名+メモで検索。
@@ -152,7 +152,7 @@ export const Overview: Story = {
         </section>
 
         {/* フィルター検索 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">フィルター検索</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             条件を絞り込んで検索。チップでフィルターを表示。
@@ -175,7 +175,7 @@ export const Overview: Story = {
         </section>
 
         {/* 検索結果 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">検索結果</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             検索結果の表示パターン。ハイライト、件数、空状態。
@@ -189,14 +189,14 @@ export const Overview: Story = {
               <div className="border-border divide-border divide-y rounded-lg border">
                 <div className="p-3">
                   <p className="font-medium">
-                    <span className="bg-state-active text-state-active-foreground rounded">
+                    <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
                     A - 週次レビュー
                   </p>
                   <p className="text-muted-foreground text-sm">
                     今週の
-                    <span className="bg-state-active text-state-active-foreground rounded">
+                    <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
                     進捗を確認
@@ -204,14 +204,14 @@ export const Overview: Story = {
                 </div>
                 <div className="p-3">
                   <p className="font-medium">
-                    <span className="bg-state-active text-state-active-foreground rounded">
+                    <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
                     B - キックオフ
                   </p>
                   <p className="text-muted-foreground text-sm">
                     新規
-                    <span className="bg-state-active text-state-active-foreground rounded">
+                    <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
                     の立ち上げ
@@ -233,7 +233,7 @@ export const Overview: Story = {
         </section>
 
         {/* ベストプラクティス */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -347,7 +347,9 @@ function GlobalSearchWithResults() {
               <CommandItem key={tag.name} className="flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tag.color}`} />
                 <span>
-                  <mark className="bg-state-active text-state-active-foreground rounded">API</mark>
+                  <mark className="bg-state-active text-state-active-foreground rounded-lg">
+                    API
+                  </mark>
                 </span>
               </CommandItem>
             ))}
@@ -410,7 +412,7 @@ function FilterSearch() {
                 <button
                   key={filter}
                   type="button"
-                  className={`hover:bg-state-hover w-full rounded px-3 py-2 text-left text-sm ${
+                  className={`hover:bg-state-hover w-full rounded-lg px-3 py-2 text-left text-sm ${
                     filters.includes(filter) ? 'bg-state-active' : ''
                   }`}
                   onClick={() =>

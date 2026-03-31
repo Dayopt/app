@@ -2,6 +2,9 @@ import { useCallback } from 'react';
 
 import { useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
+import { api } from '@/platform/trpc';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
@@ -11,6 +14,33 @@ import type { CalendarEvent } from '../../types/calendar.types';
  */
 export const useEntryOperations = () => {
   const { updateEntry, deleteEntry } = useEntryMutations();
+  const utils = api.useUtils();
+  const t = useTranslations();
+
+  /**
+   * 時間変更のUndo toastを表示
+   * ドラッグ/リサイズで時間が変わった場合にのみ呼び出す
+   */
+  const showTimeChangeUndoToast = useCallback(
+    (entryId: string, previousStartTime: string | null, previousEndTime: string | null) => {
+      toast.success(t('entry.toast.updated'), {
+        duration: 6000,
+        action: {
+          label: t('common.undo'),
+          onClick: () => {
+            updateEntry.mutate({
+              id: entryId,
+              data: {
+                start_time: previousStartTime ?? undefined,
+                end_time: previousEndTime ?? undefined,
+              },
+            });
+          },
+        },
+      });
+    },
+    [updateEntry, t],
+  );
 
   // エントリー削除ハンドラー
   const handleEntryDelete = useCallback(
@@ -33,13 +63,26 @@ export const useEntryOperations = () => {
       try {
         if (typeof entryIdOrEntry === 'string' && updates) {
           const entryId = entryIdOrEntry;
-          updateEntry.mutate({
-            id: entryId,
-            data: {
-              start_time: updates.startTime.toISOString(),
-              end_time: updates.endTime.toISOString(),
+
+          // Undo用に現在の時間をキャッシュから取得
+          const cachedEntry = utils.entries.getById.getData({ id: entryId });
+          const prevStartTime = cachedEntry?.start_time ?? null;
+          const prevEndTime = cachedEntry?.end_time ?? null;
+
+          updateEntry.mutate(
+            {
+              id: entryId,
+              data: {
+                start_time: updates.startTime.toISOString(),
+                end_time: updates.endTime.toISOString(),
+              },
             },
-          });
+            {
+              onSuccess: () => {
+                showTimeChangeUndoToast(entryId, prevStartTime, prevEndTime);
+              },
+            },
+          );
         } else if (typeof entryIdOrEntry === 'object') {
           const updatedEntry = entryIdOrEntry;
 
@@ -48,25 +91,31 @@ export const useEntryOperations = () => {
             return;
           }
 
-          logger.log('エントリー更新 (CalendarEvent形式):', {
-            entryId: updatedEntry.id,
-            newStartDate: updatedEntry.startDate.toISOString(),
-            newEndDate: updatedEntry.endDate?.toISOString(),
-          });
+          // Undo用に現在の時間をキャッシュから取得
+          const cachedEntry = utils.entries.getById.getData({ id: updatedEntry.id });
+          const prevStartTime = cachedEntry?.start_time ?? null;
+          const prevEndTime = cachedEntry?.end_time ?? null;
 
-          updateEntry.mutate({
-            id: updatedEntry.id,
-            data: {
-              start_time: updatedEntry.startDate.toISOString(),
-              end_time: updatedEntry.endDate?.toISOString(),
+          updateEntry.mutate(
+            {
+              id: updatedEntry.id,
+              data: {
+                start_time: updatedEntry.startDate.toISOString(),
+                end_time: updatedEntry.endDate?.toISOString(),
+              },
             },
-          });
+            {
+              onSuccess: () => {
+                showTimeChangeUndoToast(updatedEntry.id, prevStartTime, prevEndTime);
+              },
+            },
+          );
         }
       } catch (error) {
         logger.error('エントリー更新に失敗:', error);
       }
     },
-    [updateEntry],
+    [updateEntry, utils, showTimeChangeUndoToast],
   );
 
   return {

@@ -46,9 +46,9 @@ export const AllPatterns: Story = {
             </DrawerHeader>
             <div className="p-4">
               <div className="space-y-4">
-                <div className="bg-muted h-10 rounded" />
-                <div className="bg-muted h-10 rounded" />
-                <div className="bg-muted h-10 rounded" />
+                <div className="bg-muted h-10 rounded-lg" />
+                <div className="bg-muted h-10 rounded-lg" />
+                <div className="bg-muted h-10 rounded-lg" />
               </div>
             </div>
             <DrawerFooter>
@@ -135,11 +135,11 @@ export const AllPatterns: Story = {
             <div className="flex-1 overflow-y-auto p-4">
               <h3 className="mb-4 font-bold">プランの詳細</h3>
               <div className="space-y-4">
-                <div className="bg-muted h-20 rounded" />
-                <div className="bg-muted h-20 rounded" />
-                <div className="bg-muted h-20 rounded" />
-                <div className="bg-muted h-20 rounded" />
-                <div className="bg-muted h-20 rounded" />
+                <div className="bg-muted h-20 rounded-lg" />
+                <div className="bg-muted h-20 rounded-lg" />
+                <div className="bg-muted h-20 rounded-lg" />
+                <div className="bg-muted h-20 rounded-lg" />
+                <div className="bg-muted h-20 rounded-lg" />
               </div>
             </div>
           </DrawerContent>

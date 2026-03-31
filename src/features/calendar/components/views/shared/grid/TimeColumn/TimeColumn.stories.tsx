@@ -39,7 +39,7 @@ export const TwentyFourHour: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border h-[500px] overflow-y-auto rounded border">
+      <div className="border-border h-[500px] overflow-y-auto rounded-lg border">
         <Story />
       </div>
     ),
@@ -56,7 +56,7 @@ export const TwelveHour: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border h-[500px] overflow-y-auto rounded border">
+      <div className="border-border h-[500px] overflow-y-auto rounded-lg border">
         <Story />
       </div>
     ),
@@ -73,7 +73,7 @@ export const BusinessHours: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border h-[500px] overflow-y-auto rounded border">
+      <div className="border-border h-[500px] overflow-y-auto rounded-lg border">
         <Story />
       </div>
     ),
@@ -90,7 +90,7 @@ export const Compact: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border h-[500px] overflow-y-auto rounded border">
+      <div className="border-border h-[500px] overflow-y-auto rounded-lg border">
         <Story />
       </div>
     ),
@@ -107,7 +107,7 @@ export const Spacious: Story = {
   },
   decorators: [
     (Story) => (
-      <div className="border-border h-[500px] overflow-y-auto rounded border">
+      <div className="border-border h-[500px] overflow-y-auto rounded-lg border">
         <Story />
       </div>
     ),
@@ -120,25 +120,25 @@ export const AllPatterns: Story = {
     <div className="flex items-start gap-6">
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">24時間表示</p>
-        <div className="border-border h-[400px] overflow-y-auto rounded border">
+        <div className="border-border h-[400px] overflow-y-auto rounded-lg border">
           <TimeColumn format="24h" startHour={6} endHour={22} hourHeight={72} />
         </div>
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">12時間表示</p>
-        <div className="border-border h-[400px] overflow-y-auto rounded border">
+        <div className="border-border h-[400px] overflow-y-auto rounded-lg border">
           <TimeColumn format="12h" startHour={6} endHour={22} hourHeight={72} />
         </div>
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">コンパクト（48px）</p>
-        <div className="border-border h-[400px] overflow-y-auto rounded border">
+        <div className="border-border h-[400px] overflow-y-auto rounded-lg border">
           <TimeColumn format="24h" startHour={6} endHour={22} hourHeight={48} />
         </div>
       </div>
       <div className="space-y-2">
         <p className="text-muted-foreground text-xs font-medium">ゆったり（96px）</p>
-        <div className="border-border h-[400px] overflow-y-auto rounded border">
+        <div className="border-border h-[400px] overflow-y-auto rounded-lg border">
           <TimeColumn format="24h" startHour={6} endHour={22} hourHeight={96} />
         </div>
       </div>

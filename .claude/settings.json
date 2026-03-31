@@ -79,47 +79,9 @@
       "WebFetch",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
-      "Bash(grep -r \"border-b\\\\|border-border\\\\|h-12\\\\|h-14\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/notifications/page.tsx)",
-      "Bash(grep -r \"h-12\\\\|h-14\\\\|border\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx)",
-      "Bash(cat /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/_overlays/GlobalOverlays.tsx)",
-      "Bash(find /Users/takayasutomoya/Desktop/app/.storybook -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.json \\\\\\))",
-      "Bash(find /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar -name \"layout.tsx\" -o -name \"route.ts\")",
-      "Bash(grep -r \"isMobile\\\\|mobile\\\\|day.*view\\\\|week.*mobile\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar --include=\"*.ts\" --include=\"*.tsx\")",
-      "Bash(grep -r \"useMediaQuery\\\\|isMobile\\\\|MEDIA_QUERIES.mobile\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\) --include=\"*.tsx\")",
-      "Bash(find /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar -maxdepth 2 -name \"layout.tsx\" -o -name \"page.tsx\" -o -name \"route.ts\")",
-      "Bash(find \"/Users/takayasutomoya/Desktop/app/src/app/[locale]/\\(app\\)/calendar\" -type f)",
       "Bash(env)",
-      "Bash(SENTRY_DSN=\"\" supabase db reset --linked)",
-      "Bash(SENTRY_DSN=\"\" supabase db execute --linked \"NOTIFY pgrst, ''reload schema''\")",
-      "Bash(SENTRY_DSN=\"\" supabase --version)",
-      "Bash(SENTRY_DSN=\"\" supabase services restart postgrest --linked)",
-      "Bash(SENTRY_DSN=\"\" supabase projects api-keys --linked)",
-      "Bash(SENTRY_DSN=\"\" supabase projects api-keys --project-ref qloztwfbrbqtjijxicnd)",
-      "Bash(SENTRY_DSN=\"\" supabase whoami)",
-      "Bash(SENTRY_DSN=\"\" supabase --debug db push --dry-run)",
-      "Bash(security find-generic-password:*)",
-      "Bash(SENTRY_DSN=\"\" supabase link --project-ref yvglwblxrnrenfifsnje)",
-      "Bash(ls /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar/)",
-      "Bash(cat /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/_composition/ClientPageRouter.tsx)",
-      "Bash(cat /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar/_composition/CalendarViewClient.tsx)",
-      "Bash(grep -n \"useSettingsStore\\\\|useContactStore\\\\|useShellStore\\\\|openSettings\\\\|closeSettings\\\\|openSheet\\\\|openContact\" /Users/takayasutomoya/Desktop/app/src/features/settings/components/display-settings.tsx /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/page.tsx /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx /Users/takayasutomoya/Desktop/app/src/features/calendar/components/layout/Header/ViewSwitcher.tsx /Users/takayasutomoya/Desktop/app/src/features/notifications/components/NotificationDropdown.tsx)",
-      "Bash(grep -rn \"useSettingsStore\\\\|useContactStore\" /Users/takayasutomoya/Desktop/app/src/features/settings/components/display-settings.tsx /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/page.tsx /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/settings/[category]/page.tsx /Users/takayasutomoya/Desktop/app/src/features/calendar/components/layout/Header/ViewSwitcher.tsx /Users/takayasutomoya/Desktop/app/src/features/notifications/components/NotificationDropdown.tsx)",
-      "Bash(cat \"/Users/takayasutomoya/Desktop/app/src/app/[locale]/\\(app\\)/stats/page.tsx\")",
-      "Bash(cat \"/Users/takayasutomoya/Desktop/app/src/app/[locale]/\\(app\\)/stats/[tab]/page.tsx\")",
-      "Bash(find /Users/takayasutomoya/Desktop/app/public -type f \\\\\\(-name *.ts -o -name *.js \\\\\\))",
-      "Bash(cat \"/Users/takayasutomoya/Desktop/app/src/app/[locale]/\\(app\\)/calendar/_server/calendar-prefetch.ts\")",
-      "Bash(grep -n \"computeStatsDateRange\\\\|computePreviousDateRange\\\\|timezone\" /Users/takayasutomoya/Desktop/app/src/features/stats/lib/prefetch.ts /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(app\\\\\\)/calendar/_server/calendar-prefetch.ts)",
-      "Bash(grep -n \"complete\\\\|locale\\\\|useLocale\\\\|useRouter\" /Users/takayasutomoya/Desktop/app/src/app/[locale]/\\\\\\(onboarding\\\\\\)/onboarding/page.tsx)",
-      "Bash(find src/emails -name '*.tsx' -exec sed -i '' \"s/t\\(''common\\\\./t\\(''emailCommon./g\" {} +)",
-      "Read(//CREATE.*FUNCTION.*public\\\\./ {func=$0} /SECURITY DEFINER/**)",
-      "Bash(sort -k5 -rh)",
-      "Bash(SENTRY_DSN= supabase projects list)",
-      "Bash(SENTRY_DSN=\"\" supabase settings api --project-ref yvglwblxrnrenfifsnje)",
-      "Bash(SENTRY_DSN= supabase --help)",
-      "Bash(SENTRY_DSN= supabase inspect db --help)",
-      "Bash(SENTRY_DSN= supabase secrets --help)",
-      "Bash(SENTRY_DSN=\"\" supabase status --project-ref yvglwblxrnrenfifsnje)",
-      "Bash(SENTRY_DSN=\"\" supabase status)"
+      "Bash(sort:*)",
+      "Bash(security find-generic-password:*)"
     ],
     "deny": [
       "Read(**/.env)",
@@ -144,6 +106,46 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start.sh",
+            "statusMessage": "プロジェクト状態を取得中..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/pre-tool-guard.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write",

@@ -5,21 +5,26 @@
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * タグ未設定時は「タグを追加」を表示。
- * 右側にパレット登録ボタン + 削除ボタンを配置。
+ * 右側に「…」メニュー（パレット登録・統計・削除）を配置。
  *
  * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
  */
 
 import { useCallback, useRef, useState } from 'react';
 
-import { ChevronDown, Plus, Star, Trash2 } from 'lucide-react';
+import { BarChart3, ChevronDown, MoreHorizontal, Pin, PinOff, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TagIcon, TagQuickSelector } from '@/features/tags';
 import type { TagColorEntry } from '@/lib/tag-colors';
-import { cn } from '@/lib/utils';
 
 interface TagRowProps {
   tagId: string | null;
@@ -36,8 +41,12 @@ interface TagRowProps {
   onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
   /** パレットに登録するコールバック（タグ+時間が有効な場合のみ表示） */
   onPinToPalette?: (() => void) | undefined;
+  /** パレットから解除するコールバック */
+  onUnpinFromPalette?: (() => void) | undefined;
   /** パレット登録済みかどうか */
   isPinnedInPalette?: boolean | undefined;
+  /** 統計を見るコールバック */
+  onViewStats?: (() => void) | undefined;
   /** 削除ボタンのコールバック */
   onDelete?: (() => void) | undefined;
 }
@@ -52,7 +61,9 @@ export function TagRow({
   onTagChange,
   onCreateAndSelect,
   onPinToPalette,
+  onUnpinFromPalette,
   isPinnedInPalette,
+  onViewStats,
   onDelete,
 }: TagRowProps) {
   const t = useTranslations();
@@ -60,6 +71,7 @@ export function TagRow({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const hasTag = tagId != null && tagName != null;
+  const hasMenuItems = onPinToPalette || onUnpinFromPalette || onViewStats || onDelete;
 
   const handleSelect = useCallback(
     (selectedTagId: string) => {
@@ -84,7 +96,7 @@ export function TagRow({
           ref={buttonRef}
           type="button"
           onClick={() => setSelectorOpen(true)}
-          className="hover:bg-state-hover -mt-1 -ml-1.5 flex items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-lg font-semibold transition-colors"
+          className="hover:bg-state-hover -mt-1 -ml-1.5 flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-lg font-semibold transition-colors"
           aria-label={hasTag ? `${t('common.tags.change')}: ${tagName}` : t('common.tags.add')}
         >
           {hasTag ? (
@@ -107,44 +119,50 @@ export function TagRow({
           )}
         </button>
 
-        {/* 右側: パレット登録 + 削除 */}
-        <div className="flex items-center">
-          {onPinToPalette && (
-            <HoverTooltip
-              content={
-                isPinnedInPalette
-                  ? t('common.actions.alreadyInPalette')
-                  : t('common.actions.addToPalette')
-              }
-              side="bottom"
-            >
+        {/* 右側: … メニュー */}
+        {hasMenuItems && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                onClick={isPinnedInPalette ? undefined : onPinToPalette}
-                className={cn(
-                  'flex size-10 items-center justify-center rounded-lg transition-colors',
-                  isPinnedInPalette
-                    ? 'text-warning cursor-default'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-state-hover',
-                )}
-                aria-label={t('common.actions.addToPalette')}
-                aria-pressed={isPinnedInPalette}
+                className="text-muted-foreground hover:text-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
+                aria-label={t('common.actions.more')}
               >
-                <Star className={cn('size-5', isPinnedInPalette && 'fill-current')} />
+                <MoreHorizontal className="size-5" />
               </button>
-            </HoverTooltip>
-          )}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-muted-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
-              aria-label={t('common.actions.delete')}
-            >
-              <Trash2 className="size-5" />
-            </button>
-          )}
-        </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isPinnedInPalette && onUnpinFromPalette ? (
+                <DropdownMenuItem onClick={onUnpinFromPalette}>
+                  <PinOff className="mr-2 size-4" />
+                  {t('common.actions.removeFromPalette')}
+                </DropdownMenuItem>
+              ) : (
+                onPinToPalette && (
+                  <DropdownMenuItem onClick={onPinToPalette}>
+                    <Pin className="mr-2 size-4" />
+                    {t('common.actions.addToPalette')}
+                  </DropdownMenuItem>
+                )
+              )}
+              {onViewStats && (
+                <DropdownMenuItem onClick={onViewStats}>
+                  <BarChart3 className="mr-2 size-4" />
+                  {t('calendar.filter.viewStats')}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} variant="destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    {t('common.actions.delete')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <TagQuickSelector

@@ -184,7 +184,7 @@ export function ViewSwitcher({
             <div className="flex items-center gap-2">
               {currentView === option.value && <Check className="text-primary size-4" />}
               {currentView !== option.value && <span className="w-4" />}
-              <span className="bg-surface-container text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
+              <span className="bg-surface-container text-muted-foreground rounded-lg px-2 py-0.5 font-mono text-xs">
                 {option.shortcut}
               </span>
             </div>
@@ -213,7 +213,7 @@ export function ViewSwitcher({
                   <div className="flex items-center gap-2">
                     {isActive && <Check className="text-primary size-4" />}
                     {!isActive && <span className="w-4" />}
-                    <span className="bg-surface-container text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
+                    <span className="bg-surface-container text-muted-foreground rounded-lg px-2 py-0.5 font-mono text-xs">
                       {count}
                     </span>
                   </div>

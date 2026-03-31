@@ -72,7 +72,7 @@ export const MobileTouchHint = memo(function MobileTouchHint({ className }: Mobi
       className={cn(
         'fixed right-4 bottom-20 left-4 z-50',
         'bg-primary text-primary-foreground',
-        'rounded-2xl px-4 py-4 shadow-md',
+        'shadow-card rounded-2xl px-4 py-4',
         'animate-in slide-in-from-bottom-4 fade-in duration-150',
         className,
       )}

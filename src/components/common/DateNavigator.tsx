@@ -49,7 +49,7 @@ export const DateNavigator = ({
   return (
     <div
       className={cn(
-        'divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-md border',
+        'divide-border border-border inline-flex h-8 items-center divide-x overflow-hidden rounded-lg border',
         className,
       )}
     >

@@ -210,8 +210,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_hourly_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start: input?.startDate,
-              p_end: input?.endDate,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
             }),
           ),
         );
@@ -258,8 +258,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
             'get_dow_distribution',
             stripUndefined({
               p_user_id: userId,
-              p_start: input?.startDate,
-              p_end: input?.endDate,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
             }),
           ),
         );
@@ -788,4 +788,145 @@ export const entriesStatisticsRouter = createTRPCRouter({
         handleStatsError('getStatsOverview', error);
       }
     }),
+
+  // ---------------------------------------------------------------------------
+  // Unified Stats Page Data (12 RPCs → 1 round-trip)
+  // ---------------------------------------------------------------------------
+
+  /** Stats ページ全データを 1 RPC で取得 */
+  getStatsPageData: protectedProcedure
+    .meta({ description: 'Stats全データ一括取得（12クエリ統合）' })
+    .input(
+      z.object({
+        startDate: z.string().datetime({ offset: true }),
+        endDate: z.string().datetime({ offset: true }),
+        prevStart: z.string().datetime({ offset: true }),
+        prevEnd: z.string().datetime({ offset: true }),
+        year: z.number().int().min(2000).max(2100),
+        monthlyMonths: z.number().int().min(1).max(24).default(3),
+        wakeHour: z.number().min(0).max(23).default(7),
+        sleepHour: z.number().min(0).max(23).default(23),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        const { data, error } = await traceDbQuery('stats.get_stats_page_data', async () =>
+          supabase.rpc(
+            'get_stats_page_data' as never,
+            {
+              p_user_id: userId,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+              p_prev_start: input.prevStart,
+              p_prev_end: input.prevEnd,
+              p_year: input.year,
+              p_monthly_months: input.monthlyMonths,
+              p_wake_hour: input.wakeHour,
+              p_sleep_hour: input.sleepHour,
+            } as never,
+          ),
+        );
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to fetch stats page data: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        // DB関数が返すJSONをそのまま返す（型はクライアント側で定義）
+        return data as StatsPageData;
+      } catch (error) {
+        handleStatsError('getStatsPageData', error);
+      }
+    }),
 });
+
+// ---------------------------------------------------------------------------
+// Types for unified stats response
+// ---------------------------------------------------------------------------
+
+export interface StatsPageData {
+  overview: {
+    totalMinutes: number;
+    avgFulfillment: number | null;
+    entryCount: number;
+    totalEntries: number;
+    plannedEntries: number;
+    planRate: number;
+  };
+  prevOverview: {
+    totalMinutes: number;
+    avgFulfillment: number | null;
+    entryCount: number;
+    totalEntries: number;
+    plannedEntries: number;
+    planRate: number;
+  };
+  contextSwitches: {
+    totalSwitches: number;
+    avgPerDay: number;
+  };
+  blankRate: {
+    availableMinutes: number;
+    scheduledMinutes: number;
+    blankRate: number;
+  };
+  timeByTag: Array<{
+    tagId: string;
+    name: string;
+    color: string;
+    hours: number;
+  }>;
+  hourly: Array<{
+    hour: number;
+    totalMinutes: number;
+  }>;
+  dow: Array<{
+    dow: number;
+    totalMinutes: number;
+  }>;
+  energyMap: Array<{
+    hour: number;
+    dow: number;
+    avgFulfillment: number | null;
+    totalMinutes: number;
+    entryCount: number;
+  }>;
+  estimationAccuracy: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    avgPlannedMinutes: number;
+    avgActualMinutes: number;
+    avgDeviationMinutes: number;
+    entryCount: number;
+  }>;
+  prevEstimationAccuracy: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    avgPlannedMinutes: number;
+    avgActualMinutes: number;
+    avgDeviationMinutes: number;
+    entryCount: number;
+  }>;
+  prevEnergyMap: Array<{
+    hour: number;
+    dow: number;
+    avgFulfillment: number | null;
+    totalMinutes: number;
+    entryCount: number;
+  }>;
+  dailyHours: Array<{
+    day: string;
+    hours: number;
+  }>;
+  monthlyTrend: Array<{
+    month: string;
+    hours: number;
+  }>;
+}

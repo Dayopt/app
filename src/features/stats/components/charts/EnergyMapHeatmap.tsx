@@ -6,13 +6,8 @@ import { Fragment, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
 import type { EnergyMapRow } from '../../types/metrics.types';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
 
 /** 表示モード: 記録量 or 充実度 */
 type HeatmapMode = 'minutes' | 'fulfillment';
@@ -52,23 +47,17 @@ function buildLookup(data: EnergyMapRow[]): Map<string, EnergyMapRow> {
   return map;
 }
 
+interface EnergyMapHeatmapProps {
+  data: EnergyMapRow[];
+}
+
 /** 時間帯×曜日のエネルギーマップをヒートマップで表示（記録量 / 充実度の2モード対応） */
-export function EnergyMapHeatmap() {
+export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
   const t = useTranslations('calendar.stats');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
-
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  const { data, isPending } = api.entries.getEnergyMap.useQuery(dateRange);
   const [mode, setMode] = useState<HeatmapMode>('minutes');
+  const isPending = false;
 
-  const lookup = useMemo(() => (data ? buildLookup(data) : new Map()), [data]);
+  const lookup = useMemo(() => buildLookup(data), [data]);
 
   if (isPending) {
     return (
@@ -112,7 +101,7 @@ export function EnergyMapHeatmap() {
             type="button"
             onClick={() => setMode('minutes')}
             className={cn(
-              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'minutes'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted',
@@ -124,7 +113,7 @@ export function EnergyMapHeatmap() {
             type="button"
             onClick={() => setMode('fulfillment')}
             className={cn(
-              'rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'fulfillment'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-muted',
@@ -168,7 +157,7 @@ export function EnergyMapHeatmap() {
                     <div
                       key={`${hour}-${DOW_KEYS[di]}`}
                       className={cn(
-                        'aspect-square rounded-sm transition-colors',
+                        'aspect-square rounded-lg transition-colors',
                         colorClass,
                         (row?.entryCount ?? 0) <= 1 && row && 'opacity-60',
                       )}
@@ -195,26 +184,26 @@ export function EnergyMapHeatmap() {
             <>
               <span>{t('energyMapLess')}</span>
               <div className="flex gap-1">
-                <div className="bg-muted size-3 rounded" />
-                <div className="bg-heatmap-scale-1 size-3 rounded" />
-                <div className="bg-heatmap-scale-2 size-3 rounded" />
-                <div className="bg-heatmap-scale-3 size-3 rounded" />
-                <div className="bg-heatmap-scale-4 size-3 rounded" />
+                <div className="bg-muted size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-1 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-2 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-3 size-3 rounded-lg" />
+                <div className="bg-heatmap-scale-4 size-3 rounded-lg" />
               </div>
               <span>{t('energyMapMore')}</span>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-low size-3 rounded" />
+                <div className="bg-fulfillment-low size-3 rounded-lg" />
                 <span>1</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-mid size-3 rounded" />
+                <div className="bg-fulfillment-mid size-3 rounded-lg" />
                 <span>2</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="bg-fulfillment-high size-3 rounded" />
+                <div className="bg-fulfillment-high size-3 rounded-lg" />
                 <span>3</span>
               </div>
             </>

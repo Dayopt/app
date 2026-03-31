@@ -26,7 +26,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-3xl gap-8">
         {/* 使い分けガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -64,7 +64,7 @@ export const Overview: Story = {
         </section>
 
         {/* Toast */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">Toast（Sonner）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             一時的な通知。右下に表示され、数秒後に自動で消える。
@@ -72,7 +72,7 @@ export const Overview: Story = {
 
           <div className="space-y-3">
             {/* Success Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <CheckCircle2 className="text-success size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存しました</p>
@@ -83,7 +83,7 @@ export const Overview: Story = {
             </div>
 
             {/* Error Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <AlertCircle className="text-destructive size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">保存に失敗しました</p>
@@ -95,7 +95,7 @@ export const Overview: Story = {
             </div>
 
             {/* Info Toast */}
-            <div className="bg-background border-border flex items-center gap-3 rounded-lg border p-4 shadow-lg">
+            <div className="bg-background border-border-subtle shadow-card flex items-center gap-3 rounded-lg border p-4">
               <Info className="text-info size-5 shrink-0" />
               <div className="flex-1">
                 <p className="font-bold">更新があります</p>
@@ -132,7 +132,7 @@ toast('カスタムメッセージ', {
         </section>
 
         {/* Alert Banner */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">Alert Banner</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ページ上部に表示する重要な情報。ユーザー操作で閉じる。
@@ -180,7 +180,7 @@ toast('カスタムメッセージ', {
         </section>
 
         {/* 使用ガイドライン */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">使用ガイドライン</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -205,7 +205,7 @@ toast('カスタムメッセージ', {
         </section>
 
         {/* 実装例 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-2xl border p-6">
           <h2 className="mb-4 text-lg font-bold">実装例</h2>
           <div className="flex gap-3">
             <Button

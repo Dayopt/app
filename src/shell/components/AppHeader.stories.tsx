@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { BarChart3, CalendarDays } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 import { AppHeader } from '@/shell/components/AppHeader';
 
 // ─────────────────────────────────────────────────────────
@@ -33,6 +36,40 @@ function StubRightSlot() {
         className="border-border bg-container hover:bg-state-hover rounded-lg border px-2 py-1 text-xs"
       >
         月
+      </button>
+    </div>
+  );
+}
+
+/** PageNav モック（ヘッダー rightSlot 用） */
+function StubPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 'stats' }) {
+  return (
+    <div className="border-border flex items-center rounded-lg border" role="tablist">
+      <button
+        role="tab"
+        aria-selected={activePage === 'calendar'}
+        className={cn(
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
+          activePage === 'calendar'
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
+        )}
+      >
+        <CalendarDays className="size-3.5" />
+        <span>カレンダー</span>
+      </button>
+      <button
+        role="tab"
+        aria-selected={activePage === 'stats'}
+        className={cn(
+          'flex h-7 items-center justify-center gap-1.5 rounded-lg px-3 text-sm transition-colors',
+          activePage === 'stats'
+            ? 'bg-state-selected text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
+        )}
+      >
+        <BarChart3 className="size-3.5" />
+        <span>統計</span>
       </button>
     </div>
   );
@@ -106,6 +143,17 @@ export const WithRightSlot: Story = {
   ),
 };
 
+/** rightSlot に PageNav を配置（実際のレイアウト） */
+export const WithPageNav: Story = {
+  render: () => (
+    <div className="border-border w-full border">
+      <AppHeader rightSlot={<StubPageNav />}>
+        <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
+      </AppHeader>
+    </div>
+  ),
+};
+
 /** 全パターン一覧 */
 export const AllPatterns: Story = {
   render: () => (
@@ -128,6 +176,11 @@ export const AllPatterns: Story = {
       <div className="border-border w-full border">
         <AppHeader leftSlot={<StubLeftSlot />} rightSlot={<StubRightSlot />}>
           <h1 className="truncate text-lg leading-8 font-bold">全スロット</h1>
+        </AppHeader>
+      </div>
+      <div className="border-border w-full border">
+        <AppHeader rightSlot={<StubPageNav />}>
+          <h1 className="truncate text-lg leading-8 font-bold">PageNav付き</h1>
         </AppHeader>
       </div>
     </div>

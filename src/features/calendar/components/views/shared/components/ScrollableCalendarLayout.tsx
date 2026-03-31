@@ -13,7 +13,9 @@ import React, { useCallback, useMemo } from 'react';
 
 import { getChronotypeProfile } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
+
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { formatTimeString } from '../../../../interaction/time-math';
 
 import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
@@ -134,7 +136,7 @@ export const ScrollableCalendarLayout = ({
     showCurrentTime,
   });
 
-  // Chronotype gradient（hook 内で DB フォールバック + クライアント生成）
+  // Chronotype gradient（ゾーン外は transparent で bg-background を透過）
   const gradientCss = useChronotypeGradient();
 
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
@@ -144,12 +146,13 @@ export const ScrollableCalendarLayout = ({
     return getChronotypeProfile(chronotype.type, chronotype.customZones).productivityZones;
   }, [chronotype]);
 
-  // 現在時刻のフォーマット（HH:mm）
-  const formattedCurrentTime = currentTime.toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  // 現在時刻のフォーマット（設定に応じて 24h/12h）
+  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const formattedCurrentTime = formatTimeString(
+    currentTime.getHours(),
+    currentTime.getMinutes(),
+    timeFormat,
+  );
 
   // グリッドクリックハンドラー
   const handleGridClick = useCallback(
@@ -211,7 +214,7 @@ export const ScrollableCalendarLayout = ({
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
                 <div
-                  className="bg-primary pointer-events-none absolute right-0 z-20 rounded px-2 py-1 text-sm font-bold text-white"
+                  className="bg-now-indicator text-now-indicator-foreground pointer-events-none absolute right-1 z-20 rounded-lg px-1 py-0.5 text-xs font-bold"
                   style={{
                     top: `${currentTimePosition}px`,
                     transform: 'translateY(-50%)',
@@ -227,7 +230,7 @@ export const ScrollableCalendarLayout = ({
 
         {/* グリッドコンテンツエリア */}
         <div className="relative flex flex-1 flex-col">
-          {/* Chronotype gradient 背景 */}
+          {/* Chronotype gradient 背景（ゾーン外は transparent） */}
           {gradientCss && (
             <div
               className="pointer-events-none absolute inset-0 z-0"

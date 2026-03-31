@@ -55,7 +55,7 @@ export const Default: Story = {
 export const TableEmpty: Story = {
   decorators: [
     (Story) => (
-      <div className="border-border h-[300px] w-[400px] rounded-xl border">
+      <div className="border-border h-[300px] w-[400px] rounded-2xl border">
         <Story />
       </div>
     ),
@@ -106,7 +106,7 @@ export const AllPatterns: Story = {
       />
 
       <p className="text-muted-foreground text-xs">size=&quot;sm&quot; + centered（テーブル内）</p>
-      <div className="border-border h-[300px] w-[400px] rounded-xl border">
+      <div className="border-border h-[300px] w-[400px] rounded-2xl border">
         <EmptyState
           icon={Inbox}
           title="アイテムがありません"

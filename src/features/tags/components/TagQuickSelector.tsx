@@ -59,6 +59,8 @@ interface TagQuickSelectorProps {
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
   /** PC: アンカー要素の横にパネルを配置する */
   anchorRef?: React.RefObject<HTMLDivElement | HTMLButtonElement | null>;
+  /** ヘッダーに表示する日付・時間帯ラベル（例: "3/30 (日) 14:00 – 15:30"） */
+  timeLabel?: string | undefined;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -243,7 +245,7 @@ function TagGridCell({
       }
       onMouseLeave={onHoverEnd}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
         colorClasses.tint,
@@ -447,7 +449,7 @@ function TagQuickSelectorContent({
             type="button"
             onClick={() => setView({ type: 'create' })}
             className={cn(
-              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors',
+              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
               'active:scale-95 active:transition-transform',
             )}
           >
@@ -495,6 +497,7 @@ export function TagQuickSelector({
   onCreateAndSelect,
   onTagHover,
   anchorRef,
+  timeLabel,
 }: TagQuickSelectorProps) {
   const t = useTranslations('calendar');
   const isMobile = useIsMobile();
@@ -585,6 +588,7 @@ export function TagQuickSelector({
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle>{t('tagSelector.title')}</DrawerTitle>
+            {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
           </DrawerHeader>
           <TagQuickSelectorContent
             onSelect={onSelect}
@@ -611,24 +615,27 @@ export function TagQuickSelector({
         aria-modal="false"
         aria-label={t('tagSelector.title')}
         className={cn(
-          'bg-card border-border absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border shadow-lg',
+          'bg-card border-border-subtle shadow-card absolute flex max-h-[70vh] w-full max-w-sm flex-col rounded-2xl border',
           'animate-in fade-in duration-150',
         )}
         style={position ? { top: position.top, left: position.left } : undefined}
       >
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className={cn(
-              'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
-              'hover:bg-state-hover',
-            )}
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </button>
+        <div className="px-4 pt-4 pb-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className={cn(
+                'text-foreground flex size-8 items-center justify-center rounded-lg transition-colors',
+                'hover:bg-state-hover',
+              )}
+              aria-label="Close"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+          {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
         </div>
 
         <TagQuickSelectorContent

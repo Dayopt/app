@@ -11,6 +11,7 @@
 
 import { useMemo } from 'react';
 
+import { CalendarEntryActionsProvider } from '../contexts/CalendarEntryActionsContext';
 import { useCalendarKeyboard } from '../hooks/keyboard/useCalendarKeyboard';
 import { useShortcutRegistry } from '../hooks/keyboard/useShortcutRegistry';
 import { useCalendarContextMenu } from '../hooks/useCalendarContextMenu';
@@ -137,8 +138,27 @@ export function CalendarController({
   });
 
   // =========================================================================
-  // View props（memo化）
-  // =========================================================================
+  // エントリ操作ハンドラ（Context経由で配信 — View以下でprops不要）
+  const entryActions = useMemo(
+    () => ({
+      onEntryClick,
+      onEntryContextMenu: handleEventContextMenu,
+      onUpdateEntry,
+      onDeleteEntry,
+      onTimeRangeSelect,
+      disabledEntryId,
+    }),
+    [
+      onEntryClick,
+      handleEventContextMenu,
+      onUpdateEntry,
+      onDeleteEntry,
+      onTimeRangeSelect,
+      disabledEntryId,
+    ],
+  );
+
+  // View props（データ + ナビゲーションのみ。エントリ操作はContext経由）
   const commonProps = useMemo(
     () => ({
       dateRange: viewDateRange,
@@ -180,7 +200,7 @@ export function CalendarController({
   // Render
   // =========================================================================
   return (
-    <>
+    <CalendarEntryActionsProvider value={entryActions}>
       <CalendarLayout
         className={className}
         viewType={viewType}
@@ -211,6 +231,6 @@ export function CalendarController({
 
       {/* モバイル操作ヒント（初回のみ表示） */}
       <MobileTouchHint />
-    </>
+    </CalendarEntryActionsProvider>
   );
 }

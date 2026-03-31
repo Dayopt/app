@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -122,14 +123,14 @@ export function TagDeleteStrategyDialog({
                     type="button"
                     onClick={() => setTargetTagId(tag.id)}
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                      'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
                       isSelected
                         ? 'bg-state-selected text-foreground'
                         : 'hover:bg-state-hover text-foreground',
                     )}
                   >
                     <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
-                    <span className="truncate">{tag.name}</span>
+                    <ColonTagLabel name={tag.name} />
                   </button>
                 );
               })}

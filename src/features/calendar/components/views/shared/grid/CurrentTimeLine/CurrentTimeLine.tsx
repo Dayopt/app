@@ -5,7 +5,7 @@
  *   now-line (absolute, flex)
  *     ├── now-dot (6×6px, rounded-full)
  *     └── now-bar (h-0.5, flex-1)
- *   色: bg-primary（Light: blue accent, Dark: amber accent）
+ *   色: bg-now-indicator（テーマのforeground色）
  *   z-index: Z_INDEX.CURRENT_TIME (15)
  */
 
@@ -13,7 +13,7 @@
 
 import { memo, useMemo } from 'react';
 
-import { tzIsSameDay } from '@/lib/date/timezone';
+import { convertToTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { timeToPixels } from '../../../../../lib/grid';
 import { CURRENT_TIME_DOT_SIZE, HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
@@ -26,7 +26,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   showDot = true,
   updateInterval = 60000,
   displayDates,
-  showOnOtherDays = true,
+  showOnOtherDays = false,
   viewMode: _viewMode = 'day',
   startHour = 0,
   endHour = 24,
@@ -34,8 +34,11 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   timeColumnWidth: _timeColumnWidth = 64,
   containerWidth: _containerWidth = 800,
 }) {
-  const currentTime = useCurrentTime({ updateInterval });
+  const rawTime = useCurrentTime({ updateInterval });
   const timezone = useCalendarSettingsStore((state) => state.timezone);
+
+  // ユーザーTZに変換してから位置計算（ブラウザTZと異なる場合に正しい位置を表示）
+  const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
 
   // 現在時刻のY座標を計算
   const topPosition = timeToPixels(currentTime, hourHeight);
@@ -45,35 +48,14 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     if (!displayDates || displayDates.length === 0) {
       return true;
     }
-    const now = new Date();
-    return displayDates.some((date) => tzIsSameDay(date, now, timezone));
-  }, [displayDates, timezone]);
+    return displayDates.some((date) => tzIsSameDay(date, rawTime, timezone));
+  }, [displayDates, rawTime, timezone]);
 
-  // 今日の列位置を計算（複数日表示の場合）
-  const columnInfo = useMemo(() => {
-    if (!displayDates || displayDates.length <= 1) {
-      return { left: 0, width: '100%', isToday: hasToday };
-    }
-
-    const now = new Date();
-    const todayIndex = displayDates.findIndex((date) => tzIsSameDay(date, now, timezone));
-
-    if (todayIndex === -1) {
-      if (showOnOtherDays) {
-        return { left: 0, width: '100%', isToday: false };
-      }
-      return null;
-    }
-
-    const columnWidthPct = 100 / displayDates.length;
-    const leftPct = todayIndex * columnWidthPct;
-
-    return {
-      left: `${leftPct}%`,
-      width: `${columnWidthPct}%`,
-      isToday: true,
-    };
-  }, [displayDates, hasToday, showOnOtherDays, timezone]);
+  // 今日の列インデックス（複数日表示の場合）
+  const todayIndex = useMemo(() => {
+    if (!displayDates || displayDates.length <= 1) return -1;
+    return displayDates.findIndex((date) => tzIsSameDay(date, rawTime, timezone));
+  }, [displayDates, rawTime, timezone]);
 
   // 表示範囲外なら非表示
   const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;
@@ -81,29 +63,64 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
     return null;
   }
 
-  if (!columnInfo) {
-    return null;
+  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
+  const isMultiDay = displayDates && displayDates.length > 1;
+
+  // 複数日表示: 全列に線を引き、本日だけ強調
+  if (isMultiDay) {
+    if (todayIndex === -1 && !showOnOtherDays) return null;
+
+    return (
+      <div
+        className={`pointer-events-none absolute left-0 w-full ${className}`}
+        style={{
+          top: `${topPosition}px`,
+          zIndex: Z_INDEX.CURRENT_TIME,
+        }}
+        aria-hidden="true"
+      >
+        <div className="flex items-center">
+          {displayDates.map((date, i) => {
+            const isToday = i === todayIndex;
+            return (
+              <div key={date.toISOString()} className="flex flex-1 items-center">
+                {isToday && showDot && (
+                  <div
+                    className="bg-now-indicator shrink-0 rounded-full"
+                    style={{
+                      width: `${CURRENT_TIME_DOT_SIZE}px`,
+                      height: `${CURRENT_TIME_DOT_SIZE}px`,
+                      marginLeft: `-${dotOffset}px`,
+                    }}
+                  />
+                )}
+                <div
+                  className={`h-0.5 flex-1 ${isToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
-  const dotOffset = CURRENT_TIME_DOT_SIZE / 2;
+  // 単日表示
+  if (!hasToday && !showOnOtherDays) return null;
 
   return (
     <div
-      className={`pointer-events-none absolute ${className}`}
+      className={`pointer-events-none absolute left-0 w-full ${className}`}
       style={{
         top: `${topPosition}px`,
-        left: typeof columnInfo.left === 'number' ? `${columnInfo.left}px` : columnInfo.left,
-        width: columnInfo.width,
         zIndex: Z_INDEX.CURRENT_TIME,
       }}
       aria-hidden="true"
     >
-      {/* now-line: dot + bar */}
       <div className="flex items-center">
-        {/* now-dot */}
-        {showDot && columnInfo.isToday && (
+        {showDot && hasToday && (
           <div
-            className="bg-primary shrink-0 rounded-full"
+            className="bg-now-indicator shrink-0 rounded-full"
             style={{
               width: `${CURRENT_TIME_DOT_SIZE}px`,
               height: `${CURRENT_TIME_DOT_SIZE}px`,
@@ -111,9 +128,9 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
             }}
           />
         )}
-
-        {/* now-bar */}
-        <div className={`bg-primary h-0.5 flex-1 ${columnInfo.isToday ? '' : 'opacity-40'}`} />
+        <div
+          className={`h-0.5 flex-1 ${hasToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
+        />
       </div>
     </div>
   );
@@ -137,11 +154,15 @@ export const CurrentTimeLineForColumn = memo<{
   showDot = false,
   className = '',
   isToday = true,
-  showOnOtherDays = true,
+  showOnOtherDays = false,
   startHour = 0,
   endHour = 24,
 }) {
-  const currentTime = useCurrentTime({ updateInterval: 60000 });
+  const rawTime = useCurrentTime({ updateInterval: 60000 });
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
+
+  // ユーザーTZに変換
+  const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
 
   const topPosition = timeToPixels(currentTime, hourHeight);
 
@@ -170,7 +191,7 @@ export const CurrentTimeLineForColumn = memo<{
         {/* now-dot */}
         {showDot && isToday && (
           <div
-            className="bg-primary shrink-0 rounded-full"
+            className="bg-now-indicator shrink-0 rounded-full"
             style={{
               width: `${CURRENT_TIME_DOT_SIZE}px`,
               height: `${CURRENT_TIME_DOT_SIZE}px`,
@@ -180,7 +201,9 @@ export const CurrentTimeLineForColumn = memo<{
         )}
 
         {/* now-bar */}
-        <div className={`bg-primary h-0.5 flex-1 ${isToday ? '' : 'opacity-40'}`} />
+        <div
+          className={`h-0.5 flex-1 ${isToday ? 'bg-now-indicator' : 'bg-now-indicator-muted'}`}
+        />
       </div>
     </div>
   );

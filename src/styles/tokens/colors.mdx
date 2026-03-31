@@ -181,10 +181,10 @@ Container系・不透明度ハードコードからの移行ルール。
 
 ## Border
 
-| トークン               | Light                 | Dark                  | 用途                 |
-| ---------------------- | --------------------- | --------------------- | -------------------- |
-| `border-border`        | `oklch(0 0 0 / 0.06)` | `oklch(1 0 0 / 0.07)` | card外枠、セクション |
-| `border-border-subtle` | `oklch(0 0 0 / 0.04)` | `oklch(1 0 0 / 0.05)` | card内部の区切り     |
+| トークン               | Light                 | Dark                  | 用途                                         |
+| ---------------------- | --------------------- | --------------------- | -------------------------------------------- |
+| `border-border`        | `oklch(0 0 0 / 0.12)` | `oklch(1 0 0 / 0.12)` | 構造的な区切り（sidebar, input, divider）    |
+| `border-border-subtle` | `oklch(0 0 0 / 0.06)` | `oklch(1 0 0 / 0.07)` | Raised/Overlay の縁（card, dialog, popover） |
 
 > 入力フィールド背景は `bg-muted`。フォーカスリングは `focus-visible:ring-2 ring-primary`。
 
@@ -245,14 +245,13 @@ Container系・不透明度ハードコードからの移行ルール。
 
 foreground ベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
 
-| 状態     | トークン            | 不透明度 | 用途                   |
-| -------- | ------------------- | -------- | ---------------------- |
-| Hover    | `bg-state-hover`    | 10%      | マウスオーバー時       |
-| Focus    | `bg-state-focus`    | 12%      | キーボードフォーカス時 |
-| Pressed  | `bg-state-pressed`  | 12%      | クリック中             |
-| Selected | `bg-state-selected` | 12%      | 選択状態               |
-| Dragged  | `bg-state-dragged`  | 16%      | ドラッグ中             |
-| Active   | `bg-state-active`   | 塗り     | 選択中（塗りつぶし）   |
+| 状態     | トークン            | 不透明度 | 用途                 |
+| -------- | ------------------- | -------- | -------------------- |
+| Hover    | `bg-state-hover`    | 10%      | マウスオーバー時     |
+| Pressed  | `bg-state-pressed`  | 12%      | クリック中           |
+| Selected | `bg-state-selected` | 12%      | 選択状態             |
+| Dragged  | `bg-state-dragged`  | 16%      | ドラッグ中           |
+| Active   | `bg-state-active`   | 塗り     | 選択中（塗りつぶし） |
 
 ---
 

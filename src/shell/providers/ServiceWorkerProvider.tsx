@@ -49,7 +49,7 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
       {/* 更新バナー（インストールバナーより優先） */}
       {showUpdateBanner && (
         <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 z-50 md:bottom-4">
-          <div className="bg-card border-border flex items-center gap-4 rounded-2xl border p-4 shadow-md">
+          <div className="bg-card border-border-subtle shadow-card flex items-center gap-4 rounded-2xl border p-4">
             <RefreshCw className="text-primary h-5 w-5" />
             <div className="flex-1">
               <p className="text-foreground text-sm font-normal">{t('updateAvailable')}</p>

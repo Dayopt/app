@@ -8,12 +8,11 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { BarChart3, CalendarDays, ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
+import { ChevronRight, Moon, PanelLeft, Plus, Search } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { getTagColorClasses } from '@/lib/tag-colors';
-import { cn } from '@/lib/utils';
 
 import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
@@ -27,7 +26,7 @@ function ActionButton() {
   return (
     <button
       type="button"
-      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded"
+      className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
       onClick={fn()}
       aria-label="Add"
     >
@@ -51,7 +50,7 @@ function TagRow({
 }) {
   const colorClasses = getTagColorClasses(color);
   return (
-    <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded text-sm">
+    <div className="hover:bg-state-hover group/item flex h-8 w-full min-w-0 cursor-pointer items-center rounded-lg text-sm">
       <Checkbox
         checked={checked}
         aria-label={name}
@@ -66,59 +65,25 @@ function TagRow({
   );
 }
 
-/** PageNav と同一構造のモック */
-function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 'stats' }) {
-  return (
-    <div className="bg-muted flex h-9 items-center gap-1 rounded-lg p-1" role="tablist">
-      <button
-        role="tab"
-        aria-selected={activePage === 'calendar'}
-        className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
-          activePage === 'calendar'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        <CalendarDays className="size-4" />
-        <span>カレンダー</span>
-      </button>
-      <button
-        role="tab"
-        aria-selected={activePage === 'stats'}
-        className={cn(
-          'flex h-7 flex-1 items-center justify-center gap-1.5 rounded-md text-sm transition-all',
-          activePage === 'stats'
-            ? 'bg-background text-foreground font-medium shadow-sm'
-            : 'text-muted-foreground hover:text-foreground',
-        )}
-      >
-        <BarChart3 className="size-4" />
-        <span>統計</span>
-      </button>
-    </div>
-  );
-}
-
 /** Sidebar.tsx ヘッダーと同一構造 */
 function MockSidebarHeader() {
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-2">
       <div className="flex items-center gap-2 pl-2">
-        <div className="bg-primary size-5 rounded" />
+        <div className="bg-primary size-5 rounded-lg" />
         <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
       </div>
       <div className="flex items-center">
         <button
           type="button"
-          className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
           aria-label="Search"
         >
           <Search className="text-muted-foreground size-4" />
         </button>
         <button
           type="button"
-          className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+          className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
           aria-label="Close sidebar"
         >
           <PanelLeft className="text-muted-foreground size-4" />
@@ -149,7 +114,7 @@ function MockThemeToggle() {
     <div className="flex items-center gap-1 px-2 py-2">
       <button
         type="button"
-        className="hover:bg-state-hover flex size-8 items-center justify-center rounded"
+        className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg"
         aria-label="Toggle theme"
       >
         <Moon className="text-muted-foreground size-4" />
@@ -256,17 +221,12 @@ export const WithAction: Story = {
   ],
 };
 
-/** サイドバー全体再現 — ヘッダー + PageNav + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
+/** サイドバー全体再現 — ヘッダー + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */
 export const FullSidebar: Story = {
   args: { title: '', children: null },
   render: () => (
     <SidebarShell>
       <MockSidebarHeader />
-
-      {/* Page Navigation */}
-      <div className="shrink-0 px-2 pb-2">
-        <MockPageNav />
-      </div>
 
       {/* Sidebar scroll area: gap-4 (16px) between sections */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
@@ -371,9 +331,6 @@ export const AllPatterns: Story = {
         </p>
         <SidebarShell>
           <MockSidebarHeader />
-          <div className="shrink-0 px-2 pb-2">
-            <MockPageNav />
-          </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
             <div className="px-2">
               <SidebarSection title="カレンダー" defaultOpen>

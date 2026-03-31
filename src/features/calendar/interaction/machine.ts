@@ -388,6 +388,9 @@ function handlePointerMove(
       const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
       const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
+      if (snappedTop !== state.snappedTop) {
+        effects.push({ type: 'HAPTIC', pattern: 'tap' });
+      }
       effects.push({ type: 'DRAG_STORE_UPDATE', targetDateIndex });
 
       return {
@@ -410,6 +413,10 @@ function handlePointerMove(
         snapSize,
         Math.round((state.originalPosition.height + deltaY) / snapSize) * snapSize,
       );
+
+      if (newHeight !== state.snappedHeight) {
+        effects.push({ type: 'HAPTIC', pattern: 'tap' });
+      }
 
       const { hour: sH, minute: sM } = snapToGrid(
         state.originalPosition.top,

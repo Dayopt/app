@@ -75,7 +75,7 @@ export const WithMenuSlot: Story = {
     menuSlot: (
       <button
         type="button"
-        className="text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded text-xs"
+        className="text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-lg text-xs"
         aria-label="Custom menu"
       >
         ⋯

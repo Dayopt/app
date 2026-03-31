@@ -8,7 +8,7 @@ import {
   computeActualTimeDiffOverlay,
   detectOverlapGroups,
   entriesOverlap,
-} from './entryPositioning';
+} from '../../../../lib/layout';
 
 describe('entryPositioning', () => {
   const createTimedEntry = (

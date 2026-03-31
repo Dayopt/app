@@ -31,7 +31,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => (
     <div className="w-96">
-      <Command className="rounded-lg border shadow-md">
+      <Command className="shadow-card rounded-lg border">
         <CommandInput placeholder="検索..." />
         <CommandList>
           <CommandEmpty>結果がありません。</CommandEmpty>
@@ -92,7 +92,7 @@ export const Dialog: Story = {
       <>
         <Button variant="outline" onClick={() => setOpen(true)}>
           コマンドパレットを開く
-          <kbd className="bg-muted text-muted-foreground pointer-events-none ml-2 inline-flex h-5 items-center gap-1 rounded border px-2 font-mono text-xs font-bold opacity-100 select-none">
+          <kbd className="bg-muted text-muted-foreground pointer-events-none ml-2 inline-flex h-5 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-bold opacity-100 select-none">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>
@@ -139,7 +139,7 @@ export const Dialog: Story = {
 export const WithShortcuts: Story = {
   render: () => (
     <div className="w-96">
-      <Command className="rounded-lg border shadow-md">
+      <Command className="shadow-card rounded-lg border">
         <CommandInput placeholder="検索..." />
         <CommandList>
           <CommandEmpty>結果がありません。</CommandEmpty>
@@ -173,7 +173,7 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-col items-start gap-6">
         <div className="w-96">
-          <Command className="rounded-lg border shadow-md">
+          <Command className="shadow-card rounded-lg border">
             <CommandInput placeholder="検索..." />
             <CommandList>
               <CommandEmpty>結果がありません。</CommandEmpty>

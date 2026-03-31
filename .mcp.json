@@ -9,6 +9,14 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp@latest"],
       "env": {}
+    },
+    "sentry": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server@latest"],
+      "env": {
+        "SENTRY_ACCESS_TOKEN": "${SENTRY_ACCESS_TOKEN}"
+      }
     }
   }
 }

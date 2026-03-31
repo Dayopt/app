@@ -96,7 +96,7 @@ export const VariousIcons: Story = {
         {examples.map(({ icon, color, label }) => (
           <div key={label} className="flex flex-col items-center gap-1.5">
             <div
-              className="flex size-12 items-center justify-center rounded-xl"
+              className="flex size-12 items-center justify-center rounded-2xl"
               style={{
                 backgroundColor: `var(--tag-${color}-tint)`,
               }}

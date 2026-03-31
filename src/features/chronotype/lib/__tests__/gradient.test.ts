@@ -33,9 +33,9 @@ describe('generateChronotypeGradient', () => {
     const dark = generateChronotypeGradient(zones, 'dark');
 
     expect(light).not.toBe(dark);
-    // light は L≈0.98 ベース、dark は L≈0.18 ベース
-    expect(light).toContain('0.9800');
-    expect(dark).toContain('0.1800');
+    // light は L≈0.955 ゾーン色、dark は L≈0.21 ゾーン色
+    expect(light).toContain('0.9550');
+    expect(dark).toContain('0.2100');
   });
 
   it('deep ゾーンで H=70 (amber) を使う', () => {
@@ -75,13 +75,12 @@ describe('generateChronotypeGradient', () => {
     expect(stopCount).toBeGreaterThanOrEqual(10);
   });
 
-  it('フェード区間で中間色のストップが含まれる', () => {
+  it('フェード区間でアルファ値の中間ストップが含まれる', () => {
     const zones = CHRONOTYPE_PRESETS.bear.productivityZones;
     const result = generateChronotypeGradient(zones, 'light');
 
-    // bg(L=0.98) と zone(L=0.965) の中間値が存在するはず
-    // smoothstep 補間により 0.97xx 付近の値が含まれる
-    expect(result).toMatch(/oklch\(0\.97\d+/);
+    // smoothstep フェードにより 0 < alpha < 1 のストップが含まれる
+    expect(result).toMatch(/oklch\(.+\/ 0\.\d+\)/);
   });
 });
 

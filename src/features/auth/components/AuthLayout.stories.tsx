@@ -95,7 +95,7 @@ export const LoginPathSkipped: Story = {
   },
   render: () => (
     <AuthLayout>
-      <div className="bg-muted flex h-32 items-center justify-center rounded">
+      <div className="bg-muted flex h-32 items-center justify-center rounded-lg">
         <p className="text-muted-foreground text-sm">ログインページコンテンツ（ラップなし）</p>
       </div>
     </AuthLayout>

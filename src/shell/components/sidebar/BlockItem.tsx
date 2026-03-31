@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 /** BlockItem の menuSlot 内ボタンに共通適用するクラス（ホバー時のみ表示） */
 export const blockMenuButtonCn =
-  'text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100';
+  'text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/block:opacity-100 [@media(hover:none)]:opacity-100';
 
 interface BlockItemProps {
   tagName: string;
@@ -56,7 +56,7 @@ export function BlockItem({
   return (
     <div
       className={cn(
-        'group/block flex h-8 w-full items-center rounded text-base transition-colors [@media(hover:none)]:h-11',
+        'group/block flex h-8 w-full items-center rounded-lg text-base transition-colors [@media(hover:none)]:h-11',
         disabled ? 'opacity-50' : 'hover:bg-state-hover',
         className,
       )}

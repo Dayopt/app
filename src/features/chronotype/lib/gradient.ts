@@ -4,23 +4,17 @@ import type { ProductivityZone } from '@/types/chronotype';
 // Chronotype Gradient Generator
 //
 // oklch ベースの CSS linear-gradient を生成。
-// deep(H70 暖色) / ease(H250 寒色) のみ色を付け、
-// それ以外は bg-background のまま。
+// deep(H70 暖色) / ease(H150 寒色) のみ色を付け、
+// ゾーン外は transparent（bg-background をそのまま透過）。
 // 境界: smoothstep + flat top（ゾーン内均一、端 0.8h でフェード）
 // ============================================
-
-/** テーマモード別の bg-background */
-const BG = {
-  light: { l: 0.98, c: 0, h: 0 },
-  dark: { l: 0.18, c: 0, h: 0 },
-} as const;
 
 /**
  * deep/ease の oklch パラメータ（モード別）
  *
  * 仕様の energy=1 時の値:
- *   Light: L = 0.98 - 0.025 = 0.955, C = 0.008
- *   Dark:  L = 0.18 + 0.03  = 0.210, C = 0.008 + 0.010 = 0.018
+ *   Light: L = 0.955, C = 0.008
+ *   Dark:  L = 0.210, C = 0.018
  */
 const ZONE_COLORS = {
   deep: {
@@ -47,31 +41,17 @@ function buildZoneBoundaries(zones: ProductivityZone[]): Array<{
     .map((z) => ({ start: z.startHour, end: z.endHour, level: z.level }));
 }
 
-/** oklch 値を CSS 文字列にフォーマット */
-function formatOklch(l: number, c: number, h: number): string {
-  return `oklch(${l.toFixed(4)} ${c.toFixed(4)} ${h})`;
+/** oklch + alpha を CSS 文字列にフォーマット */
+function formatOklchAlpha(l: number, c: number, h: number, alpha: number): string {
+  if (alpha <= 0) return 'transparent';
+  if (alpha >= 1) return `oklch(${l.toFixed(4)} ${c.toFixed(4)} ${h})`;
+  return `oklch(${l.toFixed(4)} ${c.toFixed(4)} ${h} / ${alpha.toFixed(3)})`;
 }
 
 /** smoothstep: 3t² − 2t³ */
 function smoothstep(t: number): number {
   const clamped = Math.max(0, Math.min(1, t));
   return clamped * clamped * (3 - 2 * clamped);
-}
-
-/** oklch 値の線形補間（achromatic の hue は相手に合わせる） */
-function lerpOklch(
-  a: { l: number; c: number; h: number },
-  b: { l: number; c: number; h: number },
-  t: number,
-): { l: number; c: number; h: number } {
-  // chroma=0 は achromatic（hue 無意味）→ 相手の hue を使う
-  const hA = a.c < 0.001 ? b.h : a.h;
-  const hB = b.c < 0.001 ? a.h : b.h;
-  return {
-    l: a.l + (b.l - a.l) * t,
-    c: a.c + (b.c - a.c) * t,
-    h: hA + (hB - hA) * t,
-  };
 }
 
 /** フェード区間の半径（時間単位） */
@@ -82,13 +62,14 @@ const FADE_STEPS = 5;
 
 interface GradientStop {
   position: number; // 0-100 (%)
-  color: string; // oklch(...)
+  color: string; // oklch(...) or transparent
 }
 
 /**
  * Chronotype gradient の CSS 文字列を生成
  *
  * Smoothstep + Flat top: ゾーン内は均一の濃さ、端 0.8h でフェード。
+ * ゾーン外は transparent で bg-background を透過させる。
  *
  * @param zones - 生産性ゾーン配列
  * @param mode - 'light' | 'dark'
@@ -103,15 +84,12 @@ export function generateChronotypeGradient(
     return 'none';
   }
 
-  const bg = BG[mode];
   const stops: GradientStop[] = [];
 
-  // 0h → bg
-  stops.push({ position: 0, color: formatOklch(bg.l, bg.c, bg.h) });
+  // 0h → transparent
+  stops.push({ position: 0, color: 'transparent' });
 
   // 各ゾーンの fade-in → flat → fade-out ストップを生成
-  // Medium smoothstep: フェードはゾーン外側にはみ出す（start-r ~ start, end ~ end+r）
-  // 隣のゾーンとの gap が 2r 未満ならフェード幅を gap/2 に縮小（重なり防止）
   for (let idx = 0; idx < boundaries.length; idx++) {
     const b = boundaries[idx] as (typeof boundaries)[number];
     const zc = ZONE_COLORS[b.level][mode];
@@ -126,47 +104,45 @@ export function generateChronotypeGradient(
     const gapAfter = next ? next.start - b.end : 24 - b.end;
     const rOut = Math.min(FADE_RADIUS, gapAfter / 2, 24 - b.end);
 
-    // fade-in: bg → zone色（start-rIn → start）
+    // fade-in: transparent → zone色（start-rIn → start）
     for (let i = 0; i <= FADE_STEPS; i++) {
       const t = i / FADE_STEPS;
       const hour = b.start - rIn + t * rIn;
-      const s = smoothstep(t);
-      const color = lerpOklch(bg, zc, s);
+      const alpha = smoothstep(t);
       stops.push({
         position: (hour / 24) * 100,
-        color: formatOklch(color.l, color.c, color.h),
+        color: formatOklchAlpha(zc.l, zc.c, zc.h, alpha),
       });
     }
 
-    // flat top: zone色均一（start → end、両端を明示して線形補間を防ぐ）
+    // flat top: zone色均一（start → end）
     stops.push({
       position: (b.start / 24) * 100,
-      color: formatOklch(zc.l, zc.c, zc.h),
+      color: formatOklchAlpha(zc.l, zc.c, zc.h, 1),
     });
     if (b.end > b.start) {
       stops.push({
         position: (b.end / 24) * 100,
-        color: formatOklch(zc.l, zc.c, zc.h),
+        color: formatOklchAlpha(zc.l, zc.c, zc.h, 1),
       });
     }
 
-    // fade-out: zone色 → bg（end → end+rOut）
+    // fade-out: zone色 → transparent（end → end+rOut）
     for (let i = 0; i <= FADE_STEPS; i++) {
       const t = i / FADE_STEPS;
       const hour = b.end + t * rOut;
-      const s = smoothstep(t);
-      const color = lerpOklch(zc, bg, s);
+      const alpha = 1 - smoothstep(t);
       stops.push({
         position: (hour / 24) * 100,
-        color: formatOklch(color.l, color.c, color.h),
+        color: formatOklchAlpha(zc.l, zc.c, zc.h, alpha),
       });
     }
   }
 
-  // 24h → bg
-  stops.push({ position: 100, color: formatOklch(bg.l, bg.c, bg.h) });
+  // 24h → transparent
+  stops.push({ position: 100, color: 'transparent' });
 
-  // 位置順にソートして重複を除去
+  // 位置順にソート
   stops.sort((a, b) => a.position - b.position);
 
   const stopsStr = stops.map((s) => `${s.color} ${s.position.toFixed(2)}%`).join(', ');

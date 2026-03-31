@@ -40,12 +40,21 @@ function snapToQuarter(minutes: number): number {
 interface EntryInspectorFormProps {
   /** パレットへのピン留めコールバック（Composition Layer から注入） */
   onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
+  /** パレットから解除コールバック（Composition Layer から注入） */
+  onUnpinFromPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
   /** パレット登録済みチェック関数（Composition Layer から注入） */
   isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
+  /** 統計を見るコールバック（Composition Layer から注入） */
+  onViewStats?: ((tagId: string) => void) | undefined;
 }
 
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
-export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryInspectorFormProps) {
+export function EntryInspectorForm({
+  onPinToPalette,
+  onUnpinFromPalette,
+  isPinnedInPalette,
+  onViewStats,
+}: EntryInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -148,6 +157,16 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
       ? isPinnedInPalette(selectedTagId, snappedDuration)
       : false;
 
+  const handleUnpinFromPalette = useCallback(() => {
+    if (!selectedTagId || snappedDuration <= 0 || !onUnpinFromPalette) return;
+    onUnpinFromPalette(selectedTagId, snappedDuration);
+  }, [selectedTagId, snappedDuration, onUnpinFromPalette]);
+
+  const handleViewStats = useCallback(() => {
+    if (!selectedTagId || !onViewStats) return;
+    onViewStats(selectedTagId);
+  }, [selectedTagId, onViewStats]);
+
   // Duration diff
   const actualDuration = useMemo(
     () => computeDuration(effectiveActualStart, effectiveActualEnd),
@@ -170,7 +189,9 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
         onPinToPalette={
           onPinToPalette && selectedTagId && snappedDuration > 0 ? handlePinToPalette : undefined
         }
+        onUnpinFromPalette={onUnpinFromPalette && isPinned ? handleUnpinFromPalette : undefined}
         isPinnedInPalette={isPinned}
+        onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
         onDelete={handleDelete}
       />
 
@@ -185,7 +206,7 @@ export function EntryInspectorForm({ onPinToPalette, isPinnedInPalette }: EntryI
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-muted mt-3 rounded-xl">
+      <div className="bg-muted mt-3 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
           {/* 日付 */}
           <DateRow

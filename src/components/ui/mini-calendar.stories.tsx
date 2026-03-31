@@ -42,7 +42,7 @@ function CalendarWithState({ initialDate }: { initialDate?: Date }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-card border-border rounded-xl border">
+      <div className="bg-card border-border rounded-2xl border">
         <MiniCalendar selectedDate={selected} onDateSelect={setSelected} />
       </div>
       <p className="text-muted-foreground text-center text-xs">
@@ -70,7 +70,7 @@ export const WithRange: Story = {
     const rangeEnd = addDays(today, 6);
 
     return (
-      <div className="bg-card border-border rounded-xl border">
+      <div className="bg-card border-border rounded-2xl border">
         <MiniCalendar displayRange={{ start: rangeStart, end: rangeEnd }} />
       </div>
     );
@@ -117,13 +117,13 @@ export const AllPatterns: Story = {
 
     return (
       <div className="flex flex-col items-start gap-6">
-        <div className="bg-card border-border rounded-xl border">
+        <div className="bg-card border-border rounded-2xl border">
           <MiniCalendar selectedDate={selected1} onDateSelect={setSelected1} />
         </div>
-        <div className="bg-card border-border rounded-xl border">
+        <div className="bg-card border-border rounded-2xl border">
           <MiniCalendar selectedDate={selected2} onDateSelect={setSelected2} />
         </div>
-        <div className="bg-card border-border rounded-xl border">
+        <div className="bg-card border-border rounded-2xl border">
           <MiniCalendar displayRange={{ start: rangeStart, end: rangeEnd }} />
         </div>
         <MiniCalendar
