@@ -7,8 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
 import { DateNavigator } from '@/components/common/DateNavigator';
+import { DateRangeDisplay } from '@/components/common/DateRangeDisplay';
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
-import { DateRangeDisplay } from '@/components/ui/date-range-display';
 import { TagIcon } from '@/features/tags';
 import { addDays, addMonths, addWeeks } from '@/lib/date/core';
 import { cn } from '@/lib/utils';

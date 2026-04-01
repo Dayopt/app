@@ -5,7 +5,6 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { Locale } from 'date-fns';
 
@@ -14,6 +13,8 @@ export interface DateRangeDisplayProps {
   date: Date;
   endDate?: Date | undefined;
   showWeekNumber?: boolean | undefined;
+  /** 週の開始曜日（0=日, 1=月, 6=土）。週番号の計算に使用 */
+  weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | undefined;
   formatPattern?: string | undefined;
   className?: string | undefined;
 }
@@ -67,6 +68,7 @@ export function DateRangeDisplay({
   date,
   endDate,
   showWeekNumber = false,
+  weekStartsOn = 1,
   formatPattern = 'MMMM yyyy',
   className,
 }: DateRangeDisplayProps) {
@@ -74,7 +76,6 @@ export function DateRangeDisplay({
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // ロケールに応じたフォーマットパターン（翻訳ファイルから取得）
   const localizedFormatPattern =
@@ -104,13 +105,13 @@ export function DateRangeDisplay({
 export function CompactDateDisplay({
   date,
   showWeekNumber = false,
+  weekStartsOn = 1,
   className,
-}: Pick<DateRangeDisplayProps, 'date' | 'showWeekNumber' | 'className'>) {
+}: Pick<DateRangeDisplayProps, 'date' | 'showWeekNumber' | 'weekStartsOn' | 'className'>) {
   const t = useTranslations('calendar.dateRange');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // ロケールに応じたフォーマット（翻訳ファイルから取得）
   const dateFormat = tCommon('dates.formats.monthDay');

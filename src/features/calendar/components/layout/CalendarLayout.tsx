@@ -77,6 +77,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
   }) => {
     const t = useTranslations('calendar');
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+    const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -135,6 +136,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
                 date={currentDate}
                 viewType={viewType}
                 showWeekNumber={showWeekNumbers}
+                weekStartsOn={weekStartsOn}
                 clickable={false}
                 displayRange={displayRange}
               />

@@ -1,7 +1,7 @@
 'use client';
 
 import { CompactDateNavigator } from '@/components/common/DateNavigator';
-import type { DateRangeDisplayProps } from '@/components/ui/date-range-display';
+import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
 import { AppHeader } from '@/shell/components/AppHeader';
 
 import type { NavigationDirection } from '@/components/common/DateNavigator';

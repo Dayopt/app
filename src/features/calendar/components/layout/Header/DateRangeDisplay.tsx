@@ -3,8 +3,8 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import type { DateRangeDisplayProps as BaseDateRangeDisplayProps } from '@/components/ui/date-range-display';
-import { DateRangeDisplay as DateRangeDisplayBase } from '@/components/ui/date-range-display';
+import type { DateRangeDisplayProps as BaseDateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
+import { DateRangeDisplay as DateRangeDisplayBase } from '@/components/common/DateRangeDisplay';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,7 @@ export function DateRangeDisplay({
   date,
   endDate,
   showWeekNumber = false,
+  weekStartsOn,
   formatPattern = 'MMMM yyyy',
   className,
   onDateSelect,
@@ -44,7 +45,12 @@ export function DateRangeDisplay({
   // クリック可能な場合: モバイル（ポップアップ）+ PC（静的）
   if (clickable && onDateSelect) {
     const dateContent = (
-      <DateRangeDisplayBase date={date} endDate={endDate} formatPattern={formatPattern} />
+      <DateRangeDisplayBase
+        date={date}
+        endDate={endDate}
+        weekStartsOn={weekStartsOn}
+        formatPattern={formatPattern}
+      />
     );
 
     return (
@@ -78,6 +84,7 @@ export function DateRangeDisplay({
           date={date}
           endDate={endDate}
           showWeekNumber={showWeekNumber}
+          weekStartsOn={weekStartsOn}
           formatPattern={formatPattern}
           className={cn('hidden md:flex', className)}
         />
@@ -91,10 +98,11 @@ export function DateRangeDisplay({
       date={date}
       endDate={endDate}
       showWeekNumber={showWeekNumber}
+      weekStartsOn={weekStartsOn}
       formatPattern={formatPattern}
       className={className}
     />
   );
 }
 
-export { CompactDateDisplay } from '@/components/ui/date-range-display';
+export { CompactDateDisplay } from '@/components/common/DateRangeDisplay';
