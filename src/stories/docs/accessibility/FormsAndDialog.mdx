@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Docs/Accessibility/フォームとDialog" />
+<Meta title="Docs/Accessibility/Forms & Dialog" />
 
 # フォームとDialog
 
@@ -31,16 +31,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 `aria-invalid` と `aria-describedby` でエラーを関連付け。
 
 ```tsx
-<Input
-  id="email"
-  aria-invalid={!!error}
-  aria-describedby={error ? "email-error" : undefined}
-/>
-{error && (
-  <p id="email-error" role="alert" className="text-destructive">
-    {error}
-  </p>
-)}
+<Input id="email" aria-invalid={!!error} aria-describedby={error ? 'email-error' : undefined} />;
+{
+  error && (
+    <p id="email-error" role="alert" className="text-destructive">
+      {error}
+    </p>
+  );
+}
 ```
 
 ---
@@ -90,8 +88,6 @@ shadcn/ui（Radix UI）の Dialog/AlertDialog は基本的なa11y対応済み。
 
 ```tsx
 <DialogHeader>
-  <DialogTitle className="sr-only">
-    画像プレビュー
-  </DialogTitle>
+  <DialogTitle className="sr-only">画像プレビュー</DialogTitle>
 </DialogHeader>
 ```

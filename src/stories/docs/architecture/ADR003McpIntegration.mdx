@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Docs/Architecture/ADR/003 MCP統合" />
+<Meta title="Docs/Architecture/ADR/003 MCP Integration" />
 
 # ADR-003: MCP統合
 
@@ -32,11 +32,11 @@ MCPを外部ツール統合レイヤーとして採用し、3サーバー構成�
 
 `.mcp.json` に3つのMCPサーバーを定義：
 
-| サーバー | タイプ | 用途 |
-| --- | --- | --- |
-| `supabase-local` | HTTP | ローカルSupabaseへの直接アクセス |
-| `context7` | stdio | ライブラリドキュメントのリアルタイム参照 |
-| `storybook-mcp` | HTTP | Storybookプレビューとの連携 |
+| サーバー         | タイプ | 用途                                     |
+| ---------------- | ------ | ---------------------------------------- |
+| `supabase-local` | HTTP   | ローカルSupabaseへの直接アクセス         |
+| `context7`       | stdio  | ライブラリドキュメントのリアルタイム参照 |
+| `storybook-mcp`  | HTTP   | Storybookプレビューとの連携              |
 
 ### 権限管理
 

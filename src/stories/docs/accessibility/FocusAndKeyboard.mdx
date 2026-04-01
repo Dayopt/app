@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Docs/Accessibility/フォーカスとキーボード" />
+<Meta title="Docs/Accessibility/Focus & Keyboard" />
 
 # フォーカスとキーボード
 
@@ -12,10 +12,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ```tsx
 // 推奨パターン
-className="outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring"
+className =
+  'outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-ring';
 
 // shadcn/ui では focus-visible:outline-ring/50 も使用
-className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+className =
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 ```
 
 ---
@@ -26,7 +28,7 @@ className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-o
 
 ```tsx
 // aria-disabled 対応
-className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+className = 'aria-disabled:pointer-events-none aria-disabled:opacity-50';
 ```
 
 ---
@@ -56,13 +58,13 @@ className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
 
 ## 基本キー
 
-| キー | 用途 |
-|------|------|
-| `Tab` | 次の要素にフォーカス移動 |
-| `Shift + Tab` | 前の要素にフォーカス移動 |
-| `Enter` | ボタン/リンクの実行 |
-| `Space` | チェックボックス/ボタンの切り替え |
-| `Escape` | モーダル/ポップオーバーを閉じる |
+| キー          | 用途                              |
+| ------------- | --------------------------------- |
+| `Tab`         | 次の要素にフォーカス移動          |
+| `Shift + Tab` | 前の要素にフォーカス移動          |
+| `Enter`       | ボタン/リンクの実行               |
+| `Space`       | チェックボックス/ボタンの切り替え |
+| `Escape`      | モーダル/ポップオーバーを閉じる   |
 
 ---
 
@@ -72,9 +74,7 @@ className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
 
 ```tsx
 // ショートカットハンドラ内で入力中かチェック
-const isTyping = ['INPUT', 'TEXTAREA'].includes(
-  document.activeElement?.tagName || ''
-);
+const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '');
 
 if (isTyping) return; // 入力中は何もしない
 
@@ -87,10 +87,10 @@ if (isTyping) return; // 入力中は何もしない
 
 カレンダー画面のキーボード操作（Google Calendar互換）。
 
-| キー | アクション |
-|------|-----------|
-| `Escape` | Inspectorを閉じる |
+| キー                 | アクション         |
+| -------------------- | ------------------ |
+| `Escape`             | Inspectorを閉じる  |
 | `Delete / Backspace` | 選択中プランを削除 |
-| `C` | 新規プラン作成 |
-| `Cmd/Ctrl + C` | コピー |
-| `Cmd/Ctrl + V` | ペースト |
+| `C`                  | 新規プラン作成     |
+| `Cmd/Ctrl + C`       | コピー             |
+| `Cmd/Ctrl + V`       | ペースト           |
