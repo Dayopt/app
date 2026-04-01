@@ -75,18 +75,18 @@ export const AllPatterns: Story = {
 
 ## 既存パターン一覧
 
-| Story                   | 内容                            |
-| ----------------------- | ------------------------------- |
-| `Patterns/Forms`        | フォーム入力パターン            |
-| `Patterns/Feedback`     | Toast, Alert, InlineMessage     |
-| `Patterns/Loading`      | Skeleton, Spinner, Progress     |
-| `Patterns/Search`       | 検索UI パターン                 |
-| `Patterns/Selection`    | 選択UI パターン                 |
-| `Patterns/Actions`      | アクションボタン配置            |
-| `Patterns/Confirmation` | 確認ダイアログ（ConfirmDialog） |
-| `Patterns/EmptyStates`  | 空状態の表示                    |
-| `Patterns/ErrorPages`   | エラーページ                    |
-| `Patterns/Cards`        | カードレイアウト                |
+| Story                   | 内容                            | いつ使うか                                               |
+| ----------------------- | ------------------------------- | -------------------------------------------------------- |
+| `Patterns/Forms`        | フォーム入力パターン            | バリデーション、エラー表示、成功状態の実装時             |
+| `Patterns/Feedback`     | Toast, Alert, InlineMessage     | ユーザーへの操作結果通知の実装時                         |
+| `Patterns/Loading`      | Skeleton, Spinner, Progress     | 非同期データ取得時のローディング表示を選ぶとき           |
+| `Patterns/Search`       | 検索UI パターン                 | 検索・フィルタリングUIの実装時                           |
+| `Patterns/Selection`    | 選択UI パターン                 | Radio/Select/Checkbox/Chip の使い分けを決めるとき        |
+| `Patterns/Actions`      | アクションボタン配置            | ボタンサイズ・配置・ドロップダウンメニューの設計時       |
+| `Patterns/Confirmation` | 確認ダイアログ（ConfirmDialog） | 削除・破壊的操作・非同期確認の実装時                     |
+| `Patterns/EmptyStates`  | 空状態の表示                    | リストやコンテンツが空の場合の表示を選ぶとき             |
+| `Patterns/ErrorPages`   | エラーページ                    | 404、エラーバウンダリ、メンテナンスページの実装時        |
+| `Patterns/Cards`        | カードレイアウト                | 情報カード・メトリクスカード・グリッドレイアウトの設計時 |
 
 ## 新パターン追加時
 
