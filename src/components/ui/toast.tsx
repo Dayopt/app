@@ -51,6 +51,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       containerAriaLabel={t('title')}
       icons={{ loading: <LoadingIcon /> }}
       // Sonner内部の--width CSS変数を上書き（デフォルト356px → 420px）
+      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override
       className="[--width:420px]"
       toastOptions={{
         unstyled: true,

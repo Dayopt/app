@@ -97,6 +97,7 @@ export function MobileCreateSheet() {
       setActiveSnapPoint={setSnap}
       fadeFromIndex={0}
     >
+      {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS unset override */}
       <DrawerContent className="max-h-[unset] rounded-t-2xl">
         <VisuallyHidden asChild>
           <DrawerTitle>Create</DrawerTitle>

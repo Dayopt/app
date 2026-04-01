@@ -121,7 +121,8 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[42rem] overflow-hidden p-0" showCloseButton={false}>
+      {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
+      <DialogContent className="w-[95vw] max-w-2xl overflow-hidden p-0" showCloseButton={false}>
         <VisuallyHidden>
           <DialogTitle>{t('title')}</DialogTitle>
         </VisuallyHidden>
@@ -134,7 +135,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
               </kbd>
             </div>
           </div>
-          <CommandList className="max-h-[30rem]">
+          <CommandList className="max-h-120">
             <CommandEmpty>{t('noResults')}</CommandEmpty>
 
             {/* Tags */}

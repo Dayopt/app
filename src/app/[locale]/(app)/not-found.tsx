@@ -20,6 +20,7 @@ export default function AppNotFound() {
   const t = useTranslations('error.notFound');
 
   return (
+    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
     <div className="grid min-h-[60vh] w-full place-items-center p-8">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
         <div className="border-border flex size-16 items-center justify-center rounded-full border-2">

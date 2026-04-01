@@ -93,6 +93,7 @@ export function ActivityPopover({ size = 'default' }: ActivityPopoverProps) {
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as ActivityTab)}
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
           className="flex min-h-[40vh] flex-col"
         >
           {/* ヘッダー: タブ + 設定 */}

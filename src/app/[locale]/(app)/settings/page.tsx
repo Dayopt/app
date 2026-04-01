@@ -206,6 +206,7 @@ export default function SettingsPage() {
             />
           </button>
           <div
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
             className={`grid transition-[grid-template-rows] duration-200 ${legalOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
           >
             <div className="overflow-hidden">

@@ -197,6 +197,7 @@ export function EntryInspectorForm({
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
         className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >

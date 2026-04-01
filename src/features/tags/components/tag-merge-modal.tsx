@@ -211,6 +211,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
 
     return (
       <div
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
         className="max-h-[50vh] overflow-y-auto px-4 py-2"
         role="radiogroup"
         aria-label={t('calendar.filter.mergeTag.title')}
@@ -280,6 +281,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={(o) => !o && !mergeTagMutation.isPending && onClose()}>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle>{t('calendar.filter.mergeTag.title')}</DrawerTitle>

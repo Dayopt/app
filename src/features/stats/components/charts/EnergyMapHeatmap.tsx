@@ -126,6 +126,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
       <CardContent>
         <div className="overflow-x-auto">
           {/* Header row: day of week labels */}
+          {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- complex grid template */}
           <div className="grid grid-cols-[40px_repeat(7,1fr)] gap-1">
             <div />
             {DOW_ORDER.map((_, i) => (

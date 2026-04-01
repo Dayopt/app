@@ -263,6 +263,7 @@ export function PaletteAddPopover({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle>{t('sidebar.palette.add')}</DrawerTitle>

@@ -125,6 +125,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
               <button
                 type="button"
                 onClick={openSearch}
+                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- calc expression
                 className="bg-muted text-muted-foreground mx-4 mt-1 mb-2 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg px-4 py-2 text-sm"
               >
                 <Search className="size-4 shrink-0" />

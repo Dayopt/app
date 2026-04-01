@@ -30,6 +30,7 @@ export default function AppError({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
+    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
     <div className="grid min-h-[60vh] w-full place-items-center p-8">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
         <div className="border-destructive flex size-16 items-center justify-center rounded-full border-2">

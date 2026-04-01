@@ -86,6 +86,7 @@ export function UserMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- Radix CSS variable
         className="border-input w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-2xl"
         side="right"
         align="end"
