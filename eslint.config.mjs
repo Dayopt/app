@@ -37,6 +37,14 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Storybook: Story の装飾サイズ（h-[500px] 等）は UI 品質に無関係のため除外
+  {
+    files: ['**/*.stories.{ts,tsx}', '**/story-helpers.{ts,tsx}'],
+    rules: {
+      'tailwindcss/no-arbitrary-value': 'off',
+    },
+  },
+
   // TypeScript用カスタムルール
   {
     files: ['**/*.{ts,tsx}'],
