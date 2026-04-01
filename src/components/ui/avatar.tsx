@@ -36,7 +36,7 @@ const avatarVariants = cva('relative flex shrink-0 overflow-hidden rounded-full'
       lg: 'size-12',
       xl: 'size-16',
       '2xl': 'size-24',
-      '3xl': 'size-[120px]',
+      '3xl': 'size-30',
     },
   },
   defaultVariants: {
