@@ -60,7 +60,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
 
 /** PageNav — ヘッダー右端のページナビゲーション。Calendar/Stats のセグメントコントロール。 */
 const meta = {
-  title: 'Components/Shell/PageNav',
+  title: 'Components/Shell/Sidebar/PageNav',
   component: MockPageNav,
   parameters: {
     layout: 'centered',
