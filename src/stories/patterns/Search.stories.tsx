@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TagIcon } from '@/features/tags';
 
 const meta = {
   title: 'Patterns/Search',
@@ -143,7 +144,7 @@ export const Overview: Story = {
           <div className="bg-container mt-4 rounded-lg p-4">
             <h3 className="mb-2 text-sm font-bold">動作ルール</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
-              <li>空状態 → タグ一覧（カラードット + タグ名）</li>
+              <li>空状態 → タグ一覧（TagIcon + タグ名）</li>
               <li>入力時 → タグ名マッチ + ブロックのメモ検索</li>
               <li>タグ選択 → showOnlyTag でフィルター適用</li>
               <li>ブロック選択 → カレンダーでその日に遷移 + Inspector表示</li>
@@ -288,11 +289,11 @@ function SearchWithClear() {
 
 function GlobalSearchEmpty() {
   const tags = [
-    { name: 'Dev:API', color: 'bg-tag-green' },
-    { name: 'Dev:Frontend', color: 'bg-tag-green' },
-    { name: 'Design', color: 'bg-tag-blue' },
-    { name: 'Meeting', color: 'bg-tag-violet' },
-    { name: 'Learning', color: 'bg-tag-orange' },
+    { name: 'Dev:API', icon: 'code', color: 'green' },
+    { name: 'Dev:Frontend', icon: 'layout', color: 'green' },
+    { name: 'Design', icon: 'palette', color: 'blue' },
+    { name: 'Meeting', icon: 'users', color: 'violet' },
+    { name: 'Learning', icon: null, color: 'orange' },
   ];
 
   return (
@@ -303,7 +304,7 @@ function GlobalSearchEmpty() {
           <CommandGroup heading="Tags">
             {tags.map((tag) => (
               <CommandItem key={tag.name} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tag.color}`} />
+                <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                 <span>{tag.name}</span>
               </CommandItem>
             ))}
@@ -315,13 +316,14 @@ function GlobalSearchEmpty() {
 }
 
 function GlobalSearchWithResults() {
-  const tags = [{ name: 'Dev:API', color: 'bg-tag-green' }];
+  const tags = [{ name: 'Dev:API', icon: 'code', color: 'green' }];
 
   const blocks = [
     {
       id: '1',
       tagName: 'Dev:API',
-      tagColor: 'bg-tag-green',
+      tagIcon: 'code',
+      tagColor: 'green',
       date: '3/6',
       time: '9:00 - 10:30',
       description: 'Refactored auth API endpoints',
@@ -329,7 +331,8 @@ function GlobalSearchWithResults() {
     {
       id: '2',
       tagName: 'Dev:API',
-      tagColor: 'bg-tag-green',
+      tagIcon: 'code',
+      tagColor: 'green',
       date: '3/5',
       time: '14:00 - 16:00',
       description: 'API design notes',
@@ -345,7 +348,7 @@ function GlobalSearchWithResults() {
           <CommandGroup heading="Tags">
             {tags.map((tag) => (
               <CommandItem key={tag.name} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tag.color}`} />
+                <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                 <span>
                   <mark className="bg-state-active text-state-active-foreground rounded-lg">
                     API
@@ -357,7 +360,12 @@ function GlobalSearchWithResults() {
           <CommandGroup heading="Blocks">
             {blocks.map((block) => (
               <CommandItem key={block.id} value={block.id} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${block.tagColor}`} />
+                <TagIcon
+                  icon={block.tagIcon}
+                  color={block.tagColor}
+                  size="sm"
+                  className="shrink-0"
+                />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="text-muted-foreground flex items-center gap-1 text-xs">
                     <span className="font-medium">{block.tagName}</span>
