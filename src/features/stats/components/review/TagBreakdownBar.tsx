@@ -55,7 +55,7 @@ export function TagBreakdownBar({
               key={seg.tagName}
               className={cn(
                 'h-full first:rounded-l-full last:rounded-r-full',
-                onTagClick && 'cursor-pointer transition-opacity hover:opacity-80',
+                onTagClick && 'hover:bg-state-hover cursor-pointer transition-colors',
               )}
               style={{ width: `${pct}%`, backgroundColor: `var(--tag-${seg.tagColor})` }}
               title={`${seg.tagName}: ${formatMinutes(seg.minutes)} (${Math.round(pct)}%)`}
@@ -76,7 +76,7 @@ export function TagBreakdownBar({
                 key={seg.tagName}
                 className={cn(
                   'flex items-center gap-1 text-xs',
-                  onTagClick && 'hover:bg-accent/50 cursor-pointer rounded-lg transition-colors',
+                  onTagClick && 'hover:bg-state-hover cursor-pointer rounded-lg transition-colors',
                 )}
                 onClick={() => onTagClick?.(seg.tagId)}
               >

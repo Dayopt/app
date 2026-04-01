@@ -45,7 +45,7 @@ function TagGridCell({
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
-        isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        isSelected ? 'ring-primary ring-2' : 'hover:bg-state-hover',
         colorClasses.tint,
       )}
     >

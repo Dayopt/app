@@ -104,7 +104,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
               'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'minutes'
                 ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted',
+                : 'text-muted-foreground hover:bg-state-hover',
             )}
           >
             {t('energyMapMinutes')}
@@ -116,7 +116,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
               'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
               mode === 'fulfillment'
                 ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted',
+                : 'text-muted-foreground hover:bg-state-hover',
             )}
           >
             {t('energyMapFulfillment')}
