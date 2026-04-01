@@ -243,7 +243,7 @@ export function BillingSettings() {
       {/* 支払い失敗警告（past_due 時のみ） */}
       {subscriptionStatus === 'past_due' && (
         <SectionCard>
-          <div className="bg-warning-tint flex items-center gap-3 rounded-lg p-4">
+          <div className="bg-warning-tint flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-warning h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{t('settings.subscription.pastDueTitle')}</p>
@@ -266,7 +266,7 @@ export function BillingSettings() {
       {/* キャンセル済み通知（canceled 時のみ） */}
       {subscriptionStatus === 'canceled' && (
         <SectionCard>
-          <div className="flex items-center gap-3 rounded-lg p-4">
+          <div className="flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{t('settings.subscription.canceledTitle')}</p>
@@ -403,20 +403,20 @@ export function BillingSettings() {
                 <tbody>
                   {invoicesData.map((invoice) => (
                     <tr key={invoice.id} className="text-sm">
-                      <td className="py-3 whitespace-nowrap">
+                      <td className="py-2 whitespace-nowrap">
                         {dateFormatter.format(new Date(invoice.date))}
                       </td>
-                      <td className="py-3 whitespace-nowrap">
+                      <td className="py-2 whitespace-nowrap">
                         {formatCurrency(invoice.amount / 100, invoice.currency)}
                       </td>
-                      <td className="py-3">
+                      <td className="py-2">
                         <Badge variant="secondary">
                           {invoice.status === 'paid'
                             ? t('settings.subscription.invoicePaid')
                             : invoice.status}
                         </Badge>
                       </td>
-                      <td className="py-3 text-right">
+                      <td className="py-2 text-right">
                         {invoice.hostedInvoiceUrl && (
                           <a
                             href={invoice.hostedInvoiceUrl}

@@ -36,7 +36,7 @@ function WithMockUser({ children }: { children: React.ReactNode }) {
 function MockSidebarContent() {
   return (
     <>
-      <div className="p-3">
+      <div className="p-4">
         <div className="bg-muted flex aspect-square w-full items-center justify-center rounded-lg">
           <span className="text-muted-foreground text-xs">Mini Calendar</span>
         </div>
@@ -45,7 +45,7 @@ function MockSidebarContent() {
         {['Day', 'Week', 'Month'].map((label) => (
           <div
             key={label}
-            className="text-muted-foreground hover:bg-state-hover rounded-lg px-3 py-1.5 text-sm"
+            className="text-muted-foreground hover:bg-state-hover rounded-lg px-4 py-2 text-sm"
           >
             {label}
           </div>
@@ -204,7 +204,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           デフォルト状態（コンテンツスロットとフッターアクション付き）
         </p>
         <div className="h-[500px] w-64">
@@ -214,7 +214,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           コンテンツなし（children スロットが空の状態）
         </p>
         <div className="h-[400px] w-64">
@@ -226,7 +226,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           インタラクティブデモ（開閉切り替え）
         </p>
         <InteractiveDemo sidebarLabel="サイドバー（インタラクティブ）" />

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TagIcon } from '@/features/tags';
 
 const meta = {
   title: 'Patterns/Search',
@@ -52,26 +53,26 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">トリガー</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">トリガー</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">基本検索</td>
-                  <td className="py-3">シンプルなテキスト検索</td>
-                  <td className="py-3">常時表示</td>
+                  <td className="py-2 font-bold">基本検索</td>
+                  <td className="py-2">シンプルなテキスト検索</td>
+                  <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">グローバル検索</td>
-                  <td className="py-3">タグ一覧 + ブロック検索</td>
-                  <td className="py-3">⌘K</td>
+                  <td className="py-2 font-bold">グローバル検索</td>
+                  <td className="py-2">タグ一覧 + ブロック検索</td>
+                  <td className="py-2">⌘K</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">フィルター検索</td>
-                  <td className="py-3">条件を絞り込んで検索</td>
-                  <td className="py-3">常時表示</td>
+                  <td className="py-2 font-bold">フィルター検索</td>
+                  <td className="py-2">条件を絞り込んで検索</td>
+                  <td className="py-2">常時表示</td>
                 </tr>
               </tbody>
             </table>
@@ -87,24 +88,24 @@ export const Overview: Story = {
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">アイコン付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">アイコン付き</h3>
               <div className="relative max-w-md">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input placeholder="検索..." className="pl-9" />
+                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
+                <Input placeholder="検索..." className="pl-8" />
               </div>
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">クリアボタン付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">クリアボタン付き</h3>
               <SearchWithClear />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">ショートカット表示</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">ショートカット表示</h3>
               <div className="relative max-w-md">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input placeholder="検索..." className="pr-16 pl-9" />
-                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 rounded-lg px-2 py-0.5 text-xs">
+                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
+                <Input placeholder="検索..." className="pr-16 pl-8" />
+                <kbd className="bg-muted text-muted-foreground absolute top-1/2 right-4 -translate-y-1/2 rounded-lg px-2 py-1 text-xs">
                   ⌘K
                 </kbd>
               </div>
@@ -113,8 +114,8 @@ export const Overview: Story = {
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`<div className="relative">
-  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4" />
-  <Input placeholder="検索..." className="pl-9" />
+  <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4" />
+  <Input placeholder="検索..." className="pl-8" />
 </div>`}
           </pre>
         </section>
@@ -128,12 +129,12 @@ export const Overview: Story = {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">空状態（タグ一覧）</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">空状態（タグ一覧）</h3>
               <GlobalSearchEmpty />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 検索結果（タグ + ブロック）
               </h3>
               <GlobalSearchWithResults />
@@ -143,7 +144,7 @@ export const Overview: Story = {
           <div className="bg-container mt-4 rounded-lg p-4">
             <h3 className="mb-2 text-sm font-bold">動作ルール</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
-              <li>空状態 → タグ一覧（カラードット + タグ名）</li>
+              <li>空状態 → タグ一覧（TagIcon + タグ名）</li>
               <li>入力時 → タグ名マッチ + ブロックのメモ検索</li>
               <li>タグ選択 → showOnlyTag でフィルター適用</li>
               <li>ブロック選択 → カレンダーでその日に遷移 + Inspector表示</li>
@@ -166,7 +167,7 @@ export const Overview: Story = {
     <Badge key={filter} variant="secondary">
       {filter}
       <button onClick={() => removeFilter(filter)}>
-        <X className="size-3" />
+        <X className="size-3.5" />
       </button>
     </Badge>
   ))}
@@ -183,11 +184,11 @@ export const Overview: Story = {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 結果あり（ハイライト）
               </h3>
               <div className="border-border divide-border divide-y rounded-lg border">
-                <div className="p-3">
+                <div className="p-4">
                   <p className="font-medium">
                     <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
@@ -202,7 +203,7 @@ export const Overview: Story = {
                     進捗を確認
                   </p>
                 </div>
-                <div className="p-3">
+                <div className="p-4">
                   <p className="font-medium">
                     <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
@@ -222,7 +223,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">結果なし</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">結果なし</h3>
               <div className="border-border rounded-lg border p-8 text-center">
                 <Search className="text-muted-foreground mx-auto size-8" />
                 <p className="mt-2 font-medium">結果が見つかりません</p>
@@ -266,17 +267,17 @@ function SearchWithClear() {
 
   return (
     <div className="relative max-w-md">
-      <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
       <Input
         placeholder="検索..."
-        className="pr-9 pl-9"
+        className="pr-8 pl-8"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
       {query && (
         <button
           type="button"
-          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2"
           onClick={() => setQuery('')}
         >
           <X className="size-4" />
@@ -288,11 +289,11 @@ function SearchWithClear() {
 
 function GlobalSearchEmpty() {
   const tags = [
-    { name: 'Dev:API', color: 'bg-tag-green' },
-    { name: 'Dev:Frontend', color: 'bg-tag-green' },
-    { name: 'Design', color: 'bg-tag-blue' },
-    { name: 'Meeting', color: 'bg-tag-violet' },
-    { name: 'Learning', color: 'bg-tag-orange' },
+    { name: 'Dev:API', icon: 'code', color: 'green' },
+    { name: 'Dev:Frontend', icon: 'layout', color: 'green' },
+    { name: 'Design', icon: 'palette', color: 'blue' },
+    { name: 'Meeting', icon: 'users', color: 'violet' },
+    { name: 'Learning', icon: null, color: 'orange' },
   ];
 
   return (
@@ -303,7 +304,7 @@ function GlobalSearchEmpty() {
           <CommandGroup heading="Tags">
             {tags.map((tag) => (
               <CommandItem key={tag.name} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tag.color}`} />
+                <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                 <span>{tag.name}</span>
               </CommandItem>
             ))}
@@ -315,13 +316,14 @@ function GlobalSearchEmpty() {
 }
 
 function GlobalSearchWithResults() {
-  const tags = [{ name: 'Dev:API', color: 'bg-tag-green' }];
+  const tags = [{ name: 'Dev:API', icon: 'code', color: 'green' }];
 
   const blocks = [
     {
       id: '1',
       tagName: 'Dev:API',
-      tagColor: 'bg-tag-green',
+      tagIcon: 'code',
+      tagColor: 'green',
       date: '3/6',
       time: '9:00 - 10:30',
       description: 'Refactored auth API endpoints',
@@ -329,7 +331,8 @@ function GlobalSearchWithResults() {
     {
       id: '2',
       tagName: 'Dev:API',
-      tagColor: 'bg-tag-green',
+      tagIcon: 'code',
+      tagColor: 'green',
       date: '3/5',
       time: '14:00 - 16:00',
       description: 'API design notes',
@@ -345,7 +348,7 @@ function GlobalSearchWithResults() {
           <CommandGroup heading="Tags">
             {tags.map((tag) => (
               <CommandItem key={tag.name} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tag.color}`} />
+                <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
                 <span>
                   <mark className="bg-state-active text-state-active-foreground rounded-lg">
                     API
@@ -357,9 +360,14 @@ function GlobalSearchWithResults() {
           <CommandGroup heading="Blocks">
             {blocks.map((block) => (
               <CommandItem key={block.id} value={block.id} className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${block.tagColor}`} />
+                <TagIcon
+                  icon={block.tagIcon}
+                  color={block.tagColor}
+                  size="sm"
+                  className="shrink-0"
+                />
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <div className="text-muted-foreground flex items-center gap-1 text-xs">
                     <span className="font-medium">{block.tagName}</span>
                     <span>{block.date}</span>
                     <span>{block.time}</span>
@@ -391,13 +399,13 @@ function FilterSearch() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
           <Input
             placeholder="検索..."
-            className="pl-9"
+            className="pl-8"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -412,7 +420,7 @@ function FilterSearch() {
                 <button
                   key={filter}
                   type="button"
-                  className={`hover:bg-state-hover w-full rounded-lg px-3 py-2 text-left text-sm ${
+                  className={`hover:bg-state-hover w-full rounded-lg px-4 py-2 text-left text-sm ${
                     filters.includes(filter) ? 'bg-state-active' : ''
                   }`}
                   onClick={() =>
@@ -435,9 +443,9 @@ function FilterSearch() {
               <button
                 type="button"
                 onClick={() => removeFilter(filter)}
-                className="hover:bg-muted ml-1 rounded-full p-0.5"
+                className="hover:bg-muted ml-1 rounded-full p-1"
               >
-                <X className="size-3" />
+                <X className="size-3.5" />
               </button>
             </Badge>
           ))}

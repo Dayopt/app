@@ -2,9 +2,11 @@
 
 import { BarChart3 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { EmptyState } from '@/components/common/EmptyState';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -94,13 +96,13 @@ export function StatsView({ className }: StatsViewProps) {
   if (hasNoData) {
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-          <BarChart3 className="text-muted-foreground size-10" />
-          <div className="text-center">
-            <p className="text-foreground text-sm font-medium">{t('emptyTitle')}</p>
-            <p className="text-muted-foreground mt-1 text-xs">{t('emptyDescription')}</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={BarChart3}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          size="sm"
+          centered
+        />
       </div>
     );
   }

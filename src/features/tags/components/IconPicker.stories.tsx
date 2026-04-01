@@ -74,7 +74,7 @@ export const ColorSync: Story = {
 
     return (
       <div className="max-w-sm">
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-4 flex items-center gap-2">
           <span className="text-muted-foreground text-sm">色:</span>
           {colors.map((c, i) => (
             <button

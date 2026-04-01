@@ -46,7 +46,7 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
     <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.recentBlocks.title')} defaultOpen>
         {itemsWithTags.length === 0 ? (
-          <div className="px-2 py-3">
+          <div className="px-2 py-4">
             <p className="text-muted-foreground text-xs">{t('sidebar.recentBlocks.empty')}</p>
             <p className="text-muted-foreground mt-1 text-xs">
               {t('sidebar.recentBlocks.emptyHint')}
@@ -58,7 +58,6 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
               <BlockItem
                 key={`${item.tagId}-${item.durationMinutes}`}
                 tagName={item.tag.name}
-                tagColor={item.tag.color}
                 durationMinutes={item.durationMinutes}
                 iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
                 onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}

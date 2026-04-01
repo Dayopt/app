@@ -241,7 +241,7 @@ export function ValueRankingSettings() {
       </p>
       <div className="space-y-1">
         {autoSave.values.rankedValues.map((keyword, index) => (
-          <div key={keyword} className="flex items-center gap-3 py-1.5">
+          <div key={keyword} className="flex items-center gap-2 py-2">
             <span className="text-muted-foreground w-5 text-right text-sm">{index + 1}.</span>
             <span className="text-foreground text-sm">
               {t(`settings.values.keywords.${keyword}`)}
@@ -409,7 +409,7 @@ function SortableRankItem({ id, rank, label }: SortableRankItemProps) {
       ref={setDroppableNodeRef}
       style={style}
       className={cn(
-        'border-border bg-background flex items-center gap-3 rounded-lg border px-3 py-2',
+        'border-border bg-background flex items-center gap-2 rounded-lg border px-4 py-2',
         isDragging && 'opacity-40',
       )}
     >
@@ -435,7 +435,7 @@ interface RankItemOverlayProps {
 
 function RankItemOverlay({ label }: RankItemOverlayProps) {
   return (
-    <div className="border-primary bg-background flex items-center gap-3 rounded-lg border-2 px-3 py-2 shadow-sm">
+    <div className="border-primary bg-background flex items-center gap-2 rounded-lg border-2 px-4 py-2 shadow-sm">
       <span className="text-foreground flex-1 text-sm">{label}</span>
       <GripVertical className="text-muted-foreground size-4" />
     </div>

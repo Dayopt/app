@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Docs/Architecture/ADR/005 時間不変原則" />
+<Meta title="Docs/Architecture/ADR/005 Time Immutability" />
 
 # ADR-005: 時間不変原則
 
@@ -32,23 +32,26 @@ Dayoptの核心である「タイムボクシング × 時間記録」の信頼�
 
 時間位置から3状態を自動判定（ADR-001の統合モデルが前提）：
 
-| 状態 | 判定条件 |
-| --- | --- |
-| upcoming | `start_time > now` |
-| active | `start_time <= now < end_time` |
-| past | `end_time <= now` |
+| 状態     | 判定条件                       |
+| -------- | ------------------------------ |
+| upcoming | `start_time > now`             |
+| active   | `start_time <= now < end_time` |
+| past     | `end_time <= now`              |
 
 判定関数: `getEntryState()` / `isEntryPast()` — `src/features/entry/lib/entry-status.ts`
 
 ### 操作制約マトリクス
 
 **過去ブロック — 禁止:**
+
 - ドラッグ移動、リサイズ、予定時間（scheduled start/end）編集、日付変更
 
 **過去ブロック — 許可:**
+
 - 記録時間（actual start/end）、充実度スコア、メモ、タグ、削除
 
 **未来/進行中ブロック:**
+
 - 全操作可能。ただし未来ブロックを過去の日付へドラッグ移動することは拒否
 
 ### 二重防御パターン

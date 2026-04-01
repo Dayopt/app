@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { CURATED_ICONS, DEFAULT_TAG_ICON, kebabToPascal } from '../lib/curated-icons';
 
 const SIZE_MAP = {
-  sm: { icon: 'size-4', dot: 'size-3' },
+  sm: { icon: 'size-4', dot: 'size-3.5' },
   md: { icon: 'size-5', dot: 'size-3.5' },
   lg: { icon: 'size-8', dot: 'size-8' },
 } as const;

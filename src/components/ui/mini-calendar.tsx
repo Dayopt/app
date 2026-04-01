@@ -245,7 +245,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-0.5 rounded-lg"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded-lg"
             onClick={handlePrevMonth}
             aria-label={tActions('previousMonth')}
           >
@@ -294,7 +294,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
             variant="ghost"
             size="sm"
             icon
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -mr-0.5 rounded-lg"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground rounded-lg"
             onClick={handleNextMonth}
             aria-label={tActions('nextMonth')}
           >
@@ -335,26 +335,27 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                     disabled={isDisabled}
                     aria-label={format(date, 'yyyy-MM-dd')}
                     className={cn(
-                      // ベーススタイル - 高さ32px、幅はグリッドに委ねる
+                      // ベーススタイル - セルは h-8、ハイライトは内側 span で制御
                       'flex h-8 items-center justify-center text-sm transition-colors',
                       // 無効化（minDateより前）
                       isDisabled && 'pointer-events-none opacity-30',
                       // 現在の月以外は薄く
                       !isCurrentMonth && !isDisabled && 'text-muted-foreground',
-                      // ホバー（今日以外）
-                      !isToday && !isDisabled && 'hover:bg-state-hover hover:rounded-lg',
-                      // 今日: primary（ホバーの影響を受けない）
-                      isToday &&
-                        !isDisabled &&
-                        'bg-primary text-primary-foreground rounded-lg font-bold',
-                      // 選択中（今日以外）
-                      isSelected &&
-                        !isToday &&
-                        !isDisabled &&
-                        'bg-state-hover text-foreground rounded-lg',
                     )}
                   >
-                    {format(date, 'd')}
+                    <span
+                      className={cn(
+                        'flex size-6 items-center justify-center rounded-lg transition-colors',
+                        // ホバー（今日以外）
+                        !isToday && !isDisabled && 'hover:bg-state-hover',
+                        // 今日: primary
+                        isToday && !isDisabled && 'bg-primary text-primary-foreground font-bold',
+                        // 選択中（今日以外）
+                        isSelected && !isToday && !isDisabled && 'bg-state-hover text-foreground',
+                      )}
+                    >
+                      {format(date, 'd')}
+                    </span>
                   </button>
                 );
               })}

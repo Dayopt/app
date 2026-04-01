@@ -46,7 +46,7 @@ export function MetricCard({
   if (isLoading) {
     return (
       <Card className={cn('gap-0 border-none py-0', isHero && 'col-span-2')}>
-        <CardContent className="p-3 md:p-6">
+        <CardContent className="p-4 md:p-6">
           <div className="animate-pulse space-y-2">
             <div className="bg-muted h-3 w-16 rounded-lg" />
             <div
@@ -64,9 +64,9 @@ export function MetricCard({
 
   return (
     <Card className={cn('gap-0 border-none py-0', isHero && 'col-span-2')}>
-      <CardContent className="flex h-full flex-col justify-between p-3 md:p-6">
+      <CardContent className="flex h-full flex-col justify-between p-4 md:p-6">
         {/* Label + Icon */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {Icon && <Icon className={cn('text-muted-foreground', isHero ? 'size-4' : 'size-3.5')} />}
           <p className="text-muted-foreground text-xs font-medium">{label}</p>
         </div>

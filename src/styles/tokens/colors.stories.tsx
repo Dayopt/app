@@ -43,7 +43,7 @@ function ColorSwatch({
       <div className="min-w-0 flex-1">
         <code className="text-sm font-bold">{tailwindClass}</code>
         {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
-        {oklch && <p className="mt-0.5 font-mono text-xs opacity-40">{oklch}</p>}
+        {oklch && <p className="mt-1 font-mono text-xs opacity-40">{oklch}</p>}
       </div>
     </div>
   );
@@ -65,8 +65,8 @@ export const AllColors: Story = {
       <h1 className="mb-4 text-2xl font-bold">カラートークン</h1>
 
       {/* ── 設計原則 ── */}
-      <div className="bg-card border-border mb-10 rounded-xl border p-6">
-        <h2 className="mb-3 text-lg font-bold">設計原則</h2>
+      <div className="bg-card border-border mb-8 rounded-lg border p-6">
+        <h2 className="mb-4 text-lg font-bold">設計原則</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
         </p>
@@ -155,7 +155,7 @@ export const AllColors: Story = {
       </ColorGroup>
 
       {/* ━━ 2. Semantic ━━ */}
-      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+      <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-bold tracking-widest uppercase">
         2. Semantic — 意味があるときだけ
       </h2>
       <p className="text-muted-foreground -mt-4 mb-6 text-xs">
@@ -235,7 +235,7 @@ export const AllColors: Story = {
       </ColorGroup>
 
       {/* ━━ 3. Primary ━━ */}
-      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+      <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-bold tracking-widest uppercase">
         3. Primary — ブランドアクション
       </h2>
 
@@ -253,7 +253,7 @@ export const AllColors: Story = {
       </ColorGroup>
 
       {/* ━━ 4. State ━━ */}
-      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+      <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-bold tracking-widest uppercase">
         4. State — インタラクション
       </h2>
       <p className="text-muted-foreground -mt-4 mb-6 text-xs">
@@ -283,12 +283,12 @@ export const AllColors: Story = {
         <ColorSwatch
           tailwindClass="bg-state-active"
           description="選択中"
-          oklch="oklch(0.95 0.025 237) | oklch(0.45 0.14 266)"
+          oklch="oklch(0.95 0.025 260) | oklch(0.45 0.14 260)"
         />
         <ColorSwatch
           tailwindClass="text-state-active-foreground"
           description="アクティブ状態テキスト"
-          oklch="oklch(0.38 0.14 266) | oklch(0.88 0.06 254)"
+          oklch="oklch(0.38 0.14 260) | oklch(0.88 0.06 260)"
         />
       </ColorGroup>
 
@@ -321,7 +321,7 @@ export const AllColors: Story = {
       </ColorGroup>
 
       {/* ━━ 5. Domain ━━ */}
-      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+      <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-bold tracking-widest uppercase">
         5. Domain — Dayopt 固有
       </h2>
 
@@ -403,16 +403,49 @@ export const AllColors: Story = {
         ))}
       </ColorGroup>
 
+      <ColorGroup title="Temporal（現在時刻）">
+        <ColorSwatch
+          tailwindClass="bg-now-indicator"
+          description="now line, now 時刻バッジ背景"
+          oklch="oklch(0.55 0.17 25) | oklch(0.65 0.15 25)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-now-indicator-foreground"
+          description="foreground"
+          oklch="oklch(1 0 0) | oklch(1 0 0)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-now-indicator-muted"
+          description="other days line"
+          oklch="oklch(0.55 0.17 25 / 0.3) | oklch(0.65 0.15 25 / 0.3)"
+        />
+      </ColorGroup>
+
       <ColorGroup title="Chart（比較用5色）">
-        <ColorSwatch tailwindClass="bg-chart-1" oklch="oklch(0.62 0.14 260)" />
-        <ColorSwatch tailwindClass="bg-chart-2" oklch="oklch(0.55 0.22 263)" />
-        <ColorSwatch tailwindClass="bg-chart-3" oklch="oklch(0.49 0.22 264)" />
-        <ColorSwatch tailwindClass="bg-chart-4" oklch="oklch(0.42 0.18 266)" />
-        <ColorSwatch tailwindClass="bg-chart-5" oklch="oklch(0.38 0.14 266)" />
+        <ColorSwatch
+          tailwindClass="bg-chart-1"
+          oklch="oklch(0.6231 0.14 260) | oklch(0.7137 0.1434 254.624)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-2"
+          oklch="oklch(0.5461 0.2152 262.8809) | oklch(0.6231 0.188 260)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-3"
+          oklch="oklch(0.4882 0.2172 264.3763) | oklch(0.5461 0.2152 262.8809)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-4"
+          oklch="oklch(0.4244 0.1809 265.6377) | oklch(0.55 0.2 264.38)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-5"
+          oklch="oklch(0.3791 0.1378 265.5222) | oklch(0.5 0.16 265.64)"
+        />
       </ColorGroup>
 
       {/* ━━ 6. Aliases ━━ */}
-      <h2 className="text-muted-foreground mt-10 mb-6 text-xs font-bold tracking-widest uppercase">
+      <h2 className="text-muted-foreground mt-8 mb-6 text-xs font-bold tracking-widest uppercase">
         6. Aliases — shadcn/ui 互換
       </h2>
 
@@ -492,11 +525,11 @@ export const Surface: Story = {
         </p>
 
         {/* ── Elevation bar: 左=暗い → 右=明るい ── */}
-        <h3 className="mb-3 font-bold">Elevation（左:沈む → 右:浮く）</h3>
-        <p className="text-muted-foreground mb-3 text-xs">
+        <h3 className="mb-4 font-bold">Elevation（左:沈む → 右:浮く）</h3>
+        <p className="text-muted-foreground mb-2 text-xs">
           Storybook ツールバーの 🌙 で Light/Dark を切り替えると全プレビューが連動します。
         </p>
-        <div className="mb-2 flex gap-0 overflow-hidden rounded-xl">
+        <div className="mb-2 flex gap-0 overflow-hidden rounded-lg">
           {surfaces.map(({ token, bg, role }) => (
             <div
               key={token}
@@ -507,7 +540,7 @@ export const Surface: Story = {
             </div>
           ))}
         </div>
-        <div className="mb-8 flex overflow-hidden rounded-xl">
+        <div className="mb-8 flex overflow-hidden rounded-lg">
           <div className="bg-muted flex flex-1 flex-col items-center justify-center py-4">
             <div className="text-foreground text-sm font-bold">muted</div>
             <div className="text-muted-foreground text-xs">入力欄・well</div>
@@ -515,20 +548,20 @@ export const Surface: Story = {
         </div>
 
         {/* ── App Layout Preview ── */}
-        <h3 className="mb-3 font-bold">Preview</h3>
+        <h3 className="mb-4 font-bold">Preview</h3>
         <div
-          className="bg-background border-border mb-8 grid overflow-hidden rounded-xl border"
+          className="bg-background border-border mb-8 grid overflow-hidden rounded-lg border"
           style={{ gridTemplateColumns: '80px 1fr', height: 200 }}
         >
           <div
-            className="bg-container flex flex-col gap-1 border-r p-3"
+            className="bg-container flex flex-col gap-1 border-r p-2"
             style={{ borderColor: 'var(--border)' }}
           >
             <div className="bg-foreground h-1.5 w-4/5 rounded opacity-25" />
             <div className="bg-foreground h-1.5 w-3/5 rounded opacity-25" />
             <div className="bg-foreground h-1.5 w-2/3 rounded opacity-25" />
           </div>
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-2 p-4">
             <div
               className="bg-card flex flex-1 flex-col gap-2 rounded-lg p-4"
               style={{ boxShadow: 'var(--shadow-card)' }}
@@ -541,15 +574,15 @@ export const Surface: Story = {
         </div>
 
         {/* ── Spec Tables ── */}
-        <h3 className="mb-3 font-bold">Surface</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">Surface</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark (H60 C.008)</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark (H60 C.008)</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">役割</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -580,15 +613,15 @@ export const Surface: Story = {
           </table>
         </div>
 
-        <h3 className="mb-3 font-bold">Text</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">Text</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">役割</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -607,14 +640,14 @@ export const Surface: Story = {
         </div>
 
         {/* Border + Shadow (visual + values) */}
-        <h3 className="mb-3 font-bold">Border / Shadow</h3>
-        <div className="bg-card border-border mb-2 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">Border / Shadow</h3>
+        <div className="bg-card border-border mb-2 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -664,7 +697,7 @@ export const Surface: Story = {
         </div>
         <details className="text-muted-foreground mb-6 text-xs">
           <summary className="cursor-pointer py-2 font-bold">Shadow コピペ用 oklch 値</summary>
-          <div className="bg-card border-border mt-2 space-y-3 rounded-lg border p-4 font-mono">
+          <div className="bg-card border-border mt-2 space-y-4 rounded-lg border p-4 font-mono">
             <div>
               <div className="text-foreground mb-1 font-sans text-xs font-bold">
                 shadow-sm (light)
@@ -778,17 +811,17 @@ export const Semantic: Story = {
         </div>
 
         {/* oklch spec table */}
-        <h3 className="mb-3 font-bold">oklch 値</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">oklch 値</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">色</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Hue</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light accent</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light bg</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark accent</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark bg</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">色</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Hue</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light accent</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light bg</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark accent</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark bg</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -814,10 +847,10 @@ export const Semantic: Story = {
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
           {semanticColors.map(({ name, text }) => (
             <div key={name} className="border-border flex gap-4 rounded-lg border p-4">
-              <div className="bg-card flex flex-1 items-center justify-center rounded p-3">
+              <div className="bg-card flex flex-1 items-center justify-center rounded p-4">
                 <span className={`${text} font-bold`}>{name} on card</span>
               </div>
-              <div className="bg-background flex flex-1 items-center justify-center rounded p-3">
+              <div className="bg-background flex flex-1 items-center justify-center rounded p-4">
                 <span className={`${text} font-bold`}>{name} on bg</span>
               </div>
             </div>
@@ -876,8 +909,8 @@ export const Text: Story = {
         </p>
 
         {/* ── Hierarchy bar ── */}
-        <h3 className="mb-3 font-bold">Hierarchy（左:主要 → 右:補助）</h3>
-        <div className="bg-background border-border mb-8 flex overflow-hidden rounded-xl border">
+        <h3 className="mb-4 font-bold">Hierarchy（左:主要 → 右:補助）</h3>
+        <div className="bg-background border-border mb-8 flex overflow-hidden rounded-lg border">
           <div className="flex flex-1 flex-col items-center justify-center py-8">
             <span className="text-foreground text-lg font-bold">foreground</span>
             <span className="text-foreground text-sm">主要テキスト</span>
@@ -889,19 +922,19 @@ export const Text: Story = {
         </div>
 
         {/* ── Contrast check: on card / on background ── */}
-        <h3 className="mb-3 font-bold">コントラスト確認</h3>
-        <p className="text-muted-foreground mb-3 text-xs">
+        <h3 className="mb-4 font-bold">コントラスト確認</h3>
+        <p className="text-muted-foreground mb-2 text-xs">
           Storybook ツールバーの 🌙 で Light/Dark を切り替えて確認。
         </p>
         <div className="mb-8 grid grid-cols-2 gap-4">
-          <div className="bg-card rounded-xl p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="bg-card rounded-lg p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
             <div className="text-muted-foreground mb-1 text-xs">on card</div>
             <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
             <p className="text-muted-foreground mt-2 text-sm">
               muted-foreground — 説明文やキャプション
             </p>
           </div>
-          <div className="bg-background border-border rounded-xl border p-6">
+          <div className="bg-background border-border rounded-lg border p-6">
             <div className="text-muted-foreground mb-1 text-xs">on background</div>
             <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
             <p className="text-muted-foreground mt-2 text-sm">
@@ -911,15 +944,15 @@ export const Text: Story = {
         </div>
 
         {/* ── Spec table: Neutral ── */}
-        <h3 className="mb-3 font-bold">Neutral</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">Neutral</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">Token</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">役割</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Token</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">役割</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -941,11 +974,11 @@ export const Text: Story = {
         </div>
 
         {/* ── Spec table: Semantic ── */}
-        <h3 className="mb-3 font-bold">Semantic（意味があるときだけ）</h3>
-        <p className="text-muted-foreground mb-3 text-xs">
+        <h3 className="mb-4 font-bold">Semantic（意味があるときだけ）</h3>
+        <p className="text-muted-foreground mb-2 text-xs">
           値は Color &gt; Semantic の accent と同じ。text-* と bg-* が同一トークンを参照。
         </p>
-        <div className="bg-card border-border mb-6 rounded-xl border">
+        <div className="bg-card border-border mb-6 rounded-lg border">
           <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-5">
             {semanticTexts.map(({ token, cls, label }) => (
               <div key={token} className="flex flex-col items-center gap-2">
@@ -962,8 +995,8 @@ export const Text: Story = {
         </div>
 
         {/* ── Usage guide ── */}
-        <h3 className="mb-3 font-bold">使い分けガイド</h3>
-        <div className="bg-card border-border rounded-xl border p-6">
+        <h3 className="mb-4 font-bold">使い分けガイド</h3>
+        <div className="bg-card border-border rounded-lg border p-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
               <p className="text-success font-bold">Do</p>
@@ -1023,17 +1056,17 @@ export const Tags: Story = {
         </p>
 
         {/* ── Base + Tint 並列表示 ── */}
-        <h3 className="mb-3 font-bold">Base / Tint 一覧</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <h3 className="mb-4 font-bold">Base / Tint 一覧</h3>
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-3 text-left text-xs font-bold">色</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Base</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Tint</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Hue</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Light base</th>
-                <th className="px-4 py-3 text-left text-xs font-bold">Dark base</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">色</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Base</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Tint</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Hue</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Light base</th>
+                <th className="px-4 py-2 text-left text-xs font-bold">Dark base</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -1071,8 +1104,8 @@ export const Tags: Story = {
         </div>
 
         {/* ── Tint 構造 ── */}
-        <h3 className="mb-3 font-bold">Tint（EntryCard 背景色）</h3>
-        <p className="text-muted-foreground mb-3 text-xs">
+        <h3 className="mb-4 font-bold">Tint（EntryCard 背景色）</h3>
+        <p className="text-muted-foreground mb-2 text-xs">
           Light: L=0.92 C=0.05。Dark: L=0.28 C=0.06（低明度でも色味を識別可能）。
         </p>
         <div className="mb-8 flex flex-wrap gap-2">
@@ -1089,13 +1122,13 @@ export const Tags: Story = {
         </div>
 
         {/* ── 使用例 ── */}
-        <h3 className="mb-3 font-bold">使用例</h3>
-        <div className="bg-card border-border rounded-xl border p-6">
+        <h3 className="mb-4 font-bold">使用例</h3>
+        <div className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4 flex flex-wrap gap-2">
             {tags.map(({ name }) => (
               <span
                 key={name}
-                className="rounded-full border px-3 py-1 text-sm capitalize"
+                className="rounded-full border px-2 py-1 text-sm capitalize"
                 style={{ borderColor: `var(--tag-${name})`, color: `var(--tag-${name})` }}
               >
                 {name}
@@ -1177,7 +1210,7 @@ export const DosDonts: Story = {
 
         <div className="grid max-w-5xl gap-6">
           {rules.map(({ title, doCode, dontCode, reason }) => (
-            <section key={title} className="bg-card border-border rounded-xl border p-6">
+            <section key={title} className="bg-card border-border rounded-lg border p-6">
               <h2 className="mb-4 text-lg font-bold">{title}</h2>
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="border-success space-y-2 border-l-4 pl-4">
@@ -1229,7 +1262,7 @@ function TimelinePreview({
         return (
           <div
             key={hour}
-            className={`absolute left-3 text-xs ${
+            className={`absolute left-4 text-xs ${
               zone?.level === 'deep'
                 ? 'text-chronotype-deep font-bold'
                 : zone?.level === 'ease'
@@ -1250,7 +1283,7 @@ function TimelinePreview({
         .map((z) => (
           <div
             key={z.level}
-            className={`absolute right-3 text-xs font-bold ${
+            className={`absolute right-4 text-xs font-bold ${
               z.level === 'deep' ? 'text-chronotype-deep' : 'text-chronotype-ease'
             }`}
             style={{ top: `${((z.startHour + z.endHour) / 2 / 24) * 100}%` }}
@@ -1273,19 +1306,19 @@ export const Chronotype: Story = {
     return (
       <div className="space-y-8">
         {/* ===== 概要 ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Chronotype タイムライン</h2>
           <p className="text-muted-foreground text-sm">
             ユーザーのクロノタイプに応じて、タイムラインに deep / ease ゾーンを視覚的に表示する。
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="bg-muted rounded-lg p-3">
+            <div className="bg-muted rounded-lg p-4">
               <p className="text-xs font-bold">背景 gradient</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 低彩度の帯で「ここはゾーン内」を伝える
               </p>
             </div>
-            <div className="bg-muted rounded-lg p-3">
+            <div className="bg-muted rounded-lg p-4">
               <p className="text-xs font-bold">時刻ラベル色</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 高彩度テキスト + 太字でゾーン範囲を強調
@@ -1295,17 +1328,17 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== カラーパレット ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h3 className="mb-4 text-sm font-bold">カラーパレット（2 色体制）</h3>
           <div className="grid gap-6 sm:grid-cols-2">
             {/* Deep */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <p className="text-chronotype-deep text-xs font-bold tracking-widest uppercase">
                 Deep（H=70 暖色）
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div
-                  className="border-border size-10 shrink-0 rounded-md border"
+                  className="border-border size-10 shrink-0 rounded-lg border"
                   style={{ backgroundColor: 'oklch(0.955 0.008 70)' }}
                 />
                 <div>
@@ -1313,8 +1346,8 @@ export const Chronotype: Story = {
                   <p className="font-mono text-xs opacity-40">L0.955 C0.008</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-chronotype-deep size-10 shrink-0 rounded-md" />
+              <div className="flex items-center gap-2">
+                <div className="bg-chronotype-deep size-10 shrink-0 rounded-lg" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.65/0.15 — Dark 0.80/0.12</p>
@@ -1322,13 +1355,13 @@ export const Chronotype: Story = {
               </div>
             </div>
             {/* Ease */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <p className="text-chronotype-ease text-xs font-bold tracking-widest uppercase">
                 Ease（H=150 寒色）
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div
-                  className="border-border size-10 shrink-0 rounded-md border"
+                  className="border-border size-10 shrink-0 rounded-lg border"
                   style={{ backgroundColor: 'oklch(0.955 0.008 150)' }}
                 />
                 <div>
@@ -1336,8 +1369,8 @@ export const Chronotype: Story = {
                   <p className="font-mono text-xs opacity-40">L0.955 C0.008</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-chronotype-ease size-10 shrink-0 rounded-md" />
+              <div className="flex items-center gap-2">
+                <div className="bg-chronotype-ease size-10 shrink-0 rounded-lg" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.55/0.15 — Dark 0.75/0.12</p>
@@ -1348,7 +1381,7 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== タイムラインプレビュー ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-bold">タイムラインプレビュー</h3>
             <div className="flex gap-1">
@@ -1357,7 +1390,7 @@ export const Chronotype: Story = {
                   key={type}
                   type="button"
                   onClick={() => setSelectedType(type)}
-                  className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                  className={`rounded-full px-2 py-1 text-xs font-bold transition-colors ${
                     selectedType === type
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground hover:bg-state-hover'
@@ -1386,7 +1419,7 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== 仕様 ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h3 className="mb-4 text-sm font-bold">oklch 仕様</h3>
           <table className="w-full text-sm">
             <thead>

@@ -184,7 +184,7 @@ export function MFAVerifyForm({
               fill
               loading="lazy"
               sizes="(min-width: 768px) 50vw, 0vw"
-              className="object-cover dark:brightness-[0.2] dark:grayscale"
+              className="object-cover dark:brightness-20 dark:grayscale"
             />
           </div>
         </CardContent>

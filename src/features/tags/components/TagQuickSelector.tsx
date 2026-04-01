@@ -108,9 +108,9 @@ function CreateTagFormView({
         </span>
       </button>
 
-      <div className="flex flex-col gap-5 px-4 py-3">
+      <div className="flex flex-col gap-4 px-4 py-2">
         {/* 名前 */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label htmlFor="create-tag-name" className="text-muted-foreground text-sm">
             {t('tagSelector.createPlaceholder')}
           </label>
@@ -124,13 +124,13 @@ function CreateTagFormView({
                 handleSubmit();
               }
             }}
-            className="border-border bg-container focus:ring-primary min-h-11 w-full rounded-lg border px-3 text-sm outline-none focus:ring-2"
+            className="border-border bg-container focus:ring-primary min-h-11 w-full rounded-lg border px-4 text-sm outline-none focus:ring-2"
             autoFocus
           />
         </div>
 
         {/* 色 */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">{t('tagSelector.color')}</span>
           <div className="flex flex-wrap gap-2">
             {TAG_COLOR_NAMES.map((color) => {
@@ -158,21 +158,21 @@ function CreateTagFormView({
         </div>
 
         {/* アイコン */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">{t('tagSelector.icon')}</span>
           <IconPicker value={selectedIcon} onChange={setSelectedIcon} color={effectiveColor} />
         </div>
 
         {/* グループ（任意） */}
         {parentTags.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             <span className="text-muted-foreground text-sm">{t('tagSelector.group')}</span>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               <button
                 type="button"
                 onClick={() => setSelectedGroup(null)}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-sm transition-colors',
+                  'rounded-full border px-2 py-1 text-sm transition-colors',
                   !selectedGroup
                     ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                     : 'border-border hover:bg-state-hover text-muted-foreground',
@@ -186,7 +186,7 @@ function CreateTagFormView({
                   type="button"
                   onClick={() => setSelectedGroup(tag.name)}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors',
+                    'flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors',
                     selectedGroup === tag.name
                       ? 'border-primary bg-primary-state-selected text-foreground font-medium'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
@@ -245,9 +245,9 @@ function TagGridCell({
       }
       onMouseLeave={onHoverEnd}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
-        isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        isSelected ? 'ring-primary ring-2' : 'hover:bg-state-hover',
         colorClasses.tint,
       )}
     >
@@ -255,7 +255,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
         <span className="truncate">{displayName}</span>
         {hasChildren && (
           <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
@@ -365,7 +365,7 @@ function TagQuickSelectorContent({
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-2">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -395,7 +395,7 @@ function TagQuickSelectorContent({
     <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
       {/* タグゼロ時: サンプルタグ候補チップ */}
       {isTagZero && (
-        <div className="space-y-3 px-3 py-4">
+        <div className="space-y-2 px-4 py-4">
           <div className="text-center">
             <p className="text-foreground text-sm font-medium">{t('tagSelector.emptyTitle')}</p>
             <p className="text-muted-foreground mt-1 text-xs">
@@ -410,7 +410,7 @@ function TagQuickSelectorContent({
                   key={nameKey}
                   type="button"
                   onClick={() => onCreateAndSelect(name, color, icon)}
-                  className="border-border hover:bg-state-hover flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors"
+                  className="border-border hover:bg-state-hover flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors"
                 >
                   <TagIcon icon={icon} color={color} size="sm" />
                   {name}
@@ -423,7 +423,7 @@ function TagQuickSelectorContent({
 
       {/* タググリッド */}
       {!isTagZero && (
-        <div className="grid grid-cols-4 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-2">
           {parentTags.map((tag) => {
             const hasChildren = childrenByPrefix.has(tag.name);
             return (
@@ -449,7 +449,7 @@ function TagQuickSelectorContent({
             type="button"
             onClick={() => setView({ type: 'create' })}
             className={cn(
-              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
               'active:scale-95 active:transition-transform',
             )}
           >
@@ -585,6 +585,7 @@ export function TagQuickSelector({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle>{t('tagSelector.title')}</DrawerTitle>

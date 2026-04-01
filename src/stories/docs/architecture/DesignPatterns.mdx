@@ -17,7 +17,7 @@ src/
 ├── components/    # 共通コンポーネント
 ├── hooks/         # 共通フック
 ├── lib/           # ユーティリティ
-├── server/        # バックエンド（tRPC）
+├── platform/      # tRPC・Supabase等の基盤
 └── types/         # 型定義
 ```
 
@@ -30,7 +30,7 @@ features/
 │   ├── hooks/
 │   ├── stores/
 │   └── types/
-├── plans/         # プラン管理
+├── entry/         # エントリ管理（統合ブロックモデル）
 ├── tags/          # タグ管理
 └── ...
 ```
@@ -54,11 +54,11 @@ features/
 ### Router（薄い層）
 
 ```typescript
-// src/server/api/routers/plans/crud.ts
+// src/features/entry/server/router.ts
 create: protectedProcedure
-  .input(createPlanSchema) // Zodでバリデーション
+  .input(createEntrySchema) // Zodでバリデーション
   .mutation(({ ctx, input }) => {
-    const service = createPlanService(ctx.supabase);
+    const service = createEntryService(ctx.supabase);
     return service.create({ userId: ctx.userId, ...input });
   });
 ```
@@ -68,12 +68,12 @@ create: protectedProcedure
 ### Service（ビジネスロジック）
 
 ```typescript
-// src/server/services/plans/plan-service.ts
-class PlanService {
-  async create(params: CreatePlanParams) {
-    this.validatePlan(params);
-    const planData = this.buildPlanData(params);
-    return this.supabase.from('plans').insert(planData);
+// src/features/entry/server/entry-service.ts
+class EntryService {
+  async create(params: CreateEntryOptions) {
+    this.validateEntry(params);
+    const entryData = this.buildEntryData(params);
+    return this.supabase.from('entries').insert(entryData);
   }
 }
 ```
@@ -105,7 +105,7 @@ export const useCalendarStore = create(
 ### サーバー状態（TanStack Query via tRPC）
 
 ```typescript
-const { data: plans, isLoading } = api.plans.list.useQuery({
+const { data: entries, isLoading } = api.entries.list.useQuery({
   startDate,
   endDate,
 });
@@ -120,10 +120,10 @@ const { data: plans, isLoading } = api.plans.list.useQuery({
 ### Presentational（見た目）
 
 ```tsx
-function PlanCard({ plan, onEdit, onDelete }) {
+function EntryCard({ entry, onEdit, onDelete }) {
   return (
     <Card>
-      <h3>{plan.title}</h3>
+      <h3>{entry.title}</h3>
       <Button onClick={onEdit}>編集</Button>
     </Card>
   );
@@ -133,11 +133,11 @@ function PlanCard({ plan, onEdit, onDelete }) {
 ### Container（ロジック）
 
 ```tsx
-function PlanCardContainer({ planId }) {
-  const { data: plan } = api.plans.getById.useQuery({ id: planId });
-  const deletePlan = api.plans.delete.useMutation();
+function EntryCardContainer({ entryId }) {
+  const { data: entry } = api.entries.getById.useQuery({ id: entryId });
+  const deleteEntry = api.entries.delete.useMutation();
 
-  return <PlanCard plan={plan} onDelete={() => deletePlan.mutate({ id: planId })} />;
+  return <EntryCard entry={entry} onDelete={() => deleteEntry.mutate({ id: entryId })} />;
 }
 ```
 
@@ -149,18 +149,18 @@ function PlanCardContainer({ planId }) {
 
 ```typescript
 // Service内でエラーをスロー
-if (!plan) {
+if (!entry) {
   throw new TRPCError({
     code: 'NOT_FOUND',
-    message: 'プランが見つかりません',
+    message: 'エントリが見つかりません',
   });
 }
 
 // Client側でキャッチ
-const mutation = api.plans.update.useMutation({
+const mutation = api.entries.update.useMutation({
   onError: (error) => {
     if (error.data?.code === 'NOT_FOUND') {
-      toast.error('プランが見つかりません');
+      toast.error('エントリが見つかりません');
     }
   },
 });
@@ -176,4 +176,4 @@ const mutation = api.plans.update.useMutation({
 
 ---
 
-**最終更新**: 2026-02-12 | **バージョン**: v1.0
+**最終更新**: 2026-04-01 | **バージョン**: v1.1

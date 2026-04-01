@@ -14,7 +14,9 @@ interface SectionCardProps {
 /**
  * 設定セクションコンポーネント
  *
- * セクション間はborder-bセパレータで区切るフラットスタイル
+ * セクション間はborder-bセパレータで区切るフラットスタイル。
+ * 現在は主に Settings / Chronotype の設定系UIで使用。
+ * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
  */
 export function SectionCard({ title, children, className, actions }: SectionCardProps) {
   return (
@@ -22,7 +24,7 @@ export function SectionCard({ title, children, className, actions }: SectionCard
       className={cn('border-border text-foreground border-b pb-6 last:border-b-0', className)}
     >
       {(title || actions) && (
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           {title ? (
             <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
               {title}

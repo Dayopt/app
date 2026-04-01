@@ -96,10 +96,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
       position: 'absolute' as const,
-      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0) + 1}px`,
+      top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
       left: `${safePosition.left}%`,
       width: `calc(${safePosition.width}% - 8px)`,
-      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0) - 2, MIN_EVENT_HEIGHT)}px`,
+      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
@@ -331,7 +331,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               ? 'flex items-center px-2 text-xs'
               : 'flex items-center px-2 text-xs'
             : isMobile
-              ? 'flex items-start gap-1.5 px-2.5 pt-2 text-sm'
+              ? 'flex items-start gap-1 px-2 pt-2 text-sm'
               : 'p-2 text-sm',
           colorClasses ? colorClasses.tint : 'bg-muted',
         )}

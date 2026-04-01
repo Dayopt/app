@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, waitFor, within } from 'storybook/test';
 
-import { CookieConsentBanner } from './cookie-consent-banner';
+import { CookieConsentBanner } from './CookieConsentBanner';
 
 const STORAGE_KEY = 'dayopt_cookie_consent';
 
 const meta = {
-  title: 'Components/UI/CookieConsentBanner',
+  title: 'Components/Shell/CookieConsentBanner',
   component: CookieConsentBanner,
   tags: ['autodocs'],
   parameters: {

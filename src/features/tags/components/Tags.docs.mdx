@@ -115,7 +115,7 @@ Parent Tag (level=0, depth=1)
 
 ```
 ソースタグ → ターゲットタグ
-  1. ソースの plan_tags / record_tags をターゲットに移動
+  1. ソースの entry_tags をターゲットに移動
   2. ソースの子タグをターゲットの子に昇格
   3. ソースタグを削除
   ※ トランザクション内で実行
@@ -144,8 +144,7 @@ Parent Tag (level=0, depth=1)
 
 ### 関連テーブル
 
-- `plan_tags`: Plans との多対多
-- `record_tags`: Records との多対多
+- `entry_tags`: Entries との多対多
 
 ---
 

@@ -8,6 +8,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
+import { logger } from '@/lib/logger';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import * as Sentry from '@sentry/nextjs';
@@ -132,6 +133,15 @@ export function useCalendarData({
   const visibleTagIds = useDeferredValue(useCalendarFilterStore((state) => state.visibleTagIds));
 
   // 全エントリをCalendarEvent型に変換
+  // DEBUG: モバイルでエントリが表示されない問題の調査用ログ
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug('[useCalendarData] pipeline input', {
+      viewType,
+      currentDate: currentDate.toISOString(),
+      dateFilter,
+      entriesCount: entriesData?.length ?? 0,
+    });
+  }
   const allCalendarEvents = useMemo(() => {
     const calendarPlans: CalendarEvent[] = [];
 
@@ -208,6 +218,22 @@ export function useCalendarData({
     const visibilityFiltered = filtered.filter((event) => {
       return isEntryVisible(event.tagId ?? null);
     });
+
+    // DEBUG: モバイルでエントリが表示されない問題の調査用ログ
+    if (process.env.NODE_ENV === 'development' && allCalendarEvents.length > 0) {
+      logger.debug('[useCalendarData] filter pipeline', {
+        allCalendarEvents: allCalendarEvents.length,
+        dateFiltered: filtered.length,
+        visibilityFiltered: visibilityFiltered.length,
+        viewRange: `${startDateOnly.toDateString()} - ${endDateOnly.toDateString()}`,
+        sampleEvent: allCalendarEvents[0]
+          ? {
+              startDate: allCalendarEvents[0].startDate?.toISOString(),
+              endDate: allCalendarEvents[0].endDate?.toISOString(),
+            }
+          : null,
+      });
+    }
 
     return visibilityFiltered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- visibleTagIds はリアクティブ依存（関数参照は安定のため直接依存不可）

@@ -29,9 +29,9 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/platform/trpc';
 
-import { InfoBox } from '@/components/common/InfoBox';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
+import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
@@ -229,8 +229,8 @@ function RestoreSection() {
         </Button>
       </div>
 
-      <div className="mt-3 flex items-start gap-2">
-        <AlertTriangle className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+      <div className="mt-4 flex items-start gap-2">
+        <AlertTriangle className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
         <p className="text-muted-foreground text-xs">{t('warning')}</p>
       </div>
 
@@ -269,7 +269,7 @@ function McpApiSection() {
       <SectionCard title={t('title')}>
         <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
         <InfoBox>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
             <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
             <Button variant="outline" size="sm" disabled>
@@ -323,7 +323,7 @@ function McpApiSection() {
       </LabeledRow>
 
       {/* Connection guide */}
-      <InfoBox className="mt-4 p-3">
+      <InfoBox className="mt-4 p-4">
         <p className="text-muted-foreground text-sm">
           {t('connectionGuide')}
           <a

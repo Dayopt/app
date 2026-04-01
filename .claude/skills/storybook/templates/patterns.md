@@ -63,34 +63,40 @@ export const AllPatterns: Story = {
 
 ## Story の構成
 
+**標準構成（多くのパターンで使用）:**
+
+1. **Overview** — 使い分けガイド + 全バリエーションを1つの Story に集約
+
+**複雑なパターン向け（ErrorPages 等）:**
+
 1. **Overview** — 使い分けガイド（テーブル + 説明テキスト）
 2. **個別パターン** — 各バリエーションの実装例
 3. **AllPatterns** — 全パターンを一覧表示
 
 ## 既存パターン一覧
 
-| Story                   | 内容                        |
-| ----------------------- | --------------------------- |
-| `Patterns/Forms`        | フォーム入力パターン        |
-| `Patterns/Feedback`     | Toast, Alert, InlineMessage |
-| `Patterns/Loading`      | Skeleton, Spinner, Progress |
-| `Patterns/Search`       | 検索UI パターン             |
-| `Patterns/Selection`    | 選択UI パターン             |
-| `Patterns/Actions`      | アクションボタン配置        |
-| `Patterns/Confirmation` | 確認ダイアログパターン      |
-| `Patterns/EmptyStates`  | 空状態の表示                |
-| `Patterns/ErrorPages`   | エラーページ                |
-| `Patterns/Cards`        | カードレイアウト            |
+| Story                   | 内容                            | いつ使うか                                               |
+| ----------------------- | ------------------------------- | -------------------------------------------------------- |
+| `Patterns/Forms`        | フォーム入力パターン            | バリデーション、エラー表示、成功状態の実装時             |
+| `Patterns/Feedback`     | Toast, Alert, InlineMessage     | ユーザーへの操作結果通知の実装時                         |
+| `Patterns/Loading`      | Skeleton, Spinner, Progress     | 非同期データ取得時のローディング表示を選ぶとき           |
+| `Patterns/Search`       | 検索UI パターン                 | 検索・フィルタリングUIの実装時                           |
+| `Patterns/Selection`    | 選択UI パターン                 | Radio/Select/Checkbox/Chip の使い分けを決めるとき        |
+| `Patterns/Actions`      | アクションボタン配置            | ボタンサイズ・配置・ドロップダウンメニューの設計時       |
+| `Patterns/Confirmation` | 確認ダイアログ（ConfirmDialog） | 削除・破壊的操作・非同期確認の実装時                     |
+| `Patterns/EmptyStates`  | 空状態の表示                    | リストやコンテンツが空の場合の表示を選ぶとき             |
+| `Patterns/ErrorPages`   | エラーページ                    | 404、エラーバウンダリ、メンテナンスページの実装時        |
+| `Patterns/Cards`        | カードレイアウト                | 情報カード・メトリクスカード・グリッドレイアウトの設計時 |
 
 ## 新パターン追加時
 
 1. `src/stories/patterns/{Name}.stories.tsx` を作成
 2. `title: 'Patterns/{Name}'` を設定
-3. Overview Story でガイドテーブルを作成
-4. 個別パターンの Story を追加
-5. AllPatterns Story を追加
+3. Overview Story でガイドテーブル + バリエーションを作成
+4. 複雑な場合のみ個別 Story + AllPatterns を追加
 
 ## 参考実装
 
-- `src/stories/patterns/Feedback.stories.tsx` — ガイドテーブル + バリエーション
-- `src/stories/patterns/Forms.stories.tsx` — フォームパターン
+- `src/stories/patterns/Feedback.stories.tsx` — Overview に全バリエーション集約（標準構成）
+- `src/stories/patterns/Confirmation.stories.tsx` — ConfirmDialog の実コンポーネント使用例
+- `src/stories/patterns/ErrorPages.stories.tsx` — 個別 Story + カタログ構成（複雑なパターン向け）

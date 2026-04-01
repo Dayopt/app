@@ -96,7 +96,7 @@ export function TagRow({
           ref={buttonRef}
           type="button"
           onClick={() => setSelectorOpen(true)}
-          className="hover:bg-state-hover -mt-1 -ml-1.5 flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-1.5 text-lg font-semibold transition-colors"
+          className="hover:bg-state-hover -mt-1 -ml-2 flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-2 text-lg font-semibold transition-colors"
           aria-label={hasTag ? `${t('common.tags.change')}: ${tagName}` : t('common.tags.add')}
         >
           {hasTag ? (

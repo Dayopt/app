@@ -88,7 +88,7 @@ export const Untagged: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground mb-3 text-xs font-medium">
+      <p className="text-muted-foreground mb-4 text-xs font-medium">
         StandaloneTag（独立タグ用メニュー）
       </p>
       <DropdownMenu defaultOpen>
@@ -102,7 +102,7 @@ export const AllPatterns: Story = {
           onDeleteTag={fn()}
         />
       </DropdownMenu>
-      <p className="text-muted-foreground mb-3 text-xs font-medium">
+      <p className="text-muted-foreground mb-4 text-xs font-medium">
         GroupedTag（グループ内タグ用メニュー）
       </p>
       <DropdownMenu defaultOpen>
@@ -124,7 +124,7 @@ export const AllPatterns: Story = {
           onChangeGroup={fn()}
         />
       </DropdownMenu>
-      <p className="text-muted-foreground mb-3 text-xs font-medium">NoDeletion（削除不可タグ）</p>
+      <p className="text-muted-foreground mb-4 text-xs font-medium">NoDeletion（削除不可タグ）</p>
       <DropdownMenu defaultOpen>
         <DropdownMenuTrigger />
         <FilterItemMenu
@@ -136,7 +136,7 @@ export const AllPatterns: Story = {
           onDeleteTag={undefined}
         />
       </DropdownMenu>
-      <p className="text-muted-foreground mb-3 text-xs font-medium">
+      <p className="text-muted-foreground mb-4 text-xs font-medium">
         Untagged（タグなし用メニュー）
       </p>
       <DropdownMenu defaultOpen>

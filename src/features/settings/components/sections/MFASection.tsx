@@ -17,9 +17,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
-import { InfoBox } from '@/components/common/InfoBox';
 import { SectionCard } from '@/components/common/SectionCard';
 import { type UseMFAReturn, useMFA } from '../../hooks/useMFA';
+import { InfoBox } from '../InfoBox';
 
 /** MFASection のプロップス定義 */
 export interface MFASectionProps {
@@ -234,7 +234,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
                 <p className="text-destructive text-xs">
                   {t('settings.account.mfa.recoveryCodes.exhaustedWarning')}
                 </p>
-                <div className="mt-3">
+                <div className="mt-4">
                   <Button
                     variant="destructive"
                     onClick={requestRegenerateRecoveryCodes}

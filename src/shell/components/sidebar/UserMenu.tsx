@@ -86,6 +86,7 @@ export function UserMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- Radix CSS variable
         className="border-input w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-2xl"
         side="right"
         align="end"
@@ -153,7 +154,7 @@ export function UserMenu({
                   <span className="flex-1">
                     {t('navigation.navUser.helpSubmenu.documentation')}
                   </span>
-                  <ExternalLink className="text-muted-foreground size-3" />
+                  <ExternalLink className="text-muted-foreground size-3.5" />
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -167,7 +168,7 @@ export function UserMenu({
                   <span className="flex-1">
                     {t('navigation.navUser.helpSubmenu.termsOfService')}
                   </span>
-                  <ExternalLink className="text-muted-foreground size-3" />
+                  <ExternalLink className="text-muted-foreground size-3.5" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -180,7 +181,7 @@ export function UserMenu({
                   <span className="flex-1">
                     {t('navigation.navUser.helpSubmenu.privacyPolicy')}
                   </span>
-                  <ExternalLink className="text-muted-foreground size-3" />
+                  <ExternalLink className="text-muted-foreground size-3.5" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -191,7 +192,7 @@ export function UserMenu({
                 >
                   <Building />
                   <span className="flex-1">{t('navigation.navUser.helpSubmenu.tokushoho')}</span>
-                  <ExternalLink className="text-muted-foreground size-3" />
+                  <ExternalLink className="text-muted-foreground size-3.5" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -202,7 +203,7 @@ export function UserMenu({
                 >
                   <Shield />
                   <span className="flex-1">{t('navigation.navUser.helpSubmenu.security')}</span>
-                  <ExternalLink className="text-muted-foreground size-3" />
+                  <ExternalLink className="text-muted-foreground size-3.5" />
                 </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

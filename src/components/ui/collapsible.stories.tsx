@@ -45,9 +45,9 @@ export const AllPatterns: Story = {
             <div className="flex h-10 w-full cursor-pointer items-center gap-2 px-4 transition-colors">
               <div className="border-border-subtle h-px flex-1 border-t" />
               <div className="hover:bg-state-hover flex items-center gap-1 rounded-lg px-2 py-1 transition-colors">
-                <Clock className="text-muted-foreground size-3" />
+                <Clock className="text-muted-foreground size-3.5" />
                 <span className="text-muted-foreground text-xs">Records (3)</span>
-                <ChevronDown className="text-muted-foreground size-3 transition-transform [[data-state=open]_&]:rotate-180" />
+                <ChevronDown className="text-muted-foreground size-3.5 transition-transform [[data-state=open]_&]:rotate-180" />
               </div>
               <div className="border-border-subtle h-px flex-1 border-t" />
             </div>

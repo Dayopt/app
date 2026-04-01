@@ -10,6 +10,7 @@ import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
 import { HoverTooltip } from '@/components/ui/tooltip';
+import { TagIcon } from '@/features/tags';
 import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 // ─────────────────────────────────────────────────────────
@@ -29,7 +30,7 @@ function RecentBlocksStory({
       <SidebarSection title="履歴" defaultOpen>
         {items.length === 0 ? (
           /* 実キー: sidebar.recentBlocks.empty + sidebar.recentBlocks.emptyHint */
-          <div className="px-2 py-3">
+          <div className="px-2 py-4">
             <p className="text-muted-foreground text-xs">まだ履歴がありません</p>
             <p className="text-muted-foreground mt-1 text-xs">
               カレンダーにブロックを追加すると自動で表示されます
@@ -40,9 +41,8 @@ function RecentBlocksStory({
             <BlockItem
               key={`${item.tagId}-${item.durationMinutes}`}
               tagName={item.tagName}
-              tagColor={item.tagColor}
+              iconSlot={<TagIcon icon={null} color={item.tagColor} size="sm" />}
               durationMinutes={item.durationMinutes}
-              dotVariant="outline"
               onClick={fn()}
               menuSlot={
                 onPinItem ? (

@@ -122,7 +122,7 @@ function TypeCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-1 flex-col items-center gap-1 rounded-2xl border p-3 transition-colors',
+        'flex flex-1 flex-col items-center gap-1 rounded-2xl border p-4 transition-colors',
         isSelected
           ? 'border-border-subtle bg-card shadow-sm'
           : 'border-border hover:border-foreground/30',
@@ -274,12 +274,12 @@ export function ChronotypeSettings() {
 
             <TimelineBar zones={selectedProfile.productivityZones} />
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-chronotype-deep-tint flex items-center gap-3 rounded-2xl p-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-chronotype-deep-tint flex items-center gap-4 rounded-2xl p-4">
                 <span className="bg-chronotype-deep/20 text-chronotype-deep flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                   ↗
                 </span>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <p className="text-muted-foreground text-xs leading-none">
                     {t('settings.chronotype.deepTime')}
                   </p>
@@ -291,11 +291,11 @@ export function ChronotypeSettings() {
                   </p>
                 </div>
               </div>
-              <div className="bg-chronotype-ease-tint flex items-center gap-3 rounded-2xl p-4">
+              <div className="bg-chronotype-ease-tint flex items-center gap-4 rounded-2xl p-4">
                 <span className="bg-chronotype-ease/20 text-chronotype-ease flex size-8 shrink-0 items-center justify-center rounded-lg text-base">
                   ↘
                 </span>
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <p className="text-muted-foreground text-xs leading-none">
                     {t('settings.chronotype.easeTime')}
                   </p>

@@ -46,31 +46,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">特徴</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">特徴</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">基本カード</td>
-                  <td className="py-3">情報のグループ化</td>
-                  <td className="py-3">タイトル＋説明＋コンテンツ</td>
+                  <td className="py-2 font-bold">基本カード</td>
+                  <td className="py-2">情報のグループ化</td>
+                  <td className="py-2">タイトル＋説明＋コンテンツ</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">アクションカード</td>
-                  <td className="py-3">操作可能なアイテム</td>
-                  <td className="py-3">メニュー＋ボタン</td>
+                  <td className="py-2 font-bold">アクションカード</td>
+                  <td className="py-2">操作可能なアイテム</td>
+                  <td className="py-2">メニュー＋ボタン</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">ステータスカード</td>
-                  <td className="py-3">状態表示</td>
-                  <td className="py-3">バッジ＋進捗</td>
+                  <td className="py-2 font-bold">ステータスカード</td>
+                  <td className="py-2">状態表示</td>
+                  <td className="py-2">バッジ＋進捗</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">メトリクスカード</td>
-                  <td className="py-3">数値・統計表示</td>
-                  <td className="py-3">大きな数値＋トレンド</td>
+                  <td className="py-2 font-bold">メトリクスカード</td>
+                  <td className="py-2">数値・統計表示</td>
+                  <td className="py-2">大きな数値＋トレンド</td>
                 </tr>
               </tbody>
             </table>
@@ -214,17 +214,17 @@ export const Overview: Story = {
               <CardContent>
                 <h3 className="mb-1 font-medium">週次レポート作成</h3>
                 <p className="text-muted-foreground text-sm">プロジェクトAの進捗をまとめる</p>
-                <div className="mt-3 flex items-center gap-3 text-xs">
+                <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/15
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     2h
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Tag className="size-3" />
+                    <Tag className="size-3.5" />
                     仕事
                   </span>
                 </div>
@@ -241,13 +241,13 @@ export const Overview: Story = {
               <CardContent>
                 <h3 className="mb-1 font-medium">ミーティング準備</h3>
                 <p className="text-muted-foreground text-sm">資料の確認と質問事項の整理</p>
-                <div className="mt-3 flex items-center gap-3 text-xs">
+                <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/14
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     1h
                   </span>
                 </div>
@@ -264,13 +264,13 @@ export const Overview: Story = {
               <CardContent>
                 <h3 className="mb-1 font-medium">コードレビュー</h3>
                 <p className="text-muted-foreground text-sm">PR #123 のレビュー</p>
-                <div className="mt-3 flex items-center gap-3 text-xs">
+                <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-destructive flex items-center gap-1">
-                    <Calendar className="size-3" />
+                    <Calendar className="size-3.5" />
                     12/12
                   </span>
                   <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-3" />
+                    <Clock className="size-3.5" />
                     30m
                   </span>
                 </div>

@@ -24,7 +24,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
   return (
     <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 left-4 z-50 md:bottom-4 md:left-auto md:w-96">
       <div className="bg-card border-border-subtle shadow-card rounded-2xl border p-4">
-        <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="mb-2 flex items-start justify-between gap-2">
           <p className="text-foreground text-sm font-medium">{t('iosInstallTitle')}</p>
           <button
             type="button"
@@ -35,7 +35,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-muted-foreground mb-3 text-xs">{t('iosInstallDescription')}</p>
+        <p className="text-muted-foreground mb-2 text-xs">{t('iosInstallDescription')}</p>
         {/* 手順リスト */}
         <ol className="text-foreground space-y-2 text-xs">
           <li className="flex items-center gap-2">

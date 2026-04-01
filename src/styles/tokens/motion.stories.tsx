@@ -22,7 +22,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* shadcn/ui標準 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">shadcn/ui標準（animate-in/out）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ダイアログ、ポップオーバー等のマウント/アンマウント時に使用
@@ -73,7 +73,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* ローディング */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">ローディング（GAFA準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             スケルトンローダー用。shimmerはFacebook/LinkedIn方式。
@@ -100,7 +100,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* エラーフィードバック */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">エラーフィードバック</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             入力エラー時のシェイクアニメーション（Apple HIG準拠）
@@ -112,10 +112,50 @@ data-[state=closed]:animate-out`}
           </pre>
         </section>
 
+        {/* Transition */}
+        <section className="bg-card border-border rounded-lg border p-6">
+          <h2 className="mb-4 text-lg font-bold">Transition（日常インタラクション）</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            ホバー、フォーカス、状態変化など日常的なインタラクションに使用。 animate-in/out
+            はマウント/アンマウント用、こちらは CSS transition 用。
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <TransitionDemo
+              name="transition-colors"
+              className="transition-colors duration-150"
+              description="色のみ変化（標準）"
+            />
+            <TransitionDemo
+              name="transition-all"
+              className="transition-all duration-150"
+              description="サイズ変化を含む"
+            />
+            <TransitionDemo
+              name="transition-transform"
+              className="transition-transform duration-200"
+              description="transform のみ"
+            />
+          </div>
+          <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
+            {`// デフォルト — 迷ったらこれ
+<button className="transition-colors duration-150 hover:bg-accent">
+
+// サイズ変化を含む
+<div className="transition-all duration-150 hover:scale-105">
+
+// transform のみ
+<div className="transition-transform duration-200 hover:-translate-y-1">
+
+// ease は指定しない（Tailwind デフォルトの ease-in-out で十分）`}
+          </pre>
+        </section>
+
         {/* duration */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Duration（継続時間）</h2>
-          <p className="text-muted-foreground mb-4 text-sm">Tailwind標準のdurationクラスを併用</p>
+          <p className="text-muted-foreground mb-4 text-sm">
+            <code>duration-150</code> をデフォルトとし、ほぼ全てこれを使う。他は例外的な場面のみ。
+          </p>
           <div className="grid gap-4 sm:grid-cols-4">
             <DurationDemo duration="75" />
             <DurationDemo duration="150" />
@@ -126,23 +166,23 @@ data-[state=closed]:animate-out`}
             <h3 className="mb-2 text-sm font-bold">推奨値</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>
-                <code>duration-75</code> - 即座の反応（ホバー等）
+                <code>duration-75</code> - 即座のフィードバック（active 押下など）
               </li>
               <li>
-                <code>duration-150</code> - 標準（ダイアログ、ポップオーバー）
+                <code>duration-150</code> - <strong>標準（デフォルト）</strong> — ほぼ全てこれを使う
               </li>
               <li>
-                <code>duration-200</code> - やや長め（シート、ドロワー）
+                <code>duration-200</code> - transform、やや重い要素の移動
               </li>
               <li>
-                <code>duration-300</code> - 長め（ページ遷移）
+                <code>duration-300</code> - 大きな面積の展開・折りたたみ（accordion 等）
               </li>
             </ul>
           </div>
         </section>
 
         {/* Easing */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Easing（イージング）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             Material Design 3準拠。要素の動きに自然さを与える。
@@ -185,7 +225,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* motion-reduce */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">アクセシビリティ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             motion-reduce対応で、ユーザー設定に応じてアニメーションを無効化
@@ -266,6 +306,30 @@ function ShakeDemo() {
   );
 }
 
+function TransitionDemo({
+  name,
+  className,
+  description,
+}: {
+  name: string;
+  className: string;
+  description: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-bold">{name}</div>
+      <button
+        type="button"
+        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-bold ${className}`}
+      >
+        hover me
+      </button>
+      <p className="text-muted-foreground text-xs">{description}</p>
+      <code className="text-muted-foreground block text-xs">{className}</code>
+    </div>
+  );
+}
+
 function DurationDemo({ duration }: { duration: string }) {
   const [key, setKey] = useState(0);
 
@@ -328,15 +392,15 @@ export const Loading: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* カード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">カードスケルトン</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="border-border space-y-3 rounded-lg border p-4">
+            <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-4 w-3/4 rounded" />
               <div className="animate-shimmer h-3 w-full rounded" />
               <div className="animate-shimmer h-3 w-5/6 rounded" />
             </div>
-            <div className="border-border space-y-3 rounded-lg border p-4">
+            <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-32 rounded-lg" />
               <div className="animate-shimmer h-4 w-2/3 rounded" />
               <div className="animate-shimmer h-3 w-full rounded" />
@@ -345,11 +409,11 @@ export const Loading: Story = {
         </section>
 
         {/* リスト */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">リストスケルトン</h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex items-center gap-2">
                 <div className="animate-shimmer size-10 shrink-0 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <div className="animate-shimmer h-4 w-1/3 rounded" />
@@ -361,7 +425,7 @@ export const Loading: Story = {
         </section>
 
         {/* テーブル */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">テーブルスケルトン</h2>
           <div className="space-y-2">
             <div className="border-border flex gap-4 border-b pb-2">

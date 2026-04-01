@@ -103,7 +103,7 @@ export function Palette({ onAddClick }: PaletteProps) {
     <div className="w-full min-w-0 overflow-hidden px-2">
       <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={addTrigger}>
         {!hasItems && (
-          <div className="text-muted-foreground space-y-2 px-2 py-3 text-xs">
+          <div className="text-muted-foreground space-y-2 px-2 py-4 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
             <p>{t('sidebar.palette.emptyHint')}</p>
           </div>
@@ -113,7 +113,6 @@ export function Palette({ onAddClick }: PaletteProps) {
           <div key={item.id}>
             <BlockItem
               tagName={item.tag.name}
-              tagColor={item.tag.color}
               durationMinutes={item.duration_minutes}
               iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
               onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
@@ -133,14 +132,15 @@ export function Palette({ onAddClick }: PaletteProps) {
           <div key={item.id}>
             <BlockItem
               tagName={t('sidebar.palette.tagDeleted')}
-              tagColor="gray"
               durationMinutes={item.duration_minutes}
+              iconSlot={<TagIcon icon={null} color="gray" size="sm" />}
               disabled
               menuSlot={
                 <HoverTooltip content={t('sidebar.palette.remove')}>
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-destructive flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors"
+                    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
+                    className="text-muted-foreground hover:text-destructive relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-2.5 before:content-['']"
                     onClick={() => unpinItem(item.id)}
                     aria-label={t('sidebar.palette.remove')}
                   >

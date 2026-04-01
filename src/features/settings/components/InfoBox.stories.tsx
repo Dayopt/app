@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { InfoBox } from './InfoBox';
 
 const meta = {
-  title: 'Components/Common/InfoBox',
+  title: 'Features/Settings/InfoBox',
   component: InfoBox,
   tags: ['autodocs'],
   decorators: [
@@ -33,7 +33,7 @@ export const Default: Story = {
 export const WithIconAndAction: Story = {
   args: {
     children: (
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
         <p className="text-foreground flex-1 text-sm">This feature requires a Pro plan.</p>
         <Button variant="outline" size="sm">
@@ -70,7 +70,7 @@ export const AllPatterns: StoryObj = {
         <p className="text-muted-foreground text-sm">Settings are saved automatically.</p>
       </InfoBox>
       <InfoBox>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
           <p className="text-foreground flex-1 text-sm">This feature requires a Pro plan.</p>
           <Button variant="outline" size="sm">

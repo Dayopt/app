@@ -152,8 +152,8 @@ Dayoptにおけるデータの流れ。ユーザー操作からDBまでの全レ
 ユーザー操作を受け取り、tRPC mutationを呼び出す。
 
 ```typescript
-const handleCreatePlan = async (data) => {
-  await createPlan.mutateAsync(data);
+const handleCreateEntry = async (data) => {
+  await createEntry.mutateAsync(data);
 };
 ```
 
@@ -162,9 +162,9 @@ const handleCreatePlan = async (data) => {
 型安全なAPI呼び出しとキャッシュ管理。
 
 ```typescript
-const createPlan = api.plans.create.useMutation({
+const createEntry = api.entries.create.useMutation({
   onSuccess: () => {
-    utils.plans.list.invalidate(); // キャッシュ無効化→再取得
+    utils.entries.list.invalidate(); // キャッシュ無効化→再取得
   },
 });
 ```
@@ -178,8 +178,8 @@ const createPlan = api.plans.create.useMutation({
 入力バリデーションと認証チェック。ルーターは薄く保つ。
 
 ```typescript
-create: protectedProcedure.input(createPlanSchema).mutation(async ({ ctx, input }) => {
-  const service = createPlanService(ctx.supabase);
+create: protectedProcedure.input(createEntrySchema).mutation(async ({ ctx, input }) => {
+  const service = createEntryService(ctx.supabase);
   return service.create({ userId: ctx.userId, ...input });
 });
 ```
@@ -189,7 +189,7 @@ create: protectedProcedure.input(createPlanSchema).mutation(async ({ ctx, input 
 ビジネスロジックを集約。テストしやすく、再利用可能。
 
 ```typescript
-class PlanService {
+class EntryService {
   async create(params) {
     // バリデーション
     // ビジネスロジック
@@ -203,7 +203,7 @@ class PlanService {
 ### 5. Supabase Client
 
 ```typescript
-const { data, error } = await this.supabase.from('plans').insert(planData).select().single();
+const { data, error } = await this.supabase.from('entries').insert(entryData).select().single();
 ```
 
 ### 6. PostgreSQL + RLS
@@ -211,8 +211,8 @@ const { data, error } = await this.supabase.from('plans').insert(planData).selec
 データベースレベルでのセキュリティ。
 
 ```sql
-CREATE POLICY "Users can manage own plans"
-ON plans FOR ALL
+CREATE POLICY "Users can manage own entries"
+ON entries FOR ALL
 USING (auth.uid() = user_id);
 ```
 
@@ -224,7 +224,7 @@ USING (auth.uid() = user_id);
 
 | 状態の種類               | 管理方法       | 例                               |
 | ------------------------ | -------------- | -------------------------------- |
-| **サーバーデータ**       | TanStack Query | プラン一覧、タグ                 |
+| **サーバーデータ**       | TanStack Query | エントリ一覧、タグ               |
 | **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
 | **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
 | **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |

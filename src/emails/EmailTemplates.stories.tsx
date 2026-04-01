@@ -142,7 +142,7 @@ export const Guidelines: Story = {
         </p>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {Object.entries(colors).map(([name, hex]) => (
-            <div key={name} className="flex items-center gap-3">
+            <div key={name} className="flex items-center gap-2">
               <div
                 className="border-border size-8 shrink-0 rounded-lg border"
                 style={{ backgroundColor: hex }}
@@ -164,9 +164,9 @@ export const Guidelines: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-3 text-left font-bold">テンプレート</th>
-                <th className="py-3 text-left font-bold">用途</th>
-                <th className="py-3 text-left font-bold">トリガー</th>
+                <th className="py-2 text-left font-bold">テンプレート</th>
+                <th className="py-2 text-left font-bold">用途</th>
+                <th className="py-2 text-left font-bold">トリガー</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -188,11 +188,11 @@ export const Guidelines: Story = {
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
                 <tr key={name} className="border-border border-b">
-                  <td className="py-3">
+                  <td className="py-2">
                     <code>{name}</code>
                   </td>
-                  <td className="py-3">{use}</td>
-                  <td className="py-3">
+                  <td className="py-2">{use}</td>
+                  <td className="py-2">
                     <code className="text-xs">{trigger}</code>
                   </td>
                 </tr>

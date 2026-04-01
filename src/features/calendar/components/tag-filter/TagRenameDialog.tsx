@@ -147,7 +147,7 @@ export function TagRenameDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent showCloseButton={false} className="max-w-[360px]">
+      <DialogContent showCloseButton={false} className="max-w-90">
         {/* Header */}
         <DialogTitle className="text-base">{t('calendar.filter.rename')}</DialogTitle>
         <DialogDescription className="sr-only">{t('calendar.filter.rename')}</DialogDescription>

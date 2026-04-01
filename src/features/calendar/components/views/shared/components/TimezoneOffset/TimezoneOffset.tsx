@@ -64,7 +64,7 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
         variant="ghost"
         aria-label={tActions('selectTimezone')}
         className={cn(
-          'text-muted-foreground h-auto justify-center px-1 py-0.5 text-xs [&_svg]:hidden',
+          'text-muted-foreground h-auto justify-center px-1 py-1 text-xs [&_svg]:hidden',
           className,
         )}
       >

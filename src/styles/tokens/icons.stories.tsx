@@ -41,89 +41,105 @@ type Story = StoryObj;
 
 export const Sizes: Story = {
   render: () => (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">アイコンサイズ</h1>
-      <p className="text-muted-foreground mb-8">
-        lucide-react を使用。タイポグラフィとの調和を優先し、6種類に統一。
-      </p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="mb-2 text-2xl font-bold">アイコンサイズ</h1>
+        <p className="text-muted-foreground">
+          lucide-react を使用。3階層 × 6種に統一。迷ったら size-3.5 か size-4。
+        </p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-3" />
+      {/* 標準（迷ったらこれ） */}
+      <div>
+        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+          標準（迷ったらこれ）
+        </h2>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-3.5" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-3.5</code>
+            <p className="mt-2 text-xs font-bold">14px</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              補助アイコン、
+              <br />
+              text-sm の横
+            </p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-3</code>
-          <p className="mt-2 text-xs font-bold">12px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            text-xsと併用、
-            <br />
-            バッジ内アイコン
-          </p>
+
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-4" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-4</code>
+            <p className="mt-2 text-xs font-bold">16px</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              <strong>標準</strong>: ボタン内、
+              <br />
+              text-base の横
+            </p>
+          </div>
         </div>
+      </div>
 
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-4" />
+      {/* 必要なときだけ */}
+      <div>
+        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+          必要なときだけ
+        </h2>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-5" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-5</code>
+            <p className="mt-2 text-xs font-bold">20px</p>
+            <p className="text-muted-foreground mt-1 text-xs">ナビ、強調</p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-4</code>
-          <p className="mt-2 text-xs font-bold">16px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            <strong>標準</strong>: text-sm、
-            <br />
-            ボタン内アイコン
-          </p>
+
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-6" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-6</code>
+            <p className="mt-2 text-xs font-bold">24px</p>
+            <p className="text-muted-foreground mt-1 text-xs">見出し横</p>
+          </div>
         </div>
+      </div>
 
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-5" />
+      {/* 特殊用途 */}
+      <div>
+        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+          特殊用途
+        </h2>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-8" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-8</code>
+            <p className="mt-2 text-xs font-bold">32px</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              カード主アイコン、
+              <br />
+              エラー
+            </p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-5</code>
-          <p className="mt-2 text-xs font-bold">20px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            強調、ナビゲーション、
-            <br />
-            lgボタン内
-          </p>
-        </div>
 
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-6" />
+          <div className="text-center">
+            <div className="flex h-16 items-center justify-center">
+              <Settings className="size-10" />
+            </div>
+            <code className="bg-container rounded px-2 py-1 text-xs">size-10</code>
+            <p className="mt-2 text-xs font-bold">40px</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              空状態、
+              <br />
+              オンボーディング
+            </p>
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-6</code>
-          <p className="mt-2 text-xs font-bold">24px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            見出し横、
-            <br />
-            目立たせたい場所
-          </p>
-        </div>
-
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-8" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-8</code>
-          <p className="mt-2 text-xs font-bold">32px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            カード内主アイコン、
-            <br />
-            フィーチャーアイコン
-          </p>
-        </div>
-
-        <div className="text-center">
-          <div className="flex h-16 items-center justify-center">
-            <Settings className="size-10" />
-          </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">size-10</code>
-          <p className="mt-2 text-xs font-bold">40px</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            空状態、
-            <br />
-            オンボーディング
-          </p>
         </div>
       </div>
     </div>

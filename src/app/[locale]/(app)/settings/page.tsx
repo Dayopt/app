@@ -118,7 +118,7 @@ export default function SettingsPage() {
     <ScrollArea className="flex-1">
       {/* B. ヒーローエリア（タップでプロフィール遷移） */}
       <Link href="/settings/profile" className="block">
-        <div className="flex flex-col items-center gap-3 px-4 pt-8 pb-6">
+        <div className="flex flex-col items-center gap-4 px-4 pt-8 pb-6">
           <Avatar size="xl">
             {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
             <AvatarFallback className="bg-foreground text-background text-xl">
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   key={link.labelKey}
                   type="button"
                   onClick={link.onPress}
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
                 >
                   {/* C. アイコン色 */}
                   <Icon className="text-muted-foreground size-5 shrink-0" />
@@ -183,9 +183,9 @@ export default function SettingsPage() {
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
               >
-                {/* C. アイコン色 + D. py-3 */}
+                {/* C. アイコン色 + D. py-2 */}
                 <Icon className="text-muted-foreground size-5 shrink-0" />
                 <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                 {link.external && <ExternalLink className="text-muted-foreground size-3.5" />}
@@ -197,7 +197,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setLegalOpen((prev) => !prev)}
-            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
           >
             <Scale className="text-muted-foreground size-5 shrink-0" />
             <span className="flex-1 font-normal">{t('settings.accountPage.legal')}</span>
@@ -206,6 +206,7 @@ export default function SettingsPage() {
             />
           </button>
           <div
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
             className={`grid transition-[grid-template-rows] duration-200 ${legalOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
           >
             <div className="overflow-hidden">
@@ -215,7 +216,7 @@ export default function SettingsPage() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-3 pr-4 pl-13 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-2 pr-4 pl-12 text-left text-sm transition-colors"
                 >
                   <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                   <ExternalLink className="text-muted-foreground size-3.5" />
@@ -232,7 +233,7 @@ export default function SettingsPage() {
           type="button"
           onClick={logout}
           disabled={isLoggingOut}
-          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm transition-colors"
+          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
         >
           <LogOut className="text-destructive size-5 shrink-0" />
           <span className="flex-1 font-normal">

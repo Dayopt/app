@@ -93,7 +93,7 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
               type="button"
               onClick={() => handleMonthClick(item.year, item.month)}
               className={cn(
-                'mx-0.5 flex h-7 shrink-0 items-center justify-center rounded-full px-3 text-xs transition-colors',
+                'mx-1 flex h-7 shrink-0 items-center justify-center rounded-full px-4 text-xs transition-colors',
                 isActive
                   ? 'border-primary text-primary border font-bold'
                   : 'border-border text-muted-foreground hover:text-foreground border',

@@ -4,7 +4,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # Database Architecture
 
-> **テーブル数**: 15 | **PostgreSQL**: v17
+> **テーブル数**: 11 | **PostgreSQL**: v17
 
 DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Production）で運用。
 全テーブルにRow Level Security (RLS) を適用し、マルチテナントのデータ分離を実現。
@@ -13,16 +13,13 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 
 ## テーブル一覧
 
-### コアビジネス（6テーブル）
+### コアビジネス（3テーブル）
 
-| テーブル           | 役割                                 | 主要カラム                                                                               |
-| ------------------ | ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| **plans**          | タスク/プラン（タイムボクシング）    | title, status(open/closed), start_time, end_time                                         |
-| **records**        | 実績時間記録                         | worked_at, start_time, end_time, duration_minutes, fulfillment_score(1-5)                |
-| **tags**           | 階層タグ（親子1階層）                | name, color, parent_id, level, sort_order, is_active                                     |
-| **plan_tags**      | Plans↔Tags中間テーブル              | plan_id, tag_id                                                                          |
-| **record_tags**    | Records↔Tags中間テーブル            | record_id, tag_id                                                                        |
-| **plan_instances** | プランの個別インスタンス（レガシー） | plan_id, instance_date, exception_type, title, description, instance_start, instance_end |
+| テーブル       | 役割                                         | 主要カラム                                                                                                                              |
+| -------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **entries**    | 時間ブロック（計画・実績の統合エンティティ） | title, origin(planned), start*time, end_time, actual_start_time, actual_end_time, fulfillment_score(1-5), duration_minutes, reminder*\* |
+| **tags**       | 階層タグ（親子1階層）                        | name, color, parent_id, level, sort_order, is_active                                                                                    |
+| **entry_tags** | Entries↔Tags中間テーブル                    | entry_id, tag_id                                                                                                                        |
 
 ### ユーザー設定（3テーブル）
 
@@ -34,16 +31,15 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 
 ### 通知（1テーブル）
 
-| テーブル          | 役割         | 主要カラム                                               |
-| ----------------- | ------------ | -------------------------------------------------------- |
-| **notifications** | ユーザー通知 | type, priority, title, message, is_read, related_plan_id |
+| テーブル          | 役割         | 主要カラム                                        |
+| ----------------- | ------------ | ------------------------------------------------- |
+| **notifications** | ユーザー通知 | type, priority, title, message, is_read, entry_id |
 
-### アクティビティログ（2テーブル）
+### アクティビティログ（1テーブル）
 
-| テーブル              | 役割             | 主要カラム                                               |
-| --------------------- | ---------------- | -------------------------------------------------------- |
-| **plan_activities**   | プラン変更履歴   | plan_id, action_type, field_name, old_value, new_value   |
-| **record_activities** | レコード変更履歴 | record_id, action_type, field_name, old_value, new_value |
+| テーブル             | 役割             | 主要カラム                                              |
+| -------------------- | ---------------- | ------------------------------------------------------- |
+| **entry_activities** | エントリ変更履歴 | entry_id, action_type, field_name, old_value, new_value |
 
 ### セキュリティ/監査（3テーブル）
 
@@ -82,45 +78,36 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
          │                         │                         │
          ▼                         ▼                         ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│      plans        │  │       tags        │  │  notifications   │
+│     entries       │  │       tags        │  │  notifications   │
 │──────────────────│  │──────────────────│  │──────────────────│
 │ id (PK)           │  │ id (PK)           │  │ id (PK)          │
 │ user_id (FK)      │  │ user_id (FK)      │  │ user_id (FK)     │
-│ title, status     │  │ name, color       │  │ type, title      │
-│ start/end_time    │  │ parent_id (FK→    │  │ related_plan_id  │
-│ reminder_*        │  │   self, max 1階層) │  │ is_read          │
-└───────┬──────────┘  └───────┬──────────┘  └──────────────────┘
-        │                     │
-   ┌────┼────┐           ┌────┘
-   │    │    │           │
-   ▼    │    ▼           ▼
-┌──────┐│ ┌──────────────────┐
-│plan_ ││ │    plan_tags      │
-│insta-││ │──────────────────│
-│nces  ││ │ plan_id (FK)      │
-│──────││ │ tag_id  (FK)      │
-│plan_ ││ │ UNIQUE(plan,tag)  │
-│id FK ││ └──────────────────┘
-└──────┘│
+│ title, origin     │  │ name, color       │  │ type, title      │
+│ start/end_time    │  │ parent_id (FK→    │  │ entry_id (FK)    │
+│ actual_start/     │  │   self, max 1階層) │  │ is_read          │
+│   end_time        │  └───────┬──────────┘  └──────────────────┘
+│ fulfillment_score │          │
+│ duration_minutes  │     ┌────┘
+│ reminder_*        │     │
+└───────┬──────────┘      ▼
+        │          ┌──────────────────┐
+        └──────────│   entry_tags     │
+                   │──────────────────│
+                   │ entry_id (FK)    │
+                   │ tag_id  (FK)     │
+                   │ UNIQUE(entry,tag) │
+                   └──────────────────┘
+
         ▼
-┌──────────────────┐  ┌──────────────────┐
-│     records       │  │   record_tags     │
-│──────────────────│  │──────────────────│
-│ id (PK)           │  │ record_id (FK)    │
-│ plan_id (FK,NULL) ├──│ tag_id  (FK)      │
-│ user_id (FK)      │  │ UNIQUE(record,tag)│
-│ worked_at, time   │  └──────────────────┘
-│ duration_minutes  │
-│ fulfillment_score │
-└───────┬──────────┘
-        │
-   ┌────┼────┐
-   ▼         ▼
-┌──────┐  ┌──────────────┐
-│plan_ │  │   record_    │
-│activ-│  │   activities  │
-│ities│  └──────────────┘
-└──────┘
+┌──────────────────┐
+│ entry_activities  │
+│──────────────────│
+│ entry_id (FK)     │
+│ action_type       │
+│ field_name        │
+│ old_value         │
+│ new_value         │
+└──────────────────┘
 
 
 === セキュリティ/監査 ===
@@ -150,42 +137,43 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 (select auth.uid()) = user_id
 
 -- 関連テーブル: 親テーブルの所有権で判定
-EXISTS (SELECT 1 FROM plans WHERE plans.id = plan_tags.plan_id
-        AND plans.user_id = (select auth.uid()))
+EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
+        AND entries.user_id = (select auth.uid()))
 ```
 
-### Plans のステータス
+### Entries の統合設計（ADR-001）
 
-`open` / `closed` の2値。当初6段階（backlog/ready/active/wait/done/cancel）→ 3段階（todo/doing/done）→ 2段階に簡素化。タイムボクシングツールとしての本質に集中。
+`plans` テーブルと `records` テーブルを単一の `entries` テーブルに統合。`status` カラムは廃止し、エントリの状態は時間位置から自動導出する：
+
+- `start_time > now` → `upcoming`
+- `start_time <= now < end_time` → `active`
+- `end_time <= now` → `past`
+
+`actual_start_time` / `actual_end_time` は過去ブロックの実績記録に使用。`fulfillment_score`（1-5）はnullableカラムとして全エントリに存在するが、過去ブロックのみに意味を持つ。詳細は ADR-001 参照。
 
 ### Tags の階層制限
 
 `level < 2` で親子1階層に制限。トリガーで `level`, `path`, `depth` を自動計算。深い階層は複雑性を増すだけと判断。
 
-### Records の plan_id NULLABLE
-
-プランに紐づかない「自由記録」も可能にする設計。時間記録の柔軟性を確保。
-
 ### トランザクション関数
 
 複数テーブルを跨ぐ操作はDB関数で原子性を保証:
 
-- `create_plan_with_tags()` — プラン作成 + タグ紐付け + アクティビティログ
-- `update_plan_with_tags()` — プラン更新 + タグ差分反映
-- `delete_plan_with_cleanup()` — プラン削除 + 関連データクリーンアップ
+- `soft_delete_entry()` — エントリのソフトデリート（deleted_at セット）
+- `bulk_soft_delete_entries()` — 複数エントリの一括ソフトデリート
+- `restore_entry()` — ソフトデリートしたエントリの復元
 - `merge_tags()` — タグマージ + 子タグの昇格
 
 ---
 
 ## 定期クリーンアップ（pg_cron）
 
-| ジョブ                      | スケジュール   | 保持期間         | 対象テーブル      |
-| --------------------------- | -------------- | ---------------- | ----------------- |
-| `cleanup-login-attempts`    | 毎日 03:00 UTC | 90日             | login_attempts    |
-| `cleanup-auth-audit-logs`   | 毎日 03:10 UTC | 365日            | auth_audit_logs   |
-| `cleanup-notifications`     | 毎日 03:20 UTC | 30日（既読のみ） | notifications     |
-| `cleanup-plan-activities`   | 毎日 03:30 UTC | 365日            | plan_activities   |
-| `cleanup-record-activities` | 毎日 03:40 UTC | 365日            | record_activities |
+| ジョブ                     | スケジュール   | 保持期間         | 対象テーブル     |
+| -------------------------- | -------------- | ---------------- | ---------------- |
+| `cleanup-login-attempts`   | 毎日 03:00 UTC | 90日             | login_attempts   |
+| `cleanup-auth-audit-logs`  | 毎日 03:10 UTC | 365日            | auth_audit_logs  |
+| `cleanup-notifications`    | 毎日 03:20 UTC | 30日（既読のみ） | notifications    |
+| `cleanup-entry-activities` | 毎日 03:30 UTC | 365日            | entry_activities |
 
 ---
 

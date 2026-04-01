@@ -138,7 +138,7 @@ export const AllPatterns: Story = {
         useShellStore.setState({ activeSheet: { type: 'settings', category: cat.id } });
         return (
           <div key={cat.id} className="h-[500px] w-56 overflow-hidden rounded-lg border">
-            <p className="text-muted-foreground border-b px-3 py-1 text-xs">{cat.id}</p>
+            <p className="text-muted-foreground border-b px-4 py-1 text-xs">{cat.id}</p>
             <SettingsSidebar />
           </div>
         );

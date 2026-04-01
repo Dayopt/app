@@ -1,5 +1,7 @@
 'use client';
 
+import type { LucideIcon } from 'lucide-react';
+import { Briefcase, Dumbbell, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
@@ -23,11 +25,19 @@ export function TagExplainContent({
 }: TourContentProps) {
   const t = useTranslations();
 
-  const examples = [
-    { color: 'bg-tag-blue', name: t('tour.steps.explainTags.examples.deepWork') },
-    { color: 'bg-tag-green', name: t('tour.steps.explainTags.examples.exercise') },
-    { color: 'bg-tag-amber', name: t('tour.steps.explainTags.examples.meeting') },
-  ] as const;
+  const examples: Array<{ icon: LucideIcon; color: string; name: string }> = [
+    {
+      icon: Briefcase,
+      color: 'var(--tag-blue)',
+      name: t('tour.steps.explainTags.examples.deepWork'),
+    },
+    {
+      icon: Dumbbell,
+      color: 'var(--tag-green)',
+      name: t('tour.steps.explainTags.examples.exercise'),
+    },
+    { icon: Users, color: 'var(--tag-amber)', name: t('tour.steps.explainTags.examples.meeting') },
+  ];
 
   return (
     <div
@@ -46,10 +56,10 @@ export function TagExplainContent({
       </div>
 
       {/* タグ例 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {examples.map((example) => (
-          <div key={example.name} className="flex items-center gap-1.5">
-            <span className={`${example.color} size-2.5 rounded-full`} />
+          <div key={example.name} className="flex items-center gap-1">
+            <example.icon className="size-4" style={{ color: example.color }} aria-hidden />
             <span className="text-foreground text-xs font-medium">{example.name}</span>
           </div>
         ))}

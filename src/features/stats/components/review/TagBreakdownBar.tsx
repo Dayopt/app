@@ -1,6 +1,7 @@
 'use client';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
+import { TagIcon } from '@/features/tags';
 import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +9,7 @@ interface TagSegment {
   tagId: string;
   tagName: string;
   tagColor: TagColorName;
+  tagIcon?: string | null;
   minutes: number;
 }
 
@@ -53,7 +55,7 @@ export function TagBreakdownBar({
               key={seg.tagName}
               className={cn(
                 'h-full first:rounded-l-full last:rounded-r-full',
-                onTagClick && 'cursor-pointer transition-opacity hover:opacity-80',
+                onTagClick && 'hover:bg-state-hover cursor-pointer transition-colors',
               )}
               style={{ width: `${pct}%`, backgroundColor: `var(--tag-${seg.tagColor})` }}
               title={`${seg.tagName}: ${formatMinutes(seg.minutes)} (${Math.round(pct)}%)`}
@@ -73,15 +75,12 @@ export function TagBreakdownBar({
                 type="button"
                 key={seg.tagName}
                 className={cn(
-                  'flex items-center gap-1.5 text-xs',
-                  onTagClick && 'hover:bg-accent/50 cursor-pointer rounded-lg transition-colors',
+                  'flex items-center gap-1 text-xs',
+                  onTagClick && 'hover:bg-state-hover cursor-pointer rounded-lg transition-colors',
                 )}
                 onClick={() => onTagClick?.(seg.tagId)}
               >
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: `var(--tag-${seg.tagColor})` }}
-                />
+                <TagIcon icon={seg.tagIcon ?? null} color={seg.tagColor} size="sm" />
                 <ColonTagLabel name={seg.tagName} className="text-foreground" />
                 <span className="text-muted-foreground">
                   {formatMinutes(seg.minutes)} ({pct}%)

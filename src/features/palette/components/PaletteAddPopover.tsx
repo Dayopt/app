@@ -125,14 +125,14 @@ function PaletteAddContent({
         {/* Duration 選択（チップ） */}
         <Field>
           <FieldLabel>{t('sidebar.palette.durationLabel')}</FieldLabel>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {DURATION_PRESETS.map((preset) => (
               <button
                 key={preset.value}
                 type="button"
                 onClick={() => setSelectedDuration(String(preset.value))}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                  'rounded-full border px-4 py-1 text-sm font-medium transition-colors',
                   selectedDuration === String(preset.value)
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border hover:bg-state-hover text-foreground',
@@ -263,6 +263,7 @@ export function PaletteAddPopover({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
+        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
             <DrawerTitle>{t('sidebar.palette.add')}</DrawerTitle>

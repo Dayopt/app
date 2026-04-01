@@ -168,13 +168,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           ボタンクリックでモーダルを開く
         </p>
         <TagCreateModalStory />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs font-medium">
           初期表示（モーダルが開いた状態）
         </p>
         <TagCreateModal

@@ -132,7 +132,7 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
       </div>
 
       {/* グループ化された通知リスト */}
-      <div className={compact ? 'max-h-[36rem] space-y-4 overflow-y-auto' : 'space-y-4'}>
+      <div className={compact ? 'max-h-144 space-y-4 overflow-y-auto' : 'space-y-4'}>
         {groupedNotifications.map((group) => (
           <div key={group.key}>
             <h3 className="text-muted-foreground mb-2 px-1 text-xs font-normal">{group.label}</h3>

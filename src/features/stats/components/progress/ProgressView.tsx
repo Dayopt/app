@@ -3,6 +3,7 @@
 import { TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { EmptyState } from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
 
 import { useStatsPageData } from '../../hooks/useStatsPageData';
@@ -32,13 +33,13 @@ export function ProgressView({ className }: StatsViewProps) {
   if (hasNoData) {
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
-          <TrendingUp className="text-muted-foreground size-10" />
-          <div className="text-center">
-            <p className="text-foreground text-sm font-medium">{t('emptyTitle')}</p>
-            <p className="text-muted-foreground mt-1 text-xs">{t('emptyDescription')}</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={TrendingUp}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          size="sm"
+          centered
+        />
       </div>
     );
   }

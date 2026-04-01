@@ -28,7 +28,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* State Layer一覧（MD3準拠） */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">State Layer 一覧（MD3 準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             foreground ベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
@@ -37,10 +37,10 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">状態</th>
-                  <th className="py-3 text-left font-bold">トークン</th>
-                  <th className="py-3 text-left font-bold">不透明度</th>
-                  <th className="py-3 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">状態</th>
+                  <th className="py-2 text-left font-bold">トークン</th>
+                  <th className="py-2 text-left font-bold">不透明度</th>
+                  <th className="py-2 text-left font-bold">用途</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
@@ -77,12 +77,12 @@ export const Overview: Story = {
                   },
                 ].map(({ state, token, opacity, usage }, i, arr) => (
                   <tr key={state} className={i < arr.length - 1 ? 'border-border border-b' : ''}>
-                    <td className="py-3">{state}</td>
-                    <td className="py-3">
+                    <td className="py-2">{state}</td>
+                    <td className="py-2">
                       <code>{token}</code>
                     </td>
-                    <td className="py-3">{opacity}</td>
-                    <td className="py-3">{usage}</td>
+                    <td className="py-2">{opacity}</td>
+                    <td className="py-2">{usage}</td>
                   </tr>
                 ))}
               </tbody>
@@ -91,7 +91,7 @@ export const Overview: Story = {
         </section>
 
         {/* Button States */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Button States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             実際にホバー・Tab フォーカス・クリックして状態変化を確認。
@@ -99,8 +99,8 @@ export const Overview: Story = {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Default */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">default</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">default</h3>
+              <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button>Default</Button>
                   <p className="text-muted-foreground text-xs">通常</p>
@@ -114,8 +114,8 @@ export const Overview: Story = {
 
             {/* Outline */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">outline</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">outline</h3>
+              <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="outline">Default</Button>
                   <p className="text-muted-foreground text-xs">通常</p>
@@ -131,8 +131,8 @@ export const Overview: Story = {
 
             {/* Ghost */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">ghost</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">ghost</h3>
+              <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="ghost">Default</Button>
                   <p className="text-muted-foreground text-xs">通常</p>
@@ -148,8 +148,8 @@ export const Overview: Story = {
 
             {/* Destructive */}
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">destructive</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">destructive</h3>
+              <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="destructive">Default</Button>
                   <p className="text-muted-foreground text-xs">通常</p>
@@ -166,7 +166,7 @@ export const Overview: Story = {
         </section>
 
         {/* Input States */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Input States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フォーカスして ring を確認。Error は aria-invalid で自動適用。
@@ -192,7 +192,7 @@ export const Overview: Story = {
         </section>
 
         {/* 実装ガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">実装ガイド（コピペ用）</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs leading-relaxed">
             {`// hover（10% overlay）

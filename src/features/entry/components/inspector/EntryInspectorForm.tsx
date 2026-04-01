@@ -176,7 +176,7 @@ export function EntryInspectorForm({
   if (!entry) return null;
 
   return (
-    <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
+    <div className="px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6">
       {/* Row 0: タグ + 削除ボタン */}
       <TagRow
         tagId={selectedTagId}
@@ -197,6 +197,7 @@ export function EntryInspectorForm({
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
         className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >
@@ -206,8 +207,8 @@ export function EntryInspectorForm({
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-muted mt-3 rounded-2xl">
-        <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
+      <div className="bg-muted mt-4 rounded-2xl">
+        <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
           {/* 日付 */}
           <DateRow
             label={t('entry.inspector.time.date')}

@@ -179,7 +179,7 @@ export const AllPatterns: Story = {
               </button>
               <button
                 type="button"
-                className="hover:bg-state-hover flex h-full items-center px-3 text-sm font-medium transition-colors"
+                className="hover:bg-state-hover flex h-full items-center px-4 text-sm font-medium transition-colors"
               >
                 Today
               </button>

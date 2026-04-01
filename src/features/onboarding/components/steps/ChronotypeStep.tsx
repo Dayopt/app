@@ -72,7 +72,7 @@ export function ChronotypeStep({
         <p className="text-muted-foreground text-sm">{t('onboarding.chronotype.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-4">
         {cardData.map((card) => (
           <AnimalCard
             key={card.type}

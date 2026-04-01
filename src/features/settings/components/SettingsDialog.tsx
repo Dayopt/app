@@ -27,7 +27,8 @@ export function SettingsDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
       <DialogContent
-        className="flex h-[85vh] max-h-[800px] max-w-4xl gap-0 overflow-hidden p-0"
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
+        className="flex h-[85vh] max-h-200 max-w-4xl gap-0 overflow-hidden p-0"
         showCloseButton={false}
       >
         <VisuallyHidden>

@@ -79,7 +79,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
                 <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="bg-primary text-primary-foreground rounded-lg px-4 py-2 transition-opacity hover:opacity-80"
+                  className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 transition-colors"
                 >
                   {translations.reloadButton}
                 </button>

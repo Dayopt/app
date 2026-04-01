@@ -21,7 +21,7 @@ const meta = {
   parameters: {
     layout: 'fullscreen',
   },
-  tags: ['autodocs', 'docs-only'],
+  tags: ['docs-only'],
 } satisfies Meta;
 
 export default meta;
@@ -64,7 +64,7 @@ function Section({
 }) {
   return (
     <div>
-      <div className="bg-surface-container border-border border-b px-6 py-3">
+      <div className="bg-surface-container border-border border-b px-6 py-2">
         <h3 className="text-foreground text-sm font-bold">{title}</h3>
         <p className="text-muted-foreground text-xs">{description}</p>
       </div>
@@ -301,48 +301,48 @@ export const Overview: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-3 pr-4 text-left font-bold">コンポーネント</th>
-                <th className="py-3 pr-4 text-left font-bold">ファイル</th>
-                <th className="py-3 pr-4 text-left font-bold">発動条件</th>
-                <th className="py-3 text-left font-bold">i18n</th>
+                <th className="py-2 pr-4 text-left font-bold">コンポーネント</th>
+                <th className="py-2 pr-4 text-left font-bold">ファイル</th>
+                <th className="py-2 pr-4 text-left font-bold">発動条件</th>
+                <th className="py-2 text-left font-bold">i18n</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">GlobalError</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/global-error.tsx</td>
-                <td className="py-3 pr-4">Root Layout破壊時</td>
-                <td className="py-3">なし（英語固定）</td>
+                <td className="py-2 pr-4 font-medium">GlobalError</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/global-error.tsx</td>
+                <td className="py-2 pr-4">Root Layout破壊時</td>
+                <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">RootError</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/error.tsx</td>
-                <td className="py-3 pr-4">Provider外のランタイムエラー</td>
-                <td className="py-3">なし（英語固定）</td>
+                <td className="py-2 pr-4 font-medium">RootError</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/error.tsx</td>
+                <td className="py-2 pr-4">Provider外のランタイムエラー</td>
+                <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">NotFound</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/not-found.tsx</td>
-                <td className="py-3 pr-4">存在しないルートへのアクセス</td>
-                <td className="py-3">なし（英語固定）</td>
+                <td className="py-2 pr-4 font-medium">NotFound</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/not-found.tsx</td>
+                <td className="py-2 pr-4">存在しないルートへのアクセス</td>
+                <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">AppError</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/.../(app)/error.tsx</td>
-                <td className="py-3 pr-4">App内ページエラー（BaseLayout内に表示）</td>
-                <td className="py-3">あり（next-intl）</td>
+                <td className="py-2 pr-4 font-medium">AppError</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/.../(app)/error.tsx</td>
+                <td className="py-2 pr-4">App内ページエラー（BaseLayout内に表示）</td>
+                <td className="py-2">あり（next-intl）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">CalendarError</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/.../calendar/error.tsx</td>
-                <td className="py-3 pr-4">カレンダーSSR/ランタイムエラー</td>
-                <td className="py-3">あり（next-intl）</td>
+                <td className="py-2 pr-4 font-medium">CalendarError</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/.../calendar/error.tsx</td>
+                <td className="py-2 pr-4">カレンダーSSR/ランタイムエラー</td>
+                <td className="py-2">あり（next-intl）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">Maintenance</td>
-                <td className="py-3 pr-4 font-mono text-xs">src/app/maintenance/route.ts</td>
-                <td className="py-3 pr-4">システムメンテナンス中（503）</td>
-                <td className="py-3">なし（英語固定）</td>
+                <td className="py-2 pr-4 font-medium">Maintenance</td>
+                <td className="py-2 pr-4 font-mono text-xs">src/app/maintenance/route.ts</td>
+                <td className="py-2 pr-4">システムメンテナンス中（503）</td>
+                <td className="py-2">なし（英語固定）</td>
               </tr>
             </tbody>
           </table>
@@ -358,26 +358,26 @@ export const Overview: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-3 pr-4 text-left font-bold">コンポーネント</th>
-                <th className="py-3 pr-4 text-left font-bold">使用元</th>
-                <th className="py-3 text-left font-bold">用途</th>
+                <th className="py-2 pr-4 text-left font-bold">コンポーネント</th>
+                <th className="py-2 pr-4 text-left font-bold">使用元</th>
+                <th className="py-2 text-left font-bold">用途</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">DefaultErrorFallback</td>
-                <td className="py-3 pr-4">ErrorBoundary</td>
-                <td className="py-3">本番環境のデフォルト表示</td>
+                <td className="py-2 pr-4 font-medium">DefaultErrorFallback</td>
+                <td className="py-2 pr-4">ErrorBoundary</td>
+                <td className="py-2">本番環境のデフォルト表示</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">DevErrorFallback</td>
-                <td className="py-3 pr-4">DetailedErrorBoundary</td>
-                <td className="py-3">開発環境用（コンポーネント名表示）</td>
+                <td className="py-2 pr-4 font-medium">DevErrorFallback</td>
+                <td className="py-2 pr-4">DetailedErrorBoundary</td>
+                <td className="py-2">開発環境用（コンポーネント名表示）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-3 pr-4 font-medium">FeatureErrorFallback</td>
-                <td className="py-3 pr-4">FeatureErrorBoundary</td>
-                <td className="py-3">機能単位のエラー表示</td>
+                <td className="py-2 pr-4 font-medium">FeatureErrorFallback</td>
+                <td className="py-2 pr-4">FeatureErrorBoundary</td>
+                <td className="py-2">機能単位のエラー表示</td>
               </tr>
             </tbody>
           </table>

@@ -81,7 +81,7 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
         isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
       )}
@@ -91,7 +91,7 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-0.5 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
         <span className="truncate">{tag.name}</span>
         {hasChildren && <span className="text-muted-foreground shrink-0 text-xs">›</span>}
       </span>
@@ -109,7 +109,7 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-3 transition-colors',
+        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >
@@ -159,9 +159,9 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         <span className="text-foreground font-semibold">新しいタグ</span>
       </button>
 
-      <div className="flex flex-col gap-5 px-4 py-3">
+      <div className="flex flex-col gap-4 px-4 py-2">
         {/* 名前 */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label htmlFor="tag-name" className="text-muted-foreground text-sm">
             名前
           </label>
@@ -183,7 +183,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         </div>
 
         {/* 色 */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">色</span>
           <div className="flex flex-wrap gap-2">
             {TAG_COLOR_NAMES.map((color) => {
@@ -210,20 +210,20 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         </div>
 
         {/* アイコン（任意） */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">アイコン</span>
           <IconPicker value={selectedIcon} onChange={setSelectedIcon} color={selectedColor} />
         </div>
 
         {/* グループ（任意） */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">グループ（任意）</span>
           <div className="relative">
             <button
               type="button"
               onClick={() => setGroupOpen(!groupOpen)}
               className={cn(
-                'border-border hover:bg-state-hover flex min-h-11 w-full items-center justify-between rounded-lg border px-3 text-sm transition-colors',
+                'border-border hover:bg-state-hover flex min-h-11 w-full items-center justify-between rounded-lg border px-4 text-sm transition-colors',
                 selectedGroup ? 'text-foreground' : 'text-muted-foreground',
               )}
             >
@@ -255,7 +255,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
                     setGroupOpen(false);
                   }}
                   className={cn(
-                    'hover:bg-state-hover flex min-h-10 w-full items-center px-3 text-sm transition-colors',
+                    'hover:bg-state-hover flex min-h-10 w-full items-center px-4 text-sm transition-colors',
                     !selectedGroup && 'text-primary font-medium',
                   )}
                 >
@@ -270,7 +270,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
                       setGroupOpen(false);
                     }}
                     className={cn(
-                      'hover:bg-state-hover flex min-h-10 w-full items-center gap-2 px-3 text-sm transition-colors',
+                      'hover:bg-state-hover flex min-h-10 w-full items-center gap-2 px-4 text-sm transition-colors',
                       selectedGroup === tag.name && 'text-primary font-medium',
                     )}
                   >
@@ -371,7 +371,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-3">
+        <div className="grid grid-cols-4 gap-2 px-4 py-2">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -397,7 +397,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
 
   // メイン画面: 親タググリッド
   return (
-    <div className="grid grid-cols-4 gap-2 px-4 py-3">
+    <div className="grid grid-cols-4 gap-2 px-4 py-2">
       {parentTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (
@@ -506,7 +506,7 @@ export const GridWithChildren: Story = {
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
-          <div className="grid grid-cols-4 gap-2 px-4 py-3">
+          <div className="grid grid-cols-4 gap-2 px-4 py-2">
             <TagGridCell
               tag={{ id: '1', name: '仕事', color: 'blue', icon: 'briefcase' }}
               isSelected={selected === '1'}
@@ -635,25 +635,25 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-wrap items-start gap-6">
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Default (8)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Default (8)</p>
           <SelectorFrame>
             <TagGridSelector tags={MOCK_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Few (2)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Few (2)</p>
           <SelectorFrame>
             <TagGridSelector tags={FEW_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Many (14)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Many (14)</p>
           <SelectorFrame>
             <TagGridSelector tags={MANY_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Children</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Children</p>
           <SelectorFrame>
             <div className="flex flex-col">
               <div className="flex min-h-11 items-center gap-2 px-4 py-2">
@@ -661,7 +661,7 @@ export const AllPatterns: Story = {
                 <TagIcon icon="briefcase" color="blue" size="sm" />
                 <span className="text-foreground font-semibold">仕事</span>
               </div>
-              <div className="grid grid-cols-4 gap-2 px-4 py-3">
+              <div className="grid grid-cols-4 gap-2 px-4 py-2">
                 <TagGridCell
                   tag={{ id: 'p-0', name: '仕事', color: 'blue', icon: 'briefcase' }}
                   onSelect={fn()}

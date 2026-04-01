@@ -140,13 +140,13 @@ export const ClickTest: Story = {
 
 | ディレクトリ / 用途          | title prefix         | 例                                                       |
 | ---------------------------- | -------------------- | -------------------------------------------------------- |
-| `src/stories/tokens/`        | `Foundations/`       | `Foundations/Colors`, `Foundations/Typography`           |
+| `src/styles/tokens/`         | `Foundations/`       | `Foundations/Colors`, `Foundations/Typography`           |
 | `src/components/ui/`         | `Components/UI/`     | `Components/UI/Button`, `Components/UI/AlertDialog`      |
 | `src/components/common/`     | `Components/Common/` | `Components/Common/DateNavigator`                        |
 | `src/shell/components/`      | `Components/Shell/`  | `Components/Shell/AppHeader`, `Components/Shell/Sidebar` |
 | `src/features/*/components/` | `Features/`          | `Features/Entry/Inspector/EntryInspector`                |
 | `src/stories/patterns/`      | `Patterns/`          | `Patterns/Feedback`, `Patterns/Forms`                    |
-| `src/stories/docs/`          | `Docs/`              | `Docs/はじめに`, `Docs/StyleGuide/Overview`              |
+| `src/stories/docs/`          | `Docs/`              | `Docs/Introduction`, `Docs/Architecture/Data Flow`       |
 
 ---
 

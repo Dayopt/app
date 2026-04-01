@@ -33,9 +33,23 @@ paths:
 
 ## Spacing
 
-- **8px グリッド準拠**: Tailwindデフォルト値 (`p-1`=4px, `p-2`=8px, `p-4`=16px...) または `--spacing-*` トークンを使用
-- 任意値 (`p-[Xpx]`) は原則禁止。やむを得ない場合はデザイントークンとして定義してから使用
+- **8px グリッド準拠（4pxサブグリッド）**
+- 任意値 (`p-[Xpx]`) は禁止。やむを得ない場合はデザイントークンとして定義してから使用
 - **`border-l-[3px]`**: 左ボーダーインジケータとして `--border-indicator` トークンで定義済み
+
+| Tailwind | px   | 用途例                        |
+| -------- | ---- | ----------------------------- |
+| 0        | 0    | リセット                      |
+| 1        | 4px  | アイコン-テキスト間、最小間隔 |
+| 2        | 8px  | コンパクト間隔                |
+| 4        | 16px | 標準間隔、カード内パディング  |
+| 6        | 24px | セクション間                  |
+| 8        | 32px | 大間隔                        |
+| 12       | 48px | ページ間隔                    |
+| 16       | 64px | ヒーロー間隔                  |
+| 24       | 96px | 最大間隔                      |
+
+**禁止**: `*-0.5`(2px), `*-1.5`(6px), `*-2.5`(10px), `*-3`(12px), `*-3.5`(14px), `*-5`(20px), `*-7`(28px), `*-9`(36px)
 
 ## Border Radius
 
@@ -53,3 +67,70 @@ paths:
 
 - Tailwindデフォルトのみ: `text-xs`, `text-sm`, `text-base`, `text-lg` 等
 - 任意値 (`text-[11px]`) は禁止
+
+## Icon Size
+
+6種のみ使用可。任意値 (`size-[Xpx]`) は禁止。`size-3` は `size-3.5` に統一済み。
+
+**標準（迷ったらこれ）:**
+
+| Tailwind   | px   | 用途                                          |
+| ---------- | ---- | --------------------------------------------- |
+| `size-3.5` | 14px | 補助（矢印、Eye、ExternalLink等）text-sm の横 |
+| `size-4`   | 16px | 標準（ボタン内、text-base の横）              |
+
+**必要なときだけ:**
+
+| Tailwind | px   | 用途       |
+| -------- | ---- | ---------- |
+| `size-5` | 20px | ナビ、強調 |
+| `size-6` | 24px | 見出し横   |
+
+**特殊用途:**
+
+| Tailwind  | px   | 用途                     |
+| --------- | ---- | ------------------------ |
+| `size-8`  | 32px | カード主アイコン、エラー |
+| `size-10` | 40px | 空状態、オンボーディング |
+
+**禁止**: `size-3`(12px), `size-7`(28px), `size-9`(36px) 等、上記以外のサイズ
+**注**: `size-8`, `size-9` 等がボタン/コンテナのサイズとして使われる場合はアイコンサイズ規約の対象外
+
+## Transition
+
+- **デフォルト**: `transition-colors duration-150` — ホバー、フォーカス、状態変化の色切り替え。迷ったらこれ
+- ease は指定しない（Tailwind デフォルトの `ease-in-out` で十分）
+- `duration-150` を標準とし、ほぼ全てのインタラクションに使う
+
+**用途別:**
+
+| クラス                              | 用途               |
+| ----------------------------------- | ------------------ |
+| `transition-colors duration-150`    | 色のみ変化（標準） |
+| `transition-all duration-150`       | サイズ変化を含む   |
+| `transition-transform duration-200` | transform のみ     |
+
+**duration 推奨値:**
+
+| duration       | 用途                                         |
+| -------------- | -------------------------------------------- |
+| `duration-75`  | 即座のフィードバック（active 押下など）      |
+| `duration-150` | **標準（デフォルト）** — ほぼ全てこれを使う  |
+| `duration-200` | transform、やや重い要素の移動                |
+| `duration-300` | 大きな面積の展開・折りたたみ（accordion 等） |
+
+上記4つ以外の duration は禁止
+
+## Z-Index
+
+- **トークン経由のみ**: `z-modal`, `z-tooltip` 等。`z-[200]` 等の任意値は禁止
+- **50 刻み規則**: 通常コンテキスト 40〜450、Inspector 1000〜1100、Overlay 1200〜1400、tooltip 9999
+
+| グループ         | 範囲      | 用途                                                                |
+| ---------------- | --------- | ------------------------------------------------------------------- |
+| 通常コンテキスト | 40–450    | dropdown, popover, sheet, modal, confirm, toast, context-menu, tour |
+| Inspector        | 1000–1100 | calendar-drag, inspector-backdrop, inspector                        |
+| Overlay          | 1200–1400 | Inspector 上の modal, popover, confirm                              |
+| 最前面           | 9999      | tooltip                                                             |
+
+- **Elevation との関係**: Sunken / Base / Raised は z-index 指定なし。Overlay のみ z-index を使用。見た目の浮き（shadow）は Elevation、スタッキング順序は Z-Index。別の関心事

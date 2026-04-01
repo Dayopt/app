@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Docs/Architecture/ADR/002 Feature-Slicedアーキテクチャ" />
+<Meta title="Docs/Architecture/ADR/002 Feature-Sliced Architecture" />
 
 # ADR-002: Feature-Slicedアーキテクチャ
 
@@ -48,12 +48,12 @@ Independent:       auth, notifications    ← 他featureに依存しない
 
 feature間の協調が必要な場合はComposition Layerで統合する：
 
-| 層 | パス |
-| --- | --- |
-| Logic Composition | `src/app/*/_composition/` |
-| Layout Composition | `src/shell/layout/` |
-| Provider Composition | `src/shell/providers/` |
-| Shell State | `src/shell/stores/`, `src/shell/contexts/` |
+| 層                   | パス                                       |
+| -------------------- | ------------------------------------------ |
+| Logic Composition    | `src/app/*/_composition/`                  |
+| Layout Composition   | `src/shell/layout/`                        |
+| Provider Composition | `src/shell/providers/`                     |
+| Shell State          | `src/shell/stores/`, `src/shell/contexts/` |
 
 ### 自動検証
 

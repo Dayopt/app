@@ -24,7 +24,7 @@ export function SyncStatusIndicator() {
     <div className="flex items-center gap-2 text-xs">
       {/* オフライン表示 */}
       {!isOnline && (
-        <div className="text-muted-foreground flex items-center gap-1.5">
+        <div className="text-muted-foreground flex items-center gap-1">
           <CloudOff className="h-3.5 w-3.5" />
           <span>{t('offline')}</span>
         </div>
@@ -32,7 +32,7 @@ export function SyncStatusIndicator() {
 
       {/* 同期待ち表示 */}
       {pendingCount > 0 && (
-        <div className="text-muted-foreground flex items-center gap-1.5">
+        <div className="text-muted-foreground flex items-center gap-1">
           {isSyncing ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
@@ -44,7 +44,7 @@ export function SyncStatusIndicator() {
 
       {/* 同期失敗表示 */}
       {failedCount > 0 && (
-        <div className="text-destructive flex items-center gap-1.5">
+        <div className="text-destructive flex items-center gap-1">
           <AlertTriangle className="h-3.5 w-3.5" />
           <span>{t('failed', { count: failedCount })}</span>
           <button

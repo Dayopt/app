@@ -39,7 +39,7 @@ export const Default: Story = {
   },
   render: () => (
     <AuthLayout>
-      <div className="flex flex-col gap-3 text-center">
+      <div className="flex flex-col gap-4 text-center">
         <h1 className="text-foreground text-xl font-bold">メール確認完了</h1>
         <p className="text-muted-foreground text-sm">
           アカウントが確認されました。ログインしてください。
@@ -62,7 +62,7 @@ export const ErrorPage: Story = {
   },
   render: () => (
     <AuthLayout>
-      <div className="flex flex-col gap-3 text-center">
+      <div className="flex flex-col gap-4 text-center">
         <h1 className="text-foreground text-xl font-bold">リンクの期限切れ</h1>
         <p className="text-muted-foreground text-sm">
           このリンクは既に使用されているか、有効期限が切れています。
@@ -113,7 +113,7 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-4 text-xs">
           AuthLayout は min-h-dvh の全画面配置のため、個別 Story での確認を推奨。
         </p>
-        <ul className="text-muted-foreground list-disc pl-5 text-xs leading-6">
+        <ul className="text-muted-foreground list-disc pl-4 text-xs leading-6">
           <li>Default — メール確認完了ページ</li>
           <li>ErrorPage — リンク期限切れページ</li>
           <li>LoginPathSkipped — /auth/login パスではラップなし</li>

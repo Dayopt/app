@@ -120,7 +120,7 @@ export function GroupHeader({
       <span className="ml-2 shrink-0">
         <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
       </span>
-      <span className="ml-1.5 min-w-0 truncate">{label}</span>
+      <span className="ml-2 min-w-0 truncate">{label}</span>
       <ChevronRight
         className={cn(
           'text-muted-foreground ml-1 size-4 shrink-0 transition-transform',
@@ -158,6 +158,7 @@ export function GroupHeader({
           <button
             type="button"
             aria-label={t('calendar.filter.tagMenu')}
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
             className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}

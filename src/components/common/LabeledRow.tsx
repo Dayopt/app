@@ -24,6 +24,9 @@ interface LabeledRowProps {
  * - min-h-11 (44px) でタッチターゲット保証
  * - variant="navigate" で ChevronRight 自動表示 + 行タップ可能
  * - variant="action" で destructive カラー
+ *
+ * 現在は主に Settings / Chronotype の設定系UIで使用。
+ * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
  */
 export function LabeledRow({
   label,
@@ -38,7 +41,7 @@ export function LabeledRow({
   const content = (
     <div
       className={cn(
-        'flex min-h-11 items-center gap-4 py-3',
+        'flex min-h-11 items-center gap-4 py-2',
         isNavigate && 'active:bg-state-pressed cursor-pointer',
         isAction && 'cursor-pointer',
       )}
@@ -46,7 +49,7 @@ export function LabeledRow({
       <div className="min-w-0 flex-1">
         <div className={cn('text-base', isAction && 'text-destructive')}>{label}</div>
         {description ? (
-          <div className="text-muted-foreground mt-0.5 text-sm">{description}</div>
+          <div className="text-muted-foreground mt-1 text-sm">{description}</div>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">

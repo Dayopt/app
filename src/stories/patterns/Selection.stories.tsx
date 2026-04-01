@@ -35,31 +35,31 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-3 text-left font-bold">パターン</th>
-                  <th className="py-3 text-left font-bold">用途</th>
-                  <th className="py-3 text-left font-bold">選択肢数</th>
+                  <th className="py-2 text-left font-bold">パターン</th>
+                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-bold">選択肢数</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Radio</td>
-                  <td className="py-3">排他的な単一選択</td>
-                  <td className="py-3">2〜5個</td>
+                  <td className="py-2 font-bold">Radio</td>
+                  <td className="py-2">排他的な単一選択</td>
+                  <td className="py-2">2〜5個</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Select</td>
-                  <td className="py-3">多数の選択肢から単一選択</td>
-                  <td className="py-3">6個以上</td>
+                  <td className="py-2 font-bold">Select</td>
+                  <td className="py-2">多数の選択肢から単一選択</td>
+                  <td className="py-2">6個以上</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-3 font-bold">Checkbox</td>
-                  <td className="py-3">複数選択可能な項目</td>
-                  <td className="py-3">任意</td>
+                  <td className="py-2 font-bold">Checkbox</td>
+                  <td className="py-2">複数選択可能な項目</td>
+                  <td className="py-2">任意</td>
                 </tr>
                 <tr>
-                  <td className="py-3 font-bold">Chips</td>
-                  <td className="py-3">タグ選択、フィルター</td>
-                  <td className="py-3">〜10個</td>
+                  <td className="py-2 font-bold">Chips</td>
+                  <td className="py-2">タグ選択、フィルター</td>
+                  <td className="py-2">〜10個</td>
                 </tr>
               </tbody>
             </table>
@@ -75,7 +75,7 @@ export const Overview: Story = {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">縦並び（推奨）</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">縦並び（推奨）</h3>
               <RadioGroup defaultValue="option-1">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="option-1" id="option-1" />
@@ -93,7 +93,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 横並び（2〜3個の場合）
               </h3>
               <RadioGroup defaultValue="light" className="flex gap-4">
@@ -130,8 +130,8 @@ export const Overview: Story = {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">基本</h3>
-              <div className="space-y-3">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">基本</h3>
+              <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="email" defaultChecked />
                   <Label htmlFor="email">メール通知</Label>
@@ -148,7 +148,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">説明付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">説明付き</h3>
               <div className="space-y-4">
                 <div className="flex items-start space-x-2">
                   <Checkbox id="weekly" className="mt-1" />
@@ -184,21 +184,21 @@ export const Overview: Story = {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 フィルターチップ（単一選択）
               </h3>
               <SingleSelectChips />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 フィルターチップ（複数選択）
               </h3>
               <MultiSelectChips />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-3 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
                 削除可能なチップ（タグ）
               </h3>
               <RemovableChips />
@@ -216,7 +216,7 @@ export const Overview: Story = {
 <Badge variant="secondary">
   タグ名
   <button onClick={onRemove}>
-    <X className="size-3" />
+    <X className="size-3.5" />
   </button>
 </Badge>`}
           </pre>
@@ -327,7 +327,7 @@ function MultiSelectChips() {
           className="cursor-pointer"
           onClick={() => toggle(option)}
         >
-          {selected.includes(option) && <Check className="mr-1 size-3" />}
+          {selected.includes(option) && <Check className="mr-1 size-3.5" />}
           {labels[option]}
         </Badge>
       ))}
@@ -354,9 +354,9 @@ function RemovableChips() {
           <button
             type="button"
             onClick={() => remove(tag)}
-            className="hover:bg-muted ml-1 rounded-full p-0.5"
+            className="hover:bg-muted ml-1 rounded-full p-1"
           >
-            <X className="size-3" />
+            <X className="size-3.5" />
           </button>
         </Badge>
       ))}
@@ -390,7 +390,7 @@ function ListSelection() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Checkbox
           id="select-all"
@@ -405,7 +405,7 @@ function ListSelection() {
         {items.map((item) => (
           <div
             key={item.id}
-            className={`flex cursor-pointer items-center gap-3 p-3 transition-colors ${
+            className={`flex cursor-pointer items-center gap-2 p-4 transition-colors ${
               selected.includes(item.id)
                 ? 'bg-state-active border-primary border-l-2'
                 : 'hover:bg-state-hover border-l-2 border-transparent'

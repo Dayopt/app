@@ -80,12 +80,12 @@ export function TagFulfillmentDistribution({ tagId }: TagFulfillmentDistribution
         <CardTitle className="text-sm">{t('fulfillmentDistribution')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {SCORE_CONFIG.map((cfg) => {
             const count = countMap.get(cfg.score) ?? 0;
             const pct = total > 0 ? Math.round((count / total) * 100) : 0;
             return (
-              <div key={cfg.score} className="flex items-center gap-3">
+              <div key={cfg.score} className="flex items-center gap-2">
                 <span className="w-6 text-center text-lg">{cfg.emoji}</span>
                 <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
                   <div

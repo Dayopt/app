@@ -121,20 +121,21 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[42rem] overflow-hidden p-0" showCloseButton={false}>
+      {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
+      <DialogContent className="w-[95vw] max-w-2xl overflow-hidden p-0" showCloseButton={false}>
         <VisuallyHidden>
           <DialogTitle>{t('title')}</DialogTitle>
         </VisuallyHidden>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground !rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2">
           <div className="relative">
             <CommandInput placeholder={t('placeholder')} value={query} onValueChange={setQuery} />
-            <div className="absolute top-1/2 right-3 hidden -translate-y-1/2 items-center gap-1 md:flex">
+            <div className="absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1 md:flex">
               <kbd className="bg-surface-container text-muted-foreground inline-flex h-6 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-normal opacity-100 select-none">
                 ESC
               </kbd>
             </div>
           </div>
-          <CommandList className="max-h-[30rem]">
+          <CommandList className="max-h-120">
             <CommandEmpty>{t('noResults')}</CommandEmpty>
 
             {/* Tags */}
@@ -173,7 +174,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                     >
                       <TagIcon icon={tag?.icon} color={tag?.color} size="sm" className="shrink-0" />
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                        <div className="text-muted-foreground flex items-center gap-1 text-xs">
                           {tag && (
                             <span className="truncate font-medium">
                               <HighlightedTagName name={tag.name} query={query} />

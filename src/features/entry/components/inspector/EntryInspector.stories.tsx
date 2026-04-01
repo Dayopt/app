@@ -91,16 +91,16 @@ function InspectorContent({
   const actualDuration = computeDuration(effectiveActualStart, effectiveActualEnd);
 
   return (
-    <div className="px-4 pt-3 pb-4 md:px-6 md:pt-5 md:pb-6">
+    <div className="px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6">
       {/* Tag + Delete */}
       <MockTagRow tagName={tagName} tagColor={tagColor} />
 
       {/* Micro Insight (Composition Layer 経由で注入) */}
-      {microInsight && <div className="mt-1.5 px-0.5">{microInsight}</div>}
+      {microInsight && <div className="mt-2 px-1">{microInsight}</div>}
 
       {/* Schedule card */}
-      <div className="bg-muted mt-3 rounded-2xl">
-        <div className="flex flex-col gap-2 px-4 pt-2.5 pb-4">
+      <div className="bg-muted mt-4 rounded-2xl">
+        <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
           {/* Date */}
           <DateRow
             label={t('entry.inspector.time.date')}
@@ -397,7 +397,7 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-wrap items-start gap-6">
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
             Upcoming + Planned
           </p>
           <InspectorFrame>
@@ -411,7 +411,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
             Past + Planned
           </p>
           <InspectorFrame>
@@ -428,7 +428,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Loading</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Loading</p>
           <InspectorFrame>
             <div className="flex h-full flex-1 items-center justify-center py-16">
               <Spinner size="lg" />
@@ -436,7 +436,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-3 text-center text-xs font-medium">Not Found</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Not Found</p>
           <InspectorFrame>
             <div className="flex h-full flex-1 items-center justify-center py-16">
               <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>

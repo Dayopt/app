@@ -27,6 +27,7 @@ export function CalendarError({ error, reset }: ErrorProps) {
   }, [error]);
 
   return (
+    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 p-8">
       <div className="border-destructive flex size-16 items-center justify-center rounded-full border-2">
         <AlertCircle className="text-destructive size-8" />

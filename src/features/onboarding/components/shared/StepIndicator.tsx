@@ -16,8 +16,8 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
   const currentIndex = ONBOARDING_STEPS.indexOf(currentStep);
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex gap-1.5">
+    <div className="flex items-center gap-2">
+      <div className="flex gap-2">
         {ONBOARDING_STEPS.map((step, index) => (
           <div
             key={step}

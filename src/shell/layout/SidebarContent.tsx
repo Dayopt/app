@@ -66,6 +66,7 @@ export function SidebarContent() {
             onDateSelect={(date) => {
               if (date) handleDateSelect(date);
             }}
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- calc expression
             className="-mx-2 w-[calc(100%+16px)] bg-transparent"
           />
         </SidebarSection>

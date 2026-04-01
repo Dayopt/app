@@ -56,7 +56,7 @@ export function HourlyDistributionChart({ data }: HourlyDistributionChartProps) 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {slots.map((slot) => {
             const pct = maxHours > 0 ? (slot.hours / maxHours) * 100 : 0;
             return (
@@ -68,9 +68,9 @@ export function HourlyDistributionChart({ data }: HourlyDistributionChartProps) 
                 <span className="text-muted-foreground w-11 shrink-0 font-mono text-xs">
                   {slot.label}
                 </span>
-                <div className="bg-muted h-5 flex-1 overflow-hidden rounded-md">
+                <div className="bg-muted h-5 flex-1 overflow-hidden rounded-lg">
                   <div
-                    className="bg-primary h-full rounded-md transition-all"
+                    className="bg-primary h-full rounded-lg transition-all"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -81,7 +81,7 @@ export function HourlyDistributionChart({ data }: HourlyDistributionChartProps) 
             );
           })}
         </div>
-        <div className="text-muted-foreground mt-3 text-center text-xs">
+        <div className="text-muted-foreground mt-4 text-center text-xs">
           {t('hourlyTotal', { hours: formatHours(totalHours) })}
         </div>
       </CardContent>

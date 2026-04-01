@@ -102,7 +102,7 @@ export function MonthlyTrendChart({ data }: MonthlyTrendChartProps) {
               x={p.x}
               y={H - 4}
               textAnchor="middle"
-              className="fill-muted-foreground text-[10px]"
+              className="fill-muted-foreground text-xs"
             >
               {p.label}
             </text>

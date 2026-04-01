@@ -253,7 +253,7 @@ export const WithSearch: Story = {
                   onClick={() => handleSelect(item.id)}
                   className="flex items-center gap-2 p-2"
                 >
-                  <span className="size-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="size-3.5 rounded-full" style={{ backgroundColor: item.color }} />
                   <span>{item.name}</span>
                   {selected.includes(item.id) && <span className="text-primary ml-auto">✓</span>}
                 </DropdownMenuItem>

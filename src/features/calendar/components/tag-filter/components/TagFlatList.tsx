@@ -631,7 +631,7 @@ function SortableTagItem({
               isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
-              isGrouped && 'pl-3',
+              isGrouped && 'pl-4',
               !checked && 'opacity-50',
             )}
           >
@@ -644,7 +644,7 @@ function SortableTagItem({
               content={tag.name}
               side="top"
               disabled={menuOpen}
-              wrapperClassName="ml-1.5 min-w-0 flex-1"
+              wrapperClassName="ml-2 min-w-0 flex-1"
             >
               <span className="min-w-0 truncate">{displayLabel}</span>
             </HoverTooltip>
@@ -675,6 +675,7 @@ function SortableTagItem({
                 <button
                   type="button"
                   aria-label={t('calendar.filter.tagMenu')}
+                  // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
                   className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
                   onClick={(e) => e.stopPropagation()}
                   onPointerDown={(e) => e.stopPropagation()}

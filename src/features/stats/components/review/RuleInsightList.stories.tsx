@@ -98,11 +98,11 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Mixed（警告＋情報の混在）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">Mixed（警告＋情報の混在）</p>
         <RuleInsightList insights={MOCK_INSIGHTS} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">WarningsOnly（警告のみ）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">WarningsOnly（警告のみ）</p>
         <RuleInsightList
           insights={[
             {
@@ -123,7 +123,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-3 text-xs font-medium">Empty（空・問題なし）</p>
+        <p className="text-muted-foreground mb-4 text-xs font-medium">Empty（空・問題なし）</p>
         <RuleInsightList insights={[]} />
       </div>
     </div>

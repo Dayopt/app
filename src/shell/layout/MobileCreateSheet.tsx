@@ -97,6 +97,7 @@ export function MobileCreateSheet() {
       setActiveSnapPoint={setSnap}
       fadeFromIndex={0}
     >
+      {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS unset override */}
       <DrawerContent className="max-h-[unset] rounded-t-2xl">
         <VisuallyHidden asChild>
           <DrawerTitle>Create</DrawerTitle>
@@ -175,7 +176,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
 
       {/* タグ選択 — スクロール可能な一覧 */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
-        <label className="text-muted-foreground mb-1.5 block shrink-0 text-sm">
+        <label className="text-muted-foreground mb-1 block shrink-0 text-sm">
           {t('sidebar.palette.tagLabel')}
         </label>
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
@@ -187,7 +188,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
                 type="button"
                 onClick={() => setSelectedTagId(tag.id)}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 py-2 text-left text-base transition-colors',
+                  'flex items-center gap-2 rounded-lg px-4 py-2 text-left text-base transition-colors',
                   selectedTagId === tag.id
                     ? 'bg-primary-state-selected text-foreground'
                     : 'text-foreground hover:bg-state-hover',
@@ -202,7 +203,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
 
       {/* Duration チップ */}
       <div className="mt-4">
-        <label className="text-muted-foreground mb-1.5 block text-sm">
+        <label className="text-muted-foreground mb-1 block text-sm">
           {t('sidebar.palette.durationLabel')}
         </label>
         <div className="flex flex-wrap gap-2">
@@ -212,7 +213,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
               type="button"
               onClick={() => setSelectedDuration(preset.value)}
               className={cn(
-                'rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+                'rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
                 selectedDuration === preset.value
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border bg-background text-foreground hover:bg-state-hover',

@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-import type { DateRangeDisplayProps } from '@/components/ui/date-range-display';
+import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
@@ -17,6 +17,7 @@ export function useStatsDateDisplayProps(
 ): DateRangeDisplayProps {
   const tCommon = useTranslations('common');
   const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
   // day / week 粒度のみ週番号を表示（Calendar と同じ条件）
   const showWeekNumber = showWeekNumbers && (granularity === 'day' || granularity === 'week');
@@ -27,20 +28,24 @@ export function useStatsDateDisplayProps(
         date: currentDate,
         formatPattern: tCommon('dates.formats.monthDayYear'),
         showWeekNumber,
+        weekStartsOn,
       };
     case 'week':
       return {
         date: currentDate,
         showWeekNumber,
+        weekStartsOn,
       };
     case 'month':
       return {
         date: currentDate,
+        weekStartsOn,
       };
     case 'year':
       return {
         date: currentDate,
         formatPattern: tCommon('dates.formats.yearOnly'),
+        weekStartsOn,
       };
   }
 }
