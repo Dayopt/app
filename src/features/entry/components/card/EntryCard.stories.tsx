@@ -21,9 +21,27 @@ type Story = StoryObj<typeof meta>;
 // ---------------------------------------------------------------------------
 
 /** EntryCardはposition:absoluteのため、relativeな親が必要。 */
-function Slot({ children, height = 72 }: { children: React.ReactNode; height?: number }) {
+function Slot({ children, height = 70 }: { children: React.ReactNode; height?: number }) {
   return (
     <div className="relative w-full" style={{ height }}>
+      {children}
+    </div>
+  );
+}
+
+/** グリッド罫線付きの表示コンテナ。HOUR_HEIGHT=72px基準で時間罫線を描画。 */
+function GridSlot({ children, hours = 3 }: { children: React.ReactNode; hours?: number }) {
+  const HOUR_HEIGHT = 72;
+  return (
+    <div className="relative w-64" style={{ height: hours * HOUR_HEIGHT }}>
+      {/* グリッド罫線 */}
+      {Array.from({ length: hours + 1 }, (_, i) => (
+        <div
+          key={i}
+          className="border-border absolute right-0 left-0 border-t"
+          style={{ top: i * HOUR_HEIGHT }}
+        />
+      ))}
       {children}
     </div>
   );
@@ -45,11 +63,12 @@ const baseEntry: CalendarEvent = {
   isMultiDay: false,
 };
 
+/** ENTRY_PADDING=2 が height から引かれた後の値（layoutEntryToVerticalPosition 準拠） */
 const basePosition = {
   top: 0,
   left: 0,
   width: 100,
-  height: 72,
+  height: 70,
 };
 
 // ---------------------------------------------------------------------------
@@ -95,21 +114,21 @@ export const CompactLayout: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-xs">PC（px-2）</p>
-      <Slot height={30}>
+      <Slot height={34}>
         <EntryCard
           entry={baseEntry}
           tagName="仕事"
           tagColor="blue"
-          position={{ ...basePosition, height: 30 }}
+          position={{ ...basePosition, height: 34 }}
         />
       </Slot>
       <p className="text-muted-foreground text-xs">モバイル（px-2）</p>
-      <Slot height={30}>
+      <Slot height={34}>
         <EntryCard
           entry={baseEntry}
           tagName="仕事"
           tagColor="blue"
-          position={{ ...basePosition, height: 30 }}
+          position={{ ...basePosition, height: 34 }}
           isMobile
         />
       </Slot>
@@ -160,7 +179,7 @@ export const DraggingState: Story = {
 /** 未実行オーバーレイ。予定時間に対して実績が短かった区間に穏やかなフェードグラデーション。 */
 export const OverlayUnexecuted: Story = {
   render: () => (
-    <Slot height={144}>
+    <Slot height={142}>
       <EntryCard
         entry={{
           ...baseEntry,
@@ -172,7 +191,7 @@ export const OverlayUnexecuted: Story = {
           actualStartDate: new Date('2024-01-15T10:30:00'),
           actualEndDate: new Date('2024-01-15T11:30:00'),
         }}
-        position={{ ...basePosition, height: 144 }}
+        position={{ ...basePosition, height: 142 }}
         hourHeight={72}
       />
     </Slot>
@@ -194,7 +213,7 @@ export const OverlayOvertime: Story = {
           actualStartDate: new Date('2024-01-15T09:30:00'),
           actualEndDate: new Date('2024-01-15T11:30:00'),
         }}
-        position={{ ...basePosition, height: 72 }}
+        position={{ ...basePosition, height: 70 }}
         hourHeight={72}
       />
     </Slot>
@@ -209,21 +228,21 @@ export const OverlayOvertime: Story = {
 // サイズバリエーション
 // ---------------------------------------------------------------------------
 
-/** 時間帯による高さの違い（HOUR_HEIGHT=72pxベース）。 */
+/** 時間帯による高さの違い（HOUR_HEIGHT=72px, ENTRY_PADDING=2pxベース）。 */
 export const SizeVariations: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
-      <Slot height={18}>
-        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 18 }} />
+      <Slot height={20}>
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 20 }} />
       </Slot>
-      <Slot height={36}>
-        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} />
+      <Slot height={34}>
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 34 }} />
       </Slot>
       <Slot>
         <EntryCard entry={baseEntry} position={basePosition} />
       </Slot>
-      <Slot height={144}>
-        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 144 }} />
+      <Slot height={142}>
+        <EntryCard entry={baseEntry} position={{ ...basePosition, height: 142 }} />
       </Slot>
     </div>
   ),
@@ -299,7 +318,7 @@ export const AllPatterns: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           Overlay: Unexecuted（予定より実績が短い → フェードグラデーション）
         </p>
-        <Slot height={144}>
+        <Slot height={142}>
           <EntryCard
             entry={{
               ...baseEntry,
@@ -311,7 +330,7 @@ export const AllPatterns: Story = {
               actualStartDate: new Date('2024-01-15T10:30:00'),
               actualEndDate: new Date('2024-01-15T11:30:00'),
             }}
-            position={{ ...basePosition, height: 144 }}
+            position={{ ...basePosition, height: 142 }}
             hourHeight={72}
           />
         </Slot>
@@ -333,7 +352,7 @@ export const AllPatterns: Story = {
               actualStartDate: new Date('2024-01-15T09:30:00'),
               actualEndDate: new Date('2024-01-15T11:30:00'),
             }}
-            position={{ ...basePosition, height: 72 }}
+            position={{ ...basePosition, height: 70 }}
             hourHeight={72}
           />
         </Slot>
@@ -342,22 +361,22 @@ export const AllPatterns: Story = {
       {/* --- サイズバリエーション --- */}
       <section>
         <p className="text-muted-foreground mb-2 text-xs">15min（最小・1行）</p>
-        <Slot height={18}>
-          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 18 }} />
+        <Slot height={20}>
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 20 }} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト・PC）</p>
-        <Slot height={36}>
-          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} />
+        <Slot height={34}>
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 34 }} />
         </Slot>
       </section>
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">30min（コンパクト・モバイル）</p>
-        <Slot height={36}>
-          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 36 }} isMobile />
+        <Slot height={34}>
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 34 }} isMobile />
         </Slot>
       </section>
 
@@ -370,10 +389,67 @@ export const AllPatterns: Story = {
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">120min（長時間）</p>
-        <Slot height={144}>
-          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 144 }} />
+        <Slot height={142}>
+          <EntryCard entry={baseEntry} position={{ ...basePosition, height: 142 }} />
         </Slot>
       </section>
     </div>
   ),
+};
+
+// ---------------------------------------------------------------------------
+// グリッド整列確認
+// ---------------------------------------------------------------------------
+
+/**
+ * グリッド罫線との整列確認。
+ * top はグリッド線にぴったり、隙間(2px)は height の内側から取る。
+ * 連続ブロック間でズレが蓄積しないことを視覚確認できる。
+ */
+export const GridAlignment: Story = {
+  render: () => {
+    const HOUR_HEIGHT = 72;
+    const ENTRY_PADDING = 2;
+
+    return (
+      <GridSlot hours={3}>
+        {/* 0:00–1:00 */}
+        <EntryCard
+          entry={{ ...baseEntry, id: 'a' }}
+          tagName="タグ"
+          tagColor="green"
+          position={{
+            top: 0 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1 * HOUR_HEIGHT - ENTRY_PADDING,
+          }}
+        />
+        {/* 1:00–2:00 */}
+        <EntryCard
+          entry={{ ...baseEntry, id: 'b' }}
+          tagName="タグ"
+          tagColor="green"
+          position={{
+            top: 1 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1 * HOUR_HEIGHT - ENTRY_PADDING,
+          }}
+        />
+        {/* 2:00–3:00 */}
+        <EntryCard
+          entry={{ ...baseEntry, id: 'c' }}
+          tagName="タグ"
+          tagColor="green"
+          position={{
+            top: 2 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1 * HOUR_HEIGHT - ENTRY_PADDING,
+          }}
+        />
+      </GridSlot>
+    );
+  },
 };
