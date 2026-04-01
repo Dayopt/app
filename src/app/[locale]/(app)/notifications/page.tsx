@@ -33,7 +33,7 @@ export default function NotificationsPage() {
             className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
             aria-label={t('notification.settings.title')}
           >
-            <Settings className="size-4" />
+            <Settings className="size-5" />
           </button>
         }
       >

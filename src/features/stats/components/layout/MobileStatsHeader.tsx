@@ -32,7 +32,7 @@ export function MobileStatsHeader({
   onGranularityChange,
 }: MobileStatsHeaderProps) {
   return (
-    <div className="md:hidden">
+    <div className="bg-background sticky top-0 z-20 md:hidden">
       <AppHeader
         rightSlot={
           showGranularity ? (
