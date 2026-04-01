@@ -5,10 +5,14 @@ import { useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { isCalendarViewPath } from '@/features/calendar';
+import { StatsView } from '@/features/stats';
+import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
+import { StatsLayoutShell } from '../stats/_composition/StatsLayoutShell';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,8 +29,7 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   const pathWithoutLocale = stripLocale(pathname);
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
-  // Stats は全ルートが独立ページ（/stats/review, /stats/progress, /stats/insights, /stats/tags/[id]）
-  // クライアントルーターではなく Next.js のサーバーレンダリングを使用
+  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
   return null;
 }
 
@@ -49,6 +52,16 @@ function CalendarClientView() {
   return <CalendarViewClient translations={translations} />;
 }
 
+function StatsClientView() {
+  return (
+    <StatsLayoutShell headerRightExtra={<SidebarPageNav />}>
+      <FeatureErrorBoundary featureName="stats">
+        <StatsView />
+      </FeatureErrorBoundary>
+    </StatsLayoutShell>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -62,8 +75,7 @@ interface ClientPageRouterProps {
  *
  * 初回ロード / リロード時は Next.js が SSR した {children} をそのまま表示。
  * PageNav が pushState + useClientRouterStore.switchToPage() を呼ぶと、
- * CalendarViewClient をクライアントサイドで直接レンダリングする。
- * Stats は全ルートが独立ページのため、クライアントルーターを経由しない。
+ * Calendar / Stats をクライアントサイドで直接レンダリングする。
  *
  * これにより router.push() のサーバーラウンドトリップを回避し、
  * ChatGPT ライクな「Sidebar 静止 / メインのみ切り替え」体験を実現する。
@@ -90,7 +102,7 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
   }, [switchToPage, resetToServer]);
 
   // router.push で URL が変わった場合、clientPage と実際のパスが不一致なら
-  // サーバーレンダリングにフォールバック（例: /stats → /stats/tags/[tagId]）
+  // サーバーレンダリングにフォールバック（例: /stats/tags/[tagId] 等のサブルート遷移）
   const actualPageType = getPageType(pathname);
   if (clientPage && clientPage !== actualPageType) {
     return <>{children}</>;
@@ -98,6 +110,10 @@ export function ClientPageRouter({ children }: ClientPageRouterProps) {
 
   if (clientPage === 'calendar') {
     return <CalendarClientView />;
+  }
+
+  if (clientPage === 'stats') {
+    return <StatsClientView />;
   }
 
   return <>{children}</>;

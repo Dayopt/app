@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
@@ -25,10 +25,8 @@ function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
 /** PageNav にナビゲーションロジックを接続する Composition Layer コンポーネント */
 export function SidebarPageNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const calendarNav = useCalendarNavigation();
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const statsGranularity = useStatsFilterStore((s) => s.granularity);
   const statsDate = useStatsFilterStore((s) => s.currentDate);
@@ -56,14 +54,16 @@ export function SidebarPageNav() {
   const handleStatsClick = useCallback(() => {
     if (activePage === 'stats') return;
 
-    // Stats は独立ルートなのでクライアントルーターをリセットし、router.push で遷移
-    resetToServer();
-    const statsPath = buildStatsPath(locale, 'review', {
-      granularity: statsGranularity,
-      date: statsDate,
-    });
-    router.push(statsPath);
-  }, [activePage, locale, statsGranularity, statsDate, resetToServer, router]);
+    window.history.pushState(
+      null,
+      '',
+      buildStatsPath(locale, 'review', {
+        granularity: statsGranularity,
+        date: statsDate,
+      }),
+    );
+    switchToPage('stats');
+  }, [activePage, locale, statsGranularity, statsDate, switchToPage]);
 
   return (
     <PageNav

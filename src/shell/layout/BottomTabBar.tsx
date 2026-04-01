@@ -73,12 +73,13 @@ export function BottomTabBar() {
   const handleStatsClick = useCallback(() => {
     if (activeTab === 'stats') return;
 
-    // Stats は独立ルートなのでクライアントルーターをリセットし、router.push で遷移
-    resetToServer();
-    router.push(
+    window.history.pushState(
+      null,
+      '',
       buildStatsPath(locale, 'review', { granularity: statsGranularity, date: statsDate }),
     );
-  }, [activeTab, locale, statsGranularity, statsDate, resetToServer, router]);
+    switchToPage('stats');
+  }, [activeTab, locale, statsGranularity, statsDate, switchToPage]);
 
   const handleNotificationsClick = useCallback(() => {
     resetToServer();
