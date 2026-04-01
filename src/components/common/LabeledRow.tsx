@@ -24,6 +24,9 @@ interface LabeledRowProps {
  * - min-h-11 (44px) でタッチターゲット保証
  * - variant="navigate" で ChevronRight 自動表示 + 行タップ可能
  * - variant="action" で destructive カラー
+ *
+ * 現在は主に Settings / Chronotype の設定系UIで使用。
+ * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
  */
 export function LabeledRow({
   label,
