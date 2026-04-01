@@ -75,7 +75,7 @@ export function StatsDateDisplay({
 
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      <span className="text-lg font-normal text-pretty">{displayText}</span>
+      <span className="text-xl font-normal text-pretty">{displayText}</span>
       {showWeekNumber ? (
         <span className="text-muted-foreground text-sm">
           {t('weekLabel', { weekNumber: getWeek(date, { weekStartsOn }) })}
