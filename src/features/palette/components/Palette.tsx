@@ -139,7 +139,8 @@ export function Palette({ onAddClick }: PaletteProps) {
                 <HoverTooltip content={t('sidebar.palette.remove')}>
                   <button
                     type="button"
-                    className="text-muted-foreground hover:text-destructive flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors"
+                    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
+                    className="text-muted-foreground hover:text-destructive relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-2.5 before:content-['']"
                     onClick={() => unpinItem(item.id)}
                     aria-label={t('sidebar.palette.remove')}
                   >
