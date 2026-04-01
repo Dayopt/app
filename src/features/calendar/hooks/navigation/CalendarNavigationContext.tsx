@@ -138,8 +138,10 @@ export const CalendarNavigationProvider = ({ children }: { children: React.React
 
   // URL由来の initialView が変更されたら viewType を同期
   // （ブラウザ戻る/進む、直接URL入力時）
+  // モバイルでは day 以外への変更を拒否（Effect A の replaceState と競合防止）
   React.useEffect(() => {
     if (isCalendarPage && initialView !== viewType) {
+      if (isMobileRef.current && initialView !== 'day') return;
       setViewType(initialView);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialView変更時のみ同期
