@@ -1,6 +1,6 @@
 # Foundations テンプレート
 
-デザイントークンの可視化。`src/stories/tokens/` が対象。
+デザイントークンの可視化。`src/styles/tokens/` が対象。
 
 ## 他レイヤーとの違い
 
@@ -80,24 +80,30 @@ export const AllColors: Story = {
 
 各 Foundations Story はトークンを視覚的に表示するヘルパーコンポーネントを定義する:
 
-| Story      | ヘルパー                    | 表示内容                             |
-| ---------- | --------------------------- | ------------------------------------ |
-| Colors     | `ColorSwatch`, `ColorGroup` | カラーチップ + Tailwindクラス名      |
-| Typography | `TypographyRow`             | フォントサイズ・ウェイトのサンプル文 |
-| Spacing    | `SpacingBlock`              | 余白の視覚的表示                     |
-| Elevation  | `ElevationCard`             | Physical Lighting の段階比較         |
-| Icons      | アイコングリッド            | lucide-react アイコン一覧            |
+| Story      | ヘルパー                    | 表示内容                                        |
+| ---------- | --------------------------- | ----------------------------------------------- |
+| Overview   | —                           | 全トークンカテゴリの概要・リンク集              |
+| Colors     | `ColorSwatch`, `ColorGroup` | カラーチップ + Tailwindクラス名                 |
+| Typography | `TypographyRow`             | フォントサイズ・ウェイトのサンプル文            |
+| Spacing    | `SpacingBlock`              | 余白の視覚的表示                                |
+| Elevation  | `ElevationCard`             | Physical Lighting の段階比較                    |
+| Radius     | `RadiusCard`                | border-radius の段階比較                        |
+| ZIndex     | `ZIndexLayer`               | z-index レイヤーの可視化                        |
+| Icons      | アイコングリッド            | lucide-react アイコン一覧                       |
+| Motion     | アニメーション例            | transition/animation トークンの実例             |
+| States     | `StateDemo`                 | hover/pressed/selected 等のインタラクション状態 |
+| Responsive | `BreakpointIndicator`       | ブレークポイント・レスポンシブパターン          |
 
 ## MDX Docs との連携
 
 Foundations Story には MDX Docs を併用することが多い:
 
 ```
-src/stories/tokens/
-├── Colors.stories.tsx        # Canvas: カラーチップ描画
-├── Colors.docs.mdx           # Docs: 使い分けテーブル + ガイドライン
-├── Typography.stories.tsx
-└── Typography.docs.mdx
+src/styles/tokens/
+├── colors.stories.tsx        # Canvas: カラーチップ描画
+├── colors.mdx                # Docs: 使い分けテーブル + ガイドライン
+├── typography.stories.tsx
+└── typography.mdx
 ```
 
 ## Canvas にテキストを入れてOK
@@ -107,6 +113,6 @@ Foundations は**例外的に** Canvas 内に `<h1>`, `<h2>`, テーブル等を
 
 ## 参考実装
 
-- `src/stories/tokens/Colors.stories.tsx` — カラートークン可視化
-- `src/stories/tokens/Typography.stories.tsx` — タイポグラフィ可視化
-- `src/stories/tokens/Elevation.stories.tsx` — Physical Lighting 可視化
+- `src/styles/tokens/colors.stories.tsx` — カラートークン可視化
+- `src/styles/tokens/typography.stories.tsx` — タイポグラフィ可視化
+- `src/styles/tokens/elevation.stories.tsx` — Physical Lighting 可視化

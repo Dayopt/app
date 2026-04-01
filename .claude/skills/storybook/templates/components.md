@@ -8,7 +8,6 @@ UIコンポーネント（単体・複合・Feature）の Story 作成用。
 | ---------------------------- | -------------------- | -------------- |
 | `src/components/ui/`         | `Components/UI/`     | あり           |
 | `src/components/common/`     | `Components/Common/` | あり or なし   |
-| `src/core/components/`       | `Components/Common/` | なし（複合）   |
 | `src/shell/components/`      | `Components/Shell/`  | あり           |
 | `src/features/*/components/` | `Features/`          | あり           |
 
@@ -75,7 +74,7 @@ export const AllPatterns: Story = {
 ## 複合コンポーネント（component 指定なし）
 
 2つ以上のコンポーネントを組み合わせたパターン。
-`src/core/components/`, `src/components/common/` が該当。
+`src/components/common/` が該当。
 
 ```tsx
 const meta = {
@@ -156,7 +155,7 @@ export const AllPatterns: Story = {
 | barrel export にない（内部コンポーネント）   | 入れない                  |
 
 **原則**: データ依存コンポーネントは無理に Storybook に入れない。
-純粋UIに分離できるなら `src/core/components/` に移動する。
+純粋UIに分離できるなら `src/components/common/` に移動する。
 
 ### Feature Boundaries
 
