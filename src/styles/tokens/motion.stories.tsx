@@ -22,7 +22,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* shadcn/ui標準 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">shadcn/ui標準（animate-in/out）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ダイアログ、ポップオーバー等のマウント/アンマウント時に使用
@@ -73,7 +73,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* ローディング */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">ローディング（GAFA準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             スケルトンローダー用。shimmerはFacebook/LinkedIn方式。
@@ -100,7 +100,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* エラーフィードバック */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">エラーフィードバック</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             入力エラー時のシェイクアニメーション（Apple HIG準拠）
@@ -113,7 +113,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* duration */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Duration（継続時間）</h2>
           <p className="text-muted-foreground mb-4 text-sm">Tailwind標準のdurationクラスを併用</p>
           <div className="grid gap-4 sm:grid-cols-4">
@@ -142,7 +142,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* Easing */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Easing（イージング）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             Material Design 3準拠。要素の動きに自然さを与える。
@@ -185,7 +185,7 @@ data-[state=closed]:animate-out`}
         </section>
 
         {/* motion-reduce */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">アクセシビリティ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             motion-reduce対応で、ユーザー設定に応じてアニメーションを無効化
@@ -328,7 +328,7 @@ export const Loading: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* カード */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">カードスケルトン</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="border-border space-y-2 rounded-lg border p-4">
@@ -345,7 +345,7 @@ export const Loading: Story = {
         </section>
 
         {/* リスト */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">リストスケルトン</h2>
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
@@ -361,7 +361,7 @@ export const Loading: Story = {
         </section>
 
         {/* テーブル */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">テーブルスケルトン</h2>
           <div className="space-y-2">
             <div className="border-border flex gap-4 border-b pb-2">

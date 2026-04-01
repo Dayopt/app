@@ -65,7 +65,7 @@ export const AllColors: Story = {
       <h1 className="mb-4 text-2xl font-bold">カラートークン</h1>
 
       {/* ── 設計原則 ── */}
-      <div className="bg-card border-border mb-8 rounded-xl border p-6">
+      <div className="bg-card border-border mb-8 rounded-lg border p-6">
         <h2 className="mb-4 text-lg font-bold">設計原則</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
@@ -496,7 +496,7 @@ export const Surface: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           Storybook ツールバーの 🌙 で Light/Dark を切り替えると全プレビューが連動します。
         </p>
-        <div className="mb-2 flex gap-0 overflow-hidden rounded-xl">
+        <div className="mb-2 flex gap-0 overflow-hidden rounded-lg">
           {surfaces.map(({ token, bg, role }) => (
             <div
               key={token}
@@ -507,7 +507,7 @@ export const Surface: Story = {
             </div>
           ))}
         </div>
-        <div className="mb-8 flex overflow-hidden rounded-xl">
+        <div className="mb-8 flex overflow-hidden rounded-lg">
           <div className="bg-muted flex flex-1 flex-col items-center justify-center py-4">
             <div className="text-foreground text-sm font-bold">muted</div>
             <div className="text-muted-foreground text-xs">入力欄・well</div>
@@ -517,7 +517,7 @@ export const Surface: Story = {
         {/* ── App Layout Preview ── */}
         <h3 className="mb-4 font-bold">Preview</h3>
         <div
-          className="bg-background border-border mb-8 grid overflow-hidden rounded-xl border"
+          className="bg-background border-border mb-8 grid overflow-hidden rounded-lg border"
           style={{ gridTemplateColumns: '80px 1fr', height: 200 }}
         >
           <div
@@ -542,7 +542,7 @@ export const Surface: Story = {
 
         {/* ── Spec Tables ── */}
         <h3 className="mb-4 font-bold">Surface</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -581,7 +581,7 @@ export const Surface: Story = {
         </div>
 
         <h3 className="mb-4 font-bold">Text</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -608,7 +608,7 @@ export const Surface: Story = {
 
         {/* Border + Shadow (visual + values) */}
         <h3 className="mb-4 font-bold">Border / Shadow</h3>
-        <div className="bg-card border-border mb-2 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-2 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -779,7 +779,7 @@ export const Semantic: Story = {
 
         {/* oklch spec table */}
         <h3 className="mb-4 font-bold">oklch 値</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -877,7 +877,7 @@ export const Text: Story = {
 
         {/* ── Hierarchy bar ── */}
         <h3 className="mb-4 font-bold">Hierarchy（左:主要 → 右:補助）</h3>
-        <div className="bg-background border-border mb-8 flex overflow-hidden rounded-xl border">
+        <div className="bg-background border-border mb-8 flex overflow-hidden rounded-lg border">
           <div className="flex flex-1 flex-col items-center justify-center py-8">
             <span className="text-foreground text-lg font-bold">foreground</span>
             <span className="text-foreground text-sm">主要テキスト</span>
@@ -894,14 +894,14 @@ export const Text: Story = {
           Storybook ツールバーの 🌙 で Light/Dark を切り替えて確認。
         </p>
         <div className="mb-8 grid grid-cols-2 gap-4">
-          <div className="bg-card rounded-xl p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="bg-card rounded-lg p-6" style={{ boxShadow: 'var(--shadow-card)' }}>
             <div className="text-muted-foreground mb-1 text-xs">on card</div>
             <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
             <p className="text-muted-foreground mt-2 text-sm">
               muted-foreground — 説明文やキャプション
             </p>
           </div>
-          <div className="bg-background border-border rounded-xl border p-6">
+          <div className="bg-background border-border rounded-lg border p-6">
             <div className="text-muted-foreground mb-1 text-xs">on background</div>
             <p className="text-foreground text-sm font-bold">foreground — 見出しや本文に使用</p>
             <p className="text-muted-foreground mt-2 text-sm">
@@ -912,7 +912,7 @@ export const Text: Story = {
 
         {/* ── Spec table: Neutral ── */}
         <h3 className="mb-4 font-bold">Neutral</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -945,7 +945,7 @@ export const Text: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           値は Color &gt; Semantic の accent と同じ。text-* と bg-* が同一トークンを参照。
         </p>
-        <div className="bg-card border-border mb-6 rounded-xl border">
+        <div className="bg-card border-border mb-6 rounded-lg border">
           <div className="grid grid-cols-2 gap-4 p-4 md:grid-cols-5">
             {semanticTexts.map(({ token, cls, label }) => (
               <div key={token} className="flex flex-col items-center gap-2">
@@ -963,7 +963,7 @@ export const Text: Story = {
 
         {/* ── Usage guide ── */}
         <h3 className="mb-4 font-bold">使い分けガイド</h3>
-        <div className="bg-card border-border rounded-xl border p-6">
+        <div className="bg-card border-border rounded-lg border p-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
               <p className="text-success font-bold">Do</p>
@@ -1024,7 +1024,7 @@ export const Tags: Story = {
 
         {/* ── Base + Tint 並列表示 ── */}
         <h3 className="mb-4 font-bold">Base / Tint 一覧</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -1090,7 +1090,7 @@ export const Tags: Story = {
 
         {/* ── 使用例 ── */}
         <h3 className="mb-4 font-bold">使用例</h3>
-        <div className="bg-card border-border rounded-xl border p-6">
+        <div className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4 flex flex-wrap gap-2">
             {tags.map(({ name }) => (
               <span
@@ -1177,7 +1177,7 @@ export const DosDonts: Story = {
 
         <div className="grid max-w-5xl gap-6">
           {rules.map(({ title, doCode, dontCode, reason }) => (
-            <section key={title} className="bg-card border-border rounded-xl border p-6">
+            <section key={title} className="bg-card border-border rounded-lg border p-6">
               <h2 className="mb-4 text-lg font-bold">{title}</h2>
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="border-success space-y-2 border-l-4 pl-4">
@@ -1273,7 +1273,7 @@ export const Chronotype: Story = {
     return (
       <div className="space-y-8">
         {/* ===== 概要 ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Chronotype タイムライン</h2>
           <p className="text-muted-foreground text-sm">
             ユーザーのクロノタイプに応じて、タイムラインに deep / ease ゾーンを視覚的に表示する。
@@ -1295,7 +1295,7 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== カラーパレット ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h3 className="mb-4 text-sm font-bold">カラーパレット（2 色体制）</h3>
           <div className="grid gap-6 sm:grid-cols-2">
             {/* Deep */}
@@ -1305,7 +1305,7 @@ export const Chronotype: Story = {
               </p>
               <div className="flex items-center gap-2">
                 <div
-                  className="border-border size-10 shrink-0 rounded-md border"
+                  className="border-border size-10 shrink-0 rounded-lg border"
                   style={{ backgroundColor: 'oklch(0.955 0.008 70)' }}
                 />
                 <div>
@@ -1314,7 +1314,7 @@ export const Chronotype: Story = {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-chronotype-deep size-10 shrink-0 rounded-md" />
+                <div className="bg-chronotype-deep size-10 shrink-0 rounded-lg" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.65/0.15 — Dark 0.80/0.12</p>
@@ -1328,7 +1328,7 @@ export const Chronotype: Story = {
               </p>
               <div className="flex items-center gap-2">
                 <div
-                  className="border-border size-10 shrink-0 rounded-md border"
+                  className="border-border size-10 shrink-0 rounded-lg border"
                   style={{ backgroundColor: 'oklch(0.955 0.008 150)' }}
                 />
                 <div>
@@ -1337,7 +1337,7 @@ export const Chronotype: Story = {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-chronotype-ease size-10 shrink-0 rounded-md" />
+                <div className="bg-chronotype-ease size-10 shrink-0 rounded-lg" />
                 <div>
                   <p className="text-xs font-bold">テキスト</p>
                   <p className="font-mono text-xs opacity-40">Light 0.55/0.15 — Dark 0.75/0.12</p>
@@ -1348,7 +1348,7 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== タイムラインプレビュー ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-bold">タイムラインプレビュー</h3>
             <div className="flex gap-1">
@@ -1386,7 +1386,7 @@ export const Chronotype: Story = {
         </section>
 
         {/* ===== 仕様 ===== */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h3 className="mb-4 text-sm font-bold">oklch 仕様</h3>
           <table className="w-full text-sm">
             <thead>

@@ -28,7 +28,7 @@ export const Overview: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* State Layer一覧（MD3準拠） */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">State Layer 一覧（MD3 準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             foreground ベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
@@ -91,7 +91,7 @@ export const Overview: Story = {
         </section>
 
         {/* Button States */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Button States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             実際にホバー・Tab フォーカス・クリックして状態変化を確認。
@@ -166,7 +166,7 @@ export const Overview: Story = {
         </section>
 
         {/* Input States */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-2 text-lg font-bold">Input States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フォーカスして ring を確認。Error は aria-invalid で自動適用。
@@ -192,7 +192,7 @@ export const Overview: Story = {
         </section>
 
         {/* 実装ガイド */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">実装ガイド（コピペ用）</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs leading-relaxed">
             {`// hover（10% overlay）

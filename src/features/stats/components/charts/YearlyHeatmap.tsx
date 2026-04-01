@@ -104,6 +104,7 @@ export function YearlyHeatmap() {
         ) : (
           <>
             <div
+              // eslint-disable-next-line tailwindcss/no-arbitrary-value -- heatmap cell spacing
               className="grid gap-[2px]"
               style={{
                 gridTemplateColumns: 'repeat(53, 1fr)',
@@ -114,7 +115,7 @@ export function YearlyHeatmap() {
               {cells.map((cell, i) => (
                 <div
                   key={i}
-                  className={`aspect-square rounded-sm ${getColorClass(cell.hours, cell.date !== null)}`}
+                  className={`aspect-square rounded-none ${getColorClass(cell.hours, cell.date !== null)}`}
                   title={cell.date ? `${cell.date}: ${formatHours(cell.hours)}` : undefined}
                 />
               ))}
@@ -122,11 +123,11 @@ export function YearlyHeatmap() {
             {/* 凡例 */}
             <div className="mt-2 flex items-center justify-end gap-1 text-xs">
               <span className="text-muted-foreground">{t('yearlyLess')}</span>
-              <div className="bg-muted size-3.5 rounded-sm" />
-              <div className="bg-heatmap-scale-1 size-3.5 rounded-sm" />
-              <div className="bg-heatmap-scale-2 size-3.5 rounded-sm" />
-              <div className="bg-heatmap-scale-3 size-3.5 rounded-sm" />
-              <div className="bg-heatmap-scale-4 size-3.5 rounded-sm" />
+              <div className="bg-muted size-3.5 rounded-none" />
+              <div className="bg-heatmap-scale-1 size-3.5 rounded-none" />
+              <div className="bg-heatmap-scale-2 size-3.5 rounded-none" />
+              <div className="bg-heatmap-scale-3 size-3.5 rounded-none" />
+              <div className="bg-heatmap-scale-4 size-3.5 rounded-none" />
               <span className="text-muted-foreground">{t('yearlyMore')}</span>
             </div>
           </>

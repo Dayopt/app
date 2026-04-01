@@ -61,7 +61,7 @@ export const Overview: Story = {
         <p className="text-muted-foreground mb-8 text-sm">shadow 単体ではなく、3つの組み合わせ。</p>
 
         {/* ── 設計原則 ── */}
-        <div className="bg-card border-border mb-8 rounded-xl border p-6">
+        <div className="bg-card border-border mb-8 rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">設計原則</h2>
           <div className="space-y-2 text-sm">
             <p>
@@ -83,7 +83,7 @@ export const Overview: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           Storybook ツールバーの 🌙 で切り替えると Light/Dark の見え方の違いが確認できます。
         </p>
-        <div className="bg-background border-border mb-8 grid grid-cols-4 gap-6 rounded-xl border p-6">
+        <div className="bg-background border-border mb-8 grid grid-cols-4 gap-6 rounded-lg border p-6">
           {/* Sunken */}
           <div className="text-center">
             <div className="bg-container border-border flex h-24 items-center justify-center rounded-lg border">
@@ -126,7 +126,7 @@ export const Overview: Story = {
 
         {/* ── Spec テーブル ── */}
         <h3 className="mb-4 font-bold">Elevation レベル</h3>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -156,7 +156,7 @@ export const Overview: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           Light では shadow で区別。Dark では面色差(L値)で区別。
         </p>
-        <div className="bg-card border-border mb-6 overflow-x-auto rounded-xl border">
+        <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -182,7 +182,7 @@ export const Overview: Story = {
 
         {/* ── なぜ4段階か ── */}
         <h3 className="mb-4 font-bold">なぜ 6段階 → 4段階か</h3>
-        <div className="bg-card border-border mb-6 rounded-xl border p-6">
+        <div className="bg-card border-border mb-6 rounded-lg border p-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-destructive space-y-2 border-l-4 pl-4">
               <p className="text-destructive text-sm font-bold">旧: 6段階</p>
@@ -215,7 +215,7 @@ export const Overview: Story = {
         <p className="text-muted-foreground mb-2 text-xs">
           Sunken / Base / Raised → z-index 指定なし。Overlay のみ z-index 必須。
         </p>
-        <div className="bg-card border-border rounded-xl border p-6">
+        <div className="bg-card border-border rounded-lg border p-6">
           <p className="text-muted-foreground text-sm">
             Overlay の中でも dropdown(z-50) と modal(z-200) は見た目は同じ shadow-card
             だが、スタッキング順序が違う。
@@ -242,7 +242,7 @@ export const UseCases: Story = {
             bg-container border-r border-border
           </code>
           <div
-            className="bg-background border-border grid overflow-hidden rounded-xl border"
+            className="bg-background border-border grid overflow-hidden rounded-lg border"
             style={{ gridTemplateColumns: '200px 1fr', height: 160 }}
           >
             <aside
@@ -263,7 +263,7 @@ export const UseCases: Story = {
         <section>
           <h2 className="mb-1 text-lg font-bold">Sunken: 入力フィールド</h2>
           <code className="text-muted-foreground mb-4 block text-xs">bg-muted rounded-lg</code>
-          <div className="bg-card border-border rounded-xl border p-6">
+          <div className="bg-card border-border rounded-lg border p-6">
             <div className="bg-muted w-64 rounded-lg px-4 py-2">
               <span className="text-muted-foreground text-sm">テキストを入力...</span>
             </div>
@@ -276,7 +276,7 @@ export const UseCases: Story = {
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-card border border-border-subtle rounded-lg shadow-sm
           </code>
-          <div className="bg-background rounded-xl p-6">
+          <div className="bg-background rounded-lg p-6">
             <div
               className="bg-card border-border-subtle w-80 rounded-lg border p-6"
               style={{ boxShadow: 'var(--shadow-sm)' }}
@@ -293,7 +293,7 @@ export const UseCases: Story = {
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-card border border-border-subtle rounded-lg shadow-card z-50
           </code>
-          <div className="bg-background rounded-xl p-6">
+          <div className="bg-background rounded-lg p-6">
             <div
               className="bg-card border-border-subtle w-48 rounded-lg border p-2"
               style={{ boxShadow: 'var(--shadow-card)' }}
@@ -311,7 +311,7 @@ export const UseCases: Story = {
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-overlay（scrim） + bg-card shadow-card rounded-2xl z-50
           </code>
-          <div className="relative overflow-hidden rounded-xl" style={{ height: 220 }}>
+          <div className="relative overflow-hidden rounded-lg" style={{ height: 220 }}>
             {/* 背景コンテンツ */}
             <div className="bg-background absolute inset-0 p-6">
               <div className="bg-foreground h-2 w-1/3 rounded opacity-10" />

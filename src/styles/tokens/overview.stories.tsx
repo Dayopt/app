@@ -25,7 +25,7 @@ function StepCard({
   linkLabel: string;
 }) {
   return (
-    <div className="bg-card border-border rounded-xl border p-4">
+    <div className="bg-card border-border rounded-lg border p-4">
       <div className="text-muted-foreground mb-1 text-xs font-bold">Step {step}</div>
       <h3 className="mb-2 font-bold">{title}</h3>
       <p className="text-muted-foreground mb-2 text-sm">{description}</p>
@@ -105,7 +105,7 @@ export const DesignSystem: Story = {
         </p>
 
         {/* ── 設計の核心 ── */}
-        <div className="bg-card border-border mb-8 rounded-xl border p-6">
+        <div className="bg-card border-border mb-8 rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">設計の核心</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
@@ -171,7 +171,7 @@ export const DesignSystem: Story = {
             <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
               見た目を決める（Step 1-3）
             </h3>
-            <div className="bg-card border-border overflow-x-auto rounded-xl border">
+            <div className="bg-card border-border overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
@@ -209,7 +209,7 @@ export const DesignSystem: Story = {
             <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
               振る舞いを決める（Step 4）
             </h3>
-            <div className="bg-card border-border overflow-x-auto rounded-xl border">
+            <div className="bg-card border-border overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
@@ -245,7 +245,7 @@ export const DesignSystem: Story = {
             <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
               基盤
             </h3>
-            <div className="bg-card border-border overflow-x-auto rounded-xl border">
+            <div className="bg-card border-border overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   {[
@@ -299,7 +299,7 @@ export const DesignSystem: Story = {
         <h2 className="mb-4 text-lg font-bold">よくある判断の例</h2>
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {examples.map(({ title, steps }) => (
-            <div key={title} className="bg-card border-border rounded-xl border p-4">
+            <div key={title} className="bg-card border-border rounded-lg border p-4">
               <h3 className="mb-2 text-sm font-bold">{title}</h3>
               <ul className="space-y-1">
                 {steps.map((step) => (

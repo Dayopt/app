@@ -295,7 +295,7 @@ export const DosDonts: Story = {
 
       <div className="grid max-w-5xl gap-8">
         {/* Tailwindスケール */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Tailwindデフォルトスケールを使用</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -331,7 +331,7 @@ export const DosDonts: Story = {
         </section>
 
         {/* 階層的なサイズ */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">階層的なサイズ変化</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -359,7 +359,7 @@ export const DosDonts: Story = {
         </section>
 
         {/* ウェイト */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">ウェイトは2種類まで</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
@@ -386,7 +386,7 @@ export const DosDonts: Story = {
         </section>
 
         {/* テキスト色 */}
-        <section className="bg-card border-border rounded-xl border p-6">
+        <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">テキスト色で階層を表現</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">

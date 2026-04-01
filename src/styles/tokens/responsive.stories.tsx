@@ -269,7 +269,7 @@ export const HoverMobile: Story = {
           <p className="text-muted-foreground mb-4 text-sm">
             ウィンドウ幅を変えて確認（640px以下でボタン常時表示）
           </p>
-          <div className="bg-card border-border group flex items-center justify-between rounded-xl border p-4">
+          <div className="bg-card border-border group flex items-center justify-between rounded-lg border p-4">
             <span>リストアイテム</span>
             <button
               type="button"
