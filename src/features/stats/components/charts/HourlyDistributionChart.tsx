@@ -68,9 +68,9 @@ export function HourlyDistributionChart({ data }: HourlyDistributionChartProps) 
                 <span className="text-muted-foreground w-11 shrink-0 font-mono text-xs">
                   {slot.label}
                 </span>
-                <div className="bg-muted h-5 flex-1 overflow-hidden rounded-md">
+                <div className="bg-muted h-5 flex-1 overflow-hidden rounded-lg">
                   <div
-                    className="bg-primary h-full rounded-md transition-all"
+                    className="bg-primary h-full rounded-lg transition-all"
                     style={{ width: `${pct}%` }}
                   />
                 </div>

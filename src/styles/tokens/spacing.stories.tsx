@@ -405,17 +405,17 @@ export const BorderIndicator: Story = {
             Utility: <code className="text-muted-foreground text-xs">border-l-indicator</code>
           </h2>
           <div className="space-y-4">
-            <div className="bg-tag-blue-tint border-tag-blue border-l-indicator flex h-10 items-center rounded-md px-2">
+            <div className="bg-tag-blue-tint border-tag-blue border-l-indicator flex h-10 items-center rounded-lg px-2">
               <span className="text-foreground text-xs font-medium tabular-nums">
                 10:00–11:00 ミーティング
               </span>
             </div>
-            <div className="bg-tag-green-tint border-tag-green border-l-indicator flex h-10 items-center rounded-md px-2">
+            <div className="bg-tag-green-tint border-tag-green border-l-indicator flex h-10 items-center rounded-lg px-2">
               <span className="text-foreground text-xs font-medium tabular-nums">
                 14:00–15:00 コーディング
               </span>
             </div>
-            <div className="bg-tag-amber-tint border-tag-amber border-l-indicator flex h-10 items-center rounded-md px-2">
+            <div className="bg-tag-amber-tint border-tag-amber border-l-indicator flex h-10 items-center rounded-lg px-2">
               <span className="text-foreground text-xs font-medium tabular-nums">
                 16:00–17:00 レビュー
               </span>
