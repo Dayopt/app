@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CalendarDays, Inbox } from 'lucide-react';
 
-import { Button } from './button';
-import { EmptyState } from './empty-state';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from './EmptyState';
 
 const meta = {
-  title: 'Components/UI/EmptyState',
+  title: 'Components/Common/EmptyState',
   component: EmptyState,
   tags: ['autodocs'],
   parameters: {

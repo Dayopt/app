@@ -3,6 +3,7 @@
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { EmptyState } from '@/components/common/EmptyState';
 import { cn } from '@/lib/utils';
 
 import { useDiscoveries } from '../../hooks/useDiscoveries';
@@ -33,13 +34,13 @@ export function InsightsView({ className }: StatsViewProps) {
   if (discoveries.length === 0) {
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
-          <Search className="text-muted-foreground size-10" />
-          <div className="text-center">
-            <p className="text-foreground text-sm font-medium">{t('emptyTitle')}</p>
-            <p className="text-muted-foreground mt-1 text-xs">{t('emptyDescription')}</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Search}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
+          size="sm"
+          centered
+        />
       </div>
     );
   }
