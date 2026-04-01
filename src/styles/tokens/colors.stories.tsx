@@ -283,12 +283,12 @@ export const AllColors: Story = {
         <ColorSwatch
           tailwindClass="bg-state-active"
           description="選択中"
-          oklch="oklch(0.95 0.025 237) | oklch(0.45 0.14 266)"
+          oklch="oklch(0.95 0.025 260) | oklch(0.45 0.14 260)"
         />
         <ColorSwatch
           tailwindClass="text-state-active-foreground"
           description="アクティブ状態テキスト"
-          oklch="oklch(0.38 0.14 266) | oklch(0.88 0.06 254)"
+          oklch="oklch(0.38 0.14 260) | oklch(0.88 0.06 260)"
         />
       </ColorGroup>
 
@@ -403,12 +403,45 @@ export const AllColors: Story = {
         ))}
       </ColorGroup>
 
+      <ColorGroup title="Temporal（現在時刻）">
+        <ColorSwatch
+          tailwindClass="bg-now-indicator"
+          description="now line, now 時刻バッジ背景"
+          oklch="oklch(0.55 0.17 25) | oklch(0.65 0.15 25)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-now-indicator-foreground"
+          description="foreground"
+          oklch="oklch(1 0 0) | oklch(1 0 0)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-now-indicator-muted"
+          description="other days line"
+          oklch="oklch(0.55 0.17 25 / 0.3) | oklch(0.65 0.15 25 / 0.3)"
+        />
+      </ColorGroup>
+
       <ColorGroup title="Chart（比較用5色）">
-        <ColorSwatch tailwindClass="bg-chart-1" oklch="oklch(0.62 0.14 260)" />
-        <ColorSwatch tailwindClass="bg-chart-2" oklch="oklch(0.55 0.22 263)" />
-        <ColorSwatch tailwindClass="bg-chart-3" oklch="oklch(0.49 0.22 264)" />
-        <ColorSwatch tailwindClass="bg-chart-4" oklch="oklch(0.42 0.18 266)" />
-        <ColorSwatch tailwindClass="bg-chart-5" oklch="oklch(0.38 0.14 266)" />
+        <ColorSwatch
+          tailwindClass="bg-chart-1"
+          oklch="oklch(0.6231 0.14 260) | oklch(0.7137 0.1434 254.624)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-2"
+          oklch="oklch(0.5461 0.2152 262.8809) | oklch(0.6231 0.188 260)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-3"
+          oklch="oklch(0.4882 0.2172 264.3763) | oklch(0.5461 0.2152 262.8809)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-4"
+          oklch="oklch(0.4244 0.1809 265.6377) | oklch(0.55 0.2 264.38)"
+        />
+        <ColorSwatch
+          tailwindClass="bg-chart-5"
+          oklch="oklch(0.3791 0.1378 265.5222) | oklch(0.5 0.16 265.64)"
+        />
       </ColorGroup>
 
       {/* ━━ 6. Aliases ━━ */}
