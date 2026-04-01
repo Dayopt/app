@@ -112,10 +112,50 @@ data-[state=closed]:animate-out`}
           </pre>
         </section>
 
+        {/* Transition */}
+        <section className="bg-card border-border rounded-lg border p-6">
+          <h2 className="mb-4 text-lg font-bold">Transition（日常インタラクション）</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            ホバー、フォーカス、状態変化など日常的なインタラクションに使用。 animate-in/out
+            はマウント/アンマウント用、こちらは CSS transition 用。
+          </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <TransitionDemo
+              name="transition-colors"
+              className="transition-colors duration-150"
+              description="色のみ変化（標準）"
+            />
+            <TransitionDemo
+              name="transition-all"
+              className="transition-all duration-150"
+              description="サイズ変化を含む"
+            />
+            <TransitionDemo
+              name="transition-transform"
+              className="transition-transform duration-200"
+              description="transform のみ"
+            />
+          </div>
+          <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
+            {`// デフォルト — 迷ったらこれ
+<button className="transition-colors duration-150 hover:bg-accent">
+
+// サイズ変化を含む
+<div className="transition-all duration-150 hover:scale-105">
+
+// transform のみ
+<div className="transition-transform duration-200 hover:-translate-y-1">
+
+// ease は指定しない（Tailwind デフォルトの ease-in-out で十分）`}
+          </pre>
+        </section>
+
         {/* duration */}
         <section className="bg-card border-border rounded-lg border p-6">
           <h2 className="mb-4 text-lg font-bold">Duration（継続時間）</h2>
-          <p className="text-muted-foreground mb-4 text-sm">Tailwind標準のdurationクラスを併用</p>
+          <p className="text-muted-foreground mb-4 text-sm">
+            <code>duration-150</code> をデフォルトとし、ほぼ全てこれを使う。他は例外的な場面のみ。
+          </p>
           <div className="grid gap-4 sm:grid-cols-4">
             <DurationDemo duration="75" />
             <DurationDemo duration="150" />
@@ -126,16 +166,16 @@ data-[state=closed]:animate-out`}
             <h3 className="mb-2 text-sm font-bold">推奨値</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>
-                <code>duration-75</code> - 即座の反応（ホバー等）
+                <code>duration-75</code> - 即座のフィードバック（active 押下など）
               </li>
               <li>
-                <code>duration-150</code> - 標準（ダイアログ、ポップオーバー）
+                <code>duration-150</code> - <strong>標準（デフォルト）</strong> — ほぼ全てこれを使う
               </li>
               <li>
-                <code>duration-200</code> - やや長め（シート、ドロワー）
+                <code>duration-200</code> - transform、やや重い要素の移動
               </li>
               <li>
-                <code>duration-300</code> - 長め（ページ遷移）
+                <code>duration-300</code> - 大きな面積の展開・折りたたみ（accordion 等）
               </li>
             </ul>
           </div>
@@ -262,6 +302,30 @@ function ShakeDemo() {
       >
         シェイク
       </button>
+    </div>
+  );
+}
+
+function TransitionDemo({
+  name,
+  className,
+  description,
+}: {
+  name: string;
+  className: string;
+  description: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-bold">{name}</div>
+      <button
+        type="button"
+        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-bold ${className}`}
+      >
+        hover me
+      </button>
+      <p className="text-muted-foreground text-xs">{description}</p>
+      <code className="text-muted-foreground block text-xs">{className}</code>
     </div>
   );
 }

@@ -95,3 +95,42 @@ paths:
 
 **禁止**: `size-3`(12px), `size-7`(28px), `size-9`(36px) 等、上記以外のサイズ
 **注**: `size-8`, `size-9` 等がボタン/コンテナのサイズとして使われる場合はアイコンサイズ規約の対象外
+
+## Transition
+
+- **デフォルト**: `transition-colors duration-150` — ホバー、フォーカス、状態変化の色切り替え。迷ったらこれ
+- ease は指定しない（Tailwind デフォルトの `ease-in-out` で十分）
+- `duration-150` を標準とし、ほぼ全てのインタラクションに使う
+
+**用途別:**
+
+| クラス                              | 用途               |
+| ----------------------------------- | ------------------ |
+| `transition-colors duration-150`    | 色のみ変化（標準） |
+| `transition-all duration-150`       | サイズ変化を含む   |
+| `transition-transform duration-200` | transform のみ     |
+
+**duration 推奨値:**
+
+| duration       | 用途                                         |
+| -------------- | -------------------------------------------- |
+| `duration-75`  | 即座のフィードバック（active 押下など）      |
+| `duration-150` | **標準（デフォルト）** — ほぼ全てこれを使う  |
+| `duration-200` | transform、やや重い要素の移動                |
+| `duration-300` | 大きな面積の展開・折りたたみ（accordion 等） |
+
+上記4つ以外の duration は禁止
+
+## Z-Index
+
+- **トークン経由のみ**: `z-modal`, `z-tooltip` 等。`z-[200]` 等の任意値は禁止
+- **50 刻み規則**: 通常コンテキスト 40〜450、Inspector 1000〜1100、Overlay 1200〜1400、tooltip 9999
+
+| グループ         | 範囲      | 用途                                                                |
+| ---------------- | --------- | ------------------------------------------------------------------- |
+| 通常コンテキスト | 40–450    | dropdown, popover, sheet, modal, confirm, toast, context-menu, tour |
+| Inspector        | 1000–1100 | calendar-drag, inspector-backdrop, inspector                        |
+| Overlay          | 1200–1400 | Inspector 上の modal, popover, confirm                              |
+| 最前面           | 9999      | tooltip                                                             |
+
+- **Elevation との関係**: Sunken / Base / Raised は z-index 指定なし。Overlay のみ z-index を使用。見た目の浮き（shadow）は Elevation、スタッキング順序は Z-Index。別の関心事

@@ -18,7 +18,7 @@
   --z-index-tour-backdrop: 400;
   --z-index-tour: 450;
   --z-index-calendar-drag: 1000;
-  --z-index-inspector-backdrop: 1099;
+  --z-index-inspector-backdrop: 1050;
   --z-index-inspector: 1100;
   /* Overlay系: Inspector上のUI */
   --z-index-overlay-modal: 1200;

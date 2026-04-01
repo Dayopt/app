@@ -53,7 +53,7 @@ const zIndexLayers = [
   },
   {
     name: 'inspector-backdrop',
-    value: 1099,
+    value: 1050,
     tailwind: 'z-inspector-backdrop',
     description: 'ドラッグ可能Inspector背景',
   },
@@ -246,6 +246,26 @@ export const UsageGuide: Story = {
               <h3 className="mb-2 font-bold">最前面（9999）</h3>
               <p className="text-muted-foreground text-sm">常に最前面に表示される要素。tooltip</p>
             </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-lg font-bold">Elevation との関係</h2>
+          <div className="bg-container rounded-lg p-4">
+            <div className="space-y-2 text-sm">
+              <p>
+                <span className="font-bold">Sunken / Base / Raised</span>
+                <span className="text-muted-foreground ml-2">→ z-index 指定なし（通常フロー）</span>
+              </p>
+              <p>
+                <span className="font-bold">Overlay</span>
+                <span className="text-muted-foreground ml-2">→ このページの z-index を使用</span>
+              </p>
+            </div>
+            <p className="text-muted-foreground mt-4 text-xs">
+              見た目の浮き（shadow）は <strong>Elevation</strong> で、スタッキング順序は{' '}
+              <strong>Z-Index</strong> で管理。別の関心事。
+            </p>
           </div>
         </section>
 
