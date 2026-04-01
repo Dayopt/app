@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { InfoBox } from './InfoBox';
 
 const meta = {
-  title: 'Components/Common/InfoBox',
+  title: 'Features/Settings/InfoBox',
   component: InfoBox,
   tags: ['autodocs'],
   decorators: [

@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { InfoBox } from '@/components/common/InfoBox';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/platform/supabase/client';
+import { InfoBox } from './InfoBox';
 
 interface EmailChangeDialogProps {
   open: boolean;

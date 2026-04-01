@@ -29,9 +29,9 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/platform/trpc';
 
-import { InfoBox } from '@/components/common/InfoBox';
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
+import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';
 type ExportRange = 'all' | 'custom';
