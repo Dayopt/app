@@ -133,7 +133,7 @@ export default function SettingsPage() {
       </Link>
       {/* Upgrade ボタンはリンク外 */}
       <div className="flex justify-center pb-6">
-        <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>
+        <Button variant="primary" size="sm" onClick={() => router.push('/settings/billing')}>
           <Sparkles className="size-4" />
           {t('navigation.navUser.upgradePlan')}
         </Button>
