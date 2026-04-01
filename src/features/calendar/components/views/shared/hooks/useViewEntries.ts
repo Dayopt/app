@@ -59,13 +59,24 @@ export function useViewEntries({
     if (!tzEntries || !Array.isArray(tzEntries)) {
       return [];
     }
-    return tzEntries.filter((entry) => {
+    const result = tzEntries.filter((entry) => {
       if (!entry.displayStartDate || !isValid(new Date(entry.displayStartDate))) {
         return false;
       }
 
       return isSameDay(entry.displayStartDate, date);
     });
+
+    // DEBUG: モバイルでエントリが表示されない問題の調査用ログ
+    if (process.env.NODE_ENV === 'development' && tzEntries.length > 0 && result.length === 0) {
+      console.warn('[useViewEntries] all entries filtered out by isSameDay', {
+        date: date.toISOString(),
+        sampleDisplayStartDate: tzEntries[0]?.displayStartDate?.toISOString(),
+        entriesIn: tzEntries.length,
+      });
+    }
+
+    return result;
   }, [date, tzEntries]);
 
   // CalendarEventをuseEntryLayoutCalculatorで期待される形式に変換
