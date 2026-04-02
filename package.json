@@ -67,6 +67,7 @@
     "deps:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx src/",
     "size": "size-limit",
     "size:why": "size-limit --why",
+    "size:budget": "tsx scripts/check-bundle-budget.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "security:check": "npm audit --audit-level=moderate",
@@ -217,6 +218,16 @@
     "vitest": "^4.0.18",
     "zod-to-json-schema": "^3.25.1"
   },
+  "size-limit": [
+    {
+      "name": "CSS bundle (gzip)",
+      "path": [
+        ".next/static/chunks/*.css"
+      ],
+      "gzip": true,
+      "limit": "95 KB"
+    }
+  ],
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "prettier --write",

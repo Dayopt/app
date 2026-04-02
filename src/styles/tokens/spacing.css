@@ -8,27 +8,9 @@
  * NOTE: これらの CSS 変数は Tailwind ユーティリティクラスとは
  * 独立した系統。コンポーネントでは Tailwind クラス（p-2, gap-4 等）
  * を使用し、CSS 変数は Storybook やグローバル CSS でのみ参照。
- *
- * 対応表:
- *   Tailwind 1 (4px)  → CSS変数なし（Tailwindクラスを直接使用）
- *   Tailwind 2 (8px)  → --spacing-xs
- *   Tailwind 4 (16px) → --spacing-sm
- *   Tailwind 6 (24px) → --spacing-md
- *   Tailwind 8 (32px) → --spacing-lg
- *   Tailwind 12(48px) → --spacing-xl
- *   Tailwind 16(64px) → --spacing-2xl
  * ============================================ */
 :root {
-  --spacing-xs: 0.5rem; /* 8px */
-  --spacing-sm: 1rem; /* 16px */
-  --spacing-md: 1.5rem; /* 24px */
-  --spacing-lg: 2rem; /* 32px */
-  --spacing-xl: 3rem; /* 48px */
-  --spacing-2xl: 4rem; /* 64px */
-
-  /* スクロールバー（8pxグリッド準拠） */
-  --scrollbar-width: 1rem; /* 16px - スクロールバー全体の幅 */
-  --scrollbar-padding: 0.25rem; /* 4px - thumbの周りの余白 */
+  --spacing-sm: 1rem; /* 16px — Storybook overrides で使用 */
 
   /* ボーダーインジケータ（カレンダーエントリの左端アクセント） */
   --border-indicator: 3px;

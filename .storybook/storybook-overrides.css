@@ -36,7 +36,7 @@
  * ============================================ */
 .sbdocs-preview {
   border: 1px solid var(--border) !important;
-  border-radius: var(--radius-md) !important;
+  border-radius: var(--radius-lg) !important;
 }
 
 .dark .sbdocs-preview {

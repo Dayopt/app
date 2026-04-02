@@ -10,14 +10,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| プリセットタイプ | lion / bear / wolf / dolphin / custom |
-| 生産性レベル | warmup / deep / ease / recovery / winddown |
-| 表示モード | border / background / both |
-| クイズ問題数 | 6問（スコア集計で最高点タイプを判定） |
-| 設定保存先 | `user_settings` テーブル（tRPC `userSettings.update` 経由） |
-| 対象人口 | lion 15-20% / bear 55% / wolf 15% / dolphin 10% |
+| 項目             | 値                                                          |
+| ---------------- | ----------------------------------------------------------- |
+| プリセットタイプ | lion / bear / wolf / dolphin / custom                       |
+| 生産性レベル     | warmup / deep / ease / recovery / winddown                  |
+| 表示モード       | border / background / both                                  |
+| クイズ問題数     | 6問（スコア集計で最高点タイプを判定）                       |
+| 設定保存先       | `user_settings` テーブル（tRPC `userSettings.update` 経由） |
+| 対象人口         | lion 15-20% / bear 55% / wolf 15% / dolphin 10%             |
 
 ---
 
@@ -38,9 +38,9 @@ ChronotypeBackground            カレンダーグリッドの背景色オーバ
 
 ### Zustand Stores
 
-| Store | 用途 | persist |
-|-------|------|---------|
-| `useCalendarSettingsStore` | `chronotype` 設定（enabled / type / displayMode / opacity）を保持 | Yes |
+| Store                      | 用途                                                              | persist |
+| -------------------------- | ----------------------------------------------------------------- | ------- |
+| `useCalendarSettingsStore` | `chronotype` 設定（enabled / type / displayMode / opacity）を保持 | Yes     |
 
 クロノタイプ固有の Zustand ストアは存在しない。設定はカレンダー設定ストアに統合されており、`ChronotypeSettings` コンポーネントは `useAutoSaveSettings` フックでデバウンス付き自動保存を行う。
 
@@ -50,20 +50,20 @@ ChronotypeBackground            カレンダーグリッドの背景色オーバ
 
 ### Query
 
-| Hook / API | 用途 |
-|------------|------|
+| Hook / API                        | 用途                                            |
+| --------------------------------- | ----------------------------------------------- |
 | `api.userSettings.get.useQuery()` | DBからクロノタイプ設定を取得（staleTime: 5min） |
 
 ### Mutation
 
-| Hook / API | 用途 |
-|------------|------|
+| Hook / API                              | 用途                                          |
+| --------------------------------------- | --------------------------------------------- |
 | `api.userSettings.update.useMutation()` | enabled / type / displayMode / opacity を保存 |
 
 ### その他
 
-| Hook | 用途 |
-|------|------|
+| Hook                  | 用途                                         |
+| --------------------- | -------------------------------------------- |
 | `useAutoSaveSettings` | 800ms デバウンスで自動保存、成功トースト表示 |
 
 ---
@@ -72,10 +72,10 @@ ChronotypeBackground            カレンダーグリッドの背景色オーバ
 
 Chronotype 専用ルーターは存在しない。`userSettings` ルーターのエンドポイントを共用する。
 
-| エンドポイント | タイプ | 関連フィールド |
-|-------------|-------|---------------|
-| `userSettings.get` | query | `chronotype_type`, `chronotype_enabled`, `chronotype_display_mode`, `chronotype_opacity` |
-| `userSettings.update` | mutation | `chronotypeEnabled`, `chronotypeType`, `chronotypeDisplayMode`, `chronotypeOpacity` |
+| エンドポイント        | タイプ   | 関連フィールド                                                                           |
+| --------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `userSettings.get`    | query    | `chronotype_type`, `chronotype_enabled`, `chronotype_display_mode`, `chronotype_opacity` |
+| `userSettings.update` | mutation | `chronotypeEnabled`, `chronotypeType`, `chronotypeDisplayMode`, `chronotypeOpacity`      |
 
 ---
 
@@ -86,39 +86,39 @@ Chronotype 専用ルーターは存在しない。`userSettings` ルーターの
 → 全問の合計スコアが最大のタイプを返す（同点時は bear をデフォルト）
 ```
 
-| 質問ID | 内容 |
-|--------|------|
-| `wakeTime` | 目覚まし不要の自然な起床時間 |
-| `morningEnergy` | 午前中のエネルギーレベル |
-| `deepFocus` | 最も集中できる時間帯 |
-| `afternoonEase` | 午後の眠気パターン |
-| `bedTime` | 理想的な就寝時間 |
-| `sleepQuality` | 睡眠の質 |
+| 質問ID          | 内容                         |
+| --------------- | ---------------------------- |
+| `wakeTime`      | 目覚まし不要の自然な起床時間 |
+| `morningEnergy` | 午前中のエネルギーレベル     |
+| `deepFocus`     | 最も集中できる時間帯         |
+| `afternoonEase` | 午後の眠気パターン           |
+| `bedTime`       | 理想的な就寝時間             |
+| `sleepQuality`  | 睡眠の質                     |
 
 ---
 
 ## 生産性ゾーン定義
 
-### プリセット別ピーク時間帯
+### プリセット別ゾーン（constants.ts 準拠）
 
-| タイプ | ウォームアップ | ピーク | ディップ | リカバリー | ウインドダウン |
-|--------|-------------|--------|---------|-----------|---------------|
-| Lion   | 5–7時 | 7–12時 | 12–14時 | 14–17時 | 17–21時 |
-| Bear   | 7–10時 | 10–14時 | 14–16時 | 16–19時 | 19–23時 |
-| Wolf   | 10–14時 | 15–21時 | 14–15時 | 21–23時 | 23–1時 |
-| Dolphin | 6–8時 | 8–12時 | 12–14時 | 14–17時 | 17–22時 |
+| タイプ  | deep（ピーク） | ease（ディップ） |
+| ------- | -------------- | ---------------- |
+| Lion    | 8–12時         | 14–17時          |
+| Bear    | 10–14時        | 15–17時          |
+| Wolf    | 17–21時        | 10–13時          |
+| Dolphin | 10–12時        | 14–16時          |
 
 ### カラートークン
 
-| レベル | Tailwind クラス | CSS変数 |
-|--------|---------------|---------|
-| warmup | `bg-chronotype-warmup` | `--chronotype-warmup` |
-| deep | `bg-chronotype-deep` | `--chronotype-deep` |
-| ease | `bg-chronotype-ease` | `--chronotype-ease` |
-| recovery | `bg-chronotype-recovery` | `--chronotype-recovery` |
-| winddown | `bg-chronotype-winddown` | `--chronotype-winddown` |
+| レベル       | Tailwind クラス           | CSS変数                  | 備考                           |
+| ------------ | ------------------------- | ------------------------ | ------------------------------ |
+| deep         | `bg-chronotype-deep`      | `--chronotype-deep`      | 暖色（H70）テキスト・アイコン  |
+| ease         | `bg-chronotype-ease`      | `--chronotype-ease`      | 寒色（H150）テキスト・アイコン |
+| deep（tint） | `bg-chronotype-deep-tint` | `--chronotype-deep-tint` | 設定パネル背景用               |
+| ease（tint） | `bg-chronotype-ease-tint` | `--chronotype-ease-tint` | 設定パネル背景用               |
 
-背景オーバーレイには淡色版の `bg-chronotype-tint-*` クラスを使用する。
+カレンダー背景オーバーレイは `gradient.ts` が oklch ベースの linear-gradient を動的生成する（CSS変数ではなく inline style）。
+warmup / recovery / winddown はロジック上のレベルとして存在するが、表示上は deep / ease の2色のみ。
 
 ---
 
@@ -126,13 +126,13 @@ Chronotype 専用ルーターは存在しない。`userSettings` ルーターの
 
 ### user_settings テーブル（関連カラムのみ）
 
-| カラム | 型 | 説明 |
-|-------|-----|------|
-| `chronotype_type` | TEXT | 'lion' / 'bear' / 'wolf' / 'dolphin' / 'custom' |
-| `chronotype_enabled` | BOOLEAN | 表示有効フラグ |
-| `chronotype_display_mode` | TEXT | 'border' / 'background' / 'both' |
-| `chronotype_opacity` | FLOAT | 背景透過度 |
+| カラム                    | 型      | 説明                                            |
+| ------------------------- | ------- | ----------------------------------------------- |
+| `chronotype_type`         | TEXT    | 'lion' / 'bear' / 'wolf' / 'dolphin' / 'custom' |
+| `chronotype_enabled`      | BOOLEAN | 表示有効フラグ                                  |
+| `chronotype_display_mode` | TEXT    | 'border' / 'background' / 'both'                |
+| `chronotype_opacity`      | FLOAT   | 背景透過度                                      |
 
 ---
 
-**最終更新**: 2026-03-19
+**最終更新**: 2026-04-02
