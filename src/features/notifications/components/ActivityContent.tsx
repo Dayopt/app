@@ -93,7 +93,7 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Spinner size="md" />
+        <Spinner size="default" />
       </div>
     );
   }
