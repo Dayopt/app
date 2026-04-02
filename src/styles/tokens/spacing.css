@@ -4,6 +4,19 @@
  * CSS内の var(--spacing-*) 参照用。
  * @theme に入れると Tailwind v4 の max-w-sm/md/lg 等と
  * 名前衝突するため :root で定義。
+ *
+ * NOTE: これらの CSS 変数は Tailwind ユーティリティクラスとは
+ * 独立した系統。コンポーネントでは Tailwind クラス（p-2, gap-4 等）
+ * を使用し、CSS 変数は Storybook やグローバル CSS でのみ参照。
+ *
+ * 対応表:
+ *   Tailwind 1 (4px)  → CSS変数なし（Tailwindクラスを直接使用）
+ *   Tailwind 2 (8px)  → --spacing-xs
+ *   Tailwind 4 (16px) → --spacing-sm
+ *   Tailwind 6 (24px) → --spacing-md
+ *   Tailwind 8 (32px) → --spacing-lg
+ *   Tailwind 12(48px) → --spacing-xl
+ *   Tailwind 16(64px) → --spacing-2xl
  * ============================================ */
 :root {
   --spacing-xs: 0.5rem; /* 8px */
