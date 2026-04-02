@@ -59,6 +59,8 @@
       "updatePassword": "パスワードを更新",
       "passwordMismatch": "パスワードが一致しません",
       "passwordMinLength": "パスワードは8文字以上で入力してください",
+      "showPassword": "パスワードを表示",
+      "hidePassword": "パスワードを隠す",
       "passwordUpdateFailed": "パスワードの更新に失敗しました",
       "passwordIncorrect": "現在のパスワードが正しくありません",
       "passwordReused": "過去5回分のパスワードは使用できません。別のパスワードを入力してください。",

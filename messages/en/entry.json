@@ -102,7 +102,8 @@
         "fulfillmentHigh": "Fulfillment: High",
         "fulfillmentTooltipLow": "Not great",
         "fulfillmentTooltipMedium": "Okay",
-        "fulfillmentTooltipHigh": "Fulfilling"
+        "fulfillmentTooltipHigh": "Fulfilling",
+        "timeProgress": "Time progress"
       },
       "note": {
         "label": "Note",

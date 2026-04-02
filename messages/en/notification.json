@@ -41,6 +41,7 @@
     "dateGroups": {
       "older": "Older"
     },
+    "deleteNotification": "Delete notification",
     "settings": {
       "title": "Notifications",
       "browserNotifications": {

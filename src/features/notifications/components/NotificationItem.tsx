@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { AlertTriangle, Bell, Brain, Lightbulb, Sparkles, Trash2, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { NotificationType } from '../schemas';
 
 interface NotificationItemProps {
@@ -48,6 +49,7 @@ export function NotificationItem({
   onDelete,
   isDeleting,
 }: NotificationItemProps) {
+  const t = useTranslations();
   const dateLocale = locale === 'ja' ? ja : enUS;
 
   const formatTime = (timestamp: string) => {
@@ -106,6 +108,7 @@ export function NotificationItem({
           size="sm"
           icon
           className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          aria-label={t('notification.deleteNotification')}
           onClick={(e) => {
             e.stopPropagation();
             onDelete(id);

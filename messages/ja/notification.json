@@ -41,6 +41,7 @@
     "dateGroups": {
       "older": "それ以前"
     },
+    "deleteNotification": "通知を削除",
     "settings": {
       "title": "通知",
       "browserNotifications": {

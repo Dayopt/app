@@ -176,6 +176,11 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                     icon
                     className="absolute top-1/2 right-1 -translate-y-1/2"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    aria-label={
+                      showCurrentPassword
+                        ? t('settings.account.hidePassword')
+                        : t('settings.account.showPassword')
+                    }
                   >
                     {showCurrentPassword ? (
                       <Eye className="h-4 w-4" />
@@ -207,6 +212,11 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                     icon
                     className="absolute top-1/2 right-1 -translate-y-1/2"
                     onClick={() => setShowNewPassword(!showNewPassword)}
+                    aria-label={
+                      showNewPassword
+                        ? t('settings.account.hidePassword')
+                        : t('settings.account.showPassword')
+                    }
                   >
                     {showNewPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   </Button>
@@ -237,6 +247,11 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                     icon
                     className="absolute top-1/2 right-1 -translate-y-1/2"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={
+                      showConfirmPassword
+                        ? t('settings.account.hidePassword')
+                        : t('settings.account.showPassword')
+                    }
                   >
                     {showConfirmPassword ? (
                       <Eye className="h-4 w-4" />

@@ -59,6 +59,8 @@
       "updatePassword": "Update Password",
       "passwordMismatch": "Passwords do not match",
       "passwordMinLength": "Password must be at least 8 characters",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "passwordUpdateFailed": "Failed to update password",
       "passwordIncorrect": "Current password is incorrect",
       "passwordReused": "Cannot reuse any of your last 5 passwords. Please choose a different password.",
