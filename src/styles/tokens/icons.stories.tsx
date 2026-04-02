@@ -59,7 +59,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-3.5" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-3.5</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-3.5</code>
             <p className="mt-2 text-xs font-bold">14px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               補助アイコン、
@@ -72,7 +72,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-4" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-4</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-4</code>
             <p className="mt-2 text-xs font-bold">16px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               <strong>標準</strong>: ボタン内、
@@ -93,7 +93,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-5" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-5</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-5</code>
             <p className="mt-2 text-xs font-bold">20px</p>
             <p className="text-muted-foreground mt-1 text-xs">ナビ、強調</p>
           </div>
@@ -102,7 +102,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-6" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-6</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-6</code>
             <p className="mt-2 text-xs font-bold">24px</p>
             <p className="text-muted-foreground mt-1 text-xs">見出し横</p>
           </div>
@@ -117,7 +117,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-8" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-8</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-8</code>
             <p className="mt-2 text-xs font-bold">32px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               カード主アイコン、
@@ -130,7 +130,7 @@ export const Sizes: Story = {
             <div className="flex h-16 items-center justify-center">
               <Settings className="size-10" />
             </div>
-            <code className="bg-container rounded px-2 py-1 text-xs">size-10</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">size-10</code>
             <p className="mt-2 text-xs font-bold">40px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               空状態、
@@ -157,7 +157,7 @@ export const StrokeWidth: Story = {
           <div className="flex h-16 items-center justify-center">
             <Settings className="size-8" strokeWidth={2} />
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">strokeWidth=2</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=2</code>
           <p className="mt-2 text-xs font-bold">
             <strong>標準（デフォルト）</strong>
           </p>
@@ -172,7 +172,7 @@ export const StrokeWidth: Story = {
           <div className="flex h-16 items-center justify-center">
             <Home className="size-8" strokeWidth={2.5} />
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">strokeWidth=2.5</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=2.5</code>
           <p className="mt-2 text-xs font-bold">強調</p>
           <p className="text-muted-foreground mt-1 text-xs">
             ナビゲーションタブ、
@@ -185,7 +185,7 @@ export const StrokeWidth: Story = {
           <div className="flex h-16 items-center justify-center">
             <Check className="size-8" strokeWidth={3} />
           </div>
-          <code className="bg-container rounded px-2 py-1 text-xs">strokeWidth=3</code>
+          <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=3</code>
           <p className="mt-2 text-xs font-bold">高視認性</p>
           <p className="text-muted-foreground mt-1 text-xs">
             チェックマーク、

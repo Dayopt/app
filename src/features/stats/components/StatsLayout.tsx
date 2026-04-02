@@ -235,7 +235,7 @@ export function StatsLayout({
               type="button"
               onClick={handleCloseTagTab}
               // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
-              className="text-muted-foreground hover:bg-state-hover hover:text-foreground relative -ml-1 flex size-5 items-center justify-center rounded transition-colors before:absolute before:-inset-3 before:content-['']"
+              className="text-muted-foreground hover:bg-state-hover hover:text-foreground relative -ml-1 flex size-5 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-3 before:content-['']"
               aria-label="Close tag tab"
             >
               <X className="size-3.5" />

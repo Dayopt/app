@@ -106,13 +106,13 @@ export const Scale: Story = {
             className={`flex items-center gap-4 rounded-lg py-2 ${highlight ? 'bg-muted' : ''}`}
           >
             <div className="w-20 text-right">
-              <code className="bg-container rounded px-2 py-1 text-xs">{size}</code>
+              <code className="bg-container rounded-lg px-2 py-1 text-xs">{size}</code>
             </div>
             <div className="text-muted-foreground w-12 text-xs">{px}</div>
             <div className={`w-16 text-sm ${highlight ? 'font-bold' : 'text-muted-foreground'}`}>
               {name}
             </div>
-            <div className="bg-container flex-1 overflow-hidden rounded">
+            <div className="bg-container flex-1 overflow-hidden rounded-lg">
               <div className={`bg-primary h-4 w-${size}`} style={{ width: px }} />
             </div>
             <div className="text-muted-foreground w-48 text-xs">{usage}</div>
@@ -122,13 +122,13 @@ export const Scale: Story = {
 
       <div className="border-info text-info mt-8 rounded-lg border p-4">
         <p className="text-sm">
-          <strong>使用する値:</strong> <code className="bg-container rounded px-1">1</code>(4px),{' '}
-          <code className="bg-container rounded px-1">2</code>(8px),{' '}
-          <code className="bg-container rounded px-1">4</code>(16px),{' '}
-          <code className="bg-container rounded px-1">6</code>(24px),{' '}
-          <code className="bg-container rounded px-1">8</code>(32px),{' '}
-          <code className="bg-container rounded px-1">12</code>(48px),{' '}
-          <code className="bg-container rounded px-1">16</code>(64px)
+          <strong>使用する値:</strong> <code className="bg-container rounded-lg px-1">1</code>(4px),{' '}
+          <code className="bg-container rounded-lg px-1">2</code>(8px),{' '}
+          <code className="bg-container rounded-lg px-1">4</code>(16px),{' '}
+          <code className="bg-container rounded-lg px-1">6</code>(24px),{' '}
+          <code className="bg-container rounded-lg px-1">8</code>(32px),{' '}
+          <code className="bg-container rounded-lg px-1">12</code>(48px),{' '}
+          <code className="bg-container rounded-lg px-1">16</code>(64px)
         </p>
       </div>
     </div>
@@ -272,18 +272,18 @@ export const GapUsage: Story = {
       <div className="space-y-8">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <code className="bg-container rounded px-2 py-1 text-xs">gap-1</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">gap-1</code>
             <span className="text-muted-foreground text-sm">タイト（アイコン+テキスト）</span>
           </div>
           <div className="bg-card border-border inline-flex items-center gap-1 rounded-lg border px-4 py-2">
-            <div className="bg-primary size-4 rounded" />
+            <div className="bg-primary size-4 rounded-lg" />
             <span className="text-sm">ラベル</span>
           </div>
         </div>
 
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <code className="bg-container rounded px-2 py-1 text-xs">gap-2</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">gap-2</code>
             <span className="text-muted-foreground text-sm">標準（同グループ内）</span>
           </div>
           <div className="flex gap-2">
@@ -295,7 +295,7 @@ export const GapUsage: Story = {
 
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <code className="bg-container rounded px-2 py-1 text-xs">gap-4</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">gap-4</code>
             <span className="text-muted-foreground text-sm">標準（グループ間、カード並び）</span>
           </div>
           <div className="flex gap-4">
@@ -307,7 +307,7 @@ export const GapUsage: Story = {
 
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <code className="bg-container rounded px-2 py-1 text-xs">gap-6</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">gap-6</code>
             <span className="text-muted-foreground text-sm">広め（セクション間）</span>
           </div>
           <div className="flex gap-6">
@@ -319,7 +319,7 @@ export const GapUsage: Story = {
 
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <code className="bg-container rounded px-2 py-1 text-xs">gap-8</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">gap-8</code>
             <span className="text-muted-foreground text-sm">大きく離す（独立セクション）</span>
           </div>
           <div className="flex gap-8">
@@ -357,17 +357,17 @@ export const NestedSpacing: Story = {
                 </p>
 
                 <div className="flex gap-2">
-                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded-lg p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded-lg p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded-lg p-2 text-xs">要素</div>
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">最内側: p-2, gap-2 (8px)</p>
               </div>
 
               <div className="bg-container rounded-lg p-4">
                 <div className="flex gap-2">
-                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
-                  <div className="bg-primary-state-selected rounded p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded-lg p-2 text-xs">要素</div>
+                  <div className="bg-primary-state-selected rounded-lg p-2 text-xs">要素</div>
                 </div>
               </div>
             </div>

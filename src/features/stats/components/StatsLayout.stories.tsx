@@ -78,7 +78,7 @@ function TabBar({
           <button
             type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-1 flex size-5 items-center justify-center rounded transition-colors"
+            className="text-muted-foreground hover:bg-state-hover hover:text-foreground -ml-1 flex size-5 items-center justify-center rounded-lg transition-colors"
             aria-label="Close tag tab"
           >
             <svg
