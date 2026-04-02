@@ -86,21 +86,19 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">週ビュー</p>
+        <p className="text-muted-foreground text-xs">週ビュー</p>
         <ViewSwitcher currentView="week" onChange={fn()} />
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">日ビュー</p>
+        <p className="text-muted-foreground text-xs">日ビュー</p>
         <ViewSwitcher currentView="day" onChange={fn()} />
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">3日間ビュー</p>
+        <p className="text-muted-foreground text-xs">3日間ビュー</p>
         <ViewSwitcher currentView="3day" onChange={fn()} />
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">
-          インタラクティブ（週→切り替え可）
-        </p>
+        <p className="text-muted-foreground text-xs">インタラクティブ（週→切り替え可）</p>
         <ViewSwitcherInteractive initial="week" />
       </div>
     </div>

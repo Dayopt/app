@@ -30,7 +30,7 @@ export function SentimentBadge({ sentiment, className }: SentimentBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+        'inline-flex items-center rounded-full px-2 py-1 text-xs',
         SENTIMENT_STYLES[sentiment],
         className,
       )}

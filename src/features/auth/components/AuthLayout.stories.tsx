@@ -46,7 +46,7 @@ export const Default: Story = {
         </p>
         <button
           type="button"
-          className="bg-primary text-primary-foreground mt-2 rounded-lg px-4 py-2 text-sm font-medium"
+          className="bg-primary text-primary-foreground mt-2 rounded-lg px-4 py-2 text-sm"
         >
           ログインへ
         </button>
@@ -70,7 +70,7 @@ export const ErrorPage: Story = {
         </p>
         <button
           type="button"
-          className="bg-primary text-primary-foreground mt-2 rounded-lg px-4 py-2 text-sm font-medium"
+          className="bg-primary text-primary-foreground mt-2 rounded-lg px-4 py-2 text-sm"
         >
           再送信
         </button>
@@ -107,9 +107,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col gap-8 p-4">
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
-          標準レイアウト（/auth/callback）
-        </p>
+        <p className="text-muted-foreground mb-2 text-xs">標準レイアウト（/auth/callback）</p>
         <p className="text-muted-foreground mb-4 text-xs">
           AuthLayout は min-h-dvh の全画面配置のため、個別 Story での確認を推奨。
         </p>

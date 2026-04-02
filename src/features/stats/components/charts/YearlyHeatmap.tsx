@@ -84,7 +84,7 @@ export function YearlyHeatmap() {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-foreground min-w-12 text-center text-sm font-medium">{year}</span>
+            <span className="text-foreground min-w-12 text-center text-sm">{year}</span>
             <Button
               variant="ghost"
               size="sm"

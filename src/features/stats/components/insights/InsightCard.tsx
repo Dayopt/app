@@ -29,7 +29,7 @@ export function InsightCard({ insight, className }: InsightCardProps) {
     <Card className={cn('gap-0 border-none py-0', className)}>
       <CardContent className="flex flex-col gap-4 p-4">
         {/* Title */}
-        <h3 className="text-foreground text-lg font-semibold">{insight.title}</h3>
+        <h3 className="text-foreground text-lg font-bold">{insight.title}</h3>
 
         {/* Comparison Badge */}
         {insight.comparison && <ComparisonBadge comparison={insight.comparison} />}
@@ -69,7 +69,7 @@ function FindingItem({ finding }: { finding: InsightFinding }) {
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2">
         <SentimentBadge sentiment={finding.sentiment} />
-        <span className="text-foreground text-sm font-medium">{finding.headline}</span>
+        <span className="text-foreground text-sm">{finding.headline}</span>
       </div>
       <p className="text-muted-foreground pl-1 text-sm">{finding.detail}</p>
     </div>
@@ -98,7 +98,7 @@ function ComparisonBadge({ comparison }: { comparison: InsightComparison }) {
   return (
     <div className="flex items-center gap-1">
       <ArrowRight className={cn('size-3.5', COMPARISON_STYLES[comparison.direction])} />
-      <span className={cn('text-sm font-medium', COMPARISON_STYLES[comparison.direction])}>
+      <span className={cn('text-sm', COMPARISON_STYLES[comparison.direction])}>
         {comparison.summary}
       </span>
     </div>

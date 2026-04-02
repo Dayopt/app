@@ -189,7 +189,7 @@ export const Overview: Story = {
               </h3>
               <div className="border-border divide-border divide-y rounded-lg border">
                 <div className="p-4">
-                  <p className="font-medium">
+                  <p className="">
                     <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
@@ -204,7 +204,7 @@ export const Overview: Story = {
                   </p>
                 </div>
                 <div className="p-4">
-                  <p className="font-medium">
+                  <p className="">
                     <span className="bg-state-active text-state-active-foreground rounded-lg">
                       プロジェクト
                     </span>
@@ -226,7 +226,7 @@ export const Overview: Story = {
               <h3 className="text-muted-foreground mb-2 text-sm font-bold">結果なし</h3>
               <div className="border-border rounded-lg border p-8 text-center">
                 <Search className="text-muted-foreground mx-auto size-8" />
-                <p className="mt-2 font-medium">結果が見つかりません</p>
+                <p className="mt-2">結果が見つかりません</p>
                 <p className="text-muted-foreground text-sm">別のキーワードで検索してください</p>
               </div>
             </div>
@@ -368,7 +368,7 @@ function GlobalSearchWithResults() {
                 />
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                    <span className="font-medium">{block.tagName}</span>
+                    <span className="">{block.tagName}</span>
                     <span>{block.date}</span>
                     <span>{block.time}</span>
                   </div>

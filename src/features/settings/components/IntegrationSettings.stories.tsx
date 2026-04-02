@@ -285,7 +285,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-muted-foreground mb-4 text-sm font-medium">トークンあり</h3>
+        <h3 className="text-muted-foreground mb-4 text-sm">トークンあり</h3>
         <IntegrationSettings />
       </div>
     </div>

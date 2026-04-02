@@ -53,19 +53,19 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Default（週粒度）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Default（週粒度）</p>
         <StatsGranularitySelector granularity="week" onGranularityChange={() => {}} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Day（日粒度）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Day（日粒度）</p>
         <StatsGranularitySelector granularity="day" onGranularityChange={() => {}} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Month（月粒度）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Month（月粒度）</p>
         <StatsGranularitySelector granularity="month" onGranularityChange={() => {}} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Year（年粒度）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Year（年粒度）</p>
         <StatsGranularitySelector granularity="year" onGranularityChange={() => {}} />
       </div>
     </div>

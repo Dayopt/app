@@ -44,7 +44,7 @@ function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
     <>
       <CalendarDays className="text-muted-foreground size-10" />
       <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">{t('noRecords')}</p>
+        <p className="text-foreground text-sm">{t('noRecords')}</p>
         {info.lastRecordDate && (
           <p className="text-muted-foreground text-sm">
             {t('lastRecord', {
@@ -58,10 +58,7 @@ function NoRecordsState({ info }: { info: InsightsEmptyInfo }) {
         )}
       </div>
       {info.lastInsightPath && (
-        <Link
-          href={info.lastInsightPath}
-          className="text-primary hover:text-primary text-sm font-medium"
-        >
+        <Link href={info.lastInsightPath} className="text-primary hover:text-primary text-sm">
           {t('viewInsights')}
         </Link>
       )}
@@ -76,12 +73,12 @@ function InsufficientDataState({ info }: { info: InsightsEmptyInfo }) {
     <>
       <Clock className="text-muted-foreground size-10" />
       <div className="flex flex-col gap-1">
-        <p className="text-foreground text-sm font-medium">{t('insufficientData')}</p>
+        <p className="text-foreground text-sm">{t('insufficientData')}</p>
         <p className="text-muted-foreground text-sm">{t('insufficientDataHint')}</p>
       </div>
       {info.recordedDays && info.recordedDays.length > 0 && (
         <div className="text-muted-foreground text-sm">
-          <p className="mb-1 font-medium">{t('recordedDays')}</p>
+          <p className="mb-1">{t('recordedDays')}</p>
           {info.recordedDays.map((day) => (
             <p key={day.dayLabel}>
               {day.dayLabel}（{day.duration}）
@@ -100,7 +97,7 @@ function PendingGenerationState({ info }: { info: InsightsEmptyInfo }) {
   return (
     <>
       <Sparkles className="text-muted-foreground size-10" />
-      <p className="text-foreground text-sm font-medium">
+      <p className="text-foreground text-sm">
         {info.expectedDate
           ? t('pendingGeneration', {
               date: format.dateTime(info.expectedDate, {

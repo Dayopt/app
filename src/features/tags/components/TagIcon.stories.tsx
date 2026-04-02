@@ -103,7 +103,7 @@ export const VariousIcons: Story = {
             >
               <TagIcon icon={icon} color={color} size="lg" />
             </div>
-            <span className="text-foreground text-xs font-medium">{label}</span>
+            <span className="text-foreground text-xs">{label}</span>
           </div>
         ))}
       </div>

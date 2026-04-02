@@ -134,29 +134,27 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">正常（非表示）</p>
+        <p className="text-muted-foreground mb-2 text-xs">正常（非表示）</p>
         <MockSyncStatus isOnline pendingCount={0} failedCount={0} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">オフライン</p>
+        <p className="text-muted-foreground mb-2 text-xs">オフライン</p>
         <MockSyncStatus isOnline={false} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">同期中（スピナー）</p>
+        <p className="text-muted-foreground mb-2 text-xs">同期中（スピナー）</p>
         <MockSyncStatus pendingCount={3} isSyncing />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">同期待ち</p>
+        <p className="text-muted-foreground mb-2 text-xs">同期待ち</p>
         <MockSyncStatus pendingCount={5} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">同期失敗</p>
+        <p className="text-muted-foreground mb-2 text-xs">同期失敗</p>
         <MockSyncStatus failedCount={2} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
-          複合（オフライン + 同期待ち + 失敗）
-        </p>
+        <p className="text-muted-foreground mb-2 text-xs">複合（オフライン + 同期待ち + 失敗）</p>
         <MockSyncStatus isOnline={false} pendingCount={3} failedCount={1} />
       </div>
     </div>

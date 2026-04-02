@@ -26,7 +26,7 @@ export function SectionCard({ title, children, className, actions }: SectionCard
       {(title || actions) && (
         <div className="mb-4 flex items-center justify-between">
           {title ? (
-            <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            <h2 className="text-muted-foreground text-sm font-bold tracking-wide uppercase">
               {title}
             </h2>
           ) : (

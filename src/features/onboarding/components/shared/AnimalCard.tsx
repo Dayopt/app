@@ -33,7 +33,7 @@ export function AnimalCard({
       }`}
     >
       <span className="text-3xl">{emoji}</span>
-      <span className="text-sm font-medium">{name}</span>
+      <span className="text-sm">{name}</span>
       <span className="text-muted-foreground text-xs">{trait}</span>
       <span className="text-muted-foreground text-xs">{time}</span>
       <span className="text-muted-foreground text-xs leading-tight">{hint}</span>

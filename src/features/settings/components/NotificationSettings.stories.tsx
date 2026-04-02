@@ -160,7 +160,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-semibold">Default</h3>
+        <h3 className="text-foreground mb-4 text-lg font-bold">Default</h3>
         <MockProvider
           responseMap={{ 'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES }}
         >
@@ -168,13 +168,13 @@ export const AllPatterns: Story = {
         </MockProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-semibold">All Disabled</h3>
+        <h3 className="text-foreground mb-4 text-lg font-bold">All Disabled</h3>
         <MockProvider responseMap={{ 'notificationPreferences.get': MOCK_ALL_DISABLED }}>
           <NotificationSettings />
         </MockProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-semibold">Loading</h3>
+        <h3 className="text-foreground mb-4 text-lg font-bold">Loading</h3>
         <MockProvider pending>
           <NotificationSettings />
         </MockProvider>

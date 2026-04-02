@@ -269,19 +269,19 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex gap-6">
       <div className="w-60">
-        <p className="text-muted-foreground mb-2 text-xs font-medium">全タグ表示</p>
+        <p className="text-muted-foreground mb-2 text-xs">全タグ表示</p>
         <MockProvider>
           <CalendarFilterList />
         </MockProvider>
       </div>
       <div className="w-60">
-        <p className="text-muted-foreground mb-2 text-xs font-medium">空状態</p>
+        <p className="text-muted-foreground mb-2 text-xs">空状態</p>
         <MockProvider tags={[]} tagStatsCounts={{}}>
           <CalendarFilterList />
         </MockProvider>
       </div>
       <div className="w-60">
-        <p className="text-muted-foreground mb-2 text-xs font-medium">ローディング</p>
+        <p className="text-muted-foreground mb-2 text-xs">ローディング</p>
         <MockProvider pending>
           <CalendarFilterList />
         </MockProvider>

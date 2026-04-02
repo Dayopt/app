@@ -68,21 +68,19 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-4">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Default（基本）</p>
+        <p className="text-muted-foreground text-xs">Default（基本）</p>
         <TimeConflictAlert message="時間が重複しています" />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">StartAfterEnd（前後逆転）</p>
+        <p className="text-muted-foreground text-xs">StartAfterEnd（前後逆転）</p>
         <TimeConflictAlert message="開始時刻は終了時刻より前に設定してください" />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">
-          ConflictWithOther（別エントリーと重複）
-        </p>
+        <p className="text-muted-foreground text-xs">ConflictWithOther（別エントリーと重複）</p>
         <TimeConflictAlert message="別のエントリーと時間が重複しています" />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">LongMessage（長文）</p>
+        <p className="text-muted-foreground text-xs">LongMessage（長文）</p>
         <TimeConflictAlert message="この時間帯には既にスケジュールが登録されています。別の時間帯を選択するか、既存のスケジュールを変更してください。" />
       </div>
     </div>

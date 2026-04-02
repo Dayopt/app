@@ -58,7 +58,7 @@ function MockBottomTabBar({
                   </span>
                 )}
               </span>
-              <span className={cn('text-xs', isActive && 'font-semibold')}>{tab.label}</span>
+              <span className={cn('text-xs', isActive && 'font-bold')}>{tab.label}</span>
             </button>
           );
         })}
@@ -124,29 +124,23 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col gap-20">
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs font-medium">
-          Calendar Active（デフォルト）
-        </p>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Calendar Active（デフォルト）</p>
         <MockBottomTabBar activeTab="calendar" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs font-medium">Stats Active</p>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Stats Active</p>
         <MockBottomTabBar activeTab="stats" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs font-medium">
-          Notifications + バッジ (3)
-        </p>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Notifications + バッジ (3)</p>
         <MockBottomTabBar activeTab="notifications" unreadCount={3} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs font-medium">
-          バッジオーバーフロー (9+)
-        </p>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">バッジオーバーフロー (9+)</p>
         <MockBottomTabBar activeTab="calendar" unreadCount={15} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs font-medium">Account Active</p>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Account Active</p>
         <MockBottomTabBar activeTab="account" />
       </div>
     </div>

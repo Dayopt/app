@@ -51,7 +51,7 @@ export const Sizes: Story = {
 
       {/* 標準（迷ったらこれ） */}
       <div>
-        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+        <h2 className="text-muted-foreground mb-4 text-sm tracking-wide uppercase">
           標準（迷ったらこれ）
         </h2>
         <div className="grid grid-cols-2 gap-8">
@@ -85,7 +85,7 @@ export const Sizes: Story = {
 
       {/* 必要なときだけ */}
       <div>
-        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
+        <h2 className="text-muted-foreground mb-4 text-sm tracking-wide uppercase">
           必要なときだけ
         </h2>
         <div className="grid grid-cols-2 gap-8">
@@ -111,9 +111,7 @@ export const Sizes: Story = {
 
       {/* 特殊用途 */}
       <div>
-        <h2 className="text-muted-foreground mb-4 text-sm font-medium tracking-wide uppercase">
-          特殊用途
-        </h2>
+        <h2 className="text-muted-foreground mb-4 text-sm tracking-wide uppercase">特殊用途</h2>
         <div className="grid grid-cols-2 gap-8">
           <div className="text-center">
             <div className="flex h-16 items-center justify-center">

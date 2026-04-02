@@ -156,11 +156,11 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">タグ未設定</p>
+        <p className="text-muted-foreground text-xs">タグ未設定</p>
         <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">フルメニュー（未登録）</p>
+        <p className="text-muted-foreground text-xs">フルメニュー（未登録）</p>
         <TagRow
           tagId="tag-1"
           tagName="仕事"
@@ -174,9 +174,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">
-          フルメニュー（パレット登録済み）
-        </p>
+        <p className="text-muted-foreground text-xs">フルメニュー（パレット登録済み）</p>
         <TagRow
           tagId="tag-2"
           tagName="プライベート"
@@ -191,7 +189,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">コロン記法タグ</p>
+        <p className="text-muted-foreground text-xs">コロン記法タグ</p>
         <TagRow
           tagId="tag-3"
           tagName="開発:API"
@@ -203,7 +201,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">削除のみ</p>
+        <p className="text-muted-foreground text-xs">削除のみ</p>
         <TagRow
           tagId="tag-4"
           tagName="運動"
@@ -214,7 +212,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">メニューなし</p>
+        <p className="text-muted-foreground text-xs">メニューなし</p>
         <TagRow
           tagId="tag-5"
           tagName="読書"

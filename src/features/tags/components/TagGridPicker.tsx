@@ -53,7 +53,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
         <span className="truncate">{displayName}</span>
         {hasChildren && (
           <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
@@ -138,7 +138,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
           <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-            <span className="text-foreground font-semibold">{view.prefix}</span>
+            <span className="text-foreground font-bold">{view.prefix}</span>
           </span>
         </button>
 

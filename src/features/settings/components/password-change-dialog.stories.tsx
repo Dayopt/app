@@ -94,9 +94,7 @@ export const AllPatterns: Story = {
     });
     return (
       <div className="flex flex-col items-start gap-6">
-        <p className="text-muted-foreground text-xs font-medium">
-          初期フォーム（パスワード入力欄3つ）
-        </p>
+        <p className="text-muted-foreground text-xs">初期フォーム（パスワード入力欄3つ）</p>
         <PasswordChangeDialog open onOpenChange={fn()} />
       </div>
     );

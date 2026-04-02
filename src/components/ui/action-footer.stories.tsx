@@ -78,7 +78,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-6">
       <div className="bg-card rounded-lg p-6" style={{ maxWidth: 400 }}>
-        <p className="text-foreground mb-1 text-sm font-medium">基本（Cancel + Save）</p>
+        <p className="text-foreground mb-1 text-sm">基本（Cancel + Save）</p>
         <ActionFooter>
           <Button variant="outline">キャンセル</Button>
           <Button>保存</Button>
@@ -86,7 +86,7 @@ export const AllPatterns: Story = {
       </div>
 
       <div className="bg-card rounded-lg p-6" style={{ maxWidth: 400 }}>
-        <p className="text-foreground mb-1 text-sm font-medium">破壊的操作</p>
+        <p className="text-foreground mb-1 text-sm">破壊的操作</p>
         <ActionFooter>
           <Button variant="outline">キャンセル</Button>
           <Button variant="destructive">削除</Button>
@@ -95,7 +95,7 @@ export const AllPatterns: Story = {
 
       <div className="bg-card rounded-lg" style={{ maxWidth: 400 }}>
         <div className="p-6">
-          <p className="text-foreground text-sm font-medium">ボーダー付き</p>
+          <p className="text-foreground text-sm">ボーダー付き</p>
         </div>
         <ActionFooter className="border-border border-t px-6 py-4">
           <Button variant="outline">キャンセル</Button>
@@ -104,7 +104,7 @@ export const AllPatterns: Story = {
       </div>
 
       <div className="bg-card rounded-lg p-6" style={{ maxWidth: 400 }}>
-        <p className="text-foreground mb-1 text-sm font-medium">3ボタン</p>
+        <p className="text-foreground mb-1 text-sm">3ボタン</p>
         <ActionFooter>
           <Button variant="ghost">後で</Button>
           <Button variant="outline">いいえ</Button>

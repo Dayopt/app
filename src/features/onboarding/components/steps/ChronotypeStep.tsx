@@ -66,7 +66,7 @@ export function ChronotypeStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-balance">
+        <h1 className="text-2xl font-bold tracking-tight text-balance">
           {t('onboarding.chronotype.title')}
         </h1>
         <p className="text-muted-foreground text-sm">{t('onboarding.chronotype.subtitle')}</p>

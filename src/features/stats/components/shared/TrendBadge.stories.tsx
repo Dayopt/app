@@ -55,29 +55,23 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">
-          UpPositive（上昇・良い変化）
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">UpPositive（上昇・良い変化）</p>
         <TrendBadge trend={{ direction: 'up', delta: 0.12, isPositive: true }} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">
-          DownNegative（下降・悪い変化）
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">DownNegative（下降・悪い変化）</p>
         <TrendBadge trend={{ direction: 'down', delta: -0.08, isPositive: false }} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">
-          DownPositive（下降・良い変化）
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">DownPositive（下降・良い変化）</p>
         <TrendBadge trend={{ direction: 'down', delta: -0.15, isPositive: true }} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Flat（横ばい・非表示）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Flat（横ばい・非表示）</p>
         <TrendBadge trend={{ direction: 'flat', delta: 0.02, isPositive: true }} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-4 text-xs font-medium">MediumSize（mdサイズ）</p>
+        <p className="text-muted-foreground mb-4 text-xs">MediumSize（mdサイズ）</p>
         <TrendBadge trend={{ direction: 'up', delta: 0.25, isPositive: true }} size="md" />
       </div>
     </div>

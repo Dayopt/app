@@ -104,7 +104,7 @@ function CreateTagFormView({
       <button type="button" onClick={onBack} className="group flex min-h-11 items-center px-4 py-2">
         <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
           <ChevronLeft className="text-muted-foreground size-5" />
-          <span className="text-foreground font-semibold">{t('tagSelector.new')}</span>
+          <span className="text-foreground font-bold">{t('tagSelector.new')}</span>
         </span>
       </button>
 
@@ -174,7 +174,7 @@ function CreateTagFormView({
                 className={cn(
                   'rounded-full border px-2 py-1 text-sm transition-colors',
                   !selectedGroup
-                    ? 'border-primary bg-primary-state-selected text-foreground font-medium'
+                    ? 'border-primary bg-primary-state-selected text-foreground'
                     : 'border-border hover:bg-state-hover text-muted-foreground',
                 )}
               >
@@ -188,7 +188,7 @@ function CreateTagFormView({
                   className={cn(
                     'flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors',
                     selectedGroup === tag.name
-                      ? 'border-primary bg-primary-state-selected text-foreground font-medium'
+                      ? 'border-primary bg-primary-state-selected text-foreground'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
                   )}
                 >
@@ -255,7 +255,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
         <span className="truncate">{displayName}</span>
         {hasChildren && (
           <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
@@ -360,7 +360,7 @@ function TagQuickSelectorContent({
           <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-            <span className="text-foreground font-semibold">{view.prefix}</span>
+            <span className="text-foreground font-bold">{view.prefix}</span>
           </span>
         </button>
 
@@ -397,7 +397,7 @@ function TagQuickSelectorContent({
       {isTagZero && (
         <div className="space-y-2 px-4 py-4">
           <div className="text-center">
-            <p className="text-foreground text-sm font-medium">{t('tagSelector.emptyTitle')}</p>
+            <p className="text-foreground text-sm">{t('tagSelector.emptyTitle')}</p>
             <p className="text-muted-foreground mt-1 text-xs">
               {t('tagSelector.emptyDescription')}
             </p>
@@ -456,9 +456,7 @@ function TagQuickSelectorContent({
             <span className="bg-muted flex size-8 items-center justify-center rounded-full">
               <Plus className="text-muted-foreground size-5" />
             </span>
-            <span className="text-muted-foreground text-sm font-medium">
-              {t('tagSelector.new')}
-            </span>
+            <span className="text-muted-foreground text-sm">{t('tagSelector.new')}</span>
           </button>
         </div>
       )}

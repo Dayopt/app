@@ -66,17 +66,17 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex max-w-lg flex-col gap-8">
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Card（count=3）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Card（count=3）</p>
         <LoadingState type="card" count={3} />
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">List（count=4）</p>
+        <p className="text-muted-foreground mb-2 text-xs">List（count=4）</p>
         <LoadingState type="list" count={4} />
       </section>
 
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Form</p>
+        <p className="text-muted-foreground mb-2 text-xs">Form</p>
         <LoadingState type="form" />
       </section>
     </div>

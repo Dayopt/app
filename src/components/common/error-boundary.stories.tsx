@@ -45,15 +45,15 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-[500px] flex-col gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Default</p>
+        <p className="text-muted-foreground mb-2 text-xs">Default</p>
         <DefaultErrorFallback onRetry={() => {}} onReload={() => {}} />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Dev</p>
+        <p className="text-muted-foreground mb-2 text-xs">Dev</p>
         <DevErrorFallback componentName="CalendarView" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Feature</p>
+        <p className="text-muted-foreground mb-2 text-xs">Feature</p>
         <FeatureErrorFallback featureName="stats" />
       </div>
     </div>

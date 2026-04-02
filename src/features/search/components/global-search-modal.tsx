@@ -176,7 +176,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                       <div className="flex min-w-0 flex-1 flex-col">
                         <div className="text-muted-foreground flex items-center gap-1 text-xs">
                           {tag && (
-                            <span className="truncate font-medium">
+                            <span className="truncate">
                               <HighlightedTagName name={tag.name} query={query} />
                             </span>
                           )}

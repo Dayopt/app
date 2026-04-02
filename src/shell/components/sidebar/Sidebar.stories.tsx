@@ -204,7 +204,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs">
           デフォルト状態（コンテンツスロットとフッターアクション付き）
         </p>
         <div className="h-[500px] w-64">
@@ -214,7 +214,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
+        <p className="text-muted-foreground mb-2 text-xs">
           コンテンツなし（children スロットが空の状態）
         </p>
         <div className="h-[400px] w-64">
@@ -226,9 +226,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
-          インタラクティブデモ（開閉切り替え）
-        </p>
+        <p className="text-muted-foreground mb-2 text-xs">インタラクティブデモ（開閉切り替え）</p>
         <InteractiveDemo sidebarLabel="サイドバー（インタラクティブ）" />
       </div>
     </div>

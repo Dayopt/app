@@ -38,7 +38,7 @@ export const Default: Story = {
         <div className="mb-4 flex items-center gap-2">
           <span className="text-muted-foreground text-sm">選択中:</span>
           <TagIcon icon={icon} color="blue" size="md" />
-          <span className="text-foreground text-sm font-medium">{icon ?? 'なし'}</span>
+          <span className="text-foreground text-sm">{icon ?? 'なし'}</span>
         </div>
         <IconPicker value={icon} onChange={setIcon} color="blue" />
       </div>
@@ -56,7 +56,7 @@ export const WithSelection: Story = {
         <div className="mb-4 flex items-center gap-2">
           <span className="text-muted-foreground text-sm">選択中:</span>
           <TagIcon icon={icon} color="green" size="md" />
-          <span className="text-foreground text-sm font-medium">{icon ?? 'なし'}</span>
+          <span className="text-foreground text-sm">{icon ?? 'なし'}</span>
         </div>
         <IconPicker value={icon} onChange={setIcon} color="green" />
       </div>

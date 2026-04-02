@@ -29,7 +29,7 @@ export const Default: Story = {};
 export const InContext: Story = {
   render: () => (
     <div className="border-border flex w-48 items-center justify-between rounded-lg border px-2 py-1">
-      <span className="text-foreground text-sm font-medium">タグ</span>
+      <span className="text-foreground text-sm">タグ</span>
       <CreateTagButton />
     </div>
   ),
@@ -40,13 +40,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">単体</p>
+        <p className="text-muted-foreground text-xs">単体</p>
         <CreateTagButton />
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">ヘッダー内コンテキスト</p>
+        <p className="text-muted-foreground text-xs">ヘッダー内コンテキスト</p>
         <div className="border-border flex w-48 items-center justify-between rounded-lg border px-2 py-1">
-          <span className="text-foreground text-sm font-medium">タグ</span>
+          <span className="text-foreground text-sm">タグ</span>
           <CreateTagButton />
         </div>
       </div>

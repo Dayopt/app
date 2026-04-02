@@ -97,9 +97,7 @@ export function TagDeleteStrategyDialog({
 
         {strategy === 'reassign' ? (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-medium">
-              {t('deleteStrategy.selectTarget')}
-            </p>
+            <p className="text-muted-foreground text-xs">{t('deleteStrategy.selectTarget')}</p>
 
             {availableTags.length > 5 ? (
               <div className="relative">

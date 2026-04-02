@@ -83,11 +83,11 @@ export const AllPatterns: Story = {
   render: (args) => (
     <div className="flex flex-col items-start gap-12">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Step 1: Welcome</p>
+        <p className="text-muted-foreground mb-2 text-xs">Step 1: Welcome</p>
         <OnboardingWizard {...args} initialStep="welcome" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Step 2: Chronotype</p>
+        <p className="text-muted-foreground mb-2 text-xs">Step 2: Chronotype</p>
         <OnboardingWizard {...args} initialName="Test User" initialStep="chronotype" />
       </div>
     </div>

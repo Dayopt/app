@@ -34,7 +34,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         className={cn(
           'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
           activePage === 'calendar'
-            ? 'bg-primary-state-selected text-foreground font-medium'
+            ? 'bg-primary-state-selected text-foreground font-bold'
             : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
@@ -48,7 +48,7 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
         className={cn(
           'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
           activePage === 'stats'
-            ? 'bg-primary-state-selected text-foreground font-medium'
+            ? 'bg-primary-state-selected text-foreground font-bold'
             : 'text-muted-foreground hover:bg-state-hover',
         )}
       >

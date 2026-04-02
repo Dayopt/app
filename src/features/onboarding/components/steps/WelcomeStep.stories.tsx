@@ -65,11 +65,11 @@ export const AllPatterns: Story = {
   render: (args) => (
     <div className="flex flex-col items-start gap-8">
       <div style={{ width: '100%', maxWidth: 400 }}>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">新規ユーザー</p>
+        <p className="text-muted-foreground mb-2 text-xs">新規ユーザー</p>
         <WelcomeStep {...args} displayName="" hasExistingName={false} />
       </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">OAuth由来</p>
+        <p className="text-muted-foreground mb-2 text-xs">OAuth由来</p>
         <WelcomeStep {...args} displayName="John Doe" hasExistingName={true} />
       </div>
     </div>

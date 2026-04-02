@@ -119,7 +119,7 @@ export const ServerError: Story = {
 export const ErrorMessages: Story = {
   render: () => (
     <div className="flex max-w-md flex-col gap-4 p-6">
-      <p className="text-muted-foreground text-sm font-medium">SignupForm エラーバリエーション</p>
+      <p className="text-muted-foreground text-sm">SignupForm エラーバリエーション</p>
       <FieldError announceImmediately className="text-center">
         このメールアドレスは既に登録されています。ログインしてください。
       </FieldError>
@@ -143,9 +143,9 @@ export const ErrorMessages: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground mb-2 text-xs font-medium">Default</p>
+      <p className="text-muted-foreground mb-2 text-xs">Default</p>
       <SignupForm />
-      <p className="text-muted-foreground mb-2 text-xs font-medium">ErrorMessages</p>
+      <p className="text-muted-foreground mb-2 text-xs">ErrorMessages</p>
       <div className="flex max-w-md flex-col gap-4 p-6">
         <FieldError announceImmediately className="text-center">
           このメールアドレスは既に登録されています。ログインしてください。

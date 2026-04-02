@@ -180,7 +180,7 @@ export function BottomTabBar() {
                   </span>
                 )}
               </span>
-              <span className={cn('text-xs', isActive && 'font-semibold')}>{tab.label}</span>
+              <span className={cn('text-xs', isActive && 'font-bold')}>{tab.label}</span>
             </button>
           );
         })}

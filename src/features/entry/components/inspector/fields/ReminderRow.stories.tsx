@@ -55,11 +55,11 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">OFF（デフォルト）</p>
+        <p className="text-muted-foreground text-xs">OFF（デフォルト）</p>
         <ReminderRowDemo />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">ON（開始時に通知）</p>
+        <p className="text-muted-foreground text-xs">ON（開始時に通知）</p>
         <ReminderRowDemo initialValue={0} />
       </div>
     </div>

@@ -128,25 +128,25 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-8">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Default（空）</p>
+        <p className="text-muted-foreground text-xs">Default（空）</p>
         <NoteSectionDemo />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithNote（テキストあり）</p>
+        <p className="text-muted-foreground text-xs">WithNote（テキストあり）</p>
         <NoteSectionDemo initialNote="今日のタスクを完了させる。" />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">MultilineNote（複数行）</p>
+        <p className="text-muted-foreground text-xs">MultilineNote（複数行）</p>
         <NoteSectionDemo
           initialNote={`1. 朝のミーティング準備\n2. 設計書レビュー\n3. コードレビュー対応`}
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Disabled（無効化）</p>
+        <p className="text-muted-foreground text-xs">Disabled（無効化）</p>
         <NoteSectionDemo initialNote="編集不可のメモ。" disabled />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">CustomMaxLength（500文字上限）</p>
+        <p className="text-muted-foreground text-xs">CustomMaxLength（500文字上限）</p>
         <NoteSectionDemo maxLength={500} />
       </div>
     </div>

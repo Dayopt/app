@@ -46,7 +46,7 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-8">
       {/* 使用中のサイズ */}
       <section>
-        <h3 className="text-foreground mb-4 text-sm font-medium">Sizes (in use)</h3>
+        <h3 className="text-foreground mb-4 text-sm">Sizes (in use)</h3>
         <div className="flex items-end gap-6">
           {[
             { size: 'xs' as const, label: '20px', desc: 'サイドバー' },
@@ -72,7 +72,7 @@ export const AllPatterns: Story = {
 
       {/* 画像 / フォールバック */}
       <section>
-        <h3 className="text-foreground mb-4 text-sm font-medium">Image / Fallback</h3>
+        <h3 className="text-foreground mb-4 text-sm">Image / Fallback</h3>
         <div className="flex items-center gap-4">
           <Avatar size="xl">
             <AvatarImage src="https://github.com/shadcn.png" alt="User" />

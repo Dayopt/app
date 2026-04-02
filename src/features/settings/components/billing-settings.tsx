@@ -246,7 +246,7 @@ export function BillingSettings() {
           <div className="bg-warning-tint flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-warning h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{t('settings.subscription.pastDueTitle')}</p>
+              <p className="text-sm">{t('settings.subscription.pastDueTitle')}</p>
               <p className="text-muted-foreground text-sm">
                 {t('settings.subscription.pastDueDescription')}
               </p>
@@ -269,7 +269,7 @@ export function BillingSettings() {
           <div className="flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">{t('settings.subscription.canceledTitle')}</p>
+              <p className="text-sm">{t('settings.subscription.canceledTitle')}</p>
               <p className="text-muted-foreground text-sm">
                 {t('settings.subscription.canceledDescription')}
               </p>
@@ -392,12 +392,10 @@ export function BillingSettings() {
               <table className="w-full">
                 <thead>
                   <tr className="text-muted-foreground text-left text-xs">
-                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceDate')}</th>
-                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceTotal')}</th>
-                    <th className="pb-2 font-medium">{t('settings.subscription.invoiceStatus')}</th>
-                    <th className="pb-2 text-right font-medium">
-                      {t('settings.subscription.invoiceAction')}
-                    </th>
+                    <th className="pb-2">{t('settings.subscription.invoiceDate')}</th>
+                    <th className="pb-2">{t('settings.subscription.invoiceTotal')}</th>
+                    <th className="pb-2">{t('settings.subscription.invoiceStatus')}</th>
+                    <th className="pb-2 text-right">{t('settings.subscription.invoiceAction')}</th>
                   </tr>
                 </thead>
                 <tbody>

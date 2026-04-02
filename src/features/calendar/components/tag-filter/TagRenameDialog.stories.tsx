@@ -76,9 +76,9 @@ export const Closed: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground text-xs font-medium">デフォルト（英語タグ名）</p>
+      <p className="text-muted-foreground text-xs">デフォルト（英語タグ名）</p>
       <TagRenameDialog isOpen onClose={fn()} onSave={fn()} currentName="Work" tagId="tag-1" />
-      <p className="text-muted-foreground text-xs font-medium">日本語タグ名</p>
+      <p className="text-muted-foreground text-xs">日本語タグ名</p>
       <TagRenameDialog
         isOpen
         onClose={fn()}

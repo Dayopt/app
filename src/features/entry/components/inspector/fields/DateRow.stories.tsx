@@ -93,15 +93,15 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Default（未選択）</p>
+        <p className="text-muted-foreground text-xs">Default（未選択）</p>
         <DateRow label="日付" selectedDate={undefined} onDateChange={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithSelectedDate（選択済み）</p>
+        <p className="text-muted-foreground text-xs">WithSelectedDate（選択済み）</p>
         <DateRow label="日付" selectedDate={new Date('2026-03-18')} onDateChange={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithIcon（アイコンあり）</p>
+        <p className="text-muted-foreground text-xs">WithIcon（アイコンあり）</p>
         <DateRow
           label="日付"
           icon={CalendarDays}
@@ -110,7 +110,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Disabled（無効化）</p>
+        <p className="text-muted-foreground text-xs">Disabled（無効化）</p>
         <DateRow
           label="日付"
           icon={CalendarDays}

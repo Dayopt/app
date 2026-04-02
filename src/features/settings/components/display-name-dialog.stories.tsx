@@ -66,7 +66,7 @@ export const Closed: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground text-xs font-medium">デフォルト（名前入力済み）</p>
+      <p className="text-muted-foreground text-xs">デフォルト（名前入力済み）</p>
       <DisplayNameDialog open onOpenChange={fn()} currentName="山田 太郎" />
     </div>
   ),

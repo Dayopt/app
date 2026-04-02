@@ -88,7 +88,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
                 <span className="text-muted-foreground w-10 text-xs">
                   {formatDate(entry.startTime)}
                 </span>
-                <span className="text-foreground w-24 font-mono text-xs font-medium">
+                <span className="text-foreground w-24 font-mono text-xs">
                   {formatTime(entry.startTime)}-{formatTime(entry.endTime)}
                 </span>
                 <span className="w-6 text-center text-base">
@@ -99,7 +99,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
                 <span className="flex-1" />
                 {deviation != null && (
                   <span
-                    className={`font-mono text-xs font-semibold ${
+                    className={`font-mono text-xs font-bold ${
                       Math.abs(deviation) <= 5
                         ? 'text-success'
                         : deviation > 0

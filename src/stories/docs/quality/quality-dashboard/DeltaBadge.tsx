@@ -18,7 +18,7 @@ export function DeltaBadge({ current, previous, invertColor = false }: DeltaBadg
 
   return (
     <span
-      className={`rounded-lg px-2 py-1 text-xs font-medium ${
+      className={`rounded-lg px-2 py-1 text-xs ${
         isGood ? 'bg-success-tint text-success' : 'bg-destructive-tint text-destructive'
       }`}
     >

@@ -46,7 +46,7 @@ export function TimeRow({
         <span
           className={cn(
             'text-sm',
-            isPrimary ? 'text-foreground font-medium' : 'text-muted-foreground',
+            isPrimary ? 'text-foreground font-bold' : 'text-muted-foreground',
           )}
         >
           {label}

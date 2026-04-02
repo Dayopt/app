@@ -117,19 +117,19 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-col items-start gap-8">
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium">Deep ゾーン（Bear 11:00）</p>
+          <p className="text-muted-foreground text-xs">Deep ゾーン（Bear 11:00）</p>
           <div className="relative h-8 w-48">
             <NowBadge currentHour={11} />
           </div>
         </div>
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium">Ease ゾーン（Bear 15:00）</p>
+          <p className="text-muted-foreground text-xs">Ease ゾーン（Bear 15:00）</p>
           <div className="relative h-8 w-48">
             <NowBadge currentHour={15} />
           </div>
         </div>
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium">ゾーン外（Bear 8:00）</p>
+          <p className="text-muted-foreground text-xs">ゾーン外（Bear 8:00）</p>
           <div className="relative h-8 w-48">
             <NowBadge currentHour={8} />
             <span className="text-muted-foreground text-xs">（非表示）</span>

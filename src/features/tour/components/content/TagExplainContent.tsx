@@ -60,7 +60,7 @@ export function TagExplainContent({
         {examples.map((example) => (
           <div key={example.name} className="flex items-center gap-1">
             <example.icon className="size-4" style={{ color: example.color }} aria-hidden />
-            <span className="text-foreground text-xs font-medium">{example.name}</span>
+            <span className="text-foreground text-xs">{example.name}</span>
           </div>
         ))}
       </div>

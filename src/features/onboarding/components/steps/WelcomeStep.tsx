@@ -36,7 +36,7 @@ export function WelcomeStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-bold tracking-tight">
           {hasExistingName ? t('onboarding.welcome.confirmTitle') : t('onboarding.welcome.title')}
         </h1>
         <p className="text-muted-foreground text-sm">

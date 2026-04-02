@@ -77,7 +77,7 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
             return (
               <span
                 key={`y-${item.year}`}
-                className="text-muted-foreground mx-1 flex h-7 shrink-0 items-center justify-center px-2 text-xs font-medium"
+                className="text-muted-foreground mx-1 flex h-7 shrink-0 items-center justify-center px-2 text-xs"
               >
                 {item.year}
               </span>

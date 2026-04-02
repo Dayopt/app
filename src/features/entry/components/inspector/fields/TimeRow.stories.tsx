@@ -131,27 +131,27 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Default（予定時間）</p>
+        <p className="text-muted-foreground text-xs">Default（予定時間）</p>
         <TimeRowDemo />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Primary（記録時間・強調）</p>
+        <p className="text-muted-foreground text-xs">Primary（記録時間・強調）</p>
         <TimeRowDemo isPrimary />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">WithError（エラー状態）</p>
+        <p className="text-muted-foreground text-xs">WithError（エラー状態）</p>
         <TimeRowDemo hasError />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Disabled（無効化）</p>
+        <p className="text-muted-foreground text-xs">Disabled（無効化）</p>
         <TimeRowDemo disabled />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Placeholder（記録なし）</p>
+        <p className="text-muted-foreground text-xs">Placeholder（記録なし）</p>
         <TimeRowPlaceholder label="記録時間" icon={Clock} message="記録なし" />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">PlaceholderMuted（薄く表示）</p>
+        <p className="text-muted-foreground text-xs">PlaceholderMuted（薄く表示）</p>
         <TimeRowPlaceholder label="記録時間" icon={Clock} message="記録なし" muted />
       </div>
     </div>

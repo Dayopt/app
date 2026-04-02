@@ -132,7 +132,7 @@ function PaletteAddContent({
                 type="button"
                 onClick={() => setSelectedDuration(String(preset.value))}
                 className={cn(
-                  'rounded-full border px-4 py-1 text-sm font-medium transition-colors',
+                  'rounded-full border px-4 py-1 text-sm transition-colors',
                   selectedDuration === String(preset.value)
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border hover:bg-state-hover text-foreground',
