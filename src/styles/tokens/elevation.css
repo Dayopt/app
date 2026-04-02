@@ -1,9 +1,0 @@
-/* ============================================
- * シャドウ（modern-minimal準拠）
- * Surface体系:
- *   Light: container(0.96) → background(0.98) → card(1.00)
- *   Dark:  container(0.15) → background(0.18) → card(0.22)
- *
- * shadow-xs / shadow-sm / shadow-card は
- * colors.css で定義、tailwind-theme.css でマッピング
- * ============================================ */
