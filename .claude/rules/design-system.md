@@ -138,3 +138,42 @@ paths:
 | 最前面           | 9999      | tooltip                                                             |
 
 - **Elevation との関係**: Sunken / Base / Raised は z-index 指定なし。Overlay のみ z-index を使用。見た目の浮き（shadow）は Elevation、スタッキング順序は Z-Index。別の関心事
+
+## State Patterns (Error / Empty / Loading)
+
+### Empty State
+
+- コンポーネント: `EmptyState` (`@/components/common/EmptyState`)
+- アイコン: `size-10` (40px), `text-muted-foreground`
+- ARIA: `role="status"`
+- 用途: データが存在しない場合の表示
+- **ルール**: 親コンテナが空状態を所有する。子の可視化コンポーネントは `return null`
+
+### Error State
+
+- コンポーネント: `ErrorState` (`@/components/common/ErrorState`)
+- アイコン: `AlertCircle`, `size-8` (32px), `text-destructive`
+- ARIA: `role="alert"`
+- リトライ: `Button variant="outline"`
+- 用途: tRPC クエリの `isError` 等、データ取得失敗時
+- **ルール**: UI を描画する全 `useQuery` は `isError` を ErrorState でハンドリング必須
+
+### Loading State
+
+- Skeleton (`animate-shimmer`): コンテンツ形状のローディング、300ms〜3s
+- Spinner (`@/components/ui/spinner`): 短いインラインローディング、〜2s
+- `loading.tsx` (Next.js): ページレベルの Skeleton
+- **ルール**: コンテンツ領域は Skeleton 優先。生 `Loader2` 禁止、必ず Spinner コンポーネントを使用
+
+### 判断マトリクス
+
+| シナリオ                 | コンポーネント  | サイズ                   |
+| ------------------------ | --------------- | ------------------------ |
+| tRPC クエリ失敗          | `ErrorState`    | 親コンテキストに合わせる |
+| データなし（親コンテナ） | `EmptyState`    | 親コンテキストに合わせる |
+| データなし（子の可視化） | `return null`   | —                        |
+| コンポーネントクラッシュ | `ErrorBoundary` | —                        |
+| ページエラー             | `error.tsx`     | フルページ               |
+| Mutation 失敗            | Toast (sonner)  | —                        |
+| 初期データ読み込み       | Skeleton        | コンテンツ形状に合わせる |
+| ボタン/インライン操作    | Spinner         | sm / md                  |
