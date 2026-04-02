@@ -205,14 +205,14 @@ export function StatsLayout({
         role="tablist"
       >
         {/* 固定3タブ */}
-        {FIXED_TABS.map((tab) => (
+        {FIXED_TABS.map((tab, i) => (
           <Link
             key={tab.id}
             href={buildTabHref(tab.path)}
             role="tab"
             aria-selected={activeTab === tab.id}
             prefetch
-            className={tabLinkClass(activeTab === tab.id)}
+            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0')}
           >
             {t(tab.labelKey)}
           </Link>
