@@ -67,6 +67,26 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion:
       'text-foreground/80 → text-muted-foreground, border-border/50 → border-border-subtle',
   },
+  // フォントウェイト準拠（font-normal / font-bold のみ）
+  {
+    pattern: '(?<![a-z0-9-])font-(?:medium|semibold|extrabold|black|light|thin)(?![a-z0-9-])',
+    message: '禁止フォントウェイト。font-normal (400) / font-bold (700) のみ使用可',
+    suggestion: 'font-medium → 削除(=font-normal), font-semibold → font-bold',
+  },
+  // bare rounded 禁止（rounded-lg / rounded-2xl / rounded-full / rounded-none のみ）
+  {
+    pattern: '(?<![a-z0-9-])rounded(?![a-z0-9-])',
+    message: 'bare rounded は禁止。rounded-lg (8px) を使用',
+    suggestion: 'rounded → rounded-lg',
+  },
+  // 直接カラークラス禁止（semantic token を使用）
+  {
+    pattern:
+      '(?:text|bg|border)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]',
+    message: '直接カラークラスは禁止。semantic token を使用',
+    suggestion: 'text-gray-500 → text-muted-foreground, bg-blue-500 → bg-primary',
+    warnOnly: true, // stories のドキュメント例を含むため段階移行
+  },
   // スペーシンググリッド準拠（8px + 4pxサブグリッド）
   // 許可値: 0(0px), 1(4px), 2(8px), 4(16px), 6(24px), 8(32px), 12(48px), 16(64px), 24(96px)
   {
