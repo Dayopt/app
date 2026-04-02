@@ -75,7 +75,7 @@ const DialogContent = ({
             className={cn(
               'text-foreground absolute top-4 right-4 flex size-8 items-center justify-center rounded-lg transition-colors',
               'hover:bg-state-hover active:bg-state-hover',
-              'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden',
+              'ring-offset-background focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden',
               'disabled:pointer-events-none',
               '[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
             )}
