@@ -134,6 +134,48 @@ for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
   }
 }
 
+// ─── 共起チェック: bg-card には shadow が必要（Elevation ルール） ───
+try {
+  const bgCardLines = execSync('grep -rn "bg-card" src --include="*.tsx" 2>/dev/null || true', {
+    encoding: 'utf8',
+  }).trim();
+
+  if (bgCardLines) {
+    const violations: string[] = [];
+
+    for (const line of bgCardLines.split('\n')) {
+      if (!line) continue;
+
+      // 除外: stories, shadcn/ui プリミティブ, opacity 派生 (bg-card/)
+      if (line.includes('.stories.') || line.includes('components/ui/') || /bg-card\//.test(line)) {
+        continue;
+      }
+
+      // shadow-xs / shadow-sm / shadow-card のいずれかが同一行にあれば OK
+      if (/shadow-(xs|sm|card)/.test(line)) continue;
+
+      violations.push(line);
+    }
+
+    if (violations.length > 0) {
+      hasWarnings = true;
+      console.log('⚠️  [warn] bg-card に shadow がない（Elevation ルール違反）');
+      console.log('   修正例: bg-card は shadow-sm (Raised) / shadow-card (Overlay) と併用');
+      console.log('   該当箇所:');
+      for (const v of violations) {
+        // "src/path:line: content" → 見やすく整形
+        const [loc, ...rest] = v.split(':');
+        const lineNum = rest[0];
+        const content = rest.slice(1).join(':').trim();
+        console.log(`     - ${loc}:${lineNum}: ${content.slice(0, 80)}`);
+      }
+      console.log('');
+    }
+  }
+} catch {
+  // grep エラーは無視
+}
+
 if (hasViolations) {
   console.log('⚠️  トークン違反が見つかりました。修正してください。');
   process.exit(1);
