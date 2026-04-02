@@ -2,33 +2,33 @@
   "error": {
     "global": {
       "title": "アプリケーションエラー",
-      "description": "申し訳ございません。予期しない問題が発生しました。",
+      "description": "予期しない問題が発生した",
       "errorId": "エラーID",
       "showDetails": "エラー詳細を表示",
       "retry": "再試行",
       "goHome": "ホームに戻る",
-      "sentryReport": "エラーは自動的に報告されました"
+      "sentryReport": "エラー報告を自動送信済み"
     },
     "boundary": {
-      "title": "予期しないエラーが発生しました",
-      "description": "申し訳ございません。アプリケーションでエラーが発生しました。",
-      "autoReport": "自動的にエラー報告を送信いたします。",
+      "title": "予期しないエラーが発生した",
+      "description": "アプリケーションでエラーが発生した",
+      "autoReport": "エラー報告を自動送信",
       "retry": "再試行",
       "reload": "ページをリロード",
       "devTitle": "開発環境 - コンポーネントエラー",
       "component": "コンポーネント",
       "unknown": "不明",
-      "checkConsole": "詳細はブラウザのコンソールを確認してください。",
-      "featureError": "{{feature}}機能でエラーが発生しました"
+      "checkConsole": "詳細はブラウザのコンソールを確認",
+      "featureError": "{{feature}}機能でエラーが発生した"
     },
     "inline": {
-      "title": "データの読み込みに失敗しました",
-      "description": "問題が発生しました。もう一度お試しください。",
+      "title": "データを読み込めなかった",
+      "description": "問題が起きた。もう一度試して",
       "retry": "再試行"
     },
     "notFound": {
-      "title": "ページが見つかりません",
-      "description": "お探しのページは存在しないか、移動された可能性があります。",
+      "title": "ページが見つからない",
+      "description": "このページは存在しないか、移動された可能性がある",
       "goHome": "ホームに戻る"
     }
   }

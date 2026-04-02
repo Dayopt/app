@@ -7,15 +7,15 @@
     "getStarted": "はじめる",
     "welcome": {
       "title": "Dayoptへようこそ！",
-      "subtitle": "あなたに合った体験をセットアップしましょう",
-      "nameLabel": "お名前は？",
-      "namePlaceholder": "名前を入力",
-      "confirmTitle": "お名前を確認してください",
-      "confirmSubtitle": "アカウントから取得しました"
+      "subtitle": "自分に合った体験をセットアップしよう",
+      "nameLabel": "名前は？",
+      "namePlaceholder": "例: Taro",
+      "confirmTitle": "名前を確認",
+      "confirmSubtitle": "アカウントから取得した"
     },
     "chronotype": {
       "title": "あなたのリズムは？",
-      "subtitle": "あなたの生活リズムに合わせて、集中しやすい時間帯をカレンダーに色で表示します",
+      "subtitle": "生活リズムに合わせて、集中しやすい時間帯をカレンダーに色で表示する",
       "lion": {
         "name": "ライオン",
         "trait": "超朝型",
@@ -44,16 +44,16 @@
       "skipLink": "あとで設定する",
       "quizDuration": "6つの質問に答えるだけ（約1分）",
       "quizResult": {
-        "title": "あなたは{type}タイプです！",
-        "description": "集中のゴールデンタイムは{deepTime}です。カレンダーに色で表示します。",
+        "title": "あなたは{type}タイプ！",
+        "description": "集中のゴールデンタイムは{deepTime}。カレンダーに色で表示する",
         "confirm": "OK"
       }
     },
     "error": {
-      "completeFailed": "保存に失敗しました。もう一度お試しください。",
-      "sessionExpired": "セッションが切れました。再ログインしてください。",
-      "networkError": "ネットワークに接続できません。接続を確認してください。",
-      "profileLoadFailed": "プロフィールの読み込みに失敗しました。",
+      "completeFailed": "保存できなかった。もう一度試して",
+      "sessionExpired": "セッションが切れた。再ログインして",
+      "networkError": "ネットワークに接続できない。接続を確認して",
+      "profileLoadFailed": "プロフィールを読み込めなかった",
       "retry": "再試行"
     }
   }

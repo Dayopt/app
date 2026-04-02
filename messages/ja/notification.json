@@ -8,16 +8,16 @@
       "ai": "AI"
     },
     "empty": {
-      "all": "通知はありません",
-      "unread": "未読の通知はありません",
-      "reminders": "リマインダー通知はありません",
-      "ai": "AI通知はありません"
+      "all": "まだ通知がない",
+      "unread": "未読の通知はない",
+      "reminders": "リマインダー通知はない",
+      "ai": "AI通知はない"
     },
     "error": {
-      "title": "通知の読み込みに失敗しました"
+      "title": "通知を読み込めなかった。もう一度試して"
     },
     "actions": {
-      "markAllAsRead": "すべて既読にする",
+      "markAllAsRead": "すべて既読に",
       "viewAll": "すべての通知を表示",
       "deleteAllRead": "既読を削除"
     },
@@ -26,12 +26,12 @@
       "unread": "{count}件の未読通知"
     },
     "confirm": {
-      "deleteAllRead": "既読の通知を全て削除しますか？"
+      "deleteAllRead": "既読の通知をすべて削除する？"
     },
     "errors": {
-      "notSupported": "このブラウザは通知をサポートしていません",
-      "permissionFailed": "通知許可の取得に失敗しました",
-      "displayFailed": "ブラウザ通知の表示に失敗しました"
+      "notSupported": "このブラウザは通知をサポートしていない",
+      "permissionFailed": "通知許可を取得できなかった",
+      "displayFailed": "ブラウザ通知を表示できなかった"
     },
     "types": {
       "all": "すべて",
@@ -63,10 +63,10 @@
         "description": "アプリを閉じていても通知を受け取る",
         "comingSoon": "近日公開"
       },
-      "browserPermissionDenied": "ブラウザ通知の許可が拒否されました",
+      "browserPermissionDenied": "ブラウザ通知の許可が拒否された",
       "permissionDenied": "拒否済み",
-      "saveError": "設定の保存に失敗しました: {message}",
-      "tip": "ブラウザ通知はアプリを開いている時のみ動作します。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れます。",
+      "saveError": "設定を保存できなかった: {message}",
+      "tip": "ブラウザ通知はアプリを開いている時のみ動作する。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れる",
       "defaultReminder": {
         "label": "開始時通知のデフォルト",
         "description": "新規エントリー作成時に開始時通知を自動でONにする"
