@@ -106,7 +106,7 @@ export function ChronotypeStep({
           size="sm"
           onClick={onComplete}
           disabled={!selectedType || isCompleting}
-          isLoading={isCompleting}
+          loading={isCompleting}
         >
           {t('onboarding.getStarted')}
         </Button>

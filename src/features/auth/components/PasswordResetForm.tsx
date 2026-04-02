@@ -131,7 +131,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
               <Field>
                 <Button
                   type="submit"
-                  isLoading={loading}
+                  loading={loading}
                   loadingText={t('auth.passwordResetForm.sending')}
                 >
                   {t('auth.passwordResetForm.sendResetLink')}

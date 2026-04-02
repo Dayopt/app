@@ -229,7 +229,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
               </Field>
 
               <Field>
-                <Button type="submit" isLoading={isSubmitting} className="w-full">
+                <Button type="submit" loading={isSubmitting} className="w-full">
                   {t('auth.signupForm.createAccountButton')}
                 </Button>
                 <p className="text-muted-foreground text-center text-xs leading-relaxed">

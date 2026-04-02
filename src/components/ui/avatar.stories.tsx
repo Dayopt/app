@@ -115,7 +115,7 @@ function AvatarUploadDemo({ initialUrl }: { initialUrl?: string }) {
       currentAvatarUrl={avatarUrl}
       onUpload={handleUpload}
       onRemove={handleRemove}
-      isUploading={isUploading}
+      loading={isUploading}
       size="3xl"
     />
   );

@@ -2,9 +2,9 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
@@ -235,7 +235,7 @@ function PaletteAddForm({ onBack, onComplete }: PaletteAddFormProps) {
         <Button
           className="w-full"
           aria-disabled={!canSubmit}
-          isLoading={isPinning}
+          loading={isPinning}
           onClick={handleSubmit}
         >
           {t('sidebar.palette.add')}

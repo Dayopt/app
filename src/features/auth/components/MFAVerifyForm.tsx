@@ -106,7 +106,7 @@ export function MFAVerifyForm({
                     <Button
                       onClick={onVerifyTotp}
                       disabled={verificationCode.length !== 6}
-                      isLoading={isVerifying}
+                      loading={isVerifying}
                       loadingText={t('auth.mfaVerify.verifying')}
                       className="w-full"
                     >
@@ -150,7 +150,7 @@ export function MFAVerifyForm({
                     <Button
                       onClick={onVerifyRecovery}
                       disabled={recoveryCode.trim().length === 0}
-                      isLoading={isVerifying}
+                      loading={isVerifying}
                       loadingText={t('auth.mfaVerify.verifying')}
                       className="w-full"
                     >

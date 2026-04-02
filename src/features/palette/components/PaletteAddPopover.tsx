@@ -152,7 +152,7 @@ function PaletteAddContent({
         <Button variant="outline" onClick={handleClose} aria-disabled={isPinning}>
           {t('common.actions.cancel')}
         </Button>
-        <Button aria-disabled={!canSubmit} isLoading={isPinning} onClick={handleSubmit}>
+        <Button aria-disabled={!canSubmit} loading={isPinning} onClick={handleSubmit}>
           {t('sidebar.palette.add')}
         </Button>
       </ActionFooter>

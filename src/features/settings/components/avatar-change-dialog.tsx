@@ -113,7 +113,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
             currentAvatarUrl={avatarUrl}
             onUpload={handleUpload}
             onRemove={handleRemove}
-            isUploading={isUploading}
+            loading={isUploading}
             size="3xl"
           />
         </div>
