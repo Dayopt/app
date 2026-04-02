@@ -201,7 +201,7 @@ export class EntryService {
       if (overlappingIds.length > 0) {
         throw new EntryServiceError(
           'TIME_OVERLAP',
-          `この時間帯には既にエントリがあります（${overlappingIds.length}件）`,
+          `この時間帯には既にエントリがある（${overlappingIds.length}件）`,
         );
       }
     }
@@ -220,7 +220,7 @@ export class EntryService {
 
     if (error) {
       if (this.isExclusionViolation(error)) {
-        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
       }
       throw new EntryServiceError('CREATE_FAILED', `Failed to create entry: ${error.message}`);
     }
@@ -246,7 +246,7 @@ export class EntryService {
       if (expected !== actual) {
         throw new EntryServiceError(
           'CONFLICT',
-          'このエントリは他の場所で更新されています。最新データをリロードしてください。',
+          'このエントリは他の場所で更新された。最新データをリロードして',
         );
       }
     }
@@ -270,7 +270,7 @@ export class EntryService {
       if (overlappingIds.length > 0) {
         throw new EntryServiceError(
           'TIME_OVERLAP',
-          `この時間帯には既にエントリがあります（${overlappingIds.length}件）`,
+          `この時間帯には既にエントリがある（${overlappingIds.length}件）`,
         );
       }
     }
@@ -299,7 +299,7 @@ export class EntryService {
 
     if (error) {
       if (this.isExclusionViolation(error)) {
-        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがあります');
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
       }
       throw new EntryServiceError('UPDATE_FAILED', `Failed to update entry: ${error.message}`);
     }

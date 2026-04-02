@@ -4,11 +4,8 @@ import { z } from 'zod';
  * ログインフォームのスキーマ
  */
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
-  password: z.string().min(1, 'パスワードを入力してください'),
+  email: z.string().min(1, 'メールアドレスを入力').email('有効なメールアドレスを入力'),
+  password: z.string().min(1, 'パスワードを入力'),
 });
 
 /** ログインフォームの入力データ型 */
@@ -23,17 +20,14 @@ export type LoginFormData = z.infer<typeof loginSchema>;
  */
 export const passwordSchema = z
   .string()
-  .min(8, 'パスワードは8文字以上で入力してください')
-  .max(64, 'パスワードは64文字以内で入力してください');
+  .min(8, 'パスワードは8文字以上で入力')
+  .max(64, 'パスワードは64文字以内で入力');
 
 /**
  * サインアップフォームのスキーマ
  */
 export const signupSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'メールアドレスを入力してください')
-    .email('有効なメールアドレスを入力してください'),
+  email: z.string().min(1, 'メールアドレスを入力').email('有効なメールアドレスを入力'),
   password: passwordSchema,
 });
 

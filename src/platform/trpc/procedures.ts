@@ -238,7 +238,7 @@ const t = initTRPC
       // エラーの詳細情報をプロダクションでは非表示
       const message =
         isProduction && error.code === 'INTERNAL_SERVER_ERROR'
-          ? 'サーバーエラーが発生しました'
+          ? 'サーバーエラーが発生した'
           : shape.message;
 
       return {

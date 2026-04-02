@@ -97,8 +97,8 @@ export const Overview: Story = {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-border rounded-lg border py-6">
               <ErrorState
-                title="データの読み込みに失敗しました"
-                description="もう一度お試しください。"
+                title="データを読み込めなかった"
+                description="もう一度試して"
                 onRetry={() => {}}
               />
             </div>
@@ -106,8 +106,8 @@ export const Overview: Story = {
             <div className="border-border rounded-lg border py-6">
               <ErrorState
                 icon={WifiOff}
-                title="ネットワークに接続できません"
-                description="インターネット接続を確認してください。"
+                title="ネットワークに接続できない"
+                description="インターネット接続を確認して"
                 onRetry={() => {}}
               />
             </div>
@@ -154,7 +154,7 @@ export const Overview: Story = {
             {(['sm', 'md', 'lg'] as const).map((size) => (
               <div key={size} className="border-border rounded-lg border py-4">
                 <p className="text-muted-foreground mb-2 text-center text-xs font-bold">{size}</p>
-                <ErrorState title="読み込みに失敗しました" onRetry={() => {}} size={size} />
+                <ErrorState title="読み込めなかった" onRetry={() => {}} size={size} />
               </div>
             ))}
           </div>
@@ -169,8 +169,8 @@ export const Overview: Story = {
 
           <div className="border-border h-64 rounded-lg border">
             <ErrorState
-              title="統計の読み込みに失敗しました"
-              description="しばらくしてからもう一度お試しください。"
+              title="統計を読み込めなかった"
+              description="しばらくしてからもう一度試して"
               onRetry={() => {}}
               size="sm"
               centered
@@ -187,8 +187,8 @@ export const Overview: Story = {
 
           <div className="border-border rounded-lg border py-6">
             <ErrorState
-              title="データの読み込みに失敗しました"
-              description="ネットワーク接続を確認してください。"
+              title="データを読み込めなかった"
+              description="ネットワーク接続を確認して"
               actions={
                 <div className="flex justify-center gap-2">
                   <Button variant="outline">再試行</Button>
@@ -248,7 +248,7 @@ if (isError) {
 
 // カスタムアクション
 <ErrorState
-  title="接続に失敗しました"
+  title="接続できなかった"
   actions={
     <div className="flex gap-2">
       <Button variant="outline">再試行</Button>

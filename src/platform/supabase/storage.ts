@@ -67,7 +67,7 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
   // ファイルタイプバリデーション
   if (!file.type.startsWith('image/')) {
     throw new StorageError(
-      '画像ファイルのみアップロード可能です',
+      '画像ファイルのみアップロード可能',
       STORAGE_ERROR_CODES.INVALID_FILE_TYPE,
       {
         actualType: file.type,
@@ -78,14 +78,10 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
 
   // ファイルサイズバリデーション
   if (file.size > MAX_FILE_SIZE) {
-    throw new StorageError(
-      'ファイルサイズは5MB以下にしてください',
-      STORAGE_ERROR_CODES.FILE_TOO_LARGE,
-      {
-        actualSize: file.size,
-        maxSize: MAX_FILE_SIZE,
-      },
-    );
+    throw new StorageError('ファイルサイズは5MB以下', STORAGE_ERROR_CODES.FILE_TOO_LARGE, {
+      actualSize: file.size,
+      maxSize: MAX_FILE_SIZE,
+    });
   }
 
   // ファイル拡張子を安全に取得

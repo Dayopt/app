@@ -9,8 +9,8 @@ const messages = {
     reload: 'Reload',
   },
   ja: {
-    title: 'オフラインです',
-    description: 'インターネットに接続されていません。接続を確認してからもう一度お試しください。',
+    title: 'オフライン',
+    description: 'インターネット未接続。接続を確認してもう一度試して',
     reload: '再読み込み',
   },
 } as const;

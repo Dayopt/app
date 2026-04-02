@@ -37,21 +37,21 @@ export const Overview: Story = {
             <Field>
               <FieldLabel>メールアドレス</FieldLabel>
               <Input placeholder="email@example.com" className="border-destructive" />
-              <FieldError>有効なメールアドレスを入力してください</FieldError>
+              <FieldError>有効なメールアドレスを入力</FieldError>
             </Field>
 
             {/* 文字数制限エラー */}
             <Field>
               <FieldLabel>タグ名</FieldLabel>
               <Input defaultValue="これは非常に長いタグ名で..." className="border-destructive" />
-              <FieldError>タグ名は20文字以内で入力してください</FieldError>
+              <FieldError>タグ名は20文字以内で入力</FieldError>
             </Field>
 
             {/* 必須項目エラー */}
             <Field>
               <FieldLabel>プラン名</FieldLabel>
-              <Input placeholder="プラン名を入力" className="border-destructive" />
-              <FieldError>プラン名は必須です</FieldError>
+              <Input placeholder="例: 朝のルーティン" className="border-destructive" />
+              <FieldError>プラン名は必須</FieldError>
             </Field>
           </div>
 
@@ -59,7 +59,7 @@ export const Overview: Story = {
             {`<Field>
   <FieldLabel>メールアドレス</FieldLabel>
   <Input className="border-destructive" />
-  <FieldError>有効なメールアドレスを入力してください</FieldError>
+  <FieldError>有効なメールアドレスを入力</FieldError>
 </Field>`}
           </pre>
         </section>
@@ -78,7 +78,7 @@ export const Overview: Story = {
                 <Input defaultValue="user@example.com" className="border-success pr-8" readOnly />
                 <CheckCircle2 className="text-success absolute top-1/2 right-4 size-4 -translate-y-1/2" />
               </div>
-              <FieldSupportText className="text-success">保存しました</FieldSupportText>
+              <FieldSupportText className="text-success">保存した</FieldSupportText>
             </Field>
           </div>
 
@@ -89,7 +89,7 @@ export const Overview: Story = {
     <Input className="border-success pr-8" />
     <CheckCircle2 className="text-success absolute right-4 ..." />
   </div>
-  <FieldSupportText className="text-success">保存しました</FieldSupportText>
+  <FieldSupportText className="text-success">保存した</FieldSupportText>
 </Field>`}
           </pre>
         </section>
@@ -106,9 +106,9 @@ export const Overview: Story = {
             <div className="bg-destructive-tint border-destructive flex items-start gap-2 rounded-lg border p-4">
               <AlertCircle className="text-destructive mt-1 size-5 shrink-0" />
               <div>
-                <p className="text-destructive font-bold">保存に失敗しました</p>
+                <p className="text-destructive font-bold">保存できなかった</p>
                 <p className="text-destructive text-sm">
-                  ネットワーク接続を確認して、もう一度お試しください。
+                  ネットワーク接続を確認して、もう一度試して
                 </p>
               </div>
             </div>
@@ -126,8 +126,8 @@ export const Overview: Story = {
 <div className="bg-destructive-tint border-destructive ...">
   <AlertCircle className="text-destructive" />
   <div>
-    <p className="text-destructive font-bold">保存に失敗しました</p>
-    <p className="text-destructive">ネットワーク接続を確認...</p>
+    <p className="text-destructive font-bold">保存できなかった</p>
+    <p className="text-destructive">ネットワーク接続を確認して...</p>
   </div>
 </div>`}
           </pre>
@@ -148,7 +148,7 @@ export const Overview: Story = {
             <Field>
               <FieldLabel>タグの説明</FieldLabel>
               <Input placeholder="このタグの用途を説明" />
-              <FieldSupportText>省略可。100文字まで。</FieldSupportText>
+              <FieldSupportText>省略可。100文字まで</FieldSupportText>
             </Field>
           </div>
         </section>
