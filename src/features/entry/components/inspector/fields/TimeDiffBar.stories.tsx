@@ -15,7 +15,6 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-    a11y: { test: 'todo' },
   },
 } satisfies Meta;
 
@@ -99,29 +98,27 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Exact（±0: ぴったり達成）</p>
+        <p className="text-muted-foreground text-xs">Exact（±0: ぴったり達成）</p>
         <TimeDiffBar plannedMinutes={60} actualMinutes={60} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Underrun（-15m: 予定より短い）</p>
+        <p className="text-muted-foreground text-xs">Underrun（-15m: 予定より短い）</p>
         <TimeDiffBar plannedMinutes={60} actualMinutes={45} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">
-          LargeUnderrun（-45m: 大幅に短い）
-        </p>
+        <p className="text-muted-foreground text-xs">LargeUnderrun（-45m: 大幅に短い）</p>
         <TimeDiffBar plannedMinutes={60} actualMinutes={15} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">Overrun（+15m: 予定超過）</p>
+        <p className="text-muted-foreground text-xs">Overrun（+15m: 予定超過）</p>
         <TimeDiffBar plannedMinutes={60} actualMinutes={75} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">LargeOverrun（+1h: 大幅超過）</p>
+        <p className="text-muted-foreground text-xs">LargeOverrun（+1h: 大幅超過）</p>
         <TimeDiffBar plannedMinutes={60} actualMinutes={120} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs font-medium">HoursAndMinutes（+1h 5m）</p>
+        <p className="text-muted-foreground text-xs">HoursAndMinutes（+1h 5m）</p>
         <TimeDiffBar plannedMinutes={90} actualMinutes={155} />
       </div>
     </div>

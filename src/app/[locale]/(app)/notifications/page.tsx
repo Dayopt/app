@@ -33,14 +33,14 @@ export default function NotificationsPage() {
             className="hover:bg-state-hover flex size-8 items-center justify-center rounded-lg transition-colors"
             aria-label={t('notification.settings.title')}
           >
-            <Settings className="size-4" />
+            <Settings className="size-5" />
           </button>
         }
       >
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold">{t('notification.title')}</h1>
           {unreadCount > 0 && (
-            <span className="bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-medium">
+            <span className="bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs">
               {unreadCount}
             </span>
           )}

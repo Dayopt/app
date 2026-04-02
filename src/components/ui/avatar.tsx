@@ -92,8 +92,8 @@ interface AvatarUploadProps {
   onUpload: (file: File) => Promise<void>;
   /** 削除時のコールバック */
   onRemove?: () => Promise<void>;
-  /** アップロード中フラグ */
-  isUploading?: boolean;
+  /** ローディング状態 */
+  loading?: boolean;
   /** 最大ファイルサイズ（バイト） */
   maxFileSize?: number;
   /** サイズ */
@@ -118,7 +118,7 @@ interface AvatarUploadProps {
  *   currentAvatarUrl={user?.avatar_url}
  *   onUpload={handleUpload}
  *   onRemove={handleRemove}
- *   isUploading={isUploading}
+ *   loading={loading}
  * />
  * ```
  */
@@ -126,7 +126,7 @@ function AvatarUpload({
   currentAvatarUrl,
   onUpload,
   onRemove,
-  isUploading = false,
+  loading = false,
   maxFileSize = 5 * 1024 * 1024, // 5MB
   size = '2xl',
   disabled = false,
@@ -179,7 +179,7 @@ function AvatarUpload({
       maxSize: maxFileSize,
       maxFiles: 1,
       multiple: false,
-      disabled: disabled || isUploading,
+      disabled: disabled || loading,
       onDropRejected: (rejections: FileRejection[]) => {
         const rejection = rejections[0];
         if (rejection?.errors[0]?.code === 'file-too-large') {
@@ -191,7 +191,7 @@ function AvatarUpload({
         }
       },
     }),
-    [onDrop, maxFileSize, disabled, isUploading, t],
+    [onDrop, maxFileSize, disabled, loading, t],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
@@ -224,7 +224,7 @@ function AvatarUpload({
             'group relative cursor-pointer rounded-full transition-all duration-200',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             isDragActive && 'ring-2 ring-primary ring-offset-2',
-            (disabled || isUploading) && 'cursor-not-allowed opacity-50',
+            (disabled || loading) && 'cursor-not-allowed opacity-50',
           ),
         })}
       >
@@ -242,7 +242,7 @@ function AvatarUpload({
               unoptimized={displayUrl.startsWith('blob:')}
             />
             {/* ホバーオーバーレイ */}
-            {!isUploading && (
+            {!loading && (
               <div className="bg-card absolute inset-0 flex items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100">
                 <Camera className="h-6 w-6 text-white" />
               </div>
@@ -268,7 +268,7 @@ function AvatarUpload({
         )}
 
         {/* ローディングオーバーレイ */}
-        {isUploading && (
+        {loading && (
           <div className="bg-card absolute inset-0 flex items-center justify-center rounded-full">
             <Loader2 className="h-6 w-6 animate-spin text-white" />
           </div>
@@ -280,13 +280,13 @@ function AvatarUpload({
         <Button
           type="button"
           variant="outline"
-          disabled={disabled || isUploading}
+          disabled={disabled || loading}
           onClick={() => {
             const input = document.querySelector<HTMLInputElement>('input[type="file"]');
             input?.click();
           }}
         >
-          {isUploading ? (
+          {loading ? (
             <>
               <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
               {t('uploading')}
@@ -303,7 +303,7 @@ function AvatarUpload({
           <Button
             type="button"
             variant="ghost"
-            disabled={disabled || isUploading}
+            disabled={disabled || loading}
             onClick={handleRemove}
             className="text-destructive hover:text-destructive"
           >

@@ -91,7 +91,7 @@ function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }:
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
         <span className="truncate">{tag.name}</span>
         {hasChildren && <span className="text-muted-foreground shrink-0 text-xs">›</span>}
       </span>
@@ -116,7 +116,7 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       <span className="bg-muted flex size-8 items-center justify-center rounded-full">
         <Plus className="text-muted-foreground size-5" />
       </span>
-      <span className="text-muted-foreground text-sm font-medium">新規</span>
+      <span className="text-muted-foreground text-sm">新規</span>
     </button>
   );
 }
@@ -156,7 +156,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
       >
         <ChevronLeft className="text-muted-foreground size-5" />
-        <span className="text-foreground font-semibold">新しいタグ</span>
+        <span className="text-foreground font-bold">新しいタグ</span>
       </button>
 
       <div className="flex flex-col gap-4 px-4 py-2">
@@ -256,7 +256,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
                   }}
                   className={cn(
                     'hover:bg-state-hover flex min-h-10 w-full items-center px-4 text-sm transition-colors',
-                    !selectedGroup && 'text-primary font-medium',
+                    !selectedGroup && 'text-primary',
                   )}
                 >
                   なし
@@ -271,7 +271,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
                     }}
                     className={cn(
                       'hover:bg-state-hover flex min-h-10 w-full items-center gap-2 px-4 text-sm transition-colors',
-                      selectedGroup === tag.name && 'text-primary font-medium',
+                      selectedGroup === tag.name && 'text-primary',
                     )}
                   >
                     <TagIcon icon={tag.icon} color={tag.color} size="sm" />
@@ -367,7 +367,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
         >
           <ChevronLeft className="text-muted-foreground size-5" />
           <TagIcon icon={parentTag?.icon ?? null} color={parentColor} size="sm" />
-          <span className="text-foreground font-semibold">{view.prefix}</span>
+          <span className="text-foreground font-bold">{view.prefix}</span>
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
@@ -502,7 +502,7 @@ export const GridWithChildren: Story = {
           <div className="flex min-h-11 items-center gap-2 px-4 py-2">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon="briefcase" color="blue" size="sm" />
-            <span className="text-foreground font-semibold">仕事</span>
+            <span className="text-foreground font-bold">仕事</span>
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
@@ -635,31 +635,31 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-wrap items-start gap-6">
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Default (8)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Default (8)</p>
           <SelectorFrame>
             <TagGridSelector tags={MOCK_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Few (2)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Few (2)</p>
           <SelectorFrame>
             <TagGridSelector tags={FEW_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Many (14)</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Many (14)</p>
           <SelectorFrame>
             <TagGridSelector tags={MANY_TAGS} onSelect={fn()} onCreateAndSelect={fn()} />
           </SelectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Children</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Children</p>
           <SelectorFrame>
             <div className="flex flex-col">
               <div className="flex min-h-11 items-center gap-2 px-4 py-2">
                 <ChevronLeft className="text-muted-foreground size-5" />
                 <TagIcon icon="briefcase" color="blue" size="sm" />
-                <span className="text-foreground font-semibold">仕事</span>
+                <span className="text-foreground font-bold">仕事</span>
               </div>
               <div className="grid grid-cols-4 gap-2 px-4 py-2">
                 <TagGridCell

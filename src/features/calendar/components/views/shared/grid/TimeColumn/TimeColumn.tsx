@@ -50,16 +50,16 @@ export const TimeColumn = memo<TimeColumnProps>(function TimeColumn({
 
       const textClass =
         zone === 'deep'
-          ? 'text-chronotype-deep font-bold'
+          ? 'text-chronotype-deep'
           : zone === 'ease'
-            ? 'text-chronotype-ease font-bold'
+            ? 'text-chronotype-ease'
             : 'text-muted-foreground';
 
       rows.push(
         <div
           key={`hour-${hour}`}
           className={cn(
-            'relative flex w-full items-start justify-end pr-2 text-sm select-none',
+            'relative flex w-full items-start justify-end pr-2 text-sm tabular-nums select-none',
             textClass,
           )}
           style={{ height: `${hourHeight}px` }}

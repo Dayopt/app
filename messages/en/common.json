@@ -236,7 +236,9 @@
       "failed": "{count, plural, one {# sync failed} other {# syncs failed}}",
       "clearFailed": "Clear",
       "offlineToast": "You're offline. Changes will be saved and synced when you reconnect.",
-      "onlineToast": "Back online. Syncing changes..."
+      "onlineToast": "Back online. Syncing changes...",
+      "lastSynced": "Last synced {time}",
+      "lastSyncedNever": "Not synced yet"
     },
     "insights": {
       "noRecords": "No records this week.",

@@ -9,8 +9,8 @@
 
 import { useCallback, useMemo } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { APP_VERSION } from '@/lib/app-info';
 import { api } from '@/platform/trpc';

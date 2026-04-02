@@ -34,7 +34,7 @@
     "navUser": {
       "myAccount": "マイアカウント",
       "account": "アカウント",
-      "upgradePlan": "プランをアップグレードする",
+      "upgradePlan": "プランをアップグレード",
       "personalize": "パーソナライズ",
       "notifications": "通知設定",
       "settings": "設定",
@@ -52,8 +52,8 @@
       "accountMenuLabel": "{name}のアカウントメニューを開く",
       "logout": "ログアウト",
       "loggingOut": "ログアウト中...",
-      "logoutSuccess": "ログアウトしました",
-      "logoutFailed": "ログアウトに失敗しました"
+      "logoutSuccess": "ログアウトした",
+      "logoutFailed": "ログアウトできなかった。もう一度試して"
     }
   }
 }

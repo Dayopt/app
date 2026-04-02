@@ -109,7 +109,7 @@ export const Overview: Story = {
 function StepWrapper({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-muted-foreground mb-2 text-xs font-medium">{label}</p>
+      <p className="text-muted-foreground mb-2 text-xs">{label}</p>
       <div className="bg-card w-80 rounded-2xl p-6 shadow-sm">{children}</div>
     </div>
   );

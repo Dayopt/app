@@ -140,7 +140,7 @@ function ContactForm({
         <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
           {labels.cancel}
         </Button>
-        <Button type="submit" isLoading={isPending} disabled={isPending}>
+        <Button type="submit" loading={isPending} disabled={isPending}>
           {labels.submit}
         </Button>
       </div>

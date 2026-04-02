@@ -13,6 +13,9 @@
       "reminders": "No reminder notifications",
       "ai": "No AI notifications"
     },
+    "error": {
+      "title": "Failed to load notifications"
+    },
     "actions": {
       "markAllAsRead": "Mark all as read",
       "viewAll": "View all notifications",
@@ -38,6 +41,7 @@
     "dateGroups": {
       "older": "Older"
     },
+    "deleteNotification": "Delete notification",
     "settings": {
       "title": "Notifications",
       "browserNotifications": {

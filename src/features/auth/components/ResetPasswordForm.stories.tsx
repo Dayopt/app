@@ -199,9 +199,7 @@ export const ServerError: Story = {
 export const ErrorMessages: Story = {
   render: () => (
     <div className="flex max-w-md flex-col gap-4 p-6">
-      <p className="text-muted-foreground text-sm font-medium">
-        ResetPasswordForm エラーバリエーション
-      </p>
+      <p className="text-muted-foreground text-sm">ResetPasswordForm エラーバリエーション</p>
       <FieldError announceImmediately className="text-center">
         パスワードが一致しません
       </FieldError>
@@ -220,7 +218,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className={cn('flex flex-col items-start gap-8')}>
       <div>
-        <p className="text-muted-foreground mb-2 text-sm font-medium">Default</p>
+        <p className="text-muted-foreground mb-2 text-sm">Default</p>
         <ResetPasswordForm />
       </div>
     </div>

@@ -68,7 +68,7 @@ export function MetricCard({
         {/* Label + Icon */}
         <div className="flex items-center gap-1">
           {Icon && <Icon className={cn('text-muted-foreground', isHero ? 'size-4' : 'size-3.5')} />}
-          <p className="text-muted-foreground text-xs font-medium">{label}</p>
+          <p className="text-muted-foreground text-xs">{label}</p>
         </div>
 
         {/* Value + Trend */}
@@ -77,9 +77,7 @@ export function MetricCard({
             {valueParts.primary}
           </span>
           {valueParts.unit && (
-            <span
-              className={cn('text-muted-foreground font-medium', isHero ? 'text-lg' : 'text-base')}
-            >
+            <span className={cn('text-muted-foreground', isHero ? 'text-lg' : 'text-base')}>
               {valueParts.unit}
             </span>
           )}
@@ -87,12 +85,7 @@ export function MetricCard({
             <>
               <span className="text-foreground text-4xl font-bold">{valueParts.secondary}</span>
               {valueParts.secondaryUnit && (
-                <span
-                  className={cn(
-                    'text-muted-foreground font-medium',
-                    isHero ? 'text-lg' : 'text-base',
-                  )}
-                >
+                <span className={cn('text-muted-foreground', isHero ? 'text-lg' : 'text-base')}>
                   {valueParts.secondaryUnit}
                 </span>
               )}

@@ -226,7 +226,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
               <Field>
                 <Button
                   type="submit"
-                  isLoading={loading}
+                  loading={loading}
                   loadingText={t('auth.resetPasswordForm.updating')}
                   className="w-full"
                 >

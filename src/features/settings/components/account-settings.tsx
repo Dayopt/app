@@ -2,9 +2,9 @@
 
 import { useCallback, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

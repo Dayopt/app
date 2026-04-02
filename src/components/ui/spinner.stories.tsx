@@ -14,8 +14,8 @@ const meta = {
   argTypes: {
     size: {
       control: 'select',
-      options: ['sm', 'md', 'lg', 'xl'],
-      description: 'サイズプリセット（sm=16px, md=24px, lg=32px, xl=48px）',
+      options: ['sm', 'default', 'lg', 'xl'],
+      description: 'サイズプリセット（sm=16px, default=24px, lg=32px, xl=48px）',
     },
   },
 } satisfies Meta<typeof Spinner>;
@@ -35,10 +35,10 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-col items-start gap-6">
         <div className="flex gap-4">
-          <Button onClick={handleClick} isLoading={isLoading}>
+          <Button onClick={handleClick} loading={isLoading}>
             ログイン
           </Button>
-          <Button onClick={handleClick} isLoading={isLoading} loadingText="送信中...">
+          <Button onClick={handleClick} loading={isLoading} loadingText="送信中...">
             送信
           </Button>
         </div>
@@ -46,7 +46,7 @@ export const AllPatterns: Story = {
         <Spinner />
 
         <div className="flex items-end gap-6">
-          {(['sm', 'md', 'lg', 'xl'] as const).map((size) => (
+          {(['sm', 'default', 'lg', 'xl'] as const).map((size) => (
             <Spinner key={size} size={size} />
           ))}
         </div>

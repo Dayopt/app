@@ -39,7 +39,7 @@ export const Default: Story = {
   render: () => (
     <div className="space-y-4">
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">コロンタグ</p>
+        <p className="text-muted-foreground mb-2 text-xs">コロンタグ</p>
         <div className="space-y-1">
           {colonTags.map((name) => (
             <div key={name} className="flex items-center gap-4 text-sm">
@@ -51,7 +51,7 @@ export const Default: Story = {
         </div>
       </section>
       <section>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">フラットタグ（変化なし）</p>
+        <p className="text-muted-foreground mb-2 text-xs">フラットタグ（変化なし）</p>
         <div className="space-y-1">
           {flatTags.map((name) => (
             <div key={name} className="flex items-center gap-4 text-sm">
@@ -105,7 +105,7 @@ export const InCardContext: Story = {
   args: { name: '' },
   render: () => (
     <div className="space-y-6">
-      <h3 className="text-sm font-medium">通常カード</h3>
+      <h3 className="text-sm">通常カード</h3>
       <div className="flex flex-wrap gap-4">
         <CardSlot label="コロンタグ">
           <EntryCardContent plan={baseEntry} tagName="開発:API" timeFormat="24h" />
@@ -115,7 +115,7 @@ export const InCardContext: Story = {
         </CardSlot>
       </div>
 
-      <h3 className="text-sm font-medium">コンパクトカード</h3>
+      <h3 className="text-sm">コンパクトカード</h3>
       <div className="flex flex-wrap gap-4">
         <div>
           <p className="text-muted-foreground mb-1 text-xs">コロンタグ</p>

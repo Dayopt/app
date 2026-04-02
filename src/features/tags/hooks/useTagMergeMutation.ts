@@ -1,7 +1,7 @@
 // タグマージ用ミューテーションフック（楽観的更新付き）
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { trpc } from '@/platform/trpc/client';
 

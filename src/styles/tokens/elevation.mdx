@@ -29,12 +29,14 @@ UI 要素の z 軸上の位置。surface色 + shadow + border のセットで表
 
 ### Shadow の値
 
-| Token         | Light                                       | Dark                       |
-| ------------- | ------------------------------------------- | -------------------------- |
-| `shadow-sm`   | ring(0.03) + 1px 3px(0.03)                  | ring(0.03) + 1px 4px(0.18) |
-| `shadow-card` | ring(0.03) + 1px 2px(0.04) + 4px 16px(0.05) | ring(0.04) + 2px 8px(0.25) |
+| Token         | Light                                       | Dark                       | 用途                             |
+| ------------- | ------------------------------------------- | -------------------------- | -------------------------------- |
+| `shadow-xs`   | 1px 2px(0.04)                               | 1px 2px(0.14)              | form control（input, select 等） |
+| `shadow-sm`   | ring(0.03) + 1px 3px(0.03)                  | ring(0.03) + 1px 4px(0.18) | Raised（card, section）          |
+| `shadow-card` | ring(0.03) + 1px 2px(0.04) + 4px 16px(0.05) | ring(0.04) + 2px 8px(0.25) | Overlay（dropdown, popover 等）  |
 
-Sunken と Base は shadow なし。Raised と Overlay だけが shadow を持つ。
+`shadow-xs` は Elevation 4段階とは独立した form control 専用トークン。
+Sunken と Base は shadow なし。Raised と Overlay だけが Elevation shadow を持つ。
 
 ---
 

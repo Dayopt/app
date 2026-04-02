@@ -296,7 +296,7 @@ export function TagCreateModal({
                   className={cn(
                     'rounded-full border px-2 py-1 text-sm transition-colors',
                     !selectedGroup
-                      ? 'border-primary bg-primary-state-selected text-foreground font-medium'
+                      ? 'border-primary bg-primary-state-selected text-foreground'
                       : 'border-border hover:bg-state-hover text-muted-foreground',
                   )}
                 >
@@ -310,7 +310,7 @@ export function TagCreateModal({
                     className={cn(
                       'flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors',
                       selectedGroup === group.name
-                        ? 'border-primary bg-primary-state-selected text-foreground font-medium'
+                        ? 'border-primary bg-primary-state-selected text-foreground'
                         : 'border-border hover:bg-state-hover text-muted-foreground',
                     )}
                   >

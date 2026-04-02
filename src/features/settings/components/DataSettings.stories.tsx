@@ -107,7 +107,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-semibold">Default</h3>
+        <h3 className="text-foreground mb-4 text-lg font-bold">Default</h3>
         <MockProvider>
           <DataSettings />
         </MockProvider>

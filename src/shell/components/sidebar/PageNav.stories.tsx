@@ -30,7 +30,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         className={cn(
           'flex h-7 items-center justify-center gap-1 rounded-lg px-4 text-sm transition-colors',
           activePage === 'calendar'
-            ? 'bg-state-selected text-foreground font-medium'
+            ? 'bg-state-selected text-foreground'
             : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
@@ -43,7 +43,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: 'calendar' | 's
         className={cn(
           'flex h-7 items-center justify-center gap-1 rounded-lg px-4 text-sm transition-colors',
           activePage === 'stats'
-            ? 'bg-state-selected text-foreground font-medium'
+            ? 'bg-state-selected text-foreground'
             : 'text-muted-foreground hover:bg-state-hover',
         )}
       >
@@ -94,11 +94,11 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Calendar Active</p>
+        <p className="text-muted-foreground mb-2 text-xs">Calendar Active</p>
         <MockPageNav activePage="calendar" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Stats Active</p>
+        <p className="text-muted-foreground mb-2 text-xs">Stats Active</p>
         <MockPageNav activePage="stats" />
       </div>
     </div>

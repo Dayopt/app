@@ -10,10 +10,10 @@
  */
 
 import { logger } from '@/lib/logger';
+import { toast } from '@/lib/toast';
 import { api } from '@/platform/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';

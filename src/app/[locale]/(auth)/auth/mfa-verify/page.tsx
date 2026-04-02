@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { MFAVerifyForm } from '@/features/auth';
 import { createClient } from '@/platform/supabase/client';
@@ -48,7 +48,7 @@ export default function MFAVerifyPage() {
           });
 
           if (challengeError) {
-            setError('MFAチャレンジの作成に失敗しました');
+            setError(t('common.errors.mfa.challengeFailed'));
             return;
           }
 
@@ -62,18 +62,18 @@ export default function MFAVerifyPage() {
         router.push('/calendar/day');
       }
     } catch {
-      setError('MFA状態の確認に失敗しました');
+      setError(t('common.errors.mfa.verifyFailed'));
     }
   };
 
   const handleVerifyTotp = async () => {
     if (!factorId || !challengeId || !verificationCode) {
-      setError('6桁のコードを入力してください');
+      setError(t('common.errors.mfa.enterCode'));
       return;
     }
 
     if (verificationCode.length !== 6) {
-      setError('コードは6桁である必要があります');
+      setError(t('common.errors.mfa.codeLength'));
       return;
     }
 
@@ -95,8 +95,7 @@ export default function MFAVerifyPage() {
       router.refresh();
       router.push(next);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : '無効なコードです。もう一度お試しください';
+      const errorMessage = err instanceof Error ? err.message : t('common.errors.mfa.codeInvalid');
       setError(errorMessage);
       setVerificationCode('');
     } finally {

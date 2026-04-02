@@ -136,7 +136,7 @@ export interface ButtonProps
   /** 子要素にスタイルを委譲する（Linkなどで使用） */
   asChild?: boolean;
   /** ローディング状態 */
-  isLoading?: boolean;
+  loading?: boolean;
   /** ローディング中に表示するテキスト（省略時は children を表示） */
   loadingText?: string;
 }
@@ -171,7 +171,7 @@ export interface ButtonProps
  *
  * @example
  * // ローディング状態
- * <Button isLoading>保存中...</Button>
+ * <Button loading>保存中...</Button>
  */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -181,7 +181,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       size,
       icon = false,
       asChild = false,
-      isLoading = false,
+      loading = false,
       loadingText,
       onClick,
       children,
@@ -195,9 +195,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const Comp = asChild ? Slot : 'button';
 
-    // aria-disabled または isLoading 時はクリックを無効化
+    // aria-disabled または loading 時はクリックを無効化
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (props['aria-disabled'] || isLoading) {
+      if (props['aria-disabled'] || loading) {
         e.preventDefault();
         return;
       }
@@ -205,7 +205,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     // ローディング中のコンテンツ
-    const content = isLoading ? (
+    const content = loading ? (
       <>
         <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
         {loadingText ?? children}
@@ -219,8 +219,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         data-slot="button"
         className={cn(buttonVariants({ variant, size: resolvedSize, className }))}
         onClick={asChild ? onClick : handleClick}
-        disabled={isLoading || disabled}
-        aria-busy={isLoading || undefined}
+        disabled={loading || disabled}
+        aria-busy={loading || undefined}
         ref={ref}
         {...props}
       >

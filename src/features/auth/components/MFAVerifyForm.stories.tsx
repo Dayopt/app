@@ -164,13 +164,13 @@ export const ModeSwitching: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground mb-2 text-xs font-medium">TOTP（デフォルト）</p>
+      <p className="text-muted-foreground mb-2 text-xs">TOTP（デフォルト）</p>
       <MFAVerifyFormStory />
-      <p className="text-muted-foreground mb-2 text-xs font-medium">リカバリーコード</p>
+      <p className="text-muted-foreground mb-2 text-xs">リカバリーコード</p>
       <MFAVerifyFormStory initialMode="recovery" />
-      <p className="text-muted-foreground mb-2 text-xs font-medium">エラー表示</p>
+      <p className="text-muted-foreground mb-2 text-xs">エラー表示</p>
       <MFAVerifyFormStory initialError="無効なコードです。もう一度お試しください" />
-      <p className="text-muted-foreground mb-2 text-xs font-medium">リカバリーコード使い切り</p>
+      <p className="text-muted-foreground mb-2 text-xs">リカバリーコード使い切り</p>
       <MFAVerifyFormStory
         initialMode="recovery"
         initialError="すべてのリカバリーコードが使用済みです"

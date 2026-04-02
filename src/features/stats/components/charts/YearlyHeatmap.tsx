@@ -84,7 +84,7 @@ export function YearlyHeatmap() {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="text-foreground min-w-12 text-center text-sm font-medium">{year}</span>
+            <span className="text-foreground min-w-12 text-center text-sm">{year}</span>
             <Button
               variant="ghost"
               size="sm"
@@ -104,8 +104,7 @@ export function YearlyHeatmap() {
         ) : (
           <>
             <div
-              // eslint-disable-next-line tailwindcss/no-arbitrary-value -- heatmap cell spacing
-              className="grid gap-[2px]"
+              className="grid gap-0"
               style={{
                 gridTemplateColumns: 'repeat(53, 1fr)',
                 gridTemplateRows: 'repeat(7, 1fr)',

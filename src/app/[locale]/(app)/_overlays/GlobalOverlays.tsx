@@ -1,10 +1,10 @@
 'use client';
 
+import { toast } from '@/lib/toast';
 import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
-import { toast } from 'sonner';
 
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';

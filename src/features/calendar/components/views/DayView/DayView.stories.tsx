@@ -10,8 +10,6 @@ const meta = {
   title: 'Features/Calendar/Views/DayView',
   parameters: {
     layout: 'fullscreen',
-    // scrollable-region-focusable: calendar grid scroll container
-    a11y: { test: 'todo' },
   },
   tags: ['autodocs'],
 } satisfies Meta;

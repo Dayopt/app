@@ -44,8 +44,8 @@ function MockButton({
     <button
       className={
         variant === 'primary'
-          ? `bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-medium ${className}`
-          : `border-border text-foreground hover:bg-state-hover rounded-lg border px-4 py-2 text-sm font-medium ${className}`
+          ? `bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm ${className}`
+          : `border-border text-foreground hover:bg-state-hover rounded-lg border px-4 py-2 text-sm ${className}`
       }
     >
       {children}
@@ -309,37 +309,37 @@ export const Overview: Story = {
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">GlobalError</td>
+                <td className="py-2 pr-4">GlobalError</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/global-error.tsx</td>
                 <td className="py-2 pr-4">Root Layout破壊時</td>
                 <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">RootError</td>
+                <td className="py-2 pr-4">RootError</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/error.tsx</td>
                 <td className="py-2 pr-4">Provider外のランタイムエラー</td>
                 <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">NotFound</td>
+                <td className="py-2 pr-4">NotFound</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/not-found.tsx</td>
                 <td className="py-2 pr-4">存在しないルートへのアクセス</td>
                 <td className="py-2">なし（英語固定）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">AppError</td>
+                <td className="py-2 pr-4">AppError</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/.../(app)/error.tsx</td>
                 <td className="py-2 pr-4">App内ページエラー（BaseLayout内に表示）</td>
                 <td className="py-2">あり（next-intl）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">CalendarError</td>
+                <td className="py-2 pr-4">CalendarError</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/.../calendar/error.tsx</td>
                 <td className="py-2 pr-4">カレンダーSSR/ランタイムエラー</td>
                 <td className="py-2">あり（next-intl）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">Maintenance</td>
+                <td className="py-2 pr-4">Maintenance</td>
                 <td className="py-2 pr-4 font-mono text-xs">src/app/maintenance/route.ts</td>
                 <td className="py-2 pr-4">システムメンテナンス中（503）</td>
                 <td className="py-2">なし（英語固定）</td>
@@ -365,17 +365,17 @@ export const Overview: Story = {
             </thead>
             <tbody className="text-muted-foreground">
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">DefaultErrorFallback</td>
+                <td className="py-2 pr-4">DefaultErrorFallback</td>
                 <td className="py-2 pr-4">ErrorBoundary</td>
                 <td className="py-2">本番環境のデフォルト表示</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">DevErrorFallback</td>
+                <td className="py-2 pr-4">DevErrorFallback</td>
                 <td className="py-2 pr-4">DetailedErrorBoundary</td>
                 <td className="py-2">開発環境用（コンポーネント名表示）</td>
               </tr>
               <tr className="border-border border-b">
-                <td className="py-2 pr-4 font-medium">FeatureErrorFallback</td>
+                <td className="py-2 pr-4">FeatureErrorFallback</td>
                 <td className="py-2 pr-4">FeatureErrorBoundary</td>
                 <td className="py-2">機能単位のエラー表示</td>
               </tr>

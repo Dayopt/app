@@ -67,6 +67,26 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion:
       'text-foreground/80 → text-muted-foreground, border-border/50 → border-border-subtle',
   },
+  // フォントウェイト準拠（font-normal / font-bold のみ）
+  {
+    pattern: '(?<![a-z0-9-])font-(?:medium|semibold|extrabold|black|light|thin)(?![a-z0-9-])',
+    message: '禁止フォントウェイト。font-normal (400) / font-bold (700) のみ使用可',
+    suggestion: 'font-medium → 削除(=font-normal), font-semibold → font-bold',
+  },
+  // bare rounded 禁止（rounded-lg / rounded-2xl / rounded-full / rounded-none のみ）
+  {
+    pattern: '(?<![a-z0-9-])rounded(?![a-z0-9-])',
+    message: 'bare rounded は禁止。rounded-lg (8px) を使用',
+    suggestion: 'rounded → rounded-lg',
+  },
+  // 直接カラークラス禁止（semantic token を使用）
+  {
+    pattern:
+      '(?:text|bg|border)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]',
+    message: '直接カラークラスは禁止。semantic token を使用',
+    suggestion: 'text-gray-500 → text-muted-foreground, bg-blue-500 → bg-primary',
+    warnOnly: true, // stories のドキュメント例を含むため段階移行
+  },
   // スペーシンググリッド準拠（8px + 4pxサブグリッド）
   // 許可値: 0(0px), 1(4px), 2(8px), 4(16px), 6(24px), 8(32px), 12(48px), 16(64px), 24(96px)
   {
@@ -112,6 +132,48 @@ for (const { pattern, message, suggestion, warnOnly } of FORBIDDEN_PATTERNS) {
   } catch {
     // grep エラーは無視
   }
+}
+
+// ─── 共起チェック: bg-card には shadow が必要（Elevation ルール） ───
+try {
+  const bgCardLines = execSync('grep -rn "bg-card" src --include="*.tsx" 2>/dev/null || true', {
+    encoding: 'utf8',
+  }).trim();
+
+  if (bgCardLines) {
+    const violations: string[] = [];
+
+    for (const line of bgCardLines.split('\n')) {
+      if (!line) continue;
+
+      // 除外: stories, shadcn/ui プリミティブ, opacity 派生 (bg-card/)
+      if (line.includes('.stories.') || line.includes('components/ui/') || /bg-card\//.test(line)) {
+        continue;
+      }
+
+      // shadow-xs / shadow-sm / shadow-card のいずれかが同一行にあれば OK
+      if (/shadow-(xs|sm|card)/.test(line)) continue;
+
+      violations.push(line);
+    }
+
+    if (violations.length > 0) {
+      hasWarnings = true;
+      console.log('⚠️  [warn] bg-card に shadow がない（Elevation ルール違反）');
+      console.log('   修正例: bg-card は shadow-sm (Raised) / shadow-card (Overlay) と併用');
+      console.log('   該当箇所:');
+      for (const v of violations) {
+        // "src/path:line: content" → 見やすく整形
+        const [loc, ...rest] = v.split(':');
+        const lineNum = rest[0];
+        const content = rest.slice(1).join(':').trim();
+        console.log(`     - ${loc}:${lineNum}: ${content.slice(0, 80)}`);
+      }
+      console.log('');
+    }
+  }
+} catch {
+  // grep エラーは無視
 }
 
 if (hasViolations) {

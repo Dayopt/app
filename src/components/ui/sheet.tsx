@@ -62,7 +62,7 @@ const SheetContent = ({
           'bg-card text-card-foreground z-sheet shadow-card fixed flex flex-col gap-4 transition ease-in-out motion-reduce:transition-none',
           'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
           'data-[state=closed]:duration-300 data-[state=open]:duration-500',
-          'focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2',
+          'ring-offset-background focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2',
           // モバイルUX: スクロールチェーン防止
           'overscroll-contain',
           side === 'right' &&
@@ -87,7 +87,7 @@ const SheetContent = ({
             className={cn(
               'text-foreground absolute top-4 right-4 flex size-8 items-center justify-center rounded-lg transition-colors',
               'hover:bg-state-hover active:bg-state-hover',
-              'focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2',
+              'ring-offset-background focus-visible:ring-ring focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2',
               'disabled:pointer-events-none',
             )}
           >

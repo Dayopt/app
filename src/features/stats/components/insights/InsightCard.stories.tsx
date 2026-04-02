@@ -137,15 +137,11 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="max-w-lg">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">
-          Weekly（週次インサイト・フルデータ）
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">Weekly（週次インサイト・フルデータ）</p>
         <InsightCard insight={WEEKLY_INSIGHT} />
       </div>
       <div className="max-w-lg">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">
-          WithoutComparison（比較なし）
-        </p>
+        <p className="text-muted-foreground mb-4 text-xs">WithoutComparison（比較なし）</p>
         <InsightCard
           insight={{
             title: WEEKLY_INSIGHT.title,
@@ -156,7 +152,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-lg">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Declining（悪化傾向）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Declining（悪化傾向）</p>
         <InsightCard
           insight={{
             title: '先週より活動量が減少しています',
@@ -189,7 +185,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="max-w-lg">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Minimal（最小構成）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Minimal（最小構成）</p>
         <InsightCard
           insight={{
             title: '安定した1週間でした',

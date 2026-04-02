@@ -16,8 +16,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const AllPatterns: Story = {
-  // aria-allowed-attr: Radix Collapsible internal aria attributes
-  parameters: { a11y: { test: 'todo' } },
+  parameters: { a11y: { config: { rules: [{ id: 'aria-allowed-attr', enabled: false }] } } },
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="border-border rounded-lg border">

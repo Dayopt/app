@@ -16,8 +16,6 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'padded',
-    // scrollable-region-focusable: calendar grid scroll container
-    a11y: { test: 'todo' },
   },
   args: {
     onTimeClick: fn(),
@@ -193,7 +191,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex items-start gap-4">
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">今日（エントリあり）</p>
+        <p className="text-muted-foreground text-xs">今日（エントリあり）</p>
         <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}
@@ -207,7 +205,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">空（今日）</p>
+        <p className="text-muted-foreground text-xs">空（今日）</p>
         <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}
@@ -220,7 +218,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">週末（空）</p>
+        <p className="text-muted-foreground text-xs">週末（空）</p>
         <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={nextSaturday}
@@ -233,7 +231,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium">コンパクト（48px）</p>
+        <p className="text-muted-foreground text-xs">コンパクト（48px）</p>
         <div className="border-border relative h-[500px] w-44 overflow-hidden rounded-lg border">
           <DayColumn
             date={today}

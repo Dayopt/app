@@ -315,6 +315,73 @@ function collectA11y(): QualitySnapshot['metrics']['a11y'] {
   }
 }
 
+function collectBundleSize(): QualitySnapshot['metrics']['bundleSize'] {
+  if (shouldSkip('bundleSize')) {
+    return {
+      loginPageGzipKB: 0,
+      smallestRouteGzipKB: 0,
+      largestRouteGzipKB: 0,
+      cssGzipKB: 0,
+      status: 'skipped',
+    };
+  }
+
+  const statsFile = resolve(ROOT, '.next/diagnostics/route-bundle-stats.json');
+  if (!existsSync(statsFile)) {
+    console.log('    (.next/diagnostics not found — skipping bundle size)');
+    return {
+      loginPageGzipKB: 0,
+      smallestRouteGzipKB: 0,
+      largestRouteGzipKB: 0,
+      cssGzipKB: 0,
+      status: 'skipped',
+    };
+  }
+
+  try {
+    exec('npx tsx scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json', {
+      ignoreError: true,
+    });
+
+    const resultFile = resolve(ROOT, '.next/diagnostics/budget-result.json');
+    if (!existsSync(resultFile)) {
+      return {
+        loginPageGzipKB: 0,
+        smallestRouteGzipKB: 0,
+        largestRouteGzipKB: 0,
+        cssGzipKB: 0,
+        status: 'skipped',
+      };
+    }
+
+    const result = JSON.parse(readFileSync(resultFile, 'utf8')) as {
+      summary: {
+        loginGzipKB: number;
+        smallestGzipKB: number;
+        largestGzipKB: number;
+        overCount: number;
+      };
+      css: { gzipKB: number };
+    };
+
+    return {
+      loginPageGzipKB: result.summary.loginGzipKB,
+      smallestRouteGzipKB: result.summary.smallestGzipKB,
+      largestRouteGzipKB: result.summary.largestGzipKB,
+      cssGzipKB: result.css.gzipKB,
+      status: result.summary.overCount > 0 ? 'warn' : 'pass',
+    };
+  } catch {
+    return {
+      loginPageGzipKB: 0,
+      smallestRouteGzipKB: 0,
+      largestRouteGzipKB: 0,
+      cssGzipKB: 0,
+      status: 'skipped',
+    };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // スナップショット書き出し
 // ---------------------------------------------------------------------------
@@ -384,6 +451,7 @@ async function main(): Promise<void> {
     { key: 'circularDeps', label: '循環依存', fn: collectCircularDeps },
     { key: 'deadCode', label: 'Dead Code', fn: collectDeadCode },
     { key: 'a11y', label: 'アクセシビリティ', fn: collectA11y },
+    { key: 'bundleSize', label: 'バンドルサイズ', fn: collectBundleSize },
   ];
 
   for (const { key, label, fn } of collectors) {
@@ -421,6 +489,9 @@ async function main(): Promise<void> {
   );
   console.log(
     `  A11y: ${snapshot.metrics.a11y.violations} violations (${snapshot.metrics.a11y.status})`,
+  );
+  console.log(
+    `  Bundle: login=${snapshot.metrics.bundleSize.loginPageGzipKB}KB, css=${snapshot.metrics.bundleSize.cssGzipKB}KB (${snapshot.metrics.bundleSize.status})`,
   );
 }
 

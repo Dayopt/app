@@ -1,7 +1,10 @@
 'use client';
 
+import { Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { EmptyState } from '@/components/common/EmptyState';
+import { ErrorState } from '@/components/common/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/platform/trpc';
@@ -34,7 +37,7 @@ function formatDate(iso: string): string {
 export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data, isPending } = api.entries.getTagRecentEntries.useQuery({
+  const { data, isPending, isError, refetch } = api.entries.getTagRecentEntries.useQuery({
     tagId,
     limit: 8,
   });
@@ -52,6 +55,19 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
     );
   }
 
+  if (isError) {
+    return (
+      <Card className="border-none">
+        <CardHeader>
+          <CardTitle className="text-sm">{t('recentBlocks')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ErrorState title={t('errorTitle')} onRetry={() => refetch()} size="sm" centered />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!data || data.length === 0) {
     return (
       <Card className="border-none">
@@ -59,9 +75,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
           <CardTitle className="text-sm">{t('recentBlocks')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-muted-foreground flex h-16 items-center justify-center text-sm">
-            {t('noEntries')}
-          </div>
+          <EmptyState icon={Clock} title={t('noEntries')} size="sm" centered />
         </CardContent>
       </Card>
     );
@@ -88,7 +102,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
                 <span className="text-muted-foreground w-10 text-xs">
                   {formatDate(entry.startTime)}
                 </span>
-                <span className="text-foreground w-24 font-mono text-xs font-medium">
+                <span className="text-foreground w-24 font-mono text-xs">
                   {formatTime(entry.startTime)}-{formatTime(entry.endTime)}
                 </span>
                 <span className="w-6 text-center text-base">
@@ -99,7 +113,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
                 <span className="flex-1" />
                 {deviation != null && (
                   <span
-                    className={`font-mono text-xs font-semibold ${
+                    className={`font-mono text-xs font-bold ${
                       Math.abs(deviation) <= 5
                         ? 'text-success'
                         : deviation > 0

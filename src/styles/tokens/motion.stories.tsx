@@ -92,7 +92,7 @@ data-[state=closed]:animate-out`}
           </div>
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
             {`// スケルトンローダー
-<div className="animate-shimmer h-4 rounded" />
+<div className="animate-shimmer h-4 rounded-lg" />
 
 // 汎用ローディング（画像等）
 <div className="bg-muted animate-pulse h-32 rounded-lg" />`}
@@ -372,7 +372,7 @@ function EasingDemo({
       <div className="text-sm font-bold">{label}</div>
       <div className="bg-muted relative h-12 overflow-hidden rounded-lg">
         <div
-          className={`bg-primary absolute top-1 bottom-1 left-1 rounded transition-transform duration-500 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
+          className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-500 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
           style={{ width: '2.5rem' }}
         />
       </div>
@@ -396,14 +396,14 @@ export const Loading: Story = {
           <h2 className="mb-4 text-lg font-bold">カードスケルトン</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="border-border space-y-2 rounded-lg border p-4">
-              <div className="animate-shimmer h-4 w-3/4 rounded" />
-              <div className="animate-shimmer h-3 w-full rounded" />
-              <div className="animate-shimmer h-3 w-5/6 rounded" />
+              <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
+              <div className="animate-shimmer h-3 w-full rounded-lg" />
+              <div className="animate-shimmer h-3 w-5/6 rounded-lg" />
             </div>
             <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-32 rounded-lg" />
-              <div className="animate-shimmer h-4 w-2/3 rounded" />
-              <div className="animate-shimmer h-3 w-full rounded" />
+              <div className="animate-shimmer h-4 w-2/3 rounded-lg" />
+              <div className="animate-shimmer h-3 w-full rounded-lg" />
             </div>
           </div>
         </section>
@@ -416,8 +416,8 @@ export const Loading: Story = {
               <div key={i} className="flex items-center gap-2">
                 <div className="animate-shimmer size-10 shrink-0 rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="animate-shimmer h-4 w-1/3 rounded" />
-                  <div className="animate-shimmer h-3 w-2/3 rounded" />
+                  <div className="animate-shimmer h-4 w-1/3 rounded-lg" />
+                  <div className="animate-shimmer h-3 w-2/3 rounded-lg" />
                 </div>
               </div>
             ))}
@@ -429,15 +429,15 @@ export const Loading: Story = {
           <h2 className="mb-4 text-lg font-bold">テーブルスケルトン</h2>
           <div className="space-y-2">
             <div className="border-border flex gap-4 border-b pb-2">
-              <div className="animate-shimmer h-4 w-1/4 rounded" />
-              <div className="animate-shimmer h-4 w-1/3 rounded" />
-              <div className="animate-shimmer h-4 w-1/4 rounded" />
+              <div className="animate-shimmer h-4 w-1/4 rounded-lg" />
+              <div className="animate-shimmer h-4 w-1/3 rounded-lg" />
+              <div className="animate-shimmer h-4 w-1/4 rounded-lg" />
             </div>
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-4 py-2">
-                <div className="animate-shimmer h-3 w-1/4 rounded" />
-                <div className="animate-shimmer h-3 w-1/3 rounded" />
-                <div className="animate-shimmer h-3 w-1/4 rounded" />
+                <div className="animate-shimmer h-3 w-1/4 rounded-lg" />
+                <div className="animate-shimmer h-3 w-1/3 rounded-lg" />
+                <div className="animate-shimmer h-3 w-1/4 rounded-lg" />
               </div>
             ))}
           </div>

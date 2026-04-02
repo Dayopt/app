@@ -4,7 +4,7 @@ import { BarChart3 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { EmptyState } from '@/components/common/EmptyState';
 import { resolveTagColor } from '@/lib/tag-colors';
@@ -47,6 +47,17 @@ export function StatsView({ className }: StatsViewProps) {
         minutes: Math.round(tag.hours * 60),
       }))
     : [];
+
+  // タグ詳細ルートをプリフェッチ（クリック前にRSCペイロードを準備）
+  const tagIds = useMemo(
+    () => pageData?.timeByTag?.map((tag) => tag.tagId) ?? [],
+    [pageData?.timeByTag],
+  );
+  useEffect(() => {
+    for (const id of tagIds) {
+      router.prefetch(`/${locale}/stats/tags/${id}`);
+    }
+  }, [router, locale, tagIds]);
 
   const handleTagClick = (tagId: string) => {
     router.push(`/${locale}/stats/tags/${tagId}`);

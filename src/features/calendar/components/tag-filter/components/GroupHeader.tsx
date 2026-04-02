@@ -108,7 +108,7 @@ export function GroupHeader({
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm font-medium',
+        'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm',
         isMobile ? 'h-11' : 'h-8',
         menuOpen && 'bg-state-selected',
         !checked && !indeterminate && 'opacity-50',

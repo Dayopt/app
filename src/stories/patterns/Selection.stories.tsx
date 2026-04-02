@@ -153,7 +153,7 @@ export const Overview: Story = {
                 <div className="flex items-start space-x-2">
                   <Checkbox id="weekly" className="mt-1" />
                   <div>
-                    <Label htmlFor="weekly" className="font-medium">
+                    <Label htmlFor="weekly" className="">
                       週次サマリー
                     </Label>
                     <p className="text-muted-foreground text-sm">
@@ -164,7 +164,7 @@ export const Overview: Story = {
                 <div className="flex items-start space-x-2">
                   <Checkbox id="reminder" className="mt-1" defaultChecked />
                   <div>
-                    <Label htmlFor="reminder" className="font-medium">
+                    <Label htmlFor="reminder" className="">
                       リマインダー
                     </Label>
                     <p className="text-muted-foreground text-sm">予定の15分前に通知</p>
@@ -414,7 +414,7 @@ function ListSelection() {
           >
             <Checkbox checked={selected.includes(item.id)} />
             <div>
-              <p className="font-medium">{item.title}</p>
+              <p className="">{item.title}</p>
               <p className="text-muted-foreground text-sm">{item.description}</p>
             </div>
           </div>

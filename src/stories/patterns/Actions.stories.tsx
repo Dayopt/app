@@ -353,7 +353,7 @@ export const Overview: Story = {
           </p>
 
           <div className="bg-muted flex items-center justify-between rounded-lg px-4 py-2">
-            <span className="text-sm font-medium">3件を選択中</span>
+            <span className="text-sm">3件を選択中</span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
                 タグを追加

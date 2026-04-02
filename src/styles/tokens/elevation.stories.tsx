@@ -226,6 +226,56 @@ export const Overview: Story = {
   },
 };
 
+export const ShadowComparison: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-2 text-2xl font-bold">Shadow 比較</h1>
+      <p className="text-muted-foreground mb-8 text-sm">
+        3種の shadow トークン。shadow-xs は form control 専用、shadow-sm / shadow-card は Elevation
+        用。
+      </p>
+
+      <div className="bg-background border-border grid grid-cols-3 gap-8 rounded-lg border p-8">
+        {/* shadow-xs */}
+        <div className="text-center">
+          <div
+            className="bg-card border-border flex h-10 w-full items-center rounded-lg border px-4"
+            style={{ boxShadow: 'var(--shadow-xs)' }}
+          >
+            <span className="text-muted-foreground text-sm">テキストを入力...</span>
+          </div>
+          <p className="mt-4 text-xs font-bold">shadow-xs</p>
+          <p className="text-muted-foreground text-xs">form control（input, select, radio）</p>
+        </div>
+
+        {/* shadow-sm */}
+        <div className="text-center">
+          <div
+            className="bg-card border-border-subtle flex h-24 items-center justify-center rounded-lg border p-4"
+            style={{ boxShadow: 'var(--shadow-sm)' }}
+          >
+            <span className="text-muted-foreground text-xs">Raised card</span>
+          </div>
+          <p className="mt-4 text-xs font-bold">shadow-sm</p>
+          <p className="text-muted-foreground text-xs">Raised（card, section）</p>
+        </div>
+
+        {/* shadow-card */}
+        <div className="text-center">
+          <div
+            className="bg-card border-border-subtle flex h-24 items-center justify-center rounded-lg border p-4"
+            style={{ boxShadow: 'var(--shadow-card)' }}
+          >
+            <span className="text-muted-foreground text-xs">Overlay</span>
+          </div>
+          <p className="mt-4 text-xs font-bold">shadow-card</p>
+          <p className="text-muted-foreground text-xs">Overlay（dropdown, popover, dialog）</p>
+        </div>
+      </div>
+    </div>
+  ),
+};
+
 export const UseCases: Story = {
   render: () => (
     <div>
@@ -249,12 +299,12 @@ export const UseCases: Story = {
               className="bg-container flex flex-col gap-2 border-r p-4"
               style={{ borderColor: 'var(--border)' }}
             >
-              <div className="bg-foreground h-2 w-3/4 rounded opacity-20" />
-              <div className="bg-foreground h-2 w-1/2 rounded opacity-20" />
-              <div className="bg-foreground h-2 w-2/3 rounded opacity-20" />
+              <div className="bg-foreground h-2 w-3/4 rounded-lg opacity-20" />
+              <div className="bg-foreground h-2 w-1/2 rounded-lg opacity-20" />
+              <div className="bg-foreground h-2 w-2/3 rounded-lg opacity-20" />
             </aside>
             <div className="p-4">
-              <div className="bg-foreground h-2 w-1/2 rounded opacity-10" />
+              <div className="bg-foreground h-2 w-1/2 rounded-lg opacity-10" />
             </div>
           </div>
         </section>
@@ -298,9 +348,9 @@ export const UseCases: Story = {
               className="bg-card border-border-subtle w-48 rounded-lg border p-2"
               style={{ boxShadow: 'var(--shadow-card)' }}
             >
-              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 1</div>
-              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 2</div>
-              <div className="hover:bg-state-hover rounded px-4 py-2 text-sm">メニュー 3</div>
+              <div className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm">メニュー 1</div>
+              <div className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm">メニュー 2</div>
+              <div className="hover:bg-state-hover rounded-lg px-4 py-2 text-sm">メニュー 3</div>
             </div>
           </div>
         </section>
@@ -314,8 +364,8 @@ export const UseCases: Story = {
           <div className="relative overflow-hidden rounded-lg" style={{ height: 220 }}>
             {/* 背景コンテンツ */}
             <div className="bg-background absolute inset-0 p-6">
-              <div className="bg-foreground h-2 w-1/3 rounded opacity-10" />
-              <div className="bg-foreground mt-2 h-2 w-1/4 rounded opacity-10" />
+              <div className="bg-foreground h-2 w-1/3 rounded-lg opacity-10" />
+              <div className="bg-foreground mt-2 h-2 w-1/4 rounded-lg opacity-10" />
             </div>
             {/* Scrim */}
             <div className="bg-overlay absolute inset-0" />

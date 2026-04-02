@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 

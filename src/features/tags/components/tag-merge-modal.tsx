@@ -176,7 +176,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         >
           <ChevronLeft className="text-muted-foreground size-5" />
           {parentTag && <TagIcon icon={parentTag.icon} color={parentTag.color} size="sm" />}
-          <span className="text-foreground font-semibold">{prefix}</span>
+          <span className="text-foreground font-bold">{prefix}</span>
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
@@ -374,7 +374,7 @@ function TagGridCell({
         <TagIcon icon={tag.icon} color={tag.color} size="lg" />
         {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
       </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm font-medium">
+      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
         <span className="truncate">{displayName ?? tag.name}</span>
         {hasChildren && <span className="text-muted-foreground shrink-0 text-xs">›</span>}
       </span>

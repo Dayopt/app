@@ -162,7 +162,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="w-56 space-y-4">
       <div className="space-y-1">
-        <p className="text-muted-foreground px-1 text-xs font-medium">チェック済み</p>
+        <p className="text-muted-foreground px-1 text-xs">チェック済み</p>
         <FilterItem
           label="仕事"
           tagId="tag-1"
@@ -174,7 +174,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground px-1 text-xs font-medium">未チェック</p>
+        <p className="text-muted-foreground px-1 text-xs">未チェック</p>
         <FilterItem
           label="勉強"
           tagId="tag-2"
@@ -186,7 +186,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground px-1 text-xs font-medium">件数なし</p>
+        <p className="text-muted-foreground px-1 text-xs">件数なし</p>
         <FilterItem
           label="運動"
           tagId="tag-3"
@@ -197,11 +197,11 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground px-1 text-xs font-medium">タグなし</p>
+        <p className="text-muted-foreground px-1 text-xs">タグなし</p>
         <FilterItem label="タグなし" checked={true} onCheckedChange={fn()} onShowOnlyThis={fn()} />
       </div>
       <div className="space-y-1">
-        <p className="text-muted-foreground px-1 text-xs font-medium">無効状態</p>
+        <p className="text-muted-foreground px-1 text-xs">無効状態</p>
         <FilterItem
           label="無効タグ"
           tagId="tag-4"

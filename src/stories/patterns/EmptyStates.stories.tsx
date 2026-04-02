@@ -36,9 +36,9 @@ export const Overview: Story = {
             <div className="border-border rounded-lg border py-6">
               <EmptyState
                 icon={Calendar}
-                title="プランがありません"
-                description="最初のプランを作成して、タイムボクシングを始めましょう。"
-                actionLabel="プランを作成"
+                title="まだエントリーがない"
+                description="最初のエントリーを作成して、タイムボクシングを始めよう"
+                actionLabel="エントリーを作成"
                 onAction={() => {}}
               />
             </div>
@@ -47,8 +47,8 @@ export const Overview: Story = {
             <div className="border-border rounded-lg border py-6">
               <EmptyState
                 icon={Tag}
-                title="タグがありません"
-                description="タグを作成して、プランを整理しましょう。"
+                title="まだタグがない"
+                description="タグを作成してエントリーを整理"
                 actionLabel="タグを作成"
                 onAction={() => {}}
               />
@@ -66,8 +66,8 @@ export const Overview: Story = {
           <div className="border-border rounded-lg border py-6">
             <EmptyState
               icon={Search}
-              title="検索結果がありません"
-              description="「ミーティング」に一致するプランは見つかりませんでした。キーワードを変えてお試しください。"
+              title="一致する結果がない"
+              description="「ミーティング」に一致するエントリーがない。キーワードを変えて試して"
               actions={<Button variant="outline">検索をクリア</Button>}
             />
           </div>
@@ -83,8 +83,8 @@ export const Overview: Story = {
           <div className="border-border rounded-lg border py-6">
             <EmptyState
               icon={FolderOpen}
-              title="該当するプランがありません"
-              description="選択したタグに該当するプランはありません。フィルターを変更してください。"
+              title="該当するエントリーがない"
+              description="選択したタグに該当するエントリーがない。フィルターを変更して"
               actions={<Button variant="outline">フィルターをリセット</Button>}
             />
           </div>
@@ -100,8 +100,8 @@ export const Overview: Story = {
           <div className="border-border rounded-lg border py-6">
             <EmptyState
               icon={Inbox}
-              title="すべて完了しました"
-              description="今日のプランはすべて完了しています。お疲れさまでした！"
+              title="すべて完了"
+              description="今日のエントリーはすべて完了。お疲れさま！"
             />
           </div>
         </section>
@@ -147,17 +147,17 @@ export const Overview: Story = {
               <p className="text-muted-foreground mb-2 text-center text-xs font-bold">
                 sm（テーブル内）
               </p>
-              <EmptyState icon={Inbox} title="アイテムがありません" size="sm" />
+              <EmptyState icon={Inbox} title="まだアイテムがない" size="sm" />
             </div>
             <div className="border-border rounded-lg border py-4">
               <p className="text-muted-foreground mb-2 text-center text-xs font-bold">md（標準）</p>
-              <EmptyState icon={Inbox} title="アイテムがありません" />
+              <EmptyState icon={Inbox} title="まだアイテムがない" />
             </div>
             <div className="border-border rounded-lg border py-4">
               <p className="text-muted-foreground mb-2 text-center text-xs font-bold">
                 lg（フルページ）
               </p>
-              <EmptyState icon={Inbox} title="アイテムがありません" size="lg" />
+              <EmptyState icon={Inbox} title="まだアイテムがない" size="lg" />
             </div>
           </div>
         </section>
@@ -172,8 +172,8 @@ export const Overview: Story = {
           <div className="border-border h-64 rounded-lg border">
             <EmptyState
               icon={Inbox}
-              title="アイテムがありません"
-              description="新しいアイテムを作成してください。"
+              title="まだアイテムがない"
+              description="新しいアイテムを作成"
               size="sm"
               centered
             />
@@ -184,7 +184,7 @@ export const Overview: Story = {
 <div className="h-64">
   <EmptyState
     icon={Inbox}
-    title="アイテムがありません"
+    title="まだアイテムがない"
     size="sm"
     centered
   />
@@ -226,23 +226,23 @@ export const Overview: Story = {
 // 標準（size="md"）
 <EmptyState
   icon={Calendar}
-  title="プランがありません"
-  description="最初のプランを作成して..."
-  actionLabel="プランを作成"
+  title="まだエントリーがない"
+  description="最初のエントリーを作成して..."
+  actionLabel="エントリーを作成"
   onAction={handleCreate}
 />
 
 // カスタムアクション
 <EmptyState
   icon={Search}
-  title="検索結果がありません"
+  title="一致する結果がない"
   actions={<Button variant="outline">検索をクリア</Button>}
 />
 
 // テーブル内（size="sm" + centered）
 <EmptyState
   icon={Inbox}
-  title="アイテムがありません"
+  title="まだアイテムがない"
   size="sm"
   centered
 />`}

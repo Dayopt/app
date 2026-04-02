@@ -97,7 +97,7 @@ function LayerRow({
         <span className="text-muted-foreground font-mono text-sm">{value}</span>
       </div>
       <div className="flex-1">
-        <code className="bg-container rounded px-2 py-1 text-sm font-bold">{tailwind}</code>
+        <code className="bg-container rounded-lg px-2 py-1 text-sm font-bold">{tailwind}</code>
         <span className="text-muted-foreground ml-2 text-sm">{name}</span>
       </div>
       <div className="text-muted-foreground text-sm">{description}</div>
@@ -137,7 +137,7 @@ function VisualStack() {
             zIndex: layer.value,
           }}
         >
-          <span className="bg-container rounded px-2 py-1">
+          <span className="bg-container rounded-lg px-2 py-1">
             {layer.name} ({layer.value})
           </span>
         </div>

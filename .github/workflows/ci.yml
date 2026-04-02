@@ -113,11 +113,23 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+      - name: Compute bundle budget
+        run: npx tsx scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json
+
+      - name: Upload build diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build-diagnostics
+          path: |
+            .next/diagnostics/budget-result.json
+            .next/static/chunks/*.css
+          retention-days: 1
+
   bundle-size:
     name: "\U0001F4E6 Bundle Size"
     runs-on: ubuntu-latest
-    needs: [lint, typecheck]
-    timeout-minutes: 10
+    needs: [build]
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
@@ -128,22 +140,34 @@ jobs:
 
       - run: npm ci
 
-      - uses: actions/cache@v4
+      - name: Download build diagnostics
+        uses: actions/download-artifact@v4
         with:
-          path: .next/cache
-          key: nextjs-bundle-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('src/**/*.{ts,tsx}') }}
-          restore-keys: nextjs-bundle-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+          name: nextjs-build-diagnostics
+          path: .next
 
-      - name: Build & report bundle size
+      - name: Report JS bundle budget
         run: |
-          echo "## 📦 Bundle Size Report" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          npx next build --profile 2>&1 | grep -E "Route|First Load|chunks|○|●|ƒ|λ" >> "$GITHUB_STEP_SUMMARY" || true
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }}
+          if [ -f .next/diagnostics/budget-result.json ]; then
+            echo "## 📦 Bundle Size Budget Report" >> "$GITHUB_STEP_SUMMARY"
+            node -e "
+              const r = require('./.next/diagnostics/budget-result.json');
+              const s = r.summary;
+              console.log('| Metric | Value |');
+              console.log('|--------|-------|');
+              console.log('| Login page (gzip) | ' + s.loginGzipKB + ' KB |');
+              console.log('| Smallest route (gzip) | ' + s.smallestGzipKB + ' KB |');
+              console.log('| Largest route (gzip) | ' + s.largestGzipKB + ' KB |');
+              console.log('| CSS total (gzip) | ' + r.css.gzipKB + ' KB |');
+              console.log('| Routes over budget | ' + s.overCount + ' / ' + s.totalRoutes + ' |');
+            " >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## 📦 Bundle Size" >> "$GITHUB_STEP_SUMMARY"
+            echo "budget-result.json not found" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check CSS bundle size
+        run: npm run size
 
   # ── Stage 3 (~3 min) ─────────────────────────────────
   e2e:

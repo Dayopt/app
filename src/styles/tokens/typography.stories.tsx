@@ -66,7 +66,9 @@ export const Scale: Story = {
             key={cls}
             className={`flex items-center gap-4 rounded-lg p-2 ${highlight ? 'bg-state-active' : ''}`}
           >
-            <code className="bg-container w-24 rounded px-2 py-1 text-center text-xs">{cls}</code>
+            <code className="bg-container w-24 rounded-lg px-2 py-1 text-center text-xs">
+              {cls}
+            </code>
             <div className="text-muted-foreground w-16 text-xs">{px}</div>
             <div className={`flex-1 ${cls}`}>あいうえお ABC</div>
             <div className="text-muted-foreground w-48 text-xs">{usage}</div>
@@ -76,10 +78,10 @@ export const Scale: Story = {
 
       <div className="border-info text-info mt-8 rounded-lg border p-4">
         <p className="text-sm">
-          <strong>よく使う:</strong> <code className="bg-container rounded px-1">text-xs</code>,{' '}
-          <code className="bg-container rounded px-1">text-sm</code>,{' '}
-          <code className="bg-container rounded px-1">text-base</code>,{' '}
-          <code className="bg-container rounded px-1">text-2xl</code>
+          <strong>よく使う:</strong> <code className="bg-container rounded-lg px-1">text-xs</code>,{' '}
+          <code className="bg-container rounded-lg px-1">text-sm</code>,{' '}
+          <code className="bg-container rounded-lg px-1">text-base</code>,{' '}
+          <code className="bg-container rounded-lg px-1">text-2xl</code>
         </p>
       </div>
     </div>
@@ -98,7 +100,7 @@ export const Hierarchy: Story = {
           <div className="text-muted-foreground mb-2 text-xs">ページタイトル</div>
           <h1 className="text-2xl font-bold">設定</h1>
           <p className="text-muted-foreground mt-1 text-sm">アカウントとアプリの設定を管理</p>
-          <code className="bg-container mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
             text-2xl font-bold + text-sm text-muted-foreground
           </code>
         </div>
@@ -107,7 +109,7 @@ export const Hierarchy: Story = {
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">セクション見出し</div>
           <h2 className="text-lg font-bold">プロフィール</h2>
-          <code className="bg-container mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
             text-lg font-bold
           </code>
         </div>
@@ -117,7 +119,7 @@ export const Hierarchy: Story = {
           <div className="text-muted-foreground mb-2 text-xs">カード見出し</div>
           <h3 className="font-bold">メール通知</h3>
           <p className="text-muted-foreground mt-1 text-sm">重要な更新をメールで受け取る</p>
-          <code className="bg-container mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
             font-bold + text-sm text-muted-foreground
           </code>
         </div>
@@ -126,7 +128,7 @@ export const Hierarchy: Story = {
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">フォームラベル</div>
           <label className="text-sm font-bold">メールアドレス</label>
-          <code className="bg-container mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
             text-sm font-bold
           </code>
         </div>
@@ -135,7 +137,7 @@ export const Hierarchy: Story = {
         <div>
           <div className="text-muted-foreground mb-2 text-xs">補助テキスト</div>
           <p className="text-muted-foreground text-xs">最終更新: 2024年1月1日</p>
-          <code className="bg-container mt-2 inline-block rounded px-2 py-1 text-xs">
+          <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
             text-xs text-muted-foreground
           </code>
         </div>
@@ -153,7 +155,7 @@ export const Weight: Story = {
       <div className="space-y-6">
         <div className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4">
-            <code className="bg-container rounded px-2 py-1 text-xs">font-bold</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">font-bold</code>
           </div>
           <p className="text-xl font-bold">見出し、強調</p>
           <p className="text-muted-foreground mt-2 text-sm">
@@ -163,7 +165,7 @@ export const Weight: Story = {
 
         <div className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4">
-            <code className="bg-container rounded px-2 py-1 text-xs">font-normal</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">font-normal</code>
           </div>
           <p className="font-normal">本文テキスト（デフォルト）</p>
           <p className="text-muted-foreground mt-2 text-sm">段落、説明文、UIテキスト全般</p>

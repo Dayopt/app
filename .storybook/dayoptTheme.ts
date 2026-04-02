@@ -70,35 +70,35 @@ export const dayoptDarkTheme = create({
   // --ring: oklch(0.6231 0.188 259.8145)
   colorSecondary: '#3b82f6',
 
-  // --background dark: oklch(0.24 0 0)
-  appBg: '#1f1f1f',
-  // --container dark: oklch(0.18 0 0)
-  appContentBg: '#121212',
-  // --background dark
-  appPreviewBg: '#1f1f1f',
+  // --background dark: oklch(0.18 0.008 60)
+  appBg: '#14110e',
+  // --container dark: oklch(0.15 0.008 60)
+  appContentBg: '#0e0a08',
+  // --background dark: oklch(0.18 0.008 60)
+  appPreviewBg: '#14110e',
 
-  // --border dark: oklch(0.3715 0 0)
+  // --border dark: oklch(1 0 0 / 0.12) — alpha overlay, hex近似
   appBorderColor: '#404040',
   appBorderRadius: 8,
 
-  // --foreground dark: oklch(0.9219 0 0)
-  textColor: '#e5e5e5',
-  // --muted-foreground dark: oklch(0.78 0 0)
-  textMutedColor: '#b7b7b7',
+  // --foreground dark: oklch(0.9 0.005 70)
+  textColor: '#e0ddda',
+  // --muted-foreground dark: oklch(0.68 0.005 60)
+  textMutedColor: '#9b9895',
 
-  barTextColor: '#b7b7b7',
+  barTextColor: '#9b9895',
   // --ring: oklch(0.6231 0.188 259.8145)
   barHoverColor: '#3b82f6',
   // --primary dark: oklch(0.5 0.188 259.8145)
   barSelectedColor: '#115bcc',
-  // --container dark: oklch(0.18 0 0)
-  barBg: '#121212',
+  // --container dark: oklch(0.15 0.008 60)
+  barBg: '#0e0a08',
 
-  // --background dark: oklch(0.24 0 0)
-  inputBg: '#1f1f1f',
-  // --border dark: oklch(0.3715 0 0)
+  // --background dark: oklch(0.18 0.008 60)
+  inputBg: '#14110e',
+  // --border dark: oklch(1 0 0 / 0.12) — alpha overlay, hex近似
   inputBorder: '#404040',
-  // --foreground dark: oklch(0.9219 0 0)
-  inputTextColor: '#e5e5e5',
+  // --foreground dark: oklch(0.9 0.005 70)
+  inputTextColor: '#e0ddda',
   inputBorderRadius: 8,
 });

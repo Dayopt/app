@@ -30,7 +30,7 @@ const LoadingIcon = () => <Loader2 className="size-5 animate-spin" />;
  *
  * @example
  * ```tsx
- * import { toast } from 'sonner';
+ * import { toast } from '@/lib/toast';
  *
  * toast.error('エラーが発生しました');
  * toast.success('削除しました', {

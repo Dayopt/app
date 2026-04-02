@@ -101,7 +101,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
             type="button"
             onClick={() => setMode('minutes')}
             className={cn(
-              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs transition-colors',
               mode === 'minutes'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-state-hover',
@@ -113,7 +113,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
             type="button"
             onClick={() => setMode('fulfillment')}
             className={cn(
-              'rounded-lg px-2 py-1 text-xs font-medium transition-colors',
+              'rounded-lg px-2 py-1 text-xs transition-colors',
               mode === 'fulfillment'
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-state-hover',
@@ -130,10 +130,7 @@ export function EnergyMapHeatmap({ data }: EnergyMapHeatmapProps) {
           <div className="grid grid-cols-[40px_repeat(7,1fr)] gap-1">
             <div />
             {DOW_ORDER.map((_, i) => (
-              <div
-                key={DOW_KEYS[i]}
-                className="text-muted-foreground text-center text-xs font-medium"
-              >
+              <div key={DOW_KEYS[i]} className="text-muted-foreground text-center text-xs">
                 {t(`dow.${DOW_KEYS[i]}`)}
               </div>
             ))}

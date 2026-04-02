@@ -29,6 +29,7 @@ export function TimeProgressBar({ plannedMinutes, actualMinutes }: TimeProgressB
         role="progressbar"
         aria-valuenow={actualMinutes}
         aria-valuemax={plannedMinutes}
+        aria-label="Time progress"
       >
         <div
           className="bg-success h-full rounded-l-full transition-all"
@@ -53,6 +54,7 @@ export function TimeProgressBar({ plannedMinutes, actualMinutes }: TimeProgressB
         role="progressbar"
         aria-valuenow={actualMinutes}
         aria-valuemax={plannedMinutes}
+        aria-label="Time progress"
       />
     </div>
   );

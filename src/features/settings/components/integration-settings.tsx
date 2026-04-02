@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import {
   Bot,
   Calendar,
@@ -17,7 +18,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import {
   AlertDialog,

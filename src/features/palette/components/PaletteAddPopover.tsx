@@ -132,7 +132,7 @@ function PaletteAddContent({
                 type="button"
                 onClick={() => setSelectedDuration(String(preset.value))}
                 className={cn(
-                  'rounded-full border px-4 py-1 text-sm font-medium transition-colors',
+                  'rounded-full border px-4 py-1 text-sm transition-colors',
                   selectedDuration === String(preset.value)
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'border-border hover:bg-state-hover text-foreground',
@@ -152,7 +152,7 @@ function PaletteAddContent({
         <Button variant="outline" onClick={handleClose} aria-disabled={isPinning}>
           {t('common.actions.cancel')}
         </Button>
-        <Button aria-disabled={!canSubmit} isLoading={isPinning} onClick={handleSubmit}>
+        <Button aria-disabled={!canSubmit} loading={isPinning} onClick={handleSubmit}>
           {t('sidebar.palette.add')}
         </Button>
       </ActionFooter>

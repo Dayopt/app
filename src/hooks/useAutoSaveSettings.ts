@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { getErrorMessage } from '@/lib/errors';

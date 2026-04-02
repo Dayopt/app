@@ -83,6 +83,33 @@ export default defineConfig({
           setupFiles: ['.storybook/vitest.setup.ts'],
         },
       },
+      // Storybook Dark mode テスト（beforeEach で .dark クラスを強制適用）
+      {
+        extends: true,
+        plugins: [
+          storybookTest({
+            configDir: path.join(dirname, '.storybook'),
+            storybookScript: 'npm run storybook -- --no-open',
+            tags: {
+              exclude: ['docs-only', 'wip'],
+            },
+          }),
+        ],
+        test: {
+          name: 'storybook-dark',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({}),
+            instances: [
+              {
+                browser: 'chromium',
+              },
+            ],
+          },
+          setupFiles: ['.storybook/vitest.setup.dark.ts'],
+        },
+      },
     ],
   },
   resolve: {

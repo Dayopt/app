@@ -190,7 +190,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-muted-foreground mb-4 text-sm font-medium">デフォルト</h3>
+        <h3 className="text-muted-foreground mb-4 text-sm">デフォルト</h3>
         <DisplaySettings />
       </div>
     </div>

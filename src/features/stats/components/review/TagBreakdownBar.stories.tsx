@@ -58,15 +58,15 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="w-full">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">WithList（バー＋凡例）</p>
+        <p className="text-muted-foreground mb-4 text-xs">WithList（バー＋凡例）</p>
         <TagBreakdownBar segments={MOCK_SEGMENTS} mode="list" />
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">BarOnly（バーのみ）</p>
+        <p className="text-muted-foreground mb-4 text-xs">BarOnly（バーのみ）</p>
         <TagBreakdownBar segments={MOCK_SEGMENTS} mode="bar" />
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">TwoTags（タグ2つ）</p>
+        <p className="text-muted-foreground mb-4 text-xs">TwoTags（タグ2つ）</p>
         <TagBreakdownBar
           segments={[
             { tagId: '1', tagName: 'Work', tagColor: 'blue', minutes: 900 },
@@ -75,7 +75,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div className="w-full">
-        <p className="text-muted-foreground mb-4 text-xs font-medium">Empty（空）</p>
+        <p className="text-muted-foreground mb-4 text-xs">Empty（空）</p>
         <TagBreakdownBar segments={[]} />
       </div>
     </div>

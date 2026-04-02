@@ -32,7 +32,7 @@ const meta = {
   title: 'Features/Entry/Inspector/EntryInspector',
   parameters: {
     layout: 'centered',
-    // button-name / color-contrast / aria-progressbar-name: internal inspector components
+    // button-name: internal inspector icon buttons
     a11y: { test: 'todo' },
   },
   tags: ['autodocs', 'critical'],
@@ -397,9 +397,7 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-wrap items-start gap-6">
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
-            Upcoming + Planned
-          </p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Upcoming + Planned</p>
           <InspectorFrame>
             <InspectorContent
               tagName="Work"
@@ -411,9 +409,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
-            Past + Planned
-          </p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Past + Planned</p>
           <InspectorFrame>
             <InspectorContent
               tagName="Meeting"
@@ -428,7 +424,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Loading</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Loading</p>
           <InspectorFrame>
             <div className="flex h-full flex-1 items-center justify-center py-16">
               <Spinner size="lg" />
@@ -436,7 +432,7 @@ export const AllPatterns: Story = {
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs font-medium">Not Found</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">Not Found</p>
           <InspectorFrame>
             <div className="flex h-full flex-1 items-center justify-center py-16">
               <p className="text-muted-foreground">{t('entry.inspector.notFound')}</p>

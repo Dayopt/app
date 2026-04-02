@@ -123,8 +123,8 @@ export const Overview: Story = {
   open={isOpen}
   onClose={() => setIsOpen(false)}
   onConfirm={handleDelete}
-  title="タグを削除しますか？"
-  description="「仕事」タグを削除します。この操作は取り消せません。"
+  title="タグを削除する？"
+  description="「仕事」タグを削除する。この操作は取り消せない"
   variant="destructive"
 />`}
           </pre>
@@ -144,8 +144,8 @@ export const Overview: Story = {
   open={isOpen}
   onClose={() => setIsOpen(false)}
   onConfirm={handleDelete}
-  title="アカウントを削除しますか？"
-  description="すべてのデータが完全に削除されます。"
+  title="アカウントを削除する？"
+  description="すべてのデータが完全に削除される"
   variant="destructive"
   icon={Trash2}
   confirmLabel="アカウントを削除"
@@ -167,8 +167,8 @@ export const Overview: Story = {
   open={isOpen}
   onClose={() => setIsOpen(false)}
   onConfirm={handleDiscard}
-  title="変更を破棄しますか？"
-  description="保存されていない変更があります。"
+  title="変更を破棄する？"
+  description="保存されていない変更がある"
   variant="warning"
   confirmLabel="破棄して閉じる"
   cancelLabel="編集を続ける"
@@ -195,7 +195,7 @@ export const Overview: Story = {
   open={isOpen}
   onClose={() => setIsOpen(false)}
   onConfirm={handleDelete}
-  title="タグを削除しますか？"
+  title="タグを削除する？"
   variant="destructive"
   loadingLabel="削除中..."
 />`}
@@ -309,8 +309,8 @@ function DeleteConfirmDemo() {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() => setOpen(false)}
-        title="タグを削除しますか？"
-        description="「仕事」タグを削除します。このタグが付いたプラン（12件）からタグが外れます。この操作は取り消せません。"
+        title="タグを削除する？"
+        description="「仕事」タグを削除する。このタグが付いたエントリー（12件）からタグが外れる。この操作は取り消せない"
         variant="destructive"
       />
     </>
@@ -328,8 +328,8 @@ function DangerousConfirmDemo() {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() => setOpen(false)}
-        title="アカウントを削除しますか？"
-        description="アカウントを削除すると、すべてのデータ（プラン、タグ、記録）が完全に削除されます。この操作は取り消せません。"
+        title="アカウントを削除する？"
+        description="アカウントを削除すると、すべてのデータ（エントリー、タグ、記録）が完全に削除される。この操作は取り消せない"
         variant="destructive"
         icon={Trash2}
         confirmLabel="アカウントを削除"
@@ -349,8 +349,8 @@ function DiscardConfirmDemo() {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={() => setOpen(false)}
-        title="変更を破棄しますか？"
-        description="保存されていない変更があります。このまま閉じると変更内容は失われます。"
+        title="変更を破棄する？"
+        description="保存されていない変更がある。このまま閉じると変更内容は失われる"
         variant="warning"
         confirmLabel="破棄して閉じる"
         cancelLabel="編集を続ける"
@@ -375,8 +375,8 @@ function AsyncConfirmDemo() {
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={handleConfirm}
-        title="タグを削除しますか？"
-        description="「仕事」タグを削除します。この操作は取り消せません。"
+        title="タグを削除する？"
+        description="「仕事」タグを削除する。この操作は取り消せない"
         variant="destructive"
         loadingLabel="削除中..."
       />

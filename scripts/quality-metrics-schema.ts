@@ -45,6 +45,13 @@ export interface QualitySnapshot {
       violations: number;
       status: 'pass' | 'fail' | 'skipped';
     };
+    bundleSize: {
+      loginPageGzipKB: number;
+      smallestRouteGzipKB: number;
+      largestRouteGzipKB: number;
+      cssGzipKB: number;
+      status: 'pass' | 'warn' | 'fail' | 'skipped';
+    };
   };
 }
 

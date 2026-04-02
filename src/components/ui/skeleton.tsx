@@ -15,16 +15,16 @@ interface SkeletonProps extends React.ComponentProps<'div'> {
    * アニメーションタイプ
    * @default 'pulse'
    */
-  animation?: SkeletonAnimation;
+  variant?: SkeletonAnimation;
 }
 
-function Skeleton({ className, animation = 'pulse', ...props }: SkeletonProps) {
+function Skeleton({ className, variant = 'pulse', ...props }: SkeletonProps) {
   return (
     <div
       data-slot="skeleton"
       className={cn(
         'rounded-lg',
-        animation === 'shimmer'
+        variant === 'shimmer'
           ? 'animate-shimmer motion-reduce:bg-surface-container motion-reduce:animate-none'
           : 'bg-surface-container animate-pulse motion-reduce:animate-none',
         className,

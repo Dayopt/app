@@ -12,8 +12,8 @@ import { useEffect, useMemo } from 'react';
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '@/features/calendar';
 import { useCalendarData } from '@/features/calendar';
 import { logger } from '@/lib/logger';
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 // =============================================================================
 // Types

@@ -42,12 +42,12 @@ export function PlanVsRecordContent({
         {/* Planned time */}
         <div className="flex items-center gap-2">
           <div className="bg-tag-blue-tint border-tag-blue border-l-indicator flex h-10 shrink-0 items-center rounded-lg px-2">
-            <span className="text-foreground text-xs font-medium whitespace-nowrap tabular-nums">
+            <span className="text-foreground text-xs whitespace-nowrap tabular-nums">
               10:00–11:00
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-foreground text-xs font-medium">
+            <span className="text-foreground text-xs">
               {t('tour.steps.planVsRecord.planLabel')}
             </span>
             <span className="text-muted-foreground text-xs">
@@ -79,12 +79,12 @@ export function PlanVsRecordContent({
         {/* Actual time */}
         <div className="flex items-center gap-2">
           <div className="bg-tag-blue-tint border-tag-blue border-l-indicator flex h-10 shrink-0 items-center rounded-lg px-2">
-            <span className="text-foreground text-xs font-medium whitespace-nowrap tabular-nums">
+            <span className="text-foreground text-xs whitespace-nowrap tabular-nums">
               10:15–11:30
             </span>
           </div>
           <div className="flex flex-col">
-            <span className="text-foreground text-xs font-medium">
+            <span className="text-foreground text-xs">
               {t('tour.steps.planVsRecord.recordLabel')}
             </span>
             <span className="text-muted-foreground text-xs">

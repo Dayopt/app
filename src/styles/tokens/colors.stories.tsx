@@ -557,18 +557,18 @@ export const Surface: Story = {
             className="bg-container flex flex-col gap-1 border-r p-2"
             style={{ borderColor: 'var(--border)' }}
           >
-            <div className="bg-foreground h-1.5 w-4/5 rounded opacity-25" />
-            <div className="bg-foreground h-1.5 w-3/5 rounded opacity-25" />
-            <div className="bg-foreground h-1.5 w-2/3 rounded opacity-25" />
+            <div className="bg-foreground h-1.5 w-4/5 rounded-lg opacity-25" />
+            <div className="bg-foreground h-1.5 w-3/5 rounded-lg opacity-25" />
+            <div className="bg-foreground h-1.5 w-2/3 rounded-lg opacity-25" />
           </div>
           <div className="flex flex-col gap-2 p-4">
             <div
               className="bg-card flex flex-1 flex-col gap-2 rounded-lg p-4"
               style={{ boxShadow: 'var(--shadow-card)' }}
             >
-              <div className="bg-foreground h-1.5 w-3/4 rounded opacity-15" />
-              <div className="bg-foreground h-1.5 w-1/2 rounded opacity-15" />
-              <div className="bg-muted h-7 rounded" />
+              <div className="bg-foreground h-1.5 w-3/4 rounded-lg opacity-15" />
+              <div className="bg-foreground h-1.5 w-1/2 rounded-lg opacity-15" />
+              <div className="bg-muted h-7 rounded-lg" />
             </div>
           </div>
         </div>
@@ -600,7 +600,7 @@ export const Surface: Story = {
                 <tr key={token} className="border-border border-b">
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <div className={`${bg} border-border size-5 shrink-0 rounded border`} />
+                      <div className={`${bg} border-border size-5 shrink-0 rounded-lg border`} />
                       <code className="text-foreground text-xs">{token}</code>
                     </div>
                   </td>
@@ -664,13 +664,13 @@ export const Surface: Story = {
                 </td>
                 <td className="px-4 py-2">
                   <div
-                    className="bg-card inline-block size-8 rounded"
+                    className="bg-card inline-block size-8 rounded-lg"
                     style={{ boxShadow: 'var(--shadow-sm)' }}
                   />
                 </td>
                 <td className="px-4 py-2">
                   <div
-                    className="bg-card inline-block size-8 rounded"
+                    className="bg-card inline-block size-8 rounded-lg"
                     style={{ boxShadow: 'var(--shadow-sm)' }}
                   />
                 </td>
@@ -681,13 +681,13 @@ export const Surface: Story = {
                 </td>
                 <td className="px-4 py-2">
                   <div
-                    className="bg-card inline-block size-8 rounded"
+                    className="bg-card inline-block size-8 rounded-lg"
                     style={{ boxShadow: 'var(--shadow-card)' }}
                   />
                 </td>
                 <td className="px-4 py-2">
                   <div
-                    className="bg-card inline-block size-8 rounded"
+                    className="bg-card inline-block size-8 rounded-lg"
                     style={{ boxShadow: 'var(--shadow-card)' }}
                   />
                 </td>
@@ -798,10 +798,10 @@ export const Semantic: Story = {
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {semanticColors.map(({ name, bg, bgTint, fg, desc }) => (
             <div key={name} className="border-border rounded-lg border p-4">
-              <div className={`${bg} mb-2 flex h-10 items-center justify-center rounded`}>
+              <div className={`${bg} mb-2 flex h-10 items-center justify-center rounded-lg`}>
                 <span className={`${fg} text-sm font-bold`}>accent</span>
               </div>
-              <div className={`${bgTint} mb-2 flex h-10 items-center justify-center rounded`}>
+              <div className={`${bgTint} mb-2 flex h-10 items-center justify-center rounded-lg`}>
                 <span className="text-foreground text-sm">bg</span>
               </div>
               <div className="text-foreground text-center font-bold">{name}</div>
@@ -847,10 +847,10 @@ export const Semantic: Story = {
         <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
           {semanticColors.map(({ name, text }) => (
             <div key={name} className="border-border flex gap-4 rounded-lg border p-4">
-              <div className="bg-card flex flex-1 items-center justify-center rounded p-4">
+              <div className="bg-card flex flex-1 items-center justify-center rounded-lg p-4">
                 <span className={`${text} font-bold`}>{name} on card</span>
               </div>
-              <div className="bg-background flex flex-1 items-center justify-center rounded p-4">
+              <div className="bg-background flex flex-1 items-center justify-center rounded-lg p-4">
                 <span className={`${text} font-bold`}>{name} on bg</span>
               </div>
             </div>
@@ -862,7 +862,7 @@ export const Semantic: Story = {
           <h3 className="mb-2 font-bold">ダークモードの foreground 反転</h3>
           <p className="text-muted-foreground text-sm">
             ダークモードではセマンティックカラーの明度が上がるため、
-            <code className="bg-container rounded px-1">text-*-foreground</code>{' '}
+            <code className="bg-container rounded-lg px-1">text-*-foreground</code>{' '}
             が白→ダーク文字に自動反転。 コンポーネント側の変更は不要。
           </p>
         </div>
@@ -1075,13 +1075,13 @@ export const Tags: Story = {
                   <td className="px-4 py-2 text-xs font-bold capitalize">{name}</td>
                   <td className="px-4 py-2">
                     <div
-                      className="size-6 rounded"
+                      className="size-6 rounded-lg"
                       style={{ backgroundColor: `var(--tag-${name})` }}
                     />
                   </td>
                   <td className="px-4 py-2">
                     <div
-                      className="border-border size-6 rounded border"
+                      className="border-border size-6 rounded-lg border"
                       style={{ backgroundColor: `var(--tag-${name}-tint)` }}
                     />
                   </td>

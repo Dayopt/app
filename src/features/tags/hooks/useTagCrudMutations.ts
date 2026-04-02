@@ -1,7 +1,7 @@
 // タグCRUD用ミューテーションフック（作成・更新・削除・リネーム・色変更・並び替え）
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import type { TagColorName } from '@/lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';

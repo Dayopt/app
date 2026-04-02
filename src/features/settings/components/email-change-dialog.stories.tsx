@@ -70,7 +70,7 @@ export const Closed: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
-      <p className="text-muted-foreground text-xs font-medium">初期フォーム（空入力）</p>
+      <p className="text-muted-foreground text-xs">初期フォーム（空入力）</p>
       <EmailChangeDialog open onOpenChange={fn()} currentEmail="current@example.com" />
     </div>
   ),

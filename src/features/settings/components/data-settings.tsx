@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import {
   AlertTriangle,
   Check,
@@ -15,7 +16,6 @@ import {
   Upload,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';

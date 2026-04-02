@@ -46,6 +46,15 @@ export const AllPatterns: Story = {
 };
 ```
 
+### Disabled Story（disabled prop がある場合）
+
+```tsx
+/** 無効状態。 */
+export const Disabled: Story = {
+  args: { disabled: true },
+};
+```
+
 ## tags の選び方
 
 | 条件                             | tags           | 理由                         |

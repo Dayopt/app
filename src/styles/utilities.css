@@ -10,6 +10,42 @@
 }
 
 /* ============================================
+ * カスタムスクロールバー（細め）
+ *
+ * サイドバー、リスト等のスクロールコンテナに適用。
+ * Webkit + Firefox 両対応。
+ * ============================================ */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--color-muted-foreground) 50%, transparent);
+  }
+
+  /* Firefox */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent;
+  }
+
+  .scrollbar-thin:hover {
+    scrollbar-color: color-mix(in oklch, var(--color-muted-foreground) 50%, transparent) transparent;
+  }
+}
+
+/* ============================================
  * ボーダーインジケータ
  *
  * カレンダーエントリの左端アクセント線。

@@ -212,7 +212,7 @@ export const Overview: Story = {
                 </div>
               </CardHeader>
               <CardContent>
-                <h3 className="mb-1 font-medium">週次レポート作成</h3>
+                <h3 className="mb-1">週次レポート作成</h3>
                 <p className="text-muted-foreground text-sm">プロジェクトAの進捗をまとめる</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
@@ -239,7 +239,7 @@ export const Overview: Story = {
                 </div>
               </CardHeader>
               <CardContent>
-                <h3 className="mb-1 font-medium">ミーティング準備</h3>
+                <h3 className="mb-1">ミーティング準備</h3>
                 <p className="text-muted-foreground text-sm">資料の確認と質問事項の整理</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground flex items-center gap-1">
@@ -262,7 +262,7 @@ export const Overview: Story = {
                 </div>
               </CardHeader>
               <CardContent>
-                <h3 className="mb-1 font-medium">コードレビュー</h3>
+                <h3 className="mb-1">コードレビュー</h3>
                 <p className="text-muted-foreground text-sm">PR #123 のレビュー</p>
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <span className="text-destructive flex items-center gap-1">

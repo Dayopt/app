@@ -2,13 +2,13 @@
   "record": {
     "inspector": {
       "title": "エントリー詳細",
-      "deleteConfirm": "このエントリーを削除しますか？",
-      "notFound": "エントリーが見つかりません",
+      "deleteConfirm": "このエントリーを削除する？",
+      "notFound": "エントリーが見つからない",
       "openEntry": "エントリーを開く",
       "toast": {
-        "timeOverlap": "時間が重複しています",
-        "saveFailed": "保存に失敗しました",
-        "tagsSaveFailed": "タグの保存に失敗しました"
+        "timeOverlap": "時間が重複している",
+        "saveFailed": "保存できなかった。もう一度試して",
+        "tagsSaveFailed": "タグを保存できなかった。もう一度試して"
       }
     }
   }

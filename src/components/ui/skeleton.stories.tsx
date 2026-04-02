@@ -24,17 +24,17 @@ export const Shimmer: Story = {
     <div className="flex flex-col items-start gap-4">
       <Card>
         <CardHeader className="pb-2">
-          <Skeleton animation="shimmer" className="h-5 w-24" />
-          <Skeleton animation="shimmer" className="h-4 w-32" />
+          <Skeleton variant="shimmer" className="h-5 w-24" />
+          <Skeleton variant="shimmer" className="h-4 w-32" />
         </CardHeader>
         <CardContent>
-          <Skeleton animation="shimmer" className="h-16 w-full" />
+          <Skeleton variant="shimmer" className="h-16 w-full" />
         </CardContent>
       </Card>
       <div className="space-y-2">
-        <Skeleton animation="shimmer" className="h-4 w-full" />
-        <Skeleton animation="shimmer" className="h-4 w-full" />
-        <Skeleton animation="shimmer" className="h-4 w-3/4" />
+        <Skeleton variant="shimmer" className="h-4 w-full" />
+        <Skeleton variant="shimmer" className="h-4 w-full" />
+        <Skeleton variant="shimmer" className="h-4 w-3/4" />
       </div>
     </div>
   ),
@@ -83,11 +83,11 @@ export const AllPatterns: Story = {
       <p className="text-muted-foreground text-xs">shimmerアニメーション（左→右の波）</p>
       <Card>
         <CardHeader className="pb-2">
-          <Skeleton animation="shimmer" className="h-5 w-24" />
-          <Skeleton animation="shimmer" className="h-4 w-32" />
+          <Skeleton variant="shimmer" className="h-5 w-24" />
+          <Skeleton variant="shimmer" className="h-4 w-32" />
         </CardHeader>
         <CardContent>
-          <Skeleton animation="shimmer" className="h-16 w-full" />
+          <Skeleton variant="shimmer" className="h-16 w-full" />
         </CardContent>
       </Card>
     </div>

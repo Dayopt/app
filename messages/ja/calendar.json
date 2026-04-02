@@ -4,7 +4,7 @@
       "search": "検索"
     },
     "meta": {
-      "description": "タイムボクシングでスケジュールを計画。日・週・月単位で予定を確認・管理できます。"
+      "description": "タイムボクシングでスケジュールを計画。日・週・月単位で予定を確認・管理。"
     },
     "title": "カレンダー",
     "views": {
@@ -36,7 +36,7 @@
       "edit": "編集",
       "duplicate": "複製",
       "restore": "予定を復元しました",
-      "restoreFailed": "復元できませんでした",
+      "restoreFailed": "復元できなかった。もう一度試して",
       "adjustEndTime": "ドラッグして終了時間を調整",
       "noTimeSet": "時間未設定",
       "selectTag": "タグを選択...",
@@ -47,21 +47,21 @@
       "deleted": "予定を削除しました",
       "moved": "予定を移動しました",
       "resized": "予定をリサイズしました",
-      "resizeFailed": "予定のリサイズ���失敗しました",
+      "resizeFailed": "予定をリサイズできなかった。もう一度試して",
       "undoMove": "移動を取り消しました",
-      "undoFailed": "取り消しに失敗しました",
+      "undoFailed": "取り消しできなかった。もう一度試して",
       "saved": "保存しました",
-      "noEventsOnThisDay": "この日にはイベントがありません",
-      "selectEventToEdit": "編集するイベントを選択してください",
-      "selectEventToDelete": "削除するイベントを選択してください",
+      "noEventsOnThisDay": "この日にはイベントがない",
+      "selectEventToEdit": "編集するイベントを選択",
+      "selectEventToDelete": "削除するイベントを選択",
       "deselected": "イベントの選択を解除しました",
       "operationCancelled": "操作をキャンセルしました",
-      "deleteFailed": "予定の削除に失敗しました",
-      "moveFailed": "予定の移動に失敗しました",
-      "duplicateFailed": "予定の複製に失敗しました",
+      "deleteFailed": "予定を削除できなかった。もう一度試して",
+      "moveFailed": "予定を移動できなかった。もう一度試して",
+      "duplicateFailed": "予定を複製できなかった。もう一度試して",
       "restoreError": "復元エラー",
       "createNewEvent": "新しいイベントを作成",
-      "enterEventTitle": "イベントタイトルを入力",
+      "enterEventTitle": "例: ミーティング、ランチ...",
       "reminderSet": "リマインダー設定済み",
       "noTitle": "(タイトルなし)",
       "allDay": "終日"
@@ -69,7 +69,7 @@
     "contextMenu": {
       "title": "エントリ操作",
       "addToPalette": "パレットに追加",
-      "delete": "削除"
+      "delete": "エントリーを削除"
     },
     "toast": {
       "created": "予定を作成しました",
@@ -86,10 +86,10 @@
       "conflict": "時間が重複しています",
       "conflictDescription": "既存の予定と時間が重複しています",
       "saving": "保存中...",
-      "error": "操作に失敗しました",
+      "error": "操作できなかった。もう一度試して",
       "errorDescription": "しばらく時間を置いてから再度お試しください",
       "syncSuccess": "カレンダーを同期しました",
-      "syncError": "同期に失敗しました",
+      "syncError": "同期できなかった。もう一度試して",
       "syncErrorDescription": "ネットワーク接続を確認してください",
       "batchComplete": "{operation}を完了しました",
       "batchDescription": "{count}件の予定を処理しました",
@@ -98,7 +98,7 @@
       "hoursBefore": "{hours}時間前",
       "minutesBefore": "{minutes}分前",
       "dropInvalid": "ドロップ先が無効です",
-      "dropFailed": "ドロップに失敗しました",
+      "dropFailed": "ドロップできなかった。もう一度試して",
       "weekendsShown": "週末を表示",
       "weekendsHidden": "週末を非表示"
     },
@@ -114,8 +114,8 @@
       "closeMiniCalendar": "ミニカレンダーを閉じる"
     },
     "errors": {
-      "loadFailed": "カレンダーの読み込みに失敗しました",
-      "displayFailed": "カレンダーを表示できませんでした。ページをリロードしてください。"
+      "loadFailed": "カレンダーを読み込めなかった。もう一度試して",
+      "displayFailed": "カレンダーを表示できなかった。ページをリロードして"
     },
     "dateRange": {
       "weekLabel": "第{weekNumber}週"
@@ -125,7 +125,7 @@
       "tags": "タグ",
       "ungrouped": "グループなし",
       "untagged": "タグなし",
-      "noTags": "タグがありません",
+      "noTags": "まだタグがない",
       "comingSoon": "近日公開予定",
       "createTag": "タグを作成",
       "addTagToGroup": "タグを追加",
@@ -149,11 +149,11 @@
       },
       "mergeTag": {
         "title": "タグを統合",
-        "selectTarget": "統合先のタグを選択してください",
+        "selectTarget": "統合先のタグを選択",
         "searchPlaceholder": "タグを検索...",
         "noResults": "タグが見つかりません",
-        "confirm": "統合する",
-        "selectRequired": "統合先のタグを選択してください",
+        "confirm": "統合",
+        "selectRequired": "統合先のタグを選択",
         "description": "「{sourceName}」を「{targetName}」に統合しますか？この操作は取り消せません。",
         "descriptionWithChildren": "「{sourceName}」を「{targetName}」に統合しますか？子タグはルートタグに昇格します。この操作は取り消せません。"
       },
@@ -161,7 +161,7 @@
       "expand": "展開",
       "collapse": "折りたたむ",
       "ungroupTags": "グループを解除",
-      "ungroupTagsFailed": "グループの解除に失敗しました",
+      "ungroupTagsFailed": "グループを解除できなかった。もう一度試して",
       "ungroupTagsSuccess": "「{name}」のグループを解除しました（{count}個のタグ）",
       "ungroupConflict": {
         "title": "同名のタグが存在します",
@@ -172,7 +172,7 @@
         "title": "「{name}」グループを削除",
         "description": "{count}個のタグが削除されます。エントリー自体は削除されません。",
         "success": "「{name}」グループを削除しました（{count}個のタグ）",
-        "failed": "グループの削除に失敗しました"
+        "failed": "グループを削除できなかった。もう一度試して"
       }
     },
     "tagSelector": {
@@ -210,9 +210,9 @@
       "percent": "%",
       "total": "合計",
       "backToAll": "すべてのタグ",
-      "noTagData": "この期間のタグデータがありません",
+      "noTagData": "この期間のタグデータがない",
       "emptyTitle": "今週のデータがありません",
-      "emptyDescription": "エントリーを追加して進捗を確認しましょう",
+      "emptyDescription": "エントリーを追加して進捗を確認",
       "periodDay": "日",
       "periodWeek": "週",
       "periodMonth": "月",
@@ -288,10 +288,10 @@
       },
       "insights": {
         "entryRateLow": "この期間の活動の大半は計画外でした",
-        "entryRateLowDetail": "翌日の計画を前夜に立ててみましょう",
+        "entryRateLowDetail": "翌日の計画を前夜に立てると効果的",
         "deepUtilizationLow": "ピーク時間帯がほとんど使われていません",
         "contextSwitchesHigh": "タスク切替が多い期間でした",
-        "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理してみましょう",
+        "contextSwitchesHighDetail": "類似タスクをまとめてバッチ処理すると効率的",
         "blankRateHigh": "空白時間が多めの期間でした",
         "trendWorse": "{label} が前期間より {pct}% 低下しました",
         "trendBetter": "{label} が前期間より {pct}% 改善しました",
@@ -335,6 +335,7 @@
         "recentBlocks": "直近のブロック",
         "deviation": "誤差",
         "noEntries": "エントリがありません",
+        "errorTitle": "データを読み込めなかった。もう一度試して",
         "entries": "件",
         "planRate": "計画率",
         "fulfillment": "充実度",
@@ -357,10 +358,10 @@
     },
     "error": {
       "title": "カレンダーの読み込みに失敗しました",
-      "description": "ネットワーク接続を確認して、もう一度お試しください。",
+      "description": "ネットワーク接続を確認して、もう一度試して",
       "retry": "再読み込み",
       "reload": "ページをリロード",
-      "entriesLoadFailed": "エントリの読み込みに失敗しました。ページを更新してください。"
+      "entriesLoadFailed": "エントリを読み込めなかった。ページを更新して"
     }
   }
 }

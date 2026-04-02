@@ -17,7 +17,7 @@ export function CoverageBar({ pct, label }: CoverageBarProps) {
           style={{ width: `${clampedPct}%` }}
         />
       </div>
-      <span className="w-12 text-right text-xs font-medium tabular-nums">{pct}%</span>
+      <span className="w-12 text-right text-xs tabular-nums">{pct}%</span>
     </div>
   );
 }

@@ -79,8 +79,7 @@ module.exports = {
         // LCP: Largest Contentful Paint (読み込み速度)
         // Google基準: ≤ 2.5s (Good), > 4.0s (Poor)
         // モバイルエミュレーションの影響で高くなるため警告のみ
-        // Phase 3目標: 2.5s
-        'largest-contentful-paint': ['warn', { maxNumericValue: 4000 }],
+        'largest-contentful-paint': ['warn', { maxNumericValue: 2500 }],
 
         // CLS: Cumulative Layout Shift (視覚的安定性)
         // Google基準: < 0.1 (Good), > 0.25 (Poor)

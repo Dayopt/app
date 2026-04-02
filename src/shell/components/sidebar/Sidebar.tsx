@@ -51,7 +51,7 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
             height={20}
             className="rounded-lg"
           />
-          <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
+          <span className="text-foreground text-sm font-bold tracking-tight">Dayopt</span>
         </div>
         <div className="flex items-center">
           <HoverTooltip content={t('navigation.sidebar.navigation.search')} side="bottom">

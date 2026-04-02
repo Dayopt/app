@@ -73,7 +73,7 @@ function MockSidebarHeader() {
     <div className="flex h-12 shrink-0 items-center justify-between px-2">
       <div className="flex items-center gap-2 pl-2">
         <div className="bg-primary size-5 rounded-lg" />
-        <span className="text-foreground text-sm font-semibold tracking-tight">Dayopt</span>
+        <span className="text-foreground text-sm font-bold tracking-tight">Dayopt</span>
       </div>
       <div className="flex items-center">
         <button
@@ -337,7 +337,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Default（開いた状態）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Default（開いた状態）</p>
         <div className="w-64 px-2">
           <SidebarSection title="セクション" defaultOpen>
             <BlockItem
@@ -356,7 +356,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Collapsed（閉じた状態）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Collapsed（閉じた状態）</p>
         <div className="w-64 px-2">
           <SidebarSection title="セクション">
             <BlockItem
@@ -369,7 +369,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">WithAction（+ボタン付き）</p>
+        <p className="text-muted-foreground mb-2 text-xs">WithAction（+ボタン付き）</p>
         <div className="w-64 px-2">
           <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
             <BlockItem
@@ -382,9 +382,7 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">
-          FullSidebar（全セクション構成）
-        </p>
+        <p className="text-muted-foreground mb-2 text-xs">FullSidebar（全セクション構成）</p>
         <SidebarShell>
           <MockSidebarHeader />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">

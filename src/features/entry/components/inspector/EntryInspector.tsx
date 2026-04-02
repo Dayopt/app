@@ -11,11 +11,10 @@
  * content の重複なし: EntryInspectorForm を一度だけ描画。
  */
 
-import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { ErrorState } from '@/components/common/ErrorState';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -97,13 +96,7 @@ export function EntryInspector({
     );
   } else if (isError) {
     content = (
-      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4">
-        <AlertTriangle className="text-muted-foreground size-8" />
-        <p className="text-muted-foreground text-sm">{t('error.boundary.title')}</p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          {t('error.boundary.retry')}
-        </Button>
-      </div>
+      <ErrorState title={t('error.boundary.title')} onRetry={() => refetch()} size="sm" centered />
     );
   } else if (!entry) {
     content = (

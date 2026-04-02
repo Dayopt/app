@@ -102,11 +102,11 @@ export const AllPatterns: Story = {
   render: (args) => (
     <div className="flex flex-col items-start gap-8">
       <div style={{ width: '100%', maxWidth: 400 }}>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">未選択</p>
+        <p className="text-muted-foreground mb-2 text-xs">未選択</p>
         <ChronotypeStep {...args} selectedType={null} showQuiz={false} />
       </div>
       <div style={{ width: '100%', maxWidth: 400 }}>
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Bear選択済み</p>
+        <p className="text-muted-foreground mb-2 text-xs">Bear選択済み</p>
         <ChronotypeStep {...args} selectedType="bear" showQuiz={false} />
       </div>
     </div>

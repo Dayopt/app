@@ -13,9 +13,9 @@
 
 import { useCallback } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import type { CalendarViewType } from '@/lib/calendar-constants';
 import { getMultiDayCount, isMultiDayView } from '@/lib/calendar-constants';

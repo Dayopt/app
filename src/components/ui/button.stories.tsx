@@ -19,7 +19,7 @@ const meta = {
       options: ['sm', 'default', 'lg'],
       description: 'ボタンのサイズ',
     },
-    isLoading: {
+    loading: {
       control: 'boolean',
       description: 'ローディング状態',
     },
@@ -156,8 +156,8 @@ export const AllPatterns: Story = {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <Button isLoading>保存中</Button>
-          <Button isLoading loadingText="処理中...">
+          <Button loading>保存中</Button>
+          <Button loading loadingText="処理中...">
             保存
           </Button>
           <Button disabled>無効</Button>
@@ -179,7 +179,7 @@ export const AllPatterns: Story = {
               </button>
               <button
                 type="button"
-                className="hover:bg-state-hover flex h-full items-center px-4 text-sm font-medium transition-colors"
+                className="hover:bg-state-hover flex h-full items-center px-4 text-sm transition-colors"
               >
                 Today
               </button>

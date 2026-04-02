@@ -111,7 +111,7 @@ const DateMainDisplay = ({
       <div
         className={cn(
           'text-base font-normal',
-          today ? 'text-foreground font-semibold' : 'text-muted-foreground',
+          today ? 'text-foreground font-bold' : 'text-muted-foreground',
         )}
       >
         {dayName}

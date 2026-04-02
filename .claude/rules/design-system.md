@@ -28,8 +28,12 @@ paths:
 - **判断基準:**
   - Raised: ページと一緒にスクロールする要素
   - Overlay: ページの上に重なる要素。下のコンテンツを覆う
-- **入力系:** `shadow-inner`（input, well）は Elevation とは別。`shadow-none` はリセット用
-- `shadow-md` / `shadow-lg` / `shadow-xl` は使用禁止。`shadow-sm` と `shadow-card` の2種のみ
+- **入力系:** input, textarea, select, radio 等のフォームコントロールは `shadow-xs` を使用
+- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ
+  - `shadow-xs`: form control 専用（input, select, textarea, radio）
+  - `shadow-sm`: Raised elevation（bg-card を使うカード・セクション）
+  - `shadow-card`: Overlay elevation（dropdown, popover, dialog, modal）
+- `shadow-md` / `shadow-lg` / `shadow-xl` は使用禁止。`shadow-none` はリセット用
 
 ## Spacing
 
@@ -134,3 +138,113 @@ paths:
 | 最前面           | 9999      | tooltip                                                             |
 
 - **Elevation との関係**: Sunken / Base / Raised は z-index 指定なし。Overlay のみ z-index を使用。見た目の浮き（shadow）は Elevation、スタッキング順序は Z-Index。別の関心事
+
+## State Patterns (Error / Empty / Loading)
+
+### Empty State
+
+- コンポーネント: `EmptyState` (`@/components/common/EmptyState`)
+- アイコン: `size-10` (40px), `text-muted-foreground`
+- ARIA: `role="status"`
+- 用途: データが存在しない場合の表示
+- **ルール**: 親コンテナが空状態を所有する。子の可視化コンポーネントは `return null`
+
+### Error State
+
+- コンポーネント: `ErrorState` (`@/components/common/ErrorState`)
+- アイコン: `AlertCircle`, `size-8` (32px), `text-destructive`
+- ARIA: `role="alert"`
+- リトライ: `Button variant="outline"`
+- 用途: tRPC クエリの `isError` 等、データ取得失敗時
+- **ルール**: UI を描画する全 `useQuery` は `isError` を ErrorState でハンドリング必須
+
+### Loading State
+
+- Skeleton (`animate-shimmer`): コンテンツ形状のローディング、300ms〜3s
+- Spinner (`@/components/ui/spinner`): 短いインラインローディング、〜2s
+- `loading.tsx` (Next.js): ページレベルの Skeleton
+- **ルール**: コンテンツ領域は Skeleton 優先。生 `Loader2` 禁止、必ず Spinner コンポーネントを使用
+
+### 判断マトリクス
+
+| シナリオ                 | コンポーネント  | サイズ                   |
+| ------------------------ | --------------- | ------------------------ |
+| tRPC クエリ失敗          | `ErrorState`    | 親コンテキストに合わせる |
+| データなし（親コンテナ） | `EmptyState`    | 親コンテキストに合わせる |
+| データなし（子の可視化） | `return null`   | —                        |
+| コンポーネントクラッシュ | `ErrorBoundary` | —                        |
+| ページエラー             | `error.tsx`     | フルページ               |
+| Mutation 失敗            | Toast (sonner)  | —                        |
+| 初期データ読み込み       | Skeleton        | コンテンツ形状に合わせる |
+| ボタン/インライン操作    | Spinner         | sm / md                  |
+
+## Interaction Patterns
+
+### 確認フロー
+
+不可逆・重要な操作の前に確認ダイアログを挟む。
+
+| 操作                             | variant       | 例                         |
+| -------------------------------- | ------------- | -------------------------- |
+| 不可逆な削除                     | `destructive` | アカウント削除、データ削除 |
+| 大量更新・変更破棄               | `warning`     | 一括変更、未保存破棄       |
+| 通常の確認                       | `default`     | アーカイブ、エクスポート   |
+| 取り消し可能な操作（保存・作成） | 確認不要      | —                          |
+
+- コンポーネント: `ConfirmDialog` (`@/components/ui/confirm-dialog`)
+- Props: `title`, `description`, `variant`, `icon?` (LucideIcon), `confirmLabel?`, `confirmDisabled?`
+- `onConfirm` は async 可。Loading 中は両ボタン自動 disable、ESC・backdrop click ブロック
+- 入力を伴う確認（パスワード確認等）は `AlertDialog` (`@radix-ui/react-alert-dialog`) を直接使用
+- z-index: 通常 `z-confirm` (250)、Inspector 上は `z-overlay-confirm` (1400)
+
+### Toast フィードバック
+
+操作結果のフィードバックに `toast` (`@/lib/toast`) を使用。`sonner` の直接 import は禁止。
+
+| タイプ       | 呼び出し          | duration | 用途           |
+| ------------ | ----------------- | -------- | -------------- |
+| 成功         | `toast.success()` | 3秒      | Mutation 成功  |
+| エラー       | `toast.error()`   | 手動消去 | Mutation 失敗  |
+| 警告         | `toast.warning()` | 6秒      | 注意喚起       |
+| 情報         | `toast.info()`    | 6秒      | ヒント、通知   |
+| 非同期進行中 | `toast.promise()` | 自動     | エクスポート等 |
+
+- 位置: mobile `bottom-center`、desktop `bottom-right`
+- closeButton: 全タイプ常時表示
+- Undo 可能な操作: `action: { label: '元に戻す', onClick }` を付与
+- ページレベルの持続的エラーは Toast ではなく `ErrorState` / インライン通知を使用
+- **import**: `import { toast } from '@/lib/toast'`（`sonner` 直接禁止）
+
+### フォームバリデーション
+
+react-hook-form + Zod + Field コンポーネント。
+
+- **バリデーションタイミング**: `mode: 'onBlur'`（初回はフィールド離脱時）、`reValidateMode: 'onChange'`（以降はリアルタイム）
+- **エラー表示**: `FieldError` — `text-sm text-destructive`、`＊` prefix 自動付与
+- **サーバーエラー**: `FieldError announceImmediately` でスクリーンリーダー即時通知（`role="alert"` をオプトイン）
+- **成功表示**: なし（正常が当たり前）
+- **保存中**: `Button loading={isSubmitting}` でスピナー + disabled
+- DADS 準拠: デフォルトは `role="alert"` なし。サーバーエラーのみ `announceImmediately`
+
+### ドラッグ操作
+
+2層構造で用途を分離。
+
+| レイヤー | ライブラリ                | 用途                               |
+| -------- | ------------------------- | ---------------------------------- |
+| Local    | interaction state machine | カレンダー内ブロック移動・リサイズ |
+| Provider | `@dnd-kit`                | リスト並び替え（タグ順序等）       |
+
+**ビジュアル状態:**
+
+| 状態         | スタイル                               | トークン/クラス           |
+| ------------ | -------------------------------------- | ------------------------- |
+| ドラッグ中   | ゴースト: `opacity-85` + `shadow-card` | `GhostRenderer`（Portal） |
+| ソースカード | `opacity-30`                           | —                         |
+| ドロップ先   | 16% foreground overlay                 | `bg-state-dragged`        |
+| 重複検出     | 赤リング                               | `ring-destructive ring-2` |
+| ドロップ拒否 | 200ms ease-out スナップバック          | GhostRenderer 内蔵        |
+
+- カーソル: 通常 `cursor-grab`、ドラッグ中 `cursor-grabbing`（`document.body` に直接設定）
+- z-index: `z-calendar-drag` (1000)
+- 過去ブロックへのドラッグは UI + ロジックの二重拒否（`temporal-constraints.md` 参照）

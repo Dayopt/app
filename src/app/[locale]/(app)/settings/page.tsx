@@ -126,14 +126,14 @@ export default function SettingsPage() {
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <p className="text-lg font-semibold">{displayName}</p>
+            <p className="text-lg font-bold">{displayName}</p>
             {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
           </div>
         </div>
       </Link>
       {/* Upgrade ボタンはリンク外 */}
       <div className="flex justify-center pb-6">
-        <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>
+        <Button variant="primary" size="sm" onClick={() => router.push('/settings/billing')}>
           <Sparkles className="size-4" />
           {t('navigation.navUser.upgradePlan')}
         </Button>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   key={link.labelKey}
                   type="button"
                   onClick={link.onPress}
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
                 >
                   {/* C. アイコン色 */}
                   <Icon className="text-muted-foreground size-5 shrink-0" />
@@ -183,9 +183,9 @@ export default function SettingsPage() {
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
+                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
               >
-                {/* C. アイコン色 + D. py-2 */}
+                {/* C. アイコン色 */}
                 <Icon className="text-muted-foreground size-5 shrink-0" />
                 <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                 {link.external && <ExternalLink className="text-muted-foreground size-3.5" />}
@@ -197,7 +197,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setLegalOpen((prev) => !prev)}
-            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
+            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
           >
             <Scale className="text-muted-foreground size-5 shrink-0" />
             <span className="flex-1 font-normal">{t('settings.accountPage.legal')}</span>
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-2 pr-4 pl-12 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-4 pr-4 pl-12 text-left text-sm transition-colors"
                 >
                   <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                   <ExternalLink className="text-muted-foreground size-3.5" />
@@ -233,7 +233,7 @@ export default function SettingsPage() {
           type="button"
           onClick={logout}
           disabled={isLoggingOut}
-          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-2 text-left text-sm transition-colors"
+          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
         >
           <LogOut className="text-destructive size-5 shrink-0" />
           <span className="flex-1 font-normal">

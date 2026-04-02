@@ -75,7 +75,7 @@ export const DateNavigator = ({
           <button
             type="button"
             onClick={() => onNavigate('today')}
-            className={cn(navButtonBase, 'px-4 text-sm font-medium')}
+            className={cn(navButtonBase, 'px-4 text-sm')}
           >
             {todayLabel}
           </button>
