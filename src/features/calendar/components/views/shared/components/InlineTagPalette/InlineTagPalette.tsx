@@ -10,10 +10,10 @@
 
 import { useCallback, useRef, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { useEntryMutations } from '@/features/entry';

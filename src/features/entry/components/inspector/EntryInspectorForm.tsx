@@ -9,9 +9,9 @@
 
 import { useCallback, useMemo } from 'react';
 
+import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { useCreateTag, useTagsMap } from '@/features/tags';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';

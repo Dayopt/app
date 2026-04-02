@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { AlertTriangle, Check, CreditCard, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { ErrorState } from '@/components/common/ErrorState';
 import { LabeledRow } from '@/components/common/LabeledRow';

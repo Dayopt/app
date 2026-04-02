@@ -2,9 +2,9 @@
 
 import { memo, useCallback, useState } from 'react';
 
+import { toast } from '@/lib/toast';
 import { Download, FileJson, History, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';

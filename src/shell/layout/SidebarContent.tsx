@@ -9,10 +9,10 @@
 
 import { useCallback } from 'react';
 
+import { toast } from '@/lib/toast';
 import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';

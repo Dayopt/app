@@ -3,9 +3,9 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { selectSessionExpired, useAuthStore } from '@/stores/useAuthStore';
 

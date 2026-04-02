@@ -5,8 +5,8 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
 
 import type {
   ChronotypeSettings as ChronotypeSettingsState,

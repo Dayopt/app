@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { Button } from '@/components/ui/button';
 
@@ -108,7 +108,7 @@ export const Overview: Story = {
           </div>
 
           <pre className="bg-container mt-4 overflow-x-auto rounded-lg p-4 text-xs">
-            {`import { toast } from 'sonner';
+            {`import { toast } from '@/lib/toast';
 
 // 成功
 toast.success('保存しました');

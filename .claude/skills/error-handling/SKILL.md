@@ -177,7 +177,7 @@ export function ErrorFallback({
 ```typescript
 // hooks/useErrorToast.ts
 import { TRPCClientError } from '@trpc/client';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 export function useErrorToast() {
   return (error: unknown) => {
