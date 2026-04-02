@@ -81,7 +81,7 @@ export const Breakpoints: Story = {
         {/* MEDIA_QUERIES */}
         <section>
           <h2 className="mb-4 text-lg font-bold">useMediaQuery用クエリ</h2>
-          <p className="text-muted-foreground mb-4 text-sm">src/config/ui/breakpoints.ts で定義</p>
+          <p className="text-muted-foreground mb-4 text-sm">src/lib/breakpoints.ts で定義</p>
           <div className="bg-container space-y-2 rounded-lg p-4 font-mono text-sm">
             <div>
               <span className="text-muted-foreground">MEDIA_QUERIES.mobile:</span> &apos;(max-width:
