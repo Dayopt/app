@@ -106,7 +106,7 @@ const DateMainDisplay = ({
   dateString: string;
   today: boolean;
 }) => (
-  <div className="flex items-center gap-1">
+  <div className="flex items-center">
     {dayName ? (
       <div
         className={cn(

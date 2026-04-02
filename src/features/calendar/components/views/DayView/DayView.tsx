@@ -32,7 +32,7 @@ export const DayView = ({
   onViewChange: _onViewChange,
   onNavigatePrev: _onNavigatePrev,
   onNavigateNext: _onNavigateNext,
-  onNavigateToday,
+  onNavigateToday: _onNavigateToday,
 }: DayViewProps) => {
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
@@ -79,15 +79,6 @@ export const DayView = ({
     return getWeek(date, { weekStartsOn });
   }, [date, weekStartsOn]);
 
-  // 日付ヘッダーのクリックハンドラー（DayViewでは日付変更のみ）
-  const handleDateHeaderClick = React.useCallback(
-    (_clickedDate: Date) => {
-      // DayViewで日付ヘッダーをクリックした場合、その日付に移動
-      onNavigateToday?.();
-    },
-    [onNavigateToday],
-  );
-
   const headerComponent = (
     <div className="flex h-8 items-center justify-center px-2">
       <DateDisplay
@@ -99,7 +90,6 @@ export const DayView = ({
         dateFormat="d"
         isToday={isToday}
         isSelected={false}
-        onClick={handleDateHeaderClick}
       />
     </div>
   );

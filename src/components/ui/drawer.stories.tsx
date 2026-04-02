@@ -52,10 +52,10 @@ export const AllPatterns: Story = {
               </div>
             </div>
             <DrawerFooter>
-              <Button>保存</Button>
               <DrawerClose asChild>
                 <Button variant="outline">キャンセル</Button>
               </DrawerClose>
+              <Button>保存</Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
