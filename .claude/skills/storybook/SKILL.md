@@ -108,6 +108,19 @@ export const AllPatterns: Story = {
 };
 ```
 
+### 推奨 State Stories
+
+`disabled` prop を持つコンポーネントでは、Disabled Story を追加する:
+
+```tsx
+/** 無効状態。 */
+export const Disabled: Story = {
+  args: { disabled: true },
+};
+```
+
+AllPatterns 内にも disabled 状態を含めること。
+
 ### セマンティックトークン
 
 - `text-foreground`, `bg-card`, `border-border` 等のセマンティックトークンのみ使用
@@ -188,6 +201,22 @@ Story作成時、以下のFoundations Storiesを参照してデザイン一貫�
 | `Foundations/Colors`     | セマンティックカラー、状態色 |
 | `Foundations/Typography` | フォントサイズ・ウェイト階層 |
 | `Foundations/Spacing`    | 余白パターン                 |
+
+---
+
+## Design System クイックリファレンス
+
+Story 作成時に頻出するトークン許可値の早見表。詳細は `.claude/rules/design-system.md` を参照。
+
+| カテゴリ        | 許可値                                                                     |
+| --------------- | -------------------------------------------------------------------------- |
+| **Spacing**     | `0`, `1`(4px), `2`(8px), `4`(16px), `6`(24px), `8`(32px), `12`, `16`, `24` |
+| **Radius**      | `rounded-none`, `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`     |
+| **Icon Size**   | `size-3.5`, `size-4`, `size-5`, `size-6`, `size-8`, `size-10`              |
+| **Font Weight** | `font-normal`, `font-bold` のみ                                            |
+| **Shadow**      | `shadow-xs`(input), `shadow-sm`(Raised), `shadow-card`(Overlay)            |
+| **色**          | セマンティックトークンのみ（`text-foreground`, `bg-card` 等）              |
+| **Transition**  | `transition-colors duration-150`（標準）                                   |
 
 ---
 
