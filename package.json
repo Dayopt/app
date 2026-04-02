@@ -44,6 +44,7 @@
     "test": "vitest --project unit",
     "test:run": "vitest --project unit run",
     "test-storybook": "vitest --project storybook",
+    "test-storybook:dark": "vitest --project storybook-dark",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --project unit run --coverage",
     "test:diff-coverage": "npm run test:coverage && tsx scripts/diff-coverage.ts",
