@@ -28,8 +28,12 @@ paths:
 - **判断基準:**
   - Raised: ページと一緒にスクロールする要素
   - Overlay: ページの上に重なる要素。下のコンテンツを覆う
-- **入力系:** `shadow-inner`（input, well）は Elevation とは別。`shadow-none` はリセット用
-- `shadow-md` / `shadow-lg` / `shadow-xl` は使用禁止。`shadow-sm` と `shadow-card` の2種のみ
+- **入力系:** input, textarea, select, radio 等のフォームコントロールは `shadow-xs` を使用
+- **許可される shadow**: `shadow-xs`, `shadow-sm`, `shadow-card` の3種のみ
+  - `shadow-xs`: form control 専用（input, select, textarea, radio）
+  - `shadow-sm`: Raised elevation（bg-card を使うカード・セクション）
+  - `shadow-card`: Overlay elevation（dropdown, popover, dialog, modal）
+- `shadow-md` / `shadow-lg` / `shadow-xl` は使用禁止。`shadow-none` はリセット用
 
 ## Spacing
 
