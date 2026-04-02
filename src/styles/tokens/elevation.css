@@ -1,11 +1,9 @@
 /* ============================================
  * シャドウ（modern-minimal準拠）
- * Surface体系はMD3準拠:
- *   Light: background(0.99) > inset(0.96) > container(0.93) > card(0.90)
- *   Dark:  background(0.12) < inset(0.16) < container(0.18) < card(0.24)
+ * Surface体系:
+ *   Light: container(0.96) → background(0.98) → card(1.00)
+ *   Dark:  container(0.15) → background(0.18) → card(0.22)
+ *
+ * shadow-xs / shadow-sm / shadow-card は
+ * colors.css で定義、tailwind-theme.css でマッピング
  * ============================================ */
-@theme {
-  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-}
