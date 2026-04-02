@@ -35,7 +35,7 @@ export const Breakpoints: Story = {
               <tbody>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">sm:</code>
+                    <code className="bg-container rounded-lg px-2">sm:</code>
                   </td>
                   <td className="px-4 py-2">640px</td>
                   <td className="px-4 py-2">Compact/Medium境界</td>
@@ -43,7 +43,7 @@ export const Breakpoints: Story = {
                 </tr>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">md:</code>
+                    <code className="bg-container rounded-lg px-2">md:</code>
                   </td>
                   <td className="px-4 py-2">768px</td>
                   <td className="px-4 py-2">Medium</td>
@@ -51,7 +51,7 @@ export const Breakpoints: Story = {
                 </tr>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">lg:</code>
+                    <code className="bg-container rounded-lg px-2">lg:</code>
                   </td>
                   <td className="px-4 py-2">1024px</td>
                   <td className="px-4 py-2">Expanded</td>
@@ -59,7 +59,7 @@ export const Breakpoints: Story = {
                 </tr>
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">xl:</code>
+                    <code className="bg-container rounded-lg px-2">xl:</code>
                   </td>
                   <td className="px-4 py-2">1280px</td>
                   <td className="px-4 py-2">Large</td>
@@ -67,7 +67,7 @@ export const Breakpoints: Story = {
                 </tr>
                 <tr>
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">2xl:</code>
+                    <code className="bg-container rounded-lg px-2">2xl:</code>
                   </td>
                   <td className="px-4 py-2">1536px</td>
                   <td className="px-4 py-2">Extra-large</td>
@@ -121,6 +121,322 @@ export const Breakpoints: Story = {
   ),
 };
 
+export const LayoutArchitecture: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-2 text-2xl font-bold">レイアウト切替アーキテクチャ</h1>
+      <p className="text-muted-foreground mb-8">MEDIA_QUERIES.mobile（max-width: 767px）で二分岐</p>
+
+      <div className="grid max-w-5xl gap-8">
+        {/* レイアウト構造図 */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">レイアウト構造</h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* MobileLayout */}
+            <div>
+              <h3 className="text-muted-foreground mb-2 text-sm">MobileLayout（&lt; 768px）</h3>
+              <div className="border-border overflow-hidden rounded-lg border">
+                <LayoutSection label="AppHeader" bg="bg-container" height="h-8" />
+                <LayoutSection label="MainContent (pb-16)" bg="bg-background" height="h-24" />
+                <LayoutSection label="BottomTabBar h-14" bg="bg-container" height="h-8" />
+              </div>
+            </div>
+            {/* DesktopLayout */}
+            <div>
+              <h3 className="text-muted-foreground mb-2 text-sm">DesktopLayout（≥ 768px）</h3>
+              <div className="border-border flex overflow-hidden rounded-lg border">
+                <div className="border-border w-16 border-r">
+                  <LayoutSection label="Sidebar w-64" bg="bg-container" height="h-full" />
+                </div>
+                <div className="flex-1">
+                  <LayoutSection label="AppHeader" bg="bg-container" height="h-8" />
+                  <LayoutSection label="MainContent" bg="bg-background" height="h-24" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 判定フック */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">判定フック</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="px-4 py-2 text-left">フック</th>
+                  <th className="px-4 py-2 text-left">判定基準</th>
+                  <th className="px-4 py-2 text-left">用途</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">useMediaQuery</code>
+                  </td>
+                  <td className="px-4 py-2">MEDIA_QUERIES.mobile (max-width: 767px)</td>
+                  <td className="text-muted-foreground px-4 py-2">レイアウト切替</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">useIsMobile</code>
+                  </td>
+                  <td className="px-4 py-2">画面幅 &lt; 768px かつ タッチデバイス</td>
+                  <td className="text-muted-foreground px-4 py-2">UI振る舞い（タップ操作）</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* BottomTabBar スペック */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">BottomTabBar</h2>
+          <p className="text-muted-foreground mb-4 text-sm">
+            モバイルレイアウトでのみ表示。固定ボトムナビゲーション。
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="px-4 py-2 text-left">プロパティ</th>
+                  <th className="px-4 py-2 text-left">値</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">高さ</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">h-14</code>（56px）
+                  </td>
+                </tr>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">z-index</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">z-bottom-tab</code>（40）
+                  </td>
+                </tr>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">セーフエリア</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">pb-safe</code>（iOS
+                    ホームインジケーター）
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">タブ数</td>
+                  <td className="px-4 py-2">4（Calendar / Stats / Notifications / Account）</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-muted-foreground mt-4 text-sm">
+            メインコンテンツには <code className="bg-container rounded-lg px-2">pb-16</code>
+            （64px）で BottomTabBar 分の余白を確保。
+          </p>
+        </section>
+
+        {/* サイドバースペック */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">デスクトップサイドバー</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="px-4 py-2 text-left">プロパティ</th>
+                  <th className="px-4 py-2 text-left">値</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">幅（開）</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">w-64</code>（256px）
+                  </td>
+                </tr>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">幅（閉）</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">w-0</code>
+                    （collapse、transition-all）
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">背景</td>
+                  <td className="px-4 py-2">
+                    <code className="bg-container rounded-lg px-2">bg-container</code>（Sunken
+                    elevation）
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 実装パターン */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">実装パターン</h2>
+          <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
+            {`// base-layout-content.tsx
+const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+
+{isMobile ? (
+  <MobileLayout>{children}</MobileLayout>
+) : (
+  <DesktopLayout>{children}</DesktopLayout>
+)}`}
+          </pre>
+        </section>
+      </div>
+    </div>
+  ),
+};
+
+export const CalendarResponsive: Story = {
+  render: () => (
+    <div>
+      <h1 className="mb-2 text-2xl font-bold">カレンダーのレスポンシブ</h1>
+      <p className="text-muted-foreground mb-8">
+        デバイスサイズに応じたビュー制限とグリッド密度の自動調整
+      </p>
+
+      <div className="grid max-w-5xl gap-8">
+        {/* ビュー表示ルール */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">ビュー表示ルール</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="px-4 py-2 text-left">デバイス</th>
+                  <th className="px-4 py-2 text-left">画面幅</th>
+                  <th className="px-4 py-2 text-left">Day</th>
+                  <th className="px-4 py-2 text-left">Multi-day 上限</th>
+                  <th className="px-4 py-2 text-left">Week（7列）</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">モバイル</td>
+                  <td className="px-4 py-2">&lt; 768px</td>
+                  <td className="px-4 py-2">
+                    <CheckCircle className="text-success size-4" />
+                  </td>
+                  <td className="px-4 py-2">最大3日</td>
+                  <td className="px-4 py-2">
+                    <XCircle className="text-destructive size-4" />
+                  </td>
+                </tr>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">タブレット</td>
+                  <td className="px-4 py-2">768 - 1023px</td>
+                  <td className="px-4 py-2">
+                    <CheckCircle className="text-success size-4" />
+                  </td>
+                  <td className="px-4 py-2">最大5日</td>
+                  <td className="px-4 py-2">
+                    <XCircle className="text-destructive size-4" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">デスクトップ</td>
+                  <td className="px-4 py-2">≥ 1024px</td>
+                  <td className="px-4 py-2">
+                    <CheckCircle className="text-success size-4" />
+                  </td>
+                  <td className="px-4 py-2">制限なし</td>
+                  <td className="px-4 py-2">
+                    <CheckCircle className="text-success size-4" />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* モバイルビュー制限 */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">モバイルビュー制限</h2>
+          <div className="space-y-2">
+            <Rule type="do">モバイルでは day ビューのみ許可</Rule>
+            <Rule type="do">URL直アクセスで week が指定された場合、day に強制リダイレクト</Rule>
+            <Rule type="dont">モバイルで week / multi-day ビューを直接表示</Rule>
+          </div>
+        </section>
+
+        {/* グリッド密度 */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">グリッド密度（HOUR_HEIGHT_DENSITIES）</h2>
+          <p className="text-muted-foreground mb-4 text-sm">src/lib/calendar-constants.ts で定義</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-border border-b">
+                  <th className="px-4 py-2 text-left">密度</th>
+                  <th className="px-4 py-2 text-left">モバイル</th>
+                  <th className="px-4 py-2 text-left">タブレット</th>
+                  <th className="px-4 py-2 text-left">デスクトップ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">compact</td>
+                  <td className="px-4 py-2">36px</td>
+                  <td className="px-4 py-2">40px</td>
+                  <td className="px-4 py-2">48px</td>
+                </tr>
+                <tr className="border-border border-b">
+                  <td className="px-4 py-2">default</td>
+                  <td className="px-4 py-2">48px</td>
+                  <td className="px-4 py-2">60px</td>
+                  <td className="px-4 py-2">72px</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">spacious</td>
+                  <td className="px-4 py-2">64px</td>
+                  <td className="px-4 py-2">80px</td>
+                  <td className="px-4 py-2">96px</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 密度比較（視覚） */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">密度比較（default）</h2>
+          <div className="flex items-end gap-6">
+            <DensityBar label="Mobile" height={48} />
+            <DensityBar label="Tablet" height={60} />
+            <DensityBar label="Desktop" height={72} />
+          </div>
+        </section>
+
+        {/* 実装コード */}
+        <section>
+          <h2 className="mb-4 text-lg font-bold">実装コード</h2>
+          <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
+            {`// CalendarViewRenderer.tsx
+const MOBILE_MAX_DAYS = 3;
+const TABLET_MAX_DAYS = 5;
+
+const maxDays = isMobile ? MOBILE_MAX_DAYS
+  : isTablet ? TABLET_MAX_DAYS
+  : Infinity;
+
+// week ビューのフォールバック
+case 'week':
+  if (isMobile || isTablet) {
+    return <MultiDayView dayCount={maxDays} />;
+  }
+  return <WeekView />;`}
+          </pre>
+        </section>
+      </div>
+    </div>
+  ),
+};
+
 export const TouchTargets: Story = {
   render: () => (
     <div>
@@ -147,7 +463,7 @@ export const TouchTargets: Story = {
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">minimum</td>
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">h-11 w-11</code>
+                    <code className="bg-container rounded-lg px-2">h-11 w-11</code>
                   </td>
                   <td className="px-4 py-2">44px</td>
                   <td className="text-muted-foreground px-4 py-2">WCAG 2.5.5最小</td>
@@ -155,7 +471,7 @@ export const TouchTargets: Story = {
                 <tr className="border-border border-b">
                   <td className="px-4 py-2">standard</td>
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">h-12 w-12</code>
+                    <code className="bg-container rounded-lg px-2">h-12 w-12</code>
                   </td>
                   <td className="px-4 py-2">48px</td>
                   <td className="text-muted-foreground px-4 py-2">M3推奨（標準）</td>
@@ -163,7 +479,7 @@ export const TouchTargets: Story = {
                 <tr>
                   <td className="px-4 py-2">large</td>
                   <td className="px-4 py-2">
-                    <code className="bg-container rounded px-2">h-14 w-14</code>
+                    <code className="bg-container rounded-lg px-2">h-14 w-14</code>
                   </td>
                   <td className="px-4 py-2">56px</td>
                   <td className="text-muted-foreground px-4 py-2">FAB、重要アクション</td>
@@ -308,6 +624,30 @@ function Rule({ type, children }: { type: 'do' | 'dont'; children: React.ReactNo
     <div className="flex items-start gap-2 text-sm">
       <Icon className={`mt-1 size-4 shrink-0 ${color}`} />
       <span className={textColor}>{children}</span>
+    </div>
+  );
+}
+
+function LayoutSection({ label, bg, height }: { label: string; bg: string; height: string }) {
+  return (
+    <div
+      className={`${bg} border-border flex items-center justify-center border-b px-2 py-1 text-xs ${height}`}
+    >
+      <span className="text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function DensityBar({ label, height }: { label: string; height: number }) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="bg-primary text-primary-foreground flex w-16 items-end justify-center rounded-lg text-xs"
+        style={{ height: `${height}px` }}
+      >
+        {height}px
+      </div>
+      <span className="text-muted-foreground text-xs">{label}</span>
     </div>
   );
 }
