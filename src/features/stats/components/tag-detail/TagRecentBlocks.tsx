@@ -1,7 +1,10 @@
 'use client';
 
+import { Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { EmptyState } from '@/components/common/EmptyState';
+import { ErrorState } from '@/components/common/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/platform/trpc';
@@ -34,7 +37,7 @@ function formatDate(iso: string): string {
 export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data, isPending } = api.entries.getTagRecentEntries.useQuery({
+  const { data, isPending, isError, refetch } = api.entries.getTagRecentEntries.useQuery({
     tagId,
     limit: 8,
   });
@@ -52,6 +55,19 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
     );
   }
 
+  if (isError) {
+    return (
+      <Card className="border-none">
+        <CardHeader>
+          <CardTitle className="text-sm">{t('recentBlocks')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ErrorState title={t('errorTitle')} onRetry={() => refetch()} size="sm" centered />
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!data || data.length === 0) {
     return (
       <Card className="border-none">
@@ -59,9 +75,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
           <CardTitle className="text-sm">{t('recentBlocks')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-muted-foreground flex h-16 items-center justify-center text-sm">
-            {t('noEntries')}
-          </div>
+          <EmptyState icon={Clock} title={t('noEntries')} size="sm" centered />
         </CardContent>
       </Card>
     );

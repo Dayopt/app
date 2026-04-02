@@ -2,10 +2,13 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { CheckCheck, Loader2, Trash2 } from 'lucide-react';
+import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { EmptyState } from '@/components/common/EmptyState';
+import { ErrorState } from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { NotificationType } from '../schemas';
@@ -42,7 +45,7 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
   const t = useTranslations();
   const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
-  const { data: allNotifications = [], isLoading } = useNotificationsList();
+  const { data: allNotifications = [], isLoading, isError, refetch } = useNotificationsList();
   const { markAsRead, markAllAsRead, deleteNotification, deleteAllRead } =
     useNotificationMutations();
 
@@ -90,15 +93,20 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="size-6 animate-spin" />
+        <Spinner size="md" />
       </div>
     );
+  }
+
+  // Error
+  if (isError) {
+    return <ErrorState title={t('notification.error.title')} onRetry={() => refetch()} size="sm" />;
   }
 
   // Empty
   const emptyKey = `notification.empty.${tab}` as const;
   if (totalCount === 0) {
-    return <div className="text-muted-foreground py-8 text-center text-sm">{t(emptyKey)}</div>;
+    return <EmptyState icon={Bell} title={t(emptyKey)} size="sm" />;
   }
 
   return (

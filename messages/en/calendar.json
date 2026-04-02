@@ -335,6 +335,7 @@
         "recentBlocks": "Recent Blocks",
         "deviation": "deviation",
         "noEntries": "No entries",
+        "errorTitle": "Failed to load data",
         "entries": "entries",
         "planRate": "Plan rate",
         "fulfillment": "Fulfillment",

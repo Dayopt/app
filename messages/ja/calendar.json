@@ -335,6 +335,7 @@
         "recentBlocks": "直近のブロック",
         "deviation": "誤差",
         "noEntries": "エントリがありません",
+        "errorTitle": "データの読み込みに失敗しました",
         "entries": "件",
         "planRate": "計画率",
         "fulfillment": "充実度",

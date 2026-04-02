@@ -13,6 +13,9 @@
       "reminders": "リマインダー通知はありません",
       "ai": "AI通知はありません"
     },
+    "error": {
+      "title": "通知の読み込みに失敗しました"
+    },
     "actions": {
       "markAllAsRead": "すべて既読にする",
       "viewAll": "すべての通知を表示",
