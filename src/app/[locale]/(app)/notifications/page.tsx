@@ -51,7 +51,7 @@ export default function NotificationsPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
         <TabsList className="h-auto rounded-none border-transparent bg-transparent p-0 px-4 pt-2">
           {TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
+            <TabsTrigger key={tab} value={tab} className="text-base">
               {t(`notification.tabs.${tab}`)}
             </TabsTrigger>
           ))}
