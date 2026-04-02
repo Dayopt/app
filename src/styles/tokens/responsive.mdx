@@ -47,6 +47,87 @@ Material Design 3 Window Size Classes に基づくレスポンシブデザイン
 
 ---
 
+## レイアウト切替アーキテクチャ
+
+`MEDIA_QUERIES.mobile`（max-width: 767px）で MobileLayout / DesktopLayout を二分岐する。
+
+| 画面幅  | レイアウト    | ナビゲーション       | サイドバー                    |
+| ------- | ------------- | -------------------- | ----------------------------- |
+| < 768px | MobileLayout  | BottomTabBar（固定） | なし                          |
+| ≥ 768px | DesktopLayout | Sidebar              | w-64（256px）、折りたたみ w-0 |
+
+### 判定フック
+
+| フック          | 判定基準                                  | 用途                     |
+| --------------- | ----------------------------------------- | ------------------------ |
+| `useMediaQuery` | `MEDIA_QUERIES.mobile` (max-width: 767px) | レイアウト切替           |
+| `useIsMobile`   | 画面幅 < 768px **かつ** タッチデバイス    | UI振る舞い（タップ操作） |
+
+```tsx
+// レイアウト切替（base-layout-content.tsx）
+const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+
+{
+  isMobile ? <MobileLayout>{children}</MobileLayout> : <DesktopLayout>{children}</DesktopLayout>;
+}
+```
+
+### BottomTabBar
+
+モバイルレイアウトでのみ表示。固定ボトムナビゲーション。
+
+| プロパティ   | 値                                              |
+| ------------ | ----------------------------------------------- |
+| 高さ         | h-14（56px）                                    |
+| z-index      | z-bottom-tab（40）                              |
+| セーフエリア | pb-safe（iOS ホームインジケーター）             |
+| タブ数       | 4（Calendar / Stats / Notifications / Account） |
+
+メインコンテンツには `pb-16`（64px）で BottomTabBar 分の余白を確保。
+
+### デスクトップサイドバー
+
+| プロパティ | 値                               |
+| ---------- | -------------------------------- |
+| 幅（開）   | w-64（256px）                    |
+| 幅（閉）   | w-0（collapse、transition-all）  |
+| 背景       | bg-container（Sunken elevation） |
+
+---
+
+## カレンダー/タイムラインのレスポンシブ
+
+### ビュー表示ルール
+
+| デバイス     | 画面幅       | Day | Multi-day 上限 | Week（7列） |
+| ------------ | ------------ | --- | -------------- | ----------- |
+| モバイル     | < 768px      | ✅  | 最大3日        | ❌ → 3日    |
+| タブレット   | 768 - 1023px | ✅  | 最大5日        | ❌ → 5日    |
+| デスクトップ | ≥ 1024px     | ✅  | 制限なし       | ✅          |
+
+- モバイルでは `day` ビューのみ許可。URL直アクセスで `week` が指定された場合、`day` に強制リダイレクト
+- `CalendarViewRenderer` が `MOBILE_MAX_DAYS`（3）/ `TABLET_MAX_DAYS`（5）で列数を制限
+
+### グリッド密度（時間あたり高さ）
+
+`HOUR_HEIGHT_DENSITIES`（`src/lib/calendar-constants.ts`）で定義。
+
+| 密度     | モバイル | タブレット | デスクトップ |
+| -------- | -------- | ---------- | ------------ |
+| compact  | 36px     | 40px       | 48px         |
+| default  | 48px     | 60px       | 72px         |
+| spacious | 64px     | 80px       | 96px         |
+
+```tsx
+// CalendarViewRenderer.tsx
+const MOBILE_MAX_DAYS = 3;
+const TABLET_MAX_DAYS = 5;
+
+const maxDays = isMobile ? MOBILE_MAX_DAYS : isTablet ? TABLET_MAX_DAYS : Infinity;
+```
+
+---
+
 ## タッチターゲット
 
 Material Design 3 / Apple HIG アクセシビリティ準拠。
@@ -103,3 +184,19 @@ Material Design 3 / Apple HIG アクセシビリティ準拠。
 <div className="w-[25rem]">            // → w-96
 <div className="max-w-[85vw]">         // → max-w-72
 ```
+
+---
+
+## ブレークポイント使用状況
+
+コードベースでの Tailwind レスポンシブプレフィックス使用頻度。
+
+| Prefix | 出現回数 | ファイル数 | 主なパターン                             |
+| ------ | -------- | ---------- | ---------------------------------------- |
+| `md:`  | 140      | 59         | grid-cols-\*(57), p-\*(18), hidden/block |
+| `sm:`  | 82       | 33         | grid-cols-\*(18), space-y-\*(10), w-\*   |
+| `lg:`  | 34       | 19         | grid-cols-\*(12), p-\*(3)                |
+| `xl:`  | 7        | 5          | まれに使用                               |
+| `2xl:` | 1        | 1          | ほぼ未使用                               |
+
+**設計方針**: `md:` を主要ブレークポイントとし、レイアウト切替に使用。`sm:` はコンポーネント単位の微調整。`lg:` 以上は必要な場合のみ。
