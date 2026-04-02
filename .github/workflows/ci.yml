@@ -144,6 +144,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: nextjs-build-diagnostics
+          path: .next
 
       - name: Report JS bundle budget
         run: |
