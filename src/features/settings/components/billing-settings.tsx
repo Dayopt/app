@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { AlertTriangle, Check, CreditCard, RefreshCw, Sparkles, Zap } from 'lucide-react';
+import { AlertTriangle, Check, CreditCard, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
+import { ErrorState } from '@/components/common/ErrorState';
+import { LabeledRow } from '@/components/common/LabeledRow';
+import { SectionCard } from '@/components/common/SectionCard';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +26,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { api } from '@/platform/trpc';
-
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
 
 interface Plan {
   id: string;
@@ -183,14 +183,12 @@ export function BillingSettings() {
     return (
       <div className="space-y-6 sm:space-y-8">
         <SectionCard>
-          <div className="flex flex-col items-center gap-4 py-8">
-            <AlertTriangle className="text-muted-foreground h-8 w-8" />
-            <p className="text-muted-foreground text-sm">{t('settings.subscription.loadError')}</p>
-            <Button variant="outline" onClick={() => overview.refetch()}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              {t('settings.subscription.retry')}
-            </Button>
-          </div>
+          <ErrorState
+            title={t('settings.subscription.loadError')}
+            onRetry={() => overview.refetch()}
+            size="sm"
+            centered
+          />
         </SectionCard>
       </div>
     );
