@@ -59,10 +59,10 @@ function DrawerContent({
       >
         {/* ドラッグハンドル: 視覚的には小さく、タッチ領域は48px (WCAG準拠) */}
         <div
-          className="hidden h-12 w-full shrink-0 items-center justify-center group-data-[vaul-drawer-direction=bottom]/drawer-content:flex"
+          className="hidden h-8 w-full shrink-0 items-center justify-center group-data-[vaul-drawer-direction=bottom]/drawer-content:flex"
           aria-hidden="true"
         >
-          <div className="bg-border h-1.5 w-12 rounded-full" />
+          <div className="bg-border h-1 w-12 rounded-full" />
         </div>
         {children}
       </DrawerPrimitive.Content>
