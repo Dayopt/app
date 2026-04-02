@@ -70,11 +70,7 @@ export const Default: Story = {
 };
 
 /** 初期フォーム状態（入力欄が空）。現在のパスワード・新しいパスワード・確認の3フィールド。 */
-export const EmptyForm: Story = {
-  parameters: {
-    a11y: { test: 'todo' },
-  },
-};
+export const EmptyForm: Story = {};
 
 /** 閉じた状態：open=false でダイアログが非表示。 */
 export const Closed: Story = {
@@ -85,9 +81,6 @@ export const Closed: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  parameters: {
-    a11y: { test: 'todo' },
-  },
   render: () => {
     useAuthStore.setState({
       user: { id: 'mock-user-id', email: 'user@example.com' } as never,

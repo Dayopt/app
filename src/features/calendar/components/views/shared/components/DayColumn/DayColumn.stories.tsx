@@ -16,8 +16,6 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'padded',
-    // scrollable-region-focusable: calendar grid scroll container
-    a11y: { test: 'todo' },
   },
   args: {
     onTimeClick: fn(),

@@ -12,8 +12,6 @@ const meta = {
   component: NotificationItem,
   parameters: {
     layout: 'padded',
-    // button-name: internal action buttons (mark as read, delete) rendered by component
-    a11y: { test: 'todo' },
     docs: {
       description: {
         component: '通知アイテムコンポーネント。リマインダー・期限超過など各種通知タイプに対応。',

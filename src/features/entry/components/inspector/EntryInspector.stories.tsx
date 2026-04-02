@@ -32,7 +32,7 @@ const meta = {
   title: 'Features/Entry/Inspector/EntryInspector',
   parameters: {
     layout: 'centered',
-    // button-name / color-contrast / aria-progressbar-name: internal inspector components
+    // button-name: internal inspector icon buttons
     a11y: { test: 'todo' },
   },
   tags: ['autodocs', 'critical'],

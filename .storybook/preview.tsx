@@ -81,6 +81,8 @@ const preview: Preview = {
           { id: 'heading-order', enabled: false },
           // Radix UI の内部実装による aria-checked 等の誤検出
           { id: 'aria-prohibited-attr', enabled: false },
+          // Radix ScrollArea / Calendar grid の内部スクロールコンテナ
+          { id: 'scrollable-region-focusable', enabled: false },
         ],
       },
 

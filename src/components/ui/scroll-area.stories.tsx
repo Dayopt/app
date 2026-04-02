@@ -10,8 +10,6 @@ const meta = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-    // scrollable-region-focusable: Radix ScrollArea internal scroll container
-    a11y: { test: 'todo' },
   },
 } satisfies Meta<typeof ScrollArea>;
 
