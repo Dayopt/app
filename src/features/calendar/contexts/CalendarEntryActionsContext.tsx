@@ -18,7 +18,7 @@ export interface CalendarEntryActions {
   onUpdateEntry?:
     | ((
         entryIdOrEntry: string | CalendarEvent,
-        updates?: { startTime: Date; endTime: Date },
+        updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
       ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
     | undefined;
   onDeleteEntry?: ((entryId: string) => void) | undefined;

@@ -50,6 +50,11 @@
       "resizeFailed": "予定をリサイズできなかった。もう一度試して",
       "undoMove": "移動を取り消しました",
       "undoFailed": "取り消しできなかった。もう一度試して",
+      "moveWithRecord": {
+        "title": "記録をリセットして移動",
+        "description": "この予定には記録がある。移動すると記録がリセットされる",
+        "confirm": "移動"
+      },
       "saved": "保存しました",
       "noEventsOnThisDay": "この日にはイベントがない",
       "selectEventToEdit": "編集するイベントを選択",

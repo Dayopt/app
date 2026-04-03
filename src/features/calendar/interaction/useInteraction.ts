@@ -50,7 +50,7 @@ export interface UseInteractionProps {
   /** Callback when an event is moved or resized */
   onEventUpdate?: (
     eventId: string,
-    updates: { startTime: Date; endTime: Date },
+    updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
   ) => Promise<void | { skipToast: true }> | void;
   /** Callback when an event is clicked (not dragged) */
   onEventClick?: (event: CalendarEvent) => void;

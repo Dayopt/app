@@ -52,7 +52,10 @@ export const WeekGrid = ({
 
   // onEventUpdate を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
   const handleEventUpdate = React.useCallback(
-    async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
+    async (
+      eventId: string,
+      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    ) => {
       if (!onEventUpdate) return;
       const entry = events.find((e) => e.id === eventId);
       if (!entry) return;

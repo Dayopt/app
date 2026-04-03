@@ -52,7 +52,10 @@ export const DayView = ({
 
   // ドラッグイベント用のハンドラー（エントリ時間更新）
   const handleEventTimeUpdate = React.useCallback(
-    async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
+    async (
+      eventId: string,
+      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    ) => {
       if (onUpdateEntry) {
         // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）
         return await onUpdateEntry(eventId, updates);

@@ -50,6 +50,11 @@
       "resizeFailed": "Failed to resize event",
       "undoMove": "Move undone",
       "undoFailed": "Failed to undo",
+      "moveWithRecord": {
+        "title": "Move and reset record",
+        "description": "This event has a time record. Moving it will reset the record",
+        "confirm": "Move"
+      },
       "saved": "Saved",
       "noEventsOnThisDay": "No events on this day",
       "selectEventToEdit": "Select an event to edit",
