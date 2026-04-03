@@ -216,8 +216,14 @@
       "total": "合計",
       "backToAll": "すべてのタグ",
       "noTagData": "この期間のタグデータがない",
-      "emptyTitle": "今週のデータがありません",
-      "emptyDescription": "エントリーを追加して進捗を確認",
+      "review": {
+        "emptyTitle": "まだ振り返りデータがない",
+        "emptyDescription": "エントリーを記録して週を振り返ろう"
+      },
+      "progress": {
+        "emptyTitle": "まだ進捗データがない",
+        "emptyDescription": "エントリーが増えるとトレンドが見える"
+      },
       "periodDay": "日",
       "periodWeek": "週",
       "periodMonth": "月",
@@ -310,8 +316,8 @@
       },
       "discoveries": {
         "loading": "読み込み中…",
-        "emptyTitle": "まだ発見がありません",
-        "emptyDescription": "もう少しデータが貯まると、あなたのパターンが見えてきます",
+        "emptyTitle": "まだ発見がない",
+        "emptyDescription": "もう少しデータが貯まると、パターンが見えてくる",
         "timePatternHighFulfillment": "{day}の{hour}時台は、充実度が高い傾向があります",
         "bestEstimationTag": "この期間で最も見積もりが正確だったタグは「{tagName}」でした（平均誤差 {deviation}分）",
         "blankTimeIncrease": "空白時間が前期間より {minutes}分 増えています",
