@@ -4,13 +4,18 @@
  * 日付選択ポップオーバー（共通コンポーネント）
  *
  * Plan/Record共通で使用する日付選択UI
+ * PC: Popover / モバイル: Drawer
  */
+
+import { useState } from 'react';
 
 import { Calendar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface DatePickerPopoverProps {
   selectedDate: Date | undefined;
@@ -28,10 +33,10 @@ interface DatePickerPopoverProps {
 }
 
 /**
- * DatePickerPopover - MiniCalendar Popover版のラッパー
+ * DatePickerPopover - MiniCalendar のラッパー
  *
  * **機能**:
- * - ボタンクリックでカレンダーPopover表示
+ * - ボタンクリックでカレンダー表示（PC: Popover / モバイル: Drawer）
  * - 日付選択後に自動的に閉じる
  * - 月/年のドロップダウン選択対応
  */
@@ -46,27 +51,57 @@ export function DatePickerPopover({
 }: DatePickerPopoverProps) {
   const t = useTranslations();
   const { formatDate } = useDateFormat();
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const resolvedPlaceholder = placeholder ?? t('common.datePicker.placeholder');
 
+  const triggerButton = (
+    <button
+      type="button"
+      disabled={disabled}
+      className="text-muted-foreground data-[state=selected]:text-foreground hover:bg-state-hover focus-visible:ring-ring inline-flex h-8 items-center gap-2 rounded-lg px-2 text-base tabular-nums transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+      data-state={selectedDate ? 'selected' : undefined}
+      aria-label={
+        selectedDate
+          ? t('common.datePicker.selectLabel', { date: formatDate(selectedDate) })
+          : t('common.datePicker.notSelected')
+      }
+      onClick={isMobile ? () => setDrawerOpen(true) : undefined}
+    >
+      {showIcon && <Calendar className="size-4" />}
+      {selectedDate ? formatDate(selectedDate) : resolvedPlaceholder}
+    </button>
+  );
+
+  // --- モバイル: Drawer ---
+  if (isMobile) {
+    return (
+      <>
+        {triggerButton}
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent className="z-overlay-popover" overlayClassName="z-overlay-popover">
+            <DrawerTitle className="sr-only">{resolvedPlaceholder}</DrawerTitle>
+            <div className="pb-safe px-4">
+              <MiniCalendar
+                selectedDate={selectedDate}
+                onDateSelect={(date) => {
+                  onDateChange(date);
+                  setDrawerOpen(false);
+                }}
+                minDate={minDate}
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
+    );
+  }
+
+  // --- PC: Popover ---
   return (
     <MiniCalendar
       asPopover
-      popoverTrigger={
-        <button
-          type="button"
-          disabled={disabled}
-          className="text-muted-foreground data-[state=selected]:text-foreground hover:bg-state-hover focus-visible:ring-ring inline-flex h-8 items-center gap-2 rounded-lg px-2 text-base tabular-nums transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-          data-state={selectedDate ? 'selected' : undefined}
-          aria-label={
-            selectedDate
-              ? t('common.datePicker.selectLabel', { date: formatDate(selectedDate) })
-              : t('common.datePicker.notSelected')
-          }
-        >
-          {showIcon && <Calendar className="size-4" />}
-          {selectedDate ? formatDate(selectedDate) : resolvedPlaceholder}
-        </button>
-      }
+      popoverTrigger={triggerButton}
       selectedDate={selectedDate}
       onDateSelect={onDateChange}
       popoverAlign="start"

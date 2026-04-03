@@ -4,10 +4,13 @@ import { useMemo } from 'react';
 
 import { CheckIcon, Clock, Flag } from 'lucide-react';
 
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 
+import { ClockTimePicker } from './ClockTimePicker';
 import { useTimeCombobox } from './useTimeCombobox';
 
 export type TimeIconType = 'clock' | 'flag';
@@ -29,8 +32,8 @@ interface TimeSelectProps {
 
 /**
  * 時刻選択（Google Calendar風）
- * - クリック → 15分刻みのドロップダウン
- * - 矢印キー ↑↓ → 15分ずつ増減
+ * - PC: Popover で15分刻みドロップダウン + 矢印キー ↑↓
+ * - モバイル: Drawer + 時計盤ピッカー（Material Design 風）
  * - 手動入力は不可（15分刻み制約）
  */
 export function TimeSelect({
@@ -43,6 +46,8 @@ export function TimeSelect({
   iconType = 'clock',
   showDurationInMenu = false,
 }: TimeSelectProps) {
+  const isMobile = useIsMobile();
+
   const {
     isOpen,
     highlightedIndex,
@@ -54,7 +59,8 @@ export function TimeSelect({
     handleOptionClick,
     handleOptionHover,
     handleOpenChange,
-  } = useTimeCombobox({ value, onChange, minTime });
+    handleTriggerClick,
+  } = useTimeCombobox({ value, onChange, minTime, isMobile });
 
   // duration 表示用: options × minTime が変わらない限りキャッシュ
   const durationLabels = useMemo(() => {
@@ -66,54 +72,86 @@ export function TimeSelect({
     return map;
   }, [showDurationInMenu, minTime, options]);
 
+  const iconElement = showIcon ? (
+    iconType === 'flag' ? (
+      <Flag className="text-muted-foreground size-4 shrink-0" />
+    ) : (
+      <Clock className="text-muted-foreground size-4 shrink-0" />
+    )
+  ) : null;
+
+  const triggerClasses = cn(
+    'relative flex items-center rounded-lg transition-colors',
+    disabled
+      ? 'cursor-default'
+      : cn('cursor-pointer', hasError ? 'ring-destructive ring-2' : 'hover:bg-state-hover'),
+    showIcon && 'w-[72px] gap-2 px-2',
+  );
+
+  const inputElement = (
+    <input
+      ref={inputRef}
+      type="text"
+      readOnly
+      role="combobox"
+      aria-expanded={isOpen}
+      aria-controls="time-listbox"
+      aria-invalid={hasError}
+      value={value}
+      onKeyDown={handleKeyDown}
+      onFocus={handleFocus}
+      disabled={disabled}
+      placeholder="--:--"
+      size={5}
+      className={cn(
+        'flex h-8 cursor-pointer rounded-lg bg-transparent text-base tabular-nums outline-none',
+        'disabled:cursor-default disabled:opacity-50',
+        showIcon ? 'w-auto' : 'px-2 text-right',
+        value ? 'text-foreground' : 'text-muted-foreground',
+        hasError && 'text-destructive',
+      )}
+    />
+  );
+
+  // --- モバイル: Drawer + ClockTimePicker ---
+  if (isMobile) {
+    return (
+      <div>
+        <div className={triggerClasses} onClick={disabled ? undefined : handleTriggerClick}>
+          {iconElement}
+          {inputElement}
+        </div>
+
+        {!disabled && (
+          <Drawer open={isOpen} onOpenChange={handleOpenChange}>
+            <DrawerContent className="z-overlay-popover" overlayClassName="z-overlay-popover">
+              <ClockTimePicker
+                value={value}
+                onChange={onChange}
+                onClose={() => handleOpenChange(false)}
+                minTime={minTime}
+              />
+            </DrawerContent>
+          </Drawer>
+        )}
+      </div>
+    );
+  }
+
+  // --- PC: Popover + スクロールリスト ---
   return (
     <div>
       <Popover open={isOpen} onOpenChange={handleOpenChange} modal={false}>
         <PopoverAnchor asChild>
           <div
-            className={cn(
-              'relative flex items-center rounded-lg transition-colors',
-              disabled
-                ? 'cursor-default'
-                : cn(
-                    'cursor-pointer',
-                    hasError ? 'ring-destructive ring-2' : 'hover:bg-state-hover',
-                  ),
-              showIcon && 'w-[72px] gap-2 px-2',
-            )}
+            className={triggerClasses}
             onClick={() => {
               if (!isOpen) handleOpenChange(true);
               inputRef.current?.focus();
             }}
           >
-            {showIcon &&
-              (iconType === 'flag' ? (
-                <Flag className="text-muted-foreground size-4 shrink-0" />
-              ) : (
-                <Clock className="text-muted-foreground size-4 shrink-0" />
-              ))}
-            <input
-              ref={inputRef}
-              type="text"
-              readOnly
-              role="combobox"
-              aria-expanded={isOpen}
-              aria-controls="time-listbox"
-              aria-invalid={hasError}
-              value={value}
-              onKeyDown={handleKeyDown}
-              onFocus={handleFocus}
-              disabled={disabled}
-              placeholder="--:--"
-              size={5}
-              className={cn(
-                'flex h-8 cursor-pointer rounded-lg bg-transparent text-base tabular-nums outline-none',
-                'disabled:cursor-default disabled:opacity-50',
-                showIcon ? 'w-auto' : 'px-2 text-right',
-                value ? 'text-foreground' : 'text-muted-foreground',
-                hasError && 'text-destructive',
-              )}
-            />
+            {iconElement}
+            {inputElement}
           </div>
         </PopoverAnchor>
 

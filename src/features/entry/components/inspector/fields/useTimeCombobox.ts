@@ -45,6 +45,8 @@ interface UseTimeComboboxOptions {
   value: string;
   onChange: (time: string) => void;
   minTime?: string | undefined;
+  /** モバイルではfocusでPopoverを開かない（Drawerはトリガークリックで開く） */
+  isMobile?: boolean;
 }
 
 export interface UseTimeComboboxReturn {
@@ -63,6 +65,8 @@ export interface UseTimeComboboxReturn {
   handleOptionClick: (option: string) => void;
   handleOptionHover: (index: number) => void;
   handleOpenChange: (open: boolean) => void;
+  /** モバイルのトリガークリック用（明示的にドロップダウンを開く） */
+  handleTriggerClick: () => void;
 }
 
 /** 15分刻み時刻選択コンボボックスのロジックフック（キーボード操作・ドロップダウン管理）
@@ -73,6 +77,7 @@ export function useTimeCombobox({
   value,
   onChange,
   minTime,
+  isMobile = false,
 }: UseTimeComboboxOptions): UseTimeComboboxReturn {
   // ─── State ───────────────────────────────────
   const [isOpen, setIsOpen] = useState(false);
@@ -198,8 +203,12 @@ export function useTimeCombobox({
   );
 
   const handleFocus = useCallback(() => {
-    setIsOpen(true);
-  }, []);
+    if (!isMobile) setIsOpen(true);
+  }, [isMobile]);
+
+  const handleTriggerClick = useCallback(() => {
+    if (!isOpen) handleOpenChange(true);
+  }, [isOpen, handleOpenChange]);
 
   const handleOptionClick = useCallback(
     (option: string) => {
@@ -225,5 +234,6 @@ export function useTimeCombobox({
     handleOptionClick,
     handleOptionHover,
     handleOpenChange,
+    handleTriggerClick,
   };
 }

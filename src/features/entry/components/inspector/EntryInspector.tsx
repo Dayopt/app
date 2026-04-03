@@ -130,11 +130,8 @@ export function EntryInspector({
 
       {isMobile ? (
         <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0 [&>div:first-child]:hidden">
+          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
-            <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
-              <div className="bg-border h-1.5 w-16 rounded-full" />
-            </div>
             <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
           </DrawerContent>
         </Drawer>
