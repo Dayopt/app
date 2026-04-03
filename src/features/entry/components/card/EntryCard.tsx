@@ -109,6 +109,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
   // 超過部分のダッシュパターン（予定範囲外は点線で視覚的に区別）
   const overtimeAccentDashed = `repeating-linear-gradient(to bottom, ${accentColor} 0px, ${accentColor} 4px, transparent 4px, transparent 8px)`;
+  // 超過オーバーレイの外枠（タグ色の破線で一周 + 角丸）
+  const overtimeBorderStyle: React.CSSProperties = {
+    border: `2px dashed ${accentColor}`,
+    borderRadius: '8px',
+  };
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -351,7 +356,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           />
         </div>
 
-        {/* 予定 vs 記録: 上部 — 未実行は斜線、超過はwarning斜線 + 差分ラベル */}
+        {/* 予定 vs 記録: 上部 — 未実行はハッチング、超過はドット枠線 + 差分ラベル */}
         {overlay.topKind !== 'none' && (
           <div
             aria-hidden="true"
@@ -359,7 +364,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               'pointer-events-none absolute top-0 right-0 left-0 flex items-center justify-center',
               overlay.topKind === 'unexecuted' ? 'pattern-hatch' : 'pattern-overtime',
             )}
-            style={{ height: `${overlay.topHeight}px` }}
+            style={{
+              height: `${overlay.topHeight}px`,
+              ...(overlay.topKind === 'overtime' ? overtimeBorderStyle : undefined),
+            }}
           >
             {overlay.topHeight >= 16 && (
               <span className="text-muted-foreground text-xs tabular-nums">
@@ -369,7 +377,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           </div>
         )}
 
-        {/* 予定 vs 記録: 下部 — 未実行は斜線、超過はwarning斜線 + 差分ラベル */}
+        {/* 予定 vs 記録: 下部 — 未実行はハッチング、超過はドット枠線 + 差分ラベル */}
         {overlay.bottomKind !== 'none' && (
           <div
             aria-hidden="true"
@@ -377,7 +385,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               'pointer-events-none absolute right-0 bottom-0 left-0 flex items-center justify-center',
               overlay.bottomKind === 'unexecuted' ? 'pattern-hatch' : 'pattern-overtime',
             )}
-            style={{ height: `${overlay.bottomHeight}px` }}
+            style={{
+              height: `${overlay.bottomHeight}px`,
+              ...(overlay.bottomKind === 'overtime' ? overtimeBorderStyle : undefined),
+            }}
           >
             {overlay.bottomHeight >= 16 && (
               <span className="text-muted-foreground text-xs tabular-nums">

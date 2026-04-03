@@ -39,7 +39,7 @@
   background: oklch(from var(--background) l c h / 0.6);
 }
 
-/* 予定 vs 記録の差分: ゴーストオーバーレイ（超過区間） */
+/* 予定 vs 記録の差分: ゴーストオーバーレイ（超過区間 — 外枠のみ、中は透明） */
 .pattern-overtime {
-  background: oklch(from var(--background) l c h / 0.6);
+  background: transparent;
 }
