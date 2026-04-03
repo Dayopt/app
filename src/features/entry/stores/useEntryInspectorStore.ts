@@ -46,25 +46,6 @@ interface EntryInspectorActions {
  */
 type EntryInspectorStore = EntryInspectorState & EntryInspectorActions;
 
-/**
- * アンカー位置のモジュールスコープRef（後方互換）
- *
- * @deprecated store の anchorRect / setAnchorRect を使用
- */
-export const inspectorAnchorRef: { current: AnchorRect | null } = { current: null };
-
-/** @deprecated store の setAnchorRect を使用 */
-export function setInspectorAnchorRect(rect: AnchorRect): void {
-  inspectorAnchorRef.current = rect;
-  // store にも同期
-  useEntryInspectorStore.getState().setAnchorRect(rect);
-}
-
-/** @deprecated store の closeInspector を使用 */
-export function clearInspectorAnchorRect(): void {
-  inspectorAnchorRef.current = null;
-}
-
 /** Entry Inspector の開閉状態・対象エントリIDを管理するストア */
 export const useEntryInspectorStore = create<EntryInspectorStore>()(
   devtools(
@@ -90,7 +71,6 @@ export const useEntryInspectorStore = create<EntryInspectorStore>()(
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('calendar-drag-cancel'));
         }
-        clearInspectorAnchorRect();
         set(
           {
             isOpen: false,
