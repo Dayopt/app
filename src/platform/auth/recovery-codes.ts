@@ -33,7 +33,11 @@ const RECOVERY_CODE_CONFIG = {
  * 環境変数から取得し、未設定の場合はフォールバック値を使用
  */
 function getHmacPepper(): string {
-  return env.RECOVERY_CODE_PEPPER ?? 'dayopt-recovery-code-default-pepper';
+  const pepper = env.RECOVERY_CODE_PEPPER;
+  if (!pepper) {
+    throw new Error('RECOVERY_CODE_PEPPER is not set. Recovery codes require a pepper for HMAC.');
+  }
+  return pepper;
 }
 
 /**
