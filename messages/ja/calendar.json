@@ -55,6 +55,10 @@
         "description": "この予定には記録がある。移動すると記録がリセットされる",
         "confirm": "移動"
       },
+      "diff": {
+        "overtime": "超過",
+        "short": "短縮"
+      },
       "saved": "保存しました",
       "noEventsOnThisDay": "この日にはイベントがない",
       "selectEventToEdit": "編集するイベントを選択",

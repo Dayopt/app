@@ -55,6 +55,10 @@
         "description": "This event has a time record. Moving it will reset the record",
         "confirm": "Move"
       },
+      "diff": {
+        "overtime": "Over",
+        "short": "Short"
+      },
       "saved": "Saved",
       "noEventsOnThisDay": "No events on this day",
       "selectEventToEdit": "Select an event to edit",

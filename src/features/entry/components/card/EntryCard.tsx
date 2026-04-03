@@ -10,6 +10,7 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
+import { Timer, TimerOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/lib/tag-colors';
@@ -298,11 +299,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       {overlay.topKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex items-center justify-center"
+          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
           style={{ top: 0, height: `${overlay.topHeight}px`, ...overtimeBorderStyle }}
         >
           {overlay.topHeight >= 16 && (
-            <span className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+              <Timer className="size-3.5" />
               {formatDiffMinutes(overlay.topDiffMin)}
             </span>
           )}
@@ -313,11 +315,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       {overlay.bottomKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex items-center justify-center"
+          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
           style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...overtimeBorderStyle }}
         >
           {overlay.bottomHeight >= 16 && (
-            <span className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+              <Timer className="size-3.5" />
               {formatDiffMinutes(overlay.bottomDiffMin)}
             </span>
           )}
@@ -368,11 +371,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {overlay.topKind === 'unexecuted' && (
             <div
               aria-hidden="true"
-              className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0 flex items-center justify-center"
+              className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0 flex flex-col items-center justify-center"
               style={{ height: `${overlay.topHeight}px` }}
             >
               {overlay.topHeight >= 16 && (
-                <span className="text-muted-foreground text-xs tabular-nums">
+                <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+                  <TimerOff className="size-3.5" />
                   {formatDiffMinutes(overlay.topDiffMin)}
                 </span>
               )}
@@ -383,11 +387,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {overlay.bottomKind === 'unexecuted' && (
             <div
               aria-hidden="true"
-              className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0 flex items-center justify-center"
+              className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center"
               style={{ height: `${overlay.bottomHeight}px` }}
             >
               {overlay.bottomHeight >= 16 && (
-                <span className="text-muted-foreground text-xs tabular-nums">
+                <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
+                  <TimerOff className="size-3.5" />
                   {formatDiffMinutes(overlay.bottomDiffMin)}
                 </span>
               )}
