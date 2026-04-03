@@ -212,7 +212,7 @@ export function StatsLayout({
             role="tab"
             aria-selected={activeTab === tab.id}
             prefetch
-            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0 after:inset-x-0')}
+            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0 after:left-0')}
           >
             {t(tab.labelKey)}
           </Link>

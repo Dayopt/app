@@ -70,7 +70,7 @@ export default function NotificationsPage() {
             <TabsTrigger
               key={tab}
               value={tab}
-              className={i === 0 ? 'pl-0 text-base after:inset-x-0' : 'text-base'}
+              className={i === 0 ? 'pl-0 text-base after:left-0' : 'text-base'}
             >
               {t(`notification.tabs.${tab}`)}
             </TabsTrigger>
