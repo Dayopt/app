@@ -13,20 +13,35 @@ export interface ActualTimeDiffOverlay {
   /** 上部: 開始差分（unexecuted=未実行で斜線, overtime=超過で左アクセント点線） */
   topKind: 'unexecuted' | 'overtime' | 'none';
   topHeight: number; // px
+  topDiffMin: number; // 差分の分数（符号付き: 正=遅れ, 負=早め）
   /** 下部: 終了差分（unexecuted=未実行で斜線, overtime=超過で左アクセント点線） */
   bottomKind: 'unexecuted' | 'overtime' | 'none';
   bottomHeight: number; // px
+  bottomDiffMin: number; // 差分の分数（符号付き: 正=遅れ, 負=早め）
   /** カード位置の調整量 */
   topShift: number; // px（上に伸ばす分。正の値 = top を減算）
   heightDelta: number; // px（全体の追加高さ）
+}
+
+/** 差分の分数を ±Xh Ym 形式にフォーマット */
+export function formatDiffMinutes(minutes: number): string {
+  const sign = minutes >= 0 ? '+' : '-';
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  if (h === 0) return `${sign}${m}min`;
+  if (m === 0) return `${sign}${h}h`;
+  return `${sign}${h}h${m}m`;
 }
 
 /** 差分なし（デフォルト値） */
 export const NO_OVERLAY: ActualTimeDiffOverlay = {
   topKind: 'none',
   topHeight: 0,
+  topDiffMin: 0,
   bottomKind: 'none',
   bottomHeight: 0,
+  bottomDiffMin: 0,
   topShift: 0,
   heightDelta: 0,
 };
@@ -89,5 +104,14 @@ export function computeActualTimeDiffOverlay(
     heightDelta += bottomHeight;
   }
 
-  return { topKind, topHeight, bottomKind, bottomHeight, topShift, heightDelta };
+  return {
+    topKind,
+    topHeight,
+    topDiffMin: startDiffMin,
+    bottomKind,
+    bottomHeight,
+    bottomDiffMin: endDiffMin,
+    topShift,
+    heightDelta,
+  };
 }

@@ -47,6 +47,11 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
   const planStart = parseStartDate(plan);
   const planEnd = parseEndDate(plan);
 
+  // 実績時間があればそちらを優先（片方のみの場合は予定時間でフォールバック）
+  const hasActual = plan.actualStartDate != null || plan.actualEndDate != null;
+  const displayStart = hasActual ? (plan.actualStartDate ?? planStart) : planStart;
+  const displayEnd = hasActual ? (plan.actualEndDate ?? planEnd) : planEnd;
+
   const fallbackLabel = plan.title || t('common.tags.add');
 
   if (isCompact) {
@@ -81,8 +86,8 @@ export const EntryCardContent = memo<EntryCardContentProps>(function EntryCardCo
           <span className="mr-1 tabular-nums">
             {previewTime
               ? formatTimeRange(previewTime.start, previewTime.end, timeFormat)
-              : planStart && planEnd
-                ? formatTimeRange(planStart, planEnd, timeFormat)
+              : displayStart && displayEnd
+                ? formatTimeRange(displayStart, displayEnd, timeFormat)
                 : t('calendar.event.noTimeSet')}
           </span>
         </div>

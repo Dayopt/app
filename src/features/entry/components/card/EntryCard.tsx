@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { computeActualTimeDiffOverlay } from '../../lib/actual-time-overlay';
+import { computeActualTimeDiffOverlay, formatDiffMinutes } from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -107,8 +107,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style],
   );
 
-  // 超過部分のグラデーション（穏やかなフェード）
-  const overtimeAccentGradient = `linear-gradient(to bottom, ${accentColor}, color-mix(in oklch, ${accentColor} 40%, transparent))`;
+  // 超過部分のダッシュパターン（予定範囲外は点線で視覚的に区別）
+  const overtimeAccentDashed = `repeating-linear-gradient(to bottom, ${accentColor} 0px, ${accentColor} 4px, transparent 4px, transparent 8px)`;
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -306,7 +306,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className="bg-background absolute top-0 right-0 left-0"
             style={{
               height: `${overlay.topHeight}px`,
-              backgroundImage: overtimeAccentGradient,
+              backgroundImage: overtimeAccentDashed,
             }}
           />
         )}
@@ -316,7 +316,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className="bg-background absolute right-0 bottom-0 left-0"
             style={{
               height: `${overlay.bottomHeight}px`,
-              backgroundImage: overtimeAccentGradient,
+              backgroundImage: overtimeAccentDashed,
             }}
           />
         )}
@@ -336,44 +336,55 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           colorClasses ? colorClasses.tint : 'bg-muted',
         )}
       >
-        <EntryCardContent
-          plan={entry}
-          tagName={tagName}
-          isCompact={safePosition.height < 40}
-          showTime={safePosition.height >= 30}
-          previewTime={previewTime}
-        />
+        {/* 超過で上に伸びた分だけコンテンツを下にオフセット（予定範囲内に配置） */}
+        <div
+          style={
+            overlay.topKind === 'overtime' ? { marginTop: `${overlay.topHeight}px` } : undefined
+          }
+        >
+          <EntryCardContent
+            plan={entry}
+            tagName={tagName}
+            isCompact={safePosition.height < 40}
+            showTime={safePosition.height >= 30}
+            previewTime={previewTime}
+          />
+        </div>
 
-        {/* 予定 vs 記録: 上部 — 未実行は斜線、超過はwarning斜線 */}
-        {overlay.topKind === 'unexecuted' && (
+        {/* 予定 vs 記録: 上部 — 未実行は斜線、超過はwarning斜線 + 差分ラベル */}
+        {overlay.topKind !== 'none' && (
           <div
             aria-hidden="true"
-            className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0"
+            className={cn(
+              'pointer-events-none absolute top-0 right-0 left-0 flex items-center justify-center',
+              overlay.topKind === 'unexecuted' ? 'pattern-hatch' : 'pattern-overtime',
+            )}
             style={{ height: `${overlay.topHeight}px` }}
-          />
-        )}
-        {overlay.topKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pattern-overtime pointer-events-none absolute top-0 right-0 left-0"
-            style={{ height: `${overlay.topHeight}px` }}
-          />
+          >
+            {overlay.topHeight >= 16 && (
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {formatDiffMinutes(overlay.topDiffMin)}
+              </span>
+            )}
+          </div>
         )}
 
-        {/* 予定 vs 記録: 下部 — 未実行は斜線、超過はwarning斜線 */}
-        {overlay.bottomKind === 'unexecuted' && (
+        {/* 予定 vs 記録: 下部 — 未実行は斜線、超過はwarning斜線 + 差分ラベル */}
+        {overlay.bottomKind !== 'none' && (
           <div
             aria-hidden="true"
-            className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
+            className={cn(
+              'pointer-events-none absolute right-0 bottom-0 left-0 flex items-center justify-center',
+              overlay.bottomKind === 'unexecuted' ? 'pattern-hatch' : 'pattern-overtime',
+            )}
             style={{ height: `${overlay.bottomHeight}px` }}
-          />
-        )}
-        {overlay.bottomKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pattern-overtime pointer-events-none absolute right-0 bottom-0 left-0"
-            style={{ height: `${overlay.bottomHeight}px` }}
-          />
+          >
+            {overlay.bottomHeight >= 16 && (
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {formatDiffMinutes(overlay.bottomDiffMin)}
+              </span>
+            )}
+          </div>
         )}
 
         {/* 下端リサイズハンドル（Draft/Past は非表示）
