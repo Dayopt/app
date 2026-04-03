@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { isCalendarViewPath } from '@/features/calendar';
-import { StatsView } from '@/features/stats';
+import { InsightsView, ProgressView, StatsView } from '@/features/stats';
 import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
 import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
@@ -33,6 +33,13 @@ function getPageType(pathname: string): 'calendar' | 'stats' | null {
   return null;
 }
 
+function getStatsTab(pathname: string): 'review' | 'progress' | 'insights' {
+  const pathWithoutLocale = stripLocale(pathname);
+  if (pathWithoutLocale.startsWith('/stats/progress')) return 'progress';
+  if (pathWithoutLocale.startsWith('/stats/insights')) return 'insights';
+  return 'review';
+}
+
 // ---------------------------------------------------------------------------
 // Sub-views (client-side rendered)
 // ---------------------------------------------------------------------------
@@ -53,10 +60,22 @@ function CalendarClientView() {
 }
 
 function StatsClientView() {
+  const pathname = usePathname();
+  const tab = getStatsTab(pathname);
+
+  const featureName =
+    tab === 'progress' ? 'stats-progress' : tab === 'insights' ? 'stats-insights' : 'stats';
+
   return (
     <StatsLayoutShell headerRightExtra={<SidebarPageNav />}>
-      <FeatureErrorBoundary featureName="stats">
-        <StatsView />
+      <FeatureErrorBoundary featureName={featureName}>
+        {tab === 'progress' ? (
+          <ProgressView />
+        ) : tab === 'insights' ? (
+          <InsightsView />
+        ) : (
+          <StatsView />
+        )}
       </FeatureErrorBoundary>
     </StatsLayoutShell>
   );
