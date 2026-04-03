@@ -47,10 +47,36 @@ const DialogContent = ({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // モバイルキーボード表示時にダイアログを上にシフト
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    const el = contentRef.current;
+    if (!vv || !el) return;
+
+    const update = () => {
+      const kbHeight = Math.max(0, window.innerHeight - vv.height);
+      if (kbHeight > 0) {
+        el.style.top = `calc(50% - ${kbHeight / 2}px)`;
+      } else {
+        el.style.top = '';
+      }
+    };
+
+    vv.addEventListener('resize', update);
+    update();
+
+    return () => {
+      vv.removeEventListener('resize', update);
+    };
+  }, []);
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
+        ref={contentRef}
         data-slot="dialog-content"
         className={cn(
           'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200',
