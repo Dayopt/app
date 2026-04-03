@@ -81,6 +81,7 @@ export function EntryInspectorForm({
     setStartTimeLocal,
     setEndTimeLocal,
     resetActualTimesLocal,
+    suppressSaveRef,
     autoSave,
   } = handlers;
   const { timeConflictError, timezone } = state;
@@ -174,6 +175,9 @@ export function EntryInspectorForm({
     const [hours, minutes] = time.split(':').map(Number);
     const isoValue = localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone);
 
+    // autoAdjust 経由の追加 save を抑制
+    suppressSaveRef.current = true;
+
     // ローカル状態のみ更新（save を発火しない）
     if (type === 'start') {
       setStartTimeLocal(time);
@@ -182,12 +186,16 @@ export function EntryInspectorForm({
     }
     resetActualTimesLocal();
 
-    // debounced save にマージ（先行する pending フィールドと合流して1回の mutation で送信）
+    // debounced save にマージ — 先行 pending があってもそのまま合流して1回の mutation
     save({
       [type === 'start' ? 'start_time' : 'end_time']: isoValue,
       actual_start_time: null,
       actual_end_time: null,
     });
+    toast.success(t('entry.toast.updated'));
+    setTimeout(() => {
+      suppressSaveRef.current = false;
+    }, 100);
     setPendingTimeChange(null);
   }, [
     pendingTimeChange,
@@ -196,7 +204,9 @@ export function EntryInspectorForm({
     setStartTimeLocal,
     setEndTimeLocal,
     resetActualTimesLocal,
+    suppressSaveRef,
     save,
+    t,
   ]);
 
   const handleCancelTimeChange = useCallback(() => {

@@ -45,6 +45,9 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   // ユーザー操作による未保存のローカル変更を保護するフラグ
   // entry sync useEffect がバックグラウンド refetch で古いデータに上書きするのを防ぐ
   const localDirtyRef = useRef(false);
+  // handleConfirmTimeChange が saveImmediate で直接保存する間、
+  // autoAdjust 経由の handleEndTimeChange.save() を抑制するフラグ
+  const suppressSaveRef = useRef(false);
 
   // Local state
   const [timeConflictError, setTimeConflictError] = useState(false);
@@ -175,6 +178,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       localDirtyRef.current = true;
       setStartTime(time);
 
+      if (suppressSaveRef.current) return;
       const isoValue =
         time && scheduleDate
           ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
@@ -193,6 +197,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       localDirtyRef.current = true;
       setEndTime(time);
 
+      if (suppressSaveRef.current) return;
       const isoValue =
         time && scheduleDate
           ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
@@ -301,5 +306,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     setStartTimeLocal,
     setEndTimeLocal,
     resetActualTimesLocal,
+    suppressSaveRef,
   };
 }
