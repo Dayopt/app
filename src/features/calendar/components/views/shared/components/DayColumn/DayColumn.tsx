@@ -12,7 +12,7 @@ import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
-import { EntryCard, isNewEntry } from '@/features/entry';
+import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
