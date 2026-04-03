@@ -7,8 +7,10 @@ import '../src/styles/globals.css';
 import { DocsTemplate } from './DocsTemplate';
 import { ThemedDocsContainer } from './ThemedDocsContainer';
 import { dayoptDarkTheme, dayoptLightTheme } from './dayoptTheme';
+import { storeMockDecorator } from './mocks/stores';
 import { StorybookThemeProvider } from './mocks/theme';
-import { TRPCMockProvider } from './mocks/trpc';
+import type { MockResponseMap } from './mocks/trpc';
+import { StoryTRPCProvider } from './mocks/trpc';
 import './storybook-overrides.css';
 
 // メッセージファイルを自動収集（namespace追加時に変更不要）
@@ -93,7 +95,10 @@ const preview: Preview = {
     },
   },
   decorators: [
-    (Story) => {
+    // Zustand ストアモック（parameters.storeMocks）
+    storeMockDecorator,
+    // テーマ + tRPC + i18n プロバイダ
+    (Story, context) => {
       const isDark = useDarkMode();
 
       if (typeof document !== 'undefined') {
@@ -102,15 +107,22 @@ const preview: Preview = {
         document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
       }
 
+      // parameters.trpcMocks / trpcPending / trpcError を読み取り
+      const trpcMocks = context.parameters.trpcMocks as MockResponseMap | undefined;
+      const trpcPending = context.parameters.trpcPending as boolean | undefined;
+      const trpcError = context.parameters.trpcError as
+        | { path: string; code: string; message?: string }
+        | undefined;
+
       return (
         <StorybookThemeProvider>
-          <TRPCMockProvider>
+          <StoryTRPCProvider mocks={trpcMocks} pending={trpcPending} error={trpcError}>
             <NextIntlClientProvider locale="ja" messages={messages}>
               <main>
                 <Story />
               </main>
             </NextIntlClientProvider>
-          </TRPCMockProvider>
+          </StoryTRPCProvider>
         </StorybookThemeProvider>
       );
     },
