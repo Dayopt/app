@@ -3,7 +3,7 @@
  * プロシージャ定義とコンテキスト管理
  */
 
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -445,8 +445,9 @@ async function checkAdminPermission(_userId: string): Promise<boolean> {
  * タイミング攻撃耐性のある文字列比較
  */
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const hashA = createHash('sha256').update(a).digest();
+  const hashB = createHash('sha256').update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 }
 
 /**
