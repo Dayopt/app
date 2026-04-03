@@ -70,7 +70,7 @@ export const CalendarDateHeader = ({
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
 
   return (
-    <div className="flex h-12 shrink-0 flex-col justify-end">
+    <div className="flex h-8 shrink-0 flex-col justify-end md:h-12">
       <div className="flex items-end">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (

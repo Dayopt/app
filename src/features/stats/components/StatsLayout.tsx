@@ -201,7 +201,7 @@ export function StatsLayout({
 
       {/* タブナビゲーション */}
       <nav
-        className="scrollbar-hide flex h-10 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4"
+        className="scrollbar-hide flex h-8 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4 md:h-10"
         role="tablist"
       >
         {/* 固定3タブ */}
@@ -212,7 +212,7 @@ export function StatsLayout({
             role="tab"
             aria-selected={activeTab === tab.id}
             prefetch
-            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0')}
+            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0 after:inset-x-0')}
           >
             {t(tab.labelKey)}
           </Link>
