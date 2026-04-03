@@ -23,7 +23,7 @@ import { SidebarSection } from './SidebarSection';
 // モックパーツ
 // ─────────────────────────────────────────────────────────
 
-/** CreateTagButton / PaletteAddPopover と同一構造 */
+/** CreateTagButton と同一構造 */
 function ActionButton() {
   return (
     <button
@@ -283,7 +283,7 @@ export const FullSidebar: Story = {
 
         {/* パレット */}
         <div className="w-full min-w-0 overflow-hidden px-2">
-          <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+          <SidebarSection title="パレット" defaultOpen>
             <BlockItem
               tagName="Work"
               iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
@@ -403,7 +403,7 @@ export const AllPatterns: Story = {
               </SidebarSection>
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
-              <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+              <SidebarSection title="パレット" defaultOpen>
                 <BlockItem
                   tagName="Work"
                   iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
