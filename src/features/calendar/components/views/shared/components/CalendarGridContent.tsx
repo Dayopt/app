@@ -92,13 +92,12 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
 
-  // 記録付きエントリのドラッグ確認ダイアログ
+  // 記録付きエントリのドラッグ確認ダイアログ（予定だけ移動、記録はそのまま）
   const [pendingDrop, setPendingDrop] = useState<{
     entryId: string;
     updates: { startTime: Date; endTime: Date };
   } | null>(null);
 
-  // onEventUpdate をラップ: 記録ありエントリのドロップ時に確認を挟む
   const wrappedOnEventUpdate = useCallback(
     (eventId: string, updates: { startTime: Date; endTime: Date; resetActualTime?: boolean }) => {
       const entry = entries.find((e) => e.id === eventId);
@@ -113,10 +112,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   const handleConfirmDrop = useCallback(() => {
     if (!pendingDrop) return;
-    onEventUpdate?.(pendingDrop.entryId, {
-      ...pendingDrop.updates,
-      resetActualTime: true,
-    });
+    onEventUpdate?.(pendingDrop.entryId, { ...pendingDrop.updates, resetActualTime: true });
     setPendingDrop(null);
   }, [pendingDrop, onEventUpdate]);
 
@@ -157,9 +153,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return null;
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      // ゴーストは予定部分のみ表示（実績時間を除外してオーバーレイを抑制）
+      const ghostEntry = { ...entry, actualStartDate: null, actualEndDate: null };
       return (
         <EntryCard
-          entry={entry}
+          entry={ghostEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
           isMobile={isMobile}

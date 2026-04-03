@@ -23,15 +23,14 @@ export interface ActualTimeDiffOverlay {
   heightDelta: number; // px（全体の追加高さ）
 }
 
-/** 差分の分数を ±Xh Ym 形式にフォーマット */
+/** 差分の分数を Xmin / XhYm 形式にフォーマット（符号なし） */
 export function formatDiffMinutes(minutes: number): string {
-  const sign = minutes >= 0 ? '+' : '-';
   const abs = Math.abs(minutes);
   const h = Math.floor(abs / 60);
   const m = abs % 60;
-  if (h === 0) return `${sign}${m}min`;
-  if (m === 0) return `${sign}${h}h`;
-  return `${sign}${h}h${m}m`;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}m`;
 }
 
 /** 差分なし（デフォルト値） */

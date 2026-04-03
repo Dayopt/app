@@ -60,6 +60,7 @@ export function useEntryForm() {
     handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
+    resetActualTimesLocal,
   } = useTimeFields({
     entry,
     entryId,
@@ -104,6 +105,7 @@ export function useEntryForm() {
       handleActualStartChange,
       handleActualEndChange,
       handleReminderChange,
+      resetActualTimesLocal,
       autoSave,
     },
 
@@ -114,6 +116,7 @@ export function useEntryForm() {
     actions: {
       updateEntry,
       handleDelete,
+      save,
     },
   };
 }

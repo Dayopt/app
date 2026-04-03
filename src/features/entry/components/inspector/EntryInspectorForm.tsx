@@ -7,12 +7,13 @@
  * onPinToPalette は Composition Layer（GlobalOverlays）から注入される。
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useCreateTag, useTagsMap } from '@/features/tags';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
@@ -76,10 +77,11 @@ export function EntryInspectorForm({
     handleActualStartChange,
     handleActualEndChange,
     handleReminderChange,
+    resetActualTimesLocal,
     autoSave,
   } = handlers;
   const { timeConflictError } = state;
-  const { handleDelete } = actions;
+  const { handleDelete, save } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -127,15 +129,54 @@ export function EntryInspectorForm({
     handleEndTimeChange: autoPlannedEndChange,
   } = useAutoAdjustEndTime(startTime, endTime, handleEndTimeChange);
 
+  // 記録付きエントリの予定時間変更確認
+  const hasActualTime = entry?.actual_start_time != null || entry?.actual_end_time != null;
+  const [pendingTimeChange, setPendingTimeChange] = useState<{
+    type: 'start' | 'end';
+    time: string;
+  } | null>(null);
+
+  const applyPlannedTimeChange = useCallback(
+    (type: 'start' | 'end', time: string) => {
+      if (type === 'start') {
+        autoPlannedStartChange(time);
+        handleStartTimeChange(time);
+      } else {
+        autoPlannedEndChange(time);
+        handleEndTimeChange(time);
+      }
+    },
+    [autoPlannedStartChange, autoPlannedEndChange, handleStartTimeChange, handleEndTimeChange],
+  );
+
   const onPlannedStartChange = (time: string) => {
-    autoPlannedStartChange(time);
-    handleStartTimeChange(time);
+    if (hasActualTime) {
+      setPendingTimeChange({ type: 'start', time });
+      return;
+    }
+    applyPlannedTimeChange('start', time);
   };
 
   const onPlannedEndChange = (time: string) => {
-    autoPlannedEndChange(time);
-    handleEndTimeChange(time);
+    if (hasActualTime) {
+      setPendingTimeChange({ type: 'end', time });
+      return;
+    }
+    applyPlannedTimeChange('end', time);
   };
+
+  const handleConfirmTimeChange = useCallback(() => {
+    if (!pendingTimeChange) return;
+    applyPlannedTimeChange(pendingTimeChange.type, pendingTimeChange.time);
+    // 記録リセットを同じ debounced save にマージ（separate saveImmediate だと optimistic lock 競合の可能性）
+    resetActualTimesLocal();
+    save({ actual_start_time: null, actual_end_time: null });
+    setPendingTimeChange(null);
+  }, [pendingTimeChange, applyPlannedTimeChange, resetActualTimesLocal, save]);
+
+  const handleCancelTimeChange = useCallback(() => {
+    setPendingTimeChange(null);
+  }, []);
 
   // 記録行の実効値（null → 予定の値を使用）
   const effectiveActualStart = actualStartTime ?? startTime;
@@ -273,6 +314,16 @@ export function EntryInspectorForm({
           />
         </div>
       </div>
+      {/* 記録リセット確認ダイアログ */}
+      <ConfirmDialog
+        open={pendingTimeChange !== null}
+        onClose={handleCancelTimeChange}
+        onConfirm={handleConfirmTimeChange}
+        title={t('calendar.event.moveWithRecord.title')}
+        description={t('calendar.event.moveWithRecord.description')}
+        variant="warning"
+        confirmLabel={t('calendar.event.moveWithRecord.confirm')}
+      />
     </div>
   );
 }

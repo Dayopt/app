@@ -244,6 +244,12 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     [scheduleDate, saveImmediate, timezone],
   );
 
+  // 記録時間のローカル状態リセット（保存は呼び出し元で行う）
+  const resetActualTimesLocal = useCallback(() => {
+    setActualStartTime(null);
+    setActualEndTime(null);
+  }, []);
+
   // 派生値
   const today = useMemo(() => new Date(), []);
 
@@ -265,5 +271,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
+    resetActualTimesLocal,
   };
 }
