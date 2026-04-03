@@ -21,7 +21,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
-import { inspectorAnchorRef, useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
+import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../types/entry';
 import { EntryInspectorForm } from './EntryInspectorForm';
 import { FloatingPopover } from './FloatingPopover';
@@ -56,6 +56,7 @@ export function EntryInspector({
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
+  const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   const {
@@ -136,11 +137,7 @@ export function EntryInspector({
           </DrawerContent>
         </Drawer>
       ) : (
-        <FloatingPopover
-          onClose={handleClose}
-          title={title}
-          anchorRect={inspectorAnchorRef.current}
-        >
+        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
           {content}
         </FloatingPopover>
       )}

@@ -6,8 +6,8 @@ import { FloatingPopover } from './FloatingPopover';
 /**
  * FloatingPopover — Inspector フローティングポップオーバー（PC用）。
  *
- * クリックされたブロックの横に fixed 配置で表示する。
- * anchorRect に基づいて左右・縦位置を自動計算する。
+ * クリックされたブロックの斜め下に fixed 配置で表示する。
+ * 右にスペースがあれば右斜め下、なければ左斜め下に配置。
  * フォーカストラップ・Tabキーでパネル内循環・Escで閉じる（onClose 呼び出し）。
  */
 const meta = {
@@ -45,11 +45,7 @@ function InspectorPlaceholder() {
 // Stories
 // ---------------------------------------------------------------------------
 
-/**
- * anchorRect なし — 画面中央に配置。
- *
- * anchorRect を省略した場合、ウィンドウ幅・高さを基準に中央配置される。
- */
+/** anchorRect なし — 画面中央に配置。 */
 export const Centered: Story = {
   render: () => (
     <FloatingPopover onClose={fn()} title="エントリ詳細">
@@ -58,12 +54,8 @@ export const Centered: Story = {
   ),
 };
 
-/**
- * 画面左側のアンカー — パネルは右側に配置。
- *
- * anchorRect.right から右に GAP=8px 空けて配置する。
- */
-export const AnchoredLeft: Story = {
+/** ブロックの右斜め下に配置。 */
+export const AnchoredBottomRight: Story = {
   render: () => (
     <FloatingPopover
       onClose={fn()}
@@ -75,12 +67,8 @@ export const AnchoredLeft: Story = {
   ),
 };
 
-/**
- * 画面右側のアンカー — パネルは左側に配置。
- *
- * 右に十分なスペースがない場合、アンカーの左側に配置する。
- */
-export const AnchoredRight: Story = {
+/** 画面右側のブロック — 左斜め下に配置。 */
+export const AnchoredBottomLeft: Story = {
   render: () => (
     <FloatingPopover
       onClose={fn()}
@@ -107,23 +95,5 @@ export const WithScrollContent: Story = {
         ))}
       </div>
     </FloatingPopover>
-  ),
-};
-
-/** 全パターン一覧。 */
-export const AllPatterns: Story = {
-  render: () => (
-    <div className="text-foreground p-8">
-      <p className="text-muted-foreground mb-4 text-sm">
-        FloatingPopover は fixed 配置のため、各 Story を個別に確認してください。
-        以下は参考として各バリアントのリストです。
-      </p>
-      <ul className="text-muted-foreground list-disc pl-4 text-xs leading-6">
-        <li>Centered — anchorRect なし、画面中央</li>
-        <li>AnchoredLeft — 左側アンカー、パネルは右に</li>
-        <li>AnchoredRight — 右側アンカー、パネルは左に</li>
-        <li>WithScrollContent — 長いコンテンツのスクロール</li>
-      </ul>
-    </div>
   ),
 };
