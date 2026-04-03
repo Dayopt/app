@@ -23,7 +23,7 @@ import { NowBadge } from '../grid/CurrentTimeLine/NowBadge';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
 import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
-import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
+import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
 import { useSleepHoursLayout } from '../hooks/useSleepHoursLayout';
 import { TimezoneOffset } from './TimezoneOffset';
@@ -114,6 +114,8 @@ export const ScrollableCalendarLayout = ({
   enableKeyboardNavigation = true,
   onScrollPositionChange,
 }: ScrollableCalendarLayoutProps) => {
+  // hourHeight store をウィンドウサイズと同期（カレンダー内で1箇所のみ）
+  useHourHeightSync();
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   // グリッドレイアウト計算（フック利用）
