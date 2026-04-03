@@ -126,12 +126,12 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
     );
   }
 
-  // 公開URLを取得
+  // 公開URLを取得（キャッシュバスター付き）
   const {
     data: { publicUrl },
   } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(fileName);
 
-  return publicUrl;
+  return `${publicUrl}?t=${Date.now()}`;
 }
 
 /**
