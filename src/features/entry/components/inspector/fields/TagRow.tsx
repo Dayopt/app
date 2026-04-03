@@ -4,7 +4,6 @@
  * タグ表示行（Pure props）
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
- * タグ未設定時は「タグを追加」を表示。
  * 右側に「…」メニュー（パレット登録・統計・削除）を配置。
  *
  * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
@@ -12,7 +11,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { BarChart3, ChevronDown, MoreHorizontal, Pin, PinOff, Plus, Trash2 } from 'lucide-react';
+import { BarChart3, ChevronDown, MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
@@ -28,8 +27,8 @@ import type { TagColorEntry } from '@/lib/tag-colors';
 
 interface TagRowProps {
   tagId: string | null;
-  /** 解決済みのタグ名（tagId が null なら undefined） */
-  tagName?: string | undefined;
+  /** 解決済みのタグ名 */
+  tagName: string;
   /** 解決済みのタグ色クラス（tagId が null なら undefined） */
   tagColorClasses?: TagColorEntry | undefined;
   /** 解決済みのタグアイコン名（tagId が null なら undefined） */
@@ -53,7 +52,7 @@ interface TagRowProps {
 
 /** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
 export function TagRow({
-  tagId,
+  tagId: _tagId,
   tagName,
   tagColorClasses: colorClasses,
   tagIcon,
@@ -70,7 +69,6 @@ export function TagRow({
   const [selectorOpen, setSelectorOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const hasTag = tagId != null && tagName != null;
   const hasMenuItems = onPinToPalette || onUnpinFromPalette || onViewStats || onDelete;
 
   const handleSelect = useCallback(
@@ -97,26 +95,16 @@ export function TagRow({
           type="button"
           onClick={() => setSelectorOpen(true)}
           className="hover:bg-state-hover -mt-1 -ml-2 flex min-w-0 items-center gap-2 rounded-lg py-1 pr-2 pl-2 text-lg font-bold transition-colors"
-          aria-label={hasTag ? `${t('common.tags.change')}: ${tagName}` : t('common.tags.add')}
+          aria-label={`${t('common.tags.change')}: ${tagName}`}
         >
-          {hasTag ? (
-            <>
-              <TagIcon
-                icon={tagIcon ?? null}
-                color={tagColor ?? colorClasses?.cssVar}
-                size="md"
-                className="flex-shrink-0"
-              />
-              <ColonTagLabel name={tagName} className="text-foreground" />
-              <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
-            </>
-          ) : (
-            <>
-              <Plus className="text-muted-foreground size-3.5 flex-shrink-0" aria-hidden />
-              <span className="text-muted-foreground">{t('common.tags.add')}</span>
-              <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
-            </>
-          )}
+          <TagIcon
+            icon={tagIcon ?? null}
+            color={tagColor ?? colorClasses?.cssVar}
+            size="md"
+            className="flex-shrink-0"
+          />
+          <ColonTagLabel name={tagName} className="text-foreground" />
+          <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
         </button>
 
         {/* 右側: … メニュー */}
