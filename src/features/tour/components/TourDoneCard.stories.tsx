@@ -21,3 +21,12 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト表示（フルスクリーンオーバーレイ） */
 export const Default: Story = {};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: (args) => (
+    <div className="flex flex-col items-start gap-6">
+      <TourDoneCard {...args} />
+    </div>
+  ),
+};

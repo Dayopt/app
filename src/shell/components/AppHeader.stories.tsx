@@ -154,7 +154,7 @@ export const WithPageNav: Story = {
   ),
 };
 
-/** 全パターン一覧 */
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
