@@ -19,7 +19,12 @@ export interface WeekGridProps {
   disabledEntryId?: string | null | undefined;
   onEventClick?: ((entry: CalendarEvent) => void) | undefined;
   onEventContextMenu?: ((entry: CalendarEvent, mouseEvent: React.MouseEvent) => void) | undefined;
-  onEventUpdate?: ((entry: CalendarEvent) => void) | undefined;
+  onEventUpdate?:
+    | ((
+        entryIdOrEntry: string | CalendarEvent,
+        updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+      ) => void | Promise<void> | Promise<{ skipToast: true } | void>)
+    | undefined;
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   className?: string | undefined;
 }
@@ -29,7 +34,10 @@ export interface UseWeekViewOptions {
   startDate: Date;
   events: CalendarEvent[];
   weekStartsOn?: 0 | 1 | 6;
-  onEventUpdate?: (entry: CalendarEvent) => void;
+  onEventUpdate?: (
+    entryIdOrEntry: string | CalendarEvent,
+    updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+  ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
 }
 
 /** useWeekView フックの戻り値 */

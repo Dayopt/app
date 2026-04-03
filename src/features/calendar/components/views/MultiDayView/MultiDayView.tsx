@@ -78,6 +78,10 @@ export function MultiDayView({
       updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
     ) => {
       if (!onUpdateEntry) return;
+      // resetActualTime フラグがある場合は (id, updates) 形式で直接渡す
+      if (updates.resetActualTime) {
+        return onUpdateEntry(eventId, updates);
+      }
       const entry = entries.find((p) => p.id === eventId);
       if (entry) {
         return onUpdateEntry({
