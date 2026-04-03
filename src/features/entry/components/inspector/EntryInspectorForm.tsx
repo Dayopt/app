@@ -180,7 +180,7 @@ export function EntryInspectorForm({
       {/* Row 0: タグ + 削除ボタン */}
       <TagRow
         tagId={selectedTagId}
-        tagName={selectedTagName}
+        tagName={selectedTagName ?? ''}
         tagColorClasses={selectedTagColorClasses}
         tagIcon={selectedTag?.icon}
         tagColor={selectedTag?.color}
@@ -198,7 +198,7 @@ export function EntryInspectorForm({
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
         // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
-        className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
+        className={`grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded mt-2' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
@@ -207,7 +207,7 @@ export function EntryInspectorForm({
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-muted mt-4 rounded-2xl">
+      <div className="bg-muted mt-2 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
           {/* 日付 */}
           <DateRow
