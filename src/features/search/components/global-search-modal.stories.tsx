@@ -2,23 +2,16 @@
  * GlobalSearchModal Stories
  *
  * エントリ（entries.list）とタグ（tags.list）を tRPC モックで提供。
- * ストア（useCalendarFilterStore, useCalendarNavigationStore,
- * useEntryInspectorStore）は setState で初期化する。
  */
 
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 import { fn } from 'storybook/test';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
-
 import { Button } from '@/components/ui/button';
+
+import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import { GlobalSearchModal } from './global-search-modal';
 
 // ─────────────────────────────────────────────────────────
@@ -111,52 +104,10 @@ const MOCK_ENTRIES = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(tags: typeof MOCK_TAGS, entries: typeof MOCK_ENTRIES): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'tags.list': { data: tags },
-            'entries.list': entries,
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({
-  children,
-  tags = MOCK_TAGS,
-  entries = MOCK_ENTRIES,
-}: {
-  children: ReactNode;
-  tags?: typeof MOCK_TAGS;
-  entries?: typeof MOCK_ENTRIES;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const trpcClient = api.createClient({ links: [createMockLink(tags, entries)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
+const MOCK_TRPC = {
+  'tags.list': { data: MOCK_TAGS },
+  'entries.list': MOCK_ENTRIES,
+};
 
 // ─────────────────────────────────────────────────────────
 // インタラクティブラッパー
@@ -172,10 +123,10 @@ function InteractiveModal({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <MockProvider tags={tags} entries={entries}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags }, 'entries.list': entries }}>
       <Button onClick={() => setIsOpen(true)}>検索を開く</Button>
       <GlobalSearchModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
-    </MockProvider>
+    </StoryTRPCProvider>
   );
 }
 
@@ -188,6 +139,7 @@ const meta = {
   title: 'Features/Search/GlobalSearchModal',
   parameters: {
     layout: 'centered',
+    trpcMocks: MOCK_TRPC,
   },
   tags: ['autodocs'],
 } satisfies Meta;
@@ -207,9 +159,9 @@ type Story = StoryObj<typeof meta>;
  */
 export const Default: Story = {
   render: () => (
-    <MockProvider>
+    <StoryTRPCProvider mocks={MOCK_TRPC}>
       <GlobalSearchModal isOpen onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 
@@ -224,9 +176,9 @@ export const EmptyState: Story = {
     a11y: { config: { rules: [{ id: 'aria-required-children', enabled: false }] } },
   },
   render: () => (
-    <MockProvider tags={[]} entries={[]}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: [] }, 'entries.list': [] }}>
       <GlobalSearchModal isOpen onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 
@@ -247,8 +199,8 @@ export const Interactive: Story = {
  */
 export const TagsOnly: Story = {
   render: () => (
-    <MockProvider entries={[]}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: MOCK_TAGS }, 'entries.list': [] }}>
       <GlobalSearchModal isOpen onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };

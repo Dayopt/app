@@ -7,14 +7,8 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
-
+import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import { Palette } from './Palette';
 
 // ─────────────────────────────────────────────────────────
@@ -80,59 +74,11 @@ const MOCK_PINNED_ITEMS = [
   { id: 'pin-3', tag_id: 'tag-exercise', duration_minutes: 45, sort_order: 2, is_pinned: true },
 ];
 
-// ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
-// ─────────────────────────────────────────────────────────
-
-interface MockConfig {
-  pinnedItems: typeof MOCK_PINNED_ITEMS;
-  tags: typeof MOCK_TAGS;
-}
-
-function createMockLink(config: MockConfig): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'palette.list': config.pinnedItems,
-            'tags.list': config.tags,
-            'entries.list': [],
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : [];
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: { id: `new-${Date.now()}` } } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({
-  children,
-  pinnedItems = MOCK_PINNED_ITEMS,
-  tags = MOCK_TAGS,
-}: {
-  children: ReactNode;
-  pinnedItems?: typeof MOCK_PINNED_ITEMS;
-  tags?: typeof MOCK_TAGS;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const link = createMockLink({ pinnedItems, tags });
-  const trpcClient = api.createClient({ links: [link] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
+const MOCK_TRPC = {
+  'palette.list': MOCK_PINNED_ITEMS,
+  'tags.list': { data: MOCK_TAGS },
+  'entries.list': [],
+};
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -141,7 +87,10 @@ function MockProvider({
 const meta = {
   title: 'Features/Palette/Overview',
   component: Palette,
-  parameters: { layout: 'padded' },
+  parameters: {
+    layout: 'padded',
+    trpcMocks: MOCK_TRPC,
+  },
   decorators: [
     (Story) => (
       <div className="w-64">
@@ -159,25 +108,17 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────
 
 /** ピン留め3件の標準状態。 */
-export const Default: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider>
-        <Story />
-      </MockProvider>
-    ),
-  ],
-};
+export const Default: Story = {};
 
 /** アイテムなし（空状態）。 */
 export const EmptyState: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider pinnedItems={[]}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: {
+      'palette.list': [],
+      'tags.list': { data: MOCK_TAGS },
+      'entries.list': [],
+    },
+  },
 };
 
 /** 全パターン比較。 */
@@ -186,15 +127,17 @@ export const AllPatterns: Story = {
     <div className="flex gap-8">
       <div>
         <p className="text-muted-foreground mb-2 text-xs">Default</p>
-        <MockProvider>
+        <StoryTRPCProvider mocks={MOCK_TRPC}>
           <Palette />
-        </MockProvider>
+        </StoryTRPCProvider>
       </div>
       <div>
         <p className="text-muted-foreground mb-2 text-xs">Empty</p>
-        <MockProvider pinnedItems={[]}>
+        <StoryTRPCProvider
+          mocks={{ 'palette.list': [], 'tags.list': { data: MOCK_TAGS }, 'entries.list': [] }}
+        >
           <Palette />
-        </MockProvider>
+        </StoryTRPCProvider>
       </div>
     </div>
   ),

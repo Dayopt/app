@@ -3,7 +3,7 @@
  *
  * パスワード変更ダイアログのストーリー。
  * OWASP/NIST推奨のセキュリティチェックを含む。
- * useAuthStore.setState でユーザー情報をモックする。
+ * parameters.storeMocks でユーザー情報をモックする。
  */
 
 import { useState } from 'react';
@@ -12,7 +12,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/stores/useAuthStore';
+
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
 
 import { PasswordChangeDialog } from './password-change-dialog';
 
@@ -21,20 +22,13 @@ const meta = {
   component: PasswordChangeDialog,
   parameters: {
     layout: 'centered',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
   },
   tags: ['autodocs'],
   args: {
     open: true,
     onOpenChange: fn(),
   },
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: { id: 'mock-user-id', email: 'user@example.com' } as never,
-      });
-      return <Story />;
-    },
-  ],
 } satisfies Meta<typeof PasswordChangeDialog>;
 
 export default meta;
@@ -46,10 +40,6 @@ type Story = StoryObj<typeof meta>;
 
 function InteractivePasswordChangeDialog() {
   const [open, setOpen] = useState(false);
-
-  useAuthStore.setState({
-    user: { id: 'mock-user-id', email: 'user@example.com' } as never,
-  });
 
   return (
     <>
@@ -81,15 +71,10 @@ export const Closed: Story = {
 
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
-  render: () => {
-    useAuthStore.setState({
-      user: { id: 'mock-user-id', email: 'user@example.com' } as never,
-    });
-    return (
-      <div className="flex flex-col items-start gap-6">
-        <p className="text-muted-foreground text-xs">初期フォーム（パスワード入力欄3つ）</p>
-        <PasswordChangeDialog open onOpenChange={fn()} />
-      </div>
-    );
-  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground text-xs">初期フォーム（パスワード入力欄3つ）</p>
+      <PasswordChangeDialog open onOpenChange={fn()} />
+    </div>
+  ),
 };

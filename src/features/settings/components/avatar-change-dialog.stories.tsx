@@ -2,7 +2,7 @@
  * AvatarChangeDialog Stories
  *
  * アバター変更ダイアログのストーリー。
- * Supabase Storage を直接呼ぶため、useAuthStore.setState でユーザー情報をモックする。
+ * Supabase Storage を直接呼ぶため、parameters.storeMocks でユーザー情報をモックする。
  */
 
 import { useState } from 'react';
@@ -11,33 +11,43 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/stores/useAuthStore';
+
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';
+
+// ─────────────────────────────────────────────────────────
+// Mock Data
+// ─────────────────────────────────────────────────────────
+
+const AUTH_WITH_AVATAR = {
+  user: {
+    id: 'mock-user-id',
+    email: 'user@example.com',
+    user_metadata: {
+      avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=storybook',
+    },
+  } as never,
+  loading: false,
+  error: null,
+};
+
+// ─────────────────────────────────────────────────────────
+// Meta
+// ─────────────────────────────────────────────────────────
 
 const meta = {
   title: 'Features/Settings/AvatarChangeDialog',
   component: AvatarChangeDialog,
   parameters: {
     layout: 'centered',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
   },
   tags: ['autodocs'],
   args: {
     open: true,
     onOpenChange: fn(),
   },
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: {
-          id: 'mock-user-id',
-          email: 'user@example.com',
-          user_metadata: { avatar_url: null },
-        } as never,
-      });
-      return <Story />;
-    },
-  ],
 } satisfies Meta<typeof AvatarChangeDialog>;
 
 export default meta;
@@ -49,14 +59,6 @@ type Story = StoryObj<typeof meta>;
 
 function InteractiveAvatarChangeDialog() {
   const [open, setOpen] = useState(false);
-
-  useAuthStore.setState({
-    user: {
-      id: 'mock-user-id',
-      email: 'user@example.com',
-      user_metadata: { avatar_url: null },
-    } as never,
-  });
 
   return (
     <>
@@ -87,21 +89,8 @@ export const NoAvatar: Story = {
 export const WithAvatar: Story = {
   parameters: {
     a11y: { test: 'todo' },
+    storeMocks: { useAuthStore: AUTH_WITH_AVATAR },
   },
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: {
-          id: 'mock-user-id',
-          email: 'user@example.com',
-          user_metadata: {
-            avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=storybook',
-          },
-        } as never,
-      });
-      return <Story />;
-    },
-  ],
 };
 
 /** 閉じた状態：open=false でダイアログが非表示。 */
@@ -116,19 +105,10 @@ export const AllPatterns: Story = {
   parameters: {
     a11y: { test: 'todo' },
   },
-  render: () => {
-    useAuthStore.setState({
-      user: {
-        id: 'mock-user-id',
-        email: 'user@example.com',
-        user_metadata: { avatar_url: null },
-      } as never,
-    });
-    return (
-      <div className="flex flex-col items-start gap-6">
-        <p className="text-muted-foreground text-xs">アバター未設定</p>
-        <AvatarChangeDialog open onOpenChange={fn()} />
-      </div>
-    );
-  },
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <p className="text-muted-foreground text-xs">アバター未設定</p>
+      <AvatarChangeDialog open onOpenChange={fn()} />
+    </div>
+  ),
 };

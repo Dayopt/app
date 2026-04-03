@@ -1,11 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
-
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import type { StatsPageData } from '../../types/metrics.types';
 import { StatsMetricsGrid } from './StatsMetricsGrid';
@@ -79,38 +72,6 @@ const PREV_DATE_RANGE = {
 };
 
 // =============================================================================
-// tRPC Mock for getStreak (still uses useQuery internally)
-// =============================================================================
-
-function createStreakMockLink(streak: number): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'entries.getStreak': { streak },
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({ children, streak = 14 }: { children: ReactNode; streak?: number }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  });
-  const trpcClient = api.createClient({ links: [createStreakMockLink(streak)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
-
-// =============================================================================
 // Meta
 // =============================================================================
 
@@ -118,15 +79,11 @@ function MockProvider({ children, streak = 14 }: { children: ReactNode; streak?:
 const meta = {
   title: 'Features/Stats/Review/MetricsGrid',
   component: StatsMetricsGrid,
-  parameters: { layout: 'padded' },
+  parameters: {
+    layout: 'padded',
+    trpcMocks: { 'entries.getStreak': { streak: 14 } },
+  },
   tags: ['autodocs'],
-  decorators: [
-    (Story) => (
-      <MockProvider>
-        <Story />
-      </MockProvider>
-    ),
-  ],
 } satisfies Meta<typeof StatsMetricsGrid>;
 
 export default meta;

@@ -3,13 +3,13 @@
  *
  * 表示名変更ダイアログのストーリー。
  * Supabase を直接呼ぶため tRPC モック不要。
- * useAuthStore.setState でユーザー情報をモックする。
+ * parameters.storeMocks でユーザー情報をモックする。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { useAuthStore } from '@/stores/useAuthStore';
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
 
 import { DisplayNameDialog } from './display-name-dialog';
 
@@ -18,6 +18,7 @@ const meta = {
   component: DisplayNameDialog,
   parameters: {
     layout: 'centered',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
   },
   tags: ['autodocs'],
   args: {
@@ -25,14 +26,6 @@ const meta = {
     onOpenChange: fn(),
     currentName: '山田 太郎',
   },
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: { id: 'mock-user-id', email: 'user@example.com' } as never,
-      });
-      return <Story />;
-    },
-  ],
 } satisfies Meta<typeof DisplayNameDialog>;
 
 export default meta;

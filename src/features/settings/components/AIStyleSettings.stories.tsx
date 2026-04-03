@@ -5,13 +5,8 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
+import { PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
 
 import { AIStyleSettings } from './ai-style-settings';
 
@@ -20,25 +15,7 @@ import { AIStyleSettings } from './ai-style-settings';
 // ─────────────────────────────────────────────────────────
 
 const MOCK_USER_SETTINGS = {
-  timezone: 'Asia/Tokyo',
-  showUtcOffset: true,
-  timeFormat: '24h' as const,
-  dateFormat: 'yyyy/MM/dd',
-  weekStartsOn: 1 as const,
-  showWeekends: true,
-  showWeekNumbers: false,
-  defaultDuration: 60,
-  snapInterval: 15 as const,
-  defaultView: 'week',
-  hourHeightDensity: 'default',
-  planRecordMode: 'both',
-  chronotype: {
-    enabled: true,
-    type: 'moderate_morning' as const,
-    displayMode: 'background' as const,
-    opacity: 0.15,
-    customZones: null,
-  },
+  ...PRESET_USER_SETTINGS.default,
   personalization: {
     values: {},
     rankedValues: [],
@@ -48,7 +25,7 @@ const MOCK_USER_SETTINGS = {
 };
 
 /** カスタムスタイル選択時の設定値（テキストエリア表示確認用） */
-const MOCK_USER_SETTINGS_CUSTOM: typeof MOCK_USER_SETTINGS = {
+const MOCK_USER_SETTINGS_CUSTOM = {
   ...MOCK_USER_SETTINGS,
   personalization: {
     ...MOCK_USER_SETTINGS.personalization,
@@ -57,58 +34,6 @@ const MOCK_USER_SETTINGS_CUSTOM: typeof MOCK_USER_SETTINGS = {
       '簡潔で率直なフィードバックをお願いします。専門用語を避け、具体的なアクションを提案してください。',
   },
 };
-
-// ─────────────────────────────────────────────────────────
-// tRPC Mock Helpers
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(responseMap: Record<string, unknown>): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function createPendingLink(): TRPCLink<AppRouter> {
-  return () => () => observable(() => {});
-}
-
-interface AIStyleMockProviderProps {
-  children: ReactNode;
-  pending?: boolean;
-  settings?: typeof MOCK_USER_SETTINGS;
-}
-
-function AIStyleMockProvider({ children, pending, settings }: AIStyleMockProviderProps) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-
-  const resolvedSettings = settings ?? MOCK_USER_SETTINGS;
-
-  const link: TRPCLink<AppRouter> = pending
-    ? createPendingLink()
-    : createMockLink({ 'userSettings.get': resolvedSettings });
-
-  const trpcClient = api.createClient({ links: [link] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -139,24 +64,16 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（coachスタイル選択中） */
 export const Default: Story = {
-  decorators: [
-    (Story) => (
-      <AIStyleMockProvider>
-        <Story />
-      </AIStyleMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS },
+  },
 };
 
 /** データ取得中（ローディング状態） */
 export const Loading: Story = {
-  decorators: [
-    (Story) => (
-      <AIStyleMockProvider pending>
-        <Story />
-      </AIStyleMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcPending: true,
+  },
 };
 
 /**
@@ -166,11 +83,7 @@ export const Loading: Story = {
  * 既存のカスタムプロンプトがあらかじめ入力されている。
  */
 export const CustomStyle: Story = {
-  decorators: [
-    (Story) => (
-      <AIStyleMockProvider settings={MOCK_USER_SETTINGS_CUSTOM}>
-        <Story />
-      </AIStyleMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS_CUSTOM },
+  },
 };

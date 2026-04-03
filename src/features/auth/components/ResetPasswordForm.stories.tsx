@@ -3,7 +3,6 @@ import { expect, userEvent, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 import { ResetPasswordForm } from './ResetPasswordForm';
 
@@ -25,17 +24,14 @@ const meta = {
         },
       },
     },
+    // デフォルトのupdatePasswordはno-opに差し替える（Supabase接続不要）
+    storeMocks: {
+      useAuthStore: {
+        updatePassword: () => new Promise(() => undefined),
+      },
+    },
   },
   tags: ['autodocs'],
-  decorators: [
-    (Story) => {
-      // デフォルトのupdatePasswordはno-opに差し替える（Supabase接続不要）
-      useAuthStore.setState({
-        updatePassword: () => new Promise(() => undefined),
-      } as never);
-      return <Story />;
-    },
-  ],
 } satisfies Meta<typeof ResetPasswordForm>;
 
 export default meta;
@@ -74,14 +70,13 @@ export const WithInteraction: Story = {
  * フォーム送信後のスピナー・ボタンのdisabled状態を確認する。
  */
 export const Submitting: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         updatePassword: () => new Promise(() => undefined),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -130,18 +125,17 @@ export const Error: Story = {
  * 実コンポーネントの成功画面（チェックアイコン付き）が表示されることを確認する。
  */
 export const Success: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         updatePassword: () =>
           Promise.resolve({
             data: { user: null, session: null },
             error: null,
           } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -166,18 +160,17 @@ export const Success: Story = {
  * フォーム上部に表示されることを確認する。
  */
 export const ServerError: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         updatePassword: () =>
           Promise.resolve({
             data: { user: null, session: null },
             error: { message: 'Password update failed', name: 'AuthError', status: 422 },
           } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 

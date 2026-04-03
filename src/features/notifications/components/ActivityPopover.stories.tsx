@@ -6,16 +6,11 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
 import { Settings } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import type { ActivityTab } from '../lib/notification-helpers';
 import type { NotificationType } from '../schemas';
@@ -90,48 +85,6 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// tRPC Mock Helpers
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(responseMap: Record<string, unknown>): TRPCLink<AppRouter> {
-  return () => {
-    return ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-  };
-}
-
-function MockProvider({
-  children,
-  responseMap,
-}: {
-  children: ReactNode;
-  responseMap: Record<string, unknown>;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const link = createMockLink(responseMap);
-  const trpcClient = api.createClient({ links: [link] });
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 // Popover 中身を再現するプレビューコンポーネント
 // ─────────────────────────────────────────────────────────
 
@@ -170,23 +123,23 @@ function ActivityPanelPreview({ defaultTab = 'all' }: { defaultTab?: ActivityTab
 // Meta
 // ─────────────────────────────────────────────────────────
 
+const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.is_read).length;
+
 const meta = {
   title: 'Features/Notifications/ActivityPopover',
   component: ActivityPanelPreview,
   parameters: {
     layout: 'padded',
+    trpcMocks: {
+      'notifications.list': MOCK_NOTIFICATIONS,
+      'notifications.unreadCount': unreadCount,
+    },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof ActivityPanelPreview>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.is_read).length;
-const defaultResponseMap = {
-  'notifications.list': MOCK_NOTIFICATIONS,
-  'notifications.unreadCount': unreadCount,
-};
 
 // ─────────────────────────────────────────────────────────
 // Stories
@@ -195,62 +148,34 @@ const defaultResponseMap = {
 /** すべてタブ — 未読・既読が混在 */
 export const AllTab: Story = {
   args: { defaultTab: 'all' },
-  decorators: [
-    (Story) => (
-      <MockProvider responseMap={defaultResponseMap}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
 };
 
 /** リマインダータブ — reminder + overdue のみ表示 */
 export const RemindersTab: Story = {
   args: { defaultTab: 'reminders' },
-  decorators: [
-    (Story) => (
-      <MockProvider responseMap={defaultResponseMap}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
 };
 
 /** AI タブ — ai_insight, weekly_report, burnout_warning のみ表示 */
 export const AiTab: Story = {
   args: { defaultTab: 'ai' },
-  decorators: [
-    (Story) => (
-      <MockProvider responseMap={defaultResponseMap}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
 };
 
 /** 通知なし（空状態） */
 export const Empty: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider responseMap={{ 'notifications.list': [], 'notifications.unreadCount': 0 }}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: {
+      'notifications.list': [],
+      'notifications.unreadCount': 0,
+    },
+  },
 };
 
 /** 全既読 */
 export const AllRead: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider
-        responseMap={{
-          'notifications.list': MOCK_NOTIFICATIONS.map((n) => ({ ...n, is_read: true })),
-          'notifications.unreadCount': 0,
-        }}
-      >
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: {
+      'notifications.list': MOCK_NOTIFICATIONS.map((n) => ({ ...n, is_read: true })),
+      'notifications.unreadCount': 0,
+    },
+  },
 };
