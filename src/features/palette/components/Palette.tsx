@@ -7,38 +7,29 @@
  * ピン留め（手動管理）のみ。自動集計は history feature に移管。
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
-import { BlockItem, SidebarSection } from '@/shell/components/sidebar';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 import { usePaletteMutations } from '../hooks/usePaletteMutations';
 import { usePaletteItems } from '../hooks/usePaletteQuery';
-
-import { PaletteAddPopover } from './PaletteAddPopover';
-import { PaletteItemMenu } from './PaletteItemMenu';
 
 // ─────────────────────────────────────────────────────────
 // Palette
 // ─────────────────────────────────────────────────────────
 
-interface PaletteProps {
-  /** 外部で追加フローを制御する場合のコールバック（モバイルシート内ビュー切り替え等） */
-  onAddClick?: (() => void) | undefined;
-}
-
 /** Palette — サイドバーのピン留めブロック配置セクション */
-export function Palette({ onAddClick }: PaletteProps) {
+export function Palette() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const { placeBlockNow } = useBlockPlace();
-  const { unpinItem, updateDuration } = usePaletteMutations();
+  const { unpinItem } = usePaletteMutations();
 
   const { data: pinnedItems } = usePaletteItems();
 
@@ -72,36 +63,27 @@ export function Palette({ onAddClick }: PaletteProps) {
     return { validItems: valid, orphanItems: orphans };
   }, [pinnedItems, getTagById]);
 
-  // PaletteAddPopover: trigger + open state をここで管理
-  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
-  const addButtonRef = useRef<HTMLButtonElement>(null);
-
-  const handleAddClick = useCallback(() => {
-    if (onAddClick) {
-      onAddClick();
-    } else {
-      setAddPopoverOpen(true);
-    }
-  }, [onAddClick]);
-
-  const addTrigger = (
-    <Button
-      ref={addButtonRef}
-      variant="ghost"
-      icon
-      className="size-6"
-      aria-label={t('sidebar.palette.add')}
-      onClick={handleAddClick}
-    >
-      <Plus className="size-4" />
-    </Button>
-  );
-
   const hasItems = validItems.length > 0 || orphanItems.length > 0;
+
+  const deleteButton = (itemId: string) => (
+    <HoverTooltip content={t('sidebar.palette.remove')}>
+      <button
+        type="button"
+        className={blockMenuButtonCn}
+        onClick={(e) => {
+          e.stopPropagation();
+          unpinItem(itemId);
+        }}
+        aria-label={t('sidebar.palette.remove')}
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </HoverTooltip>
+  );
 
   return (
     <div className="w-full min-w-0 overflow-hidden px-2">
-      <SidebarSection title={t('sidebar.palette.title')} defaultOpen action={addTrigger}>
+      <SidebarSection title={t('sidebar.palette.title')} defaultOpen>
         {!hasItems && (
           <div className="text-muted-foreground space-y-2 px-2 py-4 text-xs">
             <p>{t('sidebar.palette.empty')}</p>
@@ -116,14 +98,7 @@ export function Palette({ onAddClick }: PaletteProps) {
               durationMinutes={item.duration_minutes}
               iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
               onClick={() => placeBlockNow(item.tag_id, item.duration_minutes, item.tag.name)}
-              menuSlot={
-                <PaletteItemMenu
-                  itemId={item.id}
-                  currentDuration={item.duration_minutes}
-                  onChangeDuration={updateDuration}
-                  onRemove={unpinItem}
-                />
-              }
+              menuSlot={deleteButton(item.id)}
             />
           </div>
         ))}
@@ -135,30 +110,11 @@ export function Palette({ onAddClick }: PaletteProps) {
               durationMinutes={item.duration_minutes}
               iconSlot={<TagIcon icon={null} color="gray" size="sm" />}
               disabled
-              menuSlot={
-                <HoverTooltip content={t('sidebar.palette.remove')}>
-                  <button
-                    type="button"
-                    // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
-                    className="text-muted-foreground hover:text-destructive relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-2.5 before:content-['']"
-                    onClick={() => unpinItem(item.id)}
-                    aria-label={t('sidebar.palette.remove')}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </HoverTooltip>
-              }
+              menuSlot={deleteButton(item.id)}
             />
           </div>
         ))}
       </SidebarSection>
-
-      <PaletteAddPopover
-        open={addPopoverOpen}
-        onOpenChange={setAddPopoverOpen}
-        anchorRef={addButtonRef}
-        pinnedItems={pinnedItems ?? []}
-      />
     </div>
   );
 }

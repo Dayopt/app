@@ -3,7 +3,7 @@
 /**
  * パレットの楽観的更新付き mutation hooks
  *
- * pin（追加）/ unpin（削除）/ updateDuration（時間変更）を即座にUIに反映し、
+ * pin（追加）/ unpin（削除）を即座にUIに反映し、
  * エラー時はロールバック、完了時にキャッシュを再検証する。
  */
 
@@ -85,34 +85,6 @@ export function usePaletteMutations() {
     },
   });
 
-  const updateDurationMutation = api.palette.updateDuration.useMutation({
-    onMutate: async (input) => {
-      await utils.palette.list.cancel();
-
-      const previous = utils.palette.list.getData();
-
-      utils.palette.list.setData(undefined, (old) => {
-        if (!old) return old;
-        return old.map((item) =>
-          item.id === input.id ? { ...item, duration_minutes: input.durationMinutes } : item,
-        );
-      });
-
-      return { previous };
-    },
-
-    onError: (_err, _input, context) => {
-      if (context?.previous) {
-        utils.palette.list.setData(undefined, context.previous);
-      }
-      toast.error(t('sidebar.palette.updateFailed'));
-    },
-
-    onSettled: () => {
-      void utils.palette.list.invalidate();
-    },
-  });
-
   const pinItem = useCallback(
     (
       tagId: string,
@@ -137,19 +109,10 @@ export function usePaletteMutations() {
     [unpinMutation],
   );
 
-  const updateDuration = useCallback(
-    (id: string, durationMinutes: number) => {
-      updateDurationMutation.mutate({ id, durationMinutes });
-    },
-    [updateDurationMutation],
-  );
-
   return {
     pinItem,
     unpinItem,
-    updateDuration,
     isPinning: pinMutation.isPending,
     isUnpinning: unpinMutation.isPending,
-    isUpdatingDuration: updateDurationMutation.isPending,
   };
 }
