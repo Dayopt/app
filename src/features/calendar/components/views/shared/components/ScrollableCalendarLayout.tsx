@@ -277,6 +277,7 @@ export const ScrollableCalendarLayout = ({
                   style={{
                     top: `${currentTimePosition}px`,
                     left: todayColumnPosition.left,
+                    width: todayColumnPosition.width,
                     zIndex: Z_INDEX.CURRENT_TIME,
                   }}
                 >
