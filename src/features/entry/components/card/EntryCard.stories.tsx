@@ -198,7 +198,7 @@ export const OverlayUnexecuted: Story = {
   ),
 };
 
-/** 超過オーバーレイ。予定時間を超えて実施した区間に左アクセントグラデーション + カード拡張。 */
+/** 超過オーバーレイ。予定時間を超えて実施した区間にタグ色の破線枠（中は透明）。 */
 export const OverlayOvertime: Story = {
   render: () => (
     <Slot height={180}>
@@ -213,11 +213,47 @@ export const OverlayOvertime: Story = {
           actualStartDate: new Date('2024-01-15T09:30:00'),
           actualEndDate: new Date('2024-01-15T11:30:00'),
         }}
+        tagName="Deep Work"
+        tagColor="blue"
         position={{ ...basePosition, height: 70 }}
         hourHeight={72}
       />
     </Slot>
   ),
+};
+
+/** 超過オーバーレイ（グリッド罫線付き）。破線枠の透明度とグリッドとの整合を確認。 */
+export const OverlayOvertimeOnGrid: Story = {
+  render: () => {
+    const HOUR_HEIGHT = 72;
+    return (
+      <GridSlot hours={4}>
+        <EntryCard
+          entry={{
+            ...baseEntry,
+            entryState: 'past',
+            origin: 'planned',
+            startDate: new Date('2024-01-15T10:00:00'),
+            endDate: new Date('2024-01-15T11:00:00'),
+            displayStartDate: new Date('2024-01-15T10:00:00'),
+            displayEndDate: new Date('2024-01-15T11:00:00'),
+            duration: 60,
+            actualStartDate: new Date('2024-01-15T09:30:00'),
+            actualEndDate: new Date('2024-01-15T11:30:00'),
+          }}
+          tagName="Deep Work"
+          tagColor="blue"
+          position={{
+            top: 1 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1 * HOUR_HEIGHT - 2,
+          }}
+          hourHeight={HOUR_HEIGHT}
+        />
+      </GridSlot>
+    );
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -338,7 +374,7 @@ export const AllPatterns: Story = {
 
       <section>
         <p className="text-muted-foreground mb-2 text-xs">
-          Overlay: Overtime（予定より実績が長い → グラデーション拡張）
+          Overlay: Overtime（予定より実績が長い → 破線枠で超過区間を表示）
         </p>
         <Slot height={180}>
           <EntryCard
@@ -352,6 +388,8 @@ export const AllPatterns: Story = {
               actualStartDate: new Date('2024-01-15T09:30:00'),
               actualEndDate: new Date('2024-01-15T11:30:00'),
             }}
+            tagName="Deep Work"
+            tagColor="blue"
             position={{ ...basePosition, height: 70 }}
             hourHeight={72}
           />
