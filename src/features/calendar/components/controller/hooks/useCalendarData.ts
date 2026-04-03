@@ -97,8 +97,16 @@ export function useCalendarData({
     isLoading: isEntriesLoading,
   } = useEntries(dateFilter);
 
-  // タグマスタをプリフェッチ（EntryCard等で使用するためキャッシュをwarm up）
-  useTags();
+  // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ初期化）
+  const { data: tagsData } = useTags();
+  const initializeWithTags = useCalendarFilterStore((state) => state.initializeWithTags);
+
+  // タグフィルタを初期化（モバイルではサイドバーがマウントされないため、ここで保証する）
+  useEffect(() => {
+    if (tagsData && tagsData.length > 0) {
+      initializeWithTags(tagsData.map((tag) => tag.id));
+    }
+  }, [tagsData, initializeWithTags]);
 
   // tRPC utils（プリフェッチ用）
   const utils = api.useUtils();
