@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useCreateTag, useTagsMap } from '@/features/tags';
+import { localTimeToUTCISO } from '@/lib/date-utils';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
@@ -77,10 +78,12 @@ export function EntryInspectorForm({
     handleActualStartChange,
     handleActualEndChange,
     handleReminderChange,
+    setStartTimeLocal,
+    setEndTimeLocal,
     resetActualTimesLocal,
     autoSave,
   } = handlers;
-  const { timeConflictError } = state;
+  const { timeConflictError, timezone } = state;
   const { handleDelete, save } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
@@ -166,13 +169,35 @@ export function EntryInspectorForm({
   };
 
   const handleConfirmTimeChange = useCallback(() => {
-    if (!pendingTimeChange) return;
-    applyPlannedTimeChange(pendingTimeChange.type, pendingTimeChange.time);
-    // 記録リセットを同じ debounced save にマージ（separate saveImmediate だと optimistic lock 競合の可能性）
+    if (!pendingTimeChange || !scheduleDate) return;
+    const { type, time } = pendingTimeChange;
+    const [hours, minutes] = time.split(':').map(Number);
+    const isoValue = localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone);
+
+    // ローカル状態のみ更新（save を発火しない）
+    if (type === 'start') {
+      setStartTimeLocal(time);
+    } else {
+      setEndTimeLocal(time);
+    }
     resetActualTimesLocal();
-    save({ actual_start_time: null, actual_end_time: null });
+
+    // debounced save にマージ（先行する pending フィールドと合流して1回の mutation で送信）
+    save({
+      [type === 'start' ? 'start_time' : 'end_time']: isoValue,
+      actual_start_time: null,
+      actual_end_time: null,
+    });
     setPendingTimeChange(null);
-  }, [pendingTimeChange, applyPlannedTimeChange, resetActualTimesLocal, save]);
+  }, [
+    pendingTimeChange,
+    scheduleDate,
+    timezone,
+    setStartTimeLocal,
+    setEndTimeLocal,
+    resetActualTimesLocal,
+    save,
+  ]);
 
   const handleCancelTimeChange = useCallback(() => {
     setPendingTimeChange(null);

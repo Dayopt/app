@@ -42,6 +42,10 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   const titleRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
+  // ユーザー操作による未保存のローカル変更を保護するフラグ
+  // entry sync useEffect がバックグラウンド refetch で古いデータに上書きするのを防ぐ
+  const localDirtyRef = useRef(false);
+
   // Local state
   const [timeConflictError, setTimeConflictError] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
@@ -53,6 +57,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
 
   // entry データからローカル state を初期化
   useEffect(() => {
+    if (localDirtyRef.current) return; // ユーザーの未保存変更を保護
     if (entry && 'id' in entry) {
       if (entry.start_time) {
         const date = parseISOToUserTimezone(entry.start_time, timezone);
@@ -167,6 +172,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   const handleStartTimeChange = useCallback(
     (time: string) => {
       const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
+      localDirtyRef.current = true;
       setStartTime(time);
 
       const isoValue =
@@ -184,6 +190,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   const handleEndTimeChange = useCallback(
     (time: string) => {
       const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
+      localDirtyRef.current = true;
       setEndTime(time);
 
       const isoValue =
@@ -244,8 +251,28 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     [scheduleDate, saveImmediate, timezone],
   );
 
-  // 記録時間のローカル状態リセット（保存は呼び出し元で行う）
+  // dirty フラグを entry 変更後にクリア（refetch サイクル完了待ち）
+  useEffect(() => {
+    if (localDirtyRef.current) {
+      const timer = setTimeout(() => {
+        localDirtyRef.current = false;
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [entry]);
+
+  // ローカル状態のみ更新（保存は呼び出し元で行う）
+  const setStartTimeLocal = useCallback((time: string) => {
+    localDirtyRef.current = true;
+    setStartTime(time);
+  }, []);
+  const setEndTimeLocal = useCallback((time: string) => {
+    localDirtyRef.current = true;
+    setEndTime(time);
+  }, []);
   const resetActualTimesLocal = useCallback(() => {
+    localDirtyRef.current = true;
     setActualStartTime(null);
     setActualEndTime(null);
   }, []);
@@ -271,6 +298,8 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
+    setStartTimeLocal,
+    setEndTimeLocal,
     resetActualTimesLocal,
   };
 }
