@@ -603,14 +603,26 @@ export const emailRouter = createTRPCRouter({
         subject: z.string().min(1, 'Subject is required').default('Test Email from Dayopt'),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
-        // 本番環境では無効化
-        if (process.env.NODE_ENV === 'production') {
+        // 本番・staging 環境では無効化（ローカル開発のみ許可）
+        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Test endpoint is not available in production',
+            message: 'Test endpoint is only available in local development',
           });
+        }
+
+        // 自分のメールアドレスのみ許可
+        const userId = ctx.userId;
+        if (userId) {
+          const { data: userData } = await ctx.supabase.auth.getUser();
+          if (userData?.user?.email && userData.user.email !== input.to) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Can only send test emails to your own address',
+            });
+          }
         }
 
         logger.info('Sending test email', { to: input.to });
