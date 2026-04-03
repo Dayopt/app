@@ -141,7 +141,6 @@
       "openAIAssistant": "Open AI Assistant",
       "selectDate": "Select {date}",
       "selectTime": "Select time: {time}",
-      "selectTimeDrawerTitle": "Select time",
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
       "endTime": "End time",

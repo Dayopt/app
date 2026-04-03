@@ -141,7 +141,6 @@
       "openAIAssistant": "AIアシスタントを開く",
       "selectDate": "{date}を選択",
       "selectTime": "時刻選択: {time}",
-      "selectTimeDrawerTitle": "時刻を選択",
       "timeNotSelected": "時刻選択: 未選択",
       "startTime": "開始時刻",
       "endTime": "終了時刻",
