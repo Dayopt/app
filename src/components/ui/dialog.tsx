@@ -49,7 +49,7 @@ const DialogContent = ({
 }) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
 
-  // モバイルキーボード表示時にダイアログを上にシフト
+  // モバイルキーボード表示時にダイアログを上にシフト + 高さ制約
   React.useEffect(() => {
     const vv = window.visualViewport;
     const el = contentRef.current;
@@ -59,8 +59,10 @@ const DialogContent = ({
       const kbHeight = Math.max(0, window.innerHeight - vv.height);
       if (kbHeight > 0) {
         el.style.top = `calc(50% - ${kbHeight / 2}px)`;
+        el.style.maxHeight = `${vv.height - 32}px`;
       } else {
         el.style.top = '';
+        el.style.maxHeight = '';
       }
     };
 
@@ -79,7 +81,7 @@ const DialogContent = ({
         ref={contentRef}
         data-slot="dialog-content"
         className={cn(
-          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200',
+          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200 transition-[top,max-height] max-h-[calc(100dvh-2rem)] overflow-y-auto',
           // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限
           // max-wはclassNameで上書き可能（Storybook対応のためmin-w追加）
           !className?.includes('max-w-')
