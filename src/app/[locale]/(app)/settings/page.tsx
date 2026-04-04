@@ -18,14 +18,16 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
+import { api } from '@/platform/trpc';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -51,6 +53,11 @@ export default function SettingsPage() {
   const displayName = getDisplayName(user, t('navigation.navUser.account'));
   const avatarUrl = getAvatarUrl(user);
   const initials = getInitials(displayName);
+
+  const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
+  const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
+  const isPro = subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due';
+  const isLoadingBilling = billingOverview.isLoading;
 
   // PC: ホームにリダイレクトし、設定モーダルを開く
   useEffect(() => {
@@ -116,27 +123,55 @@ export default function SettingsPage() {
   // Mobile: Instagram風アカウント概要ページ
   return (
     <ScrollArea className="flex-1">
-      {/* B. ヒーローエリア（タップでプロフィール遷移） */}
-      <Link href="/settings/profile" className="block">
-        <div className="flex flex-col items-center gap-4 px-4 pt-8 pb-6">
-          <Avatar size="xl">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-            <AvatarFallback className="bg-foreground text-background text-xl">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="text-center">
-            <p className="text-lg font-medium">{displayName}</p>
-            {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
-          </div>
+      {/* B. ヒーローエリア */}
+      <div className="px-4 pt-8 pb-6">
+        <div className="border-border-subtle overflow-hidden rounded-lg border shadow-sm">
+          {/* Row 1: Avatar + Name/Email + Plan Badge */}
+          <Link
+            href="/settings/profile"
+            className="hover:bg-state-hover active:bg-state-hover flex items-center gap-4 px-4 py-4 transition-colors duration-150"
+          >
+            <Avatar size="lg">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="bg-foreground text-background text-base">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">{displayName}</p>
+              {user?.email && (
+                <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+              )}
+            </div>
+            {isLoadingBilling ? (
+              <Skeleton className="h-6 w-10 rounded-lg" />
+            ) : (
+              <Badge variant={isPro ? 'primary' : 'outline'}>
+                {isPro
+                  ? t('settings.subscription.plans.pro.name')
+                  : t('settings.subscription.plans.free.name')}
+              </Badge>
+            )}
+          </Link>
+
+          {/* Row 2: Upgrade CTA（Free時のみ） */}
+          {!isLoadingBilling && !isPro && (
+            <button
+              type="button"
+              onClick={() => router.push('/settings/billing')}
+              className="border-border-subtle hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 border-t px-4 py-4 transition-colors duration-150"
+            >
+              <Sparkles className="text-primary size-5 shrink-0" />
+              <div className="min-w-0 flex-1 text-left">
+                <p className="text-sm font-bold">{t('navigation.navUser.upgradePlan')}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t('settings.subscription.proPlanDescription')}
+                </p>
+              </div>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </button>
+          )}
         </div>
-      </Link>
-      {/* Upgrade ボタンはリンク外 */}
-      <div className="flex justify-center pb-6">
-        <Button variant="primary" size="sm" onClick={() => router.push('/settings/billing')}>
-          <Sparkles className="size-4" />
-          {t('navigation.navUser.upgradePlan')}
-        </Button>
       </div>
 
       {/* 設定カテゴリ */}
