@@ -186,7 +186,7 @@ export function TimeSelect({
                     index === highlightedIndex
                       ? 'bg-state-selected'
                       : option === value
-                        ? 'bg-state-active/10 text-state-active-foreground font-bold'
+                        ? 'bg-state-active/10 text-state-active-foreground font-medium'
                         : '',
                   )}
                   onClick={() => handleOptionClick(option)}

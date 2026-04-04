@@ -20,7 +20,7 @@ export function TourPreChoice({ onStart, onSkip }: TourPreChoiceProps) {
         role="dialog"
         aria-label={t('tour.preChoice.title')}
       >
-        <h2 className="text-foreground text-xl font-bold">{t('tour.preChoice.title')}</h2>
+        <h2 className="text-foreground text-xl font-medium">{t('tour.preChoice.title')}</h2>
         <p className="text-muted-foreground text-sm">{t('tour.preChoice.description')}</p>
         <div className="flex w-full flex-col gap-2">
           <Button onClick={onStart} className="w-full">

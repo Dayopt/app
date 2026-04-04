@@ -61,7 +61,7 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
             <div className="p-6 md:p-8">
               <FieldGroup>
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <h1 className="text-2xl font-bold">{t('auth.passwordResetForm.checkEmail')}</h1>
+                  <h1 className="text-2xl font-medium">{t('auth.passwordResetForm.checkEmail')}</h1>
                   <p className="text-muted-foreground text-balance">
                     {t('auth.passwordResetForm.sentResetLink')}{' '}
                     <span className="font-normal">{email}</span>
@@ -97,7 +97,9 @@ export function PasswordResetForm({ className, ...props }: React.ComponentProps<
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">{t('auth.passwordResetForm.resetPassword')}</h1>
+                <h1 className="text-2xl font-medium">
+                  {t('auth.passwordResetForm.resetPassword')}
+                </h1>
                 <p className="text-muted-foreground text-balance">
                   {t('auth.passwordResetForm.enterEmail')}
                 </p>

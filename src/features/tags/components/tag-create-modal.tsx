@@ -204,7 +204,7 @@ export function TagCreateModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <h2 id="tag-create-dialog-title" className="mb-6 text-lg font-bold">
+        <h2 id="tag-create-dialog-title" className="mb-6 text-lg font-medium">
           {t('tags.modal.createTitle')}
         </h2>
 

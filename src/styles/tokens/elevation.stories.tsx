@@ -54,7 +54,7 @@ export const Overview: Story = {
 
     return (
       <div>
-        <h1 className="mb-2 text-2xl font-bold">Elevation（高さ）</h1>
+        <h1 className="mb-2 text-2xl font-medium">Elevation（高さ）</h1>
         <p className="text-muted-foreground mb-2 text-sm">
           UI 要素の z 軸上の位置。surface色 + shadow + border のセットで表現する。
         </p>
@@ -62,14 +62,14 @@ export const Overview: Story = {
 
         {/* ── 設計原則 ── */}
         <div className="bg-card border-border mb-8 rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">設計原則</h2>
+          <h2 className="mb-4 text-lg font-medium">設計原則</h2>
           <div className="space-y-2 text-sm">
             <p>
-              <span className="font-bold">Light:</span>{' '}
+              <span className="font-medium">Light:</span>{' '}
               <span className="text-muted-foreground">shadow が奥行きの主役。面色差は補助。</span>
             </p>
             <p>
-              <span className="font-bold">Dark:</span>{' '}
+              <span className="font-medium">Dark:</span>{' '}
               <span className="text-muted-foreground">面色差が主役。shadow は補助。</span>
             </p>
             <p className="text-muted-foreground mt-2 text-xs">
@@ -79,7 +79,7 @@ export const Overview: Story = {
         </div>
 
         {/* ── 4段階ライブプレビュー ── */}
-        <h3 className="mb-4 font-bold">4段階プレビュー</h3>
+        <h3 className="mb-4 font-medium">4段階プレビュー</h3>
         <p className="text-muted-foreground mb-2 text-xs">
           Storybook ツールバーの 🌙 で切り替えると Light/Dark の見え方の違いが確認できます。
         </p>
@@ -89,7 +89,7 @@ export const Overview: Story = {
             <div className="bg-container border-border flex h-24 items-center justify-center rounded-lg border">
               <span className="text-muted-foreground text-xs">Sunken</span>
             </div>
-            <p className="mt-2 text-xs font-bold">Sunken</p>
+            <p className="mt-2 text-xs font-medium">Sunken</p>
             <p className="text-muted-foreground text-xs">no shadow</p>
           </div>
           {/* Base */}
@@ -97,7 +97,7 @@ export const Overview: Story = {
             <div className="bg-background flex h-24 items-center justify-center rounded-lg">
               <span className="text-muted-foreground text-xs">Base</span>
             </div>
-            <p className="mt-2 text-xs font-bold">Base</p>
+            <p className="mt-2 text-xs font-medium">Base</p>
             <p className="text-muted-foreground text-xs">no shadow</p>
           </div>
           {/* Raised */}
@@ -108,7 +108,7 @@ export const Overview: Story = {
             >
               <span className="text-muted-foreground text-xs">Raised</span>
             </div>
-            <p className="mt-2 text-xs font-bold">Raised</p>
+            <p className="mt-2 text-xs font-medium">Raised</p>
             <p className="text-muted-foreground text-xs">shadow-sm</p>
           </div>
           {/* Overlay */}
@@ -119,28 +119,28 @@ export const Overview: Story = {
             >
               <span className="text-muted-foreground text-xs">Overlay</span>
             </div>
-            <p className="mt-2 text-xs font-bold">Overlay</p>
+            <p className="mt-2 text-xs font-medium">Overlay</p>
             <p className="text-muted-foreground text-xs">shadow-card</p>
           </div>
         </div>
 
         {/* ── Spec テーブル ── */}
-        <h3 className="mb-4 font-bold">Elevation レベル</h3>
+        <h3 className="mb-4 font-medium">Elevation レベル</h3>
         <div className="bg-card border-border mb-6 overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-2 text-left text-xs font-bold">Level</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">Surface</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">Shadow</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">Border</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">用途</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Level</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Surface</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Shadow</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Border</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">用途</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
               {levels.map(({ level, surface, shadow, border, usage }) => (
                 <tr key={level} className="border-border border-b">
-                  <td className="text-foreground px-4 py-2 text-xs font-bold">{level}</td>
+                  <td className="text-foreground px-4 py-2 text-xs font-medium">{level}</td>
                   <td className="px-4 py-2 font-mono text-xs">{surface}</td>
                   <td className="px-4 py-2 font-mono text-xs">{shadow}</td>
                   <td className="px-4 py-2 font-mono text-xs">{border}</td>
@@ -152,7 +152,7 @@ export const Overview: Story = {
         </div>
 
         {/* ── Dark mode 比較 ── */}
-        <h3 className="mb-4 font-bold">Dark mode での見え方</h3>
+        <h3 className="mb-4 font-medium">Dark mode での見え方</h3>
         <p className="text-muted-foreground mb-2 text-xs">
           Light では shadow で区別。Dark では面色差(L値)で区別。
         </p>
@@ -160,15 +160,15 @@ export const Overview: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="px-4 py-2 text-left text-xs font-bold">Level</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">Light L</th>
-                <th className="px-4 py-2 text-left text-xs font-bold">Dark L</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Level</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Light L</th>
+                <th className="px-4 py-2 text-left text-xs font-medium">Dark L</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
               {levels.map(({ level, lightL, darkL }) => (
                 <tr key={level} className="border-border border-b">
-                  <td className="text-foreground px-4 py-2 text-xs font-bold">{level}</td>
+                  <td className="text-foreground px-4 py-2 text-xs font-medium">{level}</td>
                   <td className="px-4 py-2 font-mono text-xs">{lightL}</td>
                   <td className="px-4 py-2 font-mono text-xs">{darkL}</td>
                 </tr>
@@ -181,11 +181,11 @@ export const Overview: Story = {
         </p>
 
         {/* ── なぜ4段階か ── */}
-        <h3 className="mb-4 font-bold">なぜ 6段階 → 4段階か</h3>
+        <h3 className="mb-4 font-medium">なぜ 6段階 → 4段階か</h3>
         <div className="bg-card border-border mb-6 rounded-lg border p-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <p className="text-destructive text-sm font-bold">旧: 6段階</p>
+              <p className="text-destructive text-sm font-medium">旧: 6段階</p>
               <p className="text-muted-foreground text-xs">
                 shadow-none / xs / sm / md / lg / xl
                 <br />
@@ -193,7 +193,7 @@ export const Overview: Story = {
               </p>
             </div>
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <p className="text-success text-sm font-bold">新: 4段階</p>
+              <p className="text-success text-sm font-medium">新: 4段階</p>
               <p className="text-muted-foreground text-xs">
                 背景に沈むか？→ Sunken
                 <br />
@@ -211,7 +211,7 @@ export const Overview: Story = {
         </div>
 
         {/* ── z-index ── */}
-        <h3 className="mb-4 font-bold">z-index</h3>
+        <h3 className="mb-4 font-medium">z-index</h3>
         <p className="text-muted-foreground mb-2 text-xs">
           Sunken / Base / Raised → z-index 指定なし。Overlay のみ z-index 必須。
         </p>
@@ -229,7 +229,7 @@ export const Overview: Story = {
 export const ShadowComparison: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Shadow 比較</h1>
+      <h1 className="mb-2 text-2xl font-medium">Shadow 比較</h1>
       <p className="text-muted-foreground mb-8 text-sm">
         3種の shadow トークン。shadow-xs は form control 専用、shadow-sm / shadow-card は Elevation
         用。
@@ -244,7 +244,7 @@ export const ShadowComparison: Story = {
           >
             <span className="text-muted-foreground text-sm">テキストを入力...</span>
           </div>
-          <p className="mt-4 text-xs font-bold">shadow-xs</p>
+          <p className="mt-4 text-xs font-medium">shadow-xs</p>
           <p className="text-muted-foreground text-xs">form control（input, select, radio）</p>
         </div>
 
@@ -256,7 +256,7 @@ export const ShadowComparison: Story = {
           >
             <span className="text-muted-foreground text-xs">Raised card</span>
           </div>
-          <p className="mt-4 text-xs font-bold">shadow-sm</p>
+          <p className="mt-4 text-xs font-medium">shadow-sm</p>
           <p className="text-muted-foreground text-xs">Raised（card, section）</p>
         </div>
 
@@ -268,7 +268,7 @@ export const ShadowComparison: Story = {
           >
             <span className="text-muted-foreground text-xs">Overlay</span>
           </div>
-          <p className="mt-4 text-xs font-bold">shadow-card</p>
+          <p className="mt-4 text-xs font-medium">shadow-card</p>
           <p className="text-muted-foreground text-xs">Overlay（dropdown, popover, dialog）</p>
         </div>
       </div>
@@ -279,7 +279,7 @@ export const ShadowComparison: Story = {
 export const UseCases: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">実装例</h1>
+      <h1 className="mb-2 text-2xl font-medium">実装例</h1>
       <p className="text-muted-foreground mb-8 text-sm">
         各 elevation レベルの実装パターン。クラスをそのままコピペ可能。
       </p>
@@ -287,7 +287,7 @@ export const UseCases: Story = {
       <div className="space-y-8">
         {/* Sunken: サイドバー */}
         <section>
-          <h2 className="mb-1 text-lg font-bold">Sunken: サイドバー</h2>
+          <h2 className="mb-1 text-lg font-medium">Sunken: サイドバー</h2>
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-container border-r border-border
           </code>
@@ -311,7 +311,7 @@ export const UseCases: Story = {
 
         {/* Sunken: Input */}
         <section>
-          <h2 className="mb-1 text-lg font-bold">Sunken: 入力フィールド</h2>
+          <h2 className="mb-1 text-lg font-medium">Sunken: 入力フィールド</h2>
           <code className="text-muted-foreground mb-4 block text-xs">bg-muted rounded-lg</code>
           <div className="bg-card border-border rounded-lg border p-6">
             <div className="bg-muted w-64 rounded-lg px-4 py-2">
@@ -322,7 +322,7 @@ export const UseCases: Story = {
 
         {/* Raised: カード */}
         <section>
-          <h2 className="mb-1 text-lg font-bold">Raised: カード</h2>
+          <h2 className="mb-1 text-lg font-medium">Raised: カード</h2>
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-card border border-border-subtle rounded-lg shadow-sm
           </code>
@@ -331,7 +331,7 @@ export const UseCases: Story = {
               className="bg-card border-border-subtle w-80 rounded-lg border p-6"
               style={{ boxShadow: 'var(--shadow-sm)' }}
             >
-              <h3 className="mb-2 font-bold">カードタイトル</h3>
+              <h3 className="mb-2 font-medium">カードタイトル</h3>
               <p className="text-muted-foreground text-sm">コンテンツをグループ化</p>
             </div>
           </div>
@@ -339,7 +339,7 @@ export const UseCases: Story = {
 
         {/* Overlay: ドロップダウン */}
         <section>
-          <h2 className="mb-1 text-lg font-bold">Overlay: ドロップダウン</h2>
+          <h2 className="mb-1 text-lg font-medium">Overlay: ドロップダウン</h2>
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-card border border-border-subtle rounded-lg shadow-card z-50
           </code>
@@ -357,7 +357,7 @@ export const UseCases: Story = {
 
         {/* Overlay: モーダル */}
         <section>
-          <h2 className="mb-1 text-lg font-bold">Overlay: モーダル</h2>
+          <h2 className="mb-1 text-lg font-medium">Overlay: モーダル</h2>
           <code className="text-muted-foreground mb-4 block text-xs">
             bg-overlay（scrim） + bg-card shadow-card rounded-2xl z-50
           </code>
@@ -375,7 +375,7 @@ export const UseCases: Story = {
                 className="bg-card border-border-subtle w-72 rounded-2xl border p-6"
                 style={{ boxShadow: 'var(--shadow-card)' }}
               >
-                <h3 className="mb-2 text-lg font-bold">モーダルタイトル</h3>
+                <h3 className="mb-2 text-lg font-medium">モーダルタイトル</h3>
                 <p className="text-muted-foreground mb-4 text-sm">最前面でユーザーの操作を待つ</p>
                 <div className="flex justify-end gap-2">
                   <button

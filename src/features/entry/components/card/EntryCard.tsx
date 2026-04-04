@@ -10,7 +10,6 @@
 
 import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'react';
 
-import { Timer, TimerOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { getTagColorClasses } from '@/lib/tag-colors';
@@ -303,9 +302,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           style={{ top: 0, height: `${overlay.topHeight}px`, ...overtimeBorderStyle }}
         >
           {overlay.topHeight >= 16 && (
-            <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
-              <Timer className="size-3.5" />
-              {formatDiffMinutes(overlay.topDiffMin)}
+            <span className="text-muted-foreground text-xs">
+              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
+              <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
             </span>
           )}
         </div>
@@ -319,9 +318,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...overtimeBorderStyle }}
         >
           {overlay.bottomHeight >= 16 && (
-            <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
-              <Timer className="size-3.5" />
-              {formatDiffMinutes(overlay.bottomDiffMin)}
+            <span className="text-muted-foreground text-xs">
+              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
+              <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
             </span>
           )}
         </div>
@@ -375,9 +374,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               style={{ height: `${overlay.topHeight}px` }}
             >
               {overlay.topHeight >= 16 && (
-                <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
-                  <TimerOff className="size-3.5" />
-                  {formatDiffMinutes(overlay.topDiffMin)}
+                <span className="text-muted-foreground text-xs">
+                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
+                  <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
                 </span>
               )}
             </div>
@@ -391,9 +390,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               style={{ height: `${overlay.bottomHeight}px` }}
             >
               {overlay.bottomHeight >= 16 && (
-                <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
-                  <TimerOff className="size-3.5" />
-                  {formatDiffMinutes(overlay.bottomDiffMin)}
+                <span className="text-muted-foreground text-xs">
+                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
+                  <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
                 </span>
               )}
             </div>

@@ -41,7 +41,7 @@ export function SettingsSidebar({ className }: SettingsSidebarProps) {
   return (
     <aside className={cn('bg-surface-container flex flex-col', className)}>
       <div className="flex h-12 items-center px-6 pt-4">
-        <h2 className="text-lg font-bold">{t('settings.dialog.title')}</h2>
+        <h2 className="text-lg font-medium">{t('settings.dialog.title')}</h2>
       </div>
       <ScrollArea className="flex-1">
         <nav className="flex flex-col gap-1 p-2">

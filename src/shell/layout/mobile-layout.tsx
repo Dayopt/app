@@ -48,7 +48,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
         {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
         {!hasOwnHeader && (
           <AppHeader>
-            {title && <h1 className="truncate text-lg leading-8 font-bold">{title}</h1>}
+            {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
           </AppHeader>
         )}
 

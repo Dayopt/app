@@ -63,7 +63,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
 
         {/* ② Patterns: いつやっているか？ */}
         <section>
-          <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wider uppercase">
+          <h3 className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
             {t('calendar.stats.tagDetail.whenSection')}
           </h3>
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
@@ -82,7 +82,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
 
         {/* ③ Quality: どれだけうまくいっているか？ */}
         <section>
-          <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wider uppercase">
+          <h3 className="text-muted-foreground mb-4 text-xs font-medium tracking-wider uppercase">
             {t('calendar.stats.tagDetail.qualitySection')}
           </h3>
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>

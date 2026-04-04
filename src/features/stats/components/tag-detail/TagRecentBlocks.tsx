@@ -113,7 +113,7 @@ export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
                 <span className="flex-1" />
                 {deviation != null && (
                   <span
-                    className={`font-mono text-xs font-bold ${
+                    className={`font-mono text-xs font-medium ${
                       Math.abs(deviation) <= 5
                         ? 'text-success'
                         : deviation > 0

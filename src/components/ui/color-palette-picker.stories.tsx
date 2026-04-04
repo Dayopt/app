@@ -74,7 +74,7 @@ export const AllPatterns: Story = {
 
         {/* 色名ラベル付きスウォッチ一覧 */}
         <div className="p-4">
-          <h3 className="text-foreground mb-4 text-sm font-bold">色名ラベル付きスウォッチ</h3>
+          <h3 className="text-foreground mb-4 text-sm font-medium">色名ラベル付きスウォッチ</h3>
           <div className="grid grid-cols-5 gap-2">
             {TAG_COLOR_NAMES.map((colorName) => (
               <div key={colorName} className="flex flex-col items-center gap-1">

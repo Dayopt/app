@@ -64,7 +64,7 @@ export function MFAVerifyForm({
                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
                 </div>
-                <h1 className="text-2xl font-bold">{t('auth.mfaVerify.title')}</h1>
+                <h1 className="text-2xl font-medium">{t('auth.mfaVerify.title')}</h1>
                 <p className="text-muted-foreground text-balance">
                   {mode === 'totp'
                     ? t('auth.mfaVerify.description')

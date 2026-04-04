@@ -59,13 +59,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Default</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Default</h3>
         <StoryTRPCProvider mocks={{ 'userSettings.get': PRESET_USER_SETTINGS.default }}>
           <CalendarSettings />
         </StoryTRPCProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Loading</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Loading</h3>
         <StoryTRPCProvider pending>
           <CalendarSettings />
         </StoryTRPCProvider>

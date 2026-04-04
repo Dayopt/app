@@ -33,7 +33,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Card Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Card Patterns</h1>
       <p className="text-muted-foreground mb-8">
         カードUIのパターン。情報表示、アクション、レイアウトの使い分け。
       </p>
@@ -41,34 +41,34 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
+          <h2 className="mb-4 text-lg font-medium">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">パターン</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">特徴</th>
+                  <th className="py-2 text-left font-medium">パターン</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">特徴</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">基本カード</td>
+                  <td className="py-2 font-medium">基本カード</td>
                   <td className="py-2">情報のグループ化</td>
                   <td className="py-2">タイトル＋説明＋コンテンツ</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">アクションカード</td>
+                  <td className="py-2 font-medium">アクションカード</td>
                   <td className="py-2">操作可能なアイテム</td>
                   <td className="py-2">メニュー＋ボタン</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">ステータスカード</td>
+                  <td className="py-2 font-medium">ステータスカード</td>
                   <td className="py-2">状態表示</td>
                   <td className="py-2">バッジ＋進捗</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">メトリクスカード</td>
+                  <td className="py-2 font-medium">メトリクスカード</td>
                   <td className="py-2">数値・統計表示</td>
                   <td className="py-2">大きな数値＋トレンド</td>
                 </tr>
@@ -79,7 +79,7 @@ export const Overview: Story = {
 
         {/* 基本カード */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">基本カード</h2>
+          <h2 className="mb-4 text-lg font-medium">基本カード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             情報をグループ化。タイトル、説明、コンテンツで構成。
           </p>
@@ -132,7 +132,7 @@ export const Overview: Story = {
 
         {/* アクションカード */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">アクションカード</h2>
+          <h2 className="mb-4 text-lg font-medium">アクションカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ヘッダーにアクションボタン。CardActionで右上に配置。
           </p>
@@ -198,7 +198,7 @@ export const Overview: Story = {
 
         {/* ステータスカード */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ステータスカード</h2>
+          <h2 className="mb-4 text-lg font-medium">ステータスカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タスクやプロジェクトの状態を表示。バッジとメタ情報。
           </p>
@@ -281,7 +281,7 @@ export const Overview: Story = {
 
         {/* メトリクスカード */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">メトリクスカード</h2>
+          <h2 className="mb-4 text-lg font-medium">メトリクスカード</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             数値・統計を強調表示。トレンドアイコンで変化を表現。
           </p>
@@ -290,7 +290,7 @@ export const Overview: Story = {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-sm">今日の作業時間</p>
-                <p className="text-3xl font-bold">6.5h</p>
+                <p className="text-3xl font-medium">6.5h</p>
                 <p className="text-success mt-1 text-sm">+1.2h 昨日比</p>
               </CardContent>
             </Card>
@@ -298,7 +298,7 @@ export const Overview: Story = {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-sm">完了タスク</p>
-                <p className="text-3xl font-bold">12</p>
+                <p className="text-3xl font-medium">12</p>
                 <p className="text-muted-foreground mt-1 text-sm">今週の合計</p>
               </CardContent>
             </Card>
@@ -306,7 +306,7 @@ export const Overview: Story = {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-sm">進行中</p>
-                <p className="text-3xl font-bold">3</p>
+                <p className="text-3xl font-medium">3</p>
                 <p className="text-warning mt-1 text-sm">1件期限超過</p>
               </CardContent>
             </Card>
@@ -314,7 +314,7 @@ export const Overview: Story = {
             <Card>
               <CardContent className="pt-6">
                 <p className="text-muted-foreground text-sm">生産性スコア</p>
-                <p className="text-3xl font-bold">85%</p>
+                <p className="text-3xl font-medium">85%</p>
                 <p className="text-success mt-1 text-sm">+5% 先週比</p>
               </CardContent>
             </Card>
@@ -323,7 +323,7 @@ export const Overview: Story = {
 
         {/* カードグリッド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">カードグリッド</h2>
+          <h2 className="mb-4 text-lg font-medium">カードグリッド</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             レスポンシブなカードレイアウト。grid + gap で配置。
           </p>
@@ -349,10 +349,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>一貫したカード構造を使用</li>
                 <li>ホバー状態で操作可能を示唆</li>
@@ -361,7 +361,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>カード内に大量のコンテンツ</li>
                 <li>異なるサイズのカードを混在</li>

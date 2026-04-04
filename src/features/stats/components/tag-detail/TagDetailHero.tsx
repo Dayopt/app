@@ -71,7 +71,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
     <div className="bg-card border-border-subtle rounded-2xl border p-4 shadow-sm">
       {/* メイン数字 */}
       <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-bold tabular-nums">
+        <span className="text-3xl font-medium tabular-nums">
           {hours > 0 && (
             <>
               {hours}

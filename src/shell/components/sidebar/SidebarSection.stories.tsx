@@ -73,7 +73,7 @@ function MockSidebarHeader() {
     <div className="flex h-12 shrink-0 items-center justify-between px-2">
       <div className="flex items-center gap-2 pl-2">
         <div className="bg-primary size-5 rounded-lg" />
-        <span className="text-foreground text-sm font-bold tracking-tight">Dayopt</span>
+        <span className="text-foreground text-sm font-medium tracking-tight">Dayopt</span>
       </div>
       <div className="flex items-center">
         <button

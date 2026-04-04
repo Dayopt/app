@@ -49,7 +49,7 @@ export function TagExplainContent({
         <p className="text-muted-foreground text-xs">
           {t('tour.step', { current: currentStep, total: totalSteps })}
         </p>
-        <h3 className="text-foreground font-bold">{t('tour.steps.explainTags.title')}</h3>
+        <h3 className="text-foreground font-medium">{t('tour.steps.explainTags.title')}</h3>
         <p className="text-muted-foreground mt-1 text-sm">
           {t('tour.steps.explainTags.description')}
         </p>

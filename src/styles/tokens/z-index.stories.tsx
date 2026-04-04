@@ -97,7 +97,7 @@ function LayerRow({
         <span className="text-muted-foreground font-mono text-sm">{value}</span>
       </div>
       <div className="flex-1">
-        <code className="bg-container rounded-lg px-2 py-1 text-sm font-bold">{tailwind}</code>
+        <code className="bg-container rounded-lg px-2 py-1 text-sm font-medium">{tailwind}</code>
         <span className="text-muted-foreground ml-2 text-sm">{name}</span>
       </div>
       <div className="text-muted-foreground text-sm">{description}</div>
@@ -128,7 +128,7 @@ function VisualStack() {
       {visualLayers.map((layer, index) => (
         <div
           key={layer.name}
-          className={`${layer.color} border-border text-primary-foreground absolute flex items-center justify-center rounded-lg border text-sm font-bold`}
+          className={`${layer.color} border-border text-primary-foreground absolute flex items-center justify-center rounded-lg border text-sm font-medium`}
           style={{
             left: `${index * 20}px`,
             top: `${index * 30}px`,
@@ -149,13 +149,13 @@ function VisualStack() {
 export const AllLayers: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Z-Index レイヤー</h1>
+      <h1 className="mb-2 text-2xl font-medium">Z-Index レイヤー</h1>
       <p className="text-muted-foreground mb-8">
         UIコンポーネントのスタッキング順序を一元管理。値が大きいほど前面に表示される。
       </p>
 
       <div className="mb-12">
-        <h2 className="mb-4 text-lg font-bold">使用方法</h2>
+        <h2 className="mb-4 text-lg font-medium">使用方法</h2>
         <div className="bg-container rounded-lg p-4">
           <code className="text-sm">
             {`// Tailwindクラスとして使用`}
@@ -171,9 +171,9 @@ export const AllLayers: Story = {
       </div>
 
       <div className="mb-12">
-        <h2 className="mb-4 text-lg font-bold">レイヤー一覧</h2>
+        <h2 className="mb-4 text-lg font-medium">レイヤー一覧</h2>
         <div className="border-border rounded-lg border">
-          <div className="bg-container border-border flex items-center gap-4 border-b px-4 py-2 text-sm font-bold">
+          <div className="bg-container border-border flex items-center gap-4 border-b px-4 py-2 text-sm font-medium">
             <div className="w-16 text-right">値</div>
             <div className="flex-1">Tailwindクラス</div>
             <div>用途</div>
@@ -187,7 +187,7 @@ export const AllLayers: Story = {
       </div>
 
       <div>
-        <h2 className="mb-4 text-lg font-bold">ビジュアルスタック</h2>
+        <h2 className="mb-4 text-lg font-medium">ビジュアルスタック</h2>
         <p className="text-muted-foreground mb-4 text-sm">レイヤーの重なり順を視覚化</p>
         <div className="bg-container rounded-lg p-4">
           <VisualStack />
@@ -200,11 +200,11 @@ export const AllLayers: Story = {
 export const UsageGuide: Story = {
   render: () => (
     <div>
-      <h1 className="mb-8 text-2xl font-bold">Z-Index 使用ガイド</h1>
+      <h1 className="mb-8 text-2xl font-medium">Z-Index 使用ガイド</h1>
 
       <div className="space-y-8">
         <section>
-          <h2 className="mb-4 text-lg font-bold">基本原則</h2>
+          <h2 className="mb-4 text-lg font-medium">基本原則</h2>
           <ul className="text-muted-foreground list-disc space-y-2 pl-6">
             <li>
               <strong>Tailwindクラスを使用</strong>: <code>z-modal</code>, <code>z-tooltip</code>{' '}
@@ -221,44 +221,44 @@ export const UsageGuide: Story = {
         </section>
 
         <section>
-          <h2 className="mb-4 text-lg font-bold">レイヤーグループ</h2>
+          <h2 className="mb-4 text-lg font-medium">レイヤーグループ</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="bg-container rounded-lg p-4">
-              <h3 className="mb-2 font-bold">通常コンテキスト（50-350）</h3>
+              <h3 className="mb-2 font-medium">通常コンテキスト（50-350）</h3>
               <p className="text-muted-foreground text-sm">
                 ページ上の通常のオーバーレイ要素。dropdown, popover, sheet, modal, confirm, toast,
                 context-menu
               </p>
             </div>
             <div className="bg-container rounded-lg p-4">
-              <h3 className="mb-2 font-bold">Inspector（1000-1100）</h3>
+              <h3 className="mb-2 font-medium">Inspector（1000-1100）</h3>
               <p className="text-muted-foreground text-sm">
                 ドラッグ操作やフローティングUI。calendar-drag, inspector-backdrop, inspector
               </p>
             </div>
             <div className="bg-container rounded-lg p-4">
-              <h3 className="mb-2 font-bold">Overlay系（1200-1400）</h3>
+              <h3 className="mb-2 font-medium">Overlay系（1200-1400）</h3>
               <p className="text-muted-foreground text-sm">
                 Inspector上のUI。overlay-popover, overlay-modal, overlay-confirm
               </p>
             </div>
             <div className="bg-container rounded-lg p-4">
-              <h3 className="mb-2 font-bold">最前面（9999）</h3>
+              <h3 className="mb-2 font-medium">最前面（9999）</h3>
               <p className="text-muted-foreground text-sm">常に最前面に表示される要素。tooltip</p>
             </div>
           </div>
         </section>
 
         <section>
-          <h2 className="mb-4 text-lg font-bold">Elevation との関係</h2>
+          <h2 className="mb-4 text-lg font-medium">Elevation との関係</h2>
           <div className="bg-container rounded-lg p-4">
             <div className="space-y-2 text-sm">
               <p>
-                <span className="font-bold">Sunken / Base / Raised</span>
+                <span className="font-medium">Sunken / Base / Raised</span>
                 <span className="text-muted-foreground ml-2">→ z-index 指定なし（通常フロー）</span>
               </p>
               <p>
-                <span className="font-bold">Overlay</span>
+                <span className="font-medium">Overlay</span>
                 <span className="text-muted-foreground ml-2">→ このページの z-index を使用</span>
               </p>
             </div>
@@ -270,28 +270,28 @@ export const UsageGuide: Story = {
         </section>
 
         <section>
-          <h2 className="mb-4 text-lg font-bold">よくあるパターン</h2>
+          <h2 className="mb-4 text-lg font-medium">よくあるパターン</h2>
           <div className="bg-container space-y-4 rounded-lg p-4">
             <div>
-              <code className="text-sm font-bold">Inspector上のモーダル</code>
+              <code className="text-sm font-medium">Inspector上のモーダル</code>
               <p className="text-muted-foreground text-sm">
                 Inspector上で新規作成モーダルを開く → <code>z-overlay-modal</code>
               </p>
             </div>
             <div>
-              <code className="text-sm font-bold">Inspector上のモーダル内の日付選択</code>
+              <code className="text-sm font-medium">Inspector上のモーダル内の日付選択</code>
               <p className="text-muted-foreground text-sm">
                 overlay-modal内のDatePickerは自動的に上に表示される（ポータル経由）
               </p>
             </div>
             <div>
-              <code className="text-sm font-bold">Inspector上の確認ダイアログ</code>
+              <code className="text-sm font-medium">Inspector上の確認ダイアログ</code>
               <p className="text-muted-foreground text-sm">
                 Inspector上での削除確認 → <code>z-overlay-confirm</code>
               </p>
             </div>
             <div>
-              <code className="text-sm font-bold">通常の確認ダイアログ</code>
+              <code className="text-sm font-medium">通常の確認ダイアログ</code>
               <p className="text-muted-foreground text-sm">
                 ページ上の削除確認 → <code>z-confirm</code>
               </p>

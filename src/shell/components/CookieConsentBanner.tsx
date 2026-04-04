@@ -80,7 +80,7 @@ export function CookieConsentBanner() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* メッセージ */}
           <div className="flex-1">
-            <h2 id="cookie-consent-title" className="text-foreground mb-1 text-base font-bold">
+            <h2 id="cookie-consent-title" className="text-foreground mb-1 text-base font-medium">
               {t('common.cookies.banner.title')}
             </h2>
             <p id="cookie-consent-description" className="text-muted-foreground text-sm">

@@ -73,7 +73,7 @@ const AlertDialogContent = React.forwardRef<
       <AlertDialogPrimitive.Content
         ref={setRef}
         className={cn(
-          'border-border-subtle bg-card text-card-foreground z-overlay-confirm shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200 transition-[top,max-height] max-h-[calc(100dvh-2rem)] overflow-y-auto',
+          'border-border-subtle bg-card text-card-foreground z-overlay-confirm shadow-card fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border p-6 transition-[top,max-height] duration-200',
           // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限（Storybook対応）
           'w-full max-w-[calc(100vw-2rem)] min-w-80 sm:max-w-lg',
           'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:animate-none',
@@ -104,7 +104,11 @@ const AlertDialogTitle = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <AlertDialogPrimitive.Title ref={ref} className={cn('text-lg font-bold', className)} {...props} />
+  <AlertDialogPrimitive.Title
+    ref={ref}
+    className={cn('text-lg font-medium', className)}
+    {...props}
+  />
 ));
 AlertDialogTitle.displayName = AlertDialogPrimitive.Title.displayName;
 

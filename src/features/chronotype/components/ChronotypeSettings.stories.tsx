@@ -63,7 +63,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
         ))}
         {deepZone && (
           <span
-            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-medium uppercase"
             style={{
               left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
@@ -74,7 +74,7 @@ function TimelineBarDemo({ zones }: { zones: ProductivityZone[] }) {
         )}
         {easeZone && (
           <span
-            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-medium uppercase"
             style={{
               left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
@@ -135,7 +135,7 @@ function ChronotypeSettingsDemo({
                 )}
               >
                 <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
-                <span className="text-sm font-bold">{CHRONOTYPE_PRESETS[type].name}</span>
+                <span className="text-sm font-medium">{CHRONOTYPE_PRESETS[type].name}</span>
                 <span className="text-muted-foreground text-xs">{SHORT_DESC[type]}</span>
               </button>
             ))}
@@ -155,7 +155,7 @@ function ChronotypeSettingsDemo({
                   </span>
                   <div className="space-y-1">
                     <p className="text-muted-foreground text-xs leading-none">Deep time</p>
-                    <p className="text-sm leading-tight font-bold">
+                    <p className="text-sm leading-tight font-medium">
                       {getDeepHours(selectedProfile.productivityZones)}
                     </p>
                     <p className="text-muted-foreground text-xs leading-none">Best for Deep Work</p>
@@ -167,7 +167,7 @@ function ChronotypeSettingsDemo({
                   </span>
                   <div className="space-y-1">
                     <p className="text-muted-foreground text-xs leading-none">Ease time</p>
-                    <p className="text-sm leading-tight font-bold">
+                    <p className="text-sm leading-tight font-medium">
                       {getEaseHours(selectedProfile.productivityZones)}
                     </p>
                     <p className="text-muted-foreground text-xs leading-none">Light tasks & rest</p>

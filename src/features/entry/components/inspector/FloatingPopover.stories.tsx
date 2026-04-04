@@ -28,7 +28,7 @@ type Story = StoryObj;
 function InspectorPlaceholder() {
   return (
     <div className="flex flex-col gap-4 p-4">
-      <p className="text-foreground font-bold">チームミーティング</p>
+      <p className="text-foreground font-medium">チームミーティング</p>
       <p className="text-muted-foreground text-sm">10:00 – 11:00</p>
       <p className="text-muted-foreground text-xs">詳細情報がここに表示されます。</p>
       <button

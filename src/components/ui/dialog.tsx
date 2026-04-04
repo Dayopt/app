@@ -81,7 +81,7 @@ const DialogContent = ({
         ref={contentRef}
         data-slot="dialog-content"
         className={cn(
-          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200 transition-[top,max-height] max-h-[calc(100dvh-2rem)] overflow-y-auto',
+          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border p-6 transition-[top,max-height] duration-200',
           // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限
           // max-wはclassNameで上書き可能（Storybook対応のためmin-w追加）
           !className?.includes('max-w-')
@@ -144,7 +144,7 @@ const DialogTitle = ({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('text-lg leading-none font-bold', className)}
+      className={cn('text-lg leading-none font-medium', className)}
       {...props}
     />
   );

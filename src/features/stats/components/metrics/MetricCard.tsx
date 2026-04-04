@@ -73,7 +73,7 @@ export function MetricCard({
 
         {/* Value + Trend */}
         <div className="mt-auto flex items-baseline gap-1 pt-2">
-          <span className="text-foreground text-2xl font-bold md:text-4xl">
+          <span className="text-foreground text-2xl font-medium md:text-4xl">
             {valueParts.primary}
           </span>
           {valueParts.unit && (
@@ -83,7 +83,7 @@ export function MetricCard({
           )}
           {valueParts.secondary && (
             <>
-              <span className="text-foreground text-4xl font-bold">{valueParts.secondary}</span>
+              <span className="text-foreground text-4xl font-medium">{valueParts.secondary}</span>
               {valueParts.secondaryUnit && (
                 <span className={cn('text-muted-foreground', isHero ? 'text-lg' : 'text-base')}>
                   {valueParts.secondaryUnit}

@@ -94,7 +94,9 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
                   <div className="bg-state-active text-state-active-foreground mb-2 flex h-12 w-12 items-center justify-center rounded-full">
                     <Check className="h-6 w-6" />
                   </div>
-                  <h1 className="text-2xl font-bold">{t('auth.resetPasswordForm.successTitle')}</h1>
+                  <h1 className="text-2xl font-medium">
+                    {t('auth.resetPasswordForm.successTitle')}
+                  </h1>
                   <p className="text-muted-foreground text-balance">
                     {t('auth.resetPasswordForm.successMessage')}
                   </p>
@@ -123,7 +125,7 @@ export function ResetPasswordForm({ className, ...props }: React.ComponentProps<
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">{t('auth.resetPasswordForm.title')}</h1>
+                <h1 className="text-2xl font-medium">{t('auth.resetPasswordForm.title')}</h1>
                 <p className="text-muted-foreground text-balance">
                   {t('auth.resetPasswordForm.description')}
                 </p>

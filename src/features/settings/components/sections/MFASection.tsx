@@ -98,7 +98,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
         {recoveryCodes && (
           <div className="border-warning space-y-4 rounded-2xl border p-4">
             <div>
-              <h3 className="text-warning mb-2 text-lg font-bold">
+              <h3 className="text-warning mb-2 text-lg font-medium">
                 {t('settings.account.mfa.recoveryCodes.title')}
               </h3>
               <p className="text-muted-foreground text-sm">
@@ -148,7 +148,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
         {!hasMFA && showMFASetup && qrCode && (
           <div className="bg-muted space-y-4 rounded-2xl p-6">
             <div>
-              <h3 className="mb-2 text-lg font-bold">{t('settings.account.mfa.setup.title')}</h3>
+              <h3 className="mb-2 text-lg font-medium">{t('settings.account.mfa.setup.title')}</h3>
               <p className="text-muted-foreground text-sm">
                 {t('settings.account.mfa.setup.description')}
               </p>
@@ -227,7 +227,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
             {recoveryCodeCount === 0 && (
               <InfoBox variant="destructive">
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="text-destructive text-sm font-bold">
+                  <span className="text-destructive text-sm font-medium">
                     {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
                   </span>
                 </div>

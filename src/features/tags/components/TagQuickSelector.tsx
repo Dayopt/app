@@ -103,7 +103,7 @@ function CreateTagFormView({
       <button type="button" onClick={onBack} className="group flex min-h-11 items-center px-4 py-2">
         <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
           <ChevronLeft className="text-muted-foreground size-5" />
-          <span className="text-foreground font-bold">{t('tagSelector.new')}</span>
+          <span className="text-foreground font-medium">{t('tagSelector.new')}</span>
         </span>
       </button>
 
@@ -364,7 +364,7 @@ function TagQuickSelectorContent({
           <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-            <span className="text-foreground font-bold">{view.prefix}</span>
+            <span className="text-foreground font-medium">{view.prefix}</span>
           </span>
         </button>
 
@@ -625,7 +625,7 @@ export function TagQuickSelector({
       >
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">{t('tagSelector.title')}</h2>
+            <h2 className="text-lg font-medium">{t('tagSelector.title')}</h2>
             <button
               type="button"
               onClick={() => onOpenChange(false)}

@@ -54,7 +54,7 @@ export default function NotificationsPage() {
         }
       >
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold">{t('notification.title')}</h1>
+          <h1 className="text-lg font-medium">{t('notification.title')}</h1>
           {unreadCount > 0 && (
             <span className="bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs">
               {unreadCount}

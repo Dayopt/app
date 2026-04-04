@@ -101,7 +101,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 <div className="relative flex size-5 flex-col">
                   <div className="h-1 w-full border-b-2 border-current" />
                   <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-bold">{new Date().getDate()}</span>
+                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
                   </div>
                 </div>
               </Button>

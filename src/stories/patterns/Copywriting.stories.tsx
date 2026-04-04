@@ -39,11 +39,11 @@ function AuditTable({ entries }: { entries: AuditEntry[] }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border border-b">
-            <th className="py-2 text-left font-bold">ファイル</th>
-            <th className="py-2 text-left font-bold">キー</th>
-            <th className="py-2 text-left font-bold">Before</th>
-            <th className="py-2 text-left font-bold">After</th>
-            <th className="py-2 text-left font-bold">ルール</th>
+            <th className="py-2 text-left font-medium">ファイル</th>
+            <th className="py-2 text-left font-medium">キー</th>
+            <th className="py-2 text-left font-medium">Before</th>
+            <th className="py-2 text-left font-medium">After</th>
+            <th className="py-2 text-left font-medium">ルール</th>
           </tr>
         </thead>
         <tbody className="text-muted-foreground">
@@ -65,7 +65,7 @@ function AuditTable({ entries }: { entries: AuditEntry[] }) {
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Copywriting Tone Guide</h1>
+      <h1 className="mb-2 text-2xl font-medium">Copywriting Tone Guide</h1>
       <p className="text-muted-foreground mb-8">
         UIテキストのトーンルールと、現在の違反箇所の Before/After 一覧。
       </p>
@@ -73,7 +73,7 @@ export const Overview: Story = {
       <div className="grid max-w-6xl gap-8">
         {/* トーンルール概要 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">トーンルール</h2>
+          <h2 className="mb-4 text-lg font-medium">トーンルール</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             丁寧だけどカジュアル。敬語は使わず体言止めを基本とする。
           </p>
@@ -82,58 +82,58 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">#</th>
-                  <th className="py-2 text-left font-bold">ルール</th>
-                  <th className="py-2 text-left font-bold">NG</th>
-                  <th className="py-2 text-left font-bold">OK</th>
+                  <th className="py-2 text-left font-medium">#</th>
+                  <th className="py-2 text-left font-medium">ルール</th>
+                  <th className="py-2 text-left font-medium">NG</th>
+                  <th className="py-2 text-left font-medium">OK</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
                   <td className="py-2">1</td>
-                  <td className="py-2 font-bold">敬語禁止（体言止め）</td>
+                  <td className="py-2 font-medium">敬語禁止（体言止め）</td>
                   <td className="text-destructive py-2">予定を削除しました</td>
                   <td className="text-success py-2">予定を削除した</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">2</td>
-                  <td className="py-2 font-bold">専門用語禁止</td>
+                  <td className="py-2 font-medium">専門用語禁止</td>
                   <td className="text-destructive py-2">クロノタイプ</td>
                   <td className="text-success py-2">あなたのリズム</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">3</td>
-                  <td className="py-2 font-bold">主語省略</td>
+                  <td className="py-2 font-medium">主語省略</td>
                   <td className="text-destructive py-2">あなたのプロフィール</td>
                   <td className="text-success py-2">プロフィール</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">4</td>
-                  <td className="py-2 font-bold">ポジティブ変換</td>
+                  <td className="py-2 font-medium">ポジティブ変換</td>
                   <td className="text-destructive py-2">データがありません</td>
                   <td className="text-success py-2">まだデータがない</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">5</td>
-                  <td className="py-2 font-bold">ボタン: 動詞で開始</td>
+                  <td className="py-2 font-medium">ボタン: 動詞で開始</td>
                   <td className="text-destructive py-2">すべて既読にする</td>
                   <td className="text-success py-2">すべて既読に</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">6</td>
-                  <td className="py-2 font-bold">エラー: 原因 + 対処</td>
+                  <td className="py-2 font-medium">エラー: 原因 + 対処</td>
                   <td className="text-destructive py-2">エラーが発生しました</td>
                   <td className="text-success py-2">問題が起きた。もう一度試して</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">7</td>
-                  <td className="py-2 font-bold">空状態: 場所 + 次</td>
+                  <td className="py-2 font-medium">空状態: 場所 + 次</td>
                   <td className="text-destructive py-2">タグがありません</td>
                   <td className="text-success py-2">まだタグがない。最初のタグを作成</td>
                 </tr>
                 <tr>
                   <td className="py-2">8</td>
-                  <td className="py-2 font-bold">プレースホルダー: 例</td>
+                  <td className="py-2 font-medium">プレースホルダー: 例</td>
                   <td className="text-destructive py-2">入力してください</td>
                   <td className="text-success py-2">例: 朝の Deep Work</td>
                 </tr>
@@ -144,7 +144,7 @@ export const Overview: Story = {
 
         {/* 統計サマリー */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">違反統計</h2>
+          <h2 className="mb-4 text-lg font-medium">違反統計</h2>
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {(Object.entries(CATEGORY_LABELS) as [string, string][]).map(([key, label]) => {
               const count = allEntries.filter(
@@ -152,13 +152,13 @@ export const Overview: Story = {
               ).length;
               return (
                 <div key={key} className="border-border rounded-lg border p-4">
-                  <div className="text-2xl font-bold">{count}</div>
+                  <div className="text-2xl font-medium">{count}</div>
                   <div className="text-muted-foreground text-sm">{label}</div>
                 </div>
               );
             })}
             <div className="border-border rounded-lg border p-4">
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-medium">
                 {allEntries.filter((e) => e.current !== e.proposed).length}
               </div>
               <div className="text-muted-foreground text-sm">合計</div>
@@ -168,7 +168,7 @@ export const Overview: Story = {
 
         {/* Before/After: 敬語 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Before/After: 敬語 / ます形</h2>
+          <h2 className="mb-4 text-lg font-medium">Before/After: 敬語 / ます形</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             最多の違反カテゴリ。「〜しました」「〜してください」「〜されます」を体言止めに変換。
           </p>
@@ -177,14 +177,14 @@ export const Overview: Story = {
 
         {/* Before/After: 空状態 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Before/After: 空状態・ネガティブ表現</h2>
+          <h2 className="mb-4 text-lg font-medium">Before/After: 空状態・ネガティブ表現</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             「〜がありません」をポジティブに言い換え、次のアクションを示す。
           </p>
 
           <div className="mb-6 grid gap-6 md:grid-cols-2">
             <div>
-              <p className="text-destructive mb-2 text-xs font-bold">Before</p>
+              <p className="text-destructive mb-2 text-xs font-medium">Before</p>
               <div className="border-border rounded-lg border py-6">
                 <EmptyState
                   icon={Tag}
@@ -196,7 +196,7 @@ export const Overview: Story = {
               </div>
             </div>
             <div>
-              <p className="text-success mb-2 text-xs font-bold">After</p>
+              <p className="text-success mb-2 text-xs font-medium">After</p>
               <div className="border-border rounded-lg border py-6">
                 <EmptyState
                   icon={Tag}
@@ -211,7 +211,7 @@ export const Overview: Story = {
 
           <div className="mb-6 grid gap-6 md:grid-cols-2">
             <div>
-              <p className="text-destructive mb-2 text-xs font-bold">Before</p>
+              <p className="text-destructive mb-2 text-xs font-medium">Before</p>
               <div className="border-border rounded-lg border py-6">
                 <EmptyState
                   icon={Search}
@@ -222,7 +222,7 @@ export const Overview: Story = {
               </div>
             </div>
             <div>
-              <p className="text-success mb-2 text-xs font-bold">After</p>
+              <p className="text-success mb-2 text-xs font-medium">After</p>
               <div className="border-border rounded-lg border py-6">
                 <EmptyState
                   icon={Search}
@@ -239,20 +239,20 @@ export const Overview: Story = {
 
         {/* Before/After: エラーメッセージ */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Before/After: エラーメッセージ</h2>
+          <h2 className="mb-4 text-lg font-medium">Before/After: エラーメッセージ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             何が起きたか + どうすればいいか。リカバリーアクションを必ず含める。
           </p>
 
           <div className="mb-6 grid gap-6 md:grid-cols-2">
             <div>
-              <p className="text-destructive mb-2 text-xs font-bold">Before</p>
+              <p className="text-destructive mb-2 text-xs font-medium">Before</p>
               <div className="border-border rounded-lg border py-6">
                 <ErrorState title="カレンダーの読み込みに失敗しました" onRetry={() => {}} />
               </div>
             </div>
             <div>
-              <p className="text-success mb-2 text-xs font-bold">After</p>
+              <p className="text-success mb-2 text-xs font-medium">After</p>
               <div className="border-border rounded-lg border py-6">
                 <ErrorState
                   title="カレンダーを読み込めなかった。もう一度試して"
@@ -267,19 +267,19 @@ export const Overview: Story = {
 
         {/* Before/After: プレースホルダー */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Before/After: プレースホルダー</h2>
+          <h2 className="mb-4 text-lg font-medium">Before/After: プレースホルダー</h2>
           <p className="text-muted-foreground mb-4 text-sm">「〜を入力」ではなく入力例を示す。</p>
 
           <div className="mb-6 grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
-              <p className="text-destructive text-xs font-bold">Before</p>
+              <p className="text-destructive text-xs font-medium">Before</p>
               <Input placeholder="表示名を入力" readOnly />
               <Input placeholder="メッセージを入力..." readOnly />
               <Input placeholder="タグ名を入力" readOnly />
               <Input placeholder="検索..." readOnly />
             </div>
             <div className="space-y-4">
-              <p className="text-success text-xs font-bold">After</p>
+              <p className="text-success text-xs font-medium">After</p>
               <Input placeholder="例: Taro" readOnly />
               <Input placeholder="例: ボタンが反応しない" readOnly />
               <Input placeholder="例: 仕事、勉強" readOnly />
@@ -292,14 +292,14 @@ export const Overview: Story = {
 
         {/* Before/After: ボタンラベル */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Before/After: ボタンラベル</h2>
+          <h2 className="mb-4 text-lg font-medium">Before/After: ボタンラベル</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             「する」を省略。destructive は対象を明記。
           </p>
 
           <div className="mb-6 grid gap-6 md:grid-cols-2">
             <div>
-              <p className="text-destructive mb-4 text-xs font-bold">Before</p>
+              <p className="text-destructive mb-4 text-xs font-medium">Before</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline">すべて既読にする</Button>
                 <Button variant="outline">複製する</Button>
@@ -308,7 +308,7 @@ export const Overview: Story = {
               </div>
             </div>
             <div>
-              <p className="text-success mb-4 text-xs font-bold">After</p>
+              <p className="text-success mb-4 text-xs font-medium">After</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline">すべて既読に</Button>
                 <Button variant="outline">複製</Button>
@@ -318,16 +318,16 @@ export const Overview: Story = {
             </div>
           </div>
 
-          <h3 className="mb-2 font-bold">「する」省略</h3>
+          <h3 className="mb-2 font-medium">「する」省略</h3>
           <AuditTable entries={buttonSuru} />
 
-          <h3 className="mt-6 mb-2 font-bold">汎用 destructive → 具体的</h3>
+          <h3 className="mt-6 mb-2 font-medium">汎用 destructive → 具体的</h3>
           <AuditTable entries={genericDestructive} />
         </section>
 
         {/* ハードコード文字列 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ハードコード文字列</h2>
+          <h2 className="mb-4 text-lg font-medium">ハードコード文字列</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             i18n を通さずソースコードに直書きされた日本語テキスト。トーン修正が必要。
           </p>
@@ -336,10 +336,10 @@ export const Overview: Story = {
 
         {/* Do / Don't */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">Do / Don&apos;t</h2>
+          <h2 className="mb-4 text-lg font-medium">Do / Don&apos;t</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>体言止めで簡潔に</li>
                 <li>エラーにはリカバリーを添える</li>
@@ -350,7 +350,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>「〜しました」「〜してください」</li>
                 <li>「申し訳ございません」</li>
@@ -365,13 +365,13 @@ export const Overview: Story = {
 
         {/* 例外 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">例外</h2>
+          <h2 className="mb-4 text-lg font-medium">例外</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">対象</th>
-                  <th className="py-2 text-left font-bold">理由</th>
+                  <th className="py-2 text-left font-medium">対象</th>
+                  <th className="py-2 text-left font-medium">理由</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">

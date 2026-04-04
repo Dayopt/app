@@ -87,7 +87,7 @@ function SessionTimeoutExample() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-center">
               セキュリティのため、まもなくログアウトされます。
-              <span className="text-foreground mt-2 block text-2xl font-bold">
+              <span className="text-foreground mt-2 block text-2xl font-medium">
                 {formatTime(299)}
               </span>
             </AlertDialogDescription>
@@ -127,7 +127,7 @@ function AccountDeletionExample() {
                   この操作は30日後に完了します。その間にログインすると削除をキャンセルできます。
                 </p>
                 <div className="bg-muted rounded-2xl p-4">
-                  <h4 className="text-foreground mb-2 text-sm font-bold">猶予期間について</h4>
+                  <h4 className="text-foreground mb-2 text-sm font-medium">猶予期間について</h4>
                   <p className="text-xs">
                     30日間の猶予期間中はデータが保持されます。期間終了後、全てのデータが完全に削除されます。
                   </p>

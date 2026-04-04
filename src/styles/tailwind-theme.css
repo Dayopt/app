@@ -125,7 +125,7 @@
  * ============================================
  * Tailwindデフォルトを使用（CSS変数不要）
  * - フォントサイズ: text-xs, text-sm, text-base, text-lg, text-xl, text-2xl...
- * - フォントウェイト: font-normal (400), font-bold (700)
+ * - フォントウェイト: font-normal (400), font-medium (500)
  * - 行間: leading-tight, leading-normal, leading-relaxed
  * ダークモードで切り替える必要がないため、トークン化しない
  */

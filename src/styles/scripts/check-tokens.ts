@@ -67,11 +67,11 @@ const FORBIDDEN_PATTERNS: ForbiddenPattern[] = [
     suggestion:
       'text-foreground/80 → text-muted-foreground, border-border/50 → border-border-subtle',
   },
-  // フォントウェイト準拠（font-normal / font-bold のみ）
+  // フォントウェイト準拠（font-normal / font-medium のみ）
   {
-    pattern: '(?<![a-z0-9-])font-(?:medium|semibold|extrabold|black|light|thin)(?![a-z0-9-])',
-    message: '禁止フォントウェイト。font-normal (400) / font-bold (700) のみ使用可',
-    suggestion: 'font-medium → 削除(=font-normal), font-semibold → font-bold',
+    pattern: '(?<![a-z0-9-])font-(?:bold|semibold|extrabold|black|light|thin)(?![a-z0-9-])',
+    message: '禁止フォントウェイト。font-normal (400) / font-medium (500) のみ使用可',
+    suggestion: 'font-bold → font-medium, font-semibold → font-medium',
   },
   // bare rounded 禁止（rounded-lg / rounded-2xl / rounded-full / rounded-none のみ）
   {

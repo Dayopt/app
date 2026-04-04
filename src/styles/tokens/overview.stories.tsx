@@ -26,8 +26,8 @@ function StepCard({
 }) {
   return (
     <div className="bg-card border-border rounded-lg border p-4">
-      <div className="text-muted-foreground mb-1 text-xs font-bold">Step {step}</div>
-      <h3 className="mb-2 font-bold">{title}</h3>
+      <div className="text-muted-foreground mb-1 text-xs font-medium">Step {step}</div>
+      <h3 className="mb-2 font-medium">{title}</h3>
       <p className="text-muted-foreground mb-2 text-sm">{description}</p>
       <a href={href} className="text-primary text-sm underline">
         {linkLabel} →
@@ -99,14 +99,14 @@ export const DesignSystem: Story = {
 
     return (
       <div>
-        <h1 className="mb-2 text-2xl font-bold">Design System Overview</h1>
+        <h1 className="mb-2 text-2xl font-medium">Design System Overview</h1>
         <p className="text-muted-foreground mb-8 text-sm">
           新しいコンポーネントを作るとき、このページから始める。各ページへの判断フローと、設計の全体像。
         </p>
 
         {/* ── 設計の核心 ── */}
         <div className="bg-card border-border mb-8 rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">設計の核心</h2>
+          <h2 className="mb-4 text-lg font-medium">設計の核心</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             oklch(L C H) の3軸がそれぞれ1つの役割を持つ。
           </p>
@@ -124,7 +124,7 @@ export const DesignSystem: Story = {
           </div>
           <div className="text-muted-foreground space-y-1 text-xs">
             <p>
-              <span className="text-foreground font-bold">Dark mode:</span> Surface — warm H60
+              <span className="text-foreground font-medium">Dark mode:</span> Surface — warm H60
               C0.008。テキストはオフホワイト L0.90。Shadow — 面色差が主役、shadow は補助。Border —
               alpha-based（black/α, white/α）
             </p>
@@ -132,7 +132,7 @@ export const DesignSystem: Story = {
         </div>
 
         {/* ── 判断フロー ── */}
-        <h2 className="mb-4 text-lg font-bold">コンポーネントを作るときの判断フロー</h2>
+        <h2 className="mb-4 text-lg font-medium">コンポーネントを作るときの判断フロー</h2>
         <div className="mb-8 grid gap-4 md:grid-cols-2">
           <StepCard
             step={1}
@@ -165,17 +165,17 @@ export const DesignSystem: Story = {
         </div>
 
         {/* ── ページ一覧 ── */}
-        <h2 className="mb-4 text-lg font-bold">ページ一覧と役割</h2>
+        <h2 className="mb-4 text-lg font-medium">ページ一覧と役割</h2>
         <div className="mb-8 space-y-6">
           <div>
-            <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
+            <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">
               見た目を決める（Step 1-3）
             </h3>
             <div className="bg-card border-border overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-2 font-bold">
+                    <td className="text-foreground px-4 py-2 font-medium">
                       <a
                         href="?path=/story/foundations-colors--all-colors"
                         className="text-primary underline"
@@ -188,7 +188,7 @@ export const DesignSystem: Story = {
                     </td>
                   </tr>
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-2 font-bold">
+                    <td className="text-foreground px-4 py-2 font-medium">
                       <a
                         href="?path=/story/foundations-elevation--overview"
                         className="text-primary underline"
@@ -206,14 +206,14 @@ export const DesignSystem: Story = {
           </div>
 
           <div>
-            <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
+            <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">
               振る舞いを決める（Step 4）
             </h3>
             <div className="bg-card border-border overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <tbody className="text-muted-foreground">
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-2 font-bold">
+                    <td className="text-foreground px-4 py-2 font-medium">
                       <a
                         href="?path=/story/foundations-states--overview"
                         className="text-primary underline"
@@ -226,7 +226,7 @@ export const DesignSystem: Story = {
                     </td>
                   </tr>
                   <tr className="border-border border-b">
-                    <td className="text-foreground px-4 py-2 font-bold">
+                    <td className="text-foreground px-4 py-2 font-medium">
                       <a
                         href="?path=/story/foundations-zindex--all-layers"
                         className="text-primary underline"
@@ -242,7 +242,7 @@ export const DesignSystem: Story = {
           </div>
 
           <div>
-            <h3 className="text-muted-foreground mb-2 text-xs font-bold tracking-widest uppercase">
+            <h3 className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">
               基盤
             </h3>
             <div className="bg-card border-border overflow-x-auto rounded-lg border">
@@ -281,7 +281,7 @@ export const DesignSystem: Story = {
                     },
                   ].map(({ name, href, desc }) => (
                     <tr key={name} className="border-border border-b">
-                      <td className="text-foreground px-4 py-2 font-bold">
+                      <td className="text-foreground px-4 py-2 font-medium">
                         <a href={href} className="text-primary underline">
                           {name}
                         </a>
@@ -296,11 +296,11 @@ export const DesignSystem: Story = {
         </div>
 
         {/* ── よくある判断の例 ── */}
-        <h2 className="mb-4 text-lg font-bold">よくある判断の例</h2>
+        <h2 className="mb-4 text-lg font-medium">よくある判断の例</h2>
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {examples.map(({ title, steps }) => (
             <div key={title} className="bg-card border-border rounded-lg border p-4">
-              <h3 className="mb-2 text-sm font-bold">{title}</h3>
+              <h3 className="mb-2 text-sm font-medium">{title}</h3>
               <ul className="space-y-1">
                 {steps.map((step) => (
                   <li key={step} className="text-muted-foreground text-xs">
@@ -313,10 +313,10 @@ export const DesignSystem: Story = {
         </div>
 
         {/* ── Do's & Don'ts ── */}
-        <h2 className="mb-4 text-lg font-bold">Do&apos;s &amp; Don&apos;ts（全体）</h2>
+        <h2 className="mb-4 text-lg font-medium">Do&apos;s &amp; Don&apos;ts（全体）</h2>
         <div className="grid gap-6 md:grid-cols-2">
           <div className="border-success space-y-2 border-l-4 pl-4">
-            <p className="text-success text-sm font-bold">Do</p>
+            <p className="text-success text-sm font-medium">Do</p>
             <ul className="space-y-1">
               {doRules.map((rule) => (
                 <li key={rule} className="text-muted-foreground text-xs">
@@ -326,7 +326,7 @@ export const DesignSystem: Story = {
             </ul>
           </div>
           <div className="border-destructive space-y-2 border-l-4 pl-4">
-            <p className="text-destructive text-sm font-bold">Don&apos;t</p>
+            <p className="text-destructive text-sm font-medium">Don&apos;t</p>
             <ul className="space-y-1">
               {dontRules.map((rule) => (
                 <li key={rule} className="text-muted-foreground text-xs">

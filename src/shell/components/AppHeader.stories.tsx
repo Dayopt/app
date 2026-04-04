@@ -96,7 +96,7 @@ export const Default: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader>
-        <h1 className="truncate text-lg leading-8 font-bold">Plans</h1>
+        <h1 className="truncate text-lg leading-8 font-medium">Plans</h1>
       </AppHeader>
     </div>
   ),
@@ -107,7 +107,7 @@ export const Mobile: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader leftSlot={<StubLeftSlot />}>
-        <h1 className="truncate text-lg leading-8 font-bold">Plans</h1>
+        <h1 className="truncate text-lg leading-8 font-medium">Plans</h1>
       </AppHeader>
     </div>
   ),
@@ -126,7 +126,7 @@ export const WithSlots: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader leftSlot={<StubLeftSlot />} rightSlot={<StubRightSlot />}>
-        <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
+        <h1 className="truncate text-lg leading-8 font-medium">カレンダー</h1>
       </AppHeader>
     </div>
   ),
@@ -137,7 +137,7 @@ export const WithRightSlot: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader rightSlot={<StubRightSlot />}>
-        <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
+        <h1 className="truncate text-lg leading-8 font-medium">カレンダー</h1>
       </AppHeader>
     </div>
   ),
@@ -148,7 +148,7 @@ export const WithPageNav: Story = {
   render: () => (
     <div className="border-border w-full border">
       <AppHeader rightSlot={<StubPageNav />}>
-        <h1 className="truncate text-lg leading-8 font-bold">カレンダー</h1>
+        <h1 className="truncate text-lg leading-8 font-medium">カレンダー</h1>
       </AppHeader>
     </div>
   ),
@@ -160,27 +160,27 @@ export const AllPatterns: Story = {
     <div className="flex flex-col items-start gap-6">
       <div className="border-border w-full border">
         <AppHeader>
-          <h1 className="truncate text-lg leading-8 font-bold">タイトルのみ</h1>
+          <h1 className="truncate text-lg leading-8 font-medium">タイトルのみ</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
         <AppHeader leftSlot={<StubLeftSlot />}>
-          <h1 className="truncate text-lg leading-8 font-bold">leftSlot付き</h1>
+          <h1 className="truncate text-lg leading-8 font-medium">leftSlot付き</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
         <AppHeader rightSlot={<StubRightSlot />}>
-          <h1 className="truncate text-lg leading-8 font-bold">rightSlot付き</h1>
+          <h1 className="truncate text-lg leading-8 font-medium">rightSlot付き</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
         <AppHeader leftSlot={<StubLeftSlot />} rightSlot={<StubRightSlot />}>
-          <h1 className="truncate text-lg leading-8 font-bold">全スロット</h1>
+          <h1 className="truncate text-lg leading-8 font-medium">全スロット</h1>
         </AppHeader>
       </div>
       <div className="border-border w-full border">
         <AppHeader rightSlot={<StubPageNav />}>
-          <h1 className="truncate text-lg leading-8 font-bold">PageNav付き</h1>
+          <h1 className="truncate text-lg leading-8 font-medium">PageNav付き</h1>
         </AppHeader>
       </div>
     </div>

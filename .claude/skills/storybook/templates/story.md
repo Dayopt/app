@@ -105,13 +105,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <section>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Default</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Default</h3>
         <StoryTRPCProvider mocks={{ 'userSettings.get': PRESET_USER_SETTINGS.default }}>
           <MyFeatureComponent />
         </StoryTRPCProvider>
       </section>
       <section>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Loading</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Loading</h3>
         <StoryTRPCProvider pending>
           <MyFeatureComponent />
         </StoryTRPCProvider>
@@ -153,7 +153,7 @@ function ColorSwatch({
         style={{ backgroundColor: `var(--${token})` }}
       />
       <div>
-        <code className="text-sm font-bold">{tailwindClass}</code>
+        <code className="text-sm font-medium">{tailwindClass}</code>
         {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
       </div>
     </div>
@@ -164,7 +164,7 @@ function ColorSwatch({
 export const Surfaces: Story = {
   render: () => (
     <div className="p-8">
-      <h2 className="mb-6 text-xl font-bold">Surface Colors</h2>
+      <h2 className="mb-6 text-xl font-medium">Surface Colors</h2>
       <ColorSwatch tailwindClass="bg-background" description="ページ地" />
       <ColorSwatch tailwindClass="bg-card" description="カード・パネル" />
     </div>
@@ -195,7 +195,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div className="p-8">
-      <h1 className="mb-2 text-2xl font-bold">Feedback Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Feedback Patterns</h1>
       <p className="text-muted-foreground mb-8">
         ユーザーへのフィードバック。Toast、Alert、InlineMessage の使い分け。
       </p>

@@ -15,34 +15,34 @@ Dialogと異なり **ESCで閉じない・オーバーレイクリックで閉�
 
 ## Dialog vs AlertDialog
 
-| | Dialog | AlertDialog |
-|---|---|---|
-| ESCで閉じる | ○ | ✕ |
-| オーバーレイクリック | ○ | ✕ |
-| 用途 | 一般的なモーダル | 重要な確認 |
+|                      | Dialog           | AlertDialog |
+| -------------------- | ---------------- | ----------- |
+| ESCで閉じる          | ○                | ✕           |
+| オーバーレイクリック | ○                | ✕           |
+| 用途                 | 一般的なモーダル | 重要な確認  |
 
 ## コンポーネント構成
 
-| コンポーネント | 役割 |
-|---|---|
-| `AlertDialog` | ルートコンテナ（状態管理） |
-| `AlertDialogTrigger` | 開くトリガー（asChild対応） |
-| `AlertDialogContent` | コンテンツ（中央配置、rounded-2xl） |
-| `AlertDialogHeader` | ヘッダー（Title + Description） |
-| `AlertDialogTitle` | タイトル（text-lg font-bold） |
+| コンポーネント           | 役割                                  |
+| ------------------------ | ------------------------------------- |
+| `AlertDialog`            | ルートコンテナ（状態管理）            |
+| `AlertDialogTrigger`     | 開くトリガー（asChild対応）           |
+| `AlertDialogContent`     | コンテンツ（中央配置、rounded-2xl）   |
+| `AlertDialogHeader`      | ヘッダー（Title + Description）       |
+| `AlertDialogTitle`       | タイトル（text-lg font-medium）       |
 | `AlertDialogDescription` | 説明（asChildでカスタムコンテンツ可） |
-| `AlertDialogFooter` | フッター（Cancel + Action） |
-| `AlertDialogCancel` | キャンセルボタン（variant: outline） |
-| `AlertDialogAction` | 実行ボタン（variant: default） |
+| `AlertDialogFooter`      | フッター（Cancel + Action）           |
+| `AlertDialogCancel`      | キャンセルボタン（variant: outline）  |
+| `AlertDialogAction`      | 実行ボタン（variant: default）        |
 
 ## 使用箇所
 
-| 実装 | 用途 |
-|---|---|
+| 実装                  | 用途                       |
+| --------------------- | -------------------------- |
 | AccountDeletionDialog | アカウント削除（GDPR対応） |
-| SessionTimeoutDialog | セッションタイムアウト警告 |
-| TagMerge確認 | タグマージの確認 |
-| BulkDelete確認 | 一括削除の確認 |
+| SessionTimeoutDialog  | セッションタイムアウト警告 |
+| TagMerge確認          | タグマージの確認           |
+| BulkDelete確認        | 一括削除の確認             |
 
 ## Default
 

@@ -47,7 +47,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Security Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Security Patterns</h1>
       <p className="text-muted-foreground mb-8">
         認証・認可・データ保護に関する UI パターン。OWASP Top 10 準拠。
       </p>
@@ -55,7 +55,7 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 認証フロー全体像 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">認証フロー全体像</h2>
+          <h2 className="mb-4 text-lg font-medium">認証フロー全体像</h2>
           <p className="text-muted-foreground mb-6 text-sm">
             ログインから操作までの認証レイヤー。各ステップで異なるセキュリティ対策が適用される。
           </p>
@@ -75,7 +75,7 @@ export const Overview: Story = {
 
         {/* エラーサニタイズ */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">エラーメッセージのサニタイズ（OWASP準拠）</h2>
+          <h2 className="mb-4 text-lg font-medium">エラーメッセージのサニタイズ（OWASP準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             認証エラーはユーザー列挙攻撃を防ぐため、具体的な原因を開示しない。
             <code className="bg-container mx-1 rounded px-1 text-xs">getAuthErrorKey()</code>{' '}
@@ -86,15 +86,15 @@ export const Overview: Story = {
             <table className="mb-4 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">場面</th>
-                  <th className="py-2 text-left font-bold">Supabase 生エラー</th>
-                  <th className="py-2 text-left font-bold">ユーザーに表示</th>
-                  <th className="py-2 text-left font-bold">理由</th>
+                  <th className="py-2 text-left font-medium">場面</th>
+                  <th className="py-2 text-left font-medium">Supabase 生エラー</th>
+                  <th className="py-2 text-left font-medium">ユーザーに表示</th>
+                  <th className="py-2 text-left font-medium">理由</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">ログイン失敗</td>
+                  <td className="py-2 font-medium">ログイン失敗</td>
                   <td className="py-2">
                     <SanitizeExample type="raw" text="Invalid login credentials" />
                   </td>
@@ -107,7 +107,7 @@ export const Overview: Story = {
                   <td className="py-2">メール/パスワードどちらが間違いか非開示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">重複サインアップ</td>
+                  <td className="py-2 font-medium">重複サインアップ</td>
                   <td className="py-2">
                     <SanitizeExample type="raw" text="User already registered" />
                   </td>
@@ -117,7 +117,7 @@ export const Overview: Story = {
                   <td className="py-2">アカウント存在の推測を防止</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">レート制限</td>
+                  <td className="py-2 font-medium">レート制限</td>
                   <td className="py-2">
                     <SanitizeExample type="raw" text="Too many requests" />
                   </td>
@@ -130,7 +130,7 @@ export const Overview: Story = {
                   <td className="py-2">攻撃者にもブルートフォース防止を通知</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">パスワードリセット</td>
+                  <td className="py-2 font-medium">パスワードリセット</td>
                   <td className="py-2">
                     <SanitizeExample type="raw" text="Email not found" />
                   </td>
@@ -148,7 +148,7 @@ export const Overview: Story = {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>全認証エラーを i18n キー経由で表示</li>
                 <li>ログイン失敗は常に同一メッセージ</li>
@@ -156,7 +156,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>&quot;このメールアドレスは登録されていない&quot;（アカウント存在の漏洩）</li>
                 <li>&quot;パスワードが間違っている&quot;（メールが正しいことを暗示）</li>
@@ -168,7 +168,7 @@ export const Overview: Story = {
 
         {/* MFA パターン */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">MFA（多要素認証）</h2>
+          <h2 className="mb-4 text-lg font-medium">MFA（多要素認証）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             TOTP 6桁コードとリカバリーコード（8文字英数字 x 10個）の2系統。
             デバイス紛失時のアカウント復旧パスを確保。
@@ -178,21 +178,21 @@ export const Overview: Story = {
             <table className="mb-6 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">方式</th>
-                  <th className="py-2 text-left font-bold">入力UI</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">セキュリティ特性</th>
+                  <th className="py-2 text-left font-medium">方式</th>
+                  <th className="py-2 text-left font-medium">入力UI</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">セキュリティ特性</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">TOTP</td>
+                  <td className="py-2 font-medium">TOTP</td>
                   <td className="py-2">InputOTP（6スロット、自動送信）</td>
                   <td className="py-2">通常のログイン</td>
                   <td className="py-2">30秒ローテーション、タイミングセーフ検証</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">リカバリーコード</td>
+                  <td className="py-2 font-medium">リカバリーコード</td>
                   <td className="py-2">テキスト入力（XXXX-XXXX、monospace）</td>
                   <td className="py-2">デバイス紛失時</td>
                   <td className="py-2">ワンタイム使用、HMAC-SHA256 ハッシュ保存</td>
@@ -206,7 +206,7 @@ export const Overview: Story = {
 
         {/* セッション管理 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">セッション管理</h2>
+          <h2 className="mb-4 text-lg font-medium">セッション管理</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             セッション期限切れ5分前に警告。ユーザーに延長またはログアウトの選択を促す。
           </p>
@@ -215,24 +215,24 @@ export const Overview: Story = {
             <table className="mb-6 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">イベント</th>
-                  <th className="py-2 text-left font-bold">UI</th>
-                  <th className="py-2 text-left font-bold">挙動</th>
+                  <th className="py-2 text-left font-medium">イベント</th>
+                  <th className="py-2 text-left font-medium">UI</th>
+                  <th className="py-2 text-left font-medium">挙動</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">残り5分</td>
+                  <td className="py-2 font-medium">残り5分</td>
                   <td className="py-2">SessionTimeoutDialog 表示</td>
                   <td className="py-2">カウントダウン開始、ESC 不可</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">延長ボタン</td>
+                  <td className="py-2 font-medium">延長ボタン</td>
                   <td className="py-2">ダイアログ閉じ</td>
                   <td className="py-2">トークンリフレッシュ</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">タイムアウト</td>
+                  <td className="py-2 font-medium">タイムアウト</td>
                   <td className="py-2">ログイン画面へリダイレクト</td>
                   <td className="py-2">セッション破棄</td>
                 </tr>
@@ -245,7 +245,7 @@ export const Overview: Story = {
 
         {/* 入力検証 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">入力検証パターン（API境界）</h2>
+          <h2 className="mb-4 text-lg font-medium">入力検証パターン（API境界）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             全 tRPC 入力は Zod で厳密にバリデーション。UI とサーバーの二重検証。
           </p>
@@ -254,21 +254,21 @@ export const Overview: Story = {
             <table className="mb-4 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">型</th>
-                  <th className="py-2 text-left font-bold">バリデーション</th>
-                  <th className="py-2 text-left font-bold">例</th>
+                  <th className="py-2 text-left font-medium">型</th>
+                  <th className="py-2 text-left font-medium">バリデーション</th>
+                  <th className="py-2 text-left font-medium">例</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">ID</td>
+                  <td className="py-2 font-medium">ID</td>
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.string().uuid()</code>
                   </td>
                   <td className="py-2">entryId, tagId, planId</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">文字列</td>
+                  <td className="py-2 font-medium">文字列</td>
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">
                       z.string().min(1).max(N)
@@ -277,7 +277,7 @@ export const Overview: Story = {
                   <td className="py-2">title (max 200), description (max 10000)</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">数値</td>
+                  <td className="py-2 font-medium">数値</td>
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">
                       z.number().int().min(0).max(N)
@@ -286,14 +286,14 @@ export const Overview: Story = {
                   <td className="py-2">fulfillment_score (1-3), duration_minutes</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">列挙</td>
+                  <td className="py-2 font-medium">列挙</td>
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.enum([...])</code>
                   </td>
                   <td className="py-2">origin, sort_order</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">配列</td>
+                  <td className="py-2 font-medium">配列</td>
                   <td className="py-2">
                     <code className="bg-container rounded px-1 text-xs">z.array().max(100)</code>
                   </td>
@@ -324,7 +324,7 @@ export const tagsRouter = createTRPCRouter({
 
         {/* 破壊的操作の保護 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">破壊的操作の保護</h2>
+          <h2 className="mb-4 text-lg font-medium">破壊的操作の保護</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             不可逆な操作は UI + 確認ダイアログ + API の三重防御。
           </p>
@@ -333,33 +333,33 @@ export const tagsRouter = createTRPCRouter({
             <table className="mb-6 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">操作</th>
-                  <th className="py-2 text-left font-bold">UI防御</th>
-                  <th className="py-2 text-left font-bold">API防御</th>
-                  <th className="py-2 text-left font-bold">DB防御</th>
+                  <th className="py-2 text-left font-medium">操作</th>
+                  <th className="py-2 text-left font-medium">UI防御</th>
+                  <th className="py-2 text-left font-medium">API防御</th>
+                  <th className="py-2 text-left font-medium">DB防御</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">アカウント削除</td>
+                  <td className="py-2 font-medium">アカウント削除</td>
                   <td className="py-2">destructive 確認 + icon</td>
                   <td className="py-2">protectedProcedure + userId</td>
                   <td className="py-2">RLS + CASCADE</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">エントリー削除</td>
+                  <td className="py-2 font-medium">エントリー削除</td>
                   <td className="py-2">destructive 確認</td>
                   <td className="py-2">protectedProcedure + userId</td>
                   <td className="py-2">soft delete (deleted_at)</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">タグ削除</td>
+                  <td className="py-2 font-medium">タグ削除</td>
                   <td className="py-2">destructive 確認 + 影響件数表示</td>
                   <td className="py-2">protectedProcedure + userId</td>
                   <td className="py-2">entry_tags CASCADE</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">MFA 無効化</td>
+                  <td className="py-2 font-medium">MFA 無効化</td>
                   <td className="py-2">パスワード再確認</td>
                   <td className="py-2">AAL2 必須</td>
                   <td className="py-2">factor unenroll</td>
@@ -373,7 +373,7 @@ export const tagsRouter = createTRPCRouter({
 
         {/* 防御レイヤーまとめ */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">防御レイヤーまとめ</h2>
+          <h2 className="mb-4 text-lg font-medium">防御レイヤーまとめ</h2>
 
           <div className="grid gap-4 md:grid-cols-3">
             <DefenseCard
@@ -411,7 +411,7 @@ export const tagsRouter = createTRPCRouter({
 
         {/* 実装チェックリスト */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">新機能追加時のセキュリティチェックリスト</h2>
+          <h2 className="mb-4 text-lg font-medium">新機能追加時のセキュリティチェックリスト</h2>
           <div className="space-y-2 text-sm">
             <CheckItem text="tRPC ルーターは protectedProcedure を使用しているか" />
             <CheckItem text="Service 層に userId を渡しているか" />
@@ -444,7 +444,7 @@ function FlowStep({
   return (
     <div className="bg-container flex flex-col items-center gap-1 rounded-lg px-4 py-2">
       <Icon className="text-primary size-5" />
-      <span className="text-sm font-bold">{label}</span>
+      <span className="text-sm font-medium">{label}</span>
       <span className="text-muted-foreground text-center text-xs">{sublabel}</span>
     </div>
   );
@@ -478,7 +478,7 @@ function DefenseCard({
     <div className="border-border rounded-lg border p-4">
       <div className="mb-2 flex items-center gap-2">
         <Icon className="text-primary size-5" />
-        <h3 className="font-bold">{title}</h3>
+        <h3 className="font-medium">{title}</h3>
       </div>
       <ul className="text-muted-foreground space-y-1 text-sm">
         {items.map((item) => (

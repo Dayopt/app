@@ -149,20 +149,20 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
           className={cn(
             'rounded-lg px-2 py-1 transition-colors duration-150',
             mode === 'hour'
-              ? 'bg-state-selected text-foreground font-bold'
+              ? 'bg-state-selected text-foreground font-medium'
               : 'text-muted-foreground',
           )}
         >
           {selectedHour.toString().padStart(2, '0')}
         </button>
-        <span className="text-muted-foreground font-bold">:</span>
+        <span className="text-muted-foreground font-medium">:</span>
         <button
           type="button"
           onClick={() => setMode('minute')}
           className={cn(
             'rounded-lg px-2 py-1 transition-colors duration-150',
             mode === 'minute'
-              ? 'bg-state-selected text-foreground font-bold'
+              ? 'bg-state-selected text-foreground font-medium'
               : 'text-muted-foreground',
           )}
         >
@@ -222,7 +222,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
                   className={cn(
                     'absolute flex items-center justify-center text-sm transition-colors duration-150',
                     disabled && 'opacity-30',
-                    selected ? 'text-primary-foreground font-bold' : 'text-foreground',
+                    selected ? 'text-primary-foreground font-medium' : 'text-foreground',
                   )}
                   style={{
                     width: 36,
@@ -272,7 +272,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
                 className={cn(
                   'absolute flex items-center justify-center text-base font-medium transition-colors duration-150',
                   disabled && 'opacity-30',
-                  selected ? 'text-primary-foreground font-bold' : 'text-foreground',
+                  selected ? 'text-primary-foreground font-medium' : 'text-foreground',
                 )}
                 style={{
                   width: 40,

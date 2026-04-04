@@ -56,7 +56,7 @@ function EmailPreview({ element, title }: { element: React.ReactElement; title: 
 
   return (
     <div className="p-4">
-      <h3 className="mb-2 text-sm font-bold">{title}</h3>
+      <h3 className="mb-2 text-sm font-medium">{title}</h3>
       <iframe
         title={title}
         srcDoc={html}
@@ -96,21 +96,23 @@ export const Guidelines: Story = {
   render: () => (
     <div className="space-y-8 p-8">
       <div>
-        <h1 className="mb-2 text-2xl font-bold">Email Templates</h1>
+        <h1 className="mb-2 text-2xl font-medium">Email Templates</h1>
         <p className="text-muted-foreground">Resend + React Email で管理するメールテンプレート。</p>
       </div>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">構成</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">構成</h2>
         <div className="text-muted-foreground space-y-1 font-mono text-sm">
-          <p className="text-foreground font-bold">Auth メール（Supabase Edge Function / Deno）</p>
+          <p className="text-foreground font-medium">
+            Auth メール（Supabase Edge Function / Deno）
+          </p>
           <p>supabase/functions/send-auth-email/</p>
           <p className="pl-4">index.ts — webhook検証 + renderAsync + Resend送信</p>
           <p className="pl-4">styles.tsx — 共通スタイル（tokens/colors.css トークン → hex）</p>
           <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth signup）</p>
           <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth recovery）</p>
           <p className="pl-4">MagicLinkEmail.tsx — マジックリンク（Auth magic_link）</p>
-          <p className="text-foreground mt-4 font-bold">
+          <p className="text-foreground mt-4 font-medium">
             アプリメール（tRPC email router / Node.js）
           </p>
           <p>src/emails/</p>
@@ -135,7 +137,7 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">カラートークン</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">カラートークン</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           メールクライアントは CSS変数・OKLCH 未対応のため、tokens/colors.css トークンを hex
           に変換。
@@ -148,7 +150,7 @@ export const Guidelines: Story = {
                 style={{ backgroundColor: hex }}
               />
               <div>
-                <code className="text-xs font-bold">{name}</code>
+                <code className="text-xs font-medium">{name}</code>
                 <p className="text-muted-foreground text-xs">{hex}</p>
               </div>
             </div>
@@ -157,16 +159,16 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">
           テンプレートと送信フロー
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-2 text-left font-bold">テンプレート</th>
-                <th className="py-2 text-left font-bold">用途</th>
-                <th className="py-2 text-left font-bold">トリガー</th>
+                <th className="py-2 text-left font-medium">テンプレート</th>
+                <th className="py-2 text-left font-medium">用途</th>
+                <th className="py-2 text-left font-medium">トリガー</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -203,10 +205,10 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">送信フロー</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">送信フロー</h2>
         <div className="text-muted-foreground space-y-4 text-sm">
           <div>
-            <h3 className="text-foreground mb-2 text-sm font-bold">
+            <h3 className="text-foreground mb-2 text-sm font-medium">
               Auth メール（signup / reset / magic_link）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
@@ -216,7 +218,7 @@ export const Guidelines: Story = {
             </div>
           </div>
           <div>
-            <h3 className="text-foreground mb-2 text-sm font-bold">
+            <h3 className="text-foreground mb-2 text-sm font-medium">
               アプリメール（welcome / trial / pro / billing / reminder / overdue / deletion）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
@@ -229,7 +231,7 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">デザインルール</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">デザインルール</h2>
         <ul className="text-muted-foreground list-disc space-y-2 pl-6 text-sm">
           <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
           <li>メールはライトモード固定（ダークモード未対応）</li>

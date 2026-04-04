@@ -126,7 +126,7 @@ export default function SettingsPage() {
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <p className="text-lg font-bold">{displayName}</p>
+            <p className="text-lg font-medium">{displayName}</p>
             {user?.email && <p className="text-muted-foreground text-sm">{user.email}</p>}
           </div>
         </div>

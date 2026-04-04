@@ -43,7 +43,7 @@ export const Sizes: Story = {
   render: () => (
     <div className="space-y-8">
       <div>
-        <h1 className="mb-2 text-2xl font-bold">アイコンサイズ</h1>
+        <h1 className="mb-2 text-2xl font-medium">アイコンサイズ</h1>
         <p className="text-muted-foreground">
           lucide-react を使用。3階層 × 6種に統一。迷ったら size-3.5 か size-4。
         </p>
@@ -60,7 +60,7 @@ export const Sizes: Story = {
               <Settings className="size-3.5" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-3.5</code>
-            <p className="mt-2 text-xs font-bold">14px</p>
+            <p className="mt-2 text-xs font-medium">14px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               補助アイコン、
               <br />
@@ -73,7 +73,7 @@ export const Sizes: Story = {
               <Settings className="size-4" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-4</code>
-            <p className="mt-2 text-xs font-bold">16px</p>
+            <p className="mt-2 text-xs font-medium">16px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               <strong>標準</strong>: ボタン内、
               <br />
@@ -94,7 +94,7 @@ export const Sizes: Story = {
               <Settings className="size-5" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-5</code>
-            <p className="mt-2 text-xs font-bold">20px</p>
+            <p className="mt-2 text-xs font-medium">20px</p>
             <p className="text-muted-foreground mt-1 text-xs">ナビ、強調</p>
           </div>
 
@@ -103,7 +103,7 @@ export const Sizes: Story = {
               <Settings className="size-6" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-6</code>
-            <p className="mt-2 text-xs font-bold">24px</p>
+            <p className="mt-2 text-xs font-medium">24px</p>
             <p className="text-muted-foreground mt-1 text-xs">見出し横</p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export const Sizes: Story = {
               <Settings className="size-8" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-8</code>
-            <p className="mt-2 text-xs font-bold">32px</p>
+            <p className="mt-2 text-xs font-medium">32px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               カード主アイコン、
               <br />
@@ -131,7 +131,7 @@ export const Sizes: Story = {
               <Settings className="size-10" />
             </div>
             <code className="bg-container rounded-lg px-2 py-1 text-xs">size-10</code>
-            <p className="mt-2 text-xs font-bold">40px</p>
+            <p className="mt-2 text-xs font-medium">40px</p>
             <p className="text-muted-foreground mt-1 text-xs">
               空状態、
               <br />
@@ -147,7 +147,7 @@ export const Sizes: Story = {
 export const StrokeWidth: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">線の太さ（strokeWidth）</h1>
+      <h1 className="mb-6 text-2xl font-medium">線の太さ（strokeWidth）</h1>
       <p className="text-muted-foreground mb-8">
         lucide-react のデフォルトは2。用途に応じて3種類を使い分け。
       </p>
@@ -158,7 +158,7 @@ export const StrokeWidth: Story = {
             <Settings className="size-8" strokeWidth={2} />
           </div>
           <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=2</code>
-          <p className="mt-2 text-xs font-bold">
+          <p className="mt-2 text-xs font-medium">
             <strong>標準（デフォルト）</strong>
           </p>
           <p className="text-muted-foreground mt-1 text-xs">
@@ -173,7 +173,7 @@ export const StrokeWidth: Story = {
             <Home className="size-8" strokeWidth={2.5} />
           </div>
           <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=2.5</code>
-          <p className="mt-2 text-xs font-bold">強調</p>
+          <p className="mt-2 text-xs font-medium">強調</p>
           <p className="text-muted-foreground mt-1 text-xs">
             ナビゲーションタブ、
             <br />
@@ -186,7 +186,7 @@ export const StrokeWidth: Story = {
             <Check className="size-8" strokeWidth={3} />
           </div>
           <code className="bg-container rounded-lg px-2 py-1 text-xs">strokeWidth=3</code>
-          <p className="mt-2 text-xs font-bold">高視認性</p>
+          <p className="mt-2 text-xs font-medium">高視認性</p>
           <p className="text-muted-foreground mt-1 text-xs">
             チェックマーク、
             <br />
@@ -201,7 +201,7 @@ export const StrokeWidth: Story = {
 export const CommonIcons: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">よく使うアイコン</h1>
+      <h1 className="mb-6 text-2xl font-medium">よく使うアイコン</h1>
       <p className="text-muted-foreground mb-8">
         代表的なアイコンの一覧。全アイコンは{' '}
         <a
@@ -255,7 +255,7 @@ export const CommonIcons: Story = {
 export const SemanticIcons: Story = {
   render: () => (
     <div>
-      <h1 className="mb-8 text-2xl font-bold">意味を持つアイコン</h1>
+      <h1 className="mb-8 text-2xl font-medium">意味を持つアイコン</h1>
 
       <div className="space-y-6">
         <div className="flex items-center gap-4">
@@ -263,7 +263,7 @@ export const SemanticIcons: Story = {
             <Check className="size-5" />
           </div>
           <div>
-            <p className="font-bold">成功・完了</p>
+            <p className="font-medium">成功・完了</p>
             <code className="text-muted-foreground text-xs">Check + text-success + bg-muted</code>
           </div>
         </div>
@@ -273,7 +273,7 @@ export const SemanticIcons: Story = {
             <AlertCircle className="size-5" />
           </div>
           <div>
-            <p className="font-bold">警告・注意</p>
+            <p className="font-medium">警告・注意</p>
             <code className="text-muted-foreground text-xs">
               AlertCircle + text-warning + bg-muted
             </code>
@@ -285,7 +285,7 @@ export const SemanticIcons: Story = {
             <X className="size-5" />
           </div>
           <div>
-            <p className="font-bold">エラー・削除</p>
+            <p className="font-medium">エラー・削除</p>
             <code className="text-muted-foreground text-xs">X + text-destructive + bg-muted</code>
           </div>
         </div>
@@ -295,7 +295,7 @@ export const SemanticIcons: Story = {
             <Info className="size-5" />
           </div>
           <div>
-            <p className="font-bold">情報</p>
+            <p className="font-medium">情報</p>
             <code className="text-muted-foreground text-xs">Info + text-info + bg-muted</code>
           </div>
         </div>

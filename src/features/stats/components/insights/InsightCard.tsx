@@ -29,7 +29,7 @@ export function InsightCard({ insight, className }: InsightCardProps) {
     <Card className={cn('gap-0 border-none py-0', className)}>
       <CardContent className="flex flex-col gap-4 p-4">
         {/* Title */}
-        <h3 className="text-foreground text-lg font-bold">{insight.title}</h3>
+        <h3 className="text-foreground text-lg font-medium">{insight.title}</h3>
 
         {/* Comparison Badge */}
         {insight.comparison && <ComparisonBadge comparison={insight.comparison} />}

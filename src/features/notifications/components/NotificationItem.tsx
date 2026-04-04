@@ -90,7 +90,7 @@ export function NotificationItem({
           <div className="flex items-center gap-2">
             <h4
               className={`truncate text-sm ${
-                !isRead ? 'text-foreground font-bold' : 'text-muted-foreground font-normal'
+                !isRead ? 'text-foreground font-medium' : 'text-muted-foreground font-normal'
               }`}
             >
               {entryTitle ?? type}

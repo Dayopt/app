@@ -207,7 +207,7 @@ export function BillingSettings() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="text-lg font-bold">
+              <h4 className="text-lg font-medium">
                 {currentPlan === 'pro'
                   ? t('settings.subscription.plans.pro.name')
                   : t('settings.subscription.freePlanLabel')}
@@ -308,10 +308,10 @@ export function BillingSettings() {
 
                 <div className="mb-4">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold">{t(plan.nameKey)}</h4>
+                    <h4 className="font-medium">{t(plan.nameKey)}</h4>
                   </div>
                   <div className="mt-2">
-                    <span className="text-2xl font-bold">
+                    <span className="text-2xl font-medium">
                       {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: 'usd',

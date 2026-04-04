@@ -213,7 +213,7 @@ export const Overview: Story = {
       <div className="mx-auto max-w-5xl space-y-8 p-8">
         {/* タイトル */}
         <div>
-          <h1 className="text-2xl font-bold">Props Inventory</h1>
+          <h1 className="text-2xl font-medium">Props Inventory</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             UIコンポーネント（src/components/ui/）のprops一覧。設計ルールとの整合性を確認する。
           </p>
@@ -221,7 +221,7 @@ export const Overview: Story = {
 
         {/* 統一ルール */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">統一ルール</h2>
+          <h2 className="mb-4 text-lg font-medium">統一ルール</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
@@ -267,7 +267,9 @@ export const Overview: Story = {
 
         {/* コンポーネント一覧 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">全コンポーネント一覧（{components.length}件）</h2>
+          <h2 className="mb-4 text-lg font-medium">
+            全コンポーネント一覧（{components.length}件）
+          </h2>
           <div className="border-border overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead>

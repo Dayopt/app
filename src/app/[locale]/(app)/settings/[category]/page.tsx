@@ -63,7 +63,7 @@ export default function SettingsCategoryPage() {
           </Button>
         }
       >
-        <h1 className="text-lg font-bold">{categoryMeta ? t(categoryMeta.labelKey) : ''}</h1>
+        <h1 className="text-lg font-medium">{categoryMeta ? t(categoryMeta.labelKey) : ''}</h1>
       </AppHeader>
       <SettingsContent category={category} />
     </>

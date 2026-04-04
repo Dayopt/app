@@ -84,19 +84,19 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Default</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Default</h3>
         <StoryTRPCProvider mocks={{ 'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES }}>
           <NotificationSettings />
         </StoryTRPCProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-bold">All Disabled</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">All Disabled</h3>
         <StoryTRPCProvider mocks={{ 'notificationPreferences.get': MOCK_ALL_DISABLED }}>
           <NotificationSettings />
         </StoryTRPCProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-bold">Loading</h3>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Loading</h3>
         <StoryTRPCProvider pending>
           <NotificationSettings />
         </StoryTRPCProvider>

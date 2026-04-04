@@ -149,6 +149,6 @@ export const ClickTest: Story = {
 | **Spacing**     | `0`, `1`(4px), `2`(8px), `4`(16px), `6`(24px), `8`(32px), `12`, `16`, `24` |
 | **Radius**      | `rounded-none`, `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`     |
 | **Icon Size**   | `size-3.5`, `size-4`, `size-5`, `size-6`, `size-8`, `size-10`              |
-| **Font Weight** | `font-normal`, `font-bold` のみ                                            |
+| **Font Weight** | `font-normal`, `font-medium` のみ                                          |
 | **Shadow**      | `shadow-xs`(input), `shadow-sm`(Raised), `shadow-card`(Overlay)            |
 | **Transition**  | `transition-colors duration-150`（標準）                                   |

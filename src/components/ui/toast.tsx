@@ -62,7 +62,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           loader: '!static !inset-auto !transform-none',
           content:
             'row-start-1 col-start-2 min-w-0 flex flex-col gap-1 [[data-sonner-toast]:not(:has([data-icon]))_&]:col-start-1',
-          title: 'text-sm font-bold',
+          title: 'text-sm font-medium',
           description: 'text-sm text-muted-foreground',
           actionButton: cn(
             'row-start-2 col-start-2 col-span-2 justify-self-end',
