@@ -5,10 +5,9 @@ import { createPortal } from 'react-dom';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
-import { COLOR_DISPLAY_NAMES } from '@/components/ui/color-palette-picker';
+import { getColorDisplayName } from '@/components/ui/color-palette-picker';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSupportText } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useSubmitShortcut } from '@/hooks/useSubmitShortcut';
 import { logger } from '@/lib/logger';
@@ -56,6 +55,7 @@ export function TagCreateModal({
   existingTags = [],
 }: TagCreateModalProps) {
   const t = useTranslations();
+  const tCommon = useTranslations('common');
   const [name, setName] = useState('');
   const [color, setColor] = useState<TagColorName>(DEFAULT_TAG_COLOR);
   const [icon, setIcon] = useState<string | null>(DEFAULT_TAG_ICON);
@@ -250,26 +250,31 @@ export function TagCreateModal({
           {!inheritedColor && (
             <Field>
               <FieldLabel>{t('tags.form.color')}</FieldLabel>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {TAG_COLOR_NAMES.map((c) => {
                   const classes = getTagColorClasses(c);
                   const isActive = color === c;
+                  const displayName = getColorDisplayName(c, tCommon);
                   return (
-                    <HoverTooltip key={c} content={COLOR_DISPLAY_NAMES[c]} side="top">
-                      <button
-                        type="button"
-                        onClick={() => setColor(c)}
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      className="flex flex-col items-center gap-1"
+                      aria-label={displayName}
+                      aria-pressed={isActive}
+                    >
+                      <span
                         className={cn(
                           'flex size-9 items-center justify-center rounded-full transition-all',
                           isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
                           classes.dot,
                         )}
-                        aria-label={COLOR_DISPLAY_NAMES[c]}
-                        aria-pressed={isActive}
                       >
                         {isActive && <Check className="size-4 text-white" />}
-                      </button>
-                    </HoverTooltip>
+                      </span>
+                      <span className="text-muted-foreground text-xs">{displayName}</span>
+                    </button>
                   );
                 })}
               </div>

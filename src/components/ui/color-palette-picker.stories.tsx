@@ -1,13 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { TAG_COLOR_MAP } from '@/lib/tag-colors';
+import { TAG_COLOR_MAP, TAG_COLOR_NAMES } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 import type { TagColorName } from '@/lib/tag-colors';
 
 import { Button } from './button';
-import { COLOR_DISPLAY_NAMES, ColorPaletteMenuItems } from './color-palette-picker';
+import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './dropdown-menu';
 
 const meta = {
@@ -28,6 +29,7 @@ export const AllPatterns: Story = {
     onColorSelect: () => {},
   },
   render: function ColorPaletteMenuItemsStory() {
+    const t = useTranslations('common');
     const [color1, setColor1] = useState<TagColorName>('blue');
     const [color2, setColor2] = useState<TagColorName>('green');
 
@@ -41,7 +43,7 @@ export const AllPatterns: Story = {
                   className={cn('size-4 rounded-full', TAG_COLOR_MAP[color1].dot)}
                   aria-hidden
                 />
-                {COLOR_DISPLAY_NAMES[color1]}
+                {getColorDisplayName(color1, t)}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -68,6 +70,24 @@ export const AllPatterns: Story = {
               />
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+
+        {/* 色名ラベル付きスウォッチ一覧 */}
+        <div className="p-4">
+          <h3 className="text-foreground mb-4 text-sm font-bold">色名ラベル付きスウォッチ</h3>
+          <div className="grid grid-cols-5 gap-2">
+            {TAG_COLOR_NAMES.map((colorName) => (
+              <div key={colorName} className="flex flex-col items-center gap-1">
+                <span
+                  className={cn('size-9 rounded-full', TAG_COLOR_MAP[colorName].dot)}
+                  aria-hidden
+                />
+                <span className="text-muted-foreground text-xs">
+                  {getColorDisplayName(colorName, t)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

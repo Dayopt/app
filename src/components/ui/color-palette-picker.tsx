@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { TAG_COLOR_MAP, TAG_COLOR_NAMES, resolveTagColor } from '@/lib/tag-colors';
@@ -8,19 +9,15 @@ import { cn } from '@/lib/utils';
 
 import type { TagColorName } from '@/lib/tag-colors';
 
-// カラー表示名マッピング
-export const COLOR_DISPLAY_NAMES: Record<TagColorName, string> = {
-  red: 'Red',
-  orange: 'Orange',
-  amber: 'Amber',
-  green: 'Green',
-  teal: 'Teal',
-  blue: 'Blue',
-  indigo: 'Indigo',
-  violet: 'Violet',
-  pink: 'Pink',
-  gray: 'Gray',
-};
+/**
+ * 翻訳済みの色表示名を取得する
+ *
+ * @param color - タグカラー名
+ * @param t - useTranslations() の返り値（'common' namespace）
+ */
+export function getColorDisplayName(color: TagColorName, t: (key: string) => string): string {
+  return t(`colors.${color}`);
+}
 
 /**
  * カラーパレットメニューアイテム（DropdownMenu用）
@@ -35,13 +32,14 @@ export function ColorPaletteMenuItems({
   selectedColor,
   onColorSelect,
 }: ColorPaletteMenuItemsProps) {
+  const t = useTranslations('common');
   const resolvedSelected = resolveTagColor(selectedColor);
 
   return (
     <>
       {TAG_COLOR_NAMES.map((colorName) => {
         const isSelected = resolvedSelected === colorName;
-        const displayName = COLOR_DISPLAY_NAMES[colorName];
+        const displayName = getColorDisplayName(colorName, t);
 
         return (
           <DropdownMenuItem

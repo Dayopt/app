@@ -1473,3 +1473,143 @@ export const Chronotype: Story = {
     );
   },
 };
+
+// ========================================
+// CVD シミュレーション
+// ========================================
+
+const TAG_COLORS_FOR_CVD = [
+  { name: 'Red', token: '--tag-red', hue: 25 },
+  { name: 'Orange', token: '--tag-orange', hue: 55 },
+  { name: 'Amber', token: '--tag-amber', hue: 80 },
+  { name: 'Green', token: '--tag-green', hue: 145 },
+  { name: 'Teal', token: '--tag-teal', hue: 185 },
+  { name: 'Blue', token: '--tag-blue', hue: 240 },
+  { name: 'Indigo', token: '--tag-indigo', hue: 280 },
+  { name: 'Violet', token: '--tag-violet', hue: 310 },
+  { name: 'Pink', token: '--tag-pink', hue: 350 },
+  { name: 'Gray', token: '--tag-gray', hue: 250 },
+] as const;
+
+/**
+ * SVG filter で色覚特性をシミュレーション
+ * @see https://www.inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation/CVD_Simulation.html
+ */
+const CVD_FILTERS = {
+  protanopia: {
+    label: 'Protanopia（1型: 赤錐体なし）',
+    matrix:
+      '0.152286 1.052583 -0.204868 0 0  0.114503 0.786281 0.099216 0 0  -0.003882 -0.048116 1.051998 0 0  0 0 0 1 0',
+  },
+  deuteranopia: {
+    label: 'Deuteranopia（2型: 緑錐体なし）',
+    matrix:
+      '0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0',
+  },
+  tritanopia: {
+    label: 'Tritanopia（3型: 青錐体なし）',
+    matrix:
+      '1.255528 -0.076749 -0.178779 0 0  -0.078411 0.930809 0.147602 0 0  0.004733 0.691367 0.303900 0 0  0 0 0 1 0',
+  },
+} as const;
+
+const PROBLEMATIC_PAIRS: Array<{
+  colors: [string, string];
+  cvdType: string;
+  risk: string;
+}> = [
+  { colors: ['Red', 'Green'], cvdType: 'Deuteranopia', risk: '高' },
+  { colors: ['Amber', 'Green'], cvdType: 'Protan / Deutan', risk: '高' },
+  { colors: ['Red', 'Amber'], cvdType: 'Deuteranopia', risk: '中' },
+  { colors: ['Violet', 'Pink'], cvdType: 'Tritanopia', risk: '中' },
+];
+
+function CvdColorRow({ filterId }: { filterId: string | null }) {
+  return (
+    <div className="flex gap-2" style={filterId ? { filter: `url(#${filterId})` } : undefined}>
+      {TAG_COLORS_FOR_CVD.map((c) => (
+        <div key={c.name} className="flex flex-col items-center gap-1">
+          <div className="size-10 rounded-full" style={{ backgroundColor: `var(${c.token})` }} />
+          <span className="text-muted-foreground text-xs">{c.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export const ColorVisionDeficiency: Story = {
+  render: function CvdSimulation() {
+    return (
+      <div className="bg-background p-8">
+        <h2 className="text-foreground mb-2 text-2xl font-bold">
+          色覚多様性（CVD）シミュレーション
+        </h2>
+        <p className="text-muted-foreground mb-8 text-sm">
+          タグカラー10色を各色覚特性でシミュレーション表示。テキストラベルが常時表示されるため、色のみに依存しない設計。
+        </p>
+
+        {/* SVG filters */}
+        <svg className="absolute size-0" aria-hidden>
+          <defs>
+            {Object.entries(CVD_FILTERS).map(([id, { matrix }]) => (
+              <filter key={id} id={`cvd-${id}`}>
+                <feColorMatrix type="matrix" values={matrix} />
+              </filter>
+            ))}
+          </defs>
+        </svg>
+
+        <div className="flex flex-col gap-8">
+          {/* 正常色覚 */}
+          <section>
+            <h3 className="text-foreground mb-2 text-sm font-bold">正常色覚</h3>
+            <CvdColorRow filterId={null} />
+          </section>
+
+          {/* 各CVDタイプ */}
+          {Object.entries(CVD_FILTERS).map(([id, { label }]) => (
+            <section key={id}>
+              <h3 className="text-foreground mb-2 text-sm font-bold">{label}</h3>
+              <CvdColorRow filterId={`cvd-${id}`} />
+            </section>
+          ))}
+
+          {/* 注意すべきペア */}
+          <section>
+            <h3 className="text-foreground mb-4 text-sm font-bold">注意すべき色ペア</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {PROBLEMATIC_PAIRS.map(({ colors, cvdType, risk }) => (
+                <div
+                  key={colors.join('-')}
+                  className="border-border flex items-center gap-4 rounded-lg border p-4"
+                >
+                  <div className="flex gap-1">
+                    {colors.map((colorName) => {
+                      const c = TAG_COLORS_FOR_CVD.find((t) => t.name === colorName);
+                      return (
+                        <div
+                          key={colorName}
+                          className="size-8 rounded-full"
+                          style={{ backgroundColor: c ? `var(${c.token})` : undefined }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground text-sm font-bold">{colors.join(' ↔ ')}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {cvdType} — リスク: {risk}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-muted-foreground mt-4 text-xs">
+              緩和策: タグ名テキストが常時表示、オプションのタグアイコン、色選択UIに色名ラベル
+            </p>
+          </section>
+        </div>
+      </div>
+    );
+  },
+};

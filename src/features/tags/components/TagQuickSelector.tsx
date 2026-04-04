@@ -17,9 +17,8 @@ import { useTranslations } from 'next-intl';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
-import { COLOR_DISPLAY_NAMES } from '@/components/ui/color-palette-picker';
+import { getColorDisplayName } from '@/components/ui/color-palette-picker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
@@ -132,26 +131,31 @@ function CreateTagFormView({
         {/* 色 */}
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">{t('tagSelector.color')}</span>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {TAG_COLOR_NAMES.map((color) => {
               const classes = getTagColorClasses(color);
               const isActive = effectiveColor === color;
+              const displayName = getColorDisplayName(color, tCommon);
               return (
-                <HoverTooltip key={color} content={COLOR_DISPLAY_NAMES[color]} side="top">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedColor(color)}
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setSelectedColor(color)}
+                  className="flex flex-col items-center gap-1"
+                  aria-label={displayName}
+                  aria-pressed={isActive}
+                >
+                  <span
                     className={cn(
                       'flex size-9 items-center justify-center rounded-full transition-all',
                       isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
                       classes.dot,
                     )}
-                    aria-label={COLOR_DISPLAY_NAMES[color]}
-                    aria-pressed={isActive}
                   >
                     {isActive && <Check className="size-4 text-white" />}
-                  </button>
-                </HoverTooltip>
+                  </span>
+                  <span className="text-muted-foreground text-xs">{displayName}</span>
+                </button>
               );
             })}
           </div>
