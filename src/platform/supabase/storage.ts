@@ -64,8 +64,8 @@ function getFileExtension(fileName: string): string {
 export async function uploadAvatar(file: File, userId: string): Promise<string> {
   const supabase = createClient();
 
-  // ファイルタイプバリデーション
-  if (!file.type.startsWith('image/')) {
+  // ファイルタイプバリデーション（許可リストで厳密に検証）
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
     throw new StorageError(
       '画像ファイルのみアップロード可能',
       STORAGE_ERROR_CODES.INVALID_FILE_TYPE,

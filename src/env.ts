@@ -7,53 +7,58 @@
  */
 import { z } from 'zod';
 
-const serverSchema = z.object({
-  // Supabase
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+const serverSchema = z
+  .object({
+    // Supabase
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-  // Upstash Redis
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    // Upstash Redis
+    UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 
-  // Resend
-  RESEND_API_KEY: z.string().optional(),
-  RESEND_WEBHOOK_SECRET: z.string().optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
+    // Resend
+    RESEND_API_KEY: z.string().optional(),
+    RESEND_WEBHOOK_SECRET: z.string().optional(),
+    RESEND_FROM_EMAIL: z.string().email().optional(),
 
-  // Anthropic
-  ANTHROPIC_API_KEY: z.string().optional(),
+    // Anthropic
+    ANTHROPIC_API_KEY: z.string().optional(),
 
-  // GitHub
-  GITHUB_TOKEN: z.string().optional(),
-  GITHUB_CONTACT_REPO: z.string().optional(),
+    // GitHub
+    GITHUB_TOKEN: z.string().optional(),
+    GITHUB_CONTACT_REPO: z.string().optional(),
 
-  // reCAPTCHA (server)
-  RECAPTCHA_SECRET_KEY_V3: z.string().optional(),
-  RECAPTCHA_SECRET_KEY_V2: z.string().optional(),
+    // reCAPTCHA (server)
+    RECAPTCHA_SECRET_KEY_V3: z.string().optional(),
+    RECAPTCHA_SECRET_KEY_V2: z.string().optional(),
 
-  // Auth
-  RECOVERY_CODE_PEPPER: z.string().optional(),
+    // Auth
+    RECOVERY_CODE_PEPPER: z.string().optional(),
 
-  // Google
-  GOOGLE_SITE_VERIFICATION: z.string().optional(),
+    // Google
+    GOOGLE_SITE_VERIFICATION: z.string().optional(),
 
-  // Stripe
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    // Stripe
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
-  // Slack
-  SLACK_BILLING_WEBHOOK_URL: z.string().url().optional(),
+    // Slack
+    SLACK_BILLING_WEBHOOK_URL: z.string().url().optional(),
 
-  // App
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-  NEXT_PUBLIC_MAINTENANCE_MODE: z.enum(['true', 'false']).optional(),
-  VERCEL_URL: z.string().optional(),
-  VERCEL_ENV: z.string().optional(),
-  SKIP_AUTH_IN_DEV: z.string().optional(),
-});
+    // App
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+    NEXT_PUBLIC_MAINTENANCE_MODE: z.enum(['true', 'false']).optional(),
+    VERCEL_URL: z.string().optional(),
+    VERCEL_ENV: z.string().optional(),
+    SKIP_AUTH_IN_DEV: z.string().optional(),
+  })
+  .refine((data) => !(data.NODE_ENV === 'production' && data.SKIP_AUTH_IN_DEV === 'true'), {
+    message: 'SKIP_AUTH_IN_DEV は本番環境では使用できない',
+    path: ['SKIP_AUTH_IN_DEV'],
+  });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
