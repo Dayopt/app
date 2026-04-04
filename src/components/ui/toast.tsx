@@ -23,8 +23,8 @@ const LoadingIcon = () => <Loader2 className="size-5 animate-spin" />;
  * - 影: shadow-card
  * - パディング: 16px
  * - ギャップ: 8px
- * - タイトル: 14px、bold、foreground
- * - 説明: 14px、normal、muted-foreground
+ * - タイトル: 16px(mobile) / 14px(desktop)、bold、foreground
+ * - 説明: 16px(mobile) / 14px(desktop)、normal、muted-foreground
  * - 閉じるボタン: 常時表示
  * - Undoボタン: 右配置
  *
@@ -51,8 +51,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       containerAriaLabel={t('title')}
       icons={{ loading: <LoadingIcon /> }}
       // Sonner内部の--width CSS変数を上書き（デフォルト356px → 420px）
-      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override
-      className="[--width:420px]"
+      // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override for Sonner --width
+      className={isMobile ? '[--width:356px]' : '[--width:420px]'}
       toastOptions={{
         unstyled: true,
         classNames: {
@@ -62,8 +62,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
           loader: '!static !inset-auto !transform-none',
           content:
             'row-start-1 col-start-2 min-w-0 flex flex-col gap-1 [[data-sonner-toast]:not(:has([data-icon]))_&]:col-start-1',
-          title: 'text-sm font-medium',
-          description: 'text-sm text-muted-foreground',
+          title: 'text-base font-bold md:text-sm',
+          description: 'text-base text-muted-foreground md:text-sm',
           actionButton: cn(
             'row-start-2 col-start-2 col-span-2 justify-self-end',
             buttonVariants({ variant: 'outline', size: 'sm' }),
