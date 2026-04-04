@@ -9,6 +9,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { logger } from '@/lib/logger';
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
 import { captureBusinessEvent } from '@/platform/sentry';
 import { handleServiceError } from '@/platform/trpc/errors';
@@ -271,9 +272,10 @@ export const entriesCoreRouter = createTRPCRouter({
         .select();
 
       if (error) {
+        logger.error('Failed to bulk update entries', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to bulk update entries: ${error.message}`,
+          message: 'エントリーの一括更新に失敗した',
         });
       }
       return { count: data.length, entries: data };
@@ -291,9 +293,10 @@ export const entriesCoreRouter = createTRPCRouter({
       });
 
       if (error) {
+        logger.error('Failed to bulk delete entries', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to bulk delete entries: ${error.message}`,
+          message: 'エントリーの一括削除に失敗した',
         });
       }
       const count = data ?? 0;
@@ -317,9 +320,10 @@ export const entriesCoreRouter = createTRPCRouter({
         .eq('user_id', userId);
 
       if (deleteError) {
+        logger.error('Failed to clear existing tags', { error: deleteError });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to clear existing tags: ${deleteError.message}`,
+          message: 'タグのクリアに失敗した',
         });
       }
 
@@ -333,9 +337,10 @@ export const entriesCoreRouter = createTRPCRouter({
       const { error, count } = await supabase.from('entry_tags').insert(entryTagsToInsert);
 
       if (error) {
+        logger.error('Failed to bulk set tag', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to bulk set tag: ${error.message}`,
+          message: 'タグの一括設定に失敗した',
         });
       }
       return { success: true, count: count ?? entryIds.length };
@@ -383,9 +388,10 @@ export const entriesCoreRouter = createTRPCRouter({
         );
 
       if (error) {
+        logger.error('Failed to add tag to entry', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to add tag: ${error.message}`,
+          message: 'タグの追加に失敗した',
         });
       }
 
@@ -419,9 +425,10 @@ export const entriesCoreRouter = createTRPCRouter({
         .eq('user_id', userId);
 
       if (error) {
+        logger.error('Failed to remove tag from entry', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to remove tag: ${error.message}`,
+          message: 'タグの削除に失敗した',
         });
       }
 
@@ -469,9 +476,10 @@ export const entriesCoreRouter = createTRPCRouter({
         .eq('user_id', userId);
 
       if (deleteError) {
+        logger.error('Failed to remove existing tags', { error: deleteError });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to remove existing tags: ${deleteError.message}`,
+          message: 'タグの削除に失敗した',
         });
       }
 
@@ -483,9 +491,10 @@ export const entriesCoreRouter = createTRPCRouter({
           tag_id: tagId,
         });
         if (insertError) {
+          logger.error('Failed to set tag', { error: insertError });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to set tag: ${insertError.message}`,
+            message: 'タグの設定に失敗した',
           });
         }
       }
