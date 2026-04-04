@@ -182,7 +182,7 @@ export default function SettingsPage() {
             <Link
               key={category.id}
               href={`/settings/${category.id}`}
-              className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+              className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-base transition-colors"
             >
               {/* C. カテゴリアイコン色 */}
               <Icon className="text-muted-foreground size-5 shrink-0" />
