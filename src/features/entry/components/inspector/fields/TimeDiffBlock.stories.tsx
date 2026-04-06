@@ -197,16 +197,17 @@ export const LateStartEarlyEnd: Story = {
 // 10. 計画外（予定duration=0、記録あり）
 // =============================================
 
-/** 計画外: 予定がないが記録がある。全点線バー + 「計画外」バッジ。 */
+/** 予定外: origin='unplanned'。予定を0扱いにし全点線バー + 「予定外」バッジ。 */
 export const Unplanned: Story = {
   render: () => (
     <div className="w-80">
       <TimeDiffBlock
         plannedStart="10:00"
-        plannedEnd="10:00"
+        plannedEnd="11:00"
         actualStart="10:00"
         actualEnd="11:30"
         tagColor="blue"
+        isUnplanned
       />
     </div>
   ),

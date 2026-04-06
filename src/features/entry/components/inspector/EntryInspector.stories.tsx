@@ -50,6 +50,8 @@ interface InspectorContentProps {
   initialNote?: string;
   initialFulfillment?: FulfillmentScore | null;
   microInsight?: ReactNode;
+  /** 予定外エントリ */
+  isUnplanned?: boolean;
 }
 
 function InspectorContent({
@@ -62,6 +64,7 @@ function InspectorContent({
   initialNote = '',
   initialFulfillment = null,
   microInsight,
+  isUnplanned = false,
 }: InspectorContentProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [plannedStart, setPlannedStart] = useState(initialPlannedStart);
@@ -102,6 +105,7 @@ function InspectorContent({
             endTime={plannedEnd}
             onStartChange={setPlannedStart}
             onEndChange={setPlannedEnd}
+            disabled={isUnplanned}
           />
 
           {/* Actual time */}
@@ -122,6 +126,7 @@ function InspectorContent({
             actualStart={actualStart}
             actualEnd={actualEnd}
             tagColor={tagColor}
+            isUnplanned={isUnplanned}
           />
 
           {/* Fulfillment */}
@@ -221,7 +226,7 @@ export const Underrun: Story = {
 // 4. 計画外
 // ─────────────────────────────────────────────────────────
 
-/** 計画外: 予定duration=0、記録あり。全点線バー + 予定行disabled。 */
+/** 予定外: origin='unplanned'。予定行disabled + 全点線バー。 */
 export const Unplanned: Story = {
   render: () => (
     <InspectorFrame>
@@ -229,9 +234,10 @@ export const Unplanned: Story = {
         tagName="割り込み対応"
         tagColor="red"
         initialPlannedStart="10:00"
-        initialPlannedEnd="10:00"
+        initialPlannedEnd="11:30"
         initialActualStart="10:00"
         initialActualEnd="11:30"
+        isUnplanned
       />
     </InspectorFrame>
   ),
