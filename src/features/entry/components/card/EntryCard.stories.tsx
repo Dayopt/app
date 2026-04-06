@@ -257,6 +257,59 @@ export const OverlayOvertimeOnGrid: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// 予定外（origin='unplanned'）
+// ---------------------------------------------------------------------------
+
+/** 予定外エントリ。左アクセントなし、全体を破線枠で囲む。 */
+export const Unplanned: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          origin: 'unplanned',
+          actualStartDate: new Date('2024-01-15T10:00:00'),
+          actualEndDate: new Date('2024-01-15T11:00:00'),
+        }}
+        tagName="割り込み対応"
+        tagColor="red"
+        position={basePosition}
+      />
+    </Slot>
+  ),
+};
+
+/** 予定外エントリ（グリッド罫線付き）。破線枠の見え方を確認。 */
+export const UnplannedOnGrid: Story = {
+  render: () => {
+    const HOUR_HEIGHT = 72;
+    return (
+      <GridSlot hours={3}>
+        <EntryCard
+          entry={{
+            ...baseEntry,
+            origin: 'unplanned',
+            actualStartDate: new Date('2024-01-15T10:00:00'),
+            actualEndDate: new Date('2024-01-15T11:30:00'),
+            displayEndDate: new Date('2024-01-15T11:30:00'),
+            duration: 90,
+          }}
+          tagName="緊急対応"
+          tagColor="orange"
+          position={{
+            top: 1 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1.5 * HOUR_HEIGHT - 2,
+          }}
+          hourHeight={HOUR_HEIGHT}
+        />
+      </GridSlot>
+    );
+  },
+};
+
+// ---------------------------------------------------------------------------
 // 状態バリエーション
 // ---------------------------------------------------------------------------
 
@@ -345,6 +398,26 @@ export const AllPatterns: Story = {
             tagColor="blue"
             position={basePosition}
             isDragging
+          />
+        </Slot>
+      </section>
+
+      {/* --- 予定外 --- */}
+      <section>
+        <p className="text-muted-foreground mb-2 text-xs">
+          Unplanned（予定外 → 破線枠、左アクセントなし）
+        </p>
+        <Slot>
+          <EntryCard
+            entry={{
+              ...baseEntry,
+              origin: 'unplanned',
+              actualStartDate: new Date('2024-01-15T10:00:00'),
+              actualEndDate: new Date('2024-01-15T11:00:00'),
+            }}
+            tagName="割り込み対応"
+            tagColor="red"
+            position={basePosition}
           />
         </Slot>
       </section>
