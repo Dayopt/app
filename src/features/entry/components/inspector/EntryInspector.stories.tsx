@@ -57,8 +57,8 @@ function InspectorContent({
   tagColor,
   initialPlannedStart = '10:00',
   initialPlannedEnd = '11:30',
-  initialActualStart = null,
-  initialActualEnd = null,
+  initialActualStart = '10:00',
+  initialActualEnd = '11:30',
   initialNote = '',
   initialFulfillment = null,
   microInsight,
@@ -154,36 +154,11 @@ function InspectorContent({
 }
 
 // ─────────────────────────────────────────────────────────
-// 1. 記録なし
+// 1. Default（ぴったり）
 // ─────────────────────────────────────────────────────────
 
-/** 記録なし: 差分バー非表示。予定のみ。 */
-export const NoRecord: Story = {
-  render: () => (
-    <InspectorFrame>
-      <InspectorContent
-        tagName="Deep Work"
-        tagColor="blue"
-        initialPlannedStart="14:00"
-        initialPlannedEnd="15:30"
-        initialNote="集中して取り組む"
-      />
-    </InspectorFrame>
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const noteTextarea = canvas.getByPlaceholderText('メモを追加...');
-    await expect(noteTextarea).toBeInTheDocument();
-    await expect(noteTextarea).toHaveValue('集中して取り組む');
-  },
-};
-
-// ─────────────────────────────────────────────────────────
-// 2. 記録あり — ぴったり
-// ─────────────────────────────────────────────────────────
-
-/** 記録ぴったり: 予定通り。差分バー ±0。 */
-export const RecordExact: Story = {
+/** 基本形: 予定通り。差分バー ±0。 */
+export const Default: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
@@ -200,11 +175,11 @@ export const RecordExact: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 3. 記録あり — 超過
+// 2. 超過
 // ─────────────────────────────────────────────────────────
 
-/** 記録超過: 遅れて始めて遅く終わった。差分バー +15m。 */
-export const RecordOvertime: Story = {
+/** 超過: 遅れて始めて遅く終わった。差分バー +15m。 */
+export const Overtime: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
@@ -222,11 +197,11 @@ export const RecordOvertime: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 4. 記録あり — 不足
+// 3. 不足
 // ─────────────────────────────────────────────────────────
 
-/** 記録不足: 予定より短く終わった。差分バー -30m。 */
-export const RecordUnderrun: Story = {
+/** 不足: 予定より短く終わった。差分バー -30m。 */
+export const Underrun: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
@@ -243,7 +218,7 @@ export const RecordUnderrun: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 5. MicroInsight 連携
+// 4. MicroInsight 連携
 // ─────────────────────────────────────────────────────────
 
 /** MicroInsight 付き — 見積もり超過バイアス */
@@ -297,7 +272,7 @@ export const WithMicroInsightFulfillment: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 6. Loading / Empty / Mobile
+// 5. Loading / Empty / Mobile
 // ─────────────────────────────────────────────────────────
 
 /** Loading: データ取得中のスピナー表示。 */
@@ -373,7 +348,7 @@ export const MobileDrawer: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 7. 全パターン一覧
+// 6. 全パターン一覧
 // ─────────────────────────────────────────────────────────
 
 /** 全パターンを横並びで比較確認。 */
@@ -382,17 +357,6 @@ export const AllPatterns: Story = {
     const t = useTranslations();
     return (
       <div className="flex flex-wrap items-start gap-6">
-        <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs">記録なし</p>
-          <InspectorFrame>
-            <InspectorContent
-              tagName="Deep Work"
-              tagColor="blue"
-              initialPlannedStart="14:00"
-              initialPlannedEnd="15:30"
-            />
-          </InspectorFrame>
-        </div>
         <div>
           <p className="text-muted-foreground mb-2 text-center text-xs">ぴったり</p>
           <InspectorFrame>
