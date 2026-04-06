@@ -78,7 +78,8 @@ export function TimeDiffBlock({
       >
         <div className="flex items-center gap-1">
           <span className="text-muted-foreground text-sm tabular-nums">
-            {t('entry.inspector.time.actual')} {formatDurationDisplay(actualDuration)}
+            {t('entry.inspector.time.planned')} 0min / {t('entry.inspector.time.actual')}{' '}
+            {formatDurationDisplay(actualDuration)}
           </span>
           <span className="bg-info-tint text-info shrink-0 rounded-lg px-1 py-0 text-sm tabular-nums">
             {t('entry.inspector.unplanned')}
