@@ -43,6 +43,8 @@ interface TimeDiffBlockProps {
   actualEnd: string | null;
   /** タグの色名（EntryCard と同じ色でバーを描画） */
   tagColor?: string | null | undefined;
+  /** 予定外エントリ（origin='unplanned'）: 予定を0扱いにする */
+  isUnplanned?: boolean | undefined;
 }
 
 /** 予定 vs 記録の差分をサマリー + 位置ベース横バーで表示 */
@@ -52,16 +54,19 @@ export function TimeDiffBlock({
   actualStart,
   actualEnd,
   tagColor,
+  isUnplanned = false,
 }: TimeDiffBlockProps) {
   const t = useTranslations();
   const diff = computeTimeDiff(plannedStart, plannedEnd, actualStart, actualEnd);
 
-  const { plannedDuration, actualDuration, totalDiffMin, startDiffMin, endDiffMin } = diff;
+  const { actualDuration, totalDiffMin, startDiffMin, endDiffMin } = diff;
+  // 予定外の場合は予定を0扱い
+  const plannedDuration = isUnplanned ? 0 : diff.plannedDuration;
 
   // タグ色の解決
   const colorClasses = getTagColorClasses(tagColor);
 
-  // 計画外（予定duration=0、記録あり）: 全点線バー
+  // 予定外 or 予定duration=0（記録あり）: 全点線バー
   if (plannedDuration <= 0) {
     if (actualDuration <= 0) return null;
 

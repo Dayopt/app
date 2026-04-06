@@ -341,6 +341,7 @@ export function EntryInspectorForm({
             actualStart={actualStartTime}
             actualEnd={actualEndTime}
             tagColor={selectedTag?.color}
+            isUnplanned={isUnplanned}
           />
 
           {/* 充実度 */}
