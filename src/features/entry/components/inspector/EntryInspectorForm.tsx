@@ -130,8 +130,8 @@ export function EntryInspectorForm({
         origin: 'unplanned',
         backed_up_start_time: entry.start_time,
         backed_up_end_time: entry.end_time,
-        start_time: entry.start_time,
-        end_time: entry.start_time, // duration=0
+        start_time: null,
+        end_time: null,
       },
     });
   }, [entryId, entry, updateEntry]);
