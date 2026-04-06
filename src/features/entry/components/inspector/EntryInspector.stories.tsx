@@ -218,7 +218,27 @@ export const Underrun: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 4. MicroInsight 連携
+// 4. 計画外
+// ─────────────────────────────────────────────────────────
+
+/** 計画外: 予定duration=0、記録あり。全点線バー + 予定行disabled。 */
+export const Unplanned: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        tagName="割り込み対応"
+        tagColor="red"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="10:00"
+        initialActualStart="10:00"
+        initialActualEnd="11:30"
+      />
+    </InspectorFrame>
+  ),
+};
+
+// ─────────────────────────────────────────────────────────
+// 5. MicroInsight 連携
 // ─────────────────────────────────────────────────────────
 
 /** MicroInsight 付き — 見積もり超過バイアス */
@@ -272,7 +292,7 @@ export const WithMicroInsightFulfillment: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 5. Loading / Empty / Mobile
+// 6. Loading / Empty / Mobile
 // ─────────────────────────────────────────────────────────
 
 /** Loading: データ取得中のスピナー表示。 */
@@ -348,7 +368,7 @@ export const MobileDrawer: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// 6. 全パターン一覧
+// 7. 全パターン一覧
 // ─────────────────────────────────────────────────────────
 
 /** 全パターンを横並びで比較確認。 */

@@ -56,7 +56,7 @@ export function TimeDiffBlock({
   const t = useTranslations();
   const diff = computeTimeDiff(plannedStart, plannedEnd, actualStart, actualEnd);
 
-  const { plannedDuration, actualDuration, startDiffMin, endDiffMin } = diff;
+  const { plannedDuration, actualDuration, totalDiffMin, startDiffMin, endDiffMin } = diff;
 
   // タグ色の解決
   const colorClasses = getTagColorClasses(tagColor);

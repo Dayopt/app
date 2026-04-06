@@ -194,11 +194,30 @@ export const LateStartEarlyEnd: Story = {
 };
 
 // =============================================
-// 10. 未入力（return null）
+// 10. 計画外（予定duration=0、記録あり）
 // =============================================
 
-/** 計画外: actual未入力 → return null。 */
+/** 計画外: 予定がないが記録がある。全点線バー + 「計画外」バッジ。 */
 export const Unplanned: Story = {
+  render: () => (
+    <div className="w-80">
+      <TimeDiffBlock
+        plannedStart="10:00"
+        plannedEnd="10:00"
+        actualStart="10:00"
+        actualEnd="11:30"
+        tagColor="blue"
+      />
+    </div>
+  ),
+};
+
+// =============================================
+// 11. actual未入力（return null）
+// =============================================
+
+/** actual未入力: 表示なし。 */
+export const NoActual: Story = {
   render: () => (
     <div className="w-80">
       <p className="text-muted-foreground mb-2 text-xs">actual 未入力のため非表示（return null）</p>
