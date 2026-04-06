@@ -6,6 +6,16 @@ import type { CalendarEvent } from '@/types/calendar-event';
 
 import type { AnchorRect } from '../../stores/useEntryInspectorStore';
 
+/** EntryCard に渡す解決済み侵食情報（tagId → CSS変数に解決済み） */
+export interface ResolvedEncroachment {
+  fromEntryId: string;
+  direction: 'top' | 'bottom';
+  height: number;
+  minutes: number;
+  /** 侵入元のタグカラー CSS変数値 (e.g. 'var(--tag-blue)') */
+  resolvedColor: string | null;
+}
+
 /** EntryCardコンポーネントのPropsをまとめた型 */
 export interface EntryCardProps {
   /** エントリデータ */
@@ -58,6 +68,10 @@ export interface EntryCardProps {
   hourHeight?: number | undefined;
   /** 外部（WeekContent等）がwrapper側でoverlay位置調整済みの場合true。EntryCard内でのtopShift/heightDelta適用をスキップする */
   overlayPositionApplied?: boolean | undefined;
+  /** 隣接エントリからの侵食情報（タグカラー解決済み） */
+  encroachments?: ResolvedEncroachment[] | undefined;
+  /** 空き枠（unexecuted）ク���ック時のコールバック。引数は空き時間の開始・終了（分 of day） */
+  onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
 }
 
 /** カレンダーグリッド上のEntryCardの位置情報（top/left/width/heightはpx or %） */

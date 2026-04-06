@@ -42,7 +42,6 @@ const MULTI_KEY_EXCEPTIONS: Record<string, string[]> = {
     'passwordChanged',
     'accountDeletion',
     'reminder',
-    'overdue',
     'trialStart',
     'trialExpiring',
     'trialExpired',

@@ -46,13 +46,6 @@ export const Reminder: Story = {
   },
 };
 
-export const Overdue: Story = {
-  args: {
-    type: 'overdue',
-    entryTitle: 'レポート提出',
-  },
-};
-
 export const Read: Story = {
   args: {
     type: 'reminder',
@@ -115,13 +108,6 @@ export const AllTypes: Story = {
   render: (args) => (
     <div className="space-y-1">
       <NotificationItem {...args} id="1" type="reminder" entryTitle="リマインダー" />
-      <NotificationItem
-        {...args}
-        id="2"
-        type="overdue"
-        entryTitle="期限超過タスク"
-        createdAt={yesterday}
-      />
       <NotificationItem
         {...args}
         id="3"

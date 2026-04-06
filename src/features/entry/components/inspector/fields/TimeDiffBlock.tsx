@@ -56,9 +56,6 @@ export function TimeDiffBlock({
   const t = useTranslations();
   const diff = computeTimeDiff(plannedStart, plannedEnd, actualStart, actualEnd);
 
-  // actual が未入力 → 表示しない
-  if (!diff.hasActual) return null;
-
   // 予定が0分 → 表示しない
   if (diff.plannedDuration <= 0) return null;
 

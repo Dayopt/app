@@ -309,15 +309,13 @@ export function EntryInspectorForm({
           />
 
           {/* 予定 vs 記録 差分バー */}
-          {startTime && endTime && (
-            <TimeDiffBlock
-              plannedStart={startTime}
-              plannedEnd={endTime}
-              actualStart={actualStartTime}
-              actualEnd={actualEndTime}
-              tagColor={selectedTag?.color}
-            />
-          )}
+          <TimeDiffBlock
+            plannedStart={startTime}
+            plannedEnd={endTime}
+            actualStart={actualStartTime}
+            actualEnd={actualEndTime}
+            tagColor={selectedTag?.color}
+          />
 
           {/* 充実度 */}
           <FulfillmentRow

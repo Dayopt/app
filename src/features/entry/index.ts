@@ -56,8 +56,12 @@ export type { AnchorRect } from './stores/useEntryInspectorStore';
 // =============================================================================
 // Lib (actual-time overlay)
 // =============================================================================
-export { NO_OVERLAY, computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
-export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export {
+  NO_OVERLAY,
+  computeActualTimeDiffOverlay,
+  computeEncroachments,
+} from './lib/actual-time-overlay';
+export type { ActualTimeDiffOverlay, Encroachment } from './lib/actual-time-overlay';
 
 // =============================================================================
 // Lib (entry-status utilities)

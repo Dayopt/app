@@ -44,7 +44,7 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
   },
   {
     id: 'notif-2',
-    type: 'overdue',
+    type: 'reminder',
     entry_id: 'entry-2',
     is_read: false,
     created_at: oneHourAgo,
@@ -150,7 +150,7 @@ export const AllTab: Story = {
   args: { defaultTab: 'all' },
 };
 
-/** リマインダータブ — reminder + overdue のみ表示 */
+/** リマインダータブ — reminder のみ表示 */
 export const RemindersTab: Story = {
   args: { defaultTab: 'reminders' },
 };

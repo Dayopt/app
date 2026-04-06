@@ -65,7 +65,7 @@ describe('transformers', () => {
         {
           id: 'notif-2',
           user_id: 'user-1',
-          type: 'overdue',
+          type: 'ai_insight',
           entry_id: 'plan-2',
           is_read: true,
           read_at: null,

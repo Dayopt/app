@@ -35,8 +35,7 @@
     },
     "types": {
       "all": "すべて",
-      "reminder": "リマインダー",
-      "overdue": "期限超過"
+      "reminder": "リマインダー"
     },
     "dateGroups": {
       "older": "それ以前"

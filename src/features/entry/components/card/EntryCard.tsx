@@ -15,7 +15,11 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { computeActualTimeDiffOverlay, formatDiffMinutes } from '../../lib/actual-time-overlay';
+import {
+  computeActualTimeDiffOverlay,
+  formatDiffMinutes,
+  toMinutesOfDay,
+} from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -54,6 +58,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   previewTime = null,
   hourHeight: hourHeightProp,
   overlayPositionApplied = false,
+  encroachments,
+  onGapClick,
 }) {
   const t = useTranslations();
 
@@ -382,21 +388,54 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             </div>
           )}
 
-          {/* 予定 vs 記録: 下部 — 未実行はハッチング */}
+          {/* 予定 vs 記録: 下部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.bottomKind === 'unexecuted' && (
             <div
-              aria-hidden="true"
-              className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center"
+              aria-hidden={!onGapClick ? true : undefined}
+              className={cn(
+                'pattern-hatch absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center',
+                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+              )}
               style={{ height: `${overlay.bottomHeight}px` }}
+              onClick={
+                onGapClick && entry.actualEndDate && entry.endDate
+                  ? (e) => {
+                      e.stopPropagation();
+                      onGapClick(
+                        toMinutesOfDay(entry.actualEndDate!),
+                        toMinutesOfDay(entry.endDate!),
+                      );
+                    }
+                  : undefined
+              }
             >
-              {overlay.bottomHeight >= 16 && (
+              {overlay.bottomHeight >= 16 && !onGapClick && (
                 <span className="text-muted-foreground text-xs">
                   <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
                   <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
                 </span>
               )}
+              {overlay.bottomHeight >= 32 && onGapClick && (
+                <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
+                  +
+                </span>
+              )}
             </div>
           )}
+
+          {/* 侵食オーバーレイ: 隣接エントリの actual 時間がこのカードの予定枠に食い込んだ部分 */}
+          {encroachments?.map((enc) => (
+            <div
+              key={`${enc.fromEntryId}-${enc.direction}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute right-0 left-0 opacity-40"
+              style={{
+                ...(enc.direction === 'top' ? { top: 0 } : { bottom: 0 }),
+                height: `${enc.height}px`,
+                backgroundColor: enc.resolvedColor ?? 'var(--entry-default)',
+              }}
+            />
+          ))}
 
           {/* 下端リサイズハンドル（Draft/Past は非表示）
              視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。

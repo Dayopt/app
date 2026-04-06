@@ -7,7 +7,6 @@
  * エンドポイント:
  * - email.sendWelcome: ウェルカムメール送信
  * - email.sendReminder: プランリマインダーメール送信
- * - email.sendOverdue: 期限超過通知メール送信
  * - email.sendAccountDeletion: アカウント削除確認メール送信
  * - email.sendTest: テストメール送信（開発用）
  */
@@ -21,7 +20,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
 import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
 import { createEmailTranslator, type EmailLocale } from '@/emails/i18n';
-import { OverdueEmail } from '@/emails/OverdueEmail';
 import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
 import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
@@ -511,44 +509,6 @@ export const emailRouter = createTRPCRouter({
         });
       } catch (error) {
         return handleEmailError('sendReminder', error);
-      }
-    }),
-
-  /**
-   * 期限超過通知メール送信
-   */
-  sendOverdue: protectedProcedure
-    .meta({ description: '期限超過通知メール送信' })
-    .input(
-      z.object({
-        email: z.string().email(),
-        userName: z.string().min(1),
-        entryTitle: z.string().min(1),
-        endTime: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending overdue email', { entryTitle: input.entryTitle, userId: ctx.userId });
-
-        const locale = await getUserLocale(ctx.supabase, ctx.userId);
-        const t = createEmailTranslator(locale);
-
-        return sendEmail({
-          to: input.email,
-          subject: t('overdue.subject', { entryTitle: input.entryTitle }),
-          react: OverdueEmail({
-            userName: input.userName,
-            entryTitle: input.entryTitle,
-            endTime: input.endTime,
-            locale,
-            appUrl: APP_URL,
-          }),
-          context: 'Overdue email',
-        });
-      } catch (error) {
-        return handleEmailError('sendOverdue', error);
       }
     }),
 

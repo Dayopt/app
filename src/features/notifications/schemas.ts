@@ -3,7 +3,6 @@ import { z } from 'zod';
 /** 通知タイプのZodスキーマ（リマインダー + AI通知） */
 export const notificationTypeSchema = z.enum([
   'reminder',
-  'overdue',
   'ai_insight',
   'weekly_report',
   'burnout_warning',

@@ -17,7 +17,6 @@ import { AccountDeletionEmail } from './AccountDeletionEmail';
 import { CancellationConfirmEmail } from './CancellationConfirmEmail';
 import { ConfirmEmail } from './ConfirmEmail';
 import { MagicLinkEmail } from './MagicLinkEmail';
-import { OverdueEmail } from './OverdueEmail';
 import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
 import { PaymentFailedEmail } from './PaymentFailedEmail';
@@ -127,7 +126,6 @@ export const Guidelines: Story = {
           <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">ReminderEmail.tsx — プランリマインダー</p>
-          <p className="pl-4">OverdueEmail.tsx — 期限超過</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
             ※ Auth テンプレート3つは Storybook プレビュー用に src/emails/ にもコピーが存在。
@@ -186,7 +184,6 @@ export const Guidelines: Story = {
                 ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
                 ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
                 ['ReminderEmail', 'リマインダー', 'email.sendReminder'],
-                ['OverdueEmail', '期限超過', 'email.sendOverdue'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
                 <tr key={name} className="border-border border-b">
@@ -236,7 +233,7 @@ export const Guidelines: Story = {
           <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
           <li>メールはライトモード固定（ダークモード未対応）</li>
           <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
-          <li>フッターに通知設定リンクを含める（Reminder/Overdue）</li>
+          <li>フッターに通知設定リンクを含める（Reminder）</li>
           <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
           <li>maxWidth: 580px（モバイル表示を考慮）</li>
         </ul>
@@ -328,27 +325,6 @@ export const Reminder: Story = {
         locale: 'ja',
       })}
       title="Reminder"
-    />
-  ),
-};
-
-/** 期限超過通知 */
-export const Overdue: Story = {
-  render: () => (
-    <BilingualEmailPreview
-      enElement={OverdueEmail({
-        userName: 'Tomoya',
-        entryTitle: 'Submit project report',
-        endTime: '5:00 PM',
-        locale: 'en',
-      })}
-      jaElement={OverdueEmail({
-        userName: 'Tomoya',
-        entryTitle: 'プロジェクトレポートを提出',
-        endTime: '17:00',
-        locale: 'ja',
-      })}
-      title="Overdue"
     />
   ),
 };
