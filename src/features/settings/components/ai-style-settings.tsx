@@ -115,7 +115,7 @@ export function AIStyleSettings() {
             value={autoSave.values.aiCustomStylePrompt}
             onChange={(e) => handleCustomPromptChange(e.target.value)}
             placeholder={t('settings.aiStyle.customPromptPlaceholder')}
-            className="mt-2 min-h-20 resize-none text-sm"
+            className="mt-2 min-h-20 resize-none text-base md:text-sm"
             rows={3}
           />
         </div>
