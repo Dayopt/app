@@ -128,10 +128,6 @@ export function EntryInspectorForm({
       id: entryId,
       data: {
         origin: 'unplanned',
-        backed_up_start_time: entry.start_time,
-        backed_up_end_time: entry.end_time,
-        start_time: null,
-        end_time: null,
       },
     });
   }, [entryId, entry, updateEntry]);
@@ -142,10 +138,6 @@ export function EntryInspectorForm({
       id: entryId,
       data: {
         origin: 'planned',
-        start_time: entry.backed_up_start_time ?? entry.start_time,
-        end_time: entry.backed_up_end_time ?? entry.end_time,
-        backed_up_start_time: null,
-        backed_up_end_time: null,
       },
     });
   }, [entryId, entry, updateEntry]);
