@@ -72,6 +72,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 進行中エントリかどうか（視覚区別に使用）
   const isActiveEntry = entry.entryState === 'active';
+  // 予定外エントリかどうか（全体を破線枠で表示）
+  const isUnplanned = entry.origin === 'unplanned';
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
@@ -333,26 +335,30 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
       {/* カード実体（アクセント + 本体）— 予定範囲のみに制限 */}
       <div
-        className="absolute right-0 left-0 flex"
+        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-lg')}
         style={{
           top: overlay.topKind === 'overtime' ? `${overlay.topHeight}px` : 0,
           bottom: overlay.bottomKind === 'overtime' ? `${overlay.bottomHeight}px` : 0,
+          ...(isUnplanned ? overtimeBorderStyle : {}),
         }}
       >
-        {/* 左アクセントストリップ */}
-        <div
-          className={cn(
-            'relative shrink-0',
-            isActiveEntry && 'animate-pulse',
-            colorClasses ? colorClasses.dot : 'bg-entry-default',
-          )}
-          style={{ width: `${accentWidth}px` }}
-        />
+        {/* 左アクセントストリップ（予定外は非表示） */}
+        {!isUnplanned && (
+          <div
+            className={cn(
+              'relative shrink-0',
+              isActiveEntry && 'animate-pulse',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
+            style={{ width: `${accentWidth}px` }}
+          />
+        )}
 
         {/* カード本体 */}
         <div
           className={cn(
-            'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
+            'relative min-w-0 flex-1 overflow-hidden',
+            isUnplanned ? 'rounded-lg' : 'rounded-r-lg',
             safePosition.height < 40
               ? isMobile
                 ? 'flex items-center px-2 text-xs'
@@ -360,7 +366,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            colorClasses ? colorClasses.tint : 'bg-muted',
+            isUnplanned ? '' : colorClasses ? colorClasses.tint : 'bg-muted',
           )}
         >
           <EntryCardContent
