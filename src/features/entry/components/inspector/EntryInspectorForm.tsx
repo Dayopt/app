@@ -331,12 +331,45 @@ export function EntryInspectorForm({
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
             onStartChange={(time) => {
-              handleActualStartChange(time);
-              if (isUnplanned) handleStartTimeChange(time);
+              if (isUnplanned && scheduleDate) {
+                // 予定外: 記録と予定を1回のmutationで同期
+                const isoValue = time
+                  ? localTimeToUTCISO(
+                      scheduleDate,
+                      ...(time.split(':').map(Number) as [number, number]),
+                      timezone,
+                    )
+                  : null;
+                setStartTimeLocal(time);
+                handleActualStartChange(time);
+                suppressSaveRef.current = true;
+                save({ start_time: isoValue });
+                setTimeout(() => {
+                  suppressSaveRef.current = false;
+                }, 100);
+              } else {
+                handleActualStartChange(time);
+              }
             }}
             onEndChange={(time) => {
-              handleActualEndChange(time);
-              if (isUnplanned) handleEndTimeChange(time);
+              if (isUnplanned && scheduleDate) {
+                const isoValue = time
+                  ? localTimeToUTCISO(
+                      scheduleDate,
+                      ...(time.split(':').map(Number) as [number, number]),
+                      timezone,
+                    )
+                  : null;
+                setEndTimeLocal(time);
+                handleActualEndChange(time);
+                suppressSaveRef.current = true;
+                save({ end_time: isoValue });
+                setTimeout(() => {
+                  suppressSaveRef.current = false;
+                }, 100);
+              } else {
+                handleActualEndChange(time);
+              }
             }}
           />
 
