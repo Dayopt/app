@@ -102,11 +102,11 @@ export function TimeDiffBlock({
     <div className="flex flex-col gap-1" role="img" aria-label={ariaLabel}>
       {/* サマリー行 */}
       <div className="flex items-center gap-1">
-        <span className="text-muted-foreground text-xs tabular-nums">
+        <span className="text-muted-foreground text-sm tabular-nums">
           {t('entry.inspector.time.planned')} {formatDurationDisplay(plannedDuration)} /{' '}
           {t('entry.inspector.time.actual')} {formatDurationDisplay(actualDuration)}
         </span>
-        <span className={cn('shrink-0 rounded-lg px-1 py-0 text-xs tabular-nums', badgeClass)}>
+        <span className={cn('shrink-0 rounded-lg px-1 py-0 text-sm tabular-nums', badgeClass)}>
           {formatDiffBadge(totalDiffMin)}
         </span>
       </div>
