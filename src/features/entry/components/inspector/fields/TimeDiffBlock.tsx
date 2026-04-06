@@ -20,7 +20,7 @@ import { formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 import { computeTimeDiff } from '../../../lib/time-diff';
 
-/** 差分（分）を "+30m" / "±0" / "-15m" 形式にフォーマット */
+/** 差分（分）を "+30m" / "±0m" / "-15m" 形式にフォーマット */
 function formatDiffBadge(diffMinutes: number): string {
   if (diffMinutes === 0) return '±0';
   const sign = diffMinutes > 0 ? '+' : '-';

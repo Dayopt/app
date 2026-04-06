@@ -21,18 +21,13 @@ import { InspectorFrame, MockReminderRow, MockTagRow } from './story-helpers';
 /**
  * Entry Inspector — 統一エントリモデルの表示確認
  *
- * entries統合後の Inspector 完成形。
- * 全エントリは `origin: planned` で統一。
- * `entryState` は表示状態の判定（upcoming/active/past）に使用。
- *
- * - 予定行: 常に編集可能 | 記録行: 編集可能
- * - プログレスバー: ○ | 繰り返し/通知: ○ | 充実度: ○ | メモ: ○
+ * 記録の有無・差分パターン別にStoriesを分類。
+ * TimeDiffBlock の差分バーは記録入力時のみ表示。
  */
 const meta = {
   title: 'Features/Entry/Inspector/EntryInspector',
   parameters: {
     layout: 'centered',
-    // button-name: internal inspector icon buttons
     a11y: { test: 'todo' },
   },
   tags: ['autodocs', 'critical'],
@@ -54,7 +49,6 @@ interface InspectorContentProps {
   initialActualEnd?: string | null;
   initialNote?: string;
   initialFulfillment?: FulfillmentScore | null;
-  /** Composition Layer から注入されるマイクロインサイト（ReactNode） */
   microInsight?: ReactNode;
 }
 
@@ -160,25 +154,19 @@ function InspectorContent({
 }
 
 // ─────────────────────────────────────────────────────────
-// Stories
+// 1. 記録なし
 // ─────────────────────────────────────────────────────────
 
-/**
- * ## Upcoming + Planned
- *
- * 未来の予定エントリ。計画の編集がメイン操作。
- * - 予定行: 編集可能 | 記録行: 編集可能（予定と同じ初期値）
- * - プログレスバー: ○ | 繰り返し/通知: ○ | 充実度: ○ | メモ: ○
- */
-export const UpcomingPlanned: Story = {
+/** 記録なし: 差分バー非表示。予定のみ。 */
+export const NoRecord: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
-        tagName="Work"
+        tagName="Deep Work"
         tagColor="blue"
         initialPlannedStart="14:00"
         initialPlannedEnd="15:30"
-        initialNote="Prepare slides for the meeting"
+        initialNote="集中して取り組む"
       />
     </InspectorFrame>
   ),
@@ -186,28 +174,47 @@ export const UpcomingPlanned: Story = {
     const canvas = within(canvasElement);
     const noteTextarea = canvas.getByPlaceholderText('メモを追加...');
     await expect(noteTextarea).toBeInTheDocument();
-    await expect(noteTextarea).toHaveValue('Prepare slides for the meeting');
+    await expect(noteTextarea).toHaveValue('集中して取り組む');
   },
 };
 
-/**
- * ## Past + Planned
- *
- * 完了した予定エントリ。振り返りがメイン操作。
- * - 予定行: 編集可 | 記録行: 編集可
- * - 差分: バッジ表示 | 繰り返し/通知: ○ | 充実度: ○ | メモ: ○
- */
-export const PastPlanned: Story = {
+// ─────────────────────────────────────────────────────────
+// 2. 記録あり — ぴったり
+// ─────────────────────────────────────────────────────────
+
+/** 記録ぴったり: 予定通り。差分バー ±0。 */
+export const RecordExact: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
         tagName="Meeting"
-        tagColor="purple"
+        tagColor="green"
+        initialPlannedStart="10:00"
+        initialPlannedEnd="11:00"
+        initialActualStart="10:00"
+        initialActualEnd="11:00"
+        initialFulfillment={3}
+      />
+    </InspectorFrame>
+  ),
+};
+
+// ─────────────────────────────────────────────────────────
+// 3. 記録あり — 超過
+// ─────────────────────────────────────────────────────────
+
+/** 記録超過: 遅れて始めて遅く終わった。差分バー +15m。 */
+export const RecordOvertime: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        tagName="Meeting"
+        tagColor="violet"
         initialPlannedStart="10:00"
         initialPlannedEnd="11:30"
         initialActualStart="10:15"
         initialActualEnd="12:00"
-        initialNote="Ran over by 30 minutes"
+        initialNote="30分延長した"
         initialFulfillment={2}
       />
     </InspectorFrame>
@@ -215,24 +222,41 @@ export const PastPlanned: Story = {
 };
 
 // ─────────────────────────────────────────────────────────
-// With Micro Insight（Composition Layer 連携プレビュー）
+// 4. 記録あり — 不足
 // ─────────────────────────────────────────────────────────
 
-/**
- * ## MicroInsight 付き — 見積もり超過バイアス
- *
- * Composition Layer が stats feature の `getEntryMicroInsight()` を呼び、
- * 結果を ReactNode として Inspector に注入するパターン。
- * ここでは Story 内で直接モックテキストを渡している。
- */
+/** 記録不足: 予定より短く終わった。差分バー -30m。 */
+export const RecordUnderrun: Story = {
+  render: () => (
+    <InspectorFrame>
+      <InspectorContent
+        tagName="勉強"
+        tagColor="amber"
+        initialPlannedStart="14:00"
+        initialPlannedEnd="16:00"
+        initialActualStart="14:00"
+        initialActualEnd="15:30"
+        initialFulfillment={1}
+      />
+    </InspectorFrame>
+  ),
+};
+
+// ─────────────────────────────────────────────────────────
+// 5. MicroInsight 連携
+// ─────────────────────────────────────────────────────────
+
+/** MicroInsight 付き — 見積もり超過バイアス */
 export const WithMicroInsightEstimation: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
         tagName="Meeting"
-        tagColor="purple"
+        tagColor="violet"
         initialPlannedStart="10:00"
         initialPlannedEnd="11:30"
+        initialActualStart="10:00"
+        initialActualEnd="12:00"
         microInsight={
           <EntryMicroInsight
             insight={{
@@ -252,7 +276,7 @@ export const WithMicroInsightFulfillment: Story = {
   render: () => (
     <InspectorFrame>
       <InspectorContent
-        tagName="Work"
+        tagName="Deep Work"
         tagColor="blue"
         initialPlannedStart="10:00"
         initialPlannedEnd="12:00"
@@ -272,31 +296,11 @@ export const WithMicroInsightFulfillment: Story = {
   ),
 };
 
-/** MicroInsight なし（null — 大半のケース）。既存と同じ見た目。 */
-export const WithoutMicroInsight: Story = {
-  render: () => (
-    <InspectorFrame>
-      <InspectorContent
-        tagName="Work"
-        tagColor="blue"
-        initialPlannedStart="14:00"
-        initialPlannedEnd="15:30"
-        microInsight={undefined}
-      />
-    </InspectorFrame>
-  ),
-};
-
 // ─────────────────────────────────────────────────────────
-// Loading / Empty / Mobile states
+// 6. Loading / Empty / Mobile
 // ─────────────────────────────────────────────────────────
 
-/**
- * ## Loading
- *
- * エントリデータ取得中のスピナー表示。
- * 実コンポーネントの `isLoading === true` 分岐と同一マークアップ。
- */
+/** Loading: データ取得中のスピナー表示。 */
 export const Loading: Story = {
   render: () => (
     <InspectorFrame>
@@ -311,12 +315,7 @@ export const Loading: Story = {
   },
 };
 
-/**
- * ## NotFound
- *
- * 指定 entryId のエントリが存在しない場合の空状態表示。
- * 実コンポーネントの `!entry` 分岐と同一マークアップ。
- */
+/** NotFound: エントリが存在しない場合。 */
 export const NotFound: Story = {
   render: function NotFoundStory() {
     const t = useTranslations();
@@ -334,14 +333,7 @@ export const NotFound: Story = {
   },
 };
 
-/**
- * ## MobileDrawer
- *
- * モバイル幅での Drawer レイアウト確認。
- * 実コンポーネントの `isMobile === true` 分岐と同一構造:
- * - ドラッグハンドル（灰色バー）
- * - スクロール可能なコンテンツ領域
- */
+/** MobileDrawer: モバイル幅での Drawer レイアウト確認。 */
 export const MobileDrawer: Story = {
   parameters: {
     layout: 'fullscreen',
@@ -365,10 +357,12 @@ export const MobileDrawer: Story = {
           <DrawerTitle className="sr-only">エントリ詳細</DrawerTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <InspectorContent
-              tagName="Work"
+              tagName="Deep Work"
               tagColor="blue"
               initialPlannedStart="10:00"
               initialPlannedEnd="11:30"
+              initialActualStart="10:00"
+              initialActualEnd="11:45"
               initialNote="モバイル Drawer 表示の確認"
             />
           </div>
@@ -378,39 +372,66 @@ export const MobileDrawer: Story = {
   },
 };
 
-/**
- * 全パターンを横並びで比較確認。
- * Loading・NotFound・通常表示の 3 状態を一覧。
- */
+// ─────────────────────────────────────────────────────────
+// 7. 全パターン一覧
+// ─────────────────────────────────────────────────────────
+
+/** 全パターンを横並びで比較確認。 */
 export const AllPatterns: Story = {
   render: function AllPatternsStory() {
     const t = useTranslations();
     return (
       <div className="flex flex-wrap items-start gap-6">
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs">Upcoming + Planned</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">記録なし</p>
           <InspectorFrame>
             <InspectorContent
-              tagName="Work"
+              tagName="Deep Work"
               tagColor="blue"
               initialPlannedStart="14:00"
               initialPlannedEnd="15:30"
-              initialNote="Prepare slides"
             />
           </InspectorFrame>
         </div>
         <div>
-          <p className="text-muted-foreground mb-2 text-center text-xs">Past + Planned</p>
+          <p className="text-muted-foreground mb-2 text-center text-xs">ぴったり</p>
           <InspectorFrame>
             <InspectorContent
               tagName="Meeting"
-              tagColor="purple"
+              tagColor="green"
+              initialPlannedStart="10:00"
+              initialPlannedEnd="11:00"
+              initialActualStart="10:00"
+              initialActualEnd="11:00"
+              initialFulfillment={3}
+            />
+          </InspectorFrame>
+        </div>
+        <div>
+          <p className="text-muted-foreground mb-2 text-center text-xs">超過（+30m）</p>
+          <InspectorFrame>
+            <InspectorContent
+              tagName="Meeting"
+              tagColor="violet"
               initialPlannedStart="10:00"
               initialPlannedEnd="11:30"
               initialActualStart="10:15"
               initialActualEnd="12:00"
-              initialNote="Ran 30min over"
               initialFulfillment={2}
+            />
+          </InspectorFrame>
+        </div>
+        <div>
+          <p className="text-muted-foreground mb-2 text-center text-xs">不足（-30m）</p>
+          <InspectorFrame>
+            <InspectorContent
+              tagName="勉強"
+              tagColor="amber"
+              initialPlannedStart="14:00"
+              initialPlannedEnd="16:00"
+              initialActualStart="14:00"
+              initialActualEnd="15:30"
+              initialFulfillment={1}
             />
           </InspectorFrame>
         </div>
