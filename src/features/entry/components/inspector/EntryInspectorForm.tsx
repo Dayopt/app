@@ -330,8 +330,14 @@ export function EntryInspectorForm({
             icon={Play}
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
-            onStartChange={(time) => handleActualStartChange(time)}
-            onEndChange={(time) => handleActualEndChange(time)}
+            onStartChange={(time) => {
+              handleActualStartChange(time);
+              if (isUnplanned) handleStartTimeChange(time);
+            }}
+            onEndChange={(time) => {
+              handleActualEndChange(time);
+              if (isUnplanned) handleEndTimeChange(time);
+            }}
           />
 
           {/* 予定 vs 記録 差分バー */}
