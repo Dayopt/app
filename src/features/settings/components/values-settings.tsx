@@ -124,7 +124,9 @@ export function ValuesSettings() {
 
   return (
     <SectionCard title={t('settings.values.title')}>
-      <p className="text-muted-foreground mb-2 text-sm">{t('settings.values.description')}</p>
+      <p className="text-muted-foreground mb-2 text-base md:text-sm">
+        {t('settings.values.description')}
+      </p>
       <p className="text-muted-foreground mb-4 text-xs">
         {t('settings.values.filledCount', {
           count: filledCount,
@@ -197,7 +199,7 @@ function ValueCategoryCollapsible({
         ) : (
           <ChevronRight className="text-muted-foreground size-4 shrink-0" />
         )}
-        <span className="text-foreground flex-1 text-sm">
+        <span className="text-foreground flex-1 text-base md:text-sm">
           {t(`settings.values.categories.${category}`)}
         </span>
         {filled && (

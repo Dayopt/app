@@ -59,11 +59,11 @@ export const DataExportSettings = memo(function DataExportSettings() {
         <div className="space-y-4">
           {/* エクスポート対象の説明 */}
           <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
-            <h4 className="mb-2 flex items-center gap-2 text-sm font-normal">
+            <h4 className="mb-2 flex items-center gap-2 text-base font-normal md:text-sm">
               <FileJson className="h-4 w-4" />
               {t('settings.dataControls.export.includedDataTitle')}
             </h4>
-            <ul className="text-muted-foreground grid list-inside list-disc grid-cols-2 gap-1 text-sm">
+            <ul className="text-muted-foreground grid list-inside list-disc grid-cols-2 gap-1 text-base md:text-sm">
               <li>{t('settings.dataControls.export.profileInfo')}</li>
               <li>{t('settings.dataControls.export.tasksEvents')}</li>
               <li>{t('settings.dataControls.export.tagSettings')}</li>
@@ -92,7 +92,7 @@ export const DataExportSettings = memo(function DataExportSettings() {
         <div className="space-y-4">
           <div className="border-border flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8">
             <Upload className="text-muted-foreground mb-2 h-8 w-8" />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base md:text-sm">
               {t('settings.dataControls.import.dropzone')}
             </p>
             <Button variant="ghost" className="mt-4" disabled>
@@ -114,7 +114,9 @@ export const DataExportSettings = memo(function DataExportSettings() {
           <div className="bg-card border-border-subtle mt-4 rounded-lg border p-4 shadow-sm">
             <div className="flex items-center gap-2">
               <History className="text-muted-foreground h-4 w-4" />
-              <span className="text-sm">{t('settings.dataControls.backup.lastBackup')}</span>
+              <span className="text-base md:text-sm">
+                {t('settings.dataControls.backup.lastBackup')}
+              </span>
             </div>
           </div>
         )}

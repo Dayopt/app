@@ -84,12 +84,12 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
       <div className="space-y-4">
         {/* エラー・成功メッセージ */}
         {error && (
-          <div className="border-destructive text-destructive rounded-2xl border p-4 text-sm">
+          <div className="border-destructive text-destructive rounded-2xl border p-4 text-base md:text-sm">
             {error}
           </div>
         )}
         {success && (
-          <div className="border-success text-success rounded-2xl border p-4 text-sm">
+          <div className="border-success text-success rounded-2xl border p-4 text-base md:text-sm">
             {success}
           </div>
         )}
@@ -101,7 +101,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               <h3 className="text-warning mb-2 text-lg font-medium">
                 {t('settings.account.mfa.recoveryCodes.title')}
               </h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-base md:text-sm">
                 {t('settings.account.mfa.recoveryCodes.description')}
                 <strong className="text-foreground">
                   {' '}
@@ -110,7 +110,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               </p>
             </div>
 
-            <div className="bg-muted grid grid-cols-2 gap-2 rounded-2xl p-4 font-mono text-sm">
+            <div className="bg-muted grid grid-cols-2 gap-2 rounded-2xl p-4 font-mono text-base md:text-sm">
               {recoveryCodes.map((code, index) => (
                 <div key={index} className="text-foreground">
                   {code}
@@ -134,7 +134,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-base font-normal">{t('settings.account.mfa.title')}</div>
-              <p className="text-muted-foreground mt-1 text-sm">
+              <p className="text-muted-foreground mt-1 text-base md:text-sm">
                 {t('settings.account.mfa.description')}
               </p>
             </div>
@@ -149,14 +149,16 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
           <div className="bg-muted space-y-4 rounded-2xl p-6">
             <div>
               <h3 className="mb-2 text-lg font-medium">{t('settings.account.mfa.setup.title')}</h3>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-base md:text-sm">
                 {t('settings.account.mfa.setup.description')}
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <p className="mb-2 text-sm font-normal">{t('settings.account.mfa.setup.step1')}</p>
+                <p className="mb-2 text-base font-normal md:text-sm">
+                  {t('settings.account.mfa.setup.step1')}
+                </p>
                 {/* QRコードは白背景必須（読み取り精度のため） */}
                 <div className="flex justify-center rounded-2xl bg-white p-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -169,7 +171,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
 
               {secret && (
                 <div>
-                  <p className="mb-2 text-sm font-normal">
+                  <p className="mb-2 text-base font-normal md:text-sm">
                     {t('settings.account.mfa.setup.manualEntry')}
                   </p>
                   <code className="bg-muted block rounded-lg p-2 text-xs">{secret}</code>
@@ -177,7 +179,9 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               )}
 
               <div>
-                <p className="mb-2 text-sm font-normal">{t('settings.account.mfa.setup.step2')}</p>
+                <p className="mb-2 text-base font-normal md:text-sm">
+                  {t('settings.account.mfa.setup.step2')}
+                </p>
                 <div className="flex items-center gap-4">
                   <InputOTP
                     maxLength={6}
@@ -214,7 +218,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
             <div className="border-success rounded-2xl border p-4">
               <div className="mb-2 flex items-center gap-2">
                 <div className="bg-success h-2 w-2 rounded-full"></div>
-                <span className="text-success text-sm font-normal">
+                <span className="text-success text-base font-normal md:text-sm">
                   {t('settings.account.mfa.enabled.title')}
                 </span>
               </div>
@@ -227,7 +231,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
             {recoveryCodeCount === 0 && (
               <InfoBox variant="destructive">
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="text-destructive text-sm font-medium">
+                  <span className="text-destructive text-base font-medium md:text-sm">
                     {t('settings.account.mfa.recoveryCodes.noCodesLeft')}
                   </span>
                 </div>
@@ -253,7 +257,7 @@ export function MFASection({ _useMFAHook }: MFASectionProps = {}) {
               <div className="bg-muted rounded-2xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-normal">
+                    <div className="text-base font-normal md:text-sm">
                       {t('settings.account.mfa.recoveryCodes.sectionTitle')}
                     </div>
                     <p className="text-muted-foreground mt-1 text-xs">

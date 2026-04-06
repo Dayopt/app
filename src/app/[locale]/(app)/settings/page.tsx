@@ -138,7 +138,7 @@ export default function SettingsPage() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold">{displayName}</p>
+              <p className="truncate text-base font-bold">{displayName}</p>
               {user?.email && (
                 <p className="text-muted-foreground truncate text-xs">{user.email}</p>
               )}
@@ -163,7 +163,7 @@ export default function SettingsPage() {
             >
               <Sparkles className="text-primary size-5 shrink-0" />
               <div className="min-w-0 flex-1 text-left">
-                <p className="text-sm font-bold">{t('navigation.navUser.upgradePlan')}</p>
+                <p className="text-base font-bold">{t('navigation.navUser.upgradePlan')}</p>
                 <p className="text-muted-foreground text-xs">
                   {t('settings.subscription.proPlanDescription')}
                 </p>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
                   key={link.labelKey}
                   type="button"
                   onClick={link.onPress}
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-base transition-colors"
                 >
                   {/* C. アイコン色 */}
                   <Icon className="text-muted-foreground size-5 shrink-0" />
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                 href={link.href}
                 target={link.external ? '_blank' : undefined}
                 rel={link.external ? 'noopener noreferrer' : undefined}
-                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+                className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-base transition-colors"
               >
                 {/* C. アイコン色 */}
                 <Icon className="text-muted-foreground size-5 shrink-0" />
@@ -232,7 +232,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setLegalOpen((prev) => !prev)}
-            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+            className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-base transition-colors"
           >
             <Scale className="text-muted-foreground size-5 shrink-0" />
             <span className="flex-1 font-normal">{t('settings.accountPage.legal')}</span>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-4 pr-4 pl-12 text-left text-sm transition-colors"
+                  className="text-foreground hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg py-4 pr-4 pl-12 text-left text-base transition-colors"
                 >
                   <span className="flex-1 font-normal">{t(link.labelKey)}</span>
                   <ExternalLink className="text-muted-foreground size-3.5" />
@@ -268,7 +268,7 @@ export default function SettingsPage() {
           type="button"
           onClick={logout}
           disabled={isLoggingOut}
-          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-sm transition-colors"
+          className="text-destructive hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 rounded-lg px-4 py-4 text-left text-base transition-colors"
         >
           <LogOut className="text-destructive size-5 shrink-0" />
           <span className="flex-1 font-normal">

@@ -147,7 +147,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
         {success ? (
           <div className="space-y-4 py-4">
             <div className="border-success bg-success-tint rounded-2xl p-4">
-              <p className="text-success text-sm font-normal">
+              <p className="text-success text-base font-normal md:text-sm">
                 {t('settings.account.passwordUpdated')}
               </p>
             </div>
@@ -263,7 +263,7 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-sm">
+                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
                   {error}
                 </div>
               )}

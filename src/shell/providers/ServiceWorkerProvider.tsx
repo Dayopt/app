@@ -52,21 +52,23 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
           <div className="bg-card border-border-subtle shadow-card flex items-center gap-4 rounded-2xl border p-4">
             <RefreshCw className="text-primary h-5 w-5" />
             <div className="flex-1">
-              <p className="text-foreground text-sm font-normal">{t('updateAvailable')}</p>
+              <p className="text-foreground text-base font-normal md:text-sm">
+                {t('updateAvailable')}
+              </p>
               <p className="text-muted-foreground text-xs">{t('updateDescription')}</p>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setDismissed(true)}
-                className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+                className="text-muted-foreground hover:text-foreground text-base transition-colors md:text-sm"
               >
                 {t('later')}
               </button>
               <button
                 type="button"
                 onClick={applyUpdate}
-                className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-normal transition-colors"
+                className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-base font-normal transition-colors md:text-sm"
               >
                 {t('update')}
               </button>

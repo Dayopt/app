@@ -91,7 +91,9 @@ export function AIStyleSettings() {
 
   return (
     <SectionCard title={t('settings.aiStyle.title')}>
-      <p className="text-muted-foreground mb-4 text-sm">{t('settings.aiStyle.description')}</p>
+      <p className="text-muted-foreground mb-4 text-base md:text-sm">
+        {t('settings.aiStyle.description')}
+      </p>
 
       <RadioGroup
         value={autoSave.values.aiStyle}
@@ -105,7 +107,7 @@ export function AIStyleSettings() {
 
       {autoSave.values.aiStyle === 'custom' && (
         <div className="mt-4">
-          <Label htmlFor="custom-prompt" className="text-sm font-normal">
+          <Label htmlFor="custom-prompt" className="text-base font-normal md:text-sm">
             {t('settings.aiStyle.customPromptLabel')}
           </Label>
           <Textarea
@@ -140,7 +142,9 @@ function StyleCard({ style, isSelected }: StyleCardProps) {
     >
       <RadioGroupItem value={style} id={`ai-style-${style}`} className="mt-1" />
       <div className="flex-1">
-        <div className="text-foreground text-sm font-normal">{t(`settings.aiStyle.${style}`)}</div>
+        <div className="text-foreground text-base font-normal md:text-sm">
+          {t(`settings.aiStyle.${style}`)}
+        </div>
         <div className="text-muted-foreground text-xs">{t(`settings.aiStyle.${style}Desc`)}</div>
       </div>
     </Label>
