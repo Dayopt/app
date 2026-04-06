@@ -67,7 +67,7 @@ function resolveTargetDate(ctx: InteractionContext, targetDateIndex: number): Da
   return ctx.date;
 }
 
-/** Build a time range for a grid selection between two Y positions */
+/** Build a time range for a grid selection (downward only from startY) */
 function buildSelectionRange(
   startY: number,
   endY: number,
@@ -75,16 +75,15 @@ function buildSelectionRange(
   targetDate: Date,
   intervalMin: number,
 ): TimeRange {
-  const topY = Math.min(startY, endY);
-  const bottomY = Math.max(startY, endY);
-
-  const topSnap = snapToGrid(topY, hourHeight, intervalMin);
-  const bottomSnap = snapToGrid(bottomY, hourHeight, intervalMin);
+  const startSnap = snapToGrid(startY, hourHeight, intervalMin);
+  // 下方向のみ: endY が startY より上なら startY に固定
+  const clampedEndY = Math.max(endY, startY);
+  const endSnap = snapToGrid(clampedEndY, hourHeight, intervalMin);
 
   // Ensure minimum one-interval selection
-  let endHour = bottomSnap.hour;
-  let endMinute = bottomSnap.minute;
-  if (topSnap.hour === endHour && topSnap.minute === endMinute) {
+  let endHour = endSnap.hour;
+  let endMinute = endSnap.minute;
+  if (startSnap.hour === endHour && startSnap.minute === endMinute) {
     endMinute += intervalMin;
     if (endMinute >= 60) {
       endMinute = 0;
@@ -93,7 +92,7 @@ function buildSelectionRange(
   }
 
   const start = new Date(targetDate);
-  start.setHours(topSnap.hour, topSnap.minute, 0, 0);
+  start.setHours(startSnap.hour, startSnap.minute, 0, 0);
   const end = new Date(targetDate);
   end.setHours(endHour, endMinute, 0, 0);
 
