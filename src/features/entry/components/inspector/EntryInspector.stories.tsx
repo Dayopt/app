@@ -15,7 +15,7 @@ import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicro
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Spinner } from '@/components/ui/spinner';
-import { DateRow, FulfillmentRow, NoteSection, TimeDiffBar, TimeRow } from './fields';
+import { DateRow, FulfillmentRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockReminderRow, MockTagRow } from './story-helpers';
 
 /**
@@ -58,13 +58,6 @@ interface InspectorContentProps {
   microInsight?: ReactNode;
 }
 
-/** 計算ユーティリティ: HH:MM の差分を分で返す */
-function computeDuration(start: string, end: string): number {
-  const [sh, sm] = start.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  return eh! * 60 + em! - (sh! * 60 + sm!);
-}
-
 function InspectorContent({
   tagName,
   tagColor,
@@ -87,8 +80,6 @@ function InspectorContent({
 
   const effectiveActualStart = actualStart ?? plannedStart;
   const effectiveActualEnd = actualEnd ?? plannedEnd;
-  const plannedDuration = computeDuration(plannedStart, plannedEnd);
-  const actualDuration = computeDuration(effectiveActualStart, effectiveActualEnd);
 
   return (
     <div className="px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6">
@@ -130,10 +121,14 @@ function InspectorContent({
             isPrimary
           />
 
-          {/* Progress bar + diff badge */}
-          {plannedDuration > 0 && (
-            <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
-          )}
+          {/* 予定 vs 記録 差分バー */}
+          <TimeDiffBlock
+            plannedStart={plannedStart}
+            plannedEnd={plannedEnd}
+            actualStart={actualStart}
+            actualEnd={actualEnd}
+            tagColor={tagColor}
+          />
 
           {/* Fulfillment */}
           <FulfillmentRow

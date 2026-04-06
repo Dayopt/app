@@ -29,7 +29,7 @@ import {
   ReminderRow,
   TagRow,
   TimeConflictAlert,
-  TimeDiffBar,
+  TimeDiffBlock,
   TimeRow,
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
@@ -243,12 +243,6 @@ export function EntryInspectorForm({
     onViewStats(selectedTagId);
   }, [selectedTagId, onViewStats]);
 
-  // Duration diff
-  const actualDuration = useMemo(
-    () => computeDuration(effectiveActualStart, effectiveActualEnd),
-    [effectiveActualStart, effectiveActualEnd],
-  );
-
   if (!entry) return null;
 
   return (
@@ -314,9 +308,15 @@ export function EntryInspectorForm({
             onEndChange={(time) => handleActualEndChange(time)}
           />
 
-          {/* プログレスバー + 差分バッジ */}
-          {plannedDuration > 0 && (
-            <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
+          {/* 予定 vs 記録 差分バー */}
+          {startTime && endTime && (
+            <TimeDiffBlock
+              plannedStart={startTime}
+              plannedEnd={endTime}
+              actualStart={actualStartTime}
+              actualEnd={actualEndTime}
+              tagColor={selectedTag?.color}
+            />
           )}
 
           {/* 充実度 */}

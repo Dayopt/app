@@ -42,7 +42,7 @@ interface TimeDiffBlockProps {
   /** 実績終了 "HH:MM" (null = 予定通り) */
   actualEnd: string | null;
   /** タグの色名（EntryCard と同じ色でバーを描画） */
-  tagColor?: string | null;
+  tagColor?: string | null | undefined;
 }
 
 /** 予定 vs 記録の差分をサマリー + 位置ベース横バーで表示 */
