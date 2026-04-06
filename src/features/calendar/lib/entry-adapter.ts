@@ -30,12 +30,16 @@ function snapMinutes(date: Date): Date {
  * - title が空の場合はカレンダー側で「(無題)」表示
  */
 export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): CalendarEvent | null {
-  if (!entry.start_time || !entry.end_time) {
+  // 計画外エントリ: actual 時間で表示、なければスキップ
+  const isUnplanned = !entry.start_time || !entry.end_time;
+  if (isUnplanned && (!entry.actual_start_time || !entry.actual_end_time)) {
     return null;
   }
 
-  const startDate = snapMinutes(new Date(entry.start_time));
-  const endDate = snapMinutes(new Date(entry.end_time));
+  const startDate = snapMinutes(
+    new Date(isUnplanned ? entry.actual_start_time! : entry.start_time!),
+  );
+  const endDate = snapMinutes(new Date(isUnplanned ? entry.actual_end_time! : entry.end_time!));
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
   const entryState = getEntryState(entry);
