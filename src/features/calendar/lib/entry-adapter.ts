@@ -43,8 +43,17 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
   // ユーザーTZで同日かどうかを判定（ブラウザローカルTZ依存を排除）
   const isMultiDay = !tzIsSameDay(startDate, endDate, timezone);
 
+  // 予定外エントリ: actual 時間でカードを表示
+  const isUnplanned = entry.origin === 'unplanned';
+  const actualStart = entry.actual_start_time
+    ? snapMinutes(new Date(entry.actual_start_time))
+    : null;
+  const actualEnd = entry.actual_end_time ? snapMinutes(new Date(entry.actual_end_time)) : null;
+  const displayStart = isUnplanned && actualStart ? actualStart : startDate;
+  const displayEnd = isUnplanned && actualEnd ? actualEnd : endDate;
+
   const duration =
-    entry.duration_minutes ?? Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+    entry.duration_minutes ?? Math.round((displayEnd.getTime() - displayStart.getTime()) / 60000);
 
   return {
     id: entry.id,
@@ -58,8 +67,8 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     tagId: entry.tagId ?? null,
     createdAt,
     updatedAt,
-    displayStartDate: startDate,
-    displayEndDate: endDate,
+    displayStartDate: displayStart,
+    displayEndDate: displayEnd,
     duration,
     isMultiDay,
     origin: entry.origin,
