@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 import { SignupForm } from './SignupForm';
 
@@ -51,14 +50,13 @@ export const WithInteraction: Story = {
  * フォーム送信後のスピナー・ボタンのdisabled状態を確認する。
  */
 export const Submitting: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         signUp: () => new Promise(() => undefined),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -85,19 +83,16 @@ export const Submitting: Story = {
 export const ServerError: Story = {
   parameters: {
     a11y: { test: 'todo' },
-  },
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+    storeMocks: {
+      useAuthStore: {
         signUp: () =>
           Promise.resolve({
             data: { user: null, session: null },
             error: { message: 'User already registered', name: 'AuthError', status: 400 },
           } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 

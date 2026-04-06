@@ -15,7 +15,11 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { computeActualTimeDiffOverlay } from '../../lib/actual-time-overlay';
+import {
+  computeActualTimeDiffOverlay,
+  formatDiffMinutes,
+  toMinutesOfDay,
+} from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -54,6 +58,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   previewTime = null,
   hourHeight: hourHeightProp,
   overlayPositionApplied = false,
+  onGapClick,
 }) {
   const t = useTranslations();
 
@@ -67,6 +72,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   const isPast = entry.entryState === 'past';
   // 進行中エントリかどうか（視覚区別に使用）
   const isActiveEntry = entry.entryState === 'active';
+  // 予定外エントリかどうか（全体を破線枠で表示）
+  const isUnplanned = entry.origin === 'unplanned';
   // 予定 vs 記録の差分オーバーレイ
   const overlay = useMemo(
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
@@ -107,8 +114,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style],
   );
 
-  // 超過部分のグラデーション（穏やかなフェード）
-  const overtimeAccentGradient = `linear-gradient(to bottom, ${accentColor}, color-mix(in oklch, ${accentColor} 40%, transparent))`;
+  // 超過オーバーレイの外枠（タグ色の破線で一周 + 角丸）
+  const overtimeBorderStyle: React.CSSProperties = {
+    border: `2px dashed ${accentColor}`,
+    borderRadius: '8px',
+  };
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -291,116 +301,161 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
       )}
 
-      {/* 左アクセントストリップ（実体要素：超過部分だけ点線に切替可） */}
+      {/* 超過オーバーレイ: 上部 — カード外に破線枠、中は透明 */}
+      {overlay.topKind === 'overtime' && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
+          style={{ top: 0, height: `${overlay.topHeight}px`, ...overtimeBorderStyle }}
+        >
+          {overlay.topHeight >= 16 && (
+            <span className="text-muted-foreground text-xs">
+              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
+              <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 超過オーバーレイ: 下部 — カード外に破線枠、中は透明 */}
+      {overlay.bottomKind === 'overtime' && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
+          style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...overtimeBorderStyle }}
+        >
+          {overlay.bottomHeight >= 16 && (
+            <span className="text-muted-foreground text-xs">
+              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
+              <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* カード実体（アクセント + 本体）— 予定範囲のみに制限 */}
       <div
-        className={cn(
-          'relative shrink-0',
-          isActiveEntry && 'animate-pulse',
-          colorClasses ? colorClasses.dot : 'bg-entry-default',
-        )}
-        style={{ width: `${accentWidth}px` }}
+        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-lg')}
+        style={{
+          top: overlay.topKind === 'overtime' ? `${overlay.topHeight}px` : 0,
+          bottom: overlay.bottomKind === 'overtime' ? `${overlay.bottomHeight}px` : 0,
+          ...(isUnplanned ? overtimeBorderStyle : {}),
+        }}
       >
-        {/* 超過で上に拡張 → その区間だけ点線 */}
-        {overlay.topKind === 'overtime' && (
+        {/* 左アクセントストリップ（予定外は非表示） */}
+        {!isUnplanned && (
           <div
-            className="bg-background absolute top-0 right-0 left-0"
-            style={{
-              height: `${overlay.topHeight}px`,
-              backgroundImage: overtimeAccentGradient,
-            }}
-          />
-        )}
-        {/* 超過で下に拡張 → その区間だけ点線 */}
-        {overlay.bottomKind === 'overtime' && (
-          <div
-            className="bg-background absolute right-0 bottom-0 left-0"
-            style={{
-              height: `${overlay.bottomHeight}px`,
-              backgroundImage: overtimeAccentGradient,
-            }}
-          />
-        )}
-      </div>
-
-      {/* カード本体（overflow-hidden でハッチング/フェードをクリップ） */}
-      <div
-        className={cn(
-          'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
-          safePosition.height < 40
-            ? isMobile
-              ? 'flex items-center px-2 text-xs'
-              : 'flex items-center px-2 text-xs'
-            : isMobile
-              ? 'flex items-start gap-1 px-2 pt-2 text-sm'
-              : 'p-2 text-sm',
-          colorClasses ? colorClasses.tint : 'bg-muted',
-        )}
-      >
-        <EntryCardContent
-          plan={entry}
-          tagName={tagName}
-          isCompact={safePosition.height < 40}
-          showTime={safePosition.height >= 30}
-          previewTime={previewTime}
-        />
-
-        {/* 予定 vs 記録: 上部 — 未実行は斜線、超過はwarning斜線 */}
-        {overlay.topKind === 'unexecuted' && (
-          <div
-            aria-hidden="true"
-            className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0"
-            style={{ height: `${overlay.topHeight}px` }}
-          />
-        )}
-        {overlay.topKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pattern-overtime pointer-events-none absolute top-0 right-0 left-0"
-            style={{ height: `${overlay.topHeight}px` }}
+            className={cn(
+              'relative shrink-0',
+              isActiveEntry && 'animate-pulse',
+              colorClasses ? colorClasses.dot : 'bg-entry-default',
+            )}
+            style={{ width: `${accentWidth}px` }}
           />
         )}
 
-        {/* 予定 vs 記録: 下部 — 未実行は斜線、超過はwarning斜線 */}
-        {overlay.bottomKind === 'unexecuted' && (
-          <div
-            aria-hidden="true"
-            className="pattern-hatch pointer-events-none absolute right-0 bottom-0 left-0"
-            style={{ height: `${overlay.bottomHeight}px` }}
+        {/* カード本体 */}
+        <div
+          className={cn(
+            'relative min-w-0 flex-1 overflow-hidden',
+            isUnplanned ? 'rounded-lg' : 'rounded-r-lg',
+            safePosition.height < 40
+              ? isMobile
+                ? 'flex items-center px-2 text-xs'
+                : 'flex items-center px-2 text-xs'
+              : isMobile
+                ? 'flex items-start gap-1 px-2 pt-2 text-sm'
+                : 'p-2 text-sm',
+            isUnplanned ? '' : colorClasses ? colorClasses.tint : 'bg-muted',
+          )}
+        >
+          <EntryCardContent
+            plan={entry}
+            tagName={tagName}
+            isCompact={safePosition.height < 40}
+            showTime={safePosition.height >= 30}
+            previewTime={previewTime}
           />
-        )}
-        {overlay.bottomKind === 'overtime' && (
-          <div
-            aria-hidden="true"
-            className="pattern-overtime pointer-events-none absolute right-0 bottom-0 left-0"
-            style={{ height: `${overlay.bottomHeight}px` }}
-          />
-        )}
 
-        {/* 下端リサイズハンドル（Draft/Past は非表示）
+          {/* 予定 vs 記録: 上部 — 未実行はハッチング */}
+          {overlay.topKind === 'unexecuted' && (
+            <div
+              aria-hidden="true"
+              className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0 flex flex-col items-center justify-center"
+              style={{ height: `${overlay.topHeight}px` }}
+            >
+              {overlay.topHeight >= 16 && (
+                <span className="text-muted-foreground text-xs">
+                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
+                  <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* 予定 vs 記録: 下部 — 未実行はハッチング + 空き枠「+」ボタン */}
+          {overlay.bottomKind === 'unexecuted' && (
+            <div
+              aria-hidden={!onGapClick ? true : undefined}
+              className={cn(
+                'pattern-hatch absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center',
+                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+              )}
+              style={{ height: `${overlay.bottomHeight}px` }}
+              onClick={
+                onGapClick && entry.actualEndDate && entry.endDate
+                  ? (e) => {
+                      e.stopPropagation();
+                      onGapClick(
+                        toMinutesOfDay(entry.actualEndDate!),
+                        toMinutesOfDay(entry.endDate!),
+                      );
+                    }
+                  : undefined
+              }
+            >
+              {overlay.bottomHeight >= 16 && !onGapClick && (
+                <span className="text-muted-foreground text-xs">
+                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
+                  <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
+                </span>
+              )}
+              {overlay.bottomHeight >= 32 && onGapClick && (
+                <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
+                  +
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* 下端リサイズハンドル（Draft/Past は非表示）
              視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。
              短いカード（< 40px）はハンドルを縮小してクリック領域を確保 */}
-        {!isDraft && !isPast && (
-          <div
-            className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
-            role="slider"
-            tabIndex={0}
-            aria-label="Resize entry duration"
-            aria-orientation="vertical"
-            aria-valuenow={safePosition.height}
-            aria-valuemin={20}
-            aria-valuemax={480}
-            onMouseDown={handleBottomResizeMouseDown}
-            onTouchStart={handleBottomResizeTouchStart}
-            onKeyDown={handleResizeKeyDown}
-            style={{
-              height: safePosition.height < 40 ? '16px' : '32px',
-              bottom: safePosition.height < 40 ? '-4px' : '-12px',
-              zIndex: 10,
-            }}
-            title={t('calendar.event.adjustEndTime')}
-          />
-        )}
+          {!isDraft && !isPast && (
+            <div
+              className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+              role="slider"
+              tabIndex={0}
+              aria-label="Resize entry duration"
+              aria-orientation="vertical"
+              aria-valuenow={safePosition.height}
+              aria-valuemin={20}
+              aria-valuemax={480}
+              onMouseDown={handleBottomResizeMouseDown}
+              onTouchStart={handleBottomResizeTouchStart}
+              onKeyDown={handleResizeKeyDown}
+              style={{
+                height: safePosition.height < 40 ? '16px' : '32px',
+                bottom: safePosition.height < 40 ? '-4px' : '-12px',
+                zIndex: 10,
+              }}
+              title={t('calendar.event.adjustEndTime')}
+            />
+          )}
+        </div>
+        {/* /カード本体 */}
       </div>
+      {/* /カード実体ラッパー */}
     </div>
   );
 });

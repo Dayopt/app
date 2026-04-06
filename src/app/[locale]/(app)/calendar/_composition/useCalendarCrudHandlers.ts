@@ -45,7 +45,7 @@ export interface CalendarCrudHandlersResult {
   }) => void;
   onUpdateEntry: (
     entryIdOrEntry: string | CalendarEvent,
-    updates?: { startTime: Date; endTime: Date },
+    updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
   getAddToPaletteHandler: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;

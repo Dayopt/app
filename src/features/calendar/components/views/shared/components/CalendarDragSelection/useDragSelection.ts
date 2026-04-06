@@ -170,7 +170,7 @@ function selectionReducer(state: SelectionMode, action: SelectionAction): Select
 // Helpers
 // ========================================
 
-/** 開始時刻と現在時刻から選択範囲を計算（最低15分保証） */
+/** 開始時刻と現在時刻から選択範囲を計算（下方向のみ、最低15分保証） */
 function calculateSelection(
   start: { hour: number; minute: number },
   current: { hour: number; minute: number },
@@ -178,22 +178,13 @@ function calculateSelection(
   const startMin = start.hour * 60 + start.minute;
   const currentMin = current.hour * 60 + current.minute;
 
-  let s: number, e: number;
-  if (currentMin < startMin) {
-    s = currentMin;
-    e = startMin;
-  } else {
-    s = startMin;
-    e = currentMin;
-  }
+  // 下方向のみ: 開始時刻より前にはドラッグできない
+  const endMin = Math.max(currentMin, startMin + 15);
 
-  // 最低15分
-  if (e <= s) e = s + 15;
-
-  const startHour = Math.max(0, Math.floor(s / 60));
-  const startMinute = Math.max(0, s % 60);
-  const endHour = Math.min(23, Math.floor(e / 60));
-  const endMinute = Math.min(59, e % 60);
+  const startHour = Math.max(0, Math.floor(startMin / 60));
+  const startMinute = Math.max(0, startMin % 60);
+  const endHour = Math.min(23, Math.floor(endMin / 60));
+  const endMinute = Math.min(59, endMin % 60);
 
   return { startHour, startMinute, endHour, endMinute };
 }

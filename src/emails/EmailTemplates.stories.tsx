@@ -17,7 +17,6 @@ import { AccountDeletionEmail } from './AccountDeletionEmail';
 import { CancellationConfirmEmail } from './CancellationConfirmEmail';
 import { ConfirmEmail } from './ConfirmEmail';
 import { MagicLinkEmail } from './MagicLinkEmail';
-import { OverdueEmail } from './OverdueEmail';
 import { PasswordChangedEmail } from './PasswordChangedEmail';
 import { PasswordResetEmail } from './PasswordResetEmail';
 import { PaymentFailedEmail } from './PaymentFailedEmail';
@@ -56,7 +55,7 @@ function EmailPreview({ element, title }: { element: React.ReactElement; title: 
 
   return (
     <div className="p-4">
-      <h3 className="mb-2 text-sm font-bold">{title}</h3>
+      <h3 className="mb-2 text-sm font-medium">{title}</h3>
       <iframe
         title={title}
         srcDoc={html}
@@ -96,21 +95,23 @@ export const Guidelines: Story = {
   render: () => (
     <div className="space-y-8 p-8">
       <div>
-        <h1 className="mb-2 text-2xl font-bold">Email Templates</h1>
+        <h1 className="mb-2 text-2xl font-medium">Email Templates</h1>
         <p className="text-muted-foreground">Resend + React Email で管理するメールテンプレート。</p>
       </div>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">構成</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">構成</h2>
         <div className="text-muted-foreground space-y-1 font-mono text-sm">
-          <p className="text-foreground font-bold">Auth メール（Supabase Edge Function / Deno）</p>
+          <p className="text-foreground font-medium">
+            Auth メール（Supabase Edge Function / Deno）
+          </p>
           <p>supabase/functions/send-auth-email/</p>
           <p className="pl-4">index.ts — webhook検証 + renderAsync + Resend送信</p>
           <p className="pl-4">styles.tsx — 共通スタイル（tokens/colors.css トークン → hex）</p>
           <p className="pl-4">ConfirmEmail.tsx — メール確認（Auth signup）</p>
           <p className="pl-4">PasswordResetEmail.tsx — PW リセット（Auth recovery）</p>
           <p className="pl-4">MagicLinkEmail.tsx — マジックリンク（Auth magic_link）</p>
-          <p className="text-foreground mt-4 font-bold">
+          <p className="text-foreground mt-4 font-medium">
             アプリメール（tRPC email router / Node.js）
           </p>
           <p>src/emails/</p>
@@ -125,7 +126,6 @@ export const Guidelines: Story = {
           <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
           <p className="pl-4">ReminderEmail.tsx — プランリマインダー</p>
-          <p className="pl-4">OverdueEmail.tsx — 期限超過</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
             ※ Auth テンプレート3つは Storybook プレビュー用に src/emails/ にもコピーが存在。
@@ -135,7 +135,7 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">カラートークン</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">カラートークン</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           メールクライアントは CSS変数・OKLCH 未対応のため、tokens/colors.css トークンを hex
           に変換。
@@ -148,7 +148,7 @@ export const Guidelines: Story = {
                 style={{ backgroundColor: hex }}
               />
               <div>
-                <code className="text-xs font-bold">{name}</code>
+                <code className="text-xs font-medium">{name}</code>
                 <p className="text-muted-foreground text-xs">{hex}</p>
               </div>
             </div>
@@ -157,16 +157,16 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">
           テンプレートと送信フロー
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-2 text-left font-bold">テンプレート</th>
-                <th className="py-2 text-left font-bold">用途</th>
-                <th className="py-2 text-left font-bold">トリガー</th>
+                <th className="py-2 text-left font-medium">テンプレート</th>
+                <th className="py-2 text-left font-medium">用途</th>
+                <th className="py-2 text-left font-medium">トリガー</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -184,7 +184,6 @@ export const Guidelines: Story = {
                 ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
                 ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
                 ['ReminderEmail', 'リマインダー', 'email.sendReminder'],
-                ['OverdueEmail', '期限超過', 'email.sendOverdue'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
                 <tr key={name} className="border-border border-b">
@@ -203,10 +202,10 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">送信フロー</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">送信フロー</h2>
         <div className="text-muted-foreground space-y-4 text-sm">
           <div>
-            <h3 className="text-foreground mb-2 text-sm font-bold">
+            <h3 className="text-foreground mb-2 text-sm font-medium">
               Auth メール（signup / reset / magic_link）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
@@ -216,7 +215,7 @@ export const Guidelines: Story = {
             </div>
           </div>
           <div>
-            <h3 className="text-foreground mb-2 text-sm font-bold">
+            <h3 className="text-foreground mb-2 text-sm font-medium">
               アプリメール（welcome / trial / pro / billing / reminder / overdue / deletion）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
@@ -229,12 +228,12 @@ export const Guidelines: Story = {
       </section>
 
       <section>
-        <h2 className="border-border mb-4 border-b pb-2 text-lg font-bold">デザインルール</h2>
+        <h2 className="border-border mb-4 border-b pb-2 text-lg font-medium">デザインルール</h2>
         <ul className="text-muted-foreground list-disc space-y-2 pl-6 text-sm">
           <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
           <li>メールはライトモード固定（ダークモード未対応）</li>
           <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
-          <li>フッターに通知設定リンクを含める（Reminder/Overdue）</li>
+          <li>フッターに通知設定リンクを含める（Reminder）</li>
           <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
           <li>maxWidth: 580px（モバイル表示を考慮）</li>
         </ul>
@@ -326,27 +325,6 @@ export const Reminder: Story = {
         locale: 'ja',
       })}
       title="Reminder"
-    />
-  ),
-};
-
-/** 期限超過通知 */
-export const Overdue: Story = {
-  render: () => (
-    <BilingualEmailPreview
-      enElement={OverdueEmail({
-        userName: 'Tomoya',
-        entryTitle: 'Submit project report',
-        endTime: '5:00 PM',
-        locale: 'en',
-      })}
-      jaElement={OverdueEmail({
-        userName: 'Tomoya',
-        entryTitle: 'プロジェクトレポートを提出',
-        endTime: '17:00',
-        locale: 'ja',
-      })}
-      title="Overdue"
     />
   ),
 };

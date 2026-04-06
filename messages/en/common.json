@@ -401,6 +401,18 @@
         "rejectAll": "Essential only",
         "acceptAll": "Accept all"
       }
+    },
+    "colors": {
+      "red": "Red",
+      "orange": "Orange",
+      "amber": "Amber",
+      "green": "Green",
+      "teal": "Teal",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "pink": "Pink",
+      "gray": "Gray"
     }
   }
 }

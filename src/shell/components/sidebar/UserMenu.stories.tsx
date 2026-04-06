@@ -51,7 +51,7 @@ export const LongName: Story = {
   ),
 };
 
-/** 全パターン一覧 */
+/** 全パターン一覧。 */
 export const AllPatterns: Story = {
   parameters: {
     a11y: {

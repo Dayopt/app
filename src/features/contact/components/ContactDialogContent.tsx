@@ -135,8 +135,8 @@ function ContactForm({
         </div>
       </div>
 
-      {/* フッター: モバイルは縦並び、デスクトップは横並び */}
-      <div className="flex flex-col-reverse gap-2 p-4 md:flex-row md:justify-end md:p-0 md:pt-4">
+      {/* フッター: 横並び */}
+      <div className="flex flex-row justify-end gap-2 p-4 md:p-0 md:pt-4">
         <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
           {labels.cancel}
         </Button>

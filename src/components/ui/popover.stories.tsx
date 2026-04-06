@@ -52,7 +52,7 @@ export const WithForm: Story = {
       <PopoverContent className="w-80">
         <div className="grid gap-4">
           <div className="space-y-2">
-            <h4 className="leading-none font-bold">寸法</h4>
+            <h4 className="leading-none font-medium">寸法</h4>
             <p className="text-muted-foreground text-sm">レイヤーの寸法を設定します。</p>
           </div>
           <div className="grid gap-2">
@@ -230,7 +230,7 @@ export const WithList: Story = {
           {/* ヘッダー */}
           <div className="flex items-start justify-between px-4 py-4">
             <div className="flex-1">
-              <h4 className="text-foreground text-sm font-bold">保留中のタスク</h4>
+              <h4 className="text-foreground text-sm font-medium">保留中のタスク</h4>
               <p className="text-muted-foreground text-xs">過去365日間</p>
             </div>
           </div>

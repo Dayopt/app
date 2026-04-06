@@ -34,9 +34,10 @@ export function useEntryForm() {
   // --- 内部 hook 合成 ---
 
   // 1. 統一保存パイプライン
-  const { save, saveImmediate, saveTag, updateEntry, deleteEntry } = useDebouncedSave({
-    entryId,
-  });
+  const { save, saveImmediate, saveTag, cancelPending, updateEntry, deleteEntry } =
+    useDebouncedSave({
+      entryId,
+    });
 
   // 2. タグフィールド
   const { selectedTagId, handleTagChange } = useTagField({
@@ -47,6 +48,7 @@ export function useEntryForm() {
 
   // 3. 時間フィールド
   const {
+    timezone,
     timeConflictError,
     scheduleDate,
     startTime,
@@ -60,6 +62,10 @@ export function useEntryForm() {
     handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
+    setStartTimeLocal,
+    setEndTimeLocal,
+    resetActualTimesLocal,
+    suppressSaveRef,
   } = useTimeFields({
     entry,
     entryId,
@@ -104,16 +110,24 @@ export function useEntryForm() {
       handleActualStartChange,
       handleActualEndChange,
       handleReminderChange,
+      setStartTimeLocal,
+      setEndTimeLocal,
+      resetActualTimesLocal,
+      suppressSaveRef,
       autoSave,
     },
 
     state: {
       timeConflictError,
+      timezone,
     },
 
     actions: {
       updateEntry,
       handleDelete,
+      save,
+      saveImmediate,
+      cancelPending,
     },
   };
 }

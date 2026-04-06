@@ -138,7 +138,7 @@ export function TagGridPicker({ tags, selectedId, onSelect }: TagGridPickerProps
           <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon={parentTag?.icon ?? null} color={parentTag?.color ?? null} size="sm" />
-            <span className="text-foreground font-bold">{view.prefix}</span>
+            <span className="text-foreground font-medium">{view.prefix}</span>
           </span>
         </button>
 

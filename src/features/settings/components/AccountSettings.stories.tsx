@@ -14,7 +14,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { useAuthStore } from '@/stores/useAuthStore';
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
 
 import type { UseMFAReturn } from '../hooks/useMFA';
 import { AccountSettings } from './account-settings';
@@ -70,19 +70,15 @@ const meta = {
   component: AccountSettings,
   parameters: {
     layout: 'padded',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
   },
   tags: ['autodocs'],
   decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: { id: 'mock-user', email: 'user@example.com' } as never,
-      });
-      return (
-        <div className="mx-auto max-w-2xl">
-          <Story />
-        </div>
-      );
-    },
+    (Story) => (
+      <div className="mx-auto max-w-2xl">
+        <Story />
+      </div>
+    ),
   ],
 } satisfies Meta;
 
@@ -104,12 +100,10 @@ export const Default: Story = {
  * メール行のラベルが空欄になることを確認できる。
  */
 export const NoEmail: Story = {
-  render: () => {
-    useAuthStore.setState({
-      user: { id: 'mock-user-no-email', email: undefined } as never,
-    });
-    return <AccountSettings _MFASectionProps={{ _useMFAHook: () => createMockMFA() }} />;
+  parameters: {
+    storeMocks: { useAuthStore: PRESET_AUTH.noEmail },
   },
+  render: () => <AccountSettings _MFASectionProps={{ _useMFAHook: () => createMockMFA() }} />,
 };
 
 /** MFA有効済み状態。リカバリーコード残り8個。 */

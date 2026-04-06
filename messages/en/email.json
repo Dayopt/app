@@ -68,15 +68,6 @@
     "labelStartsAt": "Starts at",
     "ctaButton": "View Calendar"
   },
-  "overdue": {
-    "subject": "Overdue: {entryTitle}",
-    "heading": "Entry Overdue",
-    "body": "The following entry has passed its scheduled end time and hasn't been completed:",
-    "labelPlan": "Entry",
-    "labelWasDueBy": "Was due by",
-    "rescheduleHint": "You can reschedule this entry or mark it as complete from your calendar.",
-    "ctaButton": "View Calendar"
-  },
   "trialStart": {
     "subject": "Your 7-day Pro trial has started",
     "heading": "Your 7-day Pro trial has started",

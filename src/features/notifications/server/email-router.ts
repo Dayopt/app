@@ -7,7 +7,6 @@
  * エンドポイント:
  * - email.sendWelcome: ウェルカムメール送信
  * - email.sendReminder: プランリマインダーメール送信
- * - email.sendOverdue: 期限超過通知メール送信
  * - email.sendAccountDeletion: アカウント削除確認メール送信
  * - email.sendTest: テストメール送信（開発用）
  */
@@ -21,7 +20,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { AccountDeletionEmail } from '@/emails/AccountDeletionEmail';
 import { CancellationConfirmEmail } from '@/emails/CancellationConfirmEmail';
 import { createEmailTranslator, type EmailLocale } from '@/emails/i18n';
-import { OverdueEmail } from '@/emails/OverdueEmail';
 import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
 import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
@@ -69,9 +67,10 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
   } = await ctx.supabase.auth.getUser();
 
   if (error) {
+    logger.error('Failed to fetch user info for email verification', { error });
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to fetch user info: ${error.message}`,
+      message: 'ユーザー情報の取得に失敗した',
       cause: error,
     });
   }
@@ -96,7 +95,7 @@ async function isEmailSuppressed(email: string): Promise<boolean> {
     .limit(1);
 
   if (error) {
-    logger.error('Failed to check email suppression', { email, error });
+    logger.error('Failed to check email suppression', { error });
     // チェック失敗時は送信を許可（可用性優先）
     return false;
   }
@@ -122,7 +121,7 @@ async function sendEmail({
 }) {
   // サプレッションチェック
   if (await isEmailSuppressed(to)) {
-    logger.warn(`${context} skipped: email suppressed`, { to });
+    logger.warn(`${context} skipped: email suppressed`);
     return { success: true as const, emailId: undefined, suppressed: true as const };
   }
 
@@ -134,14 +133,14 @@ async function sendEmail({
   });
 
   if (error) {
-    logger.error(`${context} failed`, { error, to });
+    logger.error(`${context} failed`, { error });
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
-      message: `Failed to send email: ${error.message}`,
+      message: 'メール送信に失敗した',
     });
   }
 
-  logger.info(`${context} sent`, { emailId: data?.id, to });
+  logger.info(`${context} sent`, { emailId: data?.id });
   return { success: true as const, emailId: data?.id };
 }
 
@@ -155,7 +154,7 @@ function handleEmailError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `Email operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: 'メール操作に失敗した',
     cause: error,
   });
 }
@@ -176,7 +175,7 @@ export const emailRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending welcome email', { email: input.email, userId: ctx.userId });
+        logger.info('Sending welcome email', { userId: ctx.userId });
 
         const locale = await getUserLocale(ctx.supabase, ctx.userId);
         const t = createEmailTranslator(locale);
@@ -514,44 +513,6 @@ export const emailRouter = createTRPCRouter({
     }),
 
   /**
-   * 期限超過通知メール送信
-   */
-  sendOverdue: protectedProcedure
-    .meta({ description: '期限超過通知メール送信' })
-    .input(
-      z.object({
-        email: z.string().email(),
-        userName: z.string().min(1),
-        entryTitle: z.string().min(1),
-        endTime: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending overdue email', { entryTitle: input.entryTitle, userId: ctx.userId });
-
-        const locale = await getUserLocale(ctx.supabase, ctx.userId);
-        const t = createEmailTranslator(locale);
-
-        return sendEmail({
-          to: input.email,
-          subject: t('overdue.subject', { entryTitle: input.entryTitle }),
-          react: OverdueEmail({
-            userName: input.userName,
-            entryTitle: input.entryTitle,
-            endTime: input.endTime,
-            locale,
-            appUrl: APP_URL,
-          }),
-          context: 'Overdue email',
-        });
-      } catch (error) {
-        return handleEmailError('sendOverdue', error);
-      }
-    }),
-
-  /**
    * アカウント削除確認メール送信 (GDPR対応)
    */
   sendAccountDeletion: protectedProcedure
@@ -603,17 +564,29 @@ export const emailRouter = createTRPCRouter({
         subject: z.string().min(1, 'Subject is required').default('Test Email from Dayopt'),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
-        // 本番環境では無効化
-        if (process.env.NODE_ENV === 'production') {
+        // 本番・staging 環境では無効化（ローカル開発のみ許可）
+        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Test endpoint is not available in production',
+            message: 'Test endpoint is only available in local development',
           });
         }
 
-        logger.info('Sending test email', { to: input.to });
+        // 自分のメールアドレスのみ許可
+        const userId = ctx.userId;
+        if (userId) {
+          const { data: userData } = await ctx.supabase.auth.getUser();
+          if (userData?.user?.email && userData.user.email !== input.to) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Can only send test emails to your own address',
+            });
+          }
+        }
+
+        logger.info('Sending test email', { userId: ctx.userId });
 
         return sendEmail({
           to: input.to,

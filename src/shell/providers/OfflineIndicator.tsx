@@ -78,7 +78,7 @@ export function OfflineIndicator() {
   return (
     <div
       role="status"
-      className="bg-muted text-muted-foreground flex items-center justify-center gap-2 px-4 py-2 text-center text-sm"
+      className="bg-muted text-muted-foreground flex items-center justify-center gap-2 px-4 py-2 text-center text-base md:text-sm"
     >
       <WifiOff className="size-4 shrink-0" />
       <span>

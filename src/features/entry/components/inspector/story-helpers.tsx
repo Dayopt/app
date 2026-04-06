@@ -67,7 +67,7 @@ export function MockTagRow({
     <div className="flex items-center justify-between gap-2">
       <button
         type="button"
-        className="hover:bg-state-hover -mt-1 -ml-2 flex items-center gap-2 rounded-lg py-1 pr-2 pl-2 text-base font-bold transition-colors"
+        className="hover:bg-state-hover -mt-1 -ml-2 flex items-center gap-2 rounded-lg py-1 pr-2 pl-2 text-base font-medium transition-colors"
         aria-label={tagName ? `Tag: ${tagName}` : 'Add tag'}
       >
         {tagName ? (

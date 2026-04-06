@@ -6,14 +6,9 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 import { userEvent, waitFor, within } from 'storybook/test';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
+import { PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
 
 import { ValueRankingSettings } from './value-ranking-settings';
 
@@ -22,25 +17,7 @@ import { ValueRankingSettings } from './value-ranking-settings';
 // ─────────────────────────────────────────────────────────
 
 const MOCK_USER_SETTINGS_EMPTY = {
-  timezone: 'Asia/Tokyo',
-  showUtcOffset: true,
-  timeFormat: '24h' as const,
-  dateFormat: 'yyyy/MM/dd',
-  weekStartsOn: 1 as const,
-  showWeekends: true,
-  showWeekNumbers: false,
-  defaultDuration: 60,
-  snapInterval: 15 as const,
-  defaultView: 'week',
-  hourHeightDensity: 'default',
-  planRecordMode: 'both',
-  chronotype: {
-    enabled: true,
-    type: 'moderate_morning' as const,
-    displayMode: 'background' as const,
-    opacity: 0.15,
-    customZones: null,
-  },
+  ...PRESET_USER_SETTINGS.default,
   personalization: {
     values: {},
     rankedValues: [],
@@ -50,25 +27,7 @@ const MOCK_USER_SETTINGS_EMPTY = {
 };
 
 const MOCK_USER_SETTINGS_WITH_RANKING = {
-  timezone: 'Asia/Tokyo',
-  showUtcOffset: true,
-  timeFormat: '24h' as const,
-  dateFormat: 'yyyy/MM/dd',
-  weekStartsOn: 1 as const,
-  showWeekends: true,
-  showWeekNumbers: false,
-  defaultDuration: 60,
-  snapInterval: 15 as const,
-  defaultView: 'week',
-  hourHeightDensity: 'default',
-  planRecordMode: 'both',
-  chronotype: {
-    enabled: true,
-    type: 'moderate_morning' as const,
-    displayMode: 'background' as const,
-    opacity: 0.15,
-    customZones: null,
-  },
+  ...PRESET_USER_SETTINGS.default,
   personalization: {
     values: {},
     rankedValues: ['growth', 'creativity', 'autonomy', 'connection', 'health'],
@@ -76,58 +35,6 @@ const MOCK_USER_SETTINGS_WITH_RANKING = {
     aiCustomStylePrompt: '',
   },
 };
-
-// ─────────────────────────────────────────────────────────
-// tRPC Mock Helpers
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(responseMap: Record<string, unknown>): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function createPendingLink(): TRPCLink<AppRouter> {
-  return () => () => observable(() => {});
-}
-
-interface RankingMockProviderProps {
-  children: ReactNode;
-  pending?: boolean;
-  settings?: typeof MOCK_USER_SETTINGS_WITH_RANKING;
-}
-
-function RankingMockProvider({ children, pending, settings }: RankingMockProviderProps) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-
-  const resolvedSettings = settings ?? MOCK_USER_SETTINGS_WITH_RANKING;
-
-  const link: TRPCLink<AppRouter> = pending
-    ? createPendingLink()
-    : createMockLink({ 'userSettings.get': resolvedSettings });
-
-  const trpcClient = api.createClient({ links: [link] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -158,35 +65,23 @@ type Story = StoryObj<typeof meta>;
 
 /** デフォルト状態（ランキング設定済み、idle表示） */
 export const Default: Story = {
-  decorators: [
-    (Story) => (
-      <RankingMockProvider>
-        <Story />
-      </RankingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS_WITH_RANKING },
+  },
 };
 
 /** データ取得中（ローディング状態） */
 export const Loading: Story = {
-  decorators: [
-    (Story) => (
-      <RankingMockProvider pending>
-        <Story />
-      </RankingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcPending: true,
+  },
 };
 
 /** 空状態（価値観キーワード未選択） — 「選択する」ボタンが表示される */
 export const Empty: Story = {
-  decorators: [
-    (Story) => (
-      <RankingMockProvider settings={MOCK_USER_SETTINGS_EMPTY}>
-        <Story />
-      </RankingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS_EMPTY },
+  },
 };
 
 /**
@@ -199,14 +94,8 @@ export const Empty: Story = {
 export const Editing: Story = {
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS_WITH_RANKING },
   },
-  decorators: [
-    (Story) => (
-      <RankingMockProvider>
-        <Story />
-      </RankingMockProvider>
-    ),
-  ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const editButton = await waitFor(() =>

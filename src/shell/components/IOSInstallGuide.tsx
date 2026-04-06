@@ -25,7 +25,7 @@ export function IOSInstallGuide({ onDismiss }: IOSInstallGuideProps) {
     <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 left-4 z-50 md:bottom-4 md:left-auto md:w-96">
       <div className="bg-card border-border-subtle shadow-card rounded-2xl border p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <p className="text-foreground text-sm">{t('iosInstallTitle')}</p>
+          <p className="text-foreground text-base md:text-sm">{t('iosInstallTitle')}</p>
           <button
             type="button"
             onClick={onDismiss}

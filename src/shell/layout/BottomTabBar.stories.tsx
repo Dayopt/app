@@ -53,12 +53,12 @@ function MockBottomTabBar({
               >
                 <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
                 {tab.badge != null && tab.badge > 0 && (
-                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-bold">
+                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-medium">
                     {tab.badge > 9 ? '9+' : tab.badge}
                   </span>
                 )}
               </span>
-              <span className={cn('text-xs', isActive && 'font-bold')}>{tab.label}</span>
+              <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>
             </button>
           );
         })}

@@ -201,18 +201,18 @@ export function StatsLayout({
 
       {/* タブナビゲーション */}
       <nav
-        className="scrollbar-hide flex h-10 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4"
+        className="scrollbar-hide flex h-8 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4 md:h-10"
         role="tablist"
       >
         {/* 固定3タブ */}
-        {FIXED_TABS.map((tab) => (
+        {FIXED_TABS.map((tab, i) => (
           <Link
             key={tab.id}
             href={buildTabHref(tab.path)}
             role="tab"
             aria-selected={activeTab === tab.id}
             prefetch
-            className={tabLinkClass(activeTab === tab.id)}
+            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0 after:left-0')}
           >
             {t(tab.labelKey)}
           </Link>

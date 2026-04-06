@@ -7,13 +7,15 @@
  * onPinToPalette は Composition Layer（GlobalOverlays）から注入される。
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useCreateTag, useTagsMap } from '@/features/tags';
+import { localTimeToUTCISO } from '@/lib/date-utils';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
@@ -27,7 +29,7 @@ import {
   ReminderRow,
   TagRow,
   TimeConflictAlert,
-  TimeDiffBar,
+  TimeDiffBlock,
   TimeRow,
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
@@ -76,10 +78,14 @@ export function EntryInspectorForm({
     handleActualStartChange,
     handleActualEndChange,
     handleReminderChange,
+    setStartTimeLocal,
+    setEndTimeLocal,
+    resetActualTimesLocal,
+    suppressSaveRef,
     autoSave,
   } = handlers;
-  const { timeConflictError } = state;
-  const { handleDelete } = actions;
+  const { timeConflictError, timezone } = state;
+  const { handleDelete, save } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -111,8 +117,30 @@ export function EntryInspectorForm({
 
   // 充実度（TanStack Query の楽観的更新で即座に反映）
   const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
+  const isUnplanned = entry?.origin === 'unplanned';
 
   const { updateEntry } = useEntryMutations();
+
+  // 計画外にする / 計画に戻す
+  const handleMarkUnplanned = useCallback(() => {
+    if (!entryId || !entry) return;
+    updateEntry.mutate({
+      id: entryId,
+      data: {
+        origin: 'unplanned',
+      },
+    });
+  }, [entryId, entry, updateEntry]);
+
+  const handleRestorePlanned = useCallback(() => {
+    if (!entryId || !entry) return;
+    updateEntry.mutate({
+      id: entryId,
+      data: {
+        origin: 'planned',
+      },
+    });
+  }, [entryId, entry, updateEntry]);
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
       if (!entryId) return;
@@ -127,15 +155,85 @@ export function EntryInspectorForm({
     handleEndTimeChange: autoPlannedEndChange,
   } = useAutoAdjustEndTime(startTime, endTime, handleEndTimeChange);
 
+  // 記録付きエントリの予定時間変更確認
+  const hasActualTime = entry?.actual_start_time != null || entry?.actual_end_time != null;
+  const [pendingTimeChange, setPendingTimeChange] = useState<{
+    type: 'start' | 'end';
+    time: string;
+  } | null>(null);
+
+  const applyPlannedTimeChange = useCallback(
+    (type: 'start' | 'end', time: string) => {
+      if (type === 'start') {
+        autoPlannedStartChange(time);
+        handleStartTimeChange(time);
+      } else {
+        autoPlannedEndChange(time);
+        handleEndTimeChange(time);
+      }
+    },
+    [autoPlannedStartChange, autoPlannedEndChange, handleStartTimeChange, handleEndTimeChange],
+  );
+
   const onPlannedStartChange = (time: string) => {
-    autoPlannedStartChange(time);
-    handleStartTimeChange(time);
+    if (hasActualTime) {
+      setPendingTimeChange({ type: 'start', time });
+      return;
+    }
+    applyPlannedTimeChange('start', time);
   };
 
   const onPlannedEndChange = (time: string) => {
-    autoPlannedEndChange(time);
-    handleEndTimeChange(time);
+    if (hasActualTime) {
+      setPendingTimeChange({ type: 'end', time });
+      return;
+    }
+    applyPlannedTimeChange('end', time);
   };
+
+  const handleConfirmTimeChange = useCallback(() => {
+    if (!pendingTimeChange || !scheduleDate) return;
+    const { type, time } = pendingTimeChange;
+    const [hours, minutes] = time.split(':').map(Number);
+    const isoValue = localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone);
+
+    // autoAdjust 経由の追加 save を抑制
+    suppressSaveRef.current = true;
+
+    // ローカル状態のみ更新（save を発火しない）
+    if (type === 'start') {
+      setStartTimeLocal(time);
+    } else {
+      setEndTimeLocal(time);
+    }
+    resetActualTimesLocal();
+
+    // debounced save にマージ — 先行 pending があってもそのまま合流して1回の mutation
+    save({
+      [type === 'start' ? 'start_time' : 'end_time']: isoValue,
+      actual_start_time: null,
+      actual_end_time: null,
+    });
+    toast.success(t('entry.toast.updated'));
+    setTimeout(() => {
+      suppressSaveRef.current = false;
+    }, 100);
+    setPendingTimeChange(null);
+  }, [
+    pendingTimeChange,
+    scheduleDate,
+    timezone,
+    setStartTimeLocal,
+    setEndTimeLocal,
+    resetActualTimesLocal,
+    suppressSaveRef,
+    save,
+    t,
+  ]);
+
+  const handleCancelTimeChange = useCallback(() => {
+    setPendingTimeChange(null);
+  }, []);
 
   // 記録行の実効値（null → 予定の値を使用）
   const effectiveActualStart = actualStartTime ?? startTime;
@@ -167,12 +265,6 @@ export function EntryInspectorForm({
     onViewStats(selectedTagId);
   }, [selectedTagId, onViewStats]);
 
-  // Duration diff
-  const actualDuration = useMemo(
-    () => computeDuration(effectiveActualStart, effectiveActualEnd),
-    [effectiveActualStart, effectiveActualEnd],
-  );
-
   if (!entry) return null;
 
   return (
@@ -180,7 +272,7 @@ export function EntryInspectorForm({
       {/* Row 0: タグ + 削除ボタン */}
       <TagRow
         tagId={selectedTagId}
-        tagName={selectedTagName}
+        tagName={selectedTagName ?? ''}
         tagColorClasses={selectedTagColorClasses}
         tagIcon={selectedTag?.icon}
         tagColor={selectedTag?.color}
@@ -193,12 +285,15 @@ export function EntryInspectorForm({
         isPinnedInPalette={isPinned}
         onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
         onDelete={handleDelete}
+        isUnplanned={isUnplanned}
+        onMarkUnplanned={handleMarkUnplanned}
+        onRestorePlanned={handleRestorePlanned}
       />
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
       <div
         // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
-        className={`mt-2 grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded' : 'grid-rows-collapsed'}`}
+        className={`grid transition-[grid-template-rows] duration-200 ${timeConflictError ? 'grid-rows-expanded mt-2' : 'grid-rows-collapsed'}`}
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
@@ -207,7 +302,7 @@ export function EntryInspectorForm({
       </div>
 
       {/* スケジュールカード */}
-      <div className="bg-muted mt-4 rounded-2xl">
+      <div className="bg-muted mt-2 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
           {/* 日付 */}
           <DateRow
@@ -226,6 +321,7 @@ export function EntryInspectorForm({
             onStartChange={onPlannedStartChange}
             onEndChange={onPlannedEndChange}
             hasError={timeConflictError}
+            disabled={isUnplanned}
           />
 
           {/* 記録行 */}
@@ -234,14 +330,58 @@ export function EntryInspectorForm({
             icon={Play}
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
-            onStartChange={(time) => handleActualStartChange(time)}
-            onEndChange={(time) => handleActualEndChange(time)}
+            onStartChange={(time) => {
+              if (isUnplanned && scheduleDate) {
+                // 予定外: 記録と予定を1回のmutationで同期
+                const isoValue = time
+                  ? localTimeToUTCISO(
+                      scheduleDate,
+                      ...(time.split(':').map(Number) as [number, number]),
+                      timezone,
+                    )
+                  : null;
+                setStartTimeLocal(time);
+                handleActualStartChange(time);
+                suppressSaveRef.current = true;
+                save({ start_time: isoValue });
+                setTimeout(() => {
+                  suppressSaveRef.current = false;
+                }, 100);
+              } else {
+                handleActualStartChange(time);
+              }
+            }}
+            onEndChange={(time) => {
+              if (isUnplanned && scheduleDate) {
+                const isoValue = time
+                  ? localTimeToUTCISO(
+                      scheduleDate,
+                      ...(time.split(':').map(Number) as [number, number]),
+                      timezone,
+                    )
+                  : null;
+                setEndTimeLocal(time);
+                handleActualEndChange(time);
+                suppressSaveRef.current = true;
+                save({ end_time: isoValue });
+                setTimeout(() => {
+                  suppressSaveRef.current = false;
+                }, 100);
+              } else {
+                handleActualEndChange(time);
+              }
+            }}
           />
 
-          {/* プログレスバー + 差分バッジ */}
-          {plannedDuration > 0 && (
-            <TimeDiffBar plannedMinutes={plannedDuration} actualMinutes={actualDuration} />
-          )}
+          {/* 予定 vs 記録 差分バー */}
+          <TimeDiffBlock
+            plannedStart={startTime}
+            plannedEnd={endTime}
+            actualStart={actualStartTime}
+            actualEnd={actualEndTime}
+            tagColor={selectedTag?.color}
+            isUnplanned={isUnplanned}
+          />
 
           {/* 充実度 */}
           <FulfillmentRow
@@ -273,6 +413,16 @@ export function EntryInspectorForm({
           />
         </div>
       </div>
+      {/* 記録リセット確認ダイアログ */}
+      <ConfirmDialog
+        open={pendingTimeChange !== null}
+        onClose={handleCancelTimeChange}
+        onConfirm={handleConfirmTimeChange}
+        title={t('calendar.event.moveWithRecord.title')}
+        description={t('calendar.event.moveWithRecord.description')}
+        variant="warning"
+        confirmLabel={t('calendar.event.moveWithRecord.confirm')}
+      />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export const AllPatterns: Story = {
         <Collapsible defaultOpen>
           <CollapsibleTrigger asChild>
             <div className="hover:bg-state-hover flex h-8 w-full cursor-pointer items-center rounded-lg transition-colors">
-              <div className="text-muted-foreground flex h-8 min-w-0 items-center px-2 text-left text-xs font-bold">
+              <div className="text-muted-foreground flex h-8 min-w-0 items-center px-2 text-left text-xs font-medium">
                 <span className="truncate">セクションタイトル</span>
                 <ChevronRight className="ml-1 size-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-90" />
               </div>
@@ -55,7 +55,7 @@ export const AllPatterns: Story = {
             <div className="px-4 pb-4">
               <div className="bg-surface-container mb-2 flex items-center justify-between rounded-lg p-2">
                 <span className="text-muted-foreground text-xs">合計時間</span>
-                <span className="text-sm font-bold">2時間30分</span>
+                <span className="text-sm font-medium">2時間30分</span>
               </div>
               <div className="space-y-2">
                 <div className="hover:bg-state-hover flex items-center gap-2 rounded-lg p-2">

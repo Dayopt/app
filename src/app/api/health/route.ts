@@ -1,7 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import { isUpstashEnabled } from '@/lib/rate-limit/upstash';
+
 /**
- * 🏥 Health Check API エンドポイント
+ * Health Check API エンドポイント
  *
  * アプリケーションの稼働状況を確認するためのヘルスチェック
  * デプロイ後の動作確認やモニタリングに使用
@@ -15,7 +18,7 @@ interface HealthStatus {
   environment: string;
   checks: {
     database: 'ok' | 'error' | 'warning';
-    external_apis: 'ok' | 'error' | 'warning';
+    redis: 'ok' | 'error' | 'warning' | 'skipped';
     memory: 'ok' | 'error' | 'warning';
   };
   details?: {
@@ -24,17 +27,34 @@ interface HealthStatus {
   };
 }
 
+/** DB疎通タイムアウト（ms） */
+const DB_CHECK_TIMEOUT_MS = 5_000;
+
 /**
- * データベース接続チェック
+ * データベース接続チェック — 実際に SELECT 1 で疎通確認
  */
 async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
-  try {
-    // 環境変数の存在確認
-    const hasDbUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const hasDbKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const dbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const dbKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!hasDbUrl || !hasDbKey) {
-      return 'warning';
+  if (!dbUrl || !dbKey) {
+    return 'warning';
+  }
+
+  try {
+    const supabase = createClient(dbUrl, dbKey, {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options) =>
+          fetch(url, { ...options, signal: AbortSignal.timeout(DB_CHECK_TIMEOUT_MS) }),
+      },
+    });
+
+    const { error } = await supabase.rpc('ping' as never);
+
+    // ping RPC が無くても、接続自体は成功する（PGRST202 = function not found = DB is alive）
+    if (error && !error.message.includes('ping') && !error.code?.startsWith('PGRST')) {
+      return 'error';
     }
 
     return 'ok';
@@ -44,13 +64,24 @@ async function checkDatabase(): Promise<'ok' | 'error' | 'warning'> {
 }
 
 /**
- * 外部API接続チェック
+ * Redis（Upstash）接続チェック
  */
-async function checkExternalAPIs(): Promise<'ok' | 'error' | 'warning'> {
+async function checkRedis(): Promise<'ok' | 'error' | 'warning' | 'skipped'> {
+  if (!isUpstashEnabled) {
+    return 'skipped';
+  }
+
   try {
-    return 'ok';
+    const { Redis } = await import('@upstash/redis');
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    });
+
+    const pong = await redis.ping();
+    return pong === 'PONG' ? 'ok' : 'warning';
   } catch {
-    return 'warning';
+    return 'error';
   }
 }
 
@@ -126,13 +157,14 @@ export async function GET() {
     const startTime = Date.now();
 
     // 各種チェックを並行実行
-    const [dbStatus, apiStatus] = await Promise.all([checkDatabase(), checkExternalAPIs()]);
+    const [dbStatus, redisStatus] = await Promise.all([checkDatabase(), checkRedis()]);
 
     const memoryStatus = checkMemory();
 
-    // 全体的な状態を判定
-    const hasError = [dbStatus, apiStatus, memoryStatus].includes('error');
-    const hasWarning = [dbStatus, apiStatus, memoryStatus].includes('warning');
+    // 全体的な状態を判定（skipped は無視）
+    const checkResults = [dbStatus, redisStatus, memoryStatus].filter((s) => s !== 'skipped');
+    const hasError = checkResults.includes('error');
+    const hasWarning = checkResults.includes('warning');
 
     const overallStatus: HealthStatus['status'] = hasError
       ? 'unhealthy'
@@ -163,7 +195,7 @@ export async function GET() {
       environment: getEnvironment(),
       checks: {
         database: dbStatus,
-        external_apis: apiStatus,
+        redis: redisStatus,
         memory: memoryStatus,
       },
     };
@@ -171,7 +203,9 @@ export async function GET() {
     // エラーや警告の詳細を追加
     const warnings: string[] = [];
     if (dbStatus === 'warning') warnings.push('Database configuration incomplete');
-    if (apiStatus === 'warning') warnings.push('Some external APIs not accessible');
+    if (dbStatus === 'error') warnings.push('Database connection failed');
+    if (redisStatus === 'error') warnings.push('Redis connection failed');
+    if (redisStatus === 'skipped') warnings.push('Redis not configured (rate limiting degraded)');
     if (memoryStatus === 'warning') warnings.push('High memory usage detected');
 
     if (warnings.length > 0) {
@@ -203,7 +237,7 @@ export async function GET() {
       environment: getEnvironment(),
       checks: {
         database: 'error',
-        external_apis: 'error',
+        redis: 'error',
         memory: 'error',
       },
       details: {

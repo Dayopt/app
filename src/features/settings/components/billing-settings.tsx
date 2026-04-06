@@ -207,7 +207,7 @@ export function BillingSettings() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="text-lg font-bold">
+              <h4 className="text-lg font-medium">
                 {currentPlan === 'pro'
                   ? t('settings.subscription.plans.pro.name')
                   : t('settings.subscription.freePlanLabel')}
@@ -217,7 +217,7 @@ export function BillingSettings() {
                 <Badge variant="outline">{t('settings.subscription.trialBadge')}</Badge>
               )}
             </div>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base md:text-sm">
               {subscriptionStatus === 'trialing'
                 ? t('settings.subscription.trialDescription')
                 : currentPlan === 'pro'
@@ -244,8 +244,8 @@ export function BillingSettings() {
           <div className="bg-warning-tint flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-warning h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm">{t('settings.subscription.pastDueTitle')}</p>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-base md:text-sm">{t('settings.subscription.pastDueTitle')}</p>
+              <p className="text-muted-foreground text-base md:text-sm">
                 {t('settings.subscription.pastDueDescription')}
               </p>
             </div>
@@ -267,8 +267,8 @@ export function BillingSettings() {
           <div className="flex items-center gap-4 rounded-lg p-4">
             <AlertTriangle className="text-muted-foreground h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm">{t('settings.subscription.canceledTitle')}</p>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-base md:text-sm">{t('settings.subscription.canceledTitle')}</p>
+              <p className="text-muted-foreground text-base md:text-sm">
                 {t('settings.subscription.canceledDescription')}
               </p>
             </div>
@@ -308,16 +308,16 @@ export function BillingSettings() {
 
                 <div className="mb-4">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold">{t(plan.nameKey)}</h4>
+                    <h4 className="font-medium">{t(plan.nameKey)}</h4>
                   </div>
                   <div className="mt-2">
-                    <span className="text-2xl font-bold">
+                    <span className="text-2xl font-medium">
                       {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: 'usd',
                       }).format(plan.price)}
                     </span>
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-muted-foreground text-base md:text-sm">
                       {t('settings.subscription.perMonth')}
                     </span>
                   </div>
@@ -325,7 +325,7 @@ export function BillingSettings() {
 
                 <ul className="mb-4 space-y-2">
                   {plan.featureKeys.map((featureKey) => (
-                    <li key={featureKey} className="flex items-center gap-2 text-sm">
+                    <li key={featureKey} className="flex items-center gap-2 text-base md:text-sm">
                       <Check className="text-primary h-4 w-4 flex-shrink-0" />
                       <span>{t(featureKey)}</span>
                     </li>
@@ -430,7 +430,7 @@ export function BillingSettings() {
               </table>
             </div>
           ) : (
-            <p className="text-muted-foreground py-6 text-center text-sm">
+            <p className="text-muted-foreground py-6 text-center text-base md:text-sm">
               {t('settings.subscription.noInvoices')}
             </p>
           )}

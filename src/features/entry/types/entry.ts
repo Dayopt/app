@@ -29,6 +29,10 @@ export interface Entry {
   fulfillment_score: FulfillmentScore | null;
   reminder_minutes: number | null;
   reviewed_at: string | null;
+  /** 計画外にする前の予定開始時刻（復元用） */
+  backed_up_start_time?: string | null | undefined;
+  /** 計画外にする前の予定終了時刻（復元用） */
+  backed_up_end_time?: string | null | undefined;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -70,6 +74,8 @@ export interface UpdateEntryInput {
   fulfillment_score?: FulfillmentScore | null;
   reminder_minutes?: number;
   reviewed_at?: string | null;
+  backed_up_start_time?: string | null;
+  backed_up_end_time?: string | null;
 }
 
 /**

@@ -92,7 +92,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
         {success ? (
           <div className="space-y-4 py-4">
             <InfoBox>
-              <p className="text-sm">{t('successMessage', { email: newEmail })}</p>
+              <p className="text-base md:text-sm">{t('successMessage', { email: newEmail })}</p>
               <p className="text-muted-foreground mt-2 text-xs">{t('successHint')}</p>
             </InfoBox>
           </div>
@@ -140,7 +140,7 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-sm">
+                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
                   {error}
                 </div>
               )}

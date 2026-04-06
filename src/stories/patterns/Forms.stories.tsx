@@ -19,7 +19,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Form Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Form Patterns</h1>
       <p className="text-muted-foreground mb-8">
         フォームのバリデーション、エラー表示、成功状態のパターン集。
       </p>
@@ -27,7 +27,7 @@ export const Overview: Story = {
       <div className="grid max-w-3xl gap-8">
         {/* バリデーションエラー */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">バリデーションエラー</h2>
+          <h2 className="mb-4 text-lg font-medium">バリデーションエラー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フィールド単位でエラーを表示。エラーメッセージは具体的に。
           </p>
@@ -66,7 +66,7 @@ export const Overview: Story = {
 
         {/* 成功状態 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">成功状態</h2>
+          <h2 className="mb-4 text-lg font-medium">成功状態</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             保存成功時のインラインフィードバック。
           </p>
@@ -96,7 +96,7 @@ export const Overview: Story = {
 
         {/* サーバーエラー */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">サーバーエラー</h2>
+          <h2 className="mb-4 text-lg font-medium">サーバーエラー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フォーム全体のエラーはフォーム上部に表示。
           </p>
@@ -106,7 +106,7 @@ export const Overview: Story = {
             <div className="bg-destructive-tint border-destructive flex items-start gap-2 rounded-lg border p-4">
               <AlertCircle className="text-destructive mt-1 size-5 shrink-0" />
               <div>
-                <p className="text-destructive font-bold">保存できなかった</p>
+                <p className="text-destructive font-medium">保存できなかった</p>
                 <p className="text-destructive text-sm">
                   ネットワーク接続を確認して、もう一度試して
                 </p>
@@ -126,7 +126,7 @@ export const Overview: Story = {
 <div className="bg-destructive-tint border-destructive ...">
   <AlertCircle className="text-destructive" />
   <div>
-    <p className="text-destructive font-bold">保存できなかった</p>
+    <p className="text-destructive font-medium">保存できなかった</p>
     <p className="text-destructive">ネットワーク接続を確認して...</p>
   </div>
 </div>`}
@@ -135,7 +135,7 @@ export const Overview: Story = {
 
         {/* ヘルプテキスト */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ヘルプテキスト</h2>
+          <h2 className="mb-4 text-lg font-medium">ヘルプテキスト</h2>
           <p className="text-muted-foreground mb-4 text-sm">入力前にユーザーを支援する補足説明。</p>
 
           <div className="space-y-4">
@@ -155,10 +155,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>エラーは具体的に記述</li>
                 <li>エラー発生フィールドを明示</li>
@@ -167,7 +167,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>「エラーが発生しました」だけ</li>
                 <li>全フィールドを赤くする</li>

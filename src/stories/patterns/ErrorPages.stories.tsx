@@ -65,7 +65,7 @@ function Section({
   return (
     <div>
       <div className="bg-surface-container border-border border-b px-6 py-2">
-        <h3 className="text-foreground text-sm font-bold">{title}</h3>
+        <h3 className="text-foreground text-sm font-medium">{title}</h3>
         <p className="text-muted-foreground text-xs">{description}</p>
       </div>
       {children}
@@ -83,7 +83,7 @@ function MockRootError({ errorMessage }: { errorMessage: string }) {
     <div className="flex min-h-[50vh] items-center justify-center p-8">
       <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-destructive mb-2 text-2xl font-bold">Something went wrong</h1>
+          <h1 className="text-destructive mb-2 text-2xl font-medium">Something went wrong</h1>
           <p className="text-muted-foreground">
             We apologize for the inconvenience. An unexpected error occurred.
           </p>
@@ -93,7 +93,7 @@ function MockRootError({ errorMessage }: { errorMessage: string }) {
             Show details
           </summary>
           <div className="bg-surface-container mt-4 rounded-lg p-4">
-            <p className="mb-2 text-xs font-bold">Error</p>
+            <p className="mb-2 text-xs font-medium">Error</p>
             <pre className="text-muted-foreground max-h-40 overflow-auto text-xs">
               {errorMessage}
             </pre>
@@ -122,7 +122,7 @@ function MockAppError({ errorMessage }: { errorMessage: string }) {
           <AlertCircle className="text-destructive size-8" />
         </div>
         <div>
-          <h2 className="mb-2 text-xl font-bold">Application Error</h2>
+          <h2 className="mb-2 text-xl font-medium">Application Error</h2>
           <p className="text-muted-foreground text-sm">
             We&apos;re sorry. An unexpected problem has occurred.
           </p>
@@ -148,7 +148,7 @@ function MockCalendarError({ errorMessage }: { errorMessage: string }) {
         <AlertCircle className="text-destructive size-8" />
       </div>
       <div className="text-center">
-        <h2 className="mb-2 text-xl font-bold">Failed to load calendar</h2>
+        <h2 className="mb-2 text-xl font-medium">Failed to load calendar</h2>
         <p className="text-muted-foreground text-sm">
           Please check your network connection and try again.
         </p>
@@ -170,7 +170,7 @@ function MockNotFound() {
     <div className="flex min-h-[50vh] items-center justify-center p-8">
       <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-foreground mb-2 text-2xl font-bold">Page not found</h1>
+          <h1 className="text-foreground mb-2 text-2xl font-medium">Page not found</h1>
           <p className="text-muted-foreground">
             The page you are looking for does not exist or has been moved.
           </p>
@@ -205,7 +205,7 @@ function MockMaintenance() {
           </div>
         </div>
         <div className="mb-6 text-center">
-          <h1 className="text-foreground mb-2 text-2xl font-bold">Under Maintenance</h1>
+          <h1 className="text-foreground mb-2 text-2xl font-medium">Under Maintenance</h1>
         </div>
         <div className="bg-muted mb-6 rounded-lg p-4">
           <p className="text-foreground mb-2 text-sm">
@@ -231,7 +231,7 @@ function MockDefaultFallback() {
     <div className="border-destructive bg-surface-container rounded-2xl border p-6">
       <div className="text-center">
         <div className="text-destructive mb-4 text-6xl">&#9888;&#65039;</div>
-        <h2 className="text-destructive mb-2 text-3xl font-bold tracking-tight">
+        <h2 className="text-destructive mb-2 text-3xl font-medium tracking-tight">
           An unexpected error occurred
         </h2>
         <p className="text-foreground mb-4">
@@ -256,7 +256,7 @@ function MockDefaultFallback() {
 function MockDevFallback({ componentName }: { componentName?: string }) {
   return (
     <div className="border-border bg-surface-container rounded-2xl border p-6">
-      <h3 className="text-foreground mb-2 text-2xl font-bold tracking-tight">
+      <h3 className="text-foreground mb-2 text-2xl font-medium tracking-tight">
         Development - Component Error
       </h3>
       <p className="text-foreground mb-2">Component: {componentName || 'Unknown'}</p>
@@ -285,14 +285,14 @@ function MockFeatureFallback({ featureName }: { featureName: string }) {
 export const Overview: Story = {
   render: () => (
     <div className="p-6">
-      <h1 className="text-foreground mb-2 text-2xl font-bold">エラーページ & エラーバウンダリ</h1>
+      <h1 className="text-foreground mb-2 text-2xl font-medium">エラーページ & エラーバウンダリ</h1>
       <p className="text-muted-foreground mb-8">
         アプリケーション内のエラー表示パターン一覧。Next.js App Router の error.tsx / not-found.tsx
         と、React ErrorBoundary のフォールバックUI。7コンポーネント構成。
       </p>
 
       <div className="bg-card border-border mb-8 rounded-2xl border p-6">
-        <h2 className="mb-4 text-lg font-bold">ページレベルエラー</h2>
+        <h2 className="mb-4 text-lg font-medium">ページレベルエラー</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           Next.js App Router の error.tsx /
           not-found.tsx。SSRエラー時やルーティング不正時に自動表示。
@@ -301,10 +301,10 @@ export const Overview: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-2 pr-4 text-left font-bold">コンポーネント</th>
-                <th className="py-2 pr-4 text-left font-bold">ファイル</th>
-                <th className="py-2 pr-4 text-left font-bold">発動条件</th>
-                <th className="py-2 text-left font-bold">i18n</th>
+                <th className="py-2 pr-4 text-left font-medium">コンポーネント</th>
+                <th className="py-2 pr-4 text-left font-medium">ファイル</th>
+                <th className="py-2 pr-4 text-left font-medium">発動条件</th>
+                <th className="py-2 text-left font-medium">i18n</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">
@@ -350,7 +350,7 @@ export const Overview: Story = {
       </div>
 
       <div className="bg-card border-border rounded-2xl border p-6">
-        <h2 className="mb-4 text-lg font-bold">ErrorBoundary フォールバック</h2>
+        <h2 className="mb-4 text-lg font-medium">ErrorBoundary フォールバック</h2>
         <p className="text-muted-foreground mb-4 text-sm">
           React ErrorBoundary がキャッチしたエラー時のフォールバックUI。Sentry連携で自動レポート。
         </p>
@@ -358,9 +358,9 @@ export const Overview: Story = {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-border border-b">
-                <th className="py-2 pr-4 text-left font-bold">コンポーネント</th>
-                <th className="py-2 pr-4 text-left font-bold">使用元</th>
-                <th className="py-2 text-left font-bold">用途</th>
+                <th className="py-2 pr-4 text-left font-medium">コンポーネント</th>
+                <th className="py-2 pr-4 text-left font-medium">使用元</th>
+                <th className="py-2 text-left font-medium">用途</th>
               </tr>
             </thead>
             <tbody className="text-muted-foreground">

@@ -19,7 +19,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Confirmation Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Confirmation Patterns</h1>
       <p className="text-muted-foreground mb-8">
         破壊的操作や重要な決定の前に確認を求めるパターン。ConfirmDialog コンポーネントを使用。
       </p>
@@ -27,35 +27,35 @@ export const Overview: Story = {
       <div className="grid max-w-3xl gap-8">
         {/* 使い分けガイド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">確認が必要な操作</h2>
+          <h2 className="mb-4 text-lg font-medium">確認が必要な操作</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">操作</th>
-                  <th className="py-2 text-left font-bold">variant</th>
-                  <th className="py-2 text-left font-bold">理由</th>
+                  <th className="py-2 text-left font-medium">操作</th>
+                  <th className="py-2 text-left font-medium">variant</th>
+                  <th className="py-2 text-left font-medium">理由</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
                   <td className="py-2">削除</td>
-                  <td className="text-destructive py-2 font-bold">destructive</td>
+                  <td className="text-destructive py-2 font-medium">destructive</td>
                   <td className="py-2">不可逆操作</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">アカウント削除</td>
-                  <td className="text-destructive py-2 font-bold">destructive + icon</td>
+                  <td className="text-destructive py-2 font-medium">destructive + icon</td>
                   <td className="py-2">致命的な不可逆操作</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">変更破棄・ログアウト</td>
-                  <td className="text-warning py-2 font-bold">warning</td>
+                  <td className="text-warning py-2 font-medium">warning</td>
                   <td className="py-2">未保存データの損失</td>
                 </tr>
                 <tr className="border-border border-b">
                   <td className="py-2">大量更新</td>
-                  <td className="text-warning py-2 font-bold">warning</td>
+                  <td className="text-warning py-2 font-medium">warning</td>
                   <td className="py-2">影響範囲が大きい</td>
                 </tr>
                 <tr>
@@ -70,7 +70,7 @@ export const Overview: Story = {
 
         {/* ConfirmDialog API */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ConfirmDialog API</h2>
+          <h2 className="mb-4 text-lg font-medium">ConfirmDialog API</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             variant に応じてスタイル・アイコン・ラベルが自動設定される。カスタマイズも可能。
           </p>
@@ -79,27 +79,27 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">variant</th>
-                  <th className="py-2 text-left font-bold">アイコン</th>
-                  <th className="py-2 text-left font-bold">確認ボタン</th>
-                  <th className="py-2 text-left font-bold">デフォルトラベル</th>
+                  <th className="py-2 text-left font-medium">variant</th>
+                  <th className="py-2 text-left font-medium">アイコン</th>
+                  <th className="py-2 text-left font-medium">確認ボタン</th>
+                  <th className="py-2 text-left font-medium">デフォルトラベル</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">destructive</td>
+                  <td className="py-2 font-medium">destructive</td>
                   <td className="py-2">AlertTriangle（赤枠）</td>
                   <td className="py-2">赤ボタン</td>
                   <td className="py-2">i18n: common.actions.delete</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">warning</td>
+                  <td className="py-2 font-medium">warning</td>
                   <td className="py-2">AlertTriangle（黄枠）</td>
                   <td className="py-2">黄ボタン</td>
                   <td className="py-2">i18n: common.actions.confirm</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">default</td>
+                  <td className="py-2 font-medium">default</td>
                   <td className="py-2">AlertTriangle（灰背景）</td>
                   <td className="py-2">Primary ボタン</td>
                   <td className="py-2">i18n: common.actions.confirm</td>
@@ -111,7 +111,7 @@ export const Overview: Story = {
 
         {/* 削除確認 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">削除確認ダイアログ</h2>
+          <h2 className="mb-4 text-lg font-medium">削除確認ダイアログ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             何を削除するか明示。variant=&quot;destructive&quot; で赤いボタン。
           </p>
@@ -132,7 +132,7 @@ export const Overview: Story = {
 
         {/* 危険な操作（カスタムアイコン） */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">危険な操作（カスタムアイコン）</h2>
+          <h2 className="mb-4 text-lg font-medium">危険な操作（カスタムアイコン）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             特に重要な操作は icon prop でカスタムアイコンを指定。
           </p>
@@ -155,7 +155,7 @@ export const Overview: Story = {
 
         {/* 変更破棄 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">変更破棄の確認</h2>
+          <h2 className="mb-4 text-lg font-medium">変更破棄の確認</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             編集中の内容を破棄する場合。variant=&quot;warning&quot; で警告スタイル。
           </p>
@@ -178,7 +178,7 @@ export const Overview: Story = {
 
         {/* 非同期処理 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">非同期処理（Loading）</h2>
+          <h2 className="mb-4 text-lg font-medium">非同期処理（Loading）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             onConfirm が async の場合、自動でローディング状態を表示。loadingLabel
             でカスタマイズ可能。
@@ -204,10 +204,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>何を削除するか具体的に明示</li>
                 <li>影響範囲を description で説明</li>
@@ -217,7 +217,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>「本当によろしいですか？」だけ</li>
                 <li>「OK / Cancel」ボタン</li>
@@ -231,7 +231,7 @@ export const Overview: Story = {
 
         {/* ボタンラベル例 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ボタンラベルの例</h2>
+          <h2 className="mb-4 text-lg font-medium">ボタンラベルの例</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             confirmLabel / cancelLabel を省略すると、variant に応じた i18n
             キーからラベルが自動解決される。
@@ -240,9 +240,9 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">操作</th>
-                  <th className="py-2 text-left font-bold">cancelLabel</th>
-                  <th className="py-2 text-left font-bold">confirmLabel</th>
+                  <th className="py-2 text-left font-medium">操作</th>
+                  <th className="py-2 text-left font-medium">cancelLabel</th>
+                  <th className="py-2 text-left font-medium">confirmLabel</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
@@ -273,7 +273,7 @@ export const Overview: Story = {
 
         {/* トリガーボタンの例 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">トリガーボタンの例</h2>
+          <h2 className="mb-4 text-lg font-medium">トリガーボタンの例</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             確認ダイアログを開くボタン。破壊的操作は variant=&quot;destructive&quot;。
           </p>

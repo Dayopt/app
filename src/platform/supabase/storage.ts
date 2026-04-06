@@ -64,8 +64,8 @@ function getFileExtension(fileName: string): string {
 export async function uploadAvatar(file: File, userId: string): Promise<string> {
   const supabase = createClient();
 
-  // ファイルタイプバリデーション
-  if (!file.type.startsWith('image/')) {
+  // ファイルタイプバリデーション（許可リストで厳密に検証）
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
     throw new StorageError(
       '画像ファイルのみアップロード可能',
       STORAGE_ERROR_CODES.INVALID_FILE_TYPE,
@@ -126,12 +126,12 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
     );
   }
 
-  // 公開URLを取得
+  // 公開URLを取得（キャッシュバスター付き）
   const {
     data: { publicUrl },
   } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(fileName);
 
-  return publicUrl;
+  return `${publicUrl}?t=${Date.now()}`;
 }
 
 /**

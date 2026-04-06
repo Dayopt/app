@@ -52,7 +52,7 @@ export const Destructive: Story = {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <AlertTriangle className="text-destructive h-4 w-4" />
-          <span className="text-destructive text-sm font-bold">No recovery codes left</span>
+          <span className="text-destructive text-sm font-medium">No recovery codes left</span>
         </div>
         <p className="text-destructive text-xs">
           Generate new recovery codes to avoid being locked out.
@@ -81,7 +81,7 @@ export const AllPatterns: StoryObj = {
       <InfoBox variant="destructive">
         <div className="flex items-center gap-2">
           <AlertTriangle className="text-destructive h-4 w-4" />
-          <span className="text-destructive text-sm font-bold">Warning message</span>
+          <span className="text-destructive text-sm font-medium">Warning message</span>
         </div>
       </InfoBox>
     </div>

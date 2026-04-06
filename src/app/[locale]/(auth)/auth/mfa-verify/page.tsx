@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
+import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
@@ -91,7 +92,10 @@ export default function MFAVerifyPage() {
         throw new Error(verifyError.message);
       }
 
-      const next = searchParams?.get('next') || `/${locale}/calendar/day`;
+      const next = getSafeRedirectPath(
+        searchParams?.get('next') ?? null,
+        `/${locale}/calendar/day`,
+      );
       router.refresh();
       router.push(next);
     } catch (err) {
@@ -117,7 +121,10 @@ export default function MFAVerifyPage() {
       await vanillaTrpc.user.verifyRecoveryCode.mutate({ code: trimmed });
 
       toast.success(t('auth.mfaVerify.recoverySuccess'));
-      const next = searchParams?.get('next') || `/${locale}/calendar/day`;
+      const next = getSafeRedirectPath(
+        searchParams?.get('next') ?? null,
+        `/${locale}/calendar/day`,
+      );
       router.refresh();
       router.push(next);
     } catch (err) {

@@ -83,7 +83,7 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
     return (
       <div className="flex flex-col items-center gap-4 py-4 text-center">
         <span className="text-5xl">{CHRONOTYPE_EMOJI[resultType]}</span>
-        <h3 className="text-foreground text-xl font-bold">
+        <h3 className="text-foreground text-xl font-medium">
           {t('onboarding.chronotype.quizResult.title', {
             type: t(`onboarding.chronotype.${resultType}.name`),
           })}

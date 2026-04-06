@@ -105,6 +105,9 @@
         "fulfillmentTooltipHigh": "Fulfilling",
         "timeProgress": "Time progress"
       },
+      "markUnplanned": "Mark as unplanned",
+      "restorePlanned": "Restore plan",
+      "unplanned": "Unplanned",
       "note": {
         "label": "Note",
         "placeholder": "Add a note...",

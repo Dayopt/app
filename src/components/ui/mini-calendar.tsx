@@ -349,7 +349,7 @@ export const MiniCalendar = memo<MiniCalendarProps>(
                         // ホバー（今日以外）
                         !isToday && !isDisabled && 'hover:bg-state-hover',
                         // 今日: primary
-                        isToday && !isDisabled && 'bg-primary text-primary-foreground font-bold',
+                        isToday && !isDisabled && 'bg-primary text-primary-foreground font-medium',
                         // 選択中（今日以外）
                         isSelected && !isToday && !isDisabled && 'bg-state-hover text-foreground',
                       )}

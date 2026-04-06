@@ -70,6 +70,15 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       [onDateSelect],
     );
 
+    // 月変更時: ローカルviewMonth更新 + メインカレンダーも連動
+    const handleViewMonthChange = useCallback(
+      (newMonth: Date) => {
+        setViewMonth(newMonth);
+        onDateSelect?.(newMonth);
+      },
+      [onDateSelect],
+    );
+
     const handleTodayClick = useCallback(() => {
       onNavigate('today');
     }, [onNavigate]);
@@ -92,7 +101,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 <div className="relative flex size-5 flex-col">
                   <div className="h-1 w-full border-b-2 border-current" />
                   <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-bold">{new Date().getDate()}</span>
+                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
                   </div>
                 </div>
               </Button>
@@ -137,7 +146,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
                 viewMonth={viewMonth}
                 selectedDate={currentDate}
                 displayRange={displayRange}
-                onViewMonthChange={setViewMonth}
+                onViewMonthChange={handleViewMonthChange}
                 onDateSelect={handleDateSelect}
                 className="w-full"
               />
@@ -145,7 +154,7 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
               {/* 年セレクタ — 横スクロール */}
               <MobileYearStrip
                 viewMonth={viewMonth}
-                onViewMonthChange={setViewMonth}
+                onViewMonthChange={handleViewMonthChange}
                 className=""
               />
             </div>

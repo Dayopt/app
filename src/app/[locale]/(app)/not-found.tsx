@@ -28,7 +28,7 @@ export default function AppNotFound() {
         </div>
 
         <div>
-          <h1 className="mb-2 text-xl font-bold">{t('title')}</h1>
+          <h1 className="mb-2 text-xl font-medium">{t('title')}</h1>
           <p className="text-muted-foreground text-sm">{t('description')}</p>
         </div>
 

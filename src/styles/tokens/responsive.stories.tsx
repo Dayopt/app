@@ -15,13 +15,13 @@ type Story = StoryObj;
 export const Breakpoints: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">ブレークポイント</h1>
+      <h1 className="mb-2 text-2xl font-medium">ブレークポイント</h1>
       <p className="text-muted-foreground mb-8">Material Design 3 Window Size Classes に基づく</p>
 
       <div className="grid max-w-5xl gap-8">
         {/* ブレークポイント一覧 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">Tailwind v4 デフォルト</h2>
+          <h2 className="mb-4 text-lg font-medium">Tailwind v4 デフォルト</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -80,7 +80,7 @@ export const Breakpoints: Story = {
 
         {/* MEDIA_QUERIES */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">useMediaQuery用クエリ</h2>
+          <h2 className="mb-4 text-lg font-medium">useMediaQuery用クエリ</h2>
           <p className="text-muted-foreground mb-4 text-sm">src/lib/breakpoints.ts で定義</p>
           <div className="bg-container space-y-2 rounded-lg p-4 font-mono text-sm">
             <div>
@@ -104,7 +104,7 @@ export const Breakpoints: Story = {
 
         {/* 使用例 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">モバイルファースト</h2>
+          <h2 className="mb-4 text-lg font-medium">モバイルファースト</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// ✅ モバイルファースト（推奨）
 <div className="p-4 md:p-6 lg:p-8">
@@ -124,13 +124,13 @@ export const Breakpoints: Story = {
 export const LayoutArchitecture: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">レイアウト切替アーキテクチャ</h1>
+      <h1 className="mb-2 text-2xl font-medium">レイアウト切替アーキテクチャ</h1>
       <p className="text-muted-foreground mb-8">MEDIA_QUERIES.mobile（max-width: 767px）で二分岐</p>
 
       <div className="grid max-w-5xl gap-8">
         {/* レイアウト構造図 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">レイアウト構造</h2>
+          <h2 className="mb-4 text-lg font-medium">レイアウト構造</h2>
           <div className="grid gap-6 md:grid-cols-2">
             {/* MobileLayout */}
             <div>
@@ -159,7 +159,7 @@ export const LayoutArchitecture: Story = {
 
         {/* 判定フック */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">判定フック</h2>
+          <h2 className="mb-4 text-lg font-medium">判定フック</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -191,7 +191,7 @@ export const LayoutArchitecture: Story = {
 
         {/* BottomTabBar スペック */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">BottomTabBar</h2>
+          <h2 className="mb-4 text-lg font-medium">BottomTabBar</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             モバイルレイアウトでのみ表示。固定ボトムナビゲーション。
           </p>
@@ -238,7 +238,7 @@ export const LayoutArchitecture: Story = {
 
         {/* サイドバースペック */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">デスクトップサイドバー</h2>
+          <h2 className="mb-4 text-lg font-medium">デスクトップサイドバー</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -275,7 +275,7 @@ export const LayoutArchitecture: Story = {
 
         {/* 実装パターン */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">実装パターン</h2>
+          <h2 className="mb-4 text-lg font-medium">実装パターン</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// base-layout-content.tsx
 const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
@@ -295,7 +295,7 @@ const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 export const CalendarResponsive: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">カレンダーのレスポンシブ</h1>
+      <h1 className="mb-2 text-2xl font-medium">カレンダーのレスポンシブ</h1>
       <p className="text-muted-foreground mb-8">
         デバイスサイズに応じたビュー制限とグリッド密度の自動調整
       </p>
@@ -303,7 +303,7 @@ export const CalendarResponsive: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* ビュー表示ルール */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">ビュー表示ルール</h2>
+          <h2 className="mb-4 text-lg font-medium">ビュー表示ルール</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -356,7 +356,7 @@ export const CalendarResponsive: Story = {
 
         {/* モバイルビュー制限 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">モバイルビュー制限</h2>
+          <h2 className="mb-4 text-lg font-medium">モバイルビュー制限</h2>
           <div className="space-y-2">
             <Rule type="do">モバイルでは day ビューのみ許可</Rule>
             <Rule type="do">URL直アクセスで week が指定された場合、day に強制リダイレクト</Rule>
@@ -366,7 +366,7 @@ export const CalendarResponsive: Story = {
 
         {/* グリッド密度 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">グリッド密度（HOUR_HEIGHT_DENSITIES）</h2>
+          <h2 className="mb-4 text-lg font-medium">グリッド密度（HOUR_HEIGHT_DENSITIES）</h2>
           <p className="text-muted-foreground mb-4 text-sm">src/lib/calendar-constants.ts で定義</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -404,7 +404,7 @@ export const CalendarResponsive: Story = {
 
         {/* 密度比較（視覚） */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">密度比較（default）</h2>
+          <h2 className="mb-4 text-lg font-medium">密度比較（default）</h2>
           <div className="flex items-end gap-6">
             <DensityBar label="Mobile" height={48} />
             <DensityBar label="Tablet" height={60} />
@@ -414,7 +414,7 @@ export const CalendarResponsive: Story = {
 
         {/* 実装コード */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">実装コード</h2>
+          <h2 className="mb-4 text-lg font-medium">実装コード</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// CalendarViewRenderer.tsx
 const MOBILE_MAX_DAYS = 3;
@@ -440,7 +440,7 @@ case 'week':
 export const TouchTargets: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">タッチターゲット</h1>
+      <h1 className="mb-2 text-2xl font-medium">タッチターゲット</h1>
       <p className="text-muted-foreground mb-8">
         Material Design 3 / Apple HIG アクセシビリティ準拠
       </p>
@@ -448,7 +448,7 @@ export const TouchTargets: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* サイズ一覧 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">サイズ早見表</h2>
+          <h2 className="mb-4 text-lg font-medium">サイズ早見表</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -491,7 +491,7 @@ export const TouchTargets: Story = {
 
         {/* 視覚的サンプル */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">サイズ比較</h2>
+          <h2 className="mb-4 text-lg font-medium">サイズ比較</h2>
           <div className="flex items-end gap-4">
             <div className="flex flex-col items-center gap-2">
               <div className="border-destructive text-destructive flex size-6 items-center justify-center rounded-lg border text-xs">
@@ -528,7 +528,7 @@ export const TouchTargets: Story = {
 
         {/* レスポンシブタッチ */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">レスポンシブタッチターゲット</h2>
+          <h2 className="mb-4 text-lg font-medium">レスポンシブタッチターゲット</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// ✅ モバイルで大きく、デスクトップで通常サイズ
 <Button className="h-12 w-12 sm:h-10 sm:w-10">
@@ -543,7 +543,7 @@ export const TouchTargets: Story = {
 
         {/* ルール */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">ルール</h2>
+          <h2 className="mb-4 text-lg font-medium">ルール</h2>
           <div className="space-y-2">
             <Rule type="do">最小タッチターゲット 44x44px</Rule>
             <Rule type="do">推奨サイズ 48x48px</Rule>
@@ -560,13 +560,13 @@ export const TouchTargets: Story = {
 export const HoverMobile: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">ホバー依存UIのモバイル対応</h1>
+      <h1 className="mb-2 text-2xl font-medium">ホバー依存UIのモバイル対応</h1>
       <p className="text-muted-foreground mb-8">ホバーで表示されるUIはモバイルで常時表示に</p>
 
       <div className="grid max-w-5xl gap-8">
         {/* パターン */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">実装パターン</h2>
+          <h2 className="mb-4 text-lg font-medium">実装パターン</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// ✅ モバイルで常時表示、デスクトップでホバー時のみ
 <button className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
@@ -581,7 +581,7 @@ export const HoverMobile: Story = {
 
         {/* デモ */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">デモ</h2>
+          <h2 className="mb-4 text-lg font-medium">デモ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ウィンドウ幅を変えて確認（640px以下でボタン常時表示）
           </p>
@@ -598,7 +598,7 @@ export const HoverMobile: Story = {
 
         {/* 固定幅のレスポンシブ化 */}
         <section>
-          <h2 className="mb-4 text-lg font-bold">固定幅のレスポンシブ化</h2>
+          <h2 className="mb-4 text-lg font-medium">固定幅のレスポンシブ化</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-sm">
             {`// ✅ Tailwind標準クラス使用
 <div className="w-72 sm:w-80">        // 288px → 320px

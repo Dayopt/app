@@ -50,8 +50,9 @@ vi.mock('@/hooks/useMediaQuery', () => ({
 }));
 
 vi.mock('@/shell/stores/useShellStore', () => ({
-  useShellStore: (selector: (state: { openSettings: typeof mockOpenSettings }) => unknown) =>
-    selector({ openSettings: mockOpenSettings }),
+  useShellStore: (
+    selector: (state: { openSettings: typeof mockOpenSettings; openSheet: () => void }) => unknown,
+  ) => selector({ openSettings: mockOpenSettings, openSheet: vi.fn() }),
 }));
 
 vi.mock('@/shell/stores/useContactStore', () => ({
@@ -97,6 +98,16 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@/platform/trpc', () => ({
+  api: {
+    billing: {
+      getOverview: {
+        useQuery: () => ({ data: null, isLoading: false }),
+      },
+    },
+  },
 }));
 
 vi.mock('@/shell/components/AppHeader', () => ({

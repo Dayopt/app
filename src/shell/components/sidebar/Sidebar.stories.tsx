@@ -5,31 +5,9 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useShellStore } from '@/shell/stores/useShellStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
 import { Sidebar } from './Sidebar';
-
-// ── Mock: AuthStore にダミーユーザーを設定 ──
-
-function WithMockUser({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    // Storybook用のダミーユーザー（最小限のフィールドのみ）
-    const mockUser = {
-      id: 'story-user-id',
-      email: 'demo@dayopt.app',
-      user_metadata: { username: 'Demo User' },
-    };
-    useAuthStore.setState({
-      user: mockUser as never,
-      loading: false,
-    });
-    return () => {
-      useAuthStore.setState({ user: null, loading: true });
-    };
-  }, []);
-
-  return <>{children}</>;
-}
 
 // ── Mock: サイドバーコンテンツ（SidebarContent の簡易版） ──
 
@@ -71,15 +49,11 @@ const meta = {
   component: Sidebar,
   parameters: {
     layout: 'fullscreen',
+    storeMocks: {
+      useAuthStore: PRESET_AUTH.authenticated,
+    },
   },
   tags: ['autodocs'],
-  decorators: [
-    (Story) => (
-      <WithMockUser>
-        <Story />
-      </WithMockUser>
-    ),
-  ],
 } satisfies Meta<typeof Sidebar>;
 
 export default meta;

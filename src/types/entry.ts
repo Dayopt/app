@@ -11,9 +11,11 @@
 export type EntryState = 'upcoming' | 'active' | 'past';
 
 /**
- * エントリの起源（統一モデル: 常に planned）
+ * エントリの起源
+ * - planned: 計画済み（予定あり）
+ * - unplanned: 計画外（記録のみ）
  */
-export type EntryOrigin = 'planned';
+export type EntryOrigin = 'planned' | 'unplanned';
 
 /**
  * 充実度スコア（3段階）

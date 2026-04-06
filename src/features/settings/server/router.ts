@@ -98,7 +98,7 @@ function handleSettingsError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `Settings operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: '設定の操作に失敗した',
     cause: error,
   });
 }
@@ -129,10 +129,10 @@ export const userSettingsRouter = createTRPCRouter({
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 = no rows returned（設定がまだない場合）
-          logger.error('UserSettings fetch error:', error);
+          logger.error('UserSettings fetch error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch settings: ${error.message}`,
+            message: '設定の取得に失敗した',
           });
         }
 
@@ -291,10 +291,10 @@ export const userSettingsRouter = createTRPCRouter({
           .single();
 
         if (error) {
-          logger.error('UserSettings update error:', error);
+          logger.error('UserSettings update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update settings: ${error.message}`,
+            message: '設定の更新に失敗した',
           });
         }
 

@@ -47,13 +47,41 @@ const DialogContent = ({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // モバイルキーボード表示時にダイアログを上にシフト + 高さ制約
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    const el = contentRef.current;
+    if (!vv || !el) return;
+
+    const update = () => {
+      const kbHeight = Math.max(0, window.innerHeight - vv.height);
+      if (kbHeight > 0) {
+        el.style.top = `calc(50% - ${kbHeight / 2}px)`;
+        el.style.maxHeight = `${vv.height - 32}px`;
+      } else {
+        el.style.top = '';
+        el.style.maxHeight = '';
+      }
+    };
+
+    vv.addEventListener('resize', update);
+    update();
+
+    return () => {
+      vv.removeEventListener('resize', update);
+    };
+  }, []);
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
+        ref={contentRef}
         data-slot="dialog-content"
         className={cn(
-          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border p-6 duration-200',
+          'bg-card text-card-foreground z-overlay-modal border-border-subtle shadow-card fixed top-1/2 left-1/2 grid max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-2xl border p-6 transition-[top,max-height] duration-200',
           // 横幅: min-wで最小幅を保証、max-wでビューポートを超えないように制限
           // max-wはclassNameで上書き可能（Storybook対応のためmin-w追加）
           !className?.includes('max-w-')
@@ -103,7 +131,7 @@ const DialogFooter = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      className={cn('flex flex-row justify-end gap-2', className)}
       {...props}
     />
   );
@@ -116,7 +144,7 @@ const DialogTitle = ({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('text-lg leading-none font-bold', className)}
+      className={cn('text-lg leading-none font-medium', className)}
       {...props}
     />
   );

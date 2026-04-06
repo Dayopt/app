@@ -22,7 +22,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Selection Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Selection Patterns</h1>
       <p className="text-muted-foreground mb-8">
         選択UIのパターン。単一選択、複数選択、チップ選択の使い分け。
       </p>
@@ -30,34 +30,34 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
+          <h2 className="mb-4 text-lg font-medium">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">パターン</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">選択肢数</th>
+                  <th className="py-2 text-left font-medium">パターン</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">選択肢数</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Radio</td>
+                  <td className="py-2 font-medium">Radio</td>
                   <td className="py-2">排他的な単一選択</td>
                   <td className="py-2">2〜5個</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Select</td>
+                  <td className="py-2 font-medium">Select</td>
                   <td className="py-2">多数の選択肢から単一選択</td>
                   <td className="py-2">6個以上</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Checkbox</td>
+                  <td className="py-2 font-medium">Checkbox</td>
                   <td className="py-2">複数選択可能な項目</td>
                   <td className="py-2">任意</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">Chips</td>
+                  <td className="py-2 font-medium">Chips</td>
                   <td className="py-2">タグ選択、フィルター</td>
                   <td className="py-2">〜10個</td>
                 </tr>
@@ -68,14 +68,14 @@ export const Overview: Story = {
 
         {/* 単一選択（Radio） */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">単一選択（Radio）</h2>
+          <h2 className="mb-4 text-lg font-medium">単一選択（Radio）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             排他的な選択。常に1つだけ選択される。
           </p>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">縦並び（推奨）</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">縦並び（推奨）</h3>
               <RadioGroup defaultValue="option-1">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="option-1" id="option-1" />
@@ -93,7 +93,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 横並び（2〜3個の場合）
               </h3>
               <RadioGroup defaultValue="light" className="flex gap-4">
@@ -125,12 +125,12 @@ export const Overview: Story = {
 
         {/* 複数選択（Checkbox） */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">複数選択（Checkbox）</h2>
+          <h2 className="mb-4 text-lg font-medium">複数選択（Checkbox）</h2>
           <p className="text-muted-foreground mb-4 text-sm">複数選択可能。0個以上を選択できる。</p>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">基本</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">基本</h3>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox id="email" defaultChecked />
@@ -148,7 +148,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">説明付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">説明付き</h3>
               <div className="space-y-4">
                 <div className="flex items-start space-x-2">
                   <Checkbox id="weekly" className="mt-1" />
@@ -177,28 +177,28 @@ export const Overview: Story = {
 
         {/* チップ選択 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">チップ選択（Chips）</h2>
+          <h2 className="mb-4 text-lg font-medium">チップ選択（Chips）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タグやフィルターに最適。視覚的にコンパクト。
           </p>
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 フィルターチップ（単一選択）
               </h3>
               <SingleSelectChips />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 フィルターチップ（複数選択）
               </h3>
               <MultiSelectChips />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 削除可能なチップ（タグ）
               </h3>
               <RemovableChips />
@@ -224,7 +224,7 @@ export const Overview: Story = {
 
         {/* リスト選択 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">リスト選択</h2>
+          <h2 className="mb-4 text-lg font-medium">リスト選択</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             リスト内のアイテムを選択。一括操作に使用。
           </p>
@@ -248,10 +248,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>選択肢が少ない（〜5個）→ Radio/Checkbox</li>
                 <li>選択肢が多い（6個〜）→ Select</li>
@@ -260,7 +260,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>Radioで「未選択」を許可しない</li>
                 <li>10個以上のChipsを横並び</li>

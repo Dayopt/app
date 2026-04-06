@@ -21,7 +21,7 @@ export type ActivityTab = 'all' | 'reminders' | 'ai';
 /** タブ → 通知タイプのマッピング（null = フィルタなし） */
 export const ACTIVITY_TAB_TYPE_MAP: Record<ActivityTab, NotificationType[] | null> = {
   all: null,
-  reminders: ['reminder', 'overdue'],
+  reminders: ['reminder'],
   ai: ['ai_insight', 'weekly_report', 'burnout_warning', 'energy_insight'],
 } as const;
 

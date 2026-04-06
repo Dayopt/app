@@ -87,10 +87,10 @@ export const onboardingRouter = createTRPCRouter({
         .eq('id', ctx.userId);
 
       if (profileError) {
-        logger.error('Onboarding complete profile error:', profileError);
+        logger.error('Onboarding complete profile error', { error: profileError });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to update profile: ${profileError.message}`,
+          message: 'プロフィールの更新に失敗した',
         });
       }
 
@@ -139,10 +139,10 @@ export const onboardingRouter = createTRPCRouter({
         .eq('id', ctx.userId);
 
       if (error) {
-        logger.error('Onboarding reset error:', error);
+        logger.error('Onboarding reset error', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to reset onboarding: ${error.message}`,
+          message: 'オンボーディングのリセットに失敗した',
         });
       }
 

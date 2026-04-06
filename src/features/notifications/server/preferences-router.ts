@@ -20,7 +20,7 @@ function handlePreferencesError(operation: string, error: unknown): never {
   });
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: `Notification preferences operation failed (${operation}): ${error instanceof Error ? error.message : String(error)}`,
+    message: '通知設定の操作に失敗した',
     cause: error,
   });
 }
@@ -52,10 +52,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
           .single();
 
         if (error && error.code !== 'PGRST116') {
-          logger.error('NotificationPreferences fetch error:', error);
+          logger.error('NotificationPreferences fetch error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to fetch notification preferences: ${error.message}`,
+            message: '通知設定の取得に失敗した',
           });
         }
 
@@ -118,10 +118,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
         );
 
         if (error) {
-          logger.error('NotificationPreferences update error:', error);
+          logger.error('NotificationPreferences update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update notification preferences: ${error.message}`,
+            message: '通知設定の更新に失敗した',
           });
         }
 
@@ -159,10 +159,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
         );
 
         if (error) {
-          logger.error('NotificationPreferences update error:', error);
+          logger.error('NotificationPreferences update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update notification preferences: ${error.message}`,
+            message: '通知設定の更新に失敗した',
           });
         }
 
@@ -200,10 +200,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
         );
 
         if (error) {
-          logger.error('NotificationPreferences update error:', error);
+          logger.error('NotificationPreferences update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update notification preferences: ${error.message}`,
+            message: '通知設定の更新に失敗した',
           });
         }
 
@@ -253,10 +253,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
           .upsert(updateData as never, { onConflict: 'user_id' });
 
         if (error) {
-          logger.error('NotificationPreferences type update error:', error);
+          logger.error('NotificationPreferences type update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update notification type preferences: ${error.message}`,
+            message: '通知設定の更新に失敗した',
           });
         }
 
@@ -294,10 +294,10 @@ export const notificationPreferencesRouter = createTRPCRouter({
         );
 
         if (error) {
-          logger.error('NotificationPreferences update error:', error);
+          logger.error('NotificationPreferences reminder update error', { error });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: `Failed to update reminder settings: ${error.message}`,
+            message: '通知設定の更新に失敗した',
           });
         }
 

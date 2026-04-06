@@ -7,13 +7,6 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { TRPCClientError, type TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
-
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import type {
   BillingInfo,
@@ -100,93 +93,21 @@ const MOCK_INVOICES_JPY: InvoiceItem[] = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// tRPC Mock Helpers
+// Helpers
 // ─────────────────────────────────────────────────────────
 
-interface MockOverviewData {
-  billingInfo: BillingInfo;
-  paymentMethod?: PaymentMethod | null;
-  invoices?: InvoiceItem[];
-}
-
-/** billing.getOverview に固定データを返す tRPC リンクを生成 */
-function createBillingMockLink(data: MockOverviewData): TRPCLink<AppRouter> {
-  return () => {
-    return ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const overview: BillingOverview = {
-            billingInfo: data.billingInfo,
-            paymentMethod: data.paymentMethod ?? null,
-            invoices: data.invoices ?? [],
-          };
-          const responseMap: Record<string, unknown> = {
-            'billing.getOverview': overview,
-            'billing.getInfo': data.billingInfo,
-            'billing.getPaymentMethod': data.paymentMethod ?? null,
-            'billing.getInvoices': data.invoices ?? [],
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        observer.complete();
-      });
+function makeBillingMocks(
+  billingInfo: BillingInfo,
+  paymentMethod: PaymentMethod | null = null,
+  invoices: InvoiceItem[] = [],
+) {
+  const overview: BillingOverview = { billingInfo, paymentMethod, invoices };
+  return {
+    'billing.getOverview': overview,
+    'billing.getInfo': billingInfo,
+    'billing.getPaymentMethod': paymentMethod,
+    'billing.getInvoices': invoices,
   };
-}
-
-/** ローディング状態を再現する（レスポンスを返さない）tRPC リンク */
-function createPendingLink(): TRPCLink<AppRouter> {
-  return () => {
-    return () =>
-      observable(() => {
-        // observer.next / observer.complete を呼ばないことでローディングを維持
-      });
-  };
-}
-
-/** エラー状態を再現する tRPC リンク */
-function createErrorLink(): TRPCLink<AppRouter> {
-  return () => {
-    return ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          observer.error(TRPCClientError.from(new Error('Failed to fetch billing information')));
-        }
-        observer.complete();
-      });
-  };
-}
-
-interface BillingMockProviderProps {
-  children: ReactNode;
-  mockData?: MockOverviewData;
-  pending?: boolean;
-  error?: boolean;
-}
-
-function BillingMockProvider({ children, mockData, pending, error }: BillingMockProviderProps) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-
-  let link: TRPCLink<AppRouter>;
-  if (pending) {
-    link = createPendingLink();
-  } else if (error) {
-    link = createErrorLink();
-  } else {
-    link = createBillingMockLink(mockData ?? { billingInfo: FREE_BILLING_INFO });
-  }
-  const trpcClient = api.createClient({ links: [link] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
 }
 
 // ─────────────────────────────────────────────────────────
@@ -218,103 +139,55 @@ type Story = StoryObj<typeof meta>;
 
 /** 無料プランユーザー（デフォルト状態） */
 export const FreePlan: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider mockData={{ billingInfo: FREE_BILLING_INFO }}>
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(FREE_BILLING_INFO),
+  },
 };
 
 /** Proプラン（active）ユーザー。支払い方法・請求履歴・キャンセルセクション表示 */
 export const ProPlan: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider
-        mockData={{
-          billingInfo: PRO_BILLING_INFO,
-          paymentMethod: MOCK_PAYMENT_METHOD,
-          invoices: MOCK_INVOICES,
-        }}
-      >
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(PRO_BILLING_INFO, MOCK_PAYMENT_METHOD, MOCK_INVOICES),
+  },
 };
 
 /** トライアル中ユーザー（trialing）。カード情報・請求履歴なし */
 export const TrialingPlan: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider
-        mockData={{
-          billingInfo: TRIALING_BILLING_INFO,
-          paymentMethod: null,
-          invoices: [],
-        }}
-      >
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(TRIALING_BILLING_INFO, null, []),
+  },
 };
 
 /** データ取得中（ローディング状態） */
 export const Loading: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider pending>
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcPending: true,
+  },
 };
 
 /** エラー状態（リトライボタン表示） */
 export const ErrorState: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider error>
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcError: {
+      path: 'billing.getOverview',
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to fetch billing information',
+    },
+  },
 };
 
 /** Proプランだが請求書がまだない状態 */
 export const ProNoInvoices: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider
-        mockData={{
-          billingInfo: PRO_BILLING_INFO,
-          paymentMethod: MOCK_PAYMENT_METHOD,
-          invoices: [],
-        }}
-      >
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(PRO_BILLING_INFO, MOCK_PAYMENT_METHOD, []),
+  },
 };
 
 /** 日本円（JPY）での請求履歴 */
 export const JpyCurrency: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider
-        mockData={{
-          billingInfo: PRO_BILLING_INFO,
-          paymentMethod: MOCK_PAYMENT_METHOD,
-          invoices: MOCK_INVOICES_JPY,
-        }}
-      >
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(PRO_BILLING_INFO, MOCK_PAYMENT_METHOD, MOCK_INVOICES_JPY),
+  },
 };
 
 /**
@@ -326,11 +199,7 @@ export const JpyCurrency: Story = {
  * 自動的に disabled 状態を表示する。
  */
 export const StripeNotConfigured: Story = {
-  decorators: [
-    (Story) => (
-      <BillingMockProvider mockData={{ billingInfo: FREE_BILLING_INFO }}>
-        <Story />
-      </BillingMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: makeBillingMocks(FREE_BILLING_INFO),
+  },
 };

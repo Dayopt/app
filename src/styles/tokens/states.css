@@ -34,24 +34,12 @@
   --color-secondary-hover: oklch(from var(--secondary) l c h / 80%);
 }
 
-/* 予定 vs 記録の差分: 斜線パターン（未実行区間） */
+/* 予定 vs 記録の差分: ゴーストオーバーレイ（未実行区間） */
 .pattern-hatch {
-  background: repeating-linear-gradient(
-    -45deg,
-    oklch(from var(--foreground) l c h / 0.07) 0px,
-    oklch(from var(--foreground) l c h / 0.07) 2px,
-    transparent 2px,
-    transparent 6px
-  );
+  background: oklch(from var(--background) l c h / 0.6);
 }
 
-/* 予定 vs 記録の差分: 斜線パターン（超過区間） */
+/* 予定 vs 記録の差分: ゴーストオーバーレイ（超過区間 — 外枠のみ、中は透明） */
 .pattern-overtime {
-  background: repeating-linear-gradient(
-    45deg,
-    oklch(from var(--warning) l c h / 0.08) 0px,
-    oklch(from var(--warning) l c h / 0.08) 2px,
-    transparent 2px,
-    transparent 6px
-  );
+  background: transparent;
 }

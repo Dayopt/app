@@ -191,7 +191,7 @@ export function ValueRankingSettings() {
   if (view === 'editing') {
     return (
       <SectionCard title={t('settings.values.ranking.title')}>
-        <p className="text-muted-foreground mb-4 text-sm">
+        <p className="text-muted-foreground mb-4 text-base md:text-sm">
           {t('settings.values.ranking.description')}
         </p>
 
@@ -222,7 +222,7 @@ export function ValueRankingSettings() {
     return (
       <SectionCard title={t('settings.values.ranking.title')}>
         <div className="space-y-4 py-2">
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-base md:text-sm">
             {t('settings.values.ranking.notSelected')}
           </p>
           <Button variant="outline" size="sm" onClick={handleStartEditing}>
@@ -236,14 +236,16 @@ export function ValueRankingSettings() {
   // Idle state (result display)
   return (
     <SectionCard title={t('settings.values.ranking.title')}>
-      <p className="text-muted-foreground mb-4 text-sm">
+      <p className="text-muted-foreground mb-4 text-base md:text-sm">
         {t('settings.values.ranking.idleDescription')}
       </p>
       <div className="space-y-1">
         {autoSave.values.rankedValues.map((keyword, index) => (
           <div key={keyword} className="flex items-center gap-2 py-2">
-            <span className="text-muted-foreground w-5 text-right text-sm">{index + 1}.</span>
-            <span className="text-foreground text-sm">
+            <span className="text-muted-foreground w-5 text-right text-base md:text-sm">
+              {index + 1}.
+            </span>
+            <span className="text-foreground text-base md:text-sm">
               {t(`settings.values.keywords.${keyword}`)}
             </span>
           </div>
@@ -413,8 +415,8 @@ function SortableRankItem({ id, rank, label }: SortableRankItemProps) {
         isDragging && 'opacity-40',
       )}
     >
-      <span className="text-muted-foreground w-5 text-right text-sm">{rank}</span>
-      <span className="text-foreground flex-1 text-sm">{label}</span>
+      <span className="text-muted-foreground w-5 text-right text-base md:text-sm">{rank}</span>
+      <span className="text-foreground flex-1 text-base md:text-sm">{label}</span>
       <button
         ref={setDraggableNodeRef}
         type="button"
@@ -436,7 +438,7 @@ interface RankItemOverlayProps {
 function RankItemOverlay({ label }: RankItemOverlayProps) {
   return (
     <div className="border-primary bg-background flex items-center gap-2 rounded-lg border-2 px-4 py-2 shadow-sm">
-      <span className="text-foreground flex-1 text-sm">{label}</span>
+      <span className="text-foreground flex-1 text-base md:text-sm">{label}</span>
       <GripVertical className="text-muted-foreground size-4" />
     </div>
   );

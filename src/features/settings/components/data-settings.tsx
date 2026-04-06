@@ -151,7 +151,7 @@ function ExportSection() {
 
   return (
     <SectionCard title={t('title')}>
-      <p className="text-muted-foreground mb-2 text-sm">{t('description')}</p>
+      <p className="text-muted-foreground mb-2 text-base md:text-sm">{t('description')}</p>
       <LabeledRow label={t('format')}>
         <Select value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
           <SelectTrigger variant="ghost">
@@ -213,11 +213,11 @@ function RestoreSection() {
 
   return (
     <SectionCard title={t('title')}>
-      <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
+      <p className="text-muted-foreground mb-4 text-base md:text-sm">{t('description')}</p>
 
       <div className="border-border flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8">
         <Upload className="text-muted-foreground mb-2 h-8 w-8" />
-        <p className="text-muted-foreground text-sm">{t('dropzone')}</p>
+        <p className="text-muted-foreground text-base md:text-sm">{t('dropzone')}</p>
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" disabled />
         <Button
           variant="ghost"
@@ -267,11 +267,11 @@ function McpApiSection() {
   if (!isPro) {
     return (
       <SectionCard title={t('title')}>
-        <p className="text-muted-foreground mb-4 text-sm">{t('description')}</p>
+        <p className="text-muted-foreground mb-4 text-base md:text-sm">{t('description')}</p>
         <InfoBox>
           <div className="flex items-center gap-2">
             <Crown className="text-muted-foreground h-5 w-5 shrink-0" />
-            <p className="text-foreground flex-1 text-sm">{t('proRequired')}</p>
+            <p className="text-foreground flex-1 text-base md:text-sm">{t('proRequired')}</p>
             <Button variant="outline" size="sm" disabled>
               {t('upgrade')}
             </Button>
@@ -283,7 +283,7 @@ function McpApiSection() {
 
   return (
     <SectionCard title={t('title')}>
-      <p className="text-muted-foreground mb-2 text-sm">{t('description')}</p>
+      <p className="text-muted-foreground mb-2 text-base md:text-sm">{t('description')}</p>
       {/* Server URL */}
       <LabeledRow label={t('serverUrl')}>
         <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ function McpApiSection() {
 
       {/* Connection guide */}
       <InfoBox className="mt-4 p-4">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-base md:text-sm">
           {t('connectionGuide')}
           <a
             href="#"
@@ -429,7 +429,9 @@ function DeletionSection() {
         loadingLabel={t('deleting')}
       >
         <div className="space-y-2">
-          <p className="text-muted-foreground text-sm">{t('typeToConfirm', { keyword })}</p>
+          <p className="text-muted-foreground text-base md:text-sm">
+            {t('typeToConfirm', { keyword })}
+          </p>
           <Input
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}

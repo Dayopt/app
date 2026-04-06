@@ -176,7 +176,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
         >
           <ChevronLeft className="text-muted-foreground size-5" />
           {parentTag && <TagIcon icon={parentTag.icon} color={parentTag.color} size="sm" />}
-          <span className="text-foreground font-bold">{prefix}</span>
+          <span className="text-foreground font-medium">{prefix}</span>
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
@@ -311,7 +311,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
       >
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">{t('calendar.filter.mergeTag.title')}</h2>
+            <h2 className="text-lg font-medium">{t('calendar.filter.mergeTag.title')}</h2>
             <button
               type="button"
               onClick={onClose}

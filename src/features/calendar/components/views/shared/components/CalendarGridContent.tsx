@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 
+import { useTranslations } from 'next-intl';
+
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EntryCard } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -46,7 +49,7 @@ export interface CalendarGridContentProps {
   onEventUpdate?:
     | ((
         eventId: string,
-        updates: { startTime: Date; endTime: Date },
+        updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
       ) => Promise<void | { skipToast: true }> | void)
     | undefined;
   /** 時間範囲選択 */
@@ -79,6 +82,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   dataTourTarget,
   className,
 }: CalendarGridContentProps) {
+  const t = useTranslations();
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -87,6 +91,34 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
+
+  // 記録付きエントリのドラッグ確認ダイアログ（予定だけ移動、記録はそのまま）
+  const [pendingDrop, setPendingDrop] = useState<{
+    entryId: string;
+    updates: { startTime: Date; endTime: Date };
+  } | null>(null);
+
+  const wrappedOnEventUpdate = useCallback(
+    (eventId: string, updates: { startTime: Date; endTime: Date; resetActualTime?: boolean }) => {
+      const entry = entries.find((e) => e.id === eventId);
+      if (entry && (entry.actualStartDate || entry.actualEndDate)) {
+        setPendingDrop({ entryId: eventId, updates });
+        return;
+      }
+      return onEventUpdate?.(eventId, updates);
+    },
+    [entries, onEventUpdate],
+  );
+
+  const handleConfirmDrop = useCallback(() => {
+    if (!pendingDrop) return;
+    onEventUpdate?.(pendingDrop.entryId, { ...pendingDrop.updates, resetActualTime: true });
+    setPendingDrop(null);
+  }, [pendingDrop, onEventUpdate]);
+
+  const handleCancelDrop = useCallback(() => {
+    setPendingDrop(null);
+  }, []);
 
   // 自カラムに関係するドラッグ状態のみ購読（プリミティブ値で参照安定性を確保）
   const globalDraggedEntryId = useCalendarDragStore((s) =>
@@ -106,7 +138,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     ...(displayDates ? { displayDates } : {}),
     viewMode,
     hourHeight: HOUR_HEIGHT,
-    ...(onEventUpdate ? { onEventUpdate } : {}),
+    ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
     ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
   });
@@ -121,9 +153,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return null;
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
+      // ゴーストは予定部分のみ表示（実績時間を除外してオーバーレイを抑制）
+      const ghostEntry = { ...entry, actualStartDate: null, actualEndDate: null };
       return (
         <EntryCard
-          entry={entry}
+          entry={ghostEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
           isMobile={isMobile}
@@ -214,6 +248,17 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
 
       {/* React Portal ゴースト（DOM clone廃止） */}
       <GhostRenderer state={state} renderGhost={renderGhost} />
+
+      {/* 記録付きエントリのドラッグ確認ダイアログ */}
+      <ConfirmDialog
+        open={pendingDrop !== null}
+        onClose={handleCancelDrop}
+        onConfirm={handleConfirmDrop}
+        title={t('calendar.event.moveWithRecord.title')}
+        description={t('calendar.event.moveWithRecord.description')}
+        variant="warning"
+        confirmLabel={t('calendar.event.moveWithRecord.confirm')}
+      />
     </div>
   );
 });

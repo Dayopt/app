@@ -156,7 +156,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         className="hover:bg-state-hover flex min-h-11 items-center gap-2 px-4 py-2 transition-colors"
       >
         <ChevronLeft className="text-muted-foreground size-5" />
-        <span className="text-foreground font-bold">新しいタグ</span>
+        <span className="text-foreground font-medium">新しいタグ</span>
       </button>
 
       <div className="flex flex-col gap-4 px-4 py-2">
@@ -367,7 +367,7 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
         >
           <ChevronLeft className="text-muted-foreground size-5" />
           <TagIcon icon={parentTag?.icon ?? null} color={parentColor} size="sm" />
-          <span className="text-foreground font-bold">{view.prefix}</span>
+          <span className="text-foreground font-medium">{view.prefix}</span>
         </button>
 
         {/* 親タグ自体 + 子タググリッド */}
@@ -437,7 +437,7 @@ function SelectorFrame({
   return (
     <div className="bg-card shadow-card w-[360px] overflow-hidden rounded-2xl">
       <div className="px-4 pt-4 pb-2">
-        <h2 className="text-lg font-bold">{title ?? 'タグを選択'}</h2>
+        <h2 className="text-lg font-medium">{title ?? 'タグを選択'}</h2>
         {timeLabel && <p className="text-muted-foreground text-sm">{timeLabel}</p>}
       </div>
       {children}
@@ -502,7 +502,7 @@ export const GridWithChildren: Story = {
           <div className="flex min-h-11 items-center gap-2 px-4 py-2">
             <ChevronLeft className="text-muted-foreground size-5" />
             <TagIcon icon="briefcase" color="blue" size="sm" />
-            <span className="text-foreground font-bold">仕事</span>
+            <span className="text-foreground font-medium">仕事</span>
           </div>
 
           {/* 親タグ自体 + 子タグ grid */}
@@ -611,7 +611,7 @@ export const MobileDrawer: Story = {
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="max-h-[80vh]">
           <div className="flex flex-col items-center px-4 pt-4 pb-2">
-            <DrawerTitle className="text-lg font-bold">タグを選択</DrawerTitle>
+            <DrawerTitle className="text-lg font-medium">タグを選択</DrawerTitle>
             <p className="text-muted-foreground text-sm">3/30 (日) 14:00 – 15:00</p>
           </div>
           <TagGridSelector
@@ -659,7 +659,7 @@ export const AllPatterns: Story = {
               <div className="flex min-h-11 items-center gap-2 px-4 py-2">
                 <ChevronLeft className="text-muted-foreground size-5" />
                 <TagIcon icon="briefcase" color="blue" size="sm" />
-                <span className="text-foreground font-bold">仕事</span>
+                <span className="text-foreground font-medium">仕事</span>
               </div>
               <div className="grid grid-cols-4 gap-2 px-4 py-2">
                 <TagGridCell

@@ -23,7 +23,7 @@ import { NowBadge } from '../grid/CurrentTimeLine/NowBadge';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
 import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
-import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
+import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
 import { useSleepHoursLayout } from '../hooks/useSleepHoursLayout';
 import { TimezoneOffset } from './TimezoneOffset';
@@ -70,7 +70,7 @@ export const CalendarDateHeader = ({
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
 
   return (
-    <div className="flex h-12 shrink-0 flex-col justify-end">
+    <div className="flex h-8 shrink-0 flex-col justify-end md:h-12">
       <div className="flex items-end">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (
@@ -114,6 +114,8 @@ export const ScrollableCalendarLayout = ({
   enableKeyboardNavigation = true,
   onScrollPositionChange,
 }: ScrollableCalendarLayoutProps) => {
+  // hourHeight store をウィンドウサイズと同期（カレンダー内で1箇所のみ）
+  useHourHeightSync();
   const HOUR_HEIGHT = useResponsiveHourHeight();
 
   // グリッドレイアウト計算（フック利用）
@@ -214,7 +216,7 @@ export const ScrollableCalendarLayout = ({
               {/* 現在時刻ラベル（Apple Calendar風） */}
               {shouldShowCurrentTimeLine && hasToday && (
                 <div
-                  className="bg-now-indicator text-now-indicator-foreground pointer-events-none absolute right-1 z-20 rounded-lg px-2 py-1 text-xs font-bold tabular-nums"
+                  className="bg-now-indicator text-now-indicator-foreground pointer-events-none absolute right-1 z-20 rounded-lg px-1 py-1 text-xs font-medium tabular-nums"
                   style={{
                     top: `${currentTimePosition}px`,
                     transform: 'translateY(-50%)',
@@ -275,6 +277,7 @@ export const ScrollableCalendarLayout = ({
                   style={{
                     top: `${currentTimePosition}px`,
                     left: todayColumnPosition.left,
+                    width: todayColumnPosition.width,
                     zIndex: Z_INDEX.CURRENT_TIME,
                   }}
                 >

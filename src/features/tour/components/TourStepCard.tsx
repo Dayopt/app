@@ -34,7 +34,7 @@ export function TourStepCard({
         <p className="text-muted-foreground text-xs">
           {t('tour.step', { current: currentStep, total: totalSteps })}
         </p>
-        <h3 className="text-foreground font-bold">{t(titleKey)}</h3>
+        <h3 className="text-foreground font-medium">{t(titleKey)}</h3>
         <p className="text-muted-foreground text-sm">{t(descriptionKey)}</p>
       </div>
       <div className="flex items-center justify-between">

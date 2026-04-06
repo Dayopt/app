@@ -35,8 +35,8 @@ export function ProgressView({ className }: StatsViewProps) {
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <EmptyState
           icon={TrendingUp}
-          title={t('emptyTitle')}
-          description={t('emptyDescription')}
+          title={t('progress.emptyTitle')}
+          description={t('progress.emptyDescription')}
           size="sm"
           centered
         />

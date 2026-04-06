@@ -52,8 +52,15 @@ export const WeekGrid = ({
 
   // onEventUpdate を CalendarGridContent が期待する (eventId, { startTime, endTime }) 型に変換
   const handleEventUpdate = React.useCallback(
-    async (eventId: string, updates: { startTime: Date; endTime: Date }) => {
+    async (
+      eventId: string,
+      updates: { startTime: Date; endTime: Date; resetActualTime?: boolean },
+    ) => {
       if (!onEventUpdate) return;
+      // resetActualTime フラグがある場合は (id, updates) 形式で直接渡す
+      if (updates.resetActualTime) {
+        return onEventUpdate(eventId, updates);
+      }
       const entry = events.find((e) => e.id === eventId);
       if (!entry) return;
       // 返り値を伝播（繰り返しエントリ編集時の skipToast フラグ用）

@@ -105,6 +105,9 @@
         "fulfillmentTooltipHigh": "充実した",
         "timeProgress": "時間達成率"
       },
+      "markUnplanned": "予定外にする",
+      "restorePlanned": "予定に戻す",
+      "unplanned": "予定外",
       "note": {
         "label": "メモ",
         "placeholder": "例: 集中できた",

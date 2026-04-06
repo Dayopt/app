@@ -40,7 +40,7 @@ export const Overview: Story = {
   },
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Search Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Search Patterns</h1>
       <p className="text-muted-foreground mb-8">
         検索UIのパターン。基本検索、オートコンプリート、コマンドパレットの使い分け。
       </p>
@@ -48,29 +48,29 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
+          <h2 className="mb-4 text-lg font-medium">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">パターン</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">トリガー</th>
+                  <th className="py-2 text-left font-medium">パターン</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">トリガー</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">基本検索</td>
+                  <td className="py-2 font-medium">基本検索</td>
                   <td className="py-2">シンプルなテキスト検索</td>
                   <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">グローバル検索</td>
+                  <td className="py-2 font-medium">グローバル検索</td>
                   <td className="py-2">タグ一覧 + ブロック検索</td>
                   <td className="py-2">⌘K</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">フィルター検索</td>
+                  <td className="py-2 font-medium">フィルター検索</td>
                   <td className="py-2">条件を絞り込んで検索</td>
                   <td className="py-2">常時表示</td>
                 </tr>
@@ -81,14 +81,14 @@ export const Overview: Story = {
 
         {/* 基本検索 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">基本検索</h2>
+          <h2 className="mb-4 text-lg font-medium">基本検索</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             シンプルな検索入力。アイコン付きで視認性を確保。
           </p>
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">アイコン付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">アイコン付き</h3>
               <div className="relative max-w-md">
                 <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input placeholder="検索..." className="pl-8" />
@@ -96,12 +96,12 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">クリアボタン付き</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">クリアボタン付き</h3>
               <SearchWithClear />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">ショートカット表示</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">ショートカット表示</h3>
               <div className="relative max-w-md">
                 <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input placeholder="検索..." className="pr-16 pl-8" />
@@ -122,19 +122,19 @@ export const Overview: Story = {
 
         {/* グローバル検索 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">グローバル検索（⌘K）</h2>
+          <h2 className="mb-4 text-lg font-medium">グローバル検索（⌘K）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             タグとブロックを横断検索。空状態ではタグ一覧、入力時はタグ名+メモで検索。
           </p>
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">空状態（タグ一覧）</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">空状態（タグ一覧）</h3>
               <GlobalSearchEmpty />
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 検索結果（タグ + ブロック）
               </h3>
               <GlobalSearchWithResults />
@@ -142,7 +142,7 @@ export const Overview: Story = {
           </div>
 
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h3 className="mb-2 text-sm font-bold">動作ルール</h3>
+            <h3 className="mb-2 text-sm font-medium">動作ルール</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>空状態 → タグ一覧（TagIcon + タグ名）</li>
               <li>入力時 → タグ名マッチ + ブロックのメモ検索</li>
@@ -154,7 +154,7 @@ export const Overview: Story = {
 
         {/* フィルター検索 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">フィルター検索</h2>
+          <h2 className="mb-4 text-lg font-medium">フィルター検索</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             条件を絞り込んで検索。チップでフィルターを表示。
           </p>
@@ -177,14 +177,14 @@ export const Overview: Story = {
 
         {/* 検索結果 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">検索結果</h2>
+          <h2 className="mb-4 text-lg font-medium">検索結果</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             検索結果の表示パターン。ハイライト、件数、空状態。
           </p>
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">
                 結果あり（ハイライト）
               </h3>
               <div className="border-border divide-border divide-y rounded-lg border">
@@ -223,7 +223,7 @@ export const Overview: Story = {
             </div>
 
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">結果なし</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">結果なし</h3>
               <div className="border-border rounded-lg border p-8 text-center">
                 <Search className="text-muted-foreground mx-auto size-8" />
                 <p className="mt-2">結果が見つかりません</p>
@@ -235,10 +235,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>検索アイコンを左に配置</li>
                 <li>空状態でタグ一覧を即表示</li>
@@ -247,7 +247,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>コマンドパレット（操作がほぼない）</li>
                 <li>検索履歴（タグ履歴と重複）</li>

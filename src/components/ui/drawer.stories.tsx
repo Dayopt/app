@@ -52,10 +52,10 @@ export const AllPatterns: Story = {
               </div>
             </div>
             <DrawerFooter>
-              <Button>保存</Button>
               <DrawerClose asChild>
                 <Button variant="outline">キャンセル</Button>
               </DrawerClose>
+              <Button>保存</Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
@@ -133,7 +133,7 @@ export const AllPatterns: Story = {
           <DrawerContent className="flex flex-col gap-0 overflow-hidden p-0">
             <DrawerTitle className="sr-only">詳細パネル</DrawerTitle>
             <div className="flex-1 overflow-y-auto p-4">
-              <h3 className="mb-4 font-bold">プランの詳細</h3>
+              <h3 className="mb-4 font-medium">プランの詳細</h3>
               <div className="space-y-4">
                 <div className="bg-muted h-20 rounded-lg" />
                 <div className="bg-muted h-20 rounded-lg" />

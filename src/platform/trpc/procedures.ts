@@ -3,7 +3,7 @@
  * プロシージャ定義とコンテキスト管理
  */
 
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 
 import * as Sentry from '@sentry/nextjs';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -235,9 +235,14 @@ const t = initTRPC
     errorFormatter({ shape, error }) {
       const isProduction = process.env.NODE_ENV === 'production';
 
-      // エラーの詳細情報をプロダクションでは非表示
+      // プロダクションではサーバー起因エラーの詳細を隠す（DB情報漏洩防止）
+      const SERVER_ERROR_CODES = new Set([
+        'INTERNAL_SERVER_ERROR',
+        'TIMEOUT',
+        'CLIENT_CLOSED_REQUEST',
+      ]);
       const message =
-        isProduction && error.code === 'INTERNAL_SERVER_ERROR'
+        isProduction && SERVER_ERROR_CODES.has(error.code)
           ? 'サーバーエラーが発生した'
           : shape.message;
 
@@ -263,6 +268,11 @@ export const publicProcedure = t.procedure.meta({ auth: 'public' });
  *
  * Upstash 有効時は Redis ベース（分散環境対応）、
  * 未設定時はインメモリフォールバック。
+ *
+ * ⚠️ インメモリフォールバックの制約:
+ * Vercel Serverless 環境ではインスタンスごとに状態が分離され、
+ * コールドスタートでリセットされるため実質的に制限が効かない。
+ * 本番環境では必ず Upstash Redis を設定すること。
  */
 const USER_RATE_LIMIT = 100;
 const USER_RATE_WINDOW_MS = 60 * 1000;
@@ -436,17 +446,19 @@ export const createCallerFactory = t.createCallerFactory;
  */
 
 async function checkAdminPermission(_userId: string): Promise<boolean> {
-  // 実際の管理者権限確認ロジックを実装
-  // データベースからユーザーの権限を確認
-  return false; // 仮実装
+  // TODO: 管理機能が必要になった時点で実装する
+  // 候補: ADMIN_USER_IDS 環境変数によるホワイトリスト or profiles.is_admin カラム
+  // 現在 adminProcedure を使用するルーターは存在しない（deny-by-default で安全）
+  return false;
 }
 
 /**
  * タイミング攻撃耐性のある文字列比較
  */
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const hashA = createHash('sha256').update(a).digest();
+  const hashB = createHash('sha256').update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 }
 
 /**

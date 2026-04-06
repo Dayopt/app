@@ -73,7 +73,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
             <div className="border-destructive max-w-md rounded-2xl border p-6">
               <div className="text-center">
                 <div className="mb-4 text-6xl">📅</div>
-                <h2 className="text-destructive mb-2 text-2xl font-bold tracking-tight">
+                <h2 className="text-destructive mb-2 text-2xl font-medium tracking-tight">
                   {translations.errorTitle}
                 </h2>
                 <p className="text-muted-foreground mb-4 text-sm">{translations.errorMessage}</p>
