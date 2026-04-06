@@ -11,7 +11,16 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { BarChart3, ChevronDown, MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react';
+import {
+  BarChart3,
+  CalendarOff,
+  ChevronDown,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/components/ui/colon-tag-label';
@@ -48,6 +57,12 @@ interface TagRowProps {
   onViewStats?: (() => void) | undefined;
   /** 削除ボタンのコールバック */
   onDelete?: (() => void) | undefined;
+  /** 計画外かどうか */
+  isUnplanned?: boolean | undefined;
+  /** 計画外にするコールバック */
+  onMarkUnplanned?: (() => void) | undefined;
+  /** 計画に戻すコールバック */
+  onRestorePlanned?: (() => void) | undefined;
 }
 
 /** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
@@ -64,12 +79,21 @@ export function TagRow({
   isPinnedInPalette,
   onViewStats,
   onDelete,
+  isUnplanned,
+  onMarkUnplanned,
+  onRestorePlanned,
 }: TagRowProps) {
   const t = useTranslations();
   const [selectorOpen, setSelectorOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const hasMenuItems = onPinToPalette || onUnpinFromPalette || onViewStats || onDelete;
+  const hasMenuItems =
+    onPinToPalette ||
+    onUnpinFromPalette ||
+    onViewStats ||
+    onDelete ||
+    onMarkUnplanned ||
+    onRestorePlanned;
 
   const handleSelect = useCallback(
     (selectedTagId: string) => {
@@ -139,6 +163,19 @@ export function TagRow({
                   {t('calendar.filter.viewStats')}
                 </DropdownMenuItem>
               )}
+              {isUnplanned
+                ? onRestorePlanned && (
+                    <DropdownMenuItem onClick={onRestorePlanned}>
+                      <RotateCcw className="mr-2 size-4" />
+                      {t('entry.inspector.restorePlanned')}
+                    </DropdownMenuItem>
+                  )
+                : onMarkUnplanned && (
+                    <DropdownMenuItem onClick={onMarkUnplanned}>
+                      <CalendarOff className="mr-2 size-4" />
+                      {t('entry.inspector.markUnplanned')}
+                    </DropdownMenuItem>
+                  )}
               {onDelete && (
                 <>
                   <DropdownMenuSeparator />

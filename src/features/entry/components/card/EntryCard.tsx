@@ -58,7 +58,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   previewTime = null,
   hourHeight: hourHeightProp,
   overlayPositionApplied = false,
-  encroachments,
   onGapClick,
 }) {
   const t = useTranslations();
@@ -422,20 +421,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               )}
             </div>
           )}
-
-          {/* 侵食オーバーレイ: 隣接エントリの actual 時間がこのカードの予定枠に食い込んだ部分 */}
-          {encroachments?.map((enc) => (
-            <div
-              key={`${enc.fromEntryId}-${enc.direction}`}
-              aria-hidden="true"
-              className="pointer-events-none absolute right-0 left-0 opacity-40"
-              style={{
-                ...(enc.direction === 'top' ? { top: 0 } : { bottom: 0 }),
-                height: `${enc.height}px`,
-                backgroundColor: enc.resolvedColor ?? 'var(--entry-default)',
-              }}
-            />
-          ))}
 
           {/* 下端リサイズハンドル（Draft/Past は非表示）
              視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。

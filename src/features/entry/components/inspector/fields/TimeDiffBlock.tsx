@@ -56,13 +56,35 @@ export function TimeDiffBlock({
   const t = useTranslations();
   const diff = computeTimeDiff(plannedStart, plannedEnd, actualStart, actualEnd);
 
-  // 予定が0分 → 表示しない
-  if (diff.plannedDuration <= 0) return null;
-
-  const { plannedDuration, actualDuration, totalDiffMin, startDiffMin, endDiffMin } = diff;
+  const { plannedDuration, actualDuration, startDiffMin, endDiffMin } = diff;
 
   // タグ色の解決
   const colorClasses = getTagColorClasses(tagColor);
+
+  // 計画外（予定duration=0、記録あり）: 全点線バー
+  if (plannedDuration <= 0) {
+    if (actualDuration <= 0) return null;
+
+    return (
+      <div
+        className="flex flex-col gap-1"
+        role="img"
+        aria-label={`${t('entry.inspector.time.actual')} ${formatDurationDisplay(actualDuration)}`}
+      >
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {t('entry.inspector.time.actual')} {formatDurationDisplay(actualDuration)}
+          </span>
+          <span className="bg-info-tint text-info shrink-0 rounded-lg px-1 py-0 text-sm tabular-nums">
+            {t('entry.inspector.unplanned')}
+          </span>
+        </div>
+        <div className="h-2 w-full rounded-full">
+          <div className={cn('h-full rounded-full border-2 border-dotted', colorClasses.border)} />
+        </div>
+      </div>
+    );
+  }
 
   // バッジの色（差分の意味を伝えるためセマンティックカラー維持）
   const badgeClass =

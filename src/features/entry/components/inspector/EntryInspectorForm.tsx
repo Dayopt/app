@@ -117,8 +117,38 @@ export function EntryInspectorForm({
 
   // 充実度（TanStack Query の楽観的更新で即座に反映）
   const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
+  const isUnplanned = entry?.origin === 'unplanned';
 
   const { updateEntry } = useEntryMutations();
+
+  // 計画外にする / 計画に戻す
+  const handleMarkUnplanned = useCallback(() => {
+    if (!entryId || !entry) return;
+    updateEntry.mutate({
+      id: entryId,
+      data: {
+        origin: 'unplanned',
+        backed_up_start_time: entry.start_time,
+        backed_up_end_time: entry.end_time,
+        start_time: entry.start_time,
+        end_time: entry.start_time, // duration=0
+      },
+    });
+  }, [entryId, entry, updateEntry]);
+
+  const handleRestorePlanned = useCallback(() => {
+    if (!entryId || !entry) return;
+    updateEntry.mutate({
+      id: entryId,
+      data: {
+        origin: 'planned',
+        start_time: entry.backed_up_start_time ?? entry.start_time,
+        end_time: entry.backed_up_end_time ?? entry.end_time,
+        backed_up_start_time: null,
+        backed_up_end_time: null,
+      },
+    });
+  }, [entryId, entry, updateEntry]);
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
       if (!entryId) return;
@@ -263,6 +293,9 @@ export function EntryInspectorForm({
         isPinnedInPalette={isPinned}
         onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
         onDelete={handleDelete}
+        isUnplanned={isUnplanned}
+        onMarkUnplanned={handleMarkUnplanned}
+        onRestorePlanned={handleRestorePlanned}
       />
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}
@@ -296,6 +329,7 @@ export function EntryInspectorForm({
             onStartChange={onPlannedStartChange}
             onEndChange={onPlannedEndChange}
             hasError={timeConflictError}
+            disabled={isUnplanned}
           />
 
           {/* 記録行 */}

@@ -1,18 +1,16 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 
 import {
   EntryCard,
   computeActualTimeDiffOverlay,
-  computeEncroachments,
   isNewEntry,
   useEntryInspectorStore,
 } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
@@ -94,18 +92,6 @@ export const EntryRenderer = React.memo(function EntryRenderer({
 
   const currentTop = parseFloat(style.top?.toString() || '0');
   const currentHeight = parseFloat(style.height?.toString() || '20');
-
-  // 隣接エントリからの侵食計算（tagId → CSS変数に解決）
-  const entryEncroachments = useMemo(() => {
-    const raw = computeEncroachments(entry, entries, hourHeight);
-    if (raw.length === 0) return [];
-    return raw.map((enc) => ({
-      ...enc,
-      resolvedColor: enc.fromTagId
-        ? getTagColorClasses(getTagById(enc.fromTagId)?.color ?? null).cssVar
-        : null,
-    }));
-  }, [entry, entries, hourHeight, getTagById]);
 
   // ドラッグ中は元位置にファントム（半透明シルエット）を残す
   const adjustedStyle: React.CSSProperties = entryDragging
@@ -218,7 +204,6 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isActive={isInspectorOpen && inspectorEntryId === entry.id}
           previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
-          encroachments={entryEncroachments}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',
