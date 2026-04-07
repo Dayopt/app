@@ -47,75 +47,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      _backup_record_tags: {
-        Row: {
-          created_at: string | null;
-          id: string | null;
-          record_id: string | null;
-          tag_id: string | null;
-          user_id: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          id?: string | null;
-          record_id?: string | null;
-          tag_id?: string | null;
-          user_id?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          id?: string | null;
-          record_id?: string | null;
-          tag_id?: string | null;
-          user_id?: string | null;
-        };
-        Relationships: [];
-      };
-      _backup_records: {
-        Row: {
-          created_at: string | null;
-          description: string | null;
-          duration_minutes: number | null;
-          end_time: string | null;
-          fulfillment_score: number | null;
-          id: string | null;
-          plan_id: string | null;
-          start_time: string | null;
-          title: string | null;
-          updated_at: string | null;
-          user_id: string | null;
-          worked_at: string | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          description?: string | null;
-          duration_minutes?: number | null;
-          end_time?: string | null;
-          fulfillment_score?: number | null;
-          id?: string | null;
-          plan_id?: string | null;
-          start_time?: string | null;
-          title?: string | null;
-          updated_at?: string | null;
-          user_id?: string | null;
-          worked_at?: string | null;
-        };
-        Update: {
-          created_at?: string | null;
-          description?: string | null;
-          duration_minutes?: number | null;
-          end_time?: string | null;
-          fulfillment_score?: number | null;
-          id?: string | null;
-          plan_id?: string | null;
-          start_time?: string | null;
-          title?: string | null;
-          updated_at?: string | null;
-          user_id?: string | null;
-          worked_at?: string | null;
-        };
-        Relationships: [];
-      };
       ai_usage: {
         Row: {
           created_at: string;
@@ -237,6 +168,8 @@ export type Database = {
         Row: {
           actual_end_time: string | null;
           actual_start_time: string | null;
+          backed_up_end_time: string | null;
+          backed_up_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -257,6 +190,8 @@ export type Database = {
         Insert: {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
+          backed_up_end_time?: string | null;
+          backed_up_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
@@ -277,6 +212,8 @@ export type Database = {
         Update: {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
+          backed_up_end_time?: string | null;
+          backed_up_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
@@ -442,8 +379,12 @@ export type Database = {
           default_reminder_enabled: boolean;
           default_reminder_minutes: number | null;
           enable_browser_notifications: boolean;
+          enable_burnout_warnings: boolean;
+          enable_daily_insights: boolean;
           enable_email_notifications: boolean;
+          enable_energy_insights: boolean;
           enable_push_notifications: boolean;
+          enable_weekly_reports: boolean;
           id: string;
           updated_at: string;
           user_id: string;
@@ -453,8 +394,12 @@ export type Database = {
           default_reminder_enabled?: boolean;
           default_reminder_minutes?: number | null;
           enable_browser_notifications?: boolean;
+          enable_burnout_warnings?: boolean;
+          enable_daily_insights?: boolean;
           enable_email_notifications?: boolean;
+          enable_energy_insights?: boolean;
           enable_push_notifications?: boolean;
+          enable_weekly_reports?: boolean;
           id?: string;
           updated_at?: string;
           user_id: string;
@@ -464,8 +409,12 @@ export type Database = {
           default_reminder_enabled?: boolean;
           default_reminder_minutes?: number | null;
           enable_browser_notifications?: boolean;
+          enable_burnout_warnings?: boolean;
+          enable_daily_insights?: boolean;
           enable_email_notifications?: boolean;
+          enable_energy_insights?: boolean;
           enable_push_notifications?: boolean;
+          enable_weekly_reports?: boolean;
           id?: string;
           updated_at?: string;
           user_id?: string;
@@ -717,6 +666,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_badges: {
+        Row: {
+          badge_id: string;
+          created_at: string;
+          earned_at: string;
+          id: string;
+          rank: string | null;
+          user_id: string;
+        };
+        Insert: {
+          badge_id: string;
+          created_at?: string;
+          earned_at?: string;
+          id?: string;
+          rank?: string | null;
+          user_id: string;
+        };
+        Update: {
+          badge_id?: string;
+          created_at?: string;
+          earned_at?: string;
+          id?: string;
+          rank?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_settings: {
         Row: {
           ai_communication_style: string | null;
@@ -738,6 +714,7 @@ export type Database = {
           personalization_ranked_values: Json | null;
           personalization_values: Json | null;
           plan_record_mode: string;
+          preferred_locale: string;
           show_declined_events: boolean;
           show_utc_offset: boolean;
           show_week_numbers: boolean;
@@ -770,6 +747,7 @@ export type Database = {
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
           plan_record_mode?: string;
+          preferred_locale?: string;
           show_declined_events?: boolean;
           show_utc_offset?: boolean;
           show_week_numbers?: boolean;
@@ -802,6 +780,7 @@ export type Database = {
           personalization_ranked_values?: Json | null;
           personalization_values?: Json | null;
           plan_record_mode?: string;
+          preferred_locale?: string;
           show_declined_events?: boolean;
           show_utc_offset?: boolean;
           show_week_numbers?: boolean;
@@ -829,6 +808,10 @@ export type Database = {
           p_user_id: string;
         };
         Returns: {
+          actual_end_time: string | null;
+          actual_start_time: string | null;
+          backed_up_end_time: string | null;
+          backed_up_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -879,9 +862,14 @@ export type Database = {
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
       delete_old_notifications: { Args: never; Returns: undefined };
       get_active_dates: {
-        Args: { p_since: string; p_user_id: string };
+        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Returns: string[];
+      };
+      get_active_users_for_daily_insights: {
+        Args: { p_date?: string; p_limit?: number };
         Returns: {
-          active_date: string;
+          entry_count: number;
+          user_id: string;
         }[];
       };
       get_active_users_for_reflection: {
@@ -909,6 +897,20 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_child_tag_breakdown: {
+        Args: {
+          p_end_date?: string;
+          p_prefix: string;
+          p_start_date?: string;
+          p_user_id: string;
+        };
+        Returns: {
+          hours: number;
+          tag_color: string;
+          tag_id: string;
+          tag_name: string;
+        }[];
+      };
       get_context_switches: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: Json;
@@ -918,25 +920,31 @@ export type Database = {
         Returns: Json;
       };
       get_daily_hours: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_user_id: string; p_year: number };
         Returns: {
-          date: string;
+          day: string;
           hours: number;
+        }[];
+      };
+      get_daily_snapshots: {
+        Args: { p_days?: number; p_user_id: string };
+        Returns: {
+          avg_fulfillment: number;
+          day: string;
+          total_minutes: number;
         }[];
       };
       get_dow_distribution: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
           dow: number;
-          hours: number;
+          total_minutes: number;
         }[];
       };
       get_energy_map: {
-        Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
-          avg_fulfillment: number;
           dow: number;
-          entry_count: number;
           hour: number;
           total_minutes: number;
         }[];
@@ -954,22 +962,21 @@ export type Database = {
         }[];
       };
       get_fulfillment_trend: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: {
-          avg_score: number;
-          count: number;
-          date: string;
+          avg_fulfillment: number;
+          day: string;
         }[];
       };
       get_hourly_distribution: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: {
           hour: number;
-          hours: number;
+          total_minutes: number;
         }[];
       };
       get_monthly_hours: {
-        Args: { p_start_date: string; p_user_id: string };
+        Args: { p_months?: number; p_user_id: string };
         Returns: {
           hours: number;
           month: string;
@@ -989,6 +996,109 @@ export type Database = {
           p_wake_hour?: number;
         };
         Returns: Json;
+      };
+      get_stats_page_data: {
+        Args: {
+          p_end_date: string;
+          p_monthly_months?: number;
+          p_prev_end: string;
+          p_prev_start: string;
+          p_sleep_hour?: number;
+          p_start_date: string;
+          p_user_id: string;
+          p_wake_hour?: number;
+          p_year: number;
+        };
+        Returns: Json;
+      };
+      get_tag_accuracy_trend: {
+        Args: {
+          p_bucket?: string;
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          avg_deviation: number;
+          bucket: string;
+          entry_count: number;
+        }[];
+      };
+      get_tag_avg_fulfillment: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      get_tag_cumulative_time: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      get_tag_dow_distribution: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          dow: number;
+          total_minutes: number;
+        }[];
+      };
+      get_tag_fulfillment_distribution: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          count: number;
+          score: number;
+        }[];
+      };
+      get_tag_hourly_distribution: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          hour: number;
+          total_minutes: number;
+        }[];
+      };
+      get_tag_plan_rate: {
+        Args: {
+          p_end_date?: string;
+          p_start_date?: string;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
+      get_tag_recent_entries: {
+        Args: { p_limit?: number; p_tag_id: string; p_user_id: string };
+        Returns: {
+          duration_minutes: number;
+          end_time: string;
+          entry_id: string;
+          fulfillment_score: number;
+          planned_minutes: number;
+          start_time: string;
+          title: string;
+        }[];
       };
       get_tag_stats: {
         Args: { p_user_id: string };
@@ -1012,13 +1122,15 @@ export type Database = {
         Returns: Json;
       };
       get_total_time: { Args: { p_user_id: string }; Returns: Json };
+      get_user_timezone: { Args: { p_user_id: string }; Returns: string };
       get_vault_secret: { Args: { p_name: string }; Returns: string };
       get_weekly_focus_score: {
         Args: { p_user_id: string; p_weeks?: number };
         Returns: {
           focus_score: number;
-          total_minutes: number;
-          week_start: string;
+          total_hours: number;
+          unique_tags: number;
+          week: string;
         }[];
       };
       get_weekly_reflection_data: {
@@ -1068,6 +1180,7 @@ export type Database = {
         Returns: {
           color: string | null;
           created_at: string | null;
+          icon: string | null;
           id: string;
           is_active: boolean;
           name: string;

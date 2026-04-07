@@ -118,6 +118,17 @@
   --color-now-indicator: var(--now-indicator);
   --color-now-indicator-foreground: var(--now-indicator-foreground);
   --color-now-indicator-muted: var(--now-indicator-muted);
+
+  /* Badge — Rank */
+  --color-badge-bronze: var(--badge-bronze);
+  --color-badge-silver: var(--badge-silver);
+  --color-badge-gold: var(--badge-gold);
+
+  /* Badge — Category */
+  --color-badge-growth: var(--badge-growth);
+  --color-badge-exploration: var(--badge-exploration);
+  --color-badge-pattern: var(--badge-pattern);
+  --color-badge-loyalty: var(--badge-loyalty);
 }
 
 /* ============================================

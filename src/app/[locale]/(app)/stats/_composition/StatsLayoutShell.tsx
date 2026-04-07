@@ -7,7 +7,7 @@ import { StatsLayout } from '@/features/stats';
 import { useTag } from '@/features/tags';
 import { resolveTagColor } from '@/lib/tag-colors';
 
-type StatsTabId = 'review' | 'progress' | 'insights' | 'tag';
+type StatsTabId = 'review' | 'progress' | 'badges' | 'insights' | 'tag';
 
 function extractTagId(pathname: string): string | null {
   const match = pathname.match(/\/stats\/tags\/([^/?]+)/);
@@ -17,6 +17,7 @@ function extractTagId(pathname: string): string | null {
 function getActiveTab(pathname: string): StatsTabId {
   if (pathname.includes('/stats/tags/')) return 'tag';
   if (pathname.includes('/stats/progress')) return 'progress';
+  if (pathname.includes('/stats/badges')) return 'badges';
   if (pathname.includes('/stats/insights')) return 'insights';
   return 'review';
 }

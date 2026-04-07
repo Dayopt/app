@@ -48,7 +48,7 @@ export function BlockItem({
   return (
     <div
       className={cn(
-        'group/block flex h-8 w-full items-center rounded-lg text-base transition-colors [@media(hover:none)]:h-11',
+        'group/block flex h-8 w-full items-center rounded-lg text-sm transition-colors [@media(hover:none)]:h-11 [@media(hover:none)]:text-base',
         disabled ? 'opacity-50' : 'hover:bg-state-hover',
         className,
       )}

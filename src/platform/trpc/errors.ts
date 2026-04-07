@@ -106,6 +106,9 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   API_KEY_MISSING: 'INTERNAL_SERVER_ERROR',
   GENERATION_FAILED: 'INTERNAL_SERVER_ERROR',
 
+  // ===== Badge関連 =====
+  EVALUATE_FAILED: 'INTERNAL_SERVER_ERROR',
+
   // ===== Contact関連 =====
   GITHUB_API_FAILED: 'INTERNAL_SERVER_ERROR',
 

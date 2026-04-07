@@ -48,14 +48,14 @@
     "change": "変更",
     "apply": "適用",
     "loading": "読み込み中...",
-    "noData": "まだデータがない",
+    "noData": "まっさらな1日です。最初のブロックを記録しましょう",
     "undo": "元に戻す",
     "skipToMainContent": "メインコンテンツへスキップ",
     "createNewEvent": "新しいイベントを作成",
     "toast": {
-      "eventDeleted": "予定を削除した",
-      "copied": "コピーした",
-      "copyFailed": "コピーできなかった。もう一度試して"
+      "eventDeleted": "予定を削除しました",
+      "copied": "コピーしました",
+      "copyFailed": "コピーできませんでした。もう一度お試しください"
     },
     "selectedCount": "{count}件選択中",
     "moreActions": "その他のアクション",
@@ -95,26 +95,26 @@
       "clear": "クリア",
       "options": "オプション",
       "addToPalette": "パレットに追加",
-      "addedToPalette": "パレットに追加した",
+      "addedToPalette": "パレットに追加しました。次回からすぐ使えます",
       "removeFromPalette": "パレットから解除",
-      "removedFromPalette": "パレットから解除した",
+      "removedFromPalette": "パレットから解除しました",
       "more": "その他の操作"
     },
     "confirm": {
       "delete": {
-        "title": "{name}を削除する？",
-        "titleGeneric": "このアイテムを削除する？",
-        "description": "この操作は取り消せない",
+        "title": "{name}を削除しますか？",
+        "titleGeneric": "このアイテムを削除しますか？",
+        "description": "この記録は完全に消えます。取り消せません",
         "button": "削除"
       },
       "archive": {
-        "title": "{name}をアーカイブする？",
-        "description": "アーカイブしたアイテムは後で復元できる",
+        "title": "{name}をアーカイブしますか？",
+        "description": "アーカイブしたアイテムは後で復元できます",
         "button": "アーカイブ"
       },
       "bulkDelete": {
-        "title": "{count}件を削除する？",
-        "description": "選択した{count}件のアイテムを完全に削除する。この操作は取り消せない"
+        "title": "{count}件を削除しますか？",
+        "description": "選択した{count}件のアイテムは完全に削除されます。取り消せません"
       }
     },
     "aria": {
@@ -156,7 +156,7 @@
       "error": "エラー",
       "warning": "警告",
       "info": "情報",
-      "offline": "オフライン。変更は接続復帰後に同期される",
+      "offline": "オフライン。変更は接続復帰後に同期されます",
       "syncing": "{count}件の変更を同期中...",
       "syncComplete": "同期完了"
     },
@@ -205,28 +205,28 @@
       "shortcut": "⌘K",
       "title": "検索",
       "placeholder": "例: ミーティング、運動",
-      "noResults": "一致する結果がない",
+      "noResults": "一致する結果がありません",
       "tagsGroup": "タグ",
       "blocksGroup": "ブロック"
     },
     "offline": {
       "title": "オフライン",
-      "description": "インターネット未接続。接続を確認してもう一度試して",
+      "description": "インターネットに接続されていません。接続を確認してもう一度お試しください",
       "reload": "再読み込み"
     },
     "serviceWorker": {
-      "updateAvailable": "アップデートがある",
-      "updateDescription": "再読み込みして最新版を適用",
+      "updateAvailable": "アップデートがあります",
+      "updateDescription": "再読み込みして最新版を適用しましょう",
       "later": "後で",
       "update": "更新"
     },
     "pwa": {
       "installTitle": "Dayoptをインストール",
-      "installDescription": "ホーム画面に追加してより快適に",
+      "installDescription": "ホーム画面に追加するとより快適に使えます",
       "install": "インストール",
       "dismiss": "閉じる",
       "iosInstallTitle": "Dayoptをホーム画面に追加",
-      "iosInstallDescription": "アプリとしてインストールすると、より快適に使える",
+      "iosInstallDescription": "アプリとしてインストールすると、より快適に使えます",
       "iosStep1": "共有ボタンをタップ",
       "iosStep2": "「ホーム画面に追加」を選択"
     },
@@ -235,17 +235,17 @@
       "pending": "同期待ち {count}件",
       "failed": "同期失敗 {count}件",
       "clearFailed": "クリア",
-      "offlineToast": "オフライン。変更は保存され、再接続時に同期される",
-      "onlineToast": "オンラインに復帰した。変更を同期中...",
+      "offlineToast": "オフライン。変更は保存され、再接続時に同期されます",
+      "onlineToast": "オンラインに復帰しました。変更を同期中...",
       "lastSynced": "最後の同期: {time}",
       "lastSyncedNever": "未同期"
     },
     "insights": {
-      "noRecords": "この週の記録はまだない",
+      "noRecords": "新しい1週間が始まりました",
       "lastRecord": "前回の記録: {date}",
       "viewInsights": "その週のインサイトを見る →",
-      "insufficientData": "この週のデータが十分ではない",
-      "insufficientDataHint": "3日以上の記録があるとインサイトを生成できる",
+      "insufficientData": "この週のデータが十分ではありません",
+      "insufficientDataHint": "3日以上の記録があるとインサイトを生成できます",
       "recordedDays": "記録された日:",
       "pendingGeneration": "{date}に生成予定 ✦",
       "pendingGenerationNoDate": "生成予定 ✦"
@@ -258,8 +258,8 @@
     },
     "comingSoon": "近日公開",
     "userProfile": {
-      "comingSoon": "プロフィールページは近日公開予定",
-      "notFound": "ユーザーが見つからない"
+      "comingSoon": "プロフィールページは近日公開予定です",
+      "notFound": "ユーザーが見つかりません"
     },
     "entry": {
       "origin": {
@@ -279,64 +279,64 @@
     "suggest": {
       "recentHistory": "直近30件の履歴",
       "loading": "読み込み中...",
-      "loadError": "読み込めなかった。もう一度試して",
-      "noResults": "一致する候補がない"
+      "loadError": "読み込めませんでした。もう一度お試しください",
+      "noResults": "一致する候補がありません"
     },
     "validation": {
-      "required": "この項目は必須",
-      "invalidUuid": "正しいIDを指定して",
-      "invalidEmail": "有効なメールアドレスを入力",
-      "invalidUrl": "有効なURLを指定して",
-      "invalidColorCode": "有効な色コード（#RRGGBB）を指定して",
-      "futureDate": "未来の日付を指定して",
+      "required": "この項目は必須です",
+      "invalidUuid": "正しいIDを指定してください",
+      "invalidEmail": "有効なメールアドレスを入力してください",
+      "invalidUrl": "有効なURLを指定してください",
+      "invalidColorCode": "有効な色コード（#RRGGBB）を指定してください",
+      "futureDate": "未来の日付を指定してください",
       "title": {
-        "required": "タイトルは必須",
-        "maxLength": "タイトルは{max}文字以内で入力",
-        "noNewlines": "タイトルに改行や空白のみは使用できない"
+        "required": "タイトルは必須です",
+        "maxLength": "タイトルは{max}文字以内で入力してください",
+        "noNewlines": "タイトルに改行や空白のみは使用できません"
       },
       "description": {
-        "maxLength": "説明は{max}文字以内で入力"
+        "maxLength": "説明は{max}文字以内で入力してください"
       },
       "time": {
-        "endBeforeStart": "終了時間は開始時間より後にして"
+        "endBeforeStart": "終了時間は開始時間より後にしてください"
       },
       "actualTime": {
-        "endBeforeStart": "終了時間は開始時間より後にして"
+        "endBeforeStart": "終了時間は開始時間より後にしてください"
       },
       "password": {
-        "minLength": "パスワードは{min}文字以上で入力",
-        "maxLength": "パスワードは{max}文字以内で入力",
-        "lowercase": "小文字を含める必要がある",
-        "uppercase": "大文字を含める必要がある",
-        "number": "数字を含める必要がある"
+        "minLength": "パスワードは{min}文字以上で入力してください",
+        "maxLength": "パスワードは{max}文字以内で入力してください",
+        "lowercase": "小文字を含める必要があります",
+        "uppercase": "大文字を含める必要があります",
+        "number": "数字を含める必要があります"
       },
       "email": {
-        "maxLength": "メールアドレスが長すぎる"
+        "maxLength": "メールアドレスが長すぎます"
       },
       "pagination": {
-        "pageMin": "ページ番号は1以上を指定",
-        "limitMin": "取得件数は1以上を指定",
-        "limitMax": "取得件数は{max}以下を指定"
+        "pageMin": "ページ番号は1以上を指定してください",
+        "limitMin": "取得件数は1以上を指定してください",
+        "limitMax": "取得件数は{max}以下を指定してください"
       },
       "search": {
-        "maxLength": "検索クエリは{max}文字以内で入力"
+        "maxLength": "検索クエリは{max}文字以内で入力してください"
       },
       "file": {
-        "maxSize": "ファイルサイズは{max}MB以下"
+        "maxSize": "ファイルサイズは{max}MB以下です"
       },
       "tag": {
-        "nameRequired": "タグ名は必須",
-        "nameMaxLength": "タグ名は{max}文字以内"
+        "nameRequired": "タグ名は必須です",
+        "nameMaxLength": "タグ名は{max}文字以内です"
       },
       "recaptcha": {
-        "required": "認証が必要"
+        "required": "認証が必要です"
       },
       "username": {
-        "required": "ユーザー名は必須",
-        "maxLength": "ユーザー名は{max}文字以内で入力"
+        "required": "ユーザー名は必須です",
+        "maxLength": "ユーザー名は{max}文字以内で入力してください"
       },
-      "limitReached": "上限に達した",
-      "timeAfterStart": "開始時刻（{minTime}）より後の時刻を入力"
+      "limitReached": "上限に達しました",
+      "timeAfterStart": "開始時刻（{minTime}）より後の時刻を入力してください"
     },
     "avatarDropzone": {
       "avatarAlt": "プロフィール画像",
@@ -345,57 +345,57 @@
       "remove": "削除",
       "uploading": "アップロード中...",
       "fileRequirements": "JPG, PNG, GIF, WebP ({maxSize}以下)",
-      "fileTooLarge": "ファイルサイズは{maxSize}以下",
-      "invalidFileType": "画像ファイルのみアップロード可能",
-      "uploadFailed": "アップロードできなかった。もう一度試して",
-      "deleteFailed": "削除できなかった。もう一度試して",
-      "deleteConfirm": "プロフィール画像を削除する？"
+      "fileTooLarge": "ファイルサイズは{maxSize}以下です",
+      "invalidFileType": "画像ファイルのみアップロード可能です",
+      "uploadFailed": "アップロードできませんでした。もう一度お試しください",
+      "deleteFailed": "削除できませんでした。もう一度お試しください",
+      "deleteConfirm": "プロフィール画像を削除しますか？"
     },
     "errors": {
-      "generic": "問題が起きた。もう一度試して",
+      "generic": "問題が起きました。もう一度お試しください",
       "storage": {
-        "imageOnly": "画像ファイルのみアップロード可能",
-        "fileTooLarge": "ファイルサイズは5MB以下",
-        "uploadFailed": "アップロードできなかった。もう一度試して",
-        "listFailed": "ファイル一覧を取得できなかった。もう一度試して",
-        "deleteFailed": "削除できなかった。もう一度試して"
+        "imageOnly": "画像ファイルのみアップロード可能です",
+        "fileTooLarge": "ファイルサイズは5MB以下です",
+        "uploadFailed": "アップロードできませんでした。もう一度お試しください",
+        "listFailed": "ファイル一覧を取得できませんでした。もう一度お試しください",
+        "deleteFailed": "削除できませんでした。もう一度お試しください"
       },
       "mfa": {
         "enrollFailed": "登録エラー",
-        "dataNotFound": "MFAデータを取得できなかった",
-        "setupFailed": "2段階認証の設定開始に失敗した。もう一度試して",
-        "enterCode": "6桁のコードを入力",
-        "codeLength": "コードは6桁で入力",
+        "dataNotFound": "MFAデータを取得できませんでした",
+        "setupFailed": "2段階認証の設定を開始できませんでした。もう一度お試しください",
+        "enterCode": "6桁のコードを入力してください",
+        "codeLength": "コードは6桁で入力してください",
         "challengeFailed": "チャレンジエラー",
         "verifyFailed": "検証エラー",
-        "codeInvalid": "コードが正しくない。もう一度試して",
-        "verificationFailed": "コードを検証できなかった。もう一度試して",
+        "codeInvalid": "コードが正しくありません。もう一度お試しください",
+        "verificationFailed": "コードを検証できませんでした。もう一度お試しください",
         "factorListFailed": "ファクター取得エラー",
-        "noFactorFound": "有効なMFAファクターが見つからない",
-        "noVerifiedFactor": "検証済みのMFAファクターが見つからない",
+        "noFactorFound": "有効なMFAファクターが見つかりません",
+        "noVerifiedFactor": "検証済みのMFAファクターが見つかりません",
         "disableFailed": "無効化エラー",
-        "disableGeneralFailed": "2段階認証を無効化できなかった。もう一度試して",
-        "disablePrompt": "2段階認証を無効にするには、認証アプリの6桁のコードを入力:",
-        "enabled": "2段階認証が有効になった",
-        "disabled": "2段階認証を無効にした"
+        "disableGeneralFailed": "2段階認証を無効化できませんでした。もう一度お試しください",
+        "disablePrompt": "2段階認証を無効にするには、認証アプリの6桁のコードを入力してください:",
+        "enabled": "2段階認証が有効になりました",
+        "disabled": "2段階認証を無効にしました"
       },
       "auth": {
-        "wrongPassword": "パスワードが正しくない",
-        "emailUpdateFailed": "メールアドレスを更新できなかった。もう一度試して",
-        "emailNotFound": "メールアドレスが見つからない",
-        "userIdNotFound": "ユーザーIDが見つからない",
-        "profileUpdateFailed": "プロフィールを更新できなかった。もう一度試して"
+        "wrongPassword": "パスワードが正しくありません",
+        "emailUpdateFailed": "メールアドレスを更新できませんでした。もう一度お試しください",
+        "emailNotFound": "メールアドレスが見つかりません",
+        "userIdNotFound": "ユーザーIDが見つかりません",
+        "profileUpdateFailed": "プロフィールを更新できませんでした。もう一度お試しください"
       },
       "calendar": {
-        "invalidDateFormat": "日付形式が不正",
-        "invalidTimeFormat": "時刻形式が不正",
-        "timeOutOfRange": "時刻が範囲外"
+        "invalidDateFormat": "日付形式が不正です",
+        "invalidTimeFormat": "時刻形式が不正です",
+        "timeOutOfRange": "時刻が範囲外です"
       }
     },
     "cookies": {
       "banner": {
         "title": "Cookieの使用について",
-        "description": "当サービスは、サービスの品質向上と利用状況の分析のためにCookieおよび類似技術を使用している",
+        "description": "当サービスは、サービスの品質向上と利用状況の分析のためにCookieおよび類似技術を使用しています",
         "learnMore": "詳しく見る",
         "customize": "カスタマイズ",
         "rejectAll": "必須のみ",

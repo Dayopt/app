@@ -17,6 +17,8 @@ export function createMockEntry(overrides: Partial<EntryRow> = {}): EntryRow {
     end_time: null,
     actual_start_time: null,
     actual_end_time: null,
+    backed_up_start_time: null,
+    backed_up_end_time: null,
     duration_minutes: null,
     fulfillment_score: null,
     reminder_minutes: null,

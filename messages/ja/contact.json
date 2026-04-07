@@ -12,11 +12,11 @@
     "message": {
       "label": "メッセージ",
       "placeholder": "例: ダッシュボードの表示が崩れる",
-      "minLength": "10文字以上で入力"
+      "minLength": "10文字以上で入力してください"
     },
     "submit": "送信",
-    "submitSuccess": "メッセージを送信した",
-    "submitError": "メッセージを送信できなかった。もう一度試して",
-    "rateLimited": "送信回数が上限に達した。しばらくしてから試して"
+    "submitSuccess": "メッセージを送信しました",
+    "submitError": "メッセージを送信できませんでした。もう一度お試しください",
+    "rateLimited": "送信回数が上限に達しました。しばらくしてからお試しください"
   }
 }
