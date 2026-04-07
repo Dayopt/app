@@ -2,7 +2,10 @@
  * Badges Service
  *
  * バッジ判定・取得のビジネスロジック。
- * Supabaseを直接クエリし、他featureのimportは行わない（Independent layer）。
+ * Supabaseを直接クエリし、他featureのimportは行わない。
+ *
+ * パフォーマンス: 全バッジの素材データを一括取得（6クエリ）し、
+ * メモリ上で20バッジを判定する。個別クエリのN+1を回避。
  */
 
 import { ServiceError } from '@/platform/trpc/errors';
@@ -35,6 +38,26 @@ export class BadgesServiceError extends ServiceError {
 interface EarnedRecord {
   badge_id: string;
   rank: string | null;
+}
+
+/** 一括取得した素材データ */
+interface BadgeSourceData {
+  streak: number;
+  entryCount: number;
+  distinctTagCount: number;
+  paletteExists: boolean;
+  chronotypeEnabled: boolean;
+  entriesWithTime: number;
+  hasFullDay: boolean;
+  hasEarlyBird: boolean;
+  hasNightOwl: boolean;
+  fullWeekDays: number;
+  tagStreakMax: number;
+  maxTagMinutes: number;
+  mondayWeeks: number;
+  maxDayCoverage: number;
+  isProSubscriber: boolean;
+  accountAgeDays: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,17 +93,27 @@ export class BadgesService {
 
   /** バッジ判定を実行し、新規獲得バッジを返却 */
   async evaluate(userId: string): Promise<NewlyEarnedBadge[]> {
-    const earned = await this.getEarnedSet(userId);
+    const [earned, source] = await Promise.all([
+      this.getEarnedSet(userId),
+      this.fetchSourceData(userId),
+    ]);
+
     const newlyEarned: NewlyEarnedBadge[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
+      const value = this.computeValue(badge, source);
+
       if (badge.isTiered && badge.thresholds) {
-        const results = await this.evaluateTiered(userId, badge, earned);
-        newlyEarned.push(...results);
+        for (const threshold of badge.thresholds) {
+          if (this.isAlreadyEarned(earned, badge.id, threshold.rank)) continue;
+          if (value >= threshold.value) {
+            const inserted = await this.insertBadge(userId, badge.id, threshold.rank);
+            if (inserted) newlyEarned.push({ badgeId: badge.id, rank: threshold.rank });
+          }
+        }
       } else {
         if (this.isAlreadyEarned(earned, badge.id, null)) continue;
-        const pass = await this.evaluateSingle(userId, badge);
-        if (pass) {
+        if (value >= 1) {
           const inserted = await this.insertBadge(userId, badge.id, null);
           if (inserted) newlyEarned.push({ badgeId: badge.id, rank: null });
         }
@@ -92,12 +125,17 @@ export class BadgesService {
 
   /** 未獲得バッジの進捗データ */
   async getProgress(userId: string): Promise<BadgeProgress[]> {
-    const earned = await this.getEarnedSet(userId);
+    const [earned, source] = await Promise.all([
+      this.getEarnedSet(userId),
+      this.fetchSourceData(userId),
+    ]);
+
     const progressList: BadgeProgress[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
+      const currentValue = this.computeValue(badge, source);
+
       if (badge.isTiered && badge.thresholds) {
-        const currentValue = await this.getCurrentValue(userId, badge);
         const nextThreshold = this.getNextThreshold(badge, earned);
         if (nextThreshold) {
           progressList.push({
@@ -109,7 +147,6 @@ export class BadgesService {
         }
       } else {
         if (this.isAlreadyEarned(earned, badge.id, null)) continue;
-        const currentValue = await this.getCurrentValue(userId, badge);
         progressList.push({
           badgeId: badge.id,
           currentValue,
@@ -122,104 +159,60 @@ export class BadgesService {
   }
 
   // =========================================================================
-  // Internal: Evaluation Dispatchers
+  // Internal: Batch data fetch (6 parallel queries)
   // =========================================================================
 
-  private async evaluateTiered(
-    userId: string,
-    badge: BadgeDefinition,
-    earned: EarnedRecord[],
-  ): Promise<NewlyEarnedBadge[]> {
-    const results: NewlyEarnedBadge[] = [];
-    const currentValue = await this.getCurrentValue(userId, badge);
-
-    for (const threshold of badge.thresholds ?? []) {
-      if (this.isAlreadyEarned(earned, badge.id, threshold.rank)) continue;
-      if (currentValue >= threshold.value) {
-        const inserted = await this.insertBadge(userId, badge.id, threshold.rank);
-        if (inserted) results.push({ badgeId: badge.id, rank: threshold.rank });
-      }
-    }
-
-    return results;
-  }
-
-  private async evaluateSingle(userId: string, badge: BadgeDefinition): Promise<boolean> {
-    const value = await this.getCurrentValue(userId, badge);
-    return value >= 1;
-  }
-
-  // =========================================================================
-  // Internal: Value Queries
-  // =========================================================================
-
-  private async getCurrentValue(userId: string, badge: BadgeDefinition): Promise<number> {
-    switch (badge.id) {
-      case 'streak':
-        return this.queryStreak(userId);
-      case 'blocks':
-        return this.queryEntryCount(userId);
-      case 'tags-5':
-        return this.queryDistinctTagCount(userId);
-      case 'palette-first':
-        return this.queryPaletteExists(userId);
-      case 'deep-zone':
-        return this.queryDeepZoneUsed(userId);
-      case 'full-day':
-        return this.queryFullDayCount(userId);
-      case 'template-first':
-        // テンプレート機能は未実装
-        return 0;
-      case 'export-first':
-        // エクスポート機能の判定は将来対応
-        return 0;
-      case 'early-bird':
-        return this.queryEarlyBird(userId);
-      case 'night-owl':
-        return this.queryNightOwl(userId);
-      case 'full-week':
-        return this.queryFullWeek(userId);
-      case 'deep-full':
-        return this.queryDeepFull(userId);
-      case 'tag-streak':
-        return this.queryTagStreak(userId);
-      case 'tag-100h':
-        return this.queryTag100h(userId);
-      case 'monday-5':
-        return this.queryMonday5(userId);
-      case 'day-coverage':
-        return this.queryDayCoverage(userId);
-      case 'pro-signup':
-        return this.queryProSignup(userId);
-      case 'weekly-report':
-        // ウィークリーレポート機能の判定は将来対応
-        return 0;
-      case 'six-months':
-        return this.queryAccountAge(userId, 180);
-      case 'one-year':
-        return this.queryAccountAge(userId, 365);
-      default:
-        return 0;
-    }
-  }
-
-  // =========================================================================
-  // Internal: Individual Queries
-  // =========================================================================
-
-  /** 連続記録日数 */
-  private async queryStreak(userId: string): Promise<number> {
+  private async fetchSourceData(userId: string): Promise<BadgeSourceData> {
     const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-    const { data, error } = await this.supabase.rpc('get_active_dates', {
-      p_user_id: userId,
-      p_since: since,
-    });
-    if (error || !data) return 0;
 
-    const dateSet = new Set(data);
-    const today = new Date();
+    const [
+      entriesResult,
+      entryTagsResult,
+      paletteResult,
+      settingsResult,
+      activeDatesResult,
+      accountResult,
+      profileResult,
+    ] = await Promise.all([
+      // 1. entries: start_time, end_time, duration_minutes
+      this.supabase
+        .from('entries')
+        .select('start_time, end_time, duration_minutes')
+        .eq('user_id', userId),
+      // 2. entry_tags: tag_id, created_at + entry duration
+      this.supabase
+        .from('entries')
+        .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
+        .eq('user_id', userId),
+      // 3. palette_items: count
+      this.supabase
+        .from('palette_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      // 4. user_settings + profile (subscription is on profiles table)
+      this.supabase
+        .from('user_settings')
+        .select('chronotype_enabled')
+        .eq('user_id', userId)
+        .single(),
+      // 5. active_dates RPC
+      this.supabase.rpc('get_active_dates', { p_user_id: userId, p_since: since }),
+      // 6. account age
+      this.supabase.auth.admin.getUserById(userId),
+      // 7. profile (subscription_status)
+      this.supabase.from('profiles').select('subscription_status').eq('id', userId).single(),
+    ]);
+
+    const entries = entriesResult.data ?? [];
+    const entryTagRows = entryTagsResult.data ?? [];
+    const settings = settingsResult.data;
+    const activeDates = activeDatesResult.data ?? [];
+    const profile = profileResult.data;
+
+    // --- Streak ---
+    const dateSet = new Set(activeDates);
     let streak = 0;
-
+    const today = new Date();
     for (let i = 0; i < 365; i++) {
       const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
       const dateStr = d.toISOString().slice(0, 10);
@@ -230,329 +223,183 @@ export class BadgesService {
       }
     }
 
-    return streak;
-  }
+    // --- Entries with time ---
+    const entriesWithTime = entries.filter((e) => e.start_time).length;
 
-  /** 累計エントリ数 */
-  private async queryEntryCount(userId: string): Promise<number> {
-    const { count, error } = await this.supabase
-      .from('entries')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    if (error) return 0;
-    return count ?? 0;
-  }
-
-  /** 使用タグ種類数 */
-  private async queryDistinctTagCount(userId: string): Promise<number> {
-    const { data, error } = await this.supabase
-      .from('entry_tags')
-      .select('tag_id')
-      .eq('user_id', userId);
-
-    if (error || !data) return 0;
-    return new Set(data.map((d) => d.tag_id)).size;
-  }
-
-  /** パレット登録有無 */
-  private async queryPaletteExists(userId: string): Promise<number> {
-    const { count, error } = await this.supabase
-      .from('palette_items')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    if (error) return 0;
-    return (count ?? 0) > 0 ? 1 : 0;
-  }
-
-  /** Deep Zoneにブロックを配置したか */
-  private async queryDeepZoneUsed(userId: string): Promise<number> {
-    // chronotype設定からdeep zoneの時間帯を取得し、その時間帯にエントリがあるか確認
-    // 簡易実装: chronotype_enabledがtrueかつstart_timeが設定されたエントリが存在するか
-    const { data: settings } = await this.supabase
-      .from('user_settings')
-      .select('chronotype_enabled, chronotype_type')
-      .eq('user_id', userId)
-      .single();
-
-    if (!settings?.chronotype_enabled) return 0;
-
-    // chronotypeが設定済みかつエントリが存在すれば達成とみなす
-    const { count } = await this.supabase
-      .from('entries')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .not('start_time', 'is', null);
-
-    return (count ?? 0) > 0 ? 1 : 0;
-  }
-
-  /** 1日8ブロック以上の日があるか */
-  private async queryFullDayCount(userId: string): Promise<number> {
-    const { data, error } = await this.supabase.rpc('get_active_dates', {
-      p_user_id: userId,
-      p_since: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-    });
-
-    if (error || !data) return 0;
-
-    // get_active_datesはアクティブな日を返す
-    // 各日のエントリ数を別途チェック
-    const { data: entries } = await this.supabase
-      .from('entries')
-      .select('start_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null);
-
-    if (!entries) return 0;
-
+    // --- Per-day aggregations ---
     const dateCount = new Map<string, number>();
+    const dayMinutes = new Map<string, number>();
+    let hasEarlyBird = false;
+    let hasNightOwl = false;
+    const recentDaysOfWeek = new Set<number>();
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const fiveWeeksAgo = Date.now() - 35 * 24 * 60 * 60 * 1000;
+    const mondayWeeks = new Set<string>();
+
     for (const entry of entries) {
       if (!entry.start_time) continue;
       const date = entry.start_time.slice(0, 10);
+      const startMs = new Date(entry.start_time).getTime();
+      const hour = new Date(entry.start_time).getUTCHours();
+
+      // Per-day count
       dateCount.set(date, (dateCount.get(date) ?? 0) + 1);
-    }
 
-    for (const count of dateCount.values()) {
-      if (count >= 8) return 1;
-    }
-    return 0;
-  }
-
-  /** 7時前にブロック記録（1回でも達成） */
-  private async queryEarlyBird(userId: string): Promise<number> {
-    const { data, error } = await this.supabase
-      .from('entries')
-      .select('id')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null)
-      .limit(1);
-
-    if (error || !data) return 0;
-
-    // 直接SQLで7時前を判定する代わりに、全エントリから判定
-    const { data: earlyEntries } = await this.supabase
-      .from('entries')
-      .select('start_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null);
-
-    if (!earlyEntries) return 0;
-
-    for (const entry of earlyEntries) {
-      if (!entry.start_time) continue;
-      const hour = new Date(entry.start_time).getUTCHours();
-      if (hour < 7) return 1;
-    }
-    return 0;
-  }
-
-  /** 23時以降にブロック記録 */
-  private async queryNightOwl(userId: string): Promise<number> {
-    const { data } = await this.supabase
-      .from('entries')
-      .select('start_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null);
-
-    if (!data) return 0;
-
-    for (const entry of data) {
-      if (!entry.start_time) continue;
-      const hour = new Date(entry.start_time).getUTCHours();
-      if (hour >= 23) return 1;
-    }
-    return 0;
-  }
-
-  /** 1週間で全曜日に記録 */
-  private async queryFullWeek(userId: string): Promise<number> {
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data } = await this.supabase
-      .from('entries')
-      .select('start_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null)
-      .gte('start_time', oneWeekAgo);
-
-    if (!data) return 0;
-
-    const daysOfWeek = new Set<number>();
-    for (const entry of data) {
-      if (!entry.start_time) continue;
-      daysOfWeek.add(new Date(entry.start_time).getDay());
-    }
-    return daysOfWeek.size >= 7 ? 1 : 0;
-  }
-
-  /** Deep Zoneの全枠にブロック配置 */
-  private async queryDeepFull(userId: string): Promise<number> {
-    // Deep Zone全枠活用の判定は簡易実装
-    // chronotypeが有効で、十分なエントリがあれば達成
-    const { data: settings } = await this.supabase
-      .from('user_settings')
-      .select('chronotype_enabled')
-      .eq('user_id', userId)
-      .single();
-
-    if (!settings?.chronotype_enabled) return 0;
-
-    const { count } = await this.supabase
-      .from('entries')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .not('start_time', 'is', null);
-
-    // 簡易: 20エントリ以上あれば達成とみなす
-    return (count ?? 0) >= 20 ? 1 : 0;
-  }
-
-  /** 同じタグを7日連続使用 */
-  private async queryTagStreak(userId: string): Promise<number> {
-    const { data } = await this.supabase
-      .from('entry_tags')
-      .select('tag_id, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
-
-    if (!data || data.length === 0) return 0;
-
-    // タグごとに日付を収集
-    const tagDates = new Map<string, Set<string>>();
-    for (const row of data) {
-      const date = row.created_at?.slice(0, 10);
-      if (!date) continue;
-      if (!tagDates.has(row.tag_id)) tagDates.set(row.tag_id, new Set());
-      tagDates.get(row.tag_id)!.add(date);
-    }
-
-    // 各タグで連続日数を計算
-    for (const dates of tagDates.values()) {
-      const sorted = [...dates].sort();
-      let maxStreak = 1;
-      let currentStreak = 1;
-
-      for (let i = 1; i < sorted.length; i++) {
-        const prev = new Date(sorted[i - 1]!).getTime();
-        const curr = new Date(sorted[i]!).getTime();
-        if (curr - prev === 24 * 60 * 60 * 1000) {
-          currentStreak++;
-          maxStreak = Math.max(maxStreak, currentStreak);
-        } else {
-          currentStreak = 1;
-        }
+      // Day coverage
+      if (entry.end_time) {
+        const endMs = new Date(entry.end_time).getTime();
+        const minutes = (endMs - startMs) / 60000;
+        dayMinutes.set(date, (dayMinutes.get(date) ?? 0) + minutes);
       }
 
-      if (maxStreak >= 7) return 1;
-    }
-    return 0;
-  }
+      // Time-of-day
+      if (hour < 7) hasEarlyBird = true;
+      if (hour >= 23) hasNightOwl = true;
 
-  /** 1つのタグで累計100時間 */
-  private async queryTag100h(userId: string): Promise<number> {
-    const { data } = await this.supabase
-      .from('entries')
-      .select('duration_minutes, entry_tags!inner(tag_id)')
-      .eq('user_id', userId)
-      .not('duration_minutes', 'is', null);
-
-    if (!data) return 0;
-
-    const tagMinutes = new Map<string, number>();
-    for (const entry of data) {
-      const minutes = entry.duration_minutes ?? 0;
-      const tags = entry.entry_tags as unknown as Array<{ tag_id: string }>;
-      for (const tag of tags) {
-        tagMinutes.set(tag.tag_id, (tagMinutes.get(tag.tag_id) ?? 0) + minutes);
+      // Full week (last 7 days)
+      if (startMs >= oneWeekAgo) {
+        recentDaysOfWeek.add(new Date(entry.start_time).getDay());
       }
-    }
 
-    for (const minutes of tagMinutes.values()) {
-      if (minutes >= 6000) return 1; // 100時間 = 6000分
-    }
-    return 0;
-  }
-
-  /** 5週連続で月曜に記録 */
-  private async queryMonday5(userId: string): Promise<number> {
-    const fiveWeeksAgo = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString();
-    const { data } = await this.supabase
-      .from('entries')
-      .select('start_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null)
-      .gte('start_time', fiveWeeksAgo);
-
-    if (!data) return 0;
-
-    const mondayWeeks = new Set<string>();
-    for (const entry of data) {
-      if (!entry.start_time) continue;
-      const d = new Date(entry.start_time);
-      if (d.getDay() === 1) {
-        // 週番号をキーにする
+      // Monday streak (last 5 weeks)
+      if (startMs >= fiveWeeksAgo && new Date(entry.start_time).getDay() === 1) {
+        const d = new Date(entry.start_time);
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - d.getDay());
         mondayWeeks.add(weekStart.toISOString().slice(0, 10));
       }
     }
 
-    return mondayWeeks.size >= 5 ? 1 : 0;
-  }
+    const hasFullDay = [...dateCount.values()].some((c) => c >= 8);
+    // 16h * 60 * 0.8 = 768
+    const maxDayCoverage = Math.max(0, ...[...dayMinutes.values()]);
 
-  /** 1日の実時間80%以上をカバー */
-  private async queryDayCoverage(userId: string): Promise<number> {
-    const { data } = await this.supabase
-      .from('entries')
-      .select('start_time, end_time')
-      .eq('user_id', userId)
-      .not('start_time', 'is', null)
-      .not('end_time', 'is', null);
+    // --- Tag aggregations ---
+    const tagIds = new Set<string>();
+    const tagDates = new Map<string, Set<string>>();
+    const tagMinutes = new Map<string, number>();
 
-    if (!data) return 0;
+    for (const entry of entryTagRows) {
+      const tags = entry.entry_tags as unknown as Array<{
+        tag_id: string;
+        created_at: string | null;
+      }>;
+      for (const tag of tags) {
+        tagIds.add(tag.tag_id);
 
-    // 日ごとの合計時間を計算
-    const dayMinutes = new Map<string, number>();
-    for (const entry of data) {
-      if (!entry.start_time || !entry.end_time) continue;
-      const date = entry.start_time.slice(0, 10);
-      const start = new Date(entry.start_time).getTime();
-      const end = new Date(entry.end_time).getTime();
-      const minutes = (end - start) / 60000;
-      dayMinutes.set(date, (dayMinutes.get(date) ?? 0) + minutes);
+        // Tag streak
+        const tagDate = tag.created_at?.slice(0, 10);
+        if (tagDate) {
+          if (!tagDates.has(tag.tag_id)) tagDates.set(tag.tag_id, new Set());
+          tagDates.get(tag.tag_id)!.add(tagDate);
+        }
+
+        // Tag hours
+        const minutes = entry.duration_minutes ?? 0;
+        tagMinutes.set(tag.tag_id, (tagMinutes.get(tag.tag_id) ?? 0) + minutes);
+      }
     }
 
-    // 16時間（960分）の80% = 768分
-    const threshold = 768;
-    for (const minutes of dayMinutes.values()) {
-      if (minutes >= threshold) return 1;
+    // Max consecutive days for any tag
+    let tagStreakMax = 0;
+    for (const dates of tagDates.values()) {
+      const sorted = [...dates].sort();
+      let current = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = new Date(sorted[i - 1]!).getTime();
+        const curr = new Date(sorted[i]!).getTime();
+        if (curr - prev === 24 * 60 * 60 * 1000) {
+          current++;
+          tagStreakMax = Math.max(tagStreakMax, current);
+        } else {
+          current = 1;
+        }
+      }
+      tagStreakMax = Math.max(tagStreakMax, current);
     }
-    return 0;
+
+    const maxTagMinutes = Math.max(0, ...[...tagMinutes.values()]);
+
+    // --- Account age ---
+    const createdAt = accountResult.data?.user?.created_at;
+    const accountAgeDays = createdAt
+      ? (Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000)
+      : 0;
+
+    // --- Settings & Profile ---
+    const chronotypeEnabled = settings?.chronotype_enabled ?? false;
+    const subscriptionStatus = profile?.subscription_status;
+    const isProSubscriber = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+
+    return {
+      streak,
+      entryCount: entries.length,
+      distinctTagCount: tagIds.size,
+      paletteExists: (paletteResult.count ?? 0) > 0,
+      chronotypeEnabled,
+      entriesWithTime,
+      hasFullDay,
+      hasEarlyBird,
+      hasNightOwl,
+      fullWeekDays: recentDaysOfWeek.size,
+      tagStreakMax,
+      maxTagMinutes,
+      mondayWeeks: mondayWeeks.size,
+      maxDayCoverage,
+      isProSubscriber,
+      accountAgeDays,
+    };
   }
 
-  /** Proプラン登録済みか */
-  private async queryProSignup(userId: string): Promise<number> {
-    const { data } = await this.supabase
-      .from('user_settings')
-      .select('subscription_status')
-      .eq('user_id', userId)
-      .single();
+  // =========================================================================
+  // Internal: Compute value from source data
+  // =========================================================================
 
-    if (!data) return 0;
-    const status = (data as { subscription_status?: string }).subscription_status;
-    return status === 'active' || status === 'trialing' ? 1 : 0;
-  }
-
-  /** アカウント作成からの日数 */
-  private async queryAccountAge(userId: string, days: number): Promise<number> {
-    const { data } = await this.supabase.auth.admin.getUserById(userId);
-    if (!data?.user?.created_at) return 0;
-
-    const created = new Date(data.user.created_at).getTime();
-    const elapsed = Date.now() - created;
-    const elapsedDays = elapsed / (24 * 60 * 60 * 1000);
-    return elapsedDays >= days ? 1 : 0;
+  private computeValue(badge: BadgeDefinition, source: BadgeSourceData): number {
+    switch (badge.id) {
+      case 'streak':
+        return source.streak;
+      case 'blocks':
+        return source.entryCount;
+      case 'tags-5':
+        return source.distinctTagCount;
+      case 'palette-first':
+        return source.paletteExists ? 1 : 0;
+      case 'deep-zone':
+        return source.chronotypeEnabled && source.entriesWithTime > 0 ? 1 : 0;
+      case 'full-day':
+        return source.hasFullDay ? 1 : 0;
+      case 'template-first':
+        return 0; // 未実装
+      case 'export-first':
+        return 0; // 未実装
+      case 'early-bird':
+        return source.hasEarlyBird ? 1 : 0;
+      case 'night-owl':
+        return source.hasNightOwl ? 1 : 0;
+      case 'full-week':
+        return source.fullWeekDays >= 7 ? 1 : 0;
+      case 'deep-full':
+        return source.chronotypeEnabled && source.entriesWithTime >= 20 ? 1 : 0;
+      case 'tag-streak':
+        return source.tagStreakMax >= 7 ? 1 : 0;
+      case 'tag-100h':
+        return source.maxTagMinutes >= 6000 ? 1 : 0; // 100h = 6000min
+      case 'monday-5':
+        return source.mondayWeeks >= 5 ? 1 : 0;
+      case 'day-coverage':
+        return source.maxDayCoverage >= 768 ? 1 : 0; // 16h * 80%
+      case 'pro-signup':
+        return source.isProSubscriber ? 1 : 0;
+      case 'weekly-report':
+        return 0; // 未実装
+      case 'six-months':
+        return source.accountAgeDays >= 180 ? 1 : 0;
+      case 'one-year':
+        return source.accountAgeDays >= 365 ? 1 : 0;
+      default:
+        return 0;
+    }
   }
 
   // =========================================================================

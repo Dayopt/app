@@ -2,6 +2,9 @@
 
 /**
  * バッジデータ取得・判定フック
+ *
+ * list + progress でUI表示（高速）。
+ * evaluate はバックグラウンドで実行し、新規獲得時のみトースト + refetch。
  */
 
 import { useEffect, useRef } from 'react';
@@ -13,7 +16,6 @@ import { api } from '@/platform/trpc';
 
 import { BADGE_MAP } from '../constants/badge-definitions';
 
-/** バッジデータ取得 + マウント時にevaluate */
 export function useBadges() {
   const t = useTranslations('badges');
   const hasEvaluated = useRef(false);
@@ -24,12 +26,13 @@ export function useBadges() {
 
   const progressQuery = api.badges.getProgress.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
+    // list が返ってから進捗を取得（直列ではなくlist優先で表示を速く）
+    enabled: !listQuery.isPending,
   });
 
   const evaluateMutation = api.badges.evaluate.useMutation({
     onSuccess: (newlyEarned) => {
       if (newlyEarned.length > 0) {
-        // 獲得バッジをトースト通知
         for (const badge of newlyEarned) {
           const def = BADGE_MAP.get(badge.badgeId);
           if (def) {
@@ -38,26 +41,25 @@ export function useBadges() {
             toast.success(`${name}${rankLabel} ${t('earned')}`);
           }
         }
-
-        // リストと進捗を再取得
+        // 新規獲得があった場合のみrefetch
         void listQuery.refetch();
         void progressQuery.refetch();
       }
     },
   });
 
-  // マウント時に1回だけevaluateを実行
+  // list取得完了後にevaluateをバックグラウンド実行
   useEffect(() => {
-    if (hasEvaluated.current) return;
+    if (hasEvaluated.current || listQuery.isPending) return;
     hasEvaluated.current = true;
     evaluateMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [listQuery.isPending]);
 
   return {
     earnedBadges: listQuery.data ?? [],
     progress: progressQuery.data ?? [],
-    isPending: listQuery.isPending || progressQuery.isPending,
+    isPending: listQuery.isPending,
     isError: listQuery.isError || progressQuery.isError,
   };
 }
