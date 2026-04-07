@@ -8,13 +8,13 @@
       "ai": "AI"
     },
     "empty": {
-      "all": "まだ通知がない",
-      "unread": "未読の通知はない",
-      "reminders": "リマインダー通知はない",
-      "ai": "AI通知はない"
+      "all": "記録を続けると通知が届くようになります",
+      "unread": "未読の通知はありません",
+      "reminders": "リマインダー通知はありません",
+      "ai": "AI通知はありません"
     },
     "error": {
-      "title": "通知を読み込めなかった。もう一度試して"
+      "title": "通知を読み込めませんでした。もう一度お試しください"
     },
     "actions": {
       "markAllAsRead": "すべて既読に",
@@ -26,12 +26,12 @@
       "unread": "{count}件の未読通知"
     },
     "confirm": {
-      "deleteAllRead": "既読の通知をすべて削除する？"
+      "deleteAllRead": "既読の通知をすべて削除しますか？"
     },
     "errors": {
-      "notSupported": "このブラウザは通知をサポートしていない",
-      "permissionFailed": "通知許可を取得できなかった",
-      "displayFailed": "ブラウザ通知を表示できなかった"
+      "notSupported": "このブラウザは通知をサポートしていません",
+      "permissionFailed": "通知許可を取得できませんでした",
+      "displayFailed": "ブラウザ通知を表示できませんでした"
     },
     "types": {
       "all": "すべて",
@@ -45,11 +45,11 @@
       "title": "通知",
       "browserNotifications": {
         "label": "ブラウザ通知",
-        "description": "リマインダー時にブラウザ通知を表示"
+        "description": "リマインダー時にブラウザ通知を表示します"
       },
       "emailNotifications": {
         "label": "メール通知",
-        "description": "リマインダー通知をメールで受信"
+        "description": "リマインダー通知をメールで受信します"
       },
       "emailLanguage": {
         "label": "メールの言語",
@@ -59,16 +59,16 @@
       },
       "pushNotifications": {
         "label": "プッシュ通知",
-        "description": "アプリを閉じていても通知を受け取る",
+        "description": "アプリを閉じていても通知を受け取れます",
         "comingSoon": "近日公開"
       },
-      "browserPermissionDenied": "ブラウザ通知の許可が拒否された",
+      "browserPermissionDenied": "ブラウザ通知の許可が拒否されました",
       "permissionDenied": "拒否済み",
-      "saveError": "設定を保存できなかった: {message}",
-      "tip": "ブラウザ通知はアプリを開いている時のみ動作する。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れる",
+      "saveError": "設定を保存できませんでした: {message}",
+      "tip": "ブラウザ通知はアプリを開いている時のみ動作します。メール通知やプッシュ通知を有効にすると、いつでも通知を受け取れます",
       "defaultReminder": {
         "label": "開始時通知のデフォルト",
-        "description": "新規エントリー作成時に開始時通知を自動でONにする"
+        "description": "新規エントリー作成時に開始時通知を自動でONにします"
       },
       "typeSection": {
         "title": "通知タイプ",
@@ -82,7 +82,7 @@
         },
         "burnoutWarnings": {
           "label": "バーンアウト警告",
-          "description": "過負荷の兆候を検出して通知"
+          "description": "過負荷の兆候を検出して通知します"
         },
         "weeklyReports": {
           "label": "週次レポート",
