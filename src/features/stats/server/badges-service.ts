@@ -50,12 +50,11 @@ interface BadgeSourceData {
   entriesWithTime: number;
   hasFullDay: boolean;
   hasEarlyBird: boolean;
-  hasNightOwl: boolean;
   fullWeekDays: number;
-  tagStreakMax: number;
   maxTagMinutes: number;
-  mondayWeeks: number;
-  maxDayCoverage: number;
+  hasGroupTag: boolean;
+  chronotypeZoneCount: number;
+  isWeeklyBest: boolean;
   isProSubscriber: boolean;
   accountAgeDays: number;
 }
@@ -98,7 +97,8 @@ export class BadgesService {
       this.fetchSourceData(userId),
     ]);
 
-    const newlyEarned: NewlyEarnedBadge[] = [];
+    // 獲得候補を収集
+    const candidates: { badgeId: string; rank: BadgeRank | null }[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
       const value = this.computeValue(badge, source);
@@ -107,20 +107,26 @@ export class BadgesService {
         for (const threshold of badge.thresholds) {
           if (this.isAlreadyEarned(earned, badge.id, threshold.rank)) continue;
           if (value >= threshold.value) {
-            const inserted = await this.insertBadge(userId, badge.id, threshold.rank);
-            if (inserted) newlyEarned.push({ badgeId: badge.id, rank: threshold.rank });
+            candidates.push({ badgeId: badge.id, rank: threshold.rank });
           }
         }
       } else {
         if (this.isAlreadyEarned(earned, badge.id, null)) continue;
         if (value >= 1) {
-          const inserted = await this.insertBadge(userId, badge.id, null);
-          if (inserted) newlyEarned.push({ badgeId: badge.id, rank: null });
+          candidates.push({ badgeId: badge.id, rank: null });
         }
       }
     }
 
-    return newlyEarned;
+    // 並列INSERT（UNIQUE制約で重複は自動スキップ）
+    const results = await Promise.all(
+      candidates.map(async (c) => {
+        const inserted = await this.insertBadge(userId, c.badgeId, c.rank);
+        return inserted ? c : null;
+      }),
+    );
+
+    return results.filter((r): r is NewlyEarnedBadge => r !== null);
   }
 
   /** 未獲得バッジの進捗データ */
@@ -136,15 +142,16 @@ export class BadgesService {
       const currentValue = this.computeValue(badge, source);
 
       if (badge.isTiered && badge.thresholds) {
+        // 段階成長型: 次の目標があればそれを、なければ最終段階を返す（常にプログレスバー表示）
         const nextThreshold = this.getNextThreshold(badge, earned);
-        if (nextThreshold) {
-          progressList.push({
-            badgeId: badge.id,
-            currentValue,
-            targetValue: nextThreshold.value,
-            rank: nextThreshold.rank,
-          });
-        }
+        const lastThreshold = badge.thresholds[badge.thresholds.length - 1]!;
+        const target = nextThreshold ?? lastThreshold;
+        progressList.push({
+          badgeId: badge.id,
+          currentValue,
+          targetValue: target.value,
+          rank: target.rank,
+        });
       } else {
         if (this.isAlreadyEarned(earned, badge.id, null)) continue;
         progressList.push({
@@ -171,25 +178,25 @@ export class BadgesService {
       paletteResult,
       settingsResult,
       activeDatesResult,
-      accountResult,
       profileResult,
+      tagsResult,
     ] = await Promise.all([
-      // 1. entries: start_time, end_time, duration_minutes
+      // 1. entries
       this.supabase
         .from('entries')
         .select('start_time, end_time, duration_minutes')
         .eq('user_id', userId),
-      // 2. entry_tags: tag_id, created_at + entry duration
+      // 2. entry_tags + entry duration
       this.supabase
         .from('entries')
         .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
         .eq('user_id', userId),
-      // 3. palette_items: count
+      // 3. palette_items count
       this.supabase
         .from('palette_items')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId),
-      // 4. user_settings + profile (subscription is on profiles table)
+      // 4. user_settings
       this.supabase
         .from('user_settings')
         .select('chronotype_enabled')
@@ -197,10 +204,14 @@ export class BadgesService {
         .single(),
       // 5. active_dates RPC
       this.supabase.rpc('get_active_dates', { p_user_id: userId, p_since: since }),
-      // 6. account age
-      this.supabase.auth.admin.getUserById(userId),
-      // 7. profile (subscription_status)
-      this.supabase.from('profiles').select('subscription_status').eq('id', userId).single(),
+      // 6. profile
+      this.supabase
+        .from('profiles')
+        .select('subscription_status, created_at')
+        .eq('id', userId)
+        .single(),
+      // 7. tags (for group detection via colon syntax)
+      this.supabase.from('tags').select('name').eq('user_id', userId),
     ]);
 
     const entries = entriesResult.data ?? [];
@@ -208,6 +219,7 @@ export class BadgesService {
     const settings = settingsResult.data;
     const activeDates = activeDatesResult.data ?? [];
     const profile = profileResult.data;
+    const tags = tagsResult.data ?? [];
 
     // --- Streak ---
     const dateSet = new Set(activeDates);
@@ -228,13 +240,12 @@ export class BadgesService {
 
     // --- Per-day aggregations ---
     const dateCount = new Map<string, number>();
-    const dayMinutes = new Map<string, number>();
     let hasEarlyBird = false;
-    let hasNightOwl = false;
     const recentDaysOfWeek = new Set<number>();
     const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const fiveWeeksAgo = Date.now() - 35 * 24 * 60 * 60 * 1000;
-    const mondayWeeks = new Set<string>();
+
+    // --- Weekly hours for self-best detection ---
+    const weekMinutes = new Map<string, number>();
 
     for (const entry of entries) {
       if (!entry.start_time) continue;
@@ -242,86 +253,75 @@ export class BadgesService {
       const startMs = new Date(entry.start_time).getTime();
       const hour = new Date(entry.start_time).getUTCHours();
 
-      // Per-day count
       dateCount.set(date, (dateCount.get(date) ?? 0) + 1);
 
-      // Day coverage
-      if (entry.end_time) {
-        const endMs = new Date(entry.end_time).getTime();
-        const minutes = (endMs - startMs) / 60000;
-        dayMinutes.set(date, (dayMinutes.get(date) ?? 0) + minutes);
-      }
-
-      // Time-of-day
       if (hour < 7) hasEarlyBird = true;
-      if (hour >= 23) hasNightOwl = true;
 
-      // Full week (last 7 days)
       if (startMs >= oneWeekAgo) {
         recentDaysOfWeek.add(new Date(entry.start_time).getDay());
       }
 
-      // Monday streak (last 5 weeks)
-      if (startMs >= fiveWeeksAgo && new Date(entry.start_time).getDay() === 1) {
+      // Weekly minutes (ISO week key)
+      if (entry.duration_minutes) {
         const d = new Date(entry.start_time);
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - d.getDay());
-        mondayWeeks.add(weekStart.toISOString().slice(0, 10));
+        const weekKey = weekStart.toISOString().slice(0, 10);
+        weekMinutes.set(weekKey, (weekMinutes.get(weekKey) ?? 0) + entry.duration_minutes);
       }
     }
 
     const hasFullDay = [...dateCount.values()].some((c) => c >= 8);
-    // 16h * 60 * 0.8 = 768
-    const maxDayCoverage = Math.max(0, ...[...dayMinutes.values()]);
+
+    // --- Weekly champion: current week is personal best ---
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - today.getDay());
+    const thisWeekKey = thisWeekStart.toISOString().slice(0, 10);
+    const thisWeekMinutes = weekMinutes.get(thisWeekKey) ?? 0;
+    let isWeeklyBest = false;
+    if (thisWeekMinutes > 0 && weekMinutes.size > 1) {
+      const otherWeeks = [...weekMinutes.entries()].filter(([k]) => k !== thisWeekKey);
+      const maxOther = Math.max(0, ...otherWeeks.map(([, v]) => v));
+      isWeeklyBest = thisWeekMinutes > maxOther;
+    }
 
     // --- Tag aggregations ---
     const tagIds = new Set<string>();
-    const tagDates = new Map<string, Set<string>>();
     const tagMinutes = new Map<string, number>();
 
     for (const entry of entryTagRows) {
-      const tags = entry.entry_tags as unknown as Array<{
+      const entryTags = entry.entry_tags as unknown as Array<{
         tag_id: string;
         created_at: string | null;
       }>;
-      for (const tag of tags) {
+      for (const tag of entryTags) {
         tagIds.add(tag.tag_id);
-
-        // Tag streak
-        const tagDate = tag.created_at?.slice(0, 10);
-        if (tagDate) {
-          if (!tagDates.has(tag.tag_id)) tagDates.set(tag.tag_id, new Set());
-          tagDates.get(tag.tag_id)!.add(tagDate);
-        }
-
-        // Tag hours
         const minutes = entry.duration_minutes ?? 0;
         tagMinutes.set(tag.tag_id, (tagMinutes.get(tag.tag_id) ?? 0) + minutes);
       }
     }
 
-    // Max consecutive days for any tag
-    let tagStreakMax = 0;
-    for (const dates of tagDates.values()) {
-      const sorted = [...dates].sort();
-      let current = 1;
-      for (let i = 1; i < sorted.length; i++) {
-        const prev = new Date(sorted[i - 1]!).getTime();
-        const curr = new Date(sorted[i]!).getTime();
-        if (curr - prev === 24 * 60 * 60 * 1000) {
-          current++;
-          tagStreakMax = Math.max(tagStreakMax, current);
-        } else {
-          current = 1;
-        }
-      }
-      tagStreakMax = Math.max(tagStreakMax, current);
-    }
-
     const maxTagMinutes = Math.max(0, ...[...tagMinutes.values()]);
 
+    // --- Group tag (colon syntax: "group:name") ---
+    const hasGroupTag = tags.some((t) => t.name.includes(':'));
+
+    // --- Chronotype zones used (Deep/Ease/Neutral) ---
+    // 簡易判定: chronotype有効 + エントリの時間帯分布から3ゾーン判定
+    // TODO: 厳密にはuser_settingsのchronotype_custom_zonesを参照すべき
+    let chronotypeZoneCount = 0;
+    if (settings?.chronotype_enabled && entriesWithTime > 0) {
+      const hours = entries
+        .filter((e) => e.start_time)
+        .map((e) => new Date(e.start_time!).getUTCHours());
+      const hasMorning = hours.some((h) => h >= 6 && h < 12);
+      const hasAfternoon = hours.some((h) => h >= 12 && h < 18);
+      const hasEvening = hours.some((h) => h >= 18 || h < 6);
+      chronotypeZoneCount = [hasMorning, hasAfternoon, hasEvening].filter(Boolean).length;
+    }
+
     // --- Account age ---
-    const createdAt = accountResult.data?.user?.created_at;
+    const createdAt = profile?.created_at;
     const accountAgeDays = createdAt
       ? (Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000)
       : 0;
@@ -340,12 +340,11 @@ export class BadgesService {
       entriesWithTime,
       hasFullDay,
       hasEarlyBird,
-      hasNightOwl,
       fullWeekDays: recentDaysOfWeek.size,
-      tagStreakMax,
       maxTagMinutes,
-      mondayWeeks: mondayWeeks.size,
-      maxDayCoverage,
+      hasGroupTag,
+      chronotypeZoneCount,
+      isWeeklyBest,
       isProSubscriber,
       accountAgeDays,
     };
@@ -361,38 +360,30 @@ export class BadgesService {
         return source.streak;
       case 'blocks':
         return source.entryCount;
+      case 'tag-hours':
+        return source.maxTagMinutes; // 段階: 3000(50h) → 6000(100h) → 12000(200h)
       case 'tags-5':
-        return source.distinctTagCount;
+        return source.distinctTagCount >= 5 ? 1 : 0;
       case 'palette-first':
         return source.paletteExists ? 1 : 0;
       case 'deep-zone':
         return source.chronotypeEnabled && source.entriesWithTime > 0 ? 1 : 0;
       case 'full-day':
         return source.hasFullDay ? 1 : 0;
-      case 'template-first':
-        return 0; // 未実装
-      case 'export-first':
-        return 0; // 未実装
+      case 'group-first':
+        return source.hasGroupTag ? 1 : 0;
+      case 'chronotype-trio':
+        return source.chronotypeZoneCount >= 3 ? 1 : 0;
       case 'early-bird':
         return source.hasEarlyBird ? 1 : 0;
-      case 'night-owl':
-        return source.hasNightOwl ? 1 : 0;
       case 'full-week':
         return source.fullWeekDays >= 7 ? 1 : 0;
-      case 'deep-full':
-        return source.chronotypeEnabled && source.entriesWithTime >= 20 ? 1 : 0;
-      case 'tag-streak':
-        return source.tagStreakMax >= 7 ? 1 : 0;
-      case 'tag-100h':
-        return source.maxTagMinutes >= 6000 ? 1 : 0; // 100h = 6000min
-      case 'monday-5':
-        return source.mondayWeeks >= 5 ? 1 : 0;
-      case 'day-coverage':
-        return source.maxDayCoverage >= 768 ? 1 : 0; // 16h * 80%
+      case 'weekly-champion':
+        return source.isWeeklyBest ? 1 : 0;
       case 'pro-signup':
         return source.isProSubscriber ? 1 : 0;
       case 'weekly-report':
-        return 0; // 未実装
+        return 0; // AI weekly report送信ロジック実装後に判定追加
       case 'six-months':
         return source.accountAgeDays >= 180 ? 1 : 0;
       case 'one-year':

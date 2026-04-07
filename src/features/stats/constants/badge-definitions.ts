@@ -1,5 +1,5 @@
 /**
- * バッジ定義 — 全20個
+ * バッジ定義 — 全16個
  *
  * カテゴリ:
  * - growth: 段階成長型（ブロンズ→シルバー→ゴールド）
@@ -11,7 +11,7 @@
 import type { BadgeDefinition } from '../types/badge.types';
 
 // ---------------------------------------------------------------------------
-// 段階成長型（2個）
+// 段階成長型（3個）
 // ---------------------------------------------------------------------------
 
 const GROWTH_BADGES: BadgeDefinition[] = [
@@ -23,11 +23,9 @@ const GROWTH_BADGES: BadgeDefinition[] = [
     icon: 'Flame',
     isTiered: true,
     thresholds: [
-      { rank: 'bronze', value: 3 },
       { rank: 'bronze', value: 7 },
       { rank: 'silver', value: 14 },
       { rank: 'gold', value: 30 },
-      { rank: 'gold', value: 90 },
     ],
   },
   {
@@ -38,10 +36,22 @@ const GROWTH_BADGES: BadgeDefinition[] = [
     icon: 'Layers',
     isTiered: true,
     thresholds: [
-      { rank: 'bronze', value: 1 },
       { rank: 'bronze', value: 100 },
       { rank: 'silver', value: 500 },
       { rank: 'gold', value: 1000 },
+    ],
+  },
+  {
+    id: 'tag-hours',
+    category: 'growth',
+    nameKey: 'badges.tagHours.name',
+    descriptionKey: 'badges.tagHours.description',
+    icon: 'Clock',
+    isTiered: true,
+    thresholds: [
+      { rank: 'bronze', value: 3000 },
+      { rank: 'silver', value: 6000 },
+      { rank: 'gold', value: 12000 },
     ],
   },
 ];
@@ -88,29 +98,27 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     link: '/palette',
   },
   {
-    id: 'template-first',
+    id: 'group-first',
     category: 'exploration',
-    nameKey: 'badges.templateFirst.name',
-    descriptionKey: 'badges.templateFirst.description',
-    hintKey: 'badges.templateFirst.hint',
-    icon: 'Target',
+    nameKey: 'badges.groupFirst.name',
+    descriptionKey: 'badges.groupFirst.description',
+    icon: 'FolderOpen',
     isTiered: false,
-    link: '/templates',
   },
   {
-    id: 'export-first',
+    id: 'chronotype-trio',
     category: 'exploration',
-    nameKey: 'badges.exportFirst.name',
-    descriptionKey: 'badges.exportFirst.description',
-    hintKey: 'badges.exportFirst.hint',
-    icon: 'BarChart3',
+    nameKey: 'badges.chronotypeTrio.name',
+    descriptionKey: 'badges.chronotypeTrio.description',
+    hintKey: 'badges.chronotypeTrio.hint',
+    icon: 'Sparkles',
     isTiered: false,
-    link: '/settings/export',
+    link: '/settings/chronotype',
   },
 ];
 
 // ---------------------------------------------------------------------------
-// パターン系（8個）
+// パターン系（3個）
 // ---------------------------------------------------------------------------
 
 const PATTERN_BADGES: BadgeDefinition[] = [
@@ -119,15 +127,7 @@ const PATTERN_BADGES: BadgeDefinition[] = [
     category: 'pattern',
     nameKey: 'badges.earlyBird.name',
     descriptionKey: 'badges.earlyBird.description',
-    icon: 'Clock',
-    isTiered: false,
-  },
-  {
-    id: 'night-owl',
-    category: 'pattern',
-    nameKey: 'badges.nightOwl.name',
-    descriptionKey: 'badges.nightOwl.description',
-    icon: 'Clock',
+    icon: 'Sunrise',
     isTiered: false,
   },
   {
@@ -139,45 +139,11 @@ const PATTERN_BADGES: BadgeDefinition[] = [
     isTiered: false,
   },
   {
-    id: 'deep-full',
+    id: 'weekly-champion',
     category: 'pattern',
-    nameKey: 'badges.deepFull.name',
-    descriptionKey: 'badges.deepFull.description',
-    icon: 'Zap',
-    isTiered: false,
-  },
-  {
-    id: 'tag-streak',
-    category: 'pattern',
-    nameKey: 'badges.tagStreak.name',
-    descriptionKey: 'badges.tagStreak.description',
-    icon: 'Star',
-    isTiered: false,
-  },
-  {
-    id: 'tag-100h',
-    category: 'pattern',
-    nameKey: 'badges.tag100h.name',
-    descriptionKey: 'badges.tag100h.description',
-    hintKey: 'badges.tag100h.hint',
-    icon: 'Crown',
-    isTiered: false,
-    link: '/stats/review',
-  },
-  {
-    id: 'monday-5',
-    category: 'pattern',
-    nameKey: 'badges.monday5.name',
-    descriptionKey: 'badges.monday5.description',
-    icon: 'Calendar',
-    isTiered: false,
-  },
-  {
-    id: 'day-coverage',
-    category: 'pattern',
-    nameKey: 'badges.dayCoverage.name',
-    descriptionKey: 'badges.dayCoverage.description',
-    icon: 'Target',
+    nameKey: 'badges.weeklyChampion.name',
+    descriptionKey: 'badges.weeklyChampion.description',
+    icon: 'Trophy',
     isTiered: false,
   },
 ];
