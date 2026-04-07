@@ -26,8 +26,8 @@ type StatsTabId = 'review' | 'progress' | 'badges' | 'insights' | 'tag';
 const FIXED_TABS: { id: Exclude<StatsTabId, 'tag'>; path: string; labelKey: string }[] = [
   { id: 'review', path: '/stats/review', labelKey: 'calendar.stats.tabReview' },
   { id: 'progress', path: '/stats/progress', labelKey: 'calendar.stats.tabProgress' },
-  { id: 'badges', path: '/stats/badges', labelKey: 'calendar.stats.tabBadges' },
   { id: 'insights', path: '/stats/insights', labelKey: 'calendar.stats.tabInsights' },
+  { id: 'badges', path: '/stats/badges', labelKey: 'calendar.stats.tabBadges' },
 ];
 
 const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {

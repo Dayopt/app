@@ -71,7 +71,7 @@ const ALL_LOCKED: BadgeWithStatus[] = BADGE_DEFINITIONS.map((def) => ({
 // ---------------------------------------------------------------------------
 
 const meta = {
-  title: 'Features/Stats/Badges',
+  title: 'Features/Stats/Badges/Card',
   component: BadgeGrid,
   tags: ['autodocs'],
   parameters: { layout: 'centered' },
