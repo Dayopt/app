@@ -74,6 +74,8 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         end_time: input.end_time ?? null,
         actual_start_time: null,
         actual_end_time: null,
+        backed_up_start_time: null,
+        backed_up_end_time: null,
         duration_minutes: input.duration_minutes ?? null,
         fulfillment_score: input.fulfillment_score ?? null,
         reminder_minutes: input.reminder_minutes ?? null,

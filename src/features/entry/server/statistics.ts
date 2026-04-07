@@ -172,14 +172,10 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
         const { year } = input;
 
-        const startDate = new Date(year, 0, 1);
-        const endDate = new Date(year, 11, 31, 23, 59, 59);
-
         const { data, error } = await traceDbQuery('stats.get_daily_hours', async () =>
           supabase.rpc('get_daily_hours', {
             p_user_id: userId,
-            p_start_date: startDate.toISOString(),
-            p_end_date: endDate.toISOString(),
+            p_year: year,
           }),
         );
 
@@ -227,7 +223,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const rows = data ?? [];
         const hourlyHours: number[] = new Array(24).fill(0);
         for (const row of rows) {
-          if (row.hour >= 0 && row.hour < 24) hourlyHours[row.hour] = row.hours;
+          if (row.hour >= 0 && row.hour < 24) hourlyHours[row.hour] = row.total_minutes / 60;
         }
 
         const timeSlots = [];
@@ -276,7 +272,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
         const dayHours: number[] = new Array(7).fill(0);
         for (const row of rows) {
-          if (row.dow >= 0 && row.dow < 7) dayHours[row.dow] = row.hours;
+          if (row.dow >= 0 && row.dow < 7) dayHours[row.dow] = row.total_minutes / 60;
         }
 
         const mondayFirst = [1, 2, 3, 4, 5, 6, 0];
@@ -687,7 +683,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         }
 
         const activeDates = data ?? [];
-        const dateSet = new Set(activeDates.map((d) => d.active_date));
+        const dateSet = new Set(activeDates);
 
         // ユーザーのタイムゾーンで今日から逆順にstreakをカウント
         let streak = 0;
