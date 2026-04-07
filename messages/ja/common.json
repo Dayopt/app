@@ -48,7 +48,7 @@
     "change": "変更",
     "apply": "適用",
     "loading": "読み込み中...",
-    "noData": "最初のブロックを記録して始めましょう",
+    "noData": "まっさらな1日です。最初のブロックを記録しましょう",
     "undo": "元に戻す",
     "skipToMainContent": "メインコンテンツへスキップ",
     "createNewEvent": "新しいイベントを作成",
@@ -241,7 +241,7 @@
       "lastSyncedNever": "未同期"
     },
     "insights": {
-      "noRecords": "今週の記録はまだありません",
+      "noRecords": "新しい1週間が始まりました",
       "lastRecord": "前回の記録: {date}",
       "viewInsights": "その週のインサイトを見る →",
       "insufficientData": "この週のデータが十分ではありません",

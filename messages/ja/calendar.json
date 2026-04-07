@@ -60,7 +60,7 @@
         "short": "短縮"
       },
       "saved": "保存しました",
-      "noEventsOnThisDay": "この日にはまだイベントがありません",
+      "noEventsOnThisDay": "まっさらな1日です。最初のブロックを追加しましょう",
       "selectEventToEdit": "編集するイベントを選択",
       "selectEventToDelete": "削除するイベントを選択",
       "deselected": "イベントの選択を解除しました",
@@ -134,7 +134,7 @@
       "tags": "タグ",
       "ungrouped": "グループなし",
       "untagged": "タグなし",
-      "noTags": "最初のタグを作って整理を始めましょう",
+      "noTags": "タグで時間に名前をつけると、パターンが見えてきます。最初のタグを作りましょう",
       "comingSoon": "近日公開予定",
       "createTag": "タグを作成",
       "addTagToGroup": "タグを追加",
@@ -221,12 +221,12 @@
       "backToAll": "すべてのタグ",
       "noTagData": "この期間のタグデータがありません",
       "review": {
-        "emptyTitle": "まだ振り返りデータがありません",
-        "emptyDescription": "エントリーを記録して週を振り返りましょう"
+        "emptyTitle": "新しい1週間が始まりました",
+        "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます"
       },
       "progress": {
-        "emptyTitle": "まだ進捗データがありません",
-        "emptyDescription": "エントリーが増えるとトレンドが見えてきます"
+        "emptyTitle": "トレンドの準備中です",
+        "emptyDescription": "エントリーが増えると、ここにパターンが見えてきます"
       },
       "periodDay": "日",
       "periodWeek": "週",
@@ -321,7 +321,7 @@
       },
       "discoveries": {
         "loading": "読み込み中…",
-        "emptyTitle": "まだ発見がありません",
+        "emptyTitle": "発見の準備中です",
         "emptyDescription": "もう少しデータが貯まると、パターンが見えてきます",
         "timePatternHighFulfillment": "{day}の{hour}時台は、充実度が高い傾向があります",
         "bestEstimationTag": "この期間で最も見積もりが正確だったタグは「{tagName}」でした（平均誤差 {deviation}分）",
