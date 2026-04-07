@@ -9,6 +9,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
 import { captureBusinessEvent } from '@/platform/sentry';
@@ -262,7 +263,7 @@ export const entriesCoreRouter = createTRPCRouter({
     .input(bulkUpdateEntrySchema)
     .mutation(async ({ ctx, input }) => {
       const { supabase, userId } = ctx;
-      const updateData = removeUndefinedFields(input.data) as Record<string, unknown>;
+      const updateData = removeUndefinedFields(input.data) as TablesUpdate<'entries'>;
 
       const { data, error } = await supabase
         .from('entries')
