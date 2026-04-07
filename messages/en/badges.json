@@ -20,6 +20,10 @@
       "name": "Total Blocks",
       "description": "Total number of recorded blocks"
     },
+    "tagHours": {
+      "name": "Tag Master",
+      "description": "Accumulate hours on a single tag"
+    },
     "tags5": {
       "name": "5 Tags Used",
       "description": "Use 5 different tags"
@@ -38,48 +42,26 @@
       "description": "Record 8 or more blocks in a single day",
       "hint": "Use the palette for efficient recording"
     },
-    "templateFirst": {
-      "name": "Template",
-      "description": "Use a template for the first time",
-      "hint": "Open templates list"
+    "groupFirst": {
+      "name": "Group Created",
+      "description": "Create your first tag group"
     },
-    "exportFirst": {
-      "name": "First Export",
-      "description": "Export your data for the first time",
-      "hint": "Open export settings"
+    "chronotypeTrio": {
+      "name": "3-Zone Coverage",
+      "description": "Place blocks in all chronotype zones",
+      "hint": "Open chronotype settings"
     },
     "earlyBird": {
       "name": "Early Bird",
       "description": "Record a block before 7 AM"
     },
-    "nightOwl": {
-      "name": "Night Owl",
-      "description": "Record a block after 11 PM"
-    },
     "fullWeek": {
       "name": "Full Week",
       "description": "Record entries on all days of the week"
     },
-    "deepFull": {
-      "name": "Deep Zone Master",
-      "description": "Fill all Deep Zone slots with blocks"
-    },
-    "tagStreak": {
-      "name": "Tag Streak",
-      "description": "Use the same tag for 7 consecutive days"
-    },
-    "tag100h": {
-      "name": "100h Master",
-      "description": "Accumulate 100 hours on a single tag",
-      "hint": "Check tag hours in Stats → Review"
-    },
-    "monday5": {
-      "name": "Monday Master",
-      "description": "Record entries on Monday for 5 consecutive weeks"
-    },
-    "dayCoverage": {
-      "name": "Full Coverage",
-      "description": "Cover 80% or more of waking hours in a day"
+    "weeklyChampion": {
+      "name": "Weekly Champion",
+      "description": "Set a new personal best for weekly hours"
     },
     "proSignup": {
       "name": "Pro Member",
@@ -87,7 +69,7 @@
     },
     "weeklyReport": {
       "name": "First Report",
-      "description": "Receive your first weekly report"
+      "description": "Receive your first AI weekly report"
     },
     "sixMonths": {
       "name": "6-Month Veteran",

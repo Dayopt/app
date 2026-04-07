@@ -1,7 +1,7 @@
 {
   "badges": {
     "title": "バッジ",
-    "earned": "を獲得しました！",
+    "earned": "を獲得した",
     "locked": "未獲得",
     "notEarned": "未達成",
     "earnedAt": "{date}に獲得",
@@ -19,6 +19,10 @@
     "blocks": {
       "name": "累計ブロック",
       "description": "記録したブロックの累計数"
+    },
+    "tagHours": {
+      "name": "タグマスター",
+      "description": "1つのタグで累計時間を記録"
     },
     "tags5": {
       "name": "5種のタグ",
@@ -38,48 +42,26 @@
       "description": "1日に8ブロック以上記録",
       "hint": "パレットを活用して効率的に記録"
     },
-    "templateFirst": {
-      "name": "テンプレート",
-      "description": "テンプレートを初めて使用",
-      "hint": "テンプレート一覧を開く"
+    "groupFirst": {
+      "name": "グループ作成",
+      "description": "タグのグループを初めて作成"
     },
-    "exportFirst": {
-      "name": "初エクスポート",
-      "description": "データを初めてエクスポート",
-      "hint": "エクスポート設定を開く"
+    "chronotypeTrio": {
+      "name": "3ゾーン制覇",
+      "description": "全クロノタイプゾーンにブロックを配置",
+      "hint": "クロノタイプ設定を開く"
     },
     "earlyBird": {
       "name": "早起き記録",
       "description": "7時前にブロックを記録"
     },
-    "nightOwl": {
-      "name": "夜型の記録",
-      "description": "23時以降にブロックを記録"
-    },
     "fullWeek": {
       "name": "全曜日記録",
       "description": "1週間で全曜日に記録"
     },
-    "deepFull": {
-      "name": "Deep全枠活用",
-      "description": "Deep Zoneの全枠にブロックを配置"
-    },
-    "tagStreak": {
-      "name": "習慣タグ",
-      "description": "同じタグを7日連続で使用"
-    },
-    "tag100h": {
-      "name": "100時間マスター",
-      "description": "1つのタグで累計100時間を記録",
-      "hint": "Stats → Reviewでタグ別時間を確認"
-    },
-    "monday5": {
-      "name": "月曜マスター",
-      "description": "5週連続で月曜に記録"
-    },
-    "dayCoverage": {
-      "name": "完全記録の日",
-      "description": "1日の実時間80%以上をカバー"
+    "weeklyChampion": {
+      "name": "週間チャンピオン",
+      "description": "週間記録時間の自己ベストを更新"
     },
     "proSignup": {
       "name": "Pro登録",
@@ -87,7 +69,7 @@
     },
     "weeklyReport": {
       "name": "初レポート",
-      "description": "ウィークリーレポートを初受信"
+      "description": "AIウィークリーレポートを初受信"
     },
     "sixMonths": {
       "name": "半年の記録者",

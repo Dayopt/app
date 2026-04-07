@@ -24,12 +24,12 @@ function earned(badgeId: string, rank: string | null = null): UserBadge {
 const EARNED_IDS = new Map([
   ['streak', 'silver'],
   ['blocks', 'bronze'],
+  ['tag-hours', 'bronze'],
   ['tags-5', null],
   ['palette-first', null],
   ['early-bird', null],
   ['full-week', null],
   ['pro-signup', null],
-  ['weekly-report', null],
 ]);
 
 const ALL_BADGES: BadgeWithStatus[] = BADGE_DEFINITIONS.map((def) => {
@@ -78,7 +78,7 @@ const meta = {
   args: { onSelect: fn() },
   decorators: [
     (Story) => (
-      <div className="w-[360px]">
+      <div className="w-full max-w-2xl">
         <Story />
       </div>
     ),
