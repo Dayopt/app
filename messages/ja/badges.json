@@ -67,10 +67,6 @@
       "name": "Pro登録",
       "description": "Proプランに登録"
     },
-    "weeklyReport": {
-      "name": "初レポート",
-      "description": "AIウィークリーレポートを初受信"
-    },
     "sixMonths": {
       "name": "半年の記録者",
       "description": "登録から6ヶ月が経過"

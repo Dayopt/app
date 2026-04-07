@@ -67,10 +67,6 @@
       "name": "Pro Member",
       "description": "Subscribe to the Pro plan"
     },
-    "weeklyReport": {
-      "name": "First Report",
-      "description": "Receive your first AI weekly report"
-    },
     "sixMonths": {
       "name": "6-Month Veteran",
       "description": "6 months since registration"

@@ -255,6 +255,7 @@ export class BadgesService {
 
       dateCount.set(date, (dateCount.get(date) ?? 0) + 1);
 
+      // TODO: ユーザーTZで判定すべき（現在はUTC）
       if (hour < 7) hasEarlyBird = true;
 
       if (startMs >= oneWeekAgo) {
@@ -382,8 +383,6 @@ export class BadgesService {
         return source.isWeeklyBest ? 1 : 0;
       case 'pro-signup':
         return source.isProSubscriber ? 1 : 0;
-      case 'weekly-report':
-        return 0; // AI weekly report送信ロジック実装後に判定追加
       case 'six-months':
         return source.accountAgeDays >= 180 ? 1 : 0;
       case 'one-year':

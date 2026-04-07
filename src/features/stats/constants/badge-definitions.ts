@@ -1,5 +1,5 @@
 /**
- * バッジ定義 — 全16個
+ * バッジ定義 — 全15個
  *
  * カテゴリ:
  * - growth: 段階成長型（ブロンズ→シルバー→ゴールド）
@@ -85,7 +85,6 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     hintKey: 'badges.deepZone.hint',
     icon: 'Sun',
     isTiered: false,
-    link: '/settings/chronotype',
   },
   {
     id: 'full-day',
@@ -95,7 +94,6 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     hintKey: 'badges.fullDay.hint',
     icon: 'BarChart3',
     isTiered: false,
-    link: '/palette',
   },
   {
     id: 'group-first',
@@ -113,7 +111,6 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     hintKey: 'badges.chronotypeTrio.hint',
     icon: 'Sparkles',
     isTiered: false,
-    link: '/settings/chronotype',
   },
 ];
 
@@ -149,7 +146,7 @@ const PATTERN_BADGES: BadgeDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// ロイヤルティ系（4個）
+// ロイヤルティ系（3個）
 // ---------------------------------------------------------------------------
 
 const LOYALTY_BADGES: BadgeDefinition[] = [
@@ -159,14 +156,6 @@ const LOYALTY_BADGES: BadgeDefinition[] = [
     nameKey: 'badges.proSignup.name',
     descriptionKey: 'badges.proSignup.description',
     icon: 'Heart',
-    isTiered: false,
-  },
-  {
-    id: 'weekly-report',
-    category: 'loyalty',
-    nameKey: 'badges.weeklyReport.name',
-    descriptionKey: 'badges.weeklyReport.description',
-    icon: 'Mail',
     isTiered: false,
   },
   {
