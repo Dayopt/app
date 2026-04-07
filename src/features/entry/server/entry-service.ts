@@ -4,6 +4,7 @@
  * entries テーブルのビジネスロジック
  */
 
+import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-utils';
 
@@ -275,7 +276,7 @@ export class EntryService {
       }
     }
 
-    const updateData = removeUndefinedFields(normalizedInput) as Record<string, unknown>;
+    const updateData = removeUndefinedFields(normalizedInput) as TablesUpdate<'entries'>;
 
     // reviewed_at 自動設定: fulfillment_score が設定されたら reviewed_at をセット
     const inputWithFulfillment = input as { fulfillment_score?: number | null };

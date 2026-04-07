@@ -4,6 +4,7 @@
  * 通知のビジネスロジックを集約したサービス層
  */
 
+import type { TablesUpdate } from '@/lib/database.types';
 import { ServiceError } from '@/platform/trpc/errors';
 
 import type {
@@ -131,7 +132,7 @@ export class NotificationService {
   async update(options: UpdateNotificationOptions): Promise<NotificationRow> {
     const { userId, notificationId, isRead, readAt } = options;
 
-    const updateData: Record<string, boolean | string | null> = {};
+    const updateData: TablesUpdate<'notifications'> = {};
     if (isRead !== undefined) updateData.is_read = isRead;
     if (readAt !== undefined) updateData.read_at = readAt;
 
