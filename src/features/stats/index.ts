@@ -8,6 +8,7 @@
 // =============================================================================
 // Components
 // =============================================================================
+export { BadgeSection } from './components/badges/BadgeSection';
 export { InsightsView } from './components/insights/InsightsView';
 export { ProgressView } from './components/progress/ProgressView';
 export { StatsLayout } from './components/StatsLayout';
