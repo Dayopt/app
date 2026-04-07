@@ -1,11 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
-
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import { YearlyHeatmap } from './YearlyHeatmap';
 
@@ -32,40 +25,6 @@ const MOCK_DAILY_DATA = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// tRPC モック（YearlyHeatmap は内部 useQuery を使用）
-// ─────────────────────────────────────────────────────────
-
-type DailyItem = { day: string; hours: number };
-
-function createMockLink(data: DailyItem[]): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'entries.getDailyHours': data,
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({ children, data }: { children: ReactNode; data: DailyItem[] }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
-  });
-  const trpcClient = api.createClient({ links: [createMockLink(data)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 // Meta
 // ─────────────────────────────────────────────────────────
 
@@ -82,22 +41,14 @@ type Story = StoryObj<typeof meta>;
 
 /** データあり */
 export const WithData: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider data={MOCK_DAILY_DATA}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'entries.getDailyHours': MOCK_DAILY_DATA },
+  },
 };
 
 /** データなし */
 export const Empty: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider data={[]}>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'entries.getDailyHours': [] },
+  },
 };

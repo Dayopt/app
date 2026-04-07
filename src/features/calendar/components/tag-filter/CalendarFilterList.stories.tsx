@@ -3,19 +3,12 @@
  *
  * タグフィルターサイドバー（Googleカレンダーの「マイカレンダー」相当）。
  * tRPC で tags.list / entries.getTagStats をモック。
- * useCalendarFilterStore は setState で初期化。
+ * useCalendarFilterStore は storeMocks で初期化。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
-
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
+import { StoryTRPCProvider } from '../../../../../.storybook/mocks/trpc';
 import { CalendarFilterList } from './CalendarFilterList';
 
 // ─────────────────────────────────────────────────────────
@@ -95,65 +88,10 @@ const MOCK_TAG_STATS_COUNTS = {
   'tag-6': 2,
 };
 
-// ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(
-  tags: typeof MOCK_TAGS,
-  tagStatsCounts: Record<string, number>,
-): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'tags.list': { data: tags },
-            'entries.getTagStats': { counts: tagStatsCounts },
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function createPendingLink(): TRPCLink<AppRouter> {
-  return () => () =>
-    observable(() => {
-      // resolver を呼ばない → ローディング状態を維持
-    });
-}
-
-function MockProvider({
-  children,
-  tags = MOCK_TAGS,
-  tagStatsCounts = MOCK_TAG_STATS_COUNTS,
-  pending = false,
-}: {
-  children: ReactNode;
-  tags?: typeof MOCK_TAGS;
-  tagStatsCounts?: Record<string, number>;
-  pending?: boolean;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const link = pending ? createPendingLink() : createMockLink(tags, tagStatsCounts);
-  const trpcClient = api.createClient({ links: [link] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
+const MOCK_TRPC = {
+  'tags.list': { data: MOCK_TAGS },
+  'entries.getTagStats': { counts: MOCK_TAG_STATS_COUNTS },
+};
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -166,6 +104,7 @@ const meta = {
   parameters: {
     layout: 'padded',
     a11y: { test: 'todo' },
+    trpcMocks: MOCK_TRPC,
   },
   tags: ['autodocs'],
   decorators: [
@@ -191,19 +130,14 @@ type Story = StoryObj<typeof meta>;
  * コロン記法でグルーピング表示される。各タグのエントリ件数も表示。
  */
 export const Default: Story = {
-  decorators: [
-    (Story) => {
-      useCalendarFilterStore.setState({
+  parameters: {
+    storeMocks: {
+      useCalendarFilterStore: {
         visibleTagIds: new Set(['tag-1', 'tag-2', 'tag-3', 'tag-4', 'tag-5', 'tag-6']),
         initialized: true,
-      });
-      return (
-        <MockProvider>
-          <Story />
-        </MockProvider>
-      );
+      },
     },
-  ],
+  },
 };
 
 /**
@@ -212,19 +146,14 @@ export const Default: Story = {
  * 「勉強」「休憩」が非表示（チェックなし）の状態。
  */
 export const PartiallyHidden: Story = {
-  decorators: [
-    (Story) => {
-      useCalendarFilterStore.setState({
+  parameters: {
+    storeMocks: {
+      useCalendarFilterStore: {
         visibleTagIds: new Set(['tag-1', 'tag-2', 'tag-3', 'tag-5']),
         initialized: true,
-      });
-      return (
-        <MockProvider>
-          <Story />
-        </MockProvider>
-      );
+      },
     },
-  ],
+  },
 };
 
 /**
@@ -234,19 +163,18 @@ export const PartiallyHidden: Story = {
  * 「タグがありません」的なメッセージが表示される。
  */
 export const EmptyState: Story = {
-  decorators: [
-    (Story) => {
-      useCalendarFilterStore.setState({
+  parameters: {
+    trpcMocks: {
+      'tags.list': { data: [] },
+      'entries.getTagStats': { counts: {} },
+    },
+    storeMocks: {
+      useCalendarFilterStore: {
         visibleTagIds: new Set(),
         initialized: false,
-      });
-      return (
-        <MockProvider tags={[]} tagStatsCounts={{}}>
-          <Story />
-        </MockProvider>
-      );
+      },
     },
-  ],
+  },
 };
 
 /**
@@ -255,13 +183,9 @@ export const EmptyState: Story = {
  * タグ取得中はスケルトンが表示される。
  */
 export const Loading: Story = {
-  decorators: [
-    (Story) => (
-      <MockProvider pending>
-        <Story />
-      </MockProvider>
-    ),
-  ],
+  parameters: {
+    trpcPending: true,
+  },
 };
 
 /** 全パターン一覧 */
@@ -270,21 +194,23 @@ export const AllPatterns: Story = {
     <div className="flex gap-6">
       <div className="w-60">
         <p className="text-muted-foreground mb-2 text-xs">全タグ表示</p>
-        <MockProvider>
+        <StoryTRPCProvider mocks={MOCK_TRPC}>
           <CalendarFilterList />
-        </MockProvider>
+        </StoryTRPCProvider>
       </div>
       <div className="w-60">
         <p className="text-muted-foreground mb-2 text-xs">空状態</p>
-        <MockProvider tags={[]} tagStatsCounts={{}}>
+        <StoryTRPCProvider
+          mocks={{ 'tags.list': { data: [] }, 'entries.getTagStats': { counts: {} } }}
+        >
           <CalendarFilterList />
-        </MockProvider>
+        </StoryTRPCProvider>
       </div>
       <div className="w-60">
         <p className="text-muted-foreground mb-2 text-xs">ローディング</p>
-        <MockProvider pending>
+        <StoryTRPCProvider pending>
           <CalendarFilterList />
-        </MockProvider>
+        </StoryTRPCProvider>
       </div>
     </div>
   ),

@@ -10,10 +10,9 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 通知タイプ
 
-| タイプ     | 説明                     | アイコン      |
-| ---------- | ------------------------ | ------------- |
-| `reminder` | プラン開始前リマインダー | Bell          |
-| `overdue`  | 期限超過通知（将来追加） | AlertTriangle |
+| タイプ     | 説明                     | アイコン |
+| ---------- | ------------------------ | -------- |
+| `reminder` | プラン開始前リマインダー | Bell     |
 
 ---
 
@@ -21,15 +20,15 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### notifications テーブル
 
-| カラム       | 型          | 説明                            |
-| ------------ | ----------- | ------------------------------- |
-| `id`         | UUID        | PK                              |
-| `user_id`    | UUID        | FK → auth.users                 |
-| `type`       | TEXT        | 通知タイプ: reminder \| overdue |
-| `plan_id`    | UUID        | 対象プランID（FK → plans）      |
-| `is_read`    | BOOLEAN     | 既読状態                        |
-| `read_at`    | TIMESTAMPTZ | 既読日時                        |
-| `created_at` | TIMESTAMPTZ | 作成日時                        |
+| カラム       | 型          | 説明                       |
+| ------------ | ----------- | -------------------------- |
+| `id`         | UUID        | PK                         |
+| `user_id`    | UUID        | FK → auth.users            |
+| `type`       | TEXT        | 通知タイプ: reminder       |
+| `plan_id`    | UUID        | 対象プランID（FK → plans） |
+| `is_read`    | BOOLEAN     | 既読状態                   |
+| `read_at`    | TIMESTAMPTZ | 既読日時                   |
+| `created_at` | TIMESTAMPTZ | 作成日時                   |
 
 - **RLS**: `auth.uid() = user_id` で自分の通知のみアクセス
 - **インデックス**: `user_id`, `(user_id, is_read)`, `plan_id`, `created_at DESC`

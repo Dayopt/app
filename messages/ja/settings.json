@@ -6,13 +6,13 @@
       "comments": "コメント"
     },
     "activity": {
-      "noActivity": "まだアクティビティがない"
+      "noActivity": "まだアクティビティがありません"
     },
     "account": {
       "profileUpdated": "プロフィールを更新しました",
       "passwordUpdated": "パスワードを更新しました",
-      "deleteNotImplemented": "アカウント削除機能は後で実装される",
-      "deleteFailed": "アカウントを削除できなかった。もう一度試して",
+      "deleteNotImplemented": "アカウント削除機能は後で実装されます",
+      "deleteFailed": "アカウントを削除できませんでした。もう一度お試しください",
       "profile": "プロフィール",
       "profileDesc": "基本情報とプロフィール画像の設定",
       "displayName": "表示名",
@@ -24,7 +24,7 @@
       "emailPlaceholder": "メールアドレスを入力",
       "emailChange": {
         "title": "メールアドレスを変更",
-        "description": "新しいメールアドレスとパスワードを入力して",
+        "description": "新しいメールアドレスとパスワードを入力してください",
         "currentEmail": "現在のメールアドレス",
         "newEmail": "新しいメールアドレス",
         "passwordConfirm": "パスワード確認",
@@ -35,7 +35,7 @@
         "close": "閉じる",
         "successTitle": "確認メールを送信しました",
         "successMessage": "{email} に確認メールを送信しました。",
-        "successHint": "メール内のリンクをクリックして、メールアドレスの変更を完了して。"
+        "successHint": "メール内のリンクをクリックして、メールアドレスの変更を完了してください。"
       },
       "profilePicture": "プロフィール画像",
       "avatar": "アバター",
@@ -57,21 +57,21 @@
       "confirmPassword": "新しいパスワード（確認）",
       "updatingPassword": "パスワード更新中...",
       "updatePassword": "パスワードを更新",
-      "passwordMismatch": "パスワードが一致しない",
-      "passwordMinLength": "パスワードは8文字以上で入力して",
+      "passwordMismatch": "パスワードが一致しません",
+      "passwordMinLength": "パスワードは8文字以上で入力してください",
       "showPassword": "パスワードを表示",
       "hidePassword": "パスワードを隠す",
-      "passwordUpdateFailed": "パスワードを更新できなかった。もう一度試して",
-      "passwordIncorrect": "現在のパスワードが正しくない",
-      "passwordReused": "過去5回分のパスワードは使用できない。別のパスワードを入力して。",
-      "passwordPwned": "このパスワードは過去に漏洩している。より安全なパスワードを使って。",
+      "passwordUpdateFailed": "パスワードを更新できませんでした。もう一度お試しください",
+      "passwordIncorrect": "現在のパスワードが正しくありません",
+      "passwordReused": "過去5回分のパスワードは使用できません。別のパスワードを入力してください。",
+      "passwordPwned": "このパスワードは過去に漏洩しています。より安全なパスワードを使ってください。",
       "twoFactor": "2要素認証",
       "twoFactorDesc": "アカウントに追加のセキュリティ層を追加",
       "enable2FA": "2FAを有効にする",
       "twoFactorEnabled": "2要素認証が有効",
       "twoFactorPrompt": "サインイン時に認証コードを要求",
       "twoFactorActive": "2要素認証が有効",
-      "twoFactorProtection": "アカウントが追加のセキュリティ層で保護されている。",
+      "twoFactorProtection": "アカウントは追加のセキュリティ層で保護されています。",
       "emailUsedFor": "ログインや通知に使用",
       "emailVerified": "認証済み",
       "mfa": {
@@ -88,40 +88,40 @@
         "regenerate": "再生成",
         "setup": {
           "title": "2段階認証を設定",
-          "description": "以下の手順に従って、認証アプリで2段階認証を設定して。",
+          "description": "以下の手順に従って、認証アプリで2段階認証を設定してください。",
           "step1": "1. QRコードをスキャン",
-          "step1Desc": "Google Authenticator、Microsoft Authenticator、Authyなどの認証アプリでスキャンして",
+          "step1Desc": "Google Authenticator、Microsoft Authenticator、Authyなどの認証アプリでスキャンしてください",
           "manualEntry": "またはこのコードを手動で入力:",
           "step2": "2. 認証アプリに表示された6桁のコードを入力"
         },
         "enabled": {
           "title": "2段階認証が有効",
-          "description": "ログイン時に認証アプリで生成されるコードが必要"
+          "description": "ログイン時に認証アプリで生成されるコードが必要です"
         },
         "recoveryCodes": {
-          "title": "リカバリーコードを保存して",
-          "description": "認証アプリにアクセスできなくなった場合、これらのコードでログインできる。",
-          "oneTimeUse": "各コードは1回のみ使用可能。",
-          "saveWarning": "これらのコードを安全な場所に保存して。この画面を閉じると再表示できない。",
+          "title": "リカバリーコードを保存してください",
+          "description": "認証アプリにアクセスできなくなった場合、これらのコードでログインできます。",
+          "oneTimeUse": "各コードは1回のみ使用可能です。",
+          "saveWarning": "これらのコードを安全な場所に保存してください。この画面を閉じると再表示できません。",
           "saved": "保存しました",
           "sectionTitle": "リカバリーコード",
           "remaining": "残り {count} 個のコードが利用可能",
-          "noCodesLeft": "まだリカバリーコードがない",
-          "exhaustedWarning": "リカバリーコードがすべて使用済み。デバイスを紛失するとアカウントにアクセスできなくなる。今すぐ再生成して。",
-          "regenerateSuccess": "新しいリカバリーコードを生成しました。安全な場所に保存して。",
-          "regenerateFailed": "リカバリーコードを生成できなかった。もう一度試して"
+          "noCodesLeft": "まだリカバリーコードがありません",
+          "exhaustedWarning": "リカバリーコードがすべて使用済みです。デバイスを紛失するとアカウントにアクセスできなくなります。今すぐ再生成してください。",
+          "regenerateSuccess": "新しいリカバリーコードを生成しました。安全な場所に保存してください。",
+          "regenerateFailed": "リカバリーコードを生成できませんでした。もう一度お試しください"
         },
         "disableDialog": {
           "title": "2段階認証を無効にする",
-          "description": "2段階認証を無効にするには、認証アプリの6桁のコードを入力して。"
+          "description": "2段階認証を無効にするには、認証アプリの6桁のコードを入力してください。"
         },
         "regenerateDialog": {
           "title": "リカバリーコードを再生成",
-          "description": "新しいコードを生成すると、既存のリカバリーコードはすべて無効になる。この操作は元に戻せない。"
+          "description": "新しいコードを生成すると、既存のリカバリーコードはすべて無効になります。この操作は元に戻せません。"
         }
       },
       "socialLogin": "ソーシャルログイン連携",
-      "socialLoginDesc": "ソーシャルログイン連携は今後のアップデートで利用可能になる",
+      "socialLoginDesc": "ソーシャルログイン連携は今後のアップデートで利用可能になります",
       "connect": "連携",
       "disconnect": "解除",
       "connected": "連携済み",
@@ -133,7 +133,7 @@
       "privacy": "プライバシー",
       "privacyDesc": "情報の公開範囲を設定",
       "publicProfile": "プロフィールを公開",
-      "publicProfileDesc": "他のユーザーがプロフィールを閲覧できる",
+      "publicProfileDesc": "他のユーザーがプロフィールを閲覧できます",
       "showEmail": "メールアドレスを表示",
       "showEmailDesc": "プロフィールにメールアドレスを表示",
       "allowNotifications": "通知を許可",
@@ -146,11 +146,11 @@
       "privacyUpdated": "プライバシー設定を更新しました",
       "dataExport": {
         "title": "データエクスポート",
-        "description": "すべてのデータをJSON形式でダウンロードできる。GDPR準拠のデータポータビリティ権に基づく。",
+        "description": "すべてのデータをJSON形式でダウンロードできます。GDPR準拠のデータポータビリティ権に基づきます。",
         "button": "データをエクスポート",
         "exporting": "エクスポート中...",
         "success": "データのエクスポートが完了しました",
-        "error": "データをエクスポートできなかった。もう一度試して",
+        "error": "データをエクスポートできませんでした。もう一度お試しください",
         "includedData": "エクスポートされるデータ",
         "profile": "プロフィール情報",
         "tasks": "タスクデータ",
@@ -161,28 +161,28 @@
       },
       "deletion": {
         "title": "アカウント削除",
-        "warningTitle": "この操作は取り消すことができない。",
-        "warningMessage": "アカウントとすべての関連データが削除される。",
-        "consequence1": "すべてのタスクとプロジェクトが削除される",
-        "consequence2": "プロフィールと設定が削除される",
-        "consequence3": "30日後に完全削除される（猶予期間）",
+        "warningTitle": "この操作は取り消すことができません。",
+        "warningMessage": "アカウントとすべての関連データが削除されます。",
+        "consequence1": "すべてのタスクとプロジェクトが削除されます",
+        "consequence2": "プロフィールと設定が削除されます",
+        "consequence3": "30日後に完全削除されます（猶予期間）",
         "buttonText": "アカウント削除",
         "deleting": "削除中...",
         "dialogTitle": "アカウント削除の確認",
-        "dialogDescription": "本当にアカウントを削除しますか？この操作は30日後に完全に実行され、それまでキャンセルできる。",
+        "dialogDescription": "本当にアカウントを削除しますか？この操作は30日後に完全に実行されます。それまでキャンセルできます。",
         "gracePeriodTitle": "30日間の猶予期間",
-        "gracePeriodMessage": "削除リクエストから30日間、データは保持される。その間であればアカウントを復元できる。",
+        "gracePeriodMessage": "削除リクエストから30日間、データは保持されます。その間であればアカウントを復元できます。",
         "passwordLabel": "パスワードで確認",
         "passwordPlaceholder": "現在のパスワードを入力",
-        "passwordRequired": "パスワードを入力して",
-        "invalidPassword": "パスワードが正しくない",
+        "passwordRequired": "パスワードを入力してください",
+        "invalidPassword": "パスワードが正しくありません",
         "confirmTextLabel": "確認のため「DELETE」と入力",
-        "confirmTextHint": "大文字で「DELETE」と正確に入力して",
-        "confirmTextError": "確認テキストが正しくない",
+        "confirmTextHint": "大文字で「DELETE」と正確に入力してください",
+        "confirmTextError": "確認テキストが正しくありません",
         "cancel": "キャンセル",
         "confirm": "削除を実行",
-        "success": "アカウント削除をリクエストしました。30日後に完全削除される。",
-        "error": "アカウントを削除できなかった。もう一度試して"
+        "success": "アカウント削除をリクエストしました。30日後に完全削除されます。",
+        "error": "アカウントを削除できませんでした。もう一度お試しください"
       }
     },
     "calendar": {
@@ -407,13 +407,13 @@
         "selected": "{count} / {max} 選択中",
         "limit": "最大{max}個まで選べます",
         "dragHint": "ドラッグして並び替え",
-        "emptyState": "キーワードを選んで",
-        "notSelected": "まだ選択されていない。共感するキーワードを選んで順位を付けよう。",
+        "emptyState": "キーワードを選んでください",
+        "notSelected": "まだ選択されていません。共感するキーワードを選んで順位を付けましょう。",
         "select": "選択",
         "edit": "編集",
         "done": "完了",
         "cancel": "キャンセル",
-        "idleDescription": "大切にしたい価値観を5つ選び、優先順に並べて。AIが時間の使い方を分析する際の基準になる。"
+        "idleDescription": "大切にしたい価値観を5つ選び、優先順に並べてください。AIが時間の使い方を分析する際の基準になります。"
       },
       "keywords": {
         "integrity": "誠実さ",
@@ -470,7 +470,7 @@
     },
     "aiStyle": {
       "title": "AIコミュニケーションスタイル",
-      "description": "チャットパネルでAIがどのようにコミュニケーションするかを選んで。",
+      "description": "チャットパネルでAIがどのようにコミュニケーションするかを選んでください。",
       "settingsSaved": "AIスタイルを保存しました",
       "coach": "コーチ",
       "coachDesc": "気づきを促す質問をしてくれる。押し付けない。",
@@ -512,7 +512,7 @@
     },
     "common": {
       "saved": "設定を保存しました",
-      "saveFailed": "保存できなかった。もう一度試して"
+      "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください"
     },
     "mobile": {
       "description": "アプリの設定を変更",
@@ -555,7 +555,7 @@
     "dataControls": {
       "export": {
         "title": "エクスポート",
-        "description": "選択した形式でデータをダウンロード。",
+        "description": "選択した形式でデータをダウンロードできます。",
         "format": "形式",
         "formatJson": "JSON（バックアップ・復元用）",
         "formatCsv": "CSV（スプレッドシート用）",
@@ -567,7 +567,7 @@
         "exporting": "エクスポート中...",
         "exportButton": "エクスポート",
         "exportSuccess": "データをエクスポートしました",
-        "exportFailed": "エクスポートできなかった。もう一度試して。",
+        "exportFailed": "エクスポートできませんでした。もう一度お試しください。",
         "csvComingSoon": "近日公開",
         "includedDataTitle": "エクスポートに含まれるデータ",
         "profileInfo": "プロフィール情報",
@@ -593,7 +593,7 @@
         "description": "DayoptのJSONエクスポートファイルから復元。",
         "dropzone": "JSONファイルをドロップ、またはクリックして選択",
         "selectFile": "ファイルを選択",
-        "warning": "復元すると既存のデータが上書きされる。この操作は取り消せない。",
+        "warning": "復元すると既存のデータが上書きされます。この操作は取り消せません。",
         "comingSoon": "Coming soon"
       },
       "mcp": {
@@ -601,26 +601,26 @@
         "description": "Claude DesktopなどのAIアシスタントからDayoptのデータに接続。",
         "serverUrl": "MCPサーバーURL",
         "apiKey": "APIキー",
-        "noKey": "まだAPIキーが未生成",
+        "noKey": "まだAPIキーが未生成です",
         "generateKey": "APIキーを生成",
         "regenerateKey": "再発行",
-        "regenerateConfirm": "再発行すると現在のキーが無効になる。続けますか？",
+        "regenerateConfirm": "再発行すると現在のキーが無効になります。続けますか？",
         "copied": "クリップボードにコピーしました",
-        "connectionGuide": "上記のURLとAPIキーをClaude Desktopの設定に追加して。",
+        "connectionGuide": "上記のURLとAPIキーをClaude Desktopの設定に追加してください。",
         "viewDocs": "ドキュメントを見る",
-        "proRequired": "MCP / APIアクセスにはProプランが必要。",
+        "proRequired": "MCP / APIアクセスにはProプランが必要です。",
         "upgrade": "Proにアップグレード"
       },
       "deletion": {
         "title": "データ削除",
         "deleteBlocks": "全ブロックを削除",
-        "deleteBlocksDesc": "すべてのエントリーを削除。タグと設定は残る。",
+        "deleteBlocksDesc": "すべてのエントリーを削除します。タグと設定は残ります。",
         "deleteAllData": "全データを削除",
-        "deleteAllDataDesc": "タグや設定を含むすべてのデータを削除。アカウントは残る。",
+        "deleteAllDataDesc": "タグや設定を含むすべてのデータを削除します。アカウントは残ります。",
         "confirmTitle": "本当に削除しますか？",
-        "confirmDeleteBlocks": "すべてのエントリーが完全に削除される。タグと設定は保持される。",
-        "confirmDeleteAll": "すべてのデータが完全に削除される。アカウントは残るが、エントリー、タグ、設定はすべて削除される。",
-        "typeToConfirm": "確認のため「{keyword}」と入力して",
+        "confirmDeleteBlocks": "すべてのエントリーが完全に削除されます。タグと設定は保持されます。",
+        "confirmDeleteAll": "すべてのデータが完全に削除されます。アカウントは残りますが、エントリー、タグ、設定はすべて削除されます。",
+        "typeToConfirm": "確認のため「{keyword}」と入力してください",
         "confirmKeyword": "削除",
         "deleting": "削除中..."
       }
@@ -638,7 +638,7 @@
     "integrations": {
       "ai": {
         "title": "AI設定",
-        "description": "AIアシスタント機能を使用するには、各プロバイダーのAPIキーを設定して。APIキーはブラウザのローカルストレージに暗号化して保存される。",
+        "description": "AIアシスタント機能を使用するには、各プロバイダーのAPIキーを設定してください。APIキーはブラウザのローカルストレージに暗号化して保存されます。",
         "anthropicDesc": "Anthropic社のClaudeを使用",
         "openaiDesc": "OpenAI社のGPTモデルを使用",
         "saved": "保存済み",
@@ -667,15 +667,15 @@
       },
       "icalFeed": {
         "title": "iCalフィード",
-        "description": "このURLをGoogle CalendarやApple Calendarに追加すると、Dayoptのスケジュールを読み取り専用で表示できる。",
+        "description": "このURLをGoogle CalendarやApple Calendarに追加すると、Dayoptのスケジュールを読み取り専用で表示できます。",
         "feedUrl": "フィードURL",
         "copy": "コピー",
         "copied": "コピーしました",
         "regenerate": "URLを再生成",
         "regenerateConfirmTitle": "フィードURLを再生成しますか？",
-        "regenerateConfirmDescription": "現在のURLは無効になる。このURLを使用しているカレンダーは更新が必要。",
+        "regenerateConfirmDescription": "現在のURLは無効になります。このURLを使用しているカレンダーは更新が必要です。",
         "regenerateSuccess": "新しいフィードURLを生成しました",
-        "noToken": "フィードURLを生成するには「URLを再生成」をクリックして"
+        "noToken": "フィードURLを生成するには「URLを再生成」をクリックしてください"
       }
     },
     "legal": {
@@ -698,7 +698,7 @@
       },
       "links": {
         "title": "法的文書",
-        "description": "当サービスの法的文書を確認できる",
+        "description": "当サービスの法的文書を確認できます",
         "privacy": "プライバシーポリシー",
         "terms": "利用規約",
         "tokushoho": "特定商取引法に基づく表記",
@@ -727,7 +727,7 @@
       "currentPlan": "現在のプラン",
       "freePlanLabel": "Free プラン",
       "currentBadge": "現在のプラン",
-      "freePlanDescription": "基本機能を利用できる",
+      "freePlanDescription": "基本機能を利用できます",
       "proPlanDescription": "すべての機能にフルアクセス",
       "selectPlan": "プランを選択",
       "monthly": "月払い",
@@ -738,7 +738,7 @@
       "inUse": "利用中",
       "upgrade": "アップグレード",
       "paymentMethod": "支払い方法",
-      "noCard": "まだカードが登録されていない",
+      "noCard": "まだカードが登録されていません",
       "addCard": "カードを追加",
       "updateCard": "更新",
       "managePayment": "Stripe で支払い方法を管理",
@@ -748,32 +748,32 @@
       "viewInStripe": "Stripe で請求履歴を確認",
       "openPortal": "Stripe ポータルを開く",
       "invoicePaid": "支払い済み",
-      "noInvoices": "まだ請求書がない",
+      "noInvoices": "まだ請求書がありません",
       "invoiceDate": "日付",
       "invoiceTotal": "合計",
       "invoiceStatus": "ステータス",
       "invoiceAction": "アクション",
       "invoiceView": "表示",
       "cancelTitle": "サブスクリプションのキャンセル",
-      "cancelDescription": "サブスクリプションは現在の請求期間の終わりまで有効。",
+      "cancelDescription": "サブスクリプションは現在の請求期間の終わりまで有効です。",
       "cancelButton": "サブスクリプションをキャンセル",
       "cancelConfirmTitle": "サブスクリプションをキャンセルしますか？",
-      "cancelConfirmDescription": "現在の請求期間の終わりまでPro機能を引き続き利用できる。その後、アカウントはFreeプランにダウングレードされる。",
+      "cancelConfirmDescription": "現在の請求期間の終わりまでPro機能を引き続き利用できます。その後、アカウントはFreeプランにダウングレードされます。",
       "cancelConfirmAction": "キャンセルする",
       "cancelConfirmCancel": "サブスクリプションを維持",
       "billingHistory": "請求履歴",
       "pastDueTitle": "お支払いに問題がある",
-      "pastDueDescription": "前回のお支払いに失敗した。アクセスを維持するため、お支払い方法を更新して。",
+      "pastDueDescription": "前回のお支払いに失敗しました。アクセスを維持するため、お支払い方法を更新してください。",
       "updatePayment": "支払い方法を更新",
       "checkoutSuccess": "Proプランへようこそ！サブスクリプションが有効になりました。",
       "checkoutCanceled": "チェックアウトがキャンセルされました。いつでもアップグレードできます。",
-      "stripeNotConfigured": "まだStripeが設定されていない",
-      "loadError": "課金情報を読み込めなかった。もう一度試して",
+      "stripeNotConfigured": "まだStripeが設定されていません",
+      "loadError": "課金情報を読み込めませんでした。もう一度お試しください",
       "retry": "再試行",
       "trialBadge": "トライアル中",
-      "trialDescription": "7日間のトライアル期間中。トライアル終了後、自動的にProプランに移行する。",
+      "trialDescription": "7日間のトライアル期間中です。トライアル終了後、自動的にProプランに移行します。",
       "canceledTitle": "サブスクリプションがキャンセルされました",
-      "canceledDescription": "Proプランの機能は利用できなくなった。再度アップグレードすることで、すべての機能にアクセスできる。",
+      "canceledDescription": "Proプランの機能は利用できません。再度アップグレードすることで、すべての機能にアクセスできます。",
       "resubscribe": "再度アップグレード",
       "plans": {
         "free": {

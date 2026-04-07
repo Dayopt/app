@@ -40,7 +40,7 @@ export const Default: Story = {
   render: () => (
     <AuthLayout>
       <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-foreground text-xl font-bold">メール確認完了</h1>
+        <h1 className="text-foreground text-xl font-medium">メール確認完了</h1>
         <p className="text-muted-foreground text-sm">
           アカウントが確認されました。ログインしてください。
         </p>
@@ -63,7 +63,7 @@ export const ErrorPage: Story = {
   render: () => (
     <AuthLayout>
       <div className="flex flex-col gap-4 text-center">
-        <h1 className="text-foreground text-xl font-bold">リンクの期限切れ</h1>
+        <h1 className="text-foreground text-xl font-medium">リンクの期限切れ</h1>
         <p className="text-muted-foreground text-sm">
           このリンクは既に使用されているか、有効期限が切れています。
           再度メールをリクエストしてください。

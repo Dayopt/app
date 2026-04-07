@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 import { PasswordResetForm } from './PasswordResetForm';
 
@@ -44,14 +43,13 @@ export const WithInteraction: Story = {
  * フォーム送信後のスピナー・ボタンのdisabled状態を確認する。
  */
 export const Submitting: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         resetPassword: () => new Promise(() => undefined),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -73,14 +71,13 @@ export const Submitting: Story = {
  * 実コンポーネントの成功画面（日本語テキスト）が表示されることを確認する。
  */
 export const Success: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         resetPassword: () => Promise.resolve({ error: null } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -102,17 +99,16 @@ export const Success: Story = {
  * フォーム上部に表示されることを確認する。
  */
 export const ServerError: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         resetPassword: () =>
           Promise.resolve({
             error: { message: 'Email rate limit exceeded', name: 'AuthError', status: 429 },
           } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 

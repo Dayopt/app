@@ -110,6 +110,17 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   );
 
   /**
+   * 未送信の変更を破棄（タイマーキャンセル + pending クリア）
+   */
+  const cancelPending = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingRef.current = {};
+  }, []);
+
+  /**
    * 未送信の変更を即座にフラッシュ
    */
   const flush = useCallback(() => {
@@ -182,6 +193,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     save,
     saveImmediate,
     saveTag,
+    cancelPending,
     flush,
     updateEntry,
     deleteEntry,

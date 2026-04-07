@@ -1,8 +1,32 @@
 /**
- * Storybook用tRPCモック
+ * Storybook用 tRPC モックファクトリ
  *
- * PlanCardなどtRPC hooksを使用するコンポーネントのStorybook表示に必要。
- * 実際のHTTPリクエストは送信せず、コンテキストの存在のみを保証する。
+ * Story は parameters.trpcMocks でモックデータを宣言的に指定できる。
+ * 個別の MockProvider / createMockLink は不要。
+ *
+ * @example
+ * // 基本: parameters でモックデータを指定
+ * export const Default: Story = {
+ *   parameters: {
+ *     trpcMocks: { 'userSettings.get': PRESET_USER_SETTINGS.default },
+ *   },
+ * };
+ *
+ * // ローディング状態
+ * export const Loading: Story = {
+ *   parameters: { trpcPending: true },
+ * };
+ *
+ * // エラー状態
+ * export const Error: Story = {
+ *   parameters: { trpcError: { path: 'userSettings.get', code: 'INTERNAL_SERVER_ERROR' } },
+ * };
+ *
+ * // AllPatterns 内で直接使う場合
+ * import { StoryTRPCProvider } from '../../../.storybook/mocks/trpc';
+ * <StoryTRPCProvider mocks={{ 'userSettings.get': data }}>
+ *   <MyComponent />
+ * </StoryTRPCProvider>
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,102 +37,104 @@ import type { ReactNode } from 'react';
 import type { AppRouter } from '@/platform/trpc';
 import { api } from '@/platform/trpc';
 
-/** Storybook用モックデータ: プリセットタグ */
-const MOCK_TAGS = [
-  {
-    id: 'tag-work',
-    name: 'Work',
-    color: 'blue',
-    user_id: null,
-    is_active: true,
-    sort_order: 0,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-learning',
-    name: 'Learning',
-    color: 'green',
-    user_id: null,
-    is_active: true,
-    sort_order: 1,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-life',
-    name: 'Life',
-    color: 'amber',
-    user_id: null,
-    is_active: true,
-    sort_order: 2,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-exercise',
-    name: 'Exercise',
-    color: 'teal',
-    user_id: null,
-    is_active: true,
-    sort_order: 3,
-    created_at: null,
-    updated_at: null,
-  },
-  {
-    id: 'tag-hobby',
-    name: 'Hobby',
-    color: 'violet',
-    user_id: null,
-    is_active: true,
-    sort_order: 4,
-    created_at: null,
-    updated_at: null,
-  },
-];
+import { DEFAULT_TRPC_MOCKS } from './trpc-defaults';
 
-/** プロシージャパス別のモックレスポンス */
-const MOCK_RESPONSES: Record<string, unknown> = {
-  'tags.list': { data: MOCK_TAGS },
-};
+// ─────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────
 
-/** リクエストを送信せず即座に完了する no-op リンク（一部パスにはモックデータを返す） */
-const noopLink: TRPCLink<AppRouter> = () => {
-  return ({ op }) =>
-    observable((observer) => {
-      if (op.type === 'query') {
-        const mockData = MOCK_RESPONSES[op.path];
-        observer.next({ result: { type: 'data', data: mockData ?? undefined } });
-      }
-      observer.complete();
+/** プロシージャパス → レスポンスデータのマッピング */
+export type MockResponseMap = Record<string, unknown>;
+
+// ─────────────────────────────────────────────────────────
+// Link Factories
+// ─────────────────────────────────────────────────────────
+
+/** パスに応じたレスポンスを返すモックリンク */
+export function createMockLink(mocks: MockResponseMap): TRPCLink<AppRouter> {
+  return () =>
+    ({ op }) =>
+      observable((observer) => {
+        if (op.type === 'query') {
+          const result = op.path in mocks ? mocks[op.path] : undefined;
+          observer.next({ result: { type: 'data', data: result } });
+        }
+        if (op.type === 'mutation') {
+          observer.next({ result: { type: 'data', data: {} } });
+        }
+        observer.complete();
+      });
+}
+
+/** observer.next を呼ばず永久にローディング状態を維持するリンク */
+export function createPendingLink(): TRPCLink<AppRouter> {
+  return () => () =>
+    observable(() => {
+      // ローディング維持: observer.next / observer.complete を呼ばない
     });
-};
+}
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      staleTime: Infinity,
-    },
-    mutations: {
-      retry: false,
-    },
-  },
-});
+/** 指定パスに TRPCError を返すリンク */
+export function createErrorLink(
+  errorPath: string,
+  code: string,
+  message?: string,
+): TRPCLink<AppRouter> {
+  return () =>
+    ({ op }) =>
+      observable((observer) => {
+        if (op.path === errorPath) {
+          // Storybook用の簡易エラー。TRPCClientError の全プロパティは不要
+          const error = {
+            message: message ?? `Mock error: ${code}`,
+            data: { code, httpStatus: 500, stack: undefined },
+          };
+          observer.error(error as never);
+        } else {
+          observer.next({ result: { type: 'data', data: undefined } });
+          observer.complete();
+        }
+      });
+}
 
-const trpcClient = api.createClient({
-  links: [noopLink],
-});
+// ─────────────────────────────────────────────────────────
+// Provider
+// ─────────────────────────────────────────────────────────
 
-interface TRPCMockProviderProps {
+interface StoryTRPCProviderProps {
   children: ReactNode;
+  /** プロシージャパス → レスポンスデータ。DEFAULT_TRPC_MOCKS とマージされる */
+  mocks?: MockResponseMap;
+  /** true で全クエリをローディング状態に */
+  pending?: boolean;
+  /** 特定パスにエラーを返す */
+  error?: { path: string; code: string; message?: string };
 }
 
 /**
- * Storybook用tRPC Provider
- * 実際のAPIは呼ばず、コンポーネントのレンダリングのみを可能にする
+ * Story用 tRPC プロバイダ
+ *
+ * 毎回新しい QueryClient を生成し、Story間のキャッシュ漏洩を防ぐ。
+ * mocks は DEFAULT_TRPC_MOCKS にマージされるので、tags.list 等は自動的に利用可能。
  */
-export function TRPCMockProvider({ children }: TRPCMockProviderProps) {
+export function StoryTRPCProvider({ children, mocks, pending, error }: StoryTRPCProviderProps) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+
+  const mergedMocks = { ...DEFAULT_TRPC_MOCKS, ...mocks };
+
+  const link = pending
+    ? createPendingLink()
+    : error
+      ? createErrorLink(error.path, error.code, error.message)
+      : createMockLink(mergedMocks);
+
+  const trpcClient = api.createClient({ links: [link] });
+
   return (
     <api.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

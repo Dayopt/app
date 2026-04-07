@@ -107,7 +107,7 @@ export function AccountDeletionDialog() {
               <div className="space-y-2">
                 <label
                   htmlFor="delete-account-password"
-                  className="text-foreground text-sm font-normal"
+                  className="text-foreground text-base font-normal md:text-sm"
                 >
                   {t('settings.account.deletion.passwordLabel')}
                 </label>
@@ -124,7 +124,7 @@ export function AccountDeletionDialog() {
               <div className="space-y-2">
                 <label
                   htmlFor="delete-account-confirm"
-                  className="text-foreground text-sm font-normal"
+                  className="text-foreground text-base font-normal md:text-sm"
                 >
                   {t('settings.account.deletion.confirmTextLabel')}
                 </label>

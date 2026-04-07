@@ -5,7 +5,7 @@
  * セキュリティ要件の検証を含む
  */
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   generateRecoveryCodes,
@@ -14,6 +14,13 @@ import {
   prepareCodesForStorage,
   verifyRecoveryCode,
 } from '../recovery-codes';
+
+// CI環境で RECOVERY_CODE_PEPPER が未設定の場合のフォールバック
+beforeAll(() => {
+  if (!process.env.RECOVERY_CODE_PEPPER) {
+    process.env.RECOVERY_CODE_PEPPER = 'test-pepper-for-ci';
+  }
+});
 
 describe('Recovery Codes', () => {
   describe('generateRecoveryCodes', () => {

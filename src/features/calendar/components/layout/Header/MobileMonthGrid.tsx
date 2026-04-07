@@ -154,7 +154,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                       className={cn(
                         'flex size-6 items-center justify-center rounded-lg transition-colors',
                         !isToday && !isSelected && 'hover:bg-state-hover',
-                        isToday && 'bg-primary text-primary-foreground font-bold',
+                        isToday && 'bg-primary text-primary-foreground font-medium',
                         isSelected && !isToday && 'bg-state-hover text-foreground',
                       )}
                     >

@@ -12,7 +12,7 @@ import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
 import type { DayColumnProps } from '../../types/view.types';
 
-import { EntryCard, isNewEntry, setInspectorAnchorRect } from '@/features/entry';
+import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
@@ -31,6 +31,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
 }) {
   const t = useTranslations('common.aria');
   const { getTagById } = useTagsMap();
+  const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
 
@@ -104,7 +105,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               entry={entry}
               tagName={entry.tagId ? (getTagById(entry.tagId)?.name ?? null) : null}
               tagColor={entry.tagId ? (getTagById(entry.tagId)?.color ?? null) : null}
-              onAnchorRect={setInspectorAnchorRect}
+              onAnchorRect={setAnchorRect}
               isMobile={isMobile}
               position={position} // undefinedでも大丈夫（EntryCard側で対応済み）
               hourHeight={hourHeight}

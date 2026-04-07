@@ -92,7 +92,7 @@ export const Dialog: Story = {
       <>
         <Button variant="outline" onClick={() => setOpen(true)}>
           コマンドパレットを開く
-          <kbd className="bg-muted text-muted-foreground pointer-events-none ml-2 inline-flex h-5 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-bold opacity-100 select-none">
+          <kbd className="bg-muted text-muted-foreground pointer-events-none ml-2 inline-flex h-5 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-medium opacity-100 select-none">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>

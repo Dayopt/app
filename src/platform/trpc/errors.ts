@@ -106,6 +106,9 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   API_KEY_MISSING: 'INTERNAL_SERVER_ERROR',
   GENERATION_FAILED: 'INTERNAL_SERVER_ERROR',
 
+  // ===== Badge関連 =====
+  EVALUATE_FAILED: 'INTERNAL_SERVER_ERROR',
+
   // ===== Contact関連 =====
   GITHUB_API_FAILED: 'INTERNAL_SERVER_ERROR',
 
@@ -153,7 +156,7 @@ export function handleServiceError(error: unknown): never {
 
     throw new TRPCError({
       code: trpcCode,
-      message: error.message,
+      message: sanitizeErrorMessage(trpcCode, error.message),
       cause: error,
     });
   }
@@ -165,7 +168,19 @@ export function handleServiceError(error: unknown): never {
 
   throw new TRPCError({
     code: 'INTERNAL_SERVER_ERROR',
-    message: error instanceof Error ? error.message : 'Unknown error occurred',
+    message: sanitizeErrorMessage(
+      'INTERNAL_SERVER_ERROR',
+      error instanceof Error ? error.message : 'Unknown error occurred',
+    ),
     cause: error,
   });
+}
+
+/**
+ * 本番環境でサーバー起因エラーのメッセージからDB詳細を隠す
+ */
+function sanitizeErrorMessage(trpcCode: TRPCErrorCode | string, originalMessage: string): string {
+  if (process.env.NODE_ENV !== 'production') return originalMessage;
+  if (trpcCode === 'INTERNAL_SERVER_ERROR') return 'サーバーエラーが発生した';
+  return originalMessage;
 }

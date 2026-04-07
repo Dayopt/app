@@ -18,7 +18,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Empty States</h1>
+      <h1 className="mb-2 text-2xl font-medium">Empty States</h1>
       <p className="text-muted-foreground mb-8">
         データがない状態のUI。ユーザーを次のアクションに誘導する。
       </p>
@@ -26,7 +26,7 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 基本パターン */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">基本パターン</h2>
+          <h2 className="mb-4 text-lg font-medium">基本パターン</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             EmptyState コンポーネントを使用。icon + title + description + action で構成。
           </p>
@@ -58,7 +58,7 @@ export const Overview: Story = {
 
         {/* 検索結果なし */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">検索結果なし</h2>
+          <h2 className="mb-4 text-lg font-medium">検索結果なし</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             検索やフィルターで結果がない場合。検索語の見直しを促す。
           </p>
@@ -75,7 +75,7 @@ export const Overview: Story = {
 
         {/* フィルター結果なし */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">フィルター結果なし</h2>
+          <h2 className="mb-4 text-lg font-medium">フィルター結果なし</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フィルター適用後に該当データがない場合。
           </p>
@@ -92,7 +92,7 @@ export const Overview: Story = {
 
         {/* 完了状態 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">完了状態</h2>
+          <h2 className="mb-4 text-lg font-medium">完了状態</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             すべて処理済みの場合。ポジティブなメッセージで達成感を演出。
           </p>
@@ -108,7 +108,7 @@ export const Overview: Story = {
 
         {/* サイズ比較 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">サイズバリエーション</h2>
+          <h2 className="mb-4 text-lg font-medium">サイズバリエーション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             用途に応じて3段階のサイズを使い分け。
           </p>
@@ -117,24 +117,24 @@ export const Overview: Story = {
             <table className="mb-6 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">サイズ</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">アイコン</th>
+                  <th className="py-2 text-left font-medium">サイズ</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">アイコン</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">sm</td>
+                  <td className="py-2 font-medium">sm</td>
                   <td className="py-2">テーブル内、カード内</td>
                   <td className="py-2">size-10 (40px)</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">md（デフォルト）</td>
+                  <td className="py-2 font-medium">md（デフォルト）</td>
                   <td className="py-2">セクション内、一般的な空状態</td>
                   <td className="py-2">size-12 (48px)</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">lg</td>
+                  <td className="py-2 font-medium">lg</td>
                   <td className="py-2">フルページ</td>
                   <td className="py-2">size-16 (64px)</td>
                 </tr>
@@ -144,17 +144,19 @@ export const Overview: Story = {
 
           <div className="grid gap-6 md:grid-cols-3">
             <div className="border-border rounded-lg border py-4">
-              <p className="text-muted-foreground mb-2 text-center text-xs font-bold">
+              <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
                 sm（テーブル内）
               </p>
               <EmptyState icon={Inbox} title="まだアイテムがない" size="sm" />
             </div>
             <div className="border-border rounded-lg border py-4">
-              <p className="text-muted-foreground mb-2 text-center text-xs font-bold">md（標準）</p>
+              <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
+                md（標準）
+              </p>
               <EmptyState icon={Inbox} title="まだアイテムがない" />
             </div>
             <div className="border-border rounded-lg border py-4">
-              <p className="text-muted-foreground mb-2 text-center text-xs font-bold">
+              <p className="text-muted-foreground mb-2 text-center text-xs font-medium">
                 lg（フルページ）
               </p>
               <EmptyState icon={Inbox} title="まだアイテムがない" size="lg" />
@@ -164,7 +166,7 @@ export const Overview: Story = {
 
         {/* 中央配置 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">中央配置（centered）</h2>
+          <h2 className="mb-4 text-lg font-medium">中央配置（centered）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             テーブルやカード内で使う場合、centered で水平・垂直中央に配置。
           </p>
@@ -194,10 +196,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>次のアクションを明示</li>
                 <li>状況に応じたメッセージ</li>
@@ -206,7 +208,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>「データがありません」だけ</li>
                 <li>空白のまま放置</li>
@@ -219,7 +221,7 @@ export const Overview: Story = {
 
         {/* 実装例 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">実装例</h2>
+          <h2 className="mb-4 text-lg font-medium">実装例</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
             {`import { EmptyState } from '@/components/common/EmptyState';
 

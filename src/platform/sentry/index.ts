@@ -17,13 +17,5 @@ export {
   setUserPlanTag,
 } from './integration';
 
-// パフォーマンス監視
-export {
-  initPerformanceMonitoring,
-  instrumentApiCalls,
-  measureCoreWebVitals,
-  measurePageLoad,
-} from './performance';
-
 // パフォーマンストレースヘルパー
 export { traceApiCall, traceDbQuery, traceServerComponent, withTrace } from './trace';

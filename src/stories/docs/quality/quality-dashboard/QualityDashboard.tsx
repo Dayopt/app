@@ -23,7 +23,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
       {/* ヘッダー */}
       <div className="flex items-baseline justify-between">
         <div>
-          <h1 className="text-foreground text-2xl font-bold">Quality Dashboard</h1>
+          <h1 className="text-foreground text-2xl font-medium">Quality Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm">品質メトリクスの定点観測</p>
         </div>
         <div className="text-muted-foreground text-right text-xs">
@@ -38,7 +38,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
         <MetricCard title="型安全性">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold tabular-nums">{metrics.typeSafety.errors}</span>
+              <span className="text-2xl font-medium tabular-nums">{metrics.typeSafety.errors}</span>
               <span className="text-muted-foreground text-sm">errors</span>
             </div>
             <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
         <MetricCard title="Feature境界違反">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold tabular-nums">
+              <span className="text-2xl font-medium tabular-nums">
                 {metrics.featureBoundaries.violations}
               </span>
               <span className="text-muted-foreground text-sm">violations</span>
@@ -111,7 +111,9 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
         <MetricCard title="循環依存">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold tabular-nums">{metrics.circularDeps.count}</span>
+              <span className="text-2xl font-medium tabular-nums">
+                {metrics.circularDeps.count}
+              </span>
               <span className="text-muted-foreground text-sm">cycles</span>
             </div>
             <DeltaBadge
@@ -128,7 +130,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-sm">Unused exports</span>
               <div className="flex items-center gap-2">
-                <span className="font-bold tabular-nums">{metrics.deadCode.unusedExports}</span>
+                <span className="font-medium tabular-nums">{metrics.deadCode.unusedExports}</span>
                 <DeltaBadge
                   current={metrics.deadCode.unusedExports}
                   previous={prev?.deadCode.unusedExports}
@@ -139,7 +141,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground text-sm">Unused files</span>
               <div className="flex items-center gap-2">
-                <span className="font-bold tabular-nums">{metrics.deadCode.unusedFiles}</span>
+                <span className="font-medium tabular-nums">{metrics.deadCode.unusedFiles}</span>
                 <DeltaBadge
                   current={metrics.deadCode.unusedFiles}
                   previous={prev?.deadCode.unusedFiles}
@@ -154,7 +156,7 @@ export function QualityDashboard({ snapshot, previousSnapshot }: QualityDashboar
         <MetricCard title="アクセシビリティ">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold tabular-nums">{metrics.a11y.violations}</span>
+              <span className="text-2xl font-medium tabular-nums">{metrics.a11y.violations}</span>
               <span className="text-muted-foreground text-sm">violations</span>
             </div>
             <div className="flex items-center gap-2">

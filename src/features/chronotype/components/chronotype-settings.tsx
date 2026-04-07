@@ -75,7 +75,7 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
         ))}
         {deepZone && (
           <span
-            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-deep pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-medium uppercase"
             style={{
               left: `${((Math.max(deepZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
@@ -85,7 +85,7 @@ function TimelineBar({ zones }: { zones: ProductivityZone[] }) {
         )}
         {easeZone && (
           <span
-            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-bold uppercase"
+            className="text-chronotype-ease pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs font-medium uppercase"
             style={{
               left: `${((Math.max(easeZone.startHour, START) - START) / (END - START)) * 100 + 1}%`,
             }}
@@ -129,7 +129,7 @@ function TypeCard({
       )}
     >
       <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
-      <span className="text-sm font-bold">{profile?.name}</span>
+      <span className="text-sm font-medium">{profile?.name}</span>
       <span className="text-muted-foreground text-xs">
         {t(`settings.chronotype.shortDesc.${type}`)}
       </span>
@@ -283,7 +283,7 @@ export function ChronotypeSettings() {
                   <p className="text-muted-foreground text-xs leading-none">
                     {t('settings.chronotype.deepTime')}
                   </p>
-                  <p className="text-sm leading-tight font-bold">
+                  <p className="text-sm leading-tight font-medium">
                     {getDeepHours(selectedProfile.productivityZones)}
                   </p>
                   <p className="text-muted-foreground text-xs leading-none">
@@ -299,7 +299,7 @@ export function ChronotypeSettings() {
                   <p className="text-muted-foreground text-xs leading-none">
                     {t('settings.chronotype.easeTime')}
                   </p>
-                  <p className="text-sm leading-tight font-bold">
+                  <p className="text-sm leading-tight font-medium">
                     {getEaseHours(selectedProfile.productivityZones)}
                   </p>
                   <p className="text-muted-foreground text-xs leading-none">

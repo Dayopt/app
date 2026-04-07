@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
 import { FieldError } from '@/components/ui/field';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 import { LoginForm } from './LoginForm';
 
@@ -69,14 +68,13 @@ export const PasswordToggle: Story = {
  * フォーム送信後のスピナー・フィールドのaria-disabled状態を確認する。
  */
 export const Submitting: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         signIn: () => new Promise(() => undefined),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -101,18 +99,17 @@ export const Submitting: Story = {
  * フォーム上部に表示されることを確認する。
  */
 export const ServerError: Story = {
-  decorators: [
-    (Story) => {
-      useAuthStore.setState({
+  parameters: {
+    storeMocks: {
+      useAuthStore: {
         signIn: () =>
           Promise.resolve({
             data: { user: null, session: null },
             error: { message: 'Invalid login credentials', name: 'AuthError', status: 400 },
           } as never),
-      } as never);
-      return <Story />;
+      },
     },
-  ],
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 

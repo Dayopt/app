@@ -34,7 +34,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
         </div>
 
         <div>
-          <h2 className="mb-2 text-xl font-bold">Something went wrong</h2>
+          <h2 className="mb-2 text-xl font-medium">Something went wrong</h2>
           <p className="text-muted-foreground text-sm">
             An unexpected error occurred. Please try again.
           </p>

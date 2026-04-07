@@ -172,7 +172,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
       <SectionCard title={t('settings.integrations.ai.title')}>
         <div className="space-y-4">
           <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base md:text-sm">
               {t('settings.integrations.ai.description')}
             </p>
           </div>
@@ -185,7 +185,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
                 </div>
                 <div className="min-w-0 flex-1 space-y-4">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-normal">{provider.name}</h4>
+                    <h4 className="text-base font-normal md:text-sm">{provider.name}</h4>
                     {savedKeys[provider.id] && (
                       <Badge variant="outline" className="text-success gap-1">
                         <CheckCircle2 className="h-3 w-3" />
@@ -193,7 +193,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-base md:text-sm">
                     {t(`settings.integrations.ai.${provider.descriptionKey}`)}
                   </p>
                   <div className="flex gap-2">
@@ -267,8 +267,8 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
                   {integration.icon}
                 </div>
                 <div>
-                  <h4 className="text-sm font-normal">{integration.name}</h4>
-                  <p className="text-muted-foreground text-sm">
+                  <h4 className="text-base font-normal md:text-sm">{integration.name}</h4>
+                  <p className="text-muted-foreground text-base md:text-sm">
                     {t(`settings.integrations.services.${integration.descriptionKey}`)}
                   </p>
                 </div>
@@ -289,7 +289,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
         </LabeledRow>
         {syncEnabled && (
           <div className="bg-card border-border-subtle mt-4 rounded-lg border p-4 shadow-sm">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base md:text-sm">
               {t('settings.integrations.sync.description')}
             </p>
           </div>
@@ -303,7 +303,7 @@ export const IntegrationSettings = memo(function IntegrationSettings() {
       <SectionCard title={t('settings.integrations.api.title')}>
         <div className="space-y-4">
           <div className="bg-card border-border-subtle rounded-lg border p-4 shadow-sm">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-base md:text-sm">
               {t('settings.integrations.api.description')}
             </p>
           </div>
@@ -372,7 +372,7 @@ const ICalFeedSection = memo(function ICalFeedSection() {
               <Rss className="text-primary h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1 space-y-4">
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-base md:text-sm">
                 {t('settings.integrations.icalFeed.description')}
               </p>
 

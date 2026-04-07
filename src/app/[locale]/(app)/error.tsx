@@ -38,7 +38,7 @@ export default function AppError({ error, reset }: ErrorProps) {
         </div>
 
         <div>
-          <h2 className="mb-2 text-xl font-bold">{t('title')}</h2>
+          <h2 className="mb-2 text-xl font-medium">{t('title')}</h2>
           <p className="text-muted-foreground text-sm">{t('description')}</p>
 
           {process.env.NODE_ENV === 'development' && error.message && (

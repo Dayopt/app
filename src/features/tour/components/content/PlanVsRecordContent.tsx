@@ -34,7 +34,7 @@ export function PlanVsRecordContent({
         <p className="text-muted-foreground text-xs">
           {t('tour.step', { current: currentStep, total: totalSteps })}
         </p>
-        <h3 className="text-foreground font-bold">{t('tour.steps.planVsRecord.title')}</h3>
+        <h3 className="text-foreground font-medium">{t('tour.steps.planVsRecord.title')}</h3>
       </div>
 
       {/* ミニ図解: Planned vs Actual */}

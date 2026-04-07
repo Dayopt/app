@@ -68,15 +68,6 @@
     "labelStartsAt": "開始時刻",
     "ctaButton": "カレンダーを開く"
   },
-  "overdue": {
-    "subject": "期限超過：{entryTitle}",
-    "heading": "エントリーが期限を超過しています",
-    "body": "以下のエントリーが予定終了時刻を過ぎましたが、まだ完了していません：",
-    "labelPlan": "エントリー",
-    "labelWasDueBy": "予定終了時刻",
-    "rescheduleHint": "カレンダーからエントリーの再スケジュールまたは完了にできます。",
-    "ctaButton": "カレンダーを開く"
-  },
   "trialStart": {
     "subject": "7日間の Pro トライアルが始まりました",
     "heading": "7日間の Pro トライアルが始まりました",

@@ -71,7 +71,7 @@ export function ActivityPopover({ size = 'default' }: ActivityPopoverProps) {
           <Bell className={size === 'sm' ? 'size-4' : 'size-5'} />
           {unreadCount > 0 && (
             <span
-              className={`bg-destructive text-destructive-foreground absolute flex items-center justify-center rounded-full font-bold ${
+              className={`bg-destructive text-destructive-foreground absolute flex items-center justify-center rounded-full font-medium ${
                 size === 'sm'
                   ? 'top-0 right-0 h-3.5 w-3.5 text-xs'
                   : 'top-1 right-0 h-4 w-4 text-xs'

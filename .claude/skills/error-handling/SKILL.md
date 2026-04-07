@@ -160,7 +160,7 @@ export function ErrorFallback({
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <AlertCircle className="text-destructive mb-4 h-12 w-12" />
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="text-lg font-medium">{title}</h2>
       <p className="text-muted-foreground mt-2">{description}</p>
       {onRetry && (
         <Button onClick={onRetry} className="mt-4">

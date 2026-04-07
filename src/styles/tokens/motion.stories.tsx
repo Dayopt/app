@@ -15,7 +15,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Motion</h1>
+      <h1 className="mb-2 text-2xl font-medium">Motion</h1>
       <p className="text-muted-foreground mb-8">
         アニメーションとトランジションのトークン（Material Design 3準拠）
       </p>
@@ -23,7 +23,7 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* shadcn/ui標準 */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">shadcn/ui標準（animate-in/out）</h2>
+          <h2 className="mb-4 text-lg font-medium">shadcn/ui標準（animate-in/out）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ダイアログ、ポップオーバー等のマウント/アンマウント時に使用
           </p>
@@ -74,18 +74,18 @@ data-[state=closed]:animate-out`}
 
         {/* ローディング */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">ローディング（GAFA準拠）</h2>
+          <h2 className="mb-4 text-lg font-medium">ローディング（GAFA準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             スケルトンローダー用。shimmerはFacebook/LinkedIn方式。
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <div className="text-sm font-bold">animate-shimmer</div>
+              <div className="text-sm font-medium">animate-shimmer</div>
               <div className="animate-shimmer h-16 rounded-lg" />
               <p className="text-muted-foreground text-xs">左→右の波（推奨）</p>
             </div>
             <div className="space-y-2">
-              <div className="text-sm font-bold">animate-pulse</div>
+              <div className="text-sm font-medium">animate-pulse</div>
               <div className="bg-muted h-16 animate-pulse rounded-lg" />
               <p className="text-muted-foreground text-xs">フェードイン/アウト（フォールバック）</p>
             </div>
@@ -101,7 +101,7 @@ data-[state=closed]:animate-out`}
 
         {/* エラーフィードバック */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">エラーフィードバック</h2>
+          <h2 className="mb-4 text-lg font-medium">エラーフィードバック</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             入力エラー時のシェイクアニメーション（Apple HIG準拠）
           </p>
@@ -114,7 +114,7 @@ data-[state=closed]:animate-out`}
 
         {/* Transition */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">Transition（日常インタラクション）</h2>
+          <h2 className="mb-4 text-lg font-medium">Transition（日常インタラクション）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ホバー、フォーカス、状態変化など日常的なインタラクションに使用。 animate-in/out
             はマウント/アンマウント用、こちらは CSS transition 用。
@@ -152,7 +152,7 @@ data-[state=closed]:animate-out`}
 
         {/* duration */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">Duration（継続時間）</h2>
+          <h2 className="mb-4 text-lg font-medium">Duration（継続時間）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             <code>duration-150</code> をデフォルトとし、ほぼ全てこれを使う。他は例外的な場面のみ。
           </p>
@@ -163,7 +163,7 @@ data-[state=closed]:animate-out`}
             <DurationDemo duration="300" />
           </div>
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h3 className="mb-2 text-sm font-bold">推奨値</h3>
+            <h3 className="mb-2 text-sm font-medium">推奨値</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>
                 <code>duration-75</code> - 即座のフィードバック（active 押下など）
@@ -183,7 +183,7 @@ data-[state=closed]:animate-out`}
 
         {/* Easing */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">Easing（イージング）</h2>
+          <h2 className="mb-4 text-lg font-medium">Easing（イージング）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             Material Design 3準拠。要素の動きに自然さを与える。
           </p>
@@ -206,7 +206,7 @@ data-[state=closed]:animate-out`}
             <EasingDemo easing="ease-linear" label="linear" description="等速。プログレスバー等" />
           </div>
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h3 className="mb-2 text-sm font-bold">使い分け（Material Design 3）</h3>
+            <h3 className="mb-2 text-sm font-medium">使い分け（Material Design 3）</h3>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>
                 <code>ease-out</code> - デフォルト。ほとんどの場合これを使う
@@ -226,7 +226,7 @@ data-[state=closed]:animate-out`}
 
         {/* motion-reduce */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">アクセシビリティ</h2>
+          <h2 className="mb-4 text-lg font-medium">アクセシビリティ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             motion-reduce対応で、ユーザー設定に応じてアニメーションを無効化
           </p>
@@ -268,7 +268,7 @@ function AnimationCard({
     <div className="space-y-2">
       <div
         key={key}
-        className={`bg-primary text-primary-foreground flex h-16 items-center justify-center rounded-lg text-sm font-bold ${className} duration-300`}
+        className={`bg-primary text-primary-foreground flex h-16 items-center justify-center rounded-lg text-sm font-medium ${className} duration-300`}
       >
         {name}
       </div>
@@ -298,7 +298,7 @@ function ShakeDemo() {
       <button
         type="button"
         onClick={triggerShake}
-        className="text-destructive hover:bg-destructive-state-hover rounded-lg px-4 py-2 text-sm font-bold"
+        className="text-destructive hover:bg-destructive-state-hover rounded-lg px-4 py-2 text-sm font-medium"
       >
         シェイク
       </button>
@@ -317,10 +317,10 @@ function TransitionDemo({
 }) {
   return (
     <div className="space-y-2">
-      <div className="text-sm font-bold">{name}</div>
+      <div className="text-sm font-medium">{name}</div>
       <button
         type="button"
-        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-bold ${className}`}
+        className={`bg-primary text-primary-foreground hover:bg-primary/80 flex h-12 w-full items-center justify-center rounded-lg text-xs font-medium ${className}`}
       >
         hover me
       </button>
@@ -341,7 +341,7 @@ function DurationDemo({ duration }: { duration: string }) {
     <div className="space-y-2">
       <div
         key={key}
-        className={`bg-primary text-primary-foreground animate-in fade-in zoom-in-95 flex h-12 items-center justify-center rounded-lg text-xs font-bold duration-${duration}`}
+        className={`bg-primary text-primary-foreground animate-in fade-in zoom-in-95 flex h-12 items-center justify-center rounded-lg text-xs font-medium duration-${duration}`}
       >
         {duration}ms
       </div>
@@ -369,7 +369,7 @@ function EasingDemo({
 
   return (
     <div className="space-y-2">
-      <div className="text-sm font-bold">{label}</div>
+      <div className="text-sm font-medium">{label}</div>
       <div className="bg-muted relative h-12 overflow-hidden rounded-lg">
         <div
           className={`bg-primary absolute top-1 bottom-1 left-1 rounded-lg transition-transform duration-500 ${easing} ${active ? 'translate-x-[calc(100%-3rem)]' : ''}`}
@@ -387,13 +387,13 @@ function EasingDemo({
 export const Loading: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">ローディングパターン</h1>
+      <h1 className="mb-2 text-2xl font-medium">ローディングパターン</h1>
       <p className="text-muted-foreground mb-8">スケルトンローダーの実装例</p>
 
       <div className="grid max-w-5xl gap-8">
         {/* カード */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">カードスケルトン</h2>
+          <h2 className="mb-4 text-lg font-medium">カードスケルトン</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="border-border space-y-2 rounded-lg border p-4">
               <div className="animate-shimmer h-4 w-3/4 rounded-lg" />
@@ -410,7 +410,7 @@ export const Loading: Story = {
 
         {/* リスト */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">リストスケルトン</h2>
+          <h2 className="mb-4 text-lg font-medium">リストスケルトン</h2>
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-2">
@@ -426,7 +426,7 @@ export const Loading: Story = {
 
         {/* テーブル */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">テーブルスケルトン</h2>
+          <h2 className="mb-4 text-lg font-medium">テーブルスケルトン</h2>
           <div className="space-y-2">
             <div className="border-border flex gap-4 border-b pb-2">
               <div className="animate-shimmer h-4 w-1/4 rounded-lg" />

@@ -74,7 +74,7 @@ export const AllSizes: Story = {
     <div className="flex w-[600px] flex-col gap-6">
       {(['sm', 'md', 'lg'] as const).map((size) => (
         <div key={size}>
-          <p className="text-muted-foreground mb-2 text-xs font-bold">{size}</p>
+          <p className="text-muted-foreground mb-2 text-xs font-medium">{size}</p>
           <div className="border-border rounded-lg border">
             <ErrorState
               title="データの読み込みに失敗しました"

@@ -95,7 +95,7 @@ export const MobileYearStrip = memo<MobileYearStripProps>(
               className={cn(
                 'mx-1 flex h-7 shrink-0 items-center justify-center rounded-full px-4 text-xs transition-colors',
                 isActive
-                  ? 'border-primary text-primary border font-bold'
+                  ? 'border-primary text-primary border font-medium'
                   : 'border-border text-muted-foreground hover:text-foreground border',
               )}
               aria-current={isActive ? 'true' : undefined}

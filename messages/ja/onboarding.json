@@ -11,11 +11,11 @@
       "nameLabel": "名前は？",
       "namePlaceholder": "例: Taro",
       "confirmTitle": "名前を確認",
-      "confirmSubtitle": "アカウントから取得した"
+      "confirmSubtitle": "アカウントから取得しました"
     },
     "chronotype": {
       "title": "あなたのリズムは？",
-      "subtitle": "生活リズムに合わせて、集中しやすい時間帯をカレンダーに色で表示する",
+      "subtitle": "生活リズムに合わせて、集中しやすい時間帯をカレンダーに色で表示します",
       "lion": {
         "name": "ライオン",
         "trait": "超朝型",
@@ -45,15 +45,15 @@
       "quizDuration": "6つの質問に答えるだけ（約1分）",
       "quizResult": {
         "title": "あなたは{type}タイプ！",
-        "description": "集中のゴールデンタイムは{deepTime}。カレンダーに色で表示する",
+        "description": "集中のゴールデンタイムは{deepTime}。カレンダーに色で表示します",
         "confirm": "OK"
       }
     },
     "error": {
-      "completeFailed": "保存できなかった。もう一度試して",
-      "sessionExpired": "セッションが切れた。再ログインして",
-      "networkError": "ネットワークに接続できない。接続を確認して",
-      "profileLoadFailed": "プロフィールを読み込めなかった",
+      "completeFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください",
+      "sessionExpired": "セッションが切れました。再ログインしてください",
+      "networkError": "ネットワークに接続できません。接続を確認してください",
+      "profileLoadFailed": "プロフィールを読み込めませんでした",
       "retry": "再試行"
     }
   }

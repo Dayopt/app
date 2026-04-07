@@ -21,7 +21,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';
-import { inspectorAnchorRef, useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
+import { useEntryInspectorStore } from '../../stores/useEntryInspectorStore';
 import type { EntryWithTags } from '../../types/entry';
 import { EntryInspectorForm } from './EntryInspectorForm';
 import { FloatingPopover } from './FloatingPopover';
@@ -56,6 +56,7 @@ export function EntryInspector({
 
   const isOpen = useEntryInspectorStore((state) => state.isOpen);
   const entryId = useEntryInspectorStore((state) => state.entryId);
+  const anchorRect = useEntryInspectorStore((state) => state.anchorRect);
   const closeInspector = useEntryInspectorStore((state) => state.closeInspector);
 
   const {
@@ -129,21 +130,16 @@ export function EntryInspector({
       {urlSyncElement}
 
       {isMobile ? (
-        <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0 [&>div:first-child]:hidden">
+        <Drawer open={isOpen} onOpenChange={(open) => !open && handleClose()} handleOnly>
+          <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
-            <div className="flex h-10 shrink-0 items-center justify-center px-2 pt-2">
-              <div className="bg-border h-1.5 w-16 rounded-full" />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="mx-auto w-full max-w-lg">{content}</div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
           </DrawerContent>
         </Drawer>
       ) : (
-        <FloatingPopover
-          onClose={handleClose}
-          title={title}
-          anchorRect={inspectorAnchorRef.current}
-        >
+        <FloatingPopover onClose={handleClose} title={title} anchorRect={anchorRect}>
           {content}
         </FloatingPopover>
       )}

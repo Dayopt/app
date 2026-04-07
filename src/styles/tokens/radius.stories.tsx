@@ -14,7 +14,7 @@ type Story = StoryObj;
 export const AllRadius: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Border Radius（角丸）</h1>
+      <h1 className="mb-6 text-2xl font-medium">Border Radius（角丸）</h1>
       <p className="text-muted-foreground mb-8">
         4段階のみ。「modal/dialog だけ 16px、それ以外は 8px」が基本ルール。
       </p>
@@ -23,7 +23,7 @@ export const AllRadius: Story = {
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-none" />
           <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-none</code>
-          <p className="mt-2 text-xs font-bold">0px</p>
+          <p className="mt-2 text-xs font-medium">0px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             タブのアクティブ状態、
             <br />
@@ -34,7 +34,7 @@ export const AllRadius: Story = {
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-lg" />
           <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-lg</code>
-          <p className="mt-2 text-xs font-bold">8px</p>
+          <p className="mt-2 text-xs font-medium">8px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             <strong>標準</strong>: ボタン、
             <br />
@@ -45,14 +45,14 @@ export const AllRadius: Story = {
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-2xl" />
           <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-2xl</code>
-          <p className="mt-2 text-xs font-bold">16px</p>
+          <p className="mt-2 text-xs font-medium">16px</p>
           <p className="text-muted-foreground mt-1 text-xs">モーダル、ダイアログ</p>
         </div>
 
         <div className="text-center">
           <div className="bg-primary mx-auto mb-2 size-24 rounded-full" />
           <code className="bg-container rounded-lg px-2 py-1 text-xs">rounded-full</code>
-          <p className="mt-2 text-xs font-bold">9999px</p>
+          <p className="mt-2 text-xs font-medium">9999px</p>
           <p className="text-muted-foreground mt-1 text-xs">
             アバター、ピル型ボタン、
             <br />
@@ -67,11 +67,11 @@ export const AllRadius: Story = {
 export const UseCases: Story = {
   render: () => (
     <div>
-      <h1 className="mb-8 text-2xl font-bold">使用例</h1>
+      <h1 className="mb-8 text-2xl font-medium">使用例</h1>
 
       <div className="space-y-8">
         <div>
-          <h2 className="mb-4 font-bold">ボタン</h2>
+          <h2 className="mb-4 font-medium">ボタン</h2>
           <div className="flex gap-4">
             <button className="bg-primary text-primary-foreground rounded-lg px-4 py-2">
               rounded-lg（標準）
@@ -83,21 +83,21 @@ export const UseCases: Story = {
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">カード・モーダル</h2>
+          <h2 className="mb-4 font-medium">カード・モーダル</h2>
           <div className="flex gap-4">
             <div className="bg-card text-card-foreground border-border w-48 rounded-lg border p-4">
-              <p className="font-bold">rounded-lg</p>
+              <p className="font-medium">rounded-lg</p>
               <p className="text-muted-foreground text-sm">カードの標準</p>
             </div>
             <div className="bg-card text-card-foreground border-border w-48 rounded-2xl border p-4">
-              <p className="font-bold">rounded-2xl</p>
+              <p className="font-medium">rounded-2xl</p>
               <p className="text-muted-foreground text-sm">モーダル・ダイアログ</p>
             </div>
           </div>
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">アバター</h2>
+          <h2 className="mb-4 font-medium">アバター</h2>
           <div className="flex items-center gap-4">
             <div className="bg-primary size-12 rounded-lg" />
             <span className="text-muted-foreground text-sm">→</span>
@@ -107,7 +107,7 @@ export const UseCases: Story = {
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">入力フィールド</h2>
+          <h2 className="mb-4 font-medium">入力フィールド</h2>
           <input
             type="text"
             placeholder="rounded-lg（標準）"
@@ -116,7 +116,7 @@ export const UseCases: Story = {
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">バッジ・タグ</h2>
+          <h2 className="mb-4 font-medium">バッジ・タグ</h2>
           <div className="flex gap-2">
             <span className="border-primary text-primary rounded-lg border px-2 py-1 text-xs">
               rounded-lg
@@ -134,7 +134,7 @@ export const UseCases: Story = {
 export const ElevationMapping: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Elevation × Radius</h1>
+      <h1 className="mb-6 text-2xl font-medium">Elevation × Radius</h1>
       <p className="text-muted-foreground mb-8">
         modal/dialog だけ rounded-2xl (16px)、それ以外は rounded-lg (8px) で統一。
       </p>
@@ -179,7 +179,7 @@ export const ElevationMapping: Story = {
 export const PartialRadius: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">部分的なRadius</h1>
+      <h1 className="mb-6 text-2xl font-medium">部分的なRadius</h1>
       <p className="text-muted-foreground mb-8">
         隣接要素の結合など、特定のコーナーのみ角丸にする場合に使用。
         <br />
@@ -188,7 +188,7 @@ export const PartialRadius: Story = {
 
       <div className="space-y-8">
         <div>
-          <h2 className="mb-4 font-bold">隣接要素の結合（Input Group）</h2>
+          <h2 className="mb-4 font-medium">隣接要素の結合（Input Group）</h2>
           <div className="flex">
             <input
               type="text"
@@ -206,7 +206,7 @@ export const PartialRadius: Story = {
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">範囲選択（カレンダー）</h2>
+          <h2 className="mb-4 font-medium">範囲選択（カレンダー）</h2>
           <div className="flex">
             <div className="bg-primary-state-selected flex size-10 items-center justify-center rounded-l-lg text-sm">
               1
@@ -225,7 +225,7 @@ export const PartialRadius: Story = {
         </div>
 
         <div>
-          <h2 className="mb-4 font-bold">許可されている部分Radius</h2>
+          <h2 className="mb-4 font-medium">許可されている部分Radius</h2>
           <p className="text-muted-foreground mb-4 text-xs">
             基本トークンと同じサイズのみ: 8px, 16px
           </p>

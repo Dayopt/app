@@ -33,7 +33,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Error States</h1>
+      <h1 className="mb-2 text-2xl font-medium">Error States</h1>
       <p className="text-muted-foreground mb-8">
         データ取得失敗時のUI。リトライアクションでユーザーを回復に誘導する。
       </p>
@@ -41,33 +41,33 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* エラーUI の使い分け */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">エラーUI の使い分け</h2>
+          <h2 className="mb-4 text-lg font-medium">エラーUI の使い分け</h2>
           <div className="overflow-x-auto">
             <table className="mb-4 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">レイヤー</th>
-                  <th className="py-2 text-left font-bold">コンポーネント</th>
-                  <th className="py-2 text-left font-bold">トリガー</th>
+                  <th className="py-2 text-left font-medium">レイヤー</th>
+                  <th className="py-2 text-left font-medium">コンポーネント</th>
+                  <th className="py-2 text-left font-medium">トリガー</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">ページクラッシュ</td>
+                  <td className="py-2 font-medium">ページクラッシュ</td>
                   <td className="py-2">
                     <code>error.tsx</code>
                   </td>
                   <td className="py-2">Next.js error boundary</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">コンポーネントクラッシュ</td>
+                  <td className="py-2 font-medium">コンポーネントクラッシュ</td>
                   <td className="py-2">
                     <code>ErrorBoundary</code>
                   </td>
                   <td className="py-2">React render exception</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="bg-state-active py-2 font-bold">データ取得失敗</td>
+                  <td className="bg-state-active py-2 font-medium">データ取得失敗</td>
                   <td className="bg-state-active py-2">
                     <code>ErrorState</code>
                   </td>
@@ -76,7 +76,7 @@ export const Overview: Story = {
                   </td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">Mutation 失敗</td>
+                  <td className="py-2 font-medium">Mutation 失敗</td>
                   <td className="py-2">Toast (sonner)</td>
                   <td className="py-2">
                     <code>onError</code> callback
@@ -89,7 +89,7 @@ export const Overview: Story = {
 
         {/* 基本パターン */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">基本パターン</h2>
+          <h2 className="mb-4 text-lg font-medium">基本パターン</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             ErrorState コンポーネントを使用。icon + title + description + retry で構成。
           </p>
@@ -116,7 +116,7 @@ export const Overview: Story = {
 
         {/* サイズ比較 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">サイズバリエーション</h2>
+          <h2 className="mb-4 text-lg font-medium">サイズバリエーション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             用途に応じて3段階のサイズを使い分け。
           </p>
@@ -125,24 +125,24 @@ export const Overview: Story = {
             <table className="mb-6 w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">サイズ</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">アイコン</th>
+                  <th className="py-2 text-left font-medium">サイズ</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">アイコン</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">sm</td>
+                  <td className="py-2 font-medium">sm</td>
                   <td className="py-2">テーブル内、カード内</td>
                   <td className="py-2">size-8 (32px)</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">md（デフォルト）</td>
+                  <td className="py-2 font-medium">md（デフォルト）</td>
                   <td className="py-2">セクション内、一般的なエラー</td>
                   <td className="py-2">size-8 (32px)</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">lg</td>
+                  <td className="py-2 font-medium">lg</td>
                   <td className="py-2">フルページ</td>
                   <td className="py-2">size-8 (32px)</td>
                 </tr>
@@ -153,7 +153,7 @@ export const Overview: Story = {
           <div className="grid gap-6 md:grid-cols-3">
             {(['sm', 'md', 'lg'] as const).map((size) => (
               <div key={size} className="border-border rounded-lg border py-4">
-                <p className="text-muted-foreground mb-2 text-center text-xs font-bold">{size}</p>
+                <p className="text-muted-foreground mb-2 text-center text-xs font-medium">{size}</p>
                 <ErrorState title="読み込めなかった" onRetry={() => {}} size={size} />
               </div>
             ))}
@@ -162,7 +162,7 @@ export const Overview: Story = {
 
         {/* カード内（centered） */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">中央配置（centered）</h2>
+          <h2 className="mb-4 text-lg font-medium">中央配置（centered）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             カードやテーブル内で使う場合、centered で水平・垂直中央に配置。
           </p>
@@ -180,7 +180,7 @@ export const Overview: Story = {
 
         {/* カスタムアクション */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">カスタムアクション</h2>
+          <h2 className="mb-4 text-lg font-medium">カスタムアクション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             actions prop でリトライボタン以外のアクションを配置。
           </p>
@@ -201,10 +201,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>リトライアクションを常に提供</li>
                 <li>具体的なエラー原因を説明</li>
@@ -213,7 +213,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>isError を無視して空状態と混同</li>
                 <li>アドホックなエラーUIを各所で組み立て</li>
@@ -226,7 +226,7 @@ export const Overview: Story = {
 
         {/* 実装例 */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">実装例</h2>
+          <h2 className="mb-4 text-lg font-medium">実装例</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs">
             {`import { ErrorState } from '@/components/common/ErrorState';
 

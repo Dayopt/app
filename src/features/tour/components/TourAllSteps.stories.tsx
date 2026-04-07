@@ -120,7 +120,7 @@ function DoneCardInline({ onDone }: { onDone: () => void }) {
   const t = useTranslations();
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      <h2 className="text-foreground text-xl font-bold">{t('tour.done.title')}</h2>
+      <h2 className="text-foreground text-xl font-medium">{t('tour.done.title')}</h2>
       <p className="text-muted-foreground text-sm">{t('tour.done.description')}</p>
       <Button onClick={onDone} className="w-full">
         {t('tour.done_button')}
@@ -134,7 +134,7 @@ function PreChoiceInline({ onStart, onSkip }: { onStart: () => void; onSkip: () 
   const t = useTranslations();
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      <h2 className="text-foreground text-xl font-bold">{t('tour.preChoice.title')}</h2>
+      <h2 className="text-foreground text-xl font-medium">{t('tour.preChoice.title')}</h2>
       <p className="text-muted-foreground text-sm">{t('tour.preChoice.description')}</p>
       <div className="flex w-full flex-col gap-2">
         <Button onClick={onStart} className="w-full">

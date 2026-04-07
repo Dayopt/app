@@ -19,7 +19,7 @@ export function TourDoneCard({ onDone }: TourDoneCardProps) {
         role="dialog"
         aria-label={t('tour.done.title')}
       >
-        <h2 className="text-foreground text-xl font-bold">{t('tour.done.title')}</h2>
+        <h2 className="text-foreground text-xl font-medium">{t('tour.done.title')}</h2>
         <p className="text-muted-foreground text-sm">{t('tour.done.description')}</p>
         <Button onClick={onDone} className="w-full">
           {t('tour.done_button')}

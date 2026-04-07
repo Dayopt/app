@@ -3,8 +3,8 @@
 /**
  * Inspector フローティングポップオーバー（PC用）
  *
- * クリックされたブロックの横に表示。
- * DraggableInspector から位置計算のみを抽出した薄いラッパー。
+ * ブロックの横に表示。左半分のブロック→右側、右半分→左側。
+ * ブロックを隠さない。
  */
 
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
@@ -20,30 +20,27 @@ interface FloatingPopoverProps {
   children: ReactNode;
   onClose: () => void;
   title: string;
-  /** クリックされた要素の位置（Inspector の配置に使用） */
+  /** クリックされた要素の位置 */
   anchorRect?: AnchorRect | null | undefined;
 }
 
-/** anchorRect に基づいて Inspector の位置を計算 */
-function computePosition(anchor: { top: number; right: number; bottom: number; left: number }) {
+/** ブロックの横に配置（左半分→右側、右半分→左側） */
+function computePosition(anchor: AnchorRect) {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  const spaceRight = vw - anchor.right - GAP;
-  const spaceLeft = anchor.left - GAP;
-
+  // X: ブロック中心が左半分→右側、右半分→左側
+  const blockCenter = anchor.left + anchor.width / 2;
   let x: number;
-  if (spaceRight >= INSPECTOR_MAX_WIDTH) {
+  if (blockCenter < vw / 2) {
     x = anchor.right + GAP;
-  } else if (spaceLeft >= INSPECTOR_MAX_WIDTH) {
-    x = anchor.left - GAP - INSPECTOR_MAX_WIDTH;
   } else {
-    x =
-      spaceRight >= spaceLeft
-        ? anchor.right + GAP
-        : Math.max(0, anchor.left - GAP - INSPECTOR_MAX_WIDTH);
+    x = anchor.left - INSPECTOR_MAX_WIDTH - GAP;
   }
+  // 画面内にクランプ
+  x = Math.max(GAP, Math.min(x, vw - INSPECTOR_MAX_WIDTH - GAP));
 
+  // Y: ブロック上端に揃える。下にはみ出すなら上にずらす
   const y = Math.max(GAP, Math.min(anchor.top, vh - INSPECTOR_MAX_HEIGHT - GAP));
 
   return { x, y };
@@ -52,7 +49,7 @@ function computePosition(anchor: { top: number; right: number; bottom: number; l
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** PC用Inspectorのフローティングポップオーバー（anchorRectに基づいて位置を自動計算） */
+/** PC用Inspectorのフローティングポップオーバー（ブロックの横に左右出し分け） */
 export function FloatingPopover({ children, onClose, title, anchorRect }: FloatingPopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -73,12 +70,11 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
     }, 50);
     return () => {
       clearTimeout(timer);
-      // 閉じる時に元の要素にフォーカスを返す
       previousFocusRef.current?.focus();
     };
   }, []);
 
-  // フォーカストラップ: Tab/Shift+Tab でパネル内にフォーカスを閉じ込める
+  // フォーカストラップ
   useEffect(() => {
     const panel = panelRef.current;
     if (!panel) return;
@@ -112,9 +108,10 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
       return computePosition(anchorRect);
     }
 
+    // anchorRect がない場合は画面中央
     return {
-      x: Math.max(0, (window.innerWidth - INSPECTOR_MAX_WIDTH) / 2),
-      y: Math.max(0, Math.min(100, (window.innerHeight - INSPECTOR_MAX_HEIGHT) / 4)),
+      x: Math.max(GAP, (window.innerWidth - INSPECTOR_MAX_WIDTH) / 2),
+      y: 100,
     };
   }, [anchorRect]);
 
@@ -127,12 +124,6 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
     [onClose],
   );
 
-  const style: React.CSSProperties = {
-    position: 'fixed',
-    left: position.x,
-    top: position.y,
-  };
-
   return (
     <>
       <div
@@ -143,12 +134,12 @@ export function FloatingPopover({ children, onClose, title, anchorRect }: Floati
 
       <div
         ref={panelRef}
-        style={style}
+        style={{ left: position.x, top: position.y }}
         className={cn(
           'bg-card text-card-foreground z-inspector',
           'border-border-subtle shadow-card rounded-2xl border',
-          'flex max-h-[min(40rem,calc(100dvh-2rem))] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
-          'animate-in fade-in-0 zoom-in-95 duration-150 motion-reduce:animate-none',
+          'fixed flex max-h-[min(40rem,calc(100dvh-2rem))] w-[95vw] max-w-[30rem] flex-col gap-0 overflow-hidden p-0',
+          'animate-in slide-in-from-bottom-2 duration-150 motion-reduce:animate-none',
         )}
         role="dialog"
         aria-modal="true"

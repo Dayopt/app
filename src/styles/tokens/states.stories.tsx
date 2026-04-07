@@ -17,7 +17,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">States（使い方とデモ）</h1>
+      <h1 className="mb-2 text-2xl font-medium">States（使い方とデモ）</h1>
       <p className="text-muted-foreground mb-8 text-sm">
         State トークンの定義は{' '}
         <a href="?path=/story/foundations-colors--all-colors" className="text-primary underline">
@@ -29,7 +29,7 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* State Layer一覧（MD3準拠） */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-2 text-lg font-bold">State Layer 一覧（MD3 準拠）</h2>
+          <h2 className="mb-2 text-lg font-medium">State Layer 一覧（MD3 準拠）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             foreground ベースの半透明オーバーレイ。ライト/ダークモードで自動調整される。
           </p>
@@ -37,10 +37,10 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">状態</th>
-                  <th className="py-2 text-left font-bold">トークン</th>
-                  <th className="py-2 text-left font-bold">不透明度</th>
-                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-medium">状態</th>
+                  <th className="py-2 text-left font-medium">トークン</th>
+                  <th className="py-2 text-left font-medium">不透明度</th>
+                  <th className="py-2 text-left font-medium">用途</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
@@ -92,14 +92,14 @@ export const Overview: Story = {
 
         {/* Button States */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-2 text-lg font-bold">Button States（触って確認）</h2>
+          <h2 className="mb-2 text-lg font-medium">Button States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             実際にホバー・Tab フォーカス・クリックして状態変化を確認。
           </p>
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Default */}
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">default</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">default</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button>Default</Button>
@@ -114,7 +114,7 @@ export const Overview: Story = {
 
             {/* Outline */}
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">outline</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">outline</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="outline">Default</Button>
@@ -131,7 +131,7 @@ export const Overview: Story = {
 
             {/* Ghost */}
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">ghost</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">ghost</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="ghost">Default</Button>
@@ -148,7 +148,7 @@ export const Overview: Story = {
 
             {/* Destructive */}
             <div>
-              <h3 className="text-muted-foreground mb-2 text-sm font-bold">destructive</h3>
+              <h3 className="text-muted-foreground mb-2 text-sm font-medium">destructive</h3>
               <div className="flex flex-wrap gap-2">
                 <div className="space-y-1 text-center">
                   <Button variant="destructive">Default</Button>
@@ -167,25 +167,25 @@ export const Overview: Story = {
 
         {/* Input States */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-2 text-lg font-bold">Input States（触って確認）</h2>
+          <h2 className="mb-2 text-lg font-medium">Input States（触って確認）</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             フォーカスして ring を確認。Error は aria-invalid で自動適用。
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">Default</p>
+              <p className="text-muted-foreground text-xs font-medium">Default</p>
               <Input placeholder="入力してください" />
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">Focus（Tab で確認）</p>
+              <p className="text-muted-foreground text-xs font-medium">Focus（Tab で確認）</p>
               <Input placeholder="フォーカスしてみて" />
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">Error</p>
+              <p className="text-muted-foreground text-xs font-medium">Error</p>
               <Input placeholder="エラー" aria-invalid="true" />
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">Disabled</p>
+              <p className="text-muted-foreground text-xs font-medium">Disabled</p>
               <Input placeholder="無効" disabled />
             </div>
           </div>
@@ -193,7 +193,7 @@ export const Overview: Story = {
 
         {/* 実装ガイド */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">実装ガイド（コピペ用）</h2>
+          <h2 className="mb-4 text-lg font-medium">実装ガイド（コピペ用）</h2>
           <pre className="bg-container overflow-x-auto rounded-lg p-4 text-xs leading-relaxed">
             {`// hover（10% overlay）
 hover:bg-state-hover

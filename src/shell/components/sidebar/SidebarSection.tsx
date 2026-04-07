@@ -34,7 +34,7 @@ export function SidebarSection({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="text-muted-foreground hover:bg-state-hover flex h-8 min-w-0 cursor-pointer items-center rounded-lg px-2 text-left text-sm font-bold transition-colors"
+            className="text-muted-foreground hover:bg-state-hover flex h-8 min-w-0 cursor-pointer items-center rounded-lg px-2 text-left text-sm font-medium transition-colors"
           >
             <span className="truncate">{title}</span>
             <ChevronRight className="ml-1 size-4 shrink-0 transition-transform [[data-state=open]_&]:rotate-90" />

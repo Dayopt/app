@@ -14,14 +14,14 @@ type Story = StoryObj;
 export const Principles: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Spacing（余白）の原則</h1>
+      <h1 className="mb-6 text-2xl font-medium">Spacing（余白）の原則</h1>
       <p className="text-muted-foreground mb-8">
         要素間の関係性に基づいてSpacingを決定。近いほど関連が強い。
       </p>
 
       <div className="mb-12 space-y-6">
         <div className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 font-bold">原則: 関係性 = 距離</h2>
+          <h2 className="mb-4 font-medium">原則: 関係性 = 距離</h2>
           <ul className="text-muted-foreground space-y-2 text-sm">
             <li>
               <strong className="text-foreground">近い</strong> → 強く関連（同じグループ）
@@ -37,22 +37,22 @@ export const Principles: Story = {
         </div>
       </div>
 
-      <h2 className="mb-6 text-xl font-bold">関係性の視覚化</h2>
+      <h2 className="mb-6 text-xl font-medium">関係性の視覚化</h2>
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <p className="text-muted-foreground mb-4 text-sm">❌ 一様なSpacing（関係性が不明瞭）</p>
           <div className="bg-container rounded-lg p-4">
             <div className="space-y-4">
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">タイトル</p>
+                <p className="font-medium">タイトル</p>
                 <p className="text-muted-foreground text-sm">説明文</p>
               </div>
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">タイトル</p>
+                <p className="font-medium">タイトル</p>
                 <p className="text-muted-foreground text-sm">説明文</p>
               </div>
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">別セクション</p>
+                <p className="font-medium">別セクション</p>
                 <p className="text-muted-foreground text-sm">説明文</p>
               </div>
             </div>
@@ -64,17 +64,17 @@ export const Principles: Story = {
           <div className="bg-container rounded-lg p-4">
             <div className="space-y-2">
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">タイトル</p>
+                <p className="font-medium">タイトル</p>
                 <p className="text-muted-foreground text-sm">説明文</p>
               </div>
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">タイトル</p>
+                <p className="font-medium">タイトル</p>
                 <p className="text-muted-foreground text-sm">説明文</p>
               </div>
             </div>
             <div className="mt-6">
               <div className="bg-card rounded-lg p-4">
-                <p className="font-bold">別セクション</p>
+                <p className="font-medium">別セクション</p>
                 <p className="text-muted-foreground text-sm">異なるグループは大きく離す</p>
               </div>
             </div>
@@ -88,7 +88,7 @@ export const Principles: Story = {
 export const Scale: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Spacingスケール（8ptグリッド）</h1>
+      <h1 className="mb-6 text-2xl font-medium">Spacingスケール（8ptグリッド）</h1>
       <p className="text-muted-foreground mb-8">8pxを基本単位とし、8の倍数のみを使用。</p>
 
       <div className="space-y-1">
@@ -109,7 +109,7 @@ export const Scale: Story = {
               <code className="bg-container rounded-lg px-2 py-1 text-xs">{size}</code>
             </div>
             <div className="text-muted-foreground w-12 text-xs">{px}</div>
-            <div className={`w-16 text-sm ${highlight ? 'font-bold' : 'text-muted-foreground'}`}>
+            <div className={`w-16 text-sm ${highlight ? 'font-medium' : 'text-muted-foreground'}`}>
               {name}
             </div>
             <div className="bg-container flex-1 overflow-hidden rounded-lg">
@@ -138,13 +138,13 @@ export const Scale: Story = {
 export const ComponentPatterns: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">コンポーネント別パターン</h1>
+      <h1 className="mb-6 text-2xl font-medium">コンポーネント別パターン</h1>
       <p className="text-muted-foreground mb-8">各UIコンポーネントの推奨Spacing。</p>
 
       <div className="space-y-12">
         {/* ボタン */}
         <div>
-          <h2 className="mb-4 font-bold">ボタン</h2>
+          <h2 className="mb-4 font-medium">ボタン</h2>
           <div className="flex flex-wrap items-start gap-8">
             <div className="text-center">
               <button className="bg-primary text-primary-foreground rounded-lg px-2 py-1 text-sm">
@@ -175,11 +175,11 @@ export const ComponentPatterns: Story = {
 
         {/* カード */}
         <div>
-          <h2 className="mb-4 font-bold">カード</h2>
+          <h2 className="mb-4 font-medium">カード</h2>
           <div className="flex flex-wrap items-start gap-8">
             <div>
               <div className="bg-card border-border w-64 rounded-lg border p-4">
-                <p className="font-bold">カードタイトル</p>
+                <p className="font-medium">カードタイトル</p>
                 <p className="text-muted-foreground mt-1 text-sm">説明テキスト</p>
               </div>
               <p className="text-muted-foreground mt-2 text-xs">
@@ -188,7 +188,7 @@ export const ComponentPatterns: Story = {
             </div>
             <div>
               <div className="bg-card border-border w-64 rounded-lg border p-6">
-                <p className="text-lg font-bold">大きなカード</p>
+                <p className="text-lg font-medium">大きなカード</p>
                 <p className="text-muted-foreground mt-2 text-sm">より広い余白</p>
               </div>
               <p className="text-muted-foreground mt-2 text-xs">
@@ -200,7 +200,7 @@ export const ComponentPatterns: Story = {
 
         {/* リスト */}
         <div>
-          <h2 className="mb-4 font-bold">リスト項目</h2>
+          <h2 className="mb-4 font-medium">リスト項目</h2>
           <div className="bg-card border-border w-64 rounded-lg border">
             <div className="border-border border-b px-4 py-2">項目1</div>
             <div className="border-border border-b px-4 py-2">項目2</div>
@@ -213,9 +213,9 @@ export const ComponentPatterns: Story = {
 
         {/* モーダル */}
         <div>
-          <h2 className="mb-4 font-bold">モーダル/ダイアログ</h2>
+          <h2 className="mb-4 font-medium">モーダル/ダイアログ</h2>
           <div className="bg-card border-border-subtle shadow-card w-80 rounded-2xl border p-6">
-            <h3 className="text-lg font-bold">モーダルタイトル</h3>
+            <h3 className="text-lg font-medium">モーダルタイトル</h3>
             <p className="text-muted-foreground mt-2 text-sm">
               モーダルは広めの余白で重要性を強調。
             </p>
@@ -235,10 +235,10 @@ export const ComponentPatterns: Story = {
 
         {/* フォーム */}
         <div>
-          <h2 className="mb-4 font-bold">フォーム</h2>
+          <h2 className="mb-4 font-medium">フォーム</h2>
           <div className="w-64 space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-bold">ラベル</label>
+              <label className="text-sm font-medium">ラベル</label>
               <input
                 type="text"
                 className="bg-input border-border w-full rounded-lg border px-4 py-2"
@@ -246,7 +246,7 @@ export const ComponentPatterns: Story = {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-bold">ラベル</label>
+              <label className="text-sm font-medium">ラベル</label>
               <input
                 type="text"
                 className="bg-input border-border w-full rounded-lg border px-4 py-2"
@@ -266,7 +266,7 @@ export const ComponentPatterns: Story = {
 export const GapUsage: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Gap（要素間の余白）</h1>
+      <h1 className="mb-6 text-2xl font-medium">Gap（要素間の余白）</h1>
       <p className="text-muted-foreground mb-8">Flexbox/Gridでの要素間余白。関係性に応じて選択。</p>
 
       <div className="space-y-8">
@@ -336,7 +336,7 @@ export const GapUsage: Story = {
 export const NestedSpacing: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">入れ子のSpacing</h1>
+      <h1 className="mb-6 text-2xl font-medium">入れ子のSpacing</h1>
       <p className="text-muted-foreground mb-8">
         内側→外側に向かってSpacingを大きくする。入れ子の四角形として考える。
       </p>
@@ -374,7 +374,7 @@ export const NestedSpacing: Story = {
           </div>
 
           <div className="bg-card rounded-lg p-6">
-            <p className="font-bold">別セクション</p>
+            <p className="font-medium">別セクション</p>
             <p className="text-muted-foreground mt-2 text-sm">セクション間は大きく離す (gap-6)</p>
           </div>
         </div>
@@ -394,14 +394,14 @@ export const NestedSpacing: Story = {
 export const BorderIndicator: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Border Indicator</h1>
+      <h1 className="mb-6 text-2xl font-medium">Border Indicator</h1>
       <p className="text-muted-foreground mb-8">
         カレンダーエントリの左端アクセント線。3px幅のデザイントークン。
       </p>
 
       <div className="space-y-6">
         <div>
-          <h2 className="mb-4 font-bold">
+          <h2 className="mb-4 font-medium">
             Utility: <code className="text-muted-foreground text-xs">border-l-indicator</code>
           </h2>
           <div className="space-y-4">
@@ -432,11 +432,11 @@ export const BorderIndicator: Story = {
 export const QuickReference: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">クイックリファレンス</h1>
+      <h1 className="mb-6 text-2xl font-medium">クイックリファレンス</h1>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">Gap（要素間）</h2>
+          <h2 className="mb-4 font-medium">Gap（要素間）</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
@@ -474,7 +474,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">Padding（内側余白）</h2>
+          <h2 className="mb-4 font-medium">Padding（内側余白）</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
@@ -512,7 +512,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">ボタンのPadding</h2>
+          <h2 className="mb-4 font-medium">ボタンのPadding</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
@@ -538,7 +538,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">避けるべきパターン</h2>
+          <h2 className="mb-4 font-medium">避けるべきパターン</h2>
           <ul className="text-muted-foreground space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <span className="text-destructive">✗</span>

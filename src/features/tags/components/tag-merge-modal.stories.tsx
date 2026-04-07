@@ -13,16 +13,11 @@
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 import { fn } from 'storybook/test';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
-
 import { Button } from '@/components/ui/button';
+
+import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import { TagMergeModal } from './tag-merge-modal';
 
 // ─────────────────────────────────────────────────────────
@@ -96,50 +91,6 @@ const MOCK_TAGS = [
 const SOURCE_TAG = { id: 'tag-2', name: '仕事:会議', color: 'blue' as const };
 
 // ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(tags: typeof MOCK_TAGS): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'tags.list': { data: tags },
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({
-  children,
-  tags = MOCK_TAGS,
-}: {
-  children: ReactNode;
-  tags?: typeof MOCK_TAGS;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const trpcClient = api.createClient({ links: [createMockLink(tags)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 // インタラクティブラッパー
 // ─────────────────────────────────────────────────────────
 
@@ -147,7 +98,7 @@ function InteractiveTagMerge({ tags = MOCK_TAGS }: { tags?: typeof MOCK_TAGS }) 
   const [open, setOpen] = useState(false);
 
   return (
-    <MockProvider tags={tags}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: tags } }}>
       <Button variant="outline" onClick={() => setOpen(true)}>
         「仕事:会議」をマージ
       </Button>
@@ -157,7 +108,7 @@ function InteractiveTagMerge({ tags = MOCK_TAGS }: { tags?: typeof MOCK_TAGS }) 
         sourceTag={SOURCE_TAG}
         onMergeSuccess={fn()}
       />
-    </MockProvider>
+    </StoryTRPCProvider>
   );
 }
 
@@ -178,6 +129,7 @@ const meta = {
   title: 'Features/Tags/MergeModal',
   parameters: {
     layout: 'fullscreen',
+    trpcMocks: { 'tags.list': { data: MOCK_TAGS } },
   },
   tags: ['autodocs'],
 } satisfies Meta;
@@ -197,9 +149,9 @@ type Story = StoryObj<typeof meta>;
  */
 export const Default: Story = {
   render: () => (
-    <MockProvider>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: MOCK_TAGS } }}>
       <TagMergeModal open sourceTag={SOURCE_TAG} onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 
@@ -210,9 +162,9 @@ export const Default: Story = {
  */
 export const FewTags: Story = {
   render: () => (
-    <MockProvider tags={MOCK_TAGS.slice(0, 3)}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: MOCK_TAGS.slice(0, 3) } }}>
       <TagMergeModal open sourceTag={SOURCE_TAG} onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 
@@ -224,9 +176,9 @@ export const FewTags: Story = {
  */
 export const WithGroups: Story = {
   render: () => (
-    <MockProvider tags={MOCK_TAGS}>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: MOCK_TAGS } }}>
       <TagMergeModal open sourceTag={SOURCE_TAG} onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 
@@ -237,12 +189,12 @@ export const WithGroups: Story = {
  */
 export const ClosedState: Story = {
   render: () => (
-    <MockProvider>
+    <StoryTRPCProvider mocks={{ 'tags.list': { data: MOCK_TAGS } }}>
       <div className="flex h-screen items-center justify-center">
         <p className="text-muted-foreground text-sm">（モーダルは非表示です）</p>
       </div>
       <TagMergeModal open={false} sourceTag={SOURCE_TAG} onClose={fn()} />
-    </MockProvider>
+    </StoryTRPCProvider>
   ),
 };
 

@@ -58,6 +58,8 @@ export interface EntryCardProps {
   hourHeight?: number | undefined;
   /** 外部（WeekContent等）がwrapper側でoverlay位置調整済みの場合true。EntryCard内でのtopShift/heightDelta適用をスキップする */
   overlayPositionApplied?: boolean | undefined;
+  /** 空き枠（unexecuted）クリック時のコールバック。引数は空き時間の開始・終了（分 of day） */
+  onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
 }
 
 /** カレンダーグリッド上のEntryCardの位置情報（top/left/width/heightはpx or %） */

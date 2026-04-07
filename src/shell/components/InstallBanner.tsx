@@ -24,7 +24,9 @@ export function InstallBanner({ onInstall, onDismiss }: InstallBannerProps) {
       <div className="bg-card border-border-subtle shadow-card flex items-center gap-2 rounded-2xl border p-4">
         <Download className="text-primary h-5 w-5 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-foreground truncate text-sm font-normal">{t('installTitle')}</p>
+          <p className="text-foreground truncate text-base font-normal md:text-sm">
+            {t('installTitle')}
+          </p>
           <p className="text-muted-foreground text-xs">{t('installDescription')}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

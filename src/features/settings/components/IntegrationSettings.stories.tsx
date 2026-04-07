@@ -5,58 +5,12 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { PRESET_AUTH } from '../../../../.storybook/mocks/presets';
+import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 
 import { IntegrationSettings } from './integration-settings';
-
-// ─────────────────────────────────────────────────────────
-// tRPC Mock Helpers
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(responseMap: Record<string, unknown>): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-interface IntegrationMockProviderProps {
-  children: ReactNode;
-  responseMap: Record<string, unknown>;
-}
-
-function IntegrationMockProvider({ children, responseMap }: IntegrationMockProviderProps) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-
-  const trpcClient = api.createClient({ links: [createMockLink(responseMap)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -67,19 +21,15 @@ const meta = {
   component: IntegrationSettings,
   parameters: {
     layout: 'padded',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
   },
   tags: ['autodocs'],
   decorators: [
-    (Story) => {
-      useAuthStore.setState({
-        user: { id: 'mock-user', email: 'test@example.com' } as never,
-      });
-      return (
-        <div className="mx-auto max-w-2xl">
-          <Story />
-        </div>
-      );
-    },
+    (Story) => (
+      <div className="mx-auto max-w-2xl">
+        <Story />
+      </div>
+    ),
   ],
 } satisfies Meta<typeof IntegrationSettings>;
 
@@ -94,30 +44,16 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider
-        responseMap={{ 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } }}
-      >
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
 };
 
 /** iCalトークンが未発行の状態 */
 export const NoToken: Story = {
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.getICalToken': { token: null } },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
 };
 
 /**
@@ -130,14 +66,8 @@ export const AIApiKeySaved: Story = {
   name: 'AI API Key — Saved (badge visible)',
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.getICalToken': { token: null } },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -174,15 +104,9 @@ export const AIApiKeySaved: Story = {
  */
 export const ICalRegenerateDialog: Story = {
   name: 'iCal Feed — Regenerate Confirm Dialog',
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider
-        responseMap={{ 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } }}
-      >
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
+  parameters: {
+    trpcMocks: { 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } },
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -219,14 +143,8 @@ export const SyncDisabled: Story = {
   name: 'Sync — Disabled',
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.getICalToken': { token: null } },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -250,14 +168,8 @@ export const SyncEnabled: Story = {
   name: 'Sync — Enabled (default)',
   parameters: {
     a11y: { test: 'todo' },
+    trpcMocks: { 'userSettings.getICalToken': { token: null } },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider responseMap={{ 'userSettings.getICalToken': { token: null } }}>
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
@@ -273,20 +185,15 @@ export const AllPatterns: Story = {
   parameters: {
     a11y: { test: 'todo' },
   },
-  decorators: [
-    (Story) => (
-      <IntegrationMockProvider
-        responseMap={{ 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } }}
-      >
-        <Story />
-      </IntegrationMockProvider>
-    ),
-  ],
   render: () => (
     <div className="space-y-12">
       <div>
         <h3 className="text-muted-foreground mb-4 text-sm">トークンあり</h3>
-        <IntegrationSettings />
+        <StoryTRPCProvider
+          mocks={{ 'userSettings.getICalToken': { token: 'mock-ical-token-abc123' } }}
+        >
+          <IntegrationSettings />
+        </StoryTRPCProvider>
       </div>
     </div>
   ),

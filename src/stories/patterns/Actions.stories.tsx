@@ -33,7 +33,7 @@ type Story = StoryObj;
 export const Overview: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Action Patterns</h1>
+      <h1 className="mb-2 text-2xl font-medium">Action Patterns</h1>
       <p className="text-muted-foreground mb-8">
         アクションUIのパターン。ボタン、メニュー、コンテキストメニューの使い分け。
       </p>
@@ -41,34 +41,34 @@ export const Overview: Story = {
       <div className="grid max-w-5xl gap-8">
         {/* 使い分けガイド */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">使い分けガイド</h2>
+          <h2 className="mb-4 text-lg font-medium">使い分けガイド</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">パターン</th>
-                  <th className="py-2 text-left font-bold">用途</th>
-                  <th className="py-2 text-left font-bold">トリガー</th>
+                  <th className="py-2 text-left font-medium">パターン</th>
+                  <th className="py-2 text-left font-medium">用途</th>
+                  <th className="py-2 text-left font-medium">トリガー</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Primary Button</td>
+                  <td className="py-2 font-medium">Primary Button</td>
                   <td className="py-2">主要アクション（保存、作成）</td>
                   <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Secondary Button</td>
+                  <td className="py-2 font-medium">Secondary Button</td>
                   <td className="py-2">副次アクション（キャンセル）</td>
                   <td className="py-2">常時表示</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">Dropdown Menu</td>
+                  <td className="py-2 font-medium">Dropdown Menu</td>
                   <td className="py-2">複数の関連アクション</td>
                   <td className="py-2">ボタンクリック</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">Split Button</td>
+                  <td className="py-2 font-medium">Split Button</td>
                   <td className="py-2">デフォルト＋追加オプション</td>
                   <td className="py-2">ボタン/矢印クリック</td>
                 </tr>
@@ -79,7 +79,7 @@ export const Overview: Story = {
 
         {/* ボタンサイズ */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ボタンサイズ</h2>
+          <h2 className="mb-4 text-lg font-medium">ボタンサイズ</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             3種類のサイズ。用途に応じて使い分け。
           </p>
@@ -88,30 +88,30 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">サイズ</th>
-                  <th className="py-2 text-left font-bold">高さ</th>
-                  <th className="py-2 text-left font-bold">テキスト</th>
-                  <th className="py-2 text-left font-bold">アイコン</th>
-                  <th className="py-2 text-left font-bold">用途</th>
+                  <th className="py-2 text-left font-medium">サイズ</th>
+                  <th className="py-2 text-left font-medium">高さ</th>
+                  <th className="py-2 text-left font-medium">テキスト</th>
+                  <th className="py-2 text-left font-medium">アイコン</th>
+                  <th className="py-2 text-left font-medium">用途</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">sm</td>
+                  <td className="py-2 font-medium">sm</td>
                   <td className="py-2">32px (h-8)</td>
                   <td className="py-2">14px (text-sm)</td>
                   <td className="py-2">16px (size-4)</td>
                   <td className="py-2">コンパクトUI、ツールバー</td>
                 </tr>
                 <tr className="border-border border-b">
-                  <td className="py-2 font-bold">default</td>
+                  <td className="py-2 font-medium">default</td>
                   <td className="py-2">36px (h-9)</td>
                   <td className="py-2">14px (text-sm)</td>
                   <td className="py-2">16px (size-4)</td>
                   <td className="py-2">標準的なアクション</td>
                 </tr>
                 <tr>
-                  <td className="py-2 font-bold">lg</td>
+                  <td className="py-2 font-medium">lg</td>
                   <td className="py-2">44px (h-11)</td>
                   <td className="py-2">16px (text-base)</td>
                   <td className="py-2">20px (size-5)</td>
@@ -123,21 +123,21 @@ export const Overview: Story = {
 
           <div className="mt-6 flex flex-wrap items-end gap-4">
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">sm (32px)</p>
+              <p className="text-muted-foreground text-xs font-medium">sm (32px)</p>
               <Button size="sm">
                 <Plus className="mr-2 size-4" />
                 作成
               </Button>
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">default (36px)</p>
+              <p className="text-muted-foreground text-xs font-medium">default (36px)</p>
               <Button>
                 <Plus className="mr-2 size-4" />
                 作成
               </Button>
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">lg (44px)</p>
+              <p className="text-muted-foreground text-xs font-medium">lg (44px)</p>
               <Button size="lg">
                 <Plus className="mr-2 size-5" />
                 作成
@@ -146,7 +146,7 @@ export const Overview: Story = {
           </div>
 
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h4 className="mb-2 text-sm font-bold">選択基準</h4>
+            <h4 className="mb-2 text-sm font-medium">選択基準</h4>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>
                 <strong>sm:</strong> ヘッダー、ツールバー、テーブル行内
@@ -163,7 +163,7 @@ export const Overview: Story = {
 
         {/* プライマリアクション */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">プライマリアクション</h2>
+          <h2 className="mb-4 text-lg font-medium">プライマリアクション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             画面で最も重要なアクション。1つだけ配置。
           </p>
@@ -178,7 +178,7 @@ export const Overview: Story = {
           </div>
 
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h4 className="mb-2 text-sm font-bold">配置ルール</h4>
+            <h4 className="mb-2 text-sm font-medium">配置ルール</h4>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>画面上部右寄せ、またはフォーム下部</li>
               <li>1画面に1つのプライマリアクション</li>
@@ -189,7 +189,7 @@ export const Overview: Story = {
 
         {/* ドロップダウンメニュー */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ドロップダウンメニュー</h2>
+          <h2 className="mb-4 text-lg font-medium">ドロップダウンメニュー</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             複数の関連アクションをグループ化。ボタンクリックで展開。
           </p>
@@ -197,7 +197,7 @@ export const Overview: Story = {
           <div className="flex flex-wrap gap-4">
             {/* アイコンボタン（テーブル行など） */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">アイコンボタン</p>
+              <p className="text-muted-foreground text-xs font-medium">アイコンボタン</p>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" icon>
@@ -228,7 +228,7 @@ export const Overview: Story = {
 
             {/* 縦三点 */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">縦三点</p>
+              <p className="text-muted-foreground text-xs font-medium">縦三点</p>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" icon>
@@ -246,7 +246,7 @@ export const Overview: Story = {
 
             {/* テキスト付き */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-bold">テキスト付き</p>
+              <p className="text-muted-foreground text-xs font-medium">テキスト付き</p>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
@@ -286,7 +286,7 @@ export const Overview: Story = {
 
         {/* スプリットボタン */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">スプリットボタン</h2>
+          <h2 className="mb-4 text-lg font-medium">スプリットボタン</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             デフォルトアクション＋追加オプション。頻繁に使うアクションを素早く実行。
           </p>
@@ -347,7 +347,7 @@ export const Overview: Story = {
 
         {/* 一括アクション */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">一括アクション</h2>
+          <h2 className="mb-4 text-lg font-medium">一括アクション</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             複数選択時に表示されるアクションバー。
           </p>
@@ -368,7 +368,7 @@ export const Overview: Story = {
           </div>
 
           <div className="bg-container mt-4 rounded-lg p-4">
-            <h4 className="mb-2 text-sm font-bold">表示ルール</h4>
+            <h4 className="mb-2 text-sm font-medium">表示ルール</h4>
             <ul className="text-muted-foreground space-y-1 text-xs">
               <li>1件以上選択時にのみ表示</li>
               <li>選択件数を明示</li>
@@ -380,7 +380,7 @@ export const Overview: Story = {
 
         {/* キーボードショートカット */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">キーボードショートカット</h2>
+          <h2 className="mb-4 text-lg font-medium">キーボードショートカット</h2>
           <p className="text-muted-foreground mb-4 text-sm">
             メニュー項目にショートカットを表示。パワーユーザー向け。
           </p>
@@ -389,8 +389,8 @@ export const Overview: Story = {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border border-b">
-                  <th className="py-2 text-left font-bold">アクション</th>
-                  <th className="py-2 text-left font-bold">ショートカット</th>
+                  <th className="py-2 text-left font-medium">アクション</th>
+                  <th className="py-2 text-left font-medium">ショートカット</th>
                 </tr>
               </thead>
               <tbody className="text-muted-foreground">
@@ -425,10 +425,10 @@ export const Overview: Story = {
 
         {/* ベストプラクティス */}
         <section className="bg-card border-border rounded-2xl border p-6">
-          <h2 className="mb-4 text-lg font-bold">ベストプラクティス</h2>
+          <h2 className="mb-4 text-lg font-medium">ベストプラクティス</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Do</h3>
+              <h3 className="font-medium">Do</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>破壊的アクションは視覚的に区別</li>
                 <li>頻繁に使うアクションにショートカット</li>
@@ -437,7 +437,7 @@ export const Overview: Story = {
               </ul>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="font-bold">Don&apos;t</h3>
+              <h3 className="font-medium">Don&apos;t</h3>
               <ul className="text-muted-foreground space-y-1 text-sm">
                 <li>メニュー項目が10個以上</li>
                 <li>削除を最上部に配置</li>

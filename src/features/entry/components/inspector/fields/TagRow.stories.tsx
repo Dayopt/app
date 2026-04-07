@@ -55,15 +55,6 @@ const greenTag: TagColorEntry = {
 // Stories
 // ---------------------------------------------------------------------------
 
-/** タグ未設定状態。「タグを追加」が表示される。 */
-export const NoTag: Story = {
-  render: () => (
-    <div className="w-72">
-      <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} />
-    </div>
-  ),
-};
-
 /** タグ設定済み（青）+ …メニュー（パレット追加・統計・削除）。 */
 export const WithMenu: Story = {
   render: () => (
@@ -155,10 +146,6 @@ export const NoMenu: Story = {
 export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">タグ未設定</p>
-        <TagRow tagId={null} onTagChange={fn()} onCreateAndSelect={fn()} />
-      </div>
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">フルメニュー（未登録）</p>
         <TagRow

@@ -56,7 +56,7 @@ export function SessionTimeoutDialog({
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center">
             {t('auth.session.timeoutWarningDescription')}
-            <span className="text-foreground mt-2 block text-2xl font-bold">
+            <span className="text-foreground mt-2 block text-2xl font-medium">
               {formatTime(remainingTime)}
             </span>
           </AlertDialogDescription>

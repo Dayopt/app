@@ -50,6 +50,15 @@
       "resizeFailed": "Failed to resize event",
       "undoMove": "Move undone",
       "undoFailed": "Failed to undo",
+      "moveWithRecord": {
+        "title": "Move and reset record",
+        "description": "This event has a time record. Moving it will reset the record",
+        "confirm": "Move"
+      },
+      "diff": {
+        "overtime": "Over",
+        "short": "Short"
+      },
       "saved": "Saved",
       "noEventsOnThisDay": "No events on this day",
       "selectEventToEdit": "Select an event to edit",
@@ -211,8 +220,14 @@
       "total": "Total",
       "backToAll": "All tags",
       "noTagData": "No tag data for this period",
-      "emptyTitle": "No data this week",
-      "emptyDescription": "Add entries to see your progress",
+      "review": {
+        "emptyTitle": "No review data yet",
+        "emptyDescription": "Record entries to review your week"
+      },
+      "progress": {
+        "emptyTitle": "No progress data yet",
+        "emptyDescription": "Trends will appear as you add more entries"
+      },
       "periodDay": "Day",
       "periodWeek": "Week",
       "periodMonth": "Month",
@@ -221,6 +236,7 @@
       "thisYear": "This year",
       "tabReview": "Review",
       "tabProgress": "Progress",
+      "tabBadges": "Badges",
       "tabInsights": "Discoveries",
       "charts": {
         "monthlyTrend": "Monthly Trend",

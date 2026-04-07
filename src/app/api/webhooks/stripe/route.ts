@@ -110,6 +110,19 @@ async function getUserByCustomerId(
 }
 
 /**
+ * メールアドレスをマスクしてログ用に安全な形式にする
+ * 例: "user@example.com" → "use***@example.com"
+ */
+function maskEmail(email: string): string {
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return '***';
+  const local = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
+  const visible = local.slice(0, Math.min(3, local.length));
+  return `${visible}***@${domain}`;
+}
+
+/**
  * トランザクションメール送信（fire-and-forget）
  * メール送信失敗は webhook 処理をブロックしない
  */
@@ -129,12 +142,12 @@ async function sendTransactionalEmail(
     });
 
     if (error) {
-      logger.error(`${context} failed`, { error, to });
+      logger.error(`${context} failed`, { error, to: maskEmail(to) });
     } else {
-      logger.info(`${context} sent`, { to });
+      logger.info(`${context} sent`, { to: maskEmail(to) });
     }
   } catch (error) {
-    logger.error(`${context} failed unexpectedly`, { error, to });
+    logger.error(`${context} failed unexpectedly`, { error, to: maskEmail(to) });
   }
 }
 

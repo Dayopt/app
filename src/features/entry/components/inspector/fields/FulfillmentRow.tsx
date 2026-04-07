@@ -78,7 +78,7 @@ export function FulfillmentRow({
                 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
                 'disabled:pointer-events-none disabled:opacity-50',
                 isSelected
-                  ? 'bg-accent text-accent-foreground'
+                  ? 'bg-state-selected text-foreground'
                   : 'text-muted-foreground hover:bg-state-hover hover:text-foreground',
               )}
             >

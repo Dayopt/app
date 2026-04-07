@@ -176,7 +176,7 @@ export function ConfirmDialog({
               <Icon className={`size-5 ${iconClass}`} />
             </div>
             <div className="flex-1">
-              <h2 id="confirm-dialog-title" className="text-lg leading-tight font-bold">
+              <h2 id="confirm-dialog-title" className="text-lg leading-tight font-medium">
                 {title}
               </h2>
               {description && (

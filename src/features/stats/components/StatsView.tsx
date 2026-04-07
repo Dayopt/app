@@ -109,8 +109,8 @@ export function StatsView({ className }: StatsViewProps) {
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <EmptyState
           icon={BarChart3}
-          title={t('emptyTitle')}
-          description={t('emptyDescription')}
+          title={t('review.emptyTitle')}
+          description={t('review.emptyDescription')}
           size="sm"
           centered
         />

@@ -23,7 +23,7 @@ import { SidebarSection } from './SidebarSection';
 // モックパーツ
 // ─────────────────────────────────────────────────────────
 
-/** CreateTagButton / PaletteAddPopover と同一構造 */
+/** CreateTagButton と同一構造 */
 function ActionButton() {
   return (
     <button
@@ -73,7 +73,7 @@ function MockSidebarHeader() {
     <div className="flex h-12 shrink-0 items-center justify-between px-2">
       <div className="flex items-center gap-2 pl-2">
         <div className="bg-primary size-5 rounded-lg" />
-        <span className="text-foreground text-sm font-bold tracking-tight">Dayopt</span>
+        <span className="text-foreground text-sm font-medium tracking-tight">Dayopt</span>
       </div>
       <div className="flex items-center">
         <button
@@ -283,7 +283,7 @@ export const FullSidebar: Story = {
 
         {/* パレット */}
         <div className="w-full min-w-0 overflow-hidden px-2">
-          <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+          <SidebarSection title="パレット" defaultOpen>
             <BlockItem
               tagName="Work"
               iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
@@ -403,7 +403,7 @@ export const AllPatterns: Story = {
               </SidebarSection>
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
-              <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+              <SidebarSection title="パレット" defaultOpen>
                 <BlockItem
                   tagName="Work"
                   iconSlot={<TagIcon icon={null} color="blue" size="sm" />}

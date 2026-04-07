@@ -21,12 +21,13 @@ import { MobileStatsHeader } from './layout/MobileStatsHeader';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
 import { useStatsDateDisplayProps } from './layout/useStatsDateDisplayProps';
 
-type StatsTabId = 'review' | 'progress' | 'insights' | 'tag';
+type StatsTabId = 'review' | 'progress' | 'badges' | 'insights' | 'tag';
 
 const FIXED_TABS: { id: Exclude<StatsTabId, 'tag'>; path: string; labelKey: string }[] = [
   { id: 'review', path: '/stats/review', labelKey: 'calendar.stats.tabReview' },
   { id: 'progress', path: '/stats/progress', labelKey: 'calendar.stats.tabProgress' },
   { id: 'insights', path: '/stats/insights', labelKey: 'calendar.stats.tabInsights' },
+  { id: 'badges', path: '/stats/badges', labelKey: 'calendar.stats.tabBadges' },
 ];
 
 const TODAY_LABEL_KEYS: Record<StatsGranularity, string> = {
@@ -201,7 +202,7 @@ export function StatsLayout({
 
       {/* タブナビゲーション */}
       <nav
-        className="scrollbar-hide flex h-10 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4"
+        className="scrollbar-hide flex h-8 w-full items-center justify-start gap-0 overflow-x-auto bg-transparent px-4 md:h-10"
         role="tablist"
       >
         {/* 固定3タブ */}
@@ -212,7 +213,7 @@ export function StatsLayout({
             role="tab"
             aria-selected={activeTab === tab.id}
             prefetch
-            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0')}
+            className={cn(tabLinkClass(activeTab === tab.id), i === 0 && 'pl-0 after:left-0')}
           >
             {t(tab.labelKey)}
           </Link>

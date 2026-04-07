@@ -39,12 +39,15 @@ function DrawerOverlay({
 
 function DrawerContent({
   className,
+  overlayClassName,
   children,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  overlayClassName?: string;
+}) {
   return (
     <DrawerPortal data-slot="drawer-portal">
-      <DrawerOverlay />
+      <DrawerOverlay className={overlayClassName} />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         className={cn(
@@ -57,12 +60,12 @@ function DrawerContent({
         )}
         {...props}
       >
-        {/* ドラッグハンドル: 視覚的には小さく、タッチ領域は48px (WCAG準拠) */}
+        {/* ドラッグハンドル */}
         <div
-          className="hidden h-8 w-full shrink-0 items-center justify-center group-data-[vaul-drawer-direction=bottom]/drawer-content:flex"
+          className="hidden h-6 w-full shrink-0 items-center justify-center group-data-[vaul-drawer-direction=bottom]/drawer-content:flex"
           aria-hidden="true"
         >
-          <div className="bg-border h-1 w-12 rounded-full" />
+          <div className="bg-border h-1 w-10 rounded-full" />
         </div>
         {children}
       </DrawerPrimitive.Content>
@@ -94,7 +97,7 @@ function DrawerTitle({ className, ...props }: React.ComponentProps<typeof Drawer
   return (
     <DrawerPrimitive.Title
       data-slot="drawer-title"
-      className={cn('text-foreground font-bold', className)}
+      className={cn('text-foreground font-medium', className)}
       {...props}
     />
   );

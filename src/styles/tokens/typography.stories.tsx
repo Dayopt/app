@@ -14,11 +14,11 @@ type Story = StoryObj;
 export const Principles: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Typography原則</h1>
+      <h1 className="mb-6 text-2xl font-medium">Typography原則</h1>
 
       <div className="space-y-6">
         <div className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 font-bold">Tailwindデフォルトを使用</h2>
+          <h2 className="mb-4 font-medium">Tailwindデフォルトを使用</h2>
           <p className="text-muted-foreground text-sm">
             フォントサイズはTailwindのデフォルトスケールをそのまま使用。
             業界標準で学習コストゼロ、ドキュメントも豊富。
@@ -26,7 +26,7 @@ export const Principles: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 font-bold">視覚的階層を作る</h2>
+          <h2 className="mb-4 font-medium">視覚的階層を作る</h2>
           <ul className="text-muted-foreground space-y-2 text-sm">
             <li>• サイズの差で重要度を表現（大きい = 重要）</li>
             <li>• ウェイトで強調（bold = 見出し、normal = 本文）</li>
@@ -35,7 +35,7 @@ export const Principles: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 font-bold">フォント</h2>
+          <h2 className="mb-4 font-medium">フォント</h2>
           <p className="text-muted-foreground text-sm">
             Inter（英語）+ Noto Sans JP（日本語）。 next/fontで最適化済み。
           </p>
@@ -48,7 +48,7 @@ export const Principles: Story = {
 export const Scale: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">フォントサイズスケール</h1>
+      <h1 className="mb-6 text-2xl font-medium">フォントサイズスケール</h1>
       <p className="text-muted-foreground mb-8">Tailwindデフォルト。よく使うサイズをハイライト。</p>
 
       <div className="space-y-1">
@@ -91,45 +91,45 @@ export const Scale: Story = {
 export const Hierarchy: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">タイポグラフィ階層</h1>
+      <h1 className="mb-6 text-2xl font-medium">タイポグラフィ階層</h1>
       <p className="text-muted-foreground mb-8">UIで使う典型的なパターン。</p>
 
       <div className="space-y-8">
         {/* ページレベル */}
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">ページタイトル</div>
-          <h1 className="text-2xl font-bold">設定</h1>
+          <h1 className="text-2xl font-medium">設定</h1>
           <p className="text-muted-foreground mt-1 text-sm">アカウントとアプリの設定を管理</p>
           <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
-            text-2xl font-bold + text-sm text-muted-foreground
+            text-2xl font-medium + text-sm text-muted-foreground
           </code>
         </div>
 
         {/* セクション */}
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">セクション見出し</div>
-          <h2 className="text-lg font-bold">プロフィール</h2>
+          <h2 className="text-lg font-medium">プロフィール</h2>
           <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
-            text-lg font-bold
+            text-lg font-medium
           </code>
         </div>
 
         {/* カード */}
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">カード見出し</div>
-          <h3 className="font-bold">メール通知</h3>
+          <h3 className="font-medium">メール通知</h3>
           <p className="text-muted-foreground mt-1 text-sm">重要な更新をメールで受け取る</p>
           <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
-            font-bold + text-sm text-muted-foreground
+            font-medium + text-sm text-muted-foreground
           </code>
         </div>
 
         {/* ラベル */}
         <div className="border-border border-b pb-6">
           <div className="text-muted-foreground mb-2 text-xs">フォームラベル</div>
-          <label className="text-sm font-bold">メールアドレス</label>
+          <label className="text-sm font-medium">メールアドレス</label>
           <code className="bg-container mt-2 inline-block rounded-lg px-2 py-1 text-xs">
-            text-sm font-bold
+            text-sm font-medium
           </code>
         </div>
 
@@ -149,15 +149,15 @@ export const Hierarchy: Story = {
 export const Weight: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">フォントウェイト</h1>
+      <h1 className="mb-6 text-2xl font-medium">フォントウェイト</h1>
       <p className="text-muted-foreground mb-8">2つだけ。シンプルに保つ。</p>
 
       <div className="space-y-6">
         <div className="bg-card border-border rounded-lg border p-6">
           <div className="mb-4">
-            <code className="bg-container rounded-lg px-2 py-1 text-xs">font-bold</code>
+            <code className="bg-container rounded-lg px-2 py-1 text-xs">font-medium</code>
           </div>
-          <p className="text-xl font-bold">見出し、強調</p>
+          <p className="text-xl font-medium">見出し、強調</p>
           <p className="text-muted-foreground mt-2 text-sm">
             ページタイトル、セクション見出し、ラベル、重要な情報
           </p>
@@ -178,35 +178,35 @@ export const Weight: Story = {
 export const QuickReference: Story = {
   render: () => (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">クイックリファレンス</h1>
+      <h1 className="mb-6 text-2xl font-medium">クイックリファレンス</h1>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">見出し</h2>
+          <h2 className="mb-4 font-medium">見出し</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
                 <td className="py-2">ページタイトル</td>
                 <td className="text-muted-foreground py-2">
-                  <code className="text-xs">text-2xl font-bold</code>
+                  <code className="text-xs">text-2xl font-medium</code>
                 </td>
               </tr>
               <tr>
                 <td className="py-2">セクション</td>
                 <td className="text-muted-foreground py-2">
-                  <code className="text-xs">text-lg font-bold</code>
+                  <code className="text-xs">text-lg font-medium</code>
                 </td>
               </tr>
               <tr>
                 <td className="py-2">カード見出し</td>
                 <td className="text-muted-foreground py-2">
-                  <code className="text-xs">font-bold</code>
+                  <code className="text-xs">font-medium</code>
                 </td>
               </tr>
               <tr>
                 <td className="py-2">ラベル</td>
                 <td className="text-muted-foreground py-2">
-                  <code className="text-xs">text-sm font-bold</code>
+                  <code className="text-xs">text-sm font-medium</code>
                 </td>
               </tr>
             </tbody>
@@ -214,7 +214,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">本文</h2>
+          <h2 className="mb-4 font-medium">本文</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
@@ -240,7 +240,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">行間</h2>
+          <h2 className="mb-4 font-medium">行間</h2>
           <table className="w-full text-sm">
             <tbody className="divide-border divide-y">
               <tr>
@@ -266,7 +266,7 @@ export const QuickReference: Story = {
         </div>
 
         <div className="bg-card border-border rounded-lg border p-4">
-          <h2 className="mb-4 font-bold">避けるべきパターン</h2>
+          <h2 className="mb-4 font-medium">避けるべきパターン</h2>
           <ul className="text-muted-foreground space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <span className="text-destructive">✗</span>
@@ -292,18 +292,18 @@ export const QuickReference: Story = {
 export const DosDonts: Story = {
   render: () => (
     <div>
-      <h1 className="mb-2 text-2xl font-bold">Do&apos;s & Don&apos;ts</h1>
+      <h1 className="mb-2 text-2xl font-medium">Do&apos;s & Don&apos;ts</h1>
       <p className="text-muted-foreground mb-8">タイポグラフィのベストプラクティス。</p>
 
       <div className="grid max-w-5xl gap-8">
         {/* Tailwindスケール */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">Tailwindデフォルトスケールを使用</h2>
+          <h2 className="mb-4 text-lg font-medium">Tailwindデフォルトスケールを使用</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="text-success font-bold">Do</h3>
+              <h3 className="text-success font-medium">Do</h3>
               <div className="space-y-2">
-                <p className="text-2xl font-bold">text-2xl（見出し）</p>
+                <p className="text-2xl font-medium">text-2xl（見出し）</p>
                 <p className="text-base">text-base（本文）</p>
                 <p className="text-muted-foreground text-sm">text-sm（補助）</p>
               </div>
@@ -312,9 +312,9 @@ export const DosDonts: Story = {
               </code>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="text-destructive font-bold">Don&apos;t</h3>
+              <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-2">
-                <p className="font-bold" style={{ fontSize: '23px' }}>
+                <p className="font-medium" style={{ fontSize: '23px' }}>
                   {`text-[${'23px'}]`}（任意値）
                 </p>
                 <p style={{ fontSize: '15px' }}>{`text-[${'15px'}]`}（任意値）</p>
@@ -334,22 +334,22 @@ export const DosDonts: Story = {
 
         {/* 階層的なサイズ */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">階層的なサイズ変化</h2>
+          <h2 className="mb-4 text-lg font-medium">階層的なサイズ変化</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="text-success font-bold">Do</h3>
+              <h3 className="text-success font-medium">Do</h3>
               <div className="space-y-1">
-                <p className="text-xl font-bold">見出し1 (text-xl)</p>
-                <p className="text-lg font-bold">見出し2 (text-lg)</p>
+                <p className="text-xl font-medium">見出し1 (text-xl)</p>
+                <p className="text-lg font-medium">見出し2 (text-lg)</p>
                 <p className="text-base">本文 (text-base)</p>
               </div>
               <code className="text-muted-foreground block text-xs">1段階ずつ下げる</code>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="text-destructive font-bold">Don&apos;t</h3>
+              <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-1">
-                <p className="text-3xl font-bold">見出し1 (text-3xl)</p>
-                <p className="text-sm font-bold">見出し2 (text-sm)</p>
+                <p className="text-3xl font-medium">見出し1 (text-3xl)</p>
+                <p className="text-sm font-medium">見出し2 (text-sm)</p>
                 <p className="text-xs">本文 (text-xs)</p>
               </div>
               <code className="text-muted-foreground block text-xs">サイズが飛びすぎ</code>
@@ -362,21 +362,21 @@ export const DosDonts: Story = {
 
         {/* ウェイト */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">ウェイトは2種類まで</h2>
+          <h2 className="mb-4 text-lg font-medium">ウェイトは2種類まで</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="text-success font-bold">Do</h3>
+              <h3 className="text-success font-medium">Do</h3>
               <div className="space-y-2">
-                <p className="font-bold">font-bold（見出し、強調）</p>
+                <p className="font-medium">font-medium（見出し、強調）</p>
                 <p className="font-normal">font-normal（本文）</p>
               </div>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="text-destructive font-bold">Don&apos;t</h3>
+              <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-2">
                 <p className="font-black">font-black</p>
                 <p className="font-extrabold">font-extrabold</p>
-                <p className="font-semibold">font-semibold</p>
+                <p className="font-medium">font-medium</p>
                 <p className="font-medium">font-medium</p>
                 <p className="font-light">font-light</p>
               </div>
@@ -389,17 +389,17 @@ export const DosDonts: Story = {
 
         {/* テキスト色 */}
         <section className="bg-card border-border rounded-lg border p-6">
-          <h2 className="mb-4 text-lg font-bold">テキスト色で階層を表現</h2>
+          <h2 className="mb-4 text-lg font-medium">テキスト色で階層を表現</h2>
           <div className="grid gap-6 md:grid-cols-2">
             <div className="border-success space-y-2 border-l-4 pl-4">
-              <h3 className="text-success font-bold">Do</h3>
+              <h3 className="text-success font-medium">Do</h3>
               <div className="space-y-2">
                 <p className="text-foreground">主要テキスト（text-foreground）</p>
                 <p className="text-muted-foreground">補助テキスト（text-muted-foreground）</p>
               </div>
             </div>
             <div className="border-destructive space-y-2 border-l-4 pl-4">
-              <h3 className="text-destructive font-bold">Don&apos;t</h3>
+              <h3 className="text-destructive font-medium">Don&apos;t</h3>
               <div className="space-y-2">
                 <p className="text-muted-foreground">text-gray-600（直接色指定）</p>
                 <p className="text-muted-foreground">

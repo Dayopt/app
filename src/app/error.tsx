@@ -48,7 +48,7 @@ export default function RootError({ error, reset }: ErrorProps) {
     <div className="bg-background fixed inset-0 flex items-center justify-center overflow-auto p-4">
       <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-destructive mb-2 text-2xl font-bold">{ERROR_TEXT.title}</h1>
+          <h1 className="text-destructive mb-2 text-2xl font-medium">{ERROR_TEXT.title}</h1>
           <p className="text-muted-foreground">{ERROR_TEXT.description}</p>
         </div>
 
@@ -66,7 +66,7 @@ export default function RootError({ error, reset }: ErrorProps) {
               {ERROR_TEXT.showDetails}
             </summary>
             <div className="bg-surface-container mt-4 rounded-lg p-4">
-              <p className="mb-2 text-xs font-bold">{error.name}</p>
+              <p className="mb-2 text-xs font-medium">{error.name}</p>
               <pre className="text-muted-foreground max-h-40 overflow-auto text-xs">
                 {error.message}
               </pre>

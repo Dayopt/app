@@ -38,11 +38,11 @@ UIで使う典型的なパターン。
 
 | 用途             | クラス                          |
 | ---------------- | ------------------------------- |
-| ページタイトル   | `text-2xl font-bold`            |
+| ページタイトル   | `text-2xl font-medium`          |
 | サブテキスト     | `text-sm text-muted-foreground` |
-| セクション見出し | `text-lg font-bold`             |
-| カード見出し     | `font-bold`                     |
-| フォームラベル   | `text-sm font-bold`             |
+| セクション見出し | `text-lg font-medium`           |
+| カード見出し     | `font-medium`                   |
+| フォームラベル   | `text-sm font-medium`           |
 | 補助テキスト     | `text-xs text-muted-foreground` |
 
 ---
@@ -51,10 +51,12 @@ UIで使う典型的なパターン。
 
 2つだけ。シンプルに保つ。
 
-| クラス        | 用途                                                                 |
-| ------------- | -------------------------------------------------------------------- |
-| `font-bold`   | 見出し、強調（ページタイトル、セクション見出し、ラベル、重要な情報） |
-| `font-normal` | 本文テキスト（段落、説明文、UIテキスト全般）                         |
+| クラス        | Weight | 用途                                         |
+| ------------- | ------ | -------------------------------------------- |
+| `font-medium` | 500    | 見出し、ラベル、強調、stat値                 |
+| `font-normal` | 400    | 本文テキスト（段落、説明文、UIテキスト全般） |
+
+**禁止**: font-bold, font-semibold, font-extrabold, font-black, font-light, font-thin
 
 ---
 
@@ -74,12 +76,12 @@ UIで使う典型的なパターン。
 
 ```tsx
 // ✅ Do
-<h1 className="text-2xl font-bold">見出し</h1>
+<h1 className="text-2xl font-medium">見出し</h1>
 <p className="text-base">本文</p>
 <span className="text-sm text-muted-foreground">補助</span>
 
 // ❌ Don't — 任意値は禁止
-<h1 className="text-[23px] font-bold">見出し</h1>
+<h1 className="text-[23px] font-medium">見出し</h1>
 <p className="text-[15px]">本文</p>
 ```
 
@@ -89,13 +91,13 @@ UIで使う典型的なパターン。
 
 ```tsx
 // ✅ Do — 1段階ずつ下げる
-<h1 className="text-xl font-bold">見出し1</h1>
-<h2 className="text-lg font-bold">見出し2</h2>
+<h1 className="text-xl font-medium">見出し1</h1>
+<h2 className="text-lg font-medium">見出し2</h2>
 <p className="text-base">本文</p>
 
 // ❌ Don't — サイズが飛びすぎ
-<h1 className="text-3xl font-bold">見出し1</h1>
-<h2 className="text-sm font-bold">見出し2</h2>
+<h1 className="text-3xl font-medium">見出し1</h1>
+<h2 className="text-sm font-medium">見出し2</h2>
 <p className="text-xs">本文</p>
 ```
 
@@ -105,10 +107,10 @@ UIで使う典型的なパターン。
 
 ```tsx
 // ✅ Do
-font-bold（見出し、強調）
+font-medium（見出し、強調）
 font-normal（本文）
 
-// ❌ Don't — font-black, font-extrabold, font-semibold, font-medium, font-light
+// ❌ Don't — font-bold, font-semibold, font-extrabold, font-black, font-light, font-thin
 ```
 
 理由: ウェイトの多用は視覚的ノイズになり、本当に強調したい部分が埋もれる。

@@ -43,14 +43,14 @@ export const AllPatterns: Story = {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="text-center">
-                <div className="text-3xl font-bold">7</div>
+                <div className="text-3xl font-medium">7</div>
                 <div className="text-muted-foreground text-xs">日連続</div>
               </div>
               <div className="bg-border h-12 w-px" />
               <div className="flex items-center gap-2 text-center">
                 <Trophy className="text-warning size-4" />
                 <div>
-                  <div className="text-lg font-bold">14</div>
+                  <div className="text-lg font-medium">14</div>
                   <div className="text-muted-foreground text-xs">最長記録</div>
                 </div>
               </div>
@@ -63,7 +63,7 @@ export const AllPatterns: Story = {
             <CardDescription>今週の記録</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">24:35</div>
+            <div className="text-3xl font-medium">24:35</div>
             <p className="text-muted-foreground mt-1 text-xs">先週比 +2:15</p>
           </CardContent>
         </Card>

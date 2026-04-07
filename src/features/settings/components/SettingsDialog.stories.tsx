@@ -12,44 +12,17 @@
 import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
-
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import { Button } from '@/components/ui/button';
 import { useShellStore } from '@/shell/stores/useShellStore';
+import { PRESET_AUTH, PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
+import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import type { SettingsCategory } from '../types';
 import { SettingsDialog } from './SettingsDialog';
 
 // ─────────────────────────────────────────────────────────
 // モックデータ
 // ─────────────────────────────────────────────────────────
-
-const MOCK_USER_SETTINGS = {
-  timezone: 'Asia/Tokyo',
-  showUtcOffset: true,
-  timeFormat: '24h' as const,
-  dateFormat: 'yyyy/MM/dd',
-  weekStartsOn: 1 as const,
-  showWeekends: true,
-  showWeekNumbers: false,
-  defaultDuration: 60,
-  snapInterval: 15 as const,
-  defaultView: 'week',
-  hourHeightDensity: 'default',
-  planRecordMode: 'both',
-  chronotype: {
-    enabled: true,
-    type: 'moderate_morning' as const,
-    displayMode: 'background' as const,
-    opacity: 0.15,
-    customZones: null,
-  },
-};
 
 const MOCK_NOTIFICATION_PREFERENCES = {
   emailEnabled: true,
@@ -65,46 +38,16 @@ const MOCK_PROFILE = {
 };
 
 // ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
+// 共通 tRPC モックマップ
 // ─────────────────────────────────────────────────────────
 
-function createMockLink(): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'userSettings.get': MOCK_USER_SETTINGS,
-            'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES,
-            'profile.get': MOCK_PROFILE,
-            'tags.list': { data: [] },
-            'entries.getTagStats': { counts: {} },
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({ children }: { children: ReactNode }) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const trpcClient = api.createClient({ links: [createMockLink()] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
+const DIALOG_MOCKS = {
+  'userSettings.get': PRESET_USER_SETTINGS.default,
+  'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES,
+  'profile.get': MOCK_PROFILE,
+  'tags.list': { data: [] },
+  'entries.getTagStats': { counts: {} },
+};
 
 // ─────────────────────────────────────────────────────────
 // インタラクティブラッパー
@@ -118,7 +61,7 @@ function InteractiveSettingsDialog({
   const [mounted, setMounted] = useState(false);
 
   return (
-    <MockProvider>
+    <StoryTRPCProvider mocks={DIALOG_MOCKS}>
       <Button
         onClick={() => {
           useShellStore.getState().openSettings(initialCategory);
@@ -128,7 +71,7 @@ function InteractiveSettingsDialog({
         設定を開く
       </Button>
       {mounted && <SettingsDialog />}
-    </MockProvider>
+    </StoryTRPCProvider>
   );
 }
 
@@ -147,6 +90,8 @@ const meta = {
   component: SettingsDialog,
   parameters: {
     layout: 'fullscreen',
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
+    trpcMocks: DIALOG_MOCKS,
   },
   tags: ['autodocs'],
 } satisfies Meta;
@@ -167,11 +112,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
-    return (
-      <MockProvider>
-        <SettingsDialog />
-      </MockProvider>
-    );
+    return <SettingsDialog />;
   },
 };
 
@@ -181,11 +122,7 @@ export const Default: Story = {
 export const DisplayCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'display' } });
-    return (
-      <MockProvider>
-        <SettingsDialog />
-      </MockProvider>
-    );
+    return <SettingsDialog />;
   },
 };
 
@@ -195,11 +132,7 @@ export const DisplayCategory: Story = {
 export const NotificationsCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'notifications' } });
-    return (
-      <MockProvider>
-        <SettingsDialog />
-      </MockProvider>
-    );
+    return <SettingsDialog />;
   },
 };
 
@@ -209,11 +142,7 @@ export const NotificationsCategory: Story = {
 export const DataCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'data' } });
-    return (
-      <MockProvider>
-        <SettingsDialog />
-      </MockProvider>
-    );
+    return <SettingsDialog />;
   },
 };
 
@@ -223,11 +152,7 @@ export const DataCategory: Story = {
 export const AccountCategory: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: { type: 'settings', category: 'account' } });
-    return (
-      <MockProvider>
-        <SettingsDialog />
-      </MockProvider>
-    );
+    return <SettingsDialog />;
   },
 };
 
@@ -240,12 +165,12 @@ export const ClosedState: Story = {
   render: () => {
     useShellStore.setState({ activeSheet: null });
     return (
-      <MockProvider>
+      <>
         <SettingsDialog />
         <div className="flex h-screen items-center justify-center">
           <p className="text-muted-foreground text-sm">（ダイアログは閉じています）</p>
         </div>
-      </MockProvider>
+      </>
     );
   },
 };

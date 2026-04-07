@@ -875,7 +875,7 @@ describe('Custom entry duration', () => {
 // ========================================
 
 describe('Upward selection', () => {
-  it('correctly calculates range when dragging upward', () => {
+  it('ignores upward drag and keeps start time fixed', () => {
     const selectingState: InteractionState = {
       mode: 'selecting',
       startPoint: { clientX: 100, clientY: 400 },
@@ -889,16 +889,18 @@ describe('Upward selection', () => {
       isOverlapping: false,
     };
 
-    // Move up 60px (1 hour)
+    // Move up 60px (1 hour) — downward-only なので開始時刻は固定
     const { state } = dispatch(selectingState, {
       type: 'POINTER_MOVE',
       point: { clientX: 100, clientY: 340 },
     });
 
     if (state.mode === 'selecting') {
-      // Should be 9:00 → 10:00
-      expect(state.selectionRange.start.getHours()).toBe(9);
+      // 上方向ドラッグは無視: 10:00 → 10:15（最低1スロット）
+      expect(state.selectionRange.start.getHours()).toBe(10);
+      expect(state.selectionRange.start.getMinutes()).toBe(0);
       expect(state.selectionRange.end.getHours()).toBe(10);
+      expect(state.selectionRange.end.getMinutes()).toBe(15);
     }
   });
 });

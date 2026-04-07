@@ -1,7 +1,7 @@
 /**
  * Now Badge — deep/ease ゾーン内にいるときだけ表示するラベル
  *
- * 位置: now line の 16px 上、グリッド左端
+ * 位置: now line の 16px 上、グリッド右端
  * 色: deep → text-chronotype-deep, ease → text-chronotype-ease
  */
 
@@ -35,7 +35,7 @@ export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
   const arrow = zoneLevel === 'deep' ? '↗' : '↘';
 
   return (
-    <span className={`${colorClass} absolute -top-4 left-2 text-sm whitespace-nowrap`}>
+    <span className={`${colorClass} absolute -top-4 right-2 text-sm whitespace-nowrap`}>
       {arrow} {label}
     </span>
   );

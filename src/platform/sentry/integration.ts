@@ -99,6 +99,29 @@ function generateFingerprint(error: AppError): string[] {
  * }
  * ```
  */
+const PII_KEYS = new Set([
+  'email',
+  'mail',
+  'name',
+  'phone',
+  'address',
+  'password',
+  'token',
+  'secret',
+]);
+
+function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    if (PII_KEYS.has(key.toLowerCase())) {
+      sanitized[key] = '[REDACTED]';
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
 export function reportToSentry(
   error: AppError,
   userContext?: { userId?: string; ip?: string; userAgent?: string },
@@ -127,9 +150,9 @@ export function reportToSentry(
       userMessage: error.userMessage,
     });
 
-    // メタデータがあればコンテキストに追加
+    // メタデータがあればPII除外してコンテキストに追加
     if (error.metadata) {
-      scope.setContext('errorMetadata', error.metadata);
+      scope.setContext('errorMetadata', sanitizeMetadata(error.metadata));
     }
 
     // ユーザーコンテキストを設定

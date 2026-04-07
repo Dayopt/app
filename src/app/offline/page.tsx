@@ -35,7 +35,7 @@ export default function OfflinePage() {
         <div className="bg-muted mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
           <WifiOff className="text-muted-foreground h-10 w-10" />
         </div>
-        <h1 className="text-foreground mb-2 text-2xl font-bold">{t.title}</h1>
+        <h1 className="text-foreground mb-2 text-2xl font-medium">{t.title}</h1>
         <p className="text-muted-foreground mb-6 max-w-sm">{t.description}</p>
         <button
           type="button"

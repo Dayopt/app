@@ -3,8 +3,7 @@
 // 日付・時間
 export { DatePickerPopover } from './DatePickerPopover';
 export { DateRow } from './DateRow';
-export { TimeDiffBar } from './TimeDiffBar';
-export { TimeProgressBar } from './TimeProgressBar';
+export { TimeDiffBlock } from './TimeDiffBlock';
 export { TimeRow, TimeRowPlaceholder } from './TimeRow';
 export { TimeSelect } from './TimeSelect';
 export type { TimeIconType } from './TimeSelect';

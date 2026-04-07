@@ -9,13 +9,6 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { TRPCLink } from '@trpc/client';
-import { observable } from '@trpc/server/observable';
-import type { ReactNode } from 'react';
-
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
 
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 import { InlineTagPalette } from './InlineTagPalette';
@@ -24,98 +17,11 @@ import { InlineTagPalette } from './InlineTagPalette';
 // モックデータ
 // ─────────────────────────────────────────────────────────
 
-const MOCK_TAGS = [
-  {
-    id: 'tag-1',
-    name: '仕事',
-    user_id: 'user-1',
-    color: 'blue',
-    is_active: true,
-    sort_order: 0,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-2',
-    name: '仕事:会議',
-    user_id: 'user-1',
-    color: 'blue',
-    is_active: true,
-    sort_order: 1,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-3',
-    name: '勉強',
-    user_id: 'user-1',
-    color: 'green',
-    is_active: true,
-    sort_order: 2,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tag-4',
-    name: '運動',
-    user_id: 'user-1',
-    color: 'amber',
-    is_active: true,
-    sort_order: 3,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
-  },
-];
-
 /** 1時間あたりのデフォルト高さ（px） */
 const DEFAULT_HOUR_HEIGHT = 60;
 
 /** 今日の日付（ストーリー固定値） */
 const TODAY = new Date('2026-03-18T00:00:00.000Z');
-
-// ─────────────────────────────────────────────────────────
-// tRPC モックプロバイダー
-// ─────────────────────────────────────────────────────────
-
-function createMockLink(tags: typeof MOCK_TAGS): TRPCLink<AppRouter> {
-  return () =>
-    ({ op }) =>
-      observable((observer) => {
-        if (op.type === 'query') {
-          const responseMap: Record<string, unknown> = {
-            'tags.list': { data: tags },
-          };
-          const result = op.path in responseMap ? responseMap[op.path] : undefined;
-          observer.next({ result: { type: 'data', data: result } });
-        }
-        if (op.type === 'mutation') {
-          observer.next({ result: { type: 'data', data: {} } });
-        }
-        observer.complete();
-      });
-}
-
-function MockProvider({
-  children,
-  tags = MOCK_TAGS,
-}: {
-  children: ReactNode;
-  tags?: typeof MOCK_TAGS;
-}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, staleTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
-  const trpcClient = api.createClient({ links: [createMockLink(tags)] });
-
-  return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </api.Provider>
-  );
-}
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -165,11 +71,9 @@ export const Default: Story = {
         },
       });
       return (
-        <MockProvider>
-          <div className="relative h-[1440px] w-full">
-            <Story />
-          </div>
-        </MockProvider>
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
       );
     },
   ],
@@ -196,11 +100,9 @@ export const ShortSelection: Story = {
         },
       });
       return (
-        <MockProvider>
-          <div className="relative h-[1440px] w-full">
-            <Story />
-          </div>
-        </MockProvider>
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
       );
     },
   ],
@@ -224,11 +126,9 @@ export const LongSelection: Story = {
         },
       });
       return (
-        <MockProvider>
-          <div className="relative h-[1440px] w-full">
-            <Story />
-          </div>
-        </MockProvider>
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
       );
     },
   ],
@@ -240,6 +140,9 @@ export const LongSelection: Story = {
  * タグが存在しない場合、サンプルタグ候補が表示される。
  */
 export const EmptyTags: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: [] } },
+  },
   decorators: [
     (Story) => {
       useInlineCreateStore.setState({
@@ -252,11 +155,9 @@ export const EmptyTags: Story = {
         },
       });
       return (
-        <MockProvider tags={[]}>
-          <div className="relative h-[1440px] w-full">
-            <Story />
-          </div>
-        </MockProvider>
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
       );
     },
   ],
@@ -272,11 +173,9 @@ export const NoPendingSelection: Story = {
     (Story) => {
       useInlineCreateStore.setState({ pendingSelection: null });
       return (
-        <MockProvider>
-          <div className="relative h-[1440px] w-full">
-            <Story />
-          </div>
-        </MockProvider>
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
       );
     },
   ],

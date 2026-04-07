@@ -31,7 +31,7 @@ const generateHeaderClasses = (
         : '';
 
   const statusClasses = isToday
-    ? 'bg-primary text-primary-foreground font-bold'
+    ? 'bg-primary text-primary-foreground font-medium'
     : isSelected
       ? 'bg-primary-state-selected text-primary'
       : isWeekend
@@ -87,7 +87,7 @@ export const DayDisplay = memo<DayDisplayProps>(function DayDisplay({
         </div>
 
         {/* 日付 */}
-        <div className={cn('text-lg font-bold', getTextClasses(isToday, true))}>
+        <div className={cn('text-lg font-medium', getTextClasses(isToday, true))}>
           {date.getDate()}
         </div>
 
@@ -108,7 +108,9 @@ export const DayDisplay = memo<DayDisplayProps>(function DayDisplay({
         </div>
 
         {/* 日付 */}
-        <div className={`text-lg font-bold ${getTextClasses(isToday, true)}`}>{date.getDate()}</div>
+        <div className={`text-lg font-medium ${getTextClasses(isToday, true)}`}>
+          {date.getDate()}
+        </div>
 
         {/* 月（異なる月の場合のみ表示） */}
         {format === 'long' && (
