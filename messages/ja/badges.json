@@ -1,0 +1,101 @@
+{
+  "badges": {
+    "title": "バッジ",
+    "earned": "を獲得しました！",
+    "locked": "未獲得",
+    "notEarned": "未達成",
+    "earnedAt": "{date}に獲得",
+    "progress": "{current}/{target}",
+    "openFeature": "機能を開く",
+    "ranks": {
+      "bronze": "ブロンズ",
+      "silver": "シルバー",
+      "gold": "ゴールド"
+    },
+    "streak": {
+      "name": "連続記録",
+      "description": "連続で記録した日数"
+    },
+    "blocks": {
+      "name": "累計ブロック",
+      "description": "記録したブロックの累計数"
+    },
+    "tags5": {
+      "name": "5種のタグ",
+      "description": "5種類のタグを使用"
+    },
+    "paletteFirst": {
+      "name": "パレット登録",
+      "description": "パレットに初めて登録"
+    },
+    "deepZone": {
+      "name": "Deep Zone",
+      "description": "Deep Zoneに初めてブロックを配置",
+      "hint": "クロノタイプ設定を開く"
+    },
+    "fullDay": {
+      "name": "フル活用",
+      "description": "1日に8ブロック以上記録",
+      "hint": "パレットを活用して効率的に記録"
+    },
+    "templateFirst": {
+      "name": "テンプレート",
+      "description": "テンプレートを初めて使用",
+      "hint": "テンプレート一覧を開く"
+    },
+    "exportFirst": {
+      "name": "初エクスポート",
+      "description": "データを初めてエクスポート",
+      "hint": "エクスポート設定を開く"
+    },
+    "earlyBird": {
+      "name": "早起き記録",
+      "description": "7時前にブロックを記録"
+    },
+    "nightOwl": {
+      "name": "夜型の記録",
+      "description": "23時以降にブロックを記録"
+    },
+    "fullWeek": {
+      "name": "全曜日記録",
+      "description": "1週間で全曜日に記録"
+    },
+    "deepFull": {
+      "name": "Deep全枠活用",
+      "description": "Deep Zoneの全枠にブロックを配置"
+    },
+    "tagStreak": {
+      "name": "習慣タグ",
+      "description": "同じタグを7日連続で使用"
+    },
+    "tag100h": {
+      "name": "100時間マスター",
+      "description": "1つのタグで累計100時間を記録",
+      "hint": "Stats → Reviewでタグ別時間を確認"
+    },
+    "monday5": {
+      "name": "月曜マスター",
+      "description": "5週連続で月曜に記録"
+    },
+    "dayCoverage": {
+      "name": "完全記録の日",
+      "description": "1日の実時間80%以上をカバー"
+    },
+    "proSignup": {
+      "name": "Pro登録",
+      "description": "Proプランに登録"
+    },
+    "weeklyReport": {
+      "name": "初レポート",
+      "description": "ウィークリーレポートを初受信"
+    },
+    "sixMonths": {
+      "name": "半年の記録者",
+      "description": "登録から6ヶ月が経過"
+    },
+    "oneYear": {
+      "name": "1年の記録者",
+      "description": "登録から1年が経過"
+    }
+  }
+}

@@ -22,6 +22,7 @@ import { GlobalOverlays } from './_overlays/GlobalOverlays';
 
 /** アプリページで必要なnamespace */
 const APP_NAMESPACES = [
+  'badges',
   'common',
   'calendar',
   'entry',

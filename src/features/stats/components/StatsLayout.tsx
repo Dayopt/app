@@ -21,11 +21,12 @@ import { MobileStatsHeader } from './layout/MobileStatsHeader';
 import { StatsGranularitySelector } from './layout/StatsGranularitySelector';
 import { useStatsDateDisplayProps } from './layout/useStatsDateDisplayProps';
 
-type StatsTabId = 'review' | 'progress' | 'insights' | 'tag';
+type StatsTabId = 'review' | 'progress' | 'badges' | 'insights' | 'tag';
 
 const FIXED_TABS: { id: Exclude<StatsTabId, 'tag'>; path: string; labelKey: string }[] = [
   { id: 'review', path: '/stats/review', labelKey: 'calendar.stats.tabReview' },
   { id: 'progress', path: '/stats/progress', labelKey: 'calendar.stats.tabProgress' },
+  { id: 'badges', path: '/stats/badges', labelKey: 'calendar.stats.tabBadges' },
   { id: 'insights', path: '/stats/insights', labelKey: 'calendar.stats.tabInsights' },
 ];
 
