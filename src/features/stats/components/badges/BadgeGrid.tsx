@@ -10,7 +10,7 @@ interface BadgeGridProps {
 
 export function BadgeGrid({ badges, onSelect }: BadgeGridProps) {
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="flex flex-wrap gap-4">
       {badges.map((badge) => (
         <BadgeCell key={badge.definition.id} badge={badge} onSelect={onSelect} />
       ))}

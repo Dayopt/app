@@ -4,15 +4,13 @@ import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeSection } from '@/features/stats';
 
-export const dynamic = 'force-dynamic';
-
 function BadgesSkeleton() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
       <Skeleton className="h-6 w-24" />
-      <div className="grid grid-cols-4 gap-1">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full rounded-lg" />
+      <div className="flex flex-wrap gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 w-40 rounded-lg" />
         ))}
       </div>
     </div>
