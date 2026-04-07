@@ -52,8 +52,8 @@
       "accountMenuLabel": "{name}のアカウントメニューを開く",
       "logout": "ログアウト",
       "loggingOut": "ログアウト中...",
-      "logoutSuccess": "ログアウトした",
-      "logoutFailed": "ログアウトできなかった。もう一度試して"
+      "logoutSuccess": "ログアウトしました",
+      "logoutFailed": "ログアウトできませんでした。もう一度お試しください"
     }
   }
 }
