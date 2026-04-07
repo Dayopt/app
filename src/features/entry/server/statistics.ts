@@ -670,7 +670,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
           supabase.rpc('get_active_dates', {
             p_user_id: userId,
-            p_since: since.toISOString(),
+            p_start_date: formatInTimeZone(since, timezone, 'yyyy-MM-dd'),
           }),
         );
 
