@@ -46,7 +46,7 @@ function makeBadge(
 }
 
 // Background grid for realistic context
-const GRID_BADGES: BadgeWithStatus[] = BADGE_DEFINITIONS.slice(0, 8).map((def) => ({
+const GRID_BADGES: BadgeWithStatus[] = BADGE_DEFINITIONS.slice(0, 6).map((def) => ({
   definition: def,
   earned: Math.random() > 0.5,
   ...(Math.random() > 0.5 ? { userBadge: mockEarned(def.id), currentRank: 'bronze' as const } : {}),
@@ -54,9 +54,9 @@ const GRID_BADGES: BadgeWithStatus[] = BADGE_DEFINITIONS.slice(0, 8).map((def) =
 
 function GridBackground({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-[360px]">
+    <div className="relative w-full max-w-2xl">
       {/* Blurred badge grid behind */}
-      <div className="grid grid-cols-4 gap-2 opacity-40 blur-[1px]">
+      <div className="flex flex-wrap gap-4 opacity-40 blur-[1px]">
         {GRID_BADGES.map((b) => (
           <BadgeCell key={b.definition.id} badge={b} onSelect={fn()} />
         ))}
@@ -120,13 +120,25 @@ export const TieredGold: Story = {
   },
 };
 
+/** 段階成長型（タグマスター）・ブロンズ獲得済み。 */
+export const TagHoursBronze: Story = {
+  args: {
+    badge: makeBadge('tag-hours', {
+      earned: true,
+      rank: 'bronze',
+      currentValue: 3500,
+      targetValue: 6000,
+    }),
+  },
+};
+
 /** 段階成長型・未獲得（進捗あり）。 */
 export const TieredLocked: Story = {
   args: {
     badge: makeBadge('streak', {
       earned: false,
       currentValue: 2,
-      targetValue: 3,
+      targetValue: 7,
     }),
   },
 };
@@ -182,7 +194,12 @@ export const AllPatterns: Story = {
       </GridBackground>
       <GridBackground>
         <BadgeDetailContent
-          badge={makeBadge('blocks', { earned: false, currentValue: 42, targetValue: 100 })}
+          badge={makeBadge('tag-hours', {
+            earned: true,
+            rank: 'bronze',
+            currentValue: 3500,
+            targetValue: 6000,
+          })}
         />
       </GridBackground>
       <GridBackground>
@@ -190,7 +207,7 @@ export const AllPatterns: Story = {
       </GridBackground>
       <GridBackground>
         <BadgeDetailContent
-          badge={makeBadge('deep-zone', { earned: false, currentValue: 0, targetValue: 1 })}
+          badge={makeBadge('chronotype-trio', { earned: false, currentValue: 0, targetValue: 1 })}
         />
       </GridBackground>
     </>
