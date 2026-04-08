@@ -260,7 +260,7 @@ export const OverlayOvertimeOnGrid: Story = {
 // 予定外（origin='unplanned'）
 // ---------------------------------------------------------------------------
 
-/** 予定外エントリ。左アクセントなし、全体を破線枠で囲む。 */
+/** 予定外エントリ。破線枠 + bg-background。親カード内側にオフセット配置される。 */
 export const Unplanned: Story = {
   render: () => (
     <Slot>
@@ -279,7 +279,7 @@ export const Unplanned: Story = {
   ),
 };
 
-/** 予定外エントリ（グリッド罫線付き）。破線枠の見え方を確認。 */
+/** 予定外エントリ（グリッド罫線付き）。内側オフセットの見え方を確認。 */
 export const UnplannedOnGrid: Story = {
   render: () => {
     const HOUR_HEIGHT = 72;
@@ -301,6 +301,66 @@ export const UnplannedOnGrid: Story = {
             left: 0,
             width: 100,
             height: 1.5 * HOUR_HEIGHT - 2,
+          }}
+          hourHeight={HOUR_HEIGHT}
+        />
+      </GridSlot>
+    );
+  },
+};
+
+/** 親エントリの短縮枠（unexecuted）内に計画外カードが入れ子で収まるパターン。
+ * 親: 10:00-12:00予定、11:00に実績終了 → 11:00-12:00がハッチング
+ * 子: 計画外カード 11:00-12:00 が親の内側にオフセット配置 */
+export const UnplannedInGap: Story = {
+  render: () => {
+    const HOUR_HEIGHT = 72;
+    return (
+      <GridSlot hours={3}>
+        {/* 親エントリ: 10:00-12:00予定、実績11:00終了 */}
+        <EntryCard
+          entry={{
+            ...baseEntry,
+            startDate: new Date('2024-01-15T10:00:00'),
+            endDate: new Date('2024-01-15T12:00:00'),
+            displayStartDate: new Date('2024-01-15T10:00:00'),
+            displayEndDate: new Date('2024-01-15T12:00:00'),
+            duration: 120,
+            entryState: 'past',
+            actualStartDate: new Date('2024-01-15T10:00:00'),
+            actualEndDate: new Date('2024-01-15T11:00:00'),
+          }}
+          tagName="Deep Work"
+          tagColor="blue"
+          position={{
+            top: 0,
+            left: 0,
+            width: 100,
+            height: 2 * HOUR_HEIGHT - 2,
+          }}
+          hourHeight={HOUR_HEIGHT}
+        />
+        {/* 計画外カード: 11:00-12:00（親の空き枠に入れ子） */}
+        <EntryCard
+          entry={{
+            ...baseEntry,
+            id: 'unplanned-1',
+            origin: 'unplanned',
+            startDate: new Date('2024-01-15T11:00:00'),
+            endDate: new Date('2024-01-15T11:00:00'),
+            displayStartDate: new Date('2024-01-15T11:00:00'),
+            displayEndDate: new Date('2024-01-15T12:00:00'),
+            duration: 60,
+            actualStartDate: new Date('2024-01-15T11:00:00'),
+            actualEndDate: new Date('2024-01-15T12:00:00'),
+          }}
+          tagName="散歩"
+          tagColor="green"
+          position={{
+            top: 1 * HOUR_HEIGHT,
+            left: 0,
+            width: 100,
+            height: 1 * HOUR_HEIGHT - 2,
           }}
           hourHeight={HOUR_HEIGHT}
         />
@@ -405,7 +465,7 @@ export const AllPatterns: Story = {
       {/* --- 予定外 --- */}
       <section>
         <p className="text-muted-foreground mb-2 text-xs">
-          Unplanned（予定外 → 破線枠、左アクセントなし）
+          Unplanned（予定外 → 破線枠 + 内側オフセット）
         </p>
         <Slot>
           <EntryCard
