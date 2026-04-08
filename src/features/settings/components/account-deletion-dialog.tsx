@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { logger } from '@/lib/logger';
+import { createClient } from '@/platform/supabase/client';
 import { api } from '@/platform/trpc';
 
 /**
@@ -38,12 +39,18 @@ export function AccountDeletionDialog() {
   const [confirmText, setConfirmText] = useState('');
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(t('settings.account.deletion.success'));
       setIsOpen(false);
 
-      // 即座にサインアウトページへリダイレクト
-      window.location.href = '/auth/signout';
+      // ローカルセッションをクリアしてからリダイレクト
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch {
+        // auth.users 削除済みのため signOut が失敗する可能性がある — 無視して続行
+      }
+      window.location.href = '/auth/login';
     },
     onError: (error) => {
       logger.error('Account deletion failed', error, {
