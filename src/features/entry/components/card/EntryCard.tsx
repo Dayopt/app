@@ -382,7 +382,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            isUnplanned ? '' : colorClasses ? colorClasses.tint : 'bg-muted',
+            isUnplanned ? 'bg-background' : colorClasses ? colorClasses.tint : 'bg-muted',
           )}
         >
           <EntryCardContent
