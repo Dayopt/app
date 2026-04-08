@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
@@ -63,6 +63,8 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const {
     register,
@@ -88,18 +90,44 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const { error } = await signUp(data.email, data.password);
-      if (error) {
-        const errorKey = getAuthErrorKey(error.message, 'signup');
+      const result = await signUp(data.email, data.password);
+      if (result.error) {
+        const errorKey = getAuthErrorKey(result.error.message, 'signup');
         setServerError(t(errorKey));
-      } else {
+      } else if (result.data.session) {
+        // メール確認不要 — そのままアプリへ
         router.push(`/${locale}/calendar/day`);
+      } else {
+        // メール確認が必要 — 確認待ちUIを表示
+        setPendingEmail(data.email);
+        setEmailConfirmationPending(true);
       }
     } catch (err) {
       logger.error('[SignupForm] Signup error:', err);
       setServerError(t('auth.errors.unexpectedError'));
     }
   };
+
+  if (emailConfirmationPending) {
+    return (
+      <div className={cn('flex flex-col gap-6', className)} {...props}>
+        <Card className="overflow-hidden p-0">
+          <CardContent className="flex flex-col items-center gap-4 p-6 text-center md:p-8">
+            <div className="bg-muted flex size-10 items-center justify-center rounded-full">
+              <Mail className="text-muted-foreground size-5" />
+            </div>
+            <h1 className="text-2xl font-medium">{t('auth.signupForm.checkEmail')}</h1>
+            <p className="text-muted-foreground text-sm">
+              {t('auth.signupForm.confirmationSent', { email: pendingEmail })}
+            </p>
+            <Link href="/auth/login" className="text-primary text-sm underline underline-offset-4">
+              {t('auth.signupForm.backToLogin')}
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
