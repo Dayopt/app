@@ -54,6 +54,12 @@ import { AuthStoreInitializer } from '@/features/auth';
 import { api } from '@/platform/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 
+// SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
+const SessionMonitorProvider = dynamic(
+  () => import('@/features/auth').then((mod) => mod.SessionMonitorProvider),
+  { ssr: false },
+);
+
 // GlobalSearchProviderを遅延ロード（初回レンダリングをブロックしない）
 const GlobalSearchProvider = dynamic(
   () => import('@/features/search').then((mod) => mod.GlobalSearchProvider),
@@ -118,8 +124,8 @@ function handleAuthError(error: unknown): void {
   if (typeof window === 'undefined') return;
 
   if (isAuthError(error)) {
-    // 現在のパスを保存して、ログイン後にリダイレクトできるようにする
-    const currentPath = window.location.pathname + window.location.search;
+    // 現在のパスのみ保存（query stringは含めない — 2次オープンリダイレクト防止）
+    const currentPath = window.location.pathname;
     const loginUrl = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
     window.location.href = loginUrl;
   }
@@ -219,13 +225,15 @@ export function Providers({ children }: ProvidersProps) {
         {/* 認証ストア初期化（Contextを提供しないので並列配置可能） */}
         <AuthStoreInitializer />
         <ThemeProvider>
-          <GlobalSearchProvider>
-            <ServiceWorkerProvider>
-              {children}
-              <GlobalTagCreateModal />
-              <GlobalTagMergeModal />
-            </ServiceWorkerProvider>
-          </GlobalSearchProvider>
+          <SessionMonitorProvider>
+            <GlobalSearchProvider>
+              <ServiceWorkerProvider>
+                {children}
+                <GlobalTagCreateModal />
+                <GlobalTagMergeModal />
+              </ServiceWorkerProvider>
+            </GlobalSearchProvider>
+          </SessionMonitorProvider>
         </ThemeProvider>
         {/* 開発ツール（開発環境のみ） */}
         {process.env.NODE_ENV === 'development' && <AxeAccessibilityChecker />}

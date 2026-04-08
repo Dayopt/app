@@ -19,7 +19,7 @@ export const SESSION_CONFIG = {
   /**
    * アイドルタイムアウト（無効）
    * - カレンダーアプリでは不要なため無効化
-   * - SessionMonitorProviderも削除済み
+   * - SessionMonitorProviderはセッション失効通知用に配置
    */
   idleTimeout: 30 * 24 * 60 * 60, // 実質無効（30日）
 
