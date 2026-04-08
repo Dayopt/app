@@ -501,7 +501,8 @@ async function downloadNotoSansJP(weights: string[]): Promise<FontFile[]> {
 async function importFonts(typoFolderId: string): Promise<{ added: number; errors: number }> {
   log('Downloading .ttf fonts...');
 
-  const interFonts = await downloadInterFromGitHub(['400', '500', '700']);
+  // 400(Regular), 500(Medium) のみ — 700(bold)は不使用 (src/app/layout.tsx)
+  const interFonts = await downloadInterFromGitHub(['400', '500']);
   const notoFonts = await downloadNotoSansJP(['400', '500']);
 
   const allFonts = [...interFonts, ...notoFonts];
