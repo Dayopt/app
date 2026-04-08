@@ -26,6 +26,10 @@ export function checkClientSideOverlap(
     if (event.id === draggedEventId) return false;
     if (!event.startDate || !event.endDate) return false;
 
-    return event.startDate < previewEndTime && event.endDate > previewStartTime;
+    // actual 時間が記録されている場合は実質的な占有範囲として使用
+    const effectiveStart = event.actualStartDate ?? event.startDate;
+    const effectiveEnd = event.actualEndDate ?? event.endDate;
+
+    return effectiveStart < previewEndTime && effectiveEnd > previewStartTime;
   });
 }

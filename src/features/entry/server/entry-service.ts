@@ -157,9 +157,10 @@ export class EntryService {
     const endTimeExclusive = new Date(new Date(endTime).getTime() - 1000).toISOString();
     const startTimeExclusive = new Date(new Date(startTime).getTime() + 1000).toISOString();
 
+    // まず予定時間ベースで候補を取得
     let query = this.supabase
       .from('entries')
-      .select('id')
+      .select('id, actual_start_time, actual_end_time, start_time, end_time')
       .eq('user_id', userId)
       .not('start_time', 'is', null)
       .not('end_time', 'is', null)
@@ -177,7 +178,20 @@ export class EntryService {
       return [];
     }
 
-    return data?.map((row) => row.id) ?? [];
+    if (!data) return [];
+
+    // actual 時間が記録されているエントリは、実質的な占有範囲で再判定
+    // 「予定9:00-10:00、実績9:00-9:45」→ 9:45-10:00は空きとみなす
+    const newStart = new Date(startTime).getTime() + 1000;
+    const newEnd = new Date(endTime).getTime() - 1000;
+
+    return data
+      .filter((row) => {
+        const effectiveStart = new Date(row.actual_start_time ?? row.start_time!).getTime();
+        const effectiveEnd = new Date(row.actual_end_time ?? row.end_time!).getTime();
+        return effectiveStart < newEnd && effectiveEnd > newStart;
+      })
+      .map((row) => row.id);
   }
 
   /**

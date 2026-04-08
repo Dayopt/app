@@ -84,7 +84,11 @@ function scrollCalendarToTime(hour: number, minute: number) {
   });
 }
 
-/** キャッシュ済みエントリとの重複を事前チェック */
+/** キャッシュ済みエントリとの重複を事前チェック
+ * actual 時間が記録されている場合は、実質的な占有範囲として actual を使用する。
+ * これにより「予定9:00-10:00、実績9:00-9:45」のエントリに対して
+ * 9:45-10:00に新ブロックを配置できるようになる。
+ */
 function hasOverlapInCache(
   queryClient: ReturnType<typeof useQueryClient>,
   startTime: Date,
@@ -94,6 +98,8 @@ function hasOverlapInCache(
   type CachedEntry = {
     start_time: string | null;
     end_time: string | null;
+    actual_start_time: string | null;
+    actual_end_time: string | null;
     deleted_at: string | null;
   };
   const allCaches = queryClient.getQueriesData<CachedEntry[]>({ predicate: isEntriesList });
@@ -103,8 +109,9 @@ function hasOverlapInCache(
     for (const entry of entries) {
       if (entry.deleted_at) continue;
       if (!entry.start_time || !entry.end_time) continue;
-      const entryStart = new Date(entry.start_time);
-      const entryEnd = new Date(entry.end_time);
+      // actual 時間が記録されていればそちらを実質的な占有範囲として使用
+      const entryStart = new Date(entry.actual_start_time ?? entry.start_time);
+      const entryEnd = new Date(entry.actual_end_time ?? entry.end_time);
       // half-open interval overlap
       if (entryStart < endTime && entryEnd > startTime) return true;
     }
