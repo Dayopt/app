@@ -74,7 +74,15 @@
     "security:check:production": "npm audit --production --audit-level=high",
     "storybook:coverage": "tsx scripts/check-story-coverage.ts",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "eagle:capture": "tsx scripts/eagle-capture.ts",
+    "eagle:sync": "tsx scripts/eagle-sync.ts",
+    "eagle:sync:dry": "tsx scripts/eagle-sync.ts --dry-run",
+    "eagle:sync:capture": "tsx scripts/eagle-capture.ts && tsx scripts/eagle-sync.ts",
+    "eagle:setup": "tsx scripts/eagle-sync.ts --setup",
+    "eagle:cleanup": "tsx scripts/eagle-cleanup.ts",
+    "eagle:lookup": "tsx scripts/eagle-lookup.ts",
+    "eagle:test": "tsx scripts/eagle-api.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.67",
