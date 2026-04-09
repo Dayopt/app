@@ -134,15 +134,21 @@ export async function createCheckoutSession(
   const stripe = requireStripe();
   const customerId = await getOrCreateCustomer(stripe, supabase, userId, email);
 
+  // 過去にサブスクリプション履歴がある場合はトライアルを付与しない
+  const existingSubs = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 1,
+  });
+  const hasTrialHistory = existingSubs.data.length > 0;
+
   const appUrl = getAppUrl();
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: 7,
-    },
+    subscription_data: hasTrialHistory ? {} : { trial_period_days: 7 },
     success_url: `${appUrl}/settings/subscription?success=true`,
     cancel_url: `${appUrl}/settings/subscription?canceled=true`,
     metadata: {
