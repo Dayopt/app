@@ -18,3 +18,8 @@ export const api = createTRPCReact<AppRouter>();
  * APIの型定義をエクスポート
  */
 export type { AppRouter } from '@/platform/trpc/root';
+
+/**
+ * SSR/CSR共通のベースURL取得関数
+ */
+export { getBaseUrl } from '@/platform/trpc/client';

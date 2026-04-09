@@ -51,7 +51,7 @@ const AxeAccessibilityChecker =
     : () => null;
 
 import { AuthStoreInitializer } from '@/features/auth';
-import { api } from '@/platform/trpc';
+import { api, getBaseUrl } from '@/platform/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
@@ -89,12 +89,6 @@ const GlobalTagMergeModal = dynamic(
     import('@/features/tags/components/GlobalTagMergeModal').then((mod) => mod.GlobalTagMergeModal),
   { ssr: false },
 );
-
-function getBaseUrl() {
-  if (typeof window !== 'undefined') return ''; // ブラウザではルート相対パス
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // SSR Vercel
-  return `http://localhost:${process.env.PORT ?? 3000}`; // SSR 開発
-}
 
 interface ProvidersProps {
   children: React.ReactNode;

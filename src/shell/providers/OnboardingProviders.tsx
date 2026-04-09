@@ -16,14 +16,8 @@ import superjson from 'superjson';
 
 import { Toaster } from '@/components/ui/toast';
 import { AuthStoreInitializer } from '@/features/auth';
-import { api } from '@/platform/trpc';
+import { api, getBaseUrl } from '@/platform/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
-
-function getBaseUrl() {
-  if (typeof window !== 'undefined') return '';
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return `http://localhost:${process.env.PORT ?? 3000}`;
-}
 
 function isAuthError(error: unknown): boolean {
   if (error instanceof TRPCClientError) {
