@@ -30,9 +30,9 @@ export interface Entry {
   reminder_minutes: number | null;
   reviewed_at: string | null;
   /** 計画外にする前の予定開始時刻（復元用） */
-  backed_up_start_time?: string | null | undefined;
+  backed_up_start_time: string | null;
   /** 計画外にする前の予定終了時刻（復元用） */
-  backed_up_end_time?: string | null | undefined;
+  backed_up_end_time: string | null;
   created_at: string | null;
   updated_at: string | null;
 }

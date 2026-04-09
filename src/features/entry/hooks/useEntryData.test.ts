@@ -17,6 +17,8 @@ const createMockEntry = (overrides: Partial<EntryWithTagIds> = {}): EntryWithTag
   fulfillment_score: null,
   reminder_minutes: null,
   reviewed_at: null,
+  backed_up_start_time: null,
+  backed_up_end_time: null,
   created_at: '2025-01-15T10:00:00Z',
   updated_at: '2025-01-15T10:00:00Z',
   tagId: null,
