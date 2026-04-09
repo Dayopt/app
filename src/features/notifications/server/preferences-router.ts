@@ -6,6 +6,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
 import * as Sentry from '@sentry/nextjs';
@@ -73,17 +74,15 @@ export const notificationPreferencesRouter = createTRPCRouter({
           };
         }
 
-        // NOTE: 新カラムは型生成前のため as never でアクセス
-        const row = data as Record<string, unknown>;
         return {
           enableBrowserNotifications: data.enable_browser_notifications,
           enableEmailNotifications: data.enable_email_notifications,
           enablePushNotifications: data.enable_push_notifications,
           defaultReminderEnabled: data.default_reminder_enabled ?? true,
-          enableDailyInsights: (row.enable_daily_insights as boolean | undefined) ?? true,
-          enableEnergyInsights: (row.enable_energy_insights as boolean | undefined) ?? true,
-          enableBurnoutWarnings: (row.enable_burnout_warnings as boolean | undefined) ?? true,
-          enableWeeklyReports: (row.enable_weekly_reports as boolean | undefined) ?? true,
+          enableDailyInsights: data.enable_daily_insights ?? true,
+          enableEnergyInsights: data.enable_energy_insights ?? true,
+          enableBurnoutWarnings: data.enable_burnout_warnings ?? true,
+          enableWeeklyReports: data.enable_weekly_reports ?? true,
         };
       } catch (error) {
         return handlePreferencesError('get', error);
@@ -237,20 +236,25 @@ export const notificationPreferencesRouter = createTRPCRouter({
           });
         }
 
-        const updateData: Record<string, unknown> = { user_id: userId };
-        if (input.enableDailyInsights !== undefined)
-          updateData.enable_daily_insights = input.enableDailyInsights;
-        if (input.enableEnergyInsights !== undefined)
-          updateData.enable_energy_insights = input.enableEnergyInsights;
-        if (input.enableBurnoutWarnings !== undefined)
-          updateData.enable_burnout_warnings = input.enableBurnoutWarnings;
-        if (input.enableWeeklyReports !== undefined)
-          updateData.enable_weekly_reports = input.enableWeeklyReports;
+        const updateData: Database['public']['Tables']['notification_preferences']['Insert'] = {
+          user_id: userId,
+          ...(input.enableDailyInsights !== undefined && {
+            enable_daily_insights: input.enableDailyInsights,
+          }),
+          ...(input.enableEnergyInsights !== undefined && {
+            enable_energy_insights: input.enableEnergyInsights,
+          }),
+          ...(input.enableBurnoutWarnings !== undefined && {
+            enable_burnout_warnings: input.enableBurnoutWarnings,
+          }),
+          ...(input.enableWeeklyReports !== undefined && {
+            enable_weekly_reports: input.enableWeeklyReports,
+          }),
+        };
 
-        // NOTE: 新カラムは型生成前のため as never でキャスト
         const { error } = await ctx.supabase
           .from('notification_preferences')
-          .upsert(updateData as never, { onConflict: 'user_id' });
+          .upsert(updateData, { onConflict: 'user_id' });
 
         if (error) {
           logger.error('NotificationPreferences type update error', { error });
