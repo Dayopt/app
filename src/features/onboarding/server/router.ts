@@ -3,6 +3,7 @@
  * オンボーディングの完了管理API
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -38,6 +39,9 @@ export const onboardingRouter = createTRPCRouter({
 
       if (profileResult.error) {
         logger.error('Onboarding getProfile error:', profileResult.error);
+        Sentry.captureException(profileResult.error, {
+          tags: { source: 'onboarding', operation: 'getProfile' },
+        });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to fetch profile: ${profileResult.error.message}`,
@@ -46,6 +50,9 @@ export const onboardingRouter = createTRPCRouter({
 
       if (userResult.error) {
         logger.error('Onboarding getUser error:', userResult.error);
+        Sentry.captureException(userResult.error, {
+          tags: { source: 'onboarding', operation: 'getProfile_user' },
+        });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: `Failed to fetch user info: ${userResult.error.message}`,
@@ -121,6 +128,9 @@ export const onboardingRouter = createTRPCRouter({
       const chronotype = input.chronotypeType as PresetChronotypeType | undefined;
       createSampleEntriesForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
         logger.error('Failed to create sample entries:', err);
+        Sentry.captureException(err, {
+          tags: { source: 'onboarding', operation: 'create_sample_entries' },
+        });
       });
 
       return { success: true };
@@ -182,7 +192,7 @@ async function createSampleEntriesForUser(
 
   const { data: insertedTags, error: tagsError } = await supabase
     .from('tags')
-    .insert(tagRows as never)
+    .insert(tagRows)
     .select('id, name');
 
   if (tagsError || !insertedTags) {
@@ -206,7 +216,7 @@ async function createSampleEntriesForUser(
 
   const { data: insertedEntries, error: entriesError } = await supabase
     .from('entries')
-    .insert(entryRows as never)
+    .insert(entryRows)
     .select('id');
 
   if (entriesError || !insertedEntries) {
@@ -220,12 +230,12 @@ async function createSampleEntriesForUser(
       const entryId = (insertedEntries[i] as { id: string }).id;
       const tagId = tagNameToId.get(PRESET_TAGS[plan.tagKey].name);
       if (!entryId || !tagId) return null;
-      return { entry_id: entryId, tag_id: tagId };
+      return { user_id: userId, entry_id: entryId, tag_id: tagId };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
   if (entryTagRows.length > 0) {
-    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows as never);
+    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows);
 
     if (linkError) {
       logger.error('Entry-tag link insert error:', linkError);

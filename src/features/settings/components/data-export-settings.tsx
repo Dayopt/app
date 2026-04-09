@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useState } from 'react';
 
+import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 import { Download, FileJson, History, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -43,7 +44,8 @@ export const DataExportSettings = memo(function DataExportSettings() {
       window.URL.revokeObjectURL(url);
 
       toast.success(t('settings.account.dataExport.success'));
-    } catch {
+    } catch (error) {
+      logger.error('Data export failed:', error);
       toast.error(t('settings.account.dataExport.error'));
     }
   }, [exportDataQuery, t]);

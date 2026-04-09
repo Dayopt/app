@@ -3,6 +3,7 @@
  * Stripe サブスクリプション管理API
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -71,6 +72,9 @@ export const billingRouter = createTRPCRouter({
           logger.error('Billing auth.getUser failed', {
             error: authError.message,
             userId: ctx.userId,
+          });
+          Sentry.captureException(authError, {
+            tags: { source: 'billing', operation: 'checkout_auth' },
           });
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',

@@ -7,6 +7,7 @@
  * @see src/features/entry/components/inspector/hooks/useDebouncedSave.ts
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -73,6 +74,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     logger.error('[beacon/entry-save] Failed to save entry:', error);
+    Sentry.captureException(error, {
+      tags: { source: 'beacon_entry_save' },
+    });
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
