@@ -428,6 +428,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
+    // 処理失敗時は冪等性レコードを削除してStripeのリトライを受け入れ可能にする
+    await supabase
+      .from('stripe_webhook_events' as never)
+      .delete()
+      .eq('event_id' as never, event.id);
+
     logger.error('Stripe webhook processing error', { error, eventType: event.type });
     Sentry.captureException(error, {
       tags: { source: 'stripe_webhook', eventType: event.type },
