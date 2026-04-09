@@ -5,6 +5,8 @@
  * クライアントコード（client.ts等）では従来通り process.env を直接参照する。
  * このファイルはサーバーサイドでのみ import する。
  */
+import 'server-only';
+
 import { z } from 'zod';
 
 const serverSchema = z
@@ -58,7 +60,22 @@ const serverSchema = z
   .refine((data) => !(data.NODE_ENV === 'production' && data.SKIP_AUTH_IN_DEV === 'true'), {
     message: 'SKIP_AUTH_IN_DEV は本番環境では使用できない',
     path: ['SKIP_AUTH_IN_DEV'],
-  });
+  })
+  .refine((data) => !(data.NODE_ENV === 'production' && !data.RECOVERY_CODE_PEPPER), {
+    message: 'RECOVERY_CODE_PEPPER は本番環境では必須です',
+    path: ['RECOVERY_CODE_PEPPER'],
+  })
+  .refine(
+    (data) => {
+      const hasKey = !!data.STRIPE_SECRET_KEY;
+      const hasWebhook = !!data.STRIPE_WEBHOOK_SECRET;
+      return hasKey === hasWebhook;
+    },
+    {
+      message: 'STRIPE_SECRET_KEY と STRIPE_WEBHOOK_SECRET はペアで設定してください',
+      path: ['STRIPE_WEBHOOK_SECRET'],
+    },
+  );
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 

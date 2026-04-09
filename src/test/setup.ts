@@ -3,6 +3,9 @@ import { cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, vi } from 'vitest';
 
+// server-only: テスト環境ではサーバーコンポーネント制約を無効化
+vi.mock('server-only', () => ({}));
+
 // next-intl のモック
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
