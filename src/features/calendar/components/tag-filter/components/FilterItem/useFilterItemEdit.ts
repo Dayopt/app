@@ -2,9 +2,13 @@
 
 import { useCallback, useState } from 'react';
 
+import { useTranslations } from 'next-intl';
+
 import { useUpdateTag } from '@/features/tags';
+import { logger } from '@/lib/logger';
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
+import { toast } from '@/lib/toast';
 
 interface UseFilterItemEditProps {
   tagId: string | undefined;
@@ -27,6 +31,7 @@ export function useFilterItemEdit({
   tagId,
   initialColor,
 }: UseFilterItemEditProps): UseFilterItemEditReturn {
+  const t = useTranslations();
   const updateTagMutation = useUpdateTag();
 
   // Color optimistic update state（派生状態: サーバー色と一致したら自動的に無視される）
@@ -46,11 +51,13 @@ export function useFilterItemEdit({
           id: tagId,
           color,
         });
-      } catch {
+      } catch (error) {
         setOptimisticColor(null);
+        logger.error('Tag color change failed:', error);
+        toast.error(t('tags.toast.updateFailed'));
       }
     },
-    [tagId, updateTagMutation],
+    [tagId, updateTagMutation, t],
   );
 
   const handleIconChange = useCallback(
@@ -61,11 +68,12 @@ export function useFilterItemEdit({
           id: tagId,
           icon,
         });
-      } catch {
-        // rollback handled by TanStack Query
+      } catch (error) {
+        logger.error('Tag icon change failed:', error);
+        toast.error(t('tags.toast.updateFailed'));
       }
     },
-    [tagId, updateTagMutation],
+    [tagId, updateTagMutation, t],
   );
 
   return {

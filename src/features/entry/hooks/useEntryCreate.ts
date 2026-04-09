@@ -10,8 +10,11 @@
 
 import { useCallback } from 'react';
 
+import { useTranslations } from 'next-intl';
+
 import { logger } from '@/lib/logger';
 import { snapToNextInterval } from '@/lib/time-utils';
+import { toast } from '@/lib/toast';
 import { api } from '@/platform/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useEntryMutations } from './useEntryMutations';
@@ -28,6 +31,7 @@ interface UseEntryCreateOptions {
  * @returns create: 初期日付を受け取りエントリを作成する関数
  */
 export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
+  const t = useTranslations();
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
   const { createEntry } = useEntryMutations();
   const utils = api.useUtils();
@@ -103,12 +107,13 @@ export function useEntryCreate({ onSuccess }: UseEntryCreateOptions = {}) {
         if (result?.id) {
           openInspector(result.id);
         }
-      } catch {
-        logger.error('Failed to create entry');
+      } catch (error) {
+        logger.error('Failed to create entry:', error);
+        toast.error(t('entry.inspector.toast.createFailed'));
       }
       onSuccess?.();
     },
-    [findAvailableSlot, createEntry, openInspector, onSuccess, timezone],
+    [findAvailableSlot, createEntry, openInspector, onSuccess, timezone, t],
   );
 
   return { create };
