@@ -13,7 +13,7 @@ import { z } from 'zod';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/platform/trpc/procedures';
 
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
@@ -200,7 +200,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get hourly distribution (DB function) */
-  getHourlyDistribution: protectedProcedure
+  getHourlyDistribution: proProcedure
     .meta({ description: '時間帯別分布取得（2時間スロット）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -248,7 +248,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get day of week distribution (DB function) */
-  getDayOfWeekDistribution: protectedProcedure
+  getDayOfWeekDistribution: proProcedure
     .meta({ description: '曜日別分布取得（月曜始まり）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -292,7 +292,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get monthly trend (DB function) */
-  getMonthlyTrend: protectedProcedure
+  getMonthlyTrend: proProcedure
     .meta({ description: '月別トレンド取得（デフォルト12ヶ月）' })
     .input(z.object({ months: z.number().min(1).max(120).optional() }).optional())
     .query(async ({ ctx, input }) => {
@@ -351,7 +351,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** エントリ率: origin='planned' / 全エントリ */
-  getEntryRate: protectedProcedure
+  getEntryRate: proProcedure
     .meta({ description: 'エントリ率KPI（計画エントリ / 全エントリ）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -394,7 +394,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 見積もり精度: タグ別の予定時間 vs 実績時間 */
-  getEstimationAccuracy: protectedProcedure
+  getEstimationAccuracy: proProcedure
     .meta({ description: '見積もり精度KPI（タグ別の予定vs実績）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -445,7 +445,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** エネルギーマップ: 時間帯×曜日の活動分布（既存DB関数のラッパー） */
-  getEnergyMap: protectedProcedure
+  getEnergyMap: proProcedure
     .meta({ description: 'エネルギーマップ（時間帯×曜日の活動分布）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -489,7 +489,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** コンテキストスイッチ: 連続エントリ間のタグ変化回数 */
-  getContextSwitches: protectedProcedure
+  getContextSwitches: proProcedure
     .meta({ description: 'コンテキストスイッチ回数（タグ変化頻度）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -530,7 +530,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 空白率: 活動可能時間のうちスケジュールされていない時間の割合 */
-  getBlankRate: protectedProcedure
+  getBlankRate: proProcedure
     .meta({ description: '空白率KPI（未スケジュール時間の割合）' })
     .input(
       dateRangeInput.extend({
@@ -582,7 +582,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 合計記録時間（分） */
-  getCumulativeTime: protectedProcedure
+  getCumulativeTime: proProcedure
     .meta({ description: '合計記録時間取得（分単位）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -616,7 +616,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 平均充実度 */
-  getAvgFulfillment: protectedProcedure
+  getAvgFulfillment: proProcedure
     .meta({ description: '平均充実度取得（1-5スケール）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -713,7 +713,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** 全KPIを1クエリで取得 */
-  getStatsOverview: protectedProcedure
+  getStatsOverview: proProcedure
     .meta({ description: '全KPIサマリー一括取得（7指標を1クエリ）' })
     .input(
       dateRangeInput.extend({
@@ -793,7 +793,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** Stats ページ全データを 1 RPC で取得 */
-  getStatsPageData: protectedProcedure
+  getStatsPageData: proProcedure
     .meta({ description: 'Stats全データ一括取得（12クエリ統合）' })
     .input(
       z.object({

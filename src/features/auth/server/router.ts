@@ -20,7 +20,7 @@ import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/r
 import { captureBusinessEvent } from '@/platform/sentry';
 import { createServiceRoleClient } from '@/platform/supabase/oauth';
 import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/platform/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
 
 /** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */
@@ -99,8 +99,8 @@ export const userRouter = createTRPCRouter({
    * ユーザーデータエクスポート
    * GDPR "Right to Data Portability" 準拠
    */
-  exportData: protectedProcedure
-    .meta({ description: 'ユーザーデータエクスポート（GDPR対応）' })
+  exportData: proProcedure
+    .meta({ description: 'ユーザーデータエクスポート（GDPR対応・Pro限定）' })
     .query(async ({ ctx }) => {
       try {
         const service = createUserService(ctx.supabase);

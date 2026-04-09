@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
 import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createTRPCRouter, proProcedure } from '@/platform/trpc/procedures';
 
 /** 統計クエリの共通エラーハンドラー */
 function handleTagStatsError(operation: string, error: unknown): never {
@@ -89,7 +89,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Consolidated: Tag Overview (7 DB calls in parallel)
   // ---------------------------------------------------------------------------
 
-  getTagOverview: protectedProcedure
+  getTagOverview: proProcedure
     .meta({ description: 'タグ詳細ページ用統合概要データ' })
     .input(tagOverviewInput)
     .query(async ({ ctx, input }) => {
@@ -211,7 +211,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Consolidated: Tag Timeline (2 DB calls in parallel)
   // ---------------------------------------------------------------------------
 
-  getTagTimeline: protectedProcedure
+  getTagTimeline: proProcedure
     .meta({ description: 'タグ詳細ページ用タイムラインデータ' })
     .input(tagTimelineInput)
     .query(async ({ ctx, input }) => {
@@ -278,7 +278,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Cumulative Time
   // ---------------------------------------------------------------------------
 
-  getTagCumulativeTime: protectedProcedure
+  getTagCumulativeTime: proProcedure
     .meta({ description: 'タグ別合計時間' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -312,7 +312,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Average Fulfillment
   // ---------------------------------------------------------------------------
 
-  getTagAvgFulfillment: protectedProcedure
+  getTagAvgFulfillment: proProcedure
     .meta({ description: 'タグ別平均充実度' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -349,7 +349,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Plan Rate
   // ---------------------------------------------------------------------------
 
-  getTagPlanRate: protectedProcedure
+  getTagPlanRate: proProcedure
     .meta({ description: 'タグ別計画率' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -391,7 +391,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Hourly Distribution
   // ---------------------------------------------------------------------------
 
-  getTagHourlyDistribution: protectedProcedure
+  getTagHourlyDistribution: proProcedure
     .meta({ description: 'タグ別時間帯分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -435,7 +435,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Day-of-Week Distribution
   // ---------------------------------------------------------------------------
 
-  getTagDowDistribution: protectedProcedure
+  getTagDowDistribution: proProcedure
     .meta({ description: 'タグ別曜日分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -479,7 +479,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Child Tag Breakdown (colon notation)
   // ---------------------------------------------------------------------------
 
-  getChildTagBreakdown: protectedProcedure
+  getChildTagBreakdown: proProcedure
     .meta({ description: 'コロン記法子タグ内訳' })
     .input(childTagInput)
     .query(async ({ ctx, input }) => {
@@ -524,7 +524,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Fulfillment Distribution
   // ---------------------------------------------------------------------------
 
-  getTagFulfillmentDistribution: protectedProcedure
+  getTagFulfillmentDistribution: proProcedure
     .meta({ description: 'タグ別充実度分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -563,7 +563,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Accuracy Trend
   // ---------------------------------------------------------------------------
 
-  getTagAccuracyTrend: protectedProcedure
+  getTagAccuracyTrend: proProcedure
     .meta({ description: 'タグ別見積もり精度推移' })
     .input(
       tagDateRangeInput.extend({
@@ -610,7 +610,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Recent Entries
   // ---------------------------------------------------------------------------
 
-  getTagRecentEntries: protectedProcedure
+  getTagRecentEntries: proProcedure
     .meta({ description: 'タグの直近エントリ一覧' })
     .input(
       z.object({
