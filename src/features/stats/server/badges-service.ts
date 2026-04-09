@@ -200,12 +200,31 @@ export class BadgesService {
 
   /** バッジ判定を実行し、新規獲得バッジを返却 */
   async evaluate(userId: string): Promise<NewlyEarnedBadge[]> {
+    const { newlyEarned } = await this.evaluateWithProgress(userId);
+    return newlyEarned;
+  }
+
+  /** 未獲得バッジの進捗データ */
+  async getProgress(userId: string): Promise<BadgeProgress[]> {
+    const { progress } = await this.evaluateWithProgress(userId);
+    return progress;
+  }
+
+  /**
+   * バッジ判定 + 進捗データを一括取得
+   *
+   * fetchSourceData / getEarnedSet を1回だけ呼び、
+   * 判定（INSERT）と進捗計算を同時に行う。
+   */
+  async evaluateWithProgress(
+    userId: string,
+  ): Promise<{ newlyEarned: NewlyEarnedBadge[]; progress: BadgeProgress[] }> {
     const [earned, source] = await Promise.all([
       this.getEarnedSet(userId),
       this.fetchSourceData(userId),
     ]);
 
-    // 獲得候補を収集
+    // --- 判定: 獲得候補を収集 ---
     const candidates: { badgeId: string; rank: BadgeRank | null }[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
@@ -235,24 +254,20 @@ export class BadgesService {
       }),
     );
 
-    return results.filter((r): r is NewlyEarnedBadge => r !== null);
-  }
+    const newlyEarned = results.filter((r): r is NewlyEarnedBadge => r !== null);
 
-  /** 未獲得バッジの進捗データ */
-  async getProgress(userId: string): Promise<BadgeProgress[]> {
-    const [earned, source] = await Promise.all([
-      this.getEarnedSet(userId),
-      this.fetchSourceData(userId),
-    ]);
-
+    // --- 進捗: INSERT後の earned を反映 ---
+    const updatedEarned = [
+      ...earned,
+      ...newlyEarned.map((n) => ({ badge_id: n.badgeId, rank: n.rank })),
+    ];
     const progressList: BadgeProgress[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
       const currentValue = this.computeValue(badge, source);
 
       if (badge.isTiered && badge.thresholds) {
-        // 段階成長型: 次の目標があればそれを、なければ最終段階を返す（常にプログレスバー表示）
-        const nextThreshold = this.getNextThreshold(badge, earned);
+        const nextThreshold = this.getNextThreshold(badge, updatedEarned);
         const lastThreshold = badge.thresholds[badge.thresholds.length - 1]!;
         const target = nextThreshold ?? lastThreshold;
         progressList.push({
@@ -262,7 +277,7 @@ export class BadgesService {
           rank: target.rank,
         });
       } else {
-        if (this.isAlreadyEarned(earned, badge.id, null)) continue;
+        if (this.isAlreadyEarned(updatedEarned, badge.id, null)) continue;
         progressList.push({
           badgeId: badge.id,
           currentValue,
@@ -271,7 +286,7 @@ export class BadgesService {
       }
     }
 
-    return progressList;
+    return { newlyEarned, progress: progressList };
   }
 
   // =========================================================================
@@ -447,7 +462,10 @@ export class BadgesService {
     // --- Settings & Profile ---
     const chronotypeEnabled = settings?.chronotype_enabled ?? false;
     const subscriptionStatus = profile?.subscription_status;
-    const isProSubscriber = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+    const isProSubscriber =
+      subscriptionStatus === 'active' ||
+      subscriptionStatus === 'trialing' ||
+      subscriptionStatus === 'past_due';
 
     return {
       streak,
