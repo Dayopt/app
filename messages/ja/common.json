@@ -98,7 +98,8 @@
       "addedToPalette": "パレットに追加しました。次回からすぐ使えます",
       "removeFromPalette": "パレットから解除",
       "removedFromPalette": "パレットから解除しました",
-      "more": "その他の操作"
+      "more": "その他の操作",
+      "retry": "もう一度試す"
     },
     "confirm": {
       "delete": {

@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
+import * as Sentry from '@sentry/nextjs';
+
+import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
+import { Button } from '@/components/ui/button';
 import { MFAVerifyForm } from '@/features/auth';
 import { createClient } from '@/platform/supabase/client';
 import { vanillaTrpc } from '@/platform/trpc/client';
@@ -62,7 +66,11 @@ export default function MFAVerifyPage() {
       } else {
         router.push('/calendar/day');
       }
-    } catch {
+    } catch (err) {
+      logger.error('MFA initialization failed:', err);
+      Sentry.captureException(err, {
+        tags: { source: 'mfa_verify', operation: 'init' },
+      });
       setError(t('common.errors.mfa.verifyFailed'));
     }
   };
@@ -134,7 +142,11 @@ export default function MFAVerifyPage() {
       } else if (message.includes('RECOVERY_INVALID')) {
         setError(t('auth.mfaVerify.recoveryInvalid'));
       } else {
-        setError(t('auth.mfaVerify.recoveryInvalid'));
+        logger.error('MFA recovery verification failed:', err);
+        Sentry.captureException(err, {
+          tags: { source: 'mfa_verify', operation: 'recovery' },
+        });
+        setError(t('common.errors.generic'));
       }
       setRecoveryCode('');
     } finally {
@@ -165,6 +177,21 @@ export default function MFAVerifyPage() {
           onSwitchMode={handleSwitchMode}
           loginHref={`/${locale}/auth/login`}
         />
+        {/* MFA初期化失敗時のリトライ（challengeId未取得 = フォーム操作不可） */}
+        {error && !challengeId && (
+          <div className="mt-4 text-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setError(null);
+                checkMFARequired();
+              }}
+            >
+              {t('common.actions.retry')}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

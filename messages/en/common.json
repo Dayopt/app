@@ -98,7 +98,8 @@
       "addedToPalette": "Added to palette",
       "removeFromPalette": "Remove from palette",
       "removedFromPalette": "Removed from palette",
-      "more": "More actions"
+      "more": "More actions",
+      "retry": "Try again"
     },
     "confirm": {
       "delete": {
