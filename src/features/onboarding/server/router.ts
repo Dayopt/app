@@ -114,7 +114,7 @@ export const onboardingRouter = createTRPCRouter({
 
         const { error: settingsError } = await ctx.supabase
           .from('user_settings')
-          .upsert(settingsUpsert as never, { onConflict: 'user_id' })
+          .upsert(settingsUpsert, { onConflict: 'user_id' })
           .select()
           .single();
 

@@ -4,7 +4,7 @@
  * entries テーブルのビジネスロジック
  */
 
-import type { TablesUpdate } from '@/lib/database.types';
+import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-utils';
 
@@ -224,12 +224,13 @@ export class EntryService {
     const insertData = {
       user_id: userId,
       origin,
+      title: normalizedInput.title,
       ...removeUndefinedFields(normalizedInput),
-    };
+    } as TablesInsert<'entries'>;
 
     const { data, error } = await this.supabase
       .from('entries')
-      .insert(insertData as never)
+      .insert(insertData)
       .select()
       .single();
 
