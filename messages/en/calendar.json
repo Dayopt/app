@@ -222,11 +222,15 @@
       "noTagData": "No tag data for this period",
       "review": {
         "emptyTitle": "No review data yet",
-        "emptyDescription": "Record entries to review your week"
+        "emptyDescription": "Record entries to review your week",
+        "errorTitle": "Failed to load statistics",
+        "errorDescription": "Please try again later"
       },
       "progress": {
         "emptyTitle": "No progress data yet",
-        "emptyDescription": "Trends will appear as you add more entries"
+        "emptyDescription": "Trends will appear as you add more entries",
+        "errorTitle": "Failed to load progress data",
+        "errorDescription": "Please try again later"
       },
       "periodDay": "Day",
       "periodWeek": "Week",
@@ -323,6 +327,8 @@
         "loading": "Loading…",
         "emptyTitle": "No discoveries yet",
         "emptyDescription": "As more data accumulates, your patterns will start to emerge",
+        "errorTitle": "Failed to load insights",
+        "errorDescription": "Please try again later",
         "timePatternHighFulfillment": "Your fulfillment tends to be higher around {hour}:00 on {day}s",
         "bestEstimationTag": "Your most accurately estimated tag this period was \"{tagName}\" (avg {deviation}min off)",
         "blankTimeIncrease": "Blank time increased by {minutes} minutes vs last period",

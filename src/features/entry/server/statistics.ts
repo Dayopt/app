@@ -45,7 +45,13 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): StripUndefin
 
 /** 統計クエリの共通エラーハンドラー */
 function handleStatsError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
+  // TRPCError も Sentry に報告してから再スロー（内側throwのDB起因エラーを補足）
+  if (error instanceof TRPCError) {
+    Sentry.captureException(error.cause ?? error, {
+      tags: { source: 'statistics_router', operation },
+    });
+    throw error;
+  }
 
   Sentry.captureException(error, {
     tags: { source: 'statistics_router', operation },
@@ -128,12 +134,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_time_by_tag', async () =>
           supabase.rpc(
-            'get_time_by_tag' as never,
-            {
+            'get_time_by_tag',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate ?? null,
-              p_end_date: input?.endDate ?? null,
-            } as never,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
+            }),
           ),
         );
 
@@ -354,12 +360,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_plan_rate', async () =>
           supabase.rpc(
-            'get_plan_rate' as never,
-            {
+            'get_plan_rate',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -397,12 +403,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
           supabase.rpc(
-            'get_estimation_accuracy' as never,
-            {
+            'get_estimation_accuracy',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -447,14 +453,11 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
-          supabase.rpc(
-            'get_energy_map' as never,
-            {
-              p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_energy_map', {
+            p_user_id: userId,
+            p_start: input.startDate ?? '',
+            p_end: input.endDate ?? '',
+          }),
         );
 
         if (error) {
@@ -495,12 +498,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_context_switches', async () =>
           supabase.rpc(
-            'get_context_switches' as never,
-            {
+            'get_context_switches',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -541,14 +544,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_blank_rate', async () =>
           supabase.rpc(
-            'get_blank_rate' as never,
-            {
+            'get_blank_rate',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
               p_wake_hour: input.wakeHour,
               p_sleep_hour: input.sleepHour,
-            } as never,
+            }),
           ),
         );
 
@@ -588,12 +591,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
           supabase.rpc(
-            'get_cumulative_time' as never,
-            {
+            'get_cumulative_time',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -622,12 +625,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
           supabase.rpc(
-            'get_avg_fulfillment' as never,
-            {
+            'get_avg_fulfillment',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -641,7 +644,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const result = data as { avgFulfillment: number | null; entryCount: number } | null;
         return {
-          avgFulfillment: result?.avgFulfillment ?? null,
+          avgFulfillment: result?.avgFulfillment ?? undefined,
           entryCount: result?.entryCount ?? 0,
         };
       } catch (error) {
@@ -724,14 +727,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_kpi_summary', async () =>
           supabase.rpc(
-            'get_stats_kpi_summary' as never,
-            {
+            'get_stats_kpi_summary',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
               p_wake_hour: input.wakeHour,
               p_sleep_hour: input.sleepHour,
-            } as never,
+            }),
           ),
         );
 
@@ -761,7 +764,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
             totalMinutes: result?.cumulativeTime?.totalMinutes ?? 0,
           },
           avgFulfillment: {
-            avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? null,
+            avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? undefined,
             entryCount: result?.avgFulfillment?.entryCount ?? 0,
           },
           entryRate: {
@@ -809,20 +812,17 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('stats.get_stats_page_data', async () =>
-          supabase.rpc(
-            'get_stats_page_data' as never,
-            {
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-              p_prev_start: input.prevStart,
-              p_prev_end: input.prevEnd,
-              p_year: input.year,
-              p_monthly_months: input.monthlyMonths,
-              p_wake_hour: input.wakeHour,
-              p_sleep_hour: input.sleepHour,
-            } as never,
-          ),
+          supabase.rpc('get_stats_page_data', {
+            p_user_id: userId,
+            p_start_date: input.startDate,
+            p_end_date: input.endDate,
+            p_prev_start: input.prevStart,
+            p_prev_end: input.prevEnd,
+            p_year: input.year,
+            p_monthly_months: input.monthlyMonths,
+            p_wake_hour: input.wakeHour,
+            p_sleep_hour: input.sleepHour,
+          }),
         );
 
         if (error) {
@@ -834,7 +834,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         }
 
         // DB関数が返すJSONをそのまま返す（型はクライアント側で定義）
-        return data as StatsPageData;
+        return data as unknown as StatsPageData;
       } catch (error) {
         handleStatsError('getStatsPageData', error);
       }
