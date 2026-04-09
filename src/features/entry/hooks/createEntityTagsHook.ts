@@ -7,7 +7,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
+import { useTranslations } from 'next-intl';
+
 import { logger } from '@/lib/logger';
+import { toast } from '@/lib/toast';
 import { api } from '@/platform/trpc';
 import { useUpdateEntityTagsInCache } from './useUpdateEntityTagsInCache';
 
@@ -61,6 +64,7 @@ export function useEntityTagsHook(
   utils: TRPCUtils,
 ): EntityTagsHook {
   const { entityName, enableTagStats = false } = options;
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const updateEntityTagIdsInCache = useUpdateEntityTagsInCache(entityName);
 
@@ -284,13 +288,12 @@ export function useEntityTagsHook(
         await addTagMutation.mutateAsync({ entryId: entityId, tagId });
         return true;
       } catch (error) {
-        if (enableTagStats) {
-          logger.error('Failed to add tag:', error);
-        }
+        logger.error('Failed to add tag:', error);
+        toast.error(t('entry.toast.updateFailed'));
         return false;
       }
     },
-    [addTagMutation, enableTagStats],
+    [addTagMutation, t],
   );
 
   const removeTag = useCallback(
@@ -299,13 +302,12 @@ export function useEntityTagsHook(
         await removeTagMutation.mutateAsync({ entryId: entityId, tagId });
         return true;
       } catch (error) {
-        if (enableTagStats) {
-          logger.error('Failed to remove tag:', error);
-        }
+        logger.error('Failed to remove tag:', error);
+        toast.error(t('entry.toast.updateFailed'));
         return false;
       }
     },
-    [removeTagMutation, enableTagStats],
+    [removeTagMutation, t],
   );
 
   const setTags = useCallback(
@@ -313,11 +315,13 @@ export function useEntityTagsHook(
       try {
         await setTagsMutation.mutateAsync({ entryId: entityId, tagId });
         return true;
-      } catch {
+      } catch (error) {
+        logger.error('Failed to set tags:', error);
+        toast.error(t('entry.toast.updateFailed'));
         return false;
       }
     },
-    [setTagsMutation],
+    [setTagsMutation, t],
   );
 
   const isLoading =
