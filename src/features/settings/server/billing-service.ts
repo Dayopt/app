@@ -111,7 +111,7 @@ async function getOrCreateCustomer(
   // profiles に保存
   const { error } = await supabase
     .from('profiles')
-    .update({ stripe_customer_id: customer.id } as never)
+    .update({ stripe_customer_id: customer.id })
     .eq('id', userId);
 
   if (error) {
@@ -375,16 +375,16 @@ export async function syncSubscriptionStatus(
     .update({
       subscription_status: status,
       subscription_id: subscriptionId,
-    } as never)
-    .eq('stripe_customer_id' as never, stripeCustomerId)
-    .select('id' as never);
+    })
+    .eq('stripe_customer_id', stripeCustomerId)
+    .select('id');
 
   if (error) {
     logger.error('Failed to sync subscription status', { stripeCustomerId, status, error });
     throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync subscription status');
   }
 
-  const rowsUpdated = (data as unknown[] | null)?.length ?? 0;
+  const rowsUpdated = data?.length ?? 0;
 
   if (rowsUpdated === 0) {
     logger.warn('No profile found for stripe_customer_id during sync', {
