@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Dayopt",
-    "description": "Task management application",
+    "description": "Timeboxing, time tracking, tasks, and calendar — unified",
     "version": "v1.0.0",
     "keywords": ["task management", "productivity", "project management"]
   },
