@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * 全Storyに適用するdecorators集約
  *
@@ -18,8 +19,8 @@ export { storeMockDecorator } from '../mocks/stores';
 const messageModules = import.meta.glob<Record<string, string>>('../../messages/ja/*.json', {
   eager: true,
 });
-const messages = Object.values(messageModules).reduce<Record<string, unknown>>(
-  (acc, mod) => ({ ...acc, ...mod }),
+const messages = Object.entries(messageModules).reduce<Record<string, unknown>>(
+  (acc, [, mod]) => ({ ...acc, ...(mod as Record<string, unknown>) }),
   {},
 );
 
@@ -43,7 +44,11 @@ export const providerDecorator: Decorator = (Story, context) => {
 
   return (
     <StorybookThemeProvider>
-      <StoryTRPCProvider mocks={trpcMocks} pending={trpcPending} error={trpcError}>
+      <StoryTRPCProvider
+        {...(trpcMocks !== undefined ? { mocks: trpcMocks } : {})}
+        {...(trpcPending !== undefined ? { pending: trpcPending } : {})}
+        {...(trpcError !== undefined ? { error: trpcError } : {})}
+      >
         <NextIntlClientProvider locale="ja" messages={messages}>
           <main>
             <Story />
