@@ -51,12 +51,12 @@ Redux DevToolsでデバッグしたい？
 
 ## 状態の種類と管理方法
 
-| 状態の種類 | 管理方法 | 例 |
-|-----------|---------|-----|
-| **サーバーデータ** | TanStack Query | プラン一覧、タグ |
-| **UI状態（グローバル）** | Zustand | サイドバー開閉、選択中のアイテム |
-| **UI状態（ローカル）** | useState | フォームの入力値、モーダルの開閉 |
-| **URL状態** | Next.js Router | 現在のページ、クエリパラメータ |
+| 状態の種類               | 管理方法       | 例                               |
+| ------------------------ | -------------- | -------------------------------- |
+| **サーバーデータ**       | TanStack Query | プラン一覧、タグ                 |
+| **UI状態（グローバル）** | Zustand        | サイドバー開閉、選択中のアイテム |
+| **UI状態（ローカル）**   | useState       | フォームの入力値、モーダルの開閉 |
+| **URL状態**              | Next.js Router | 現在のページ、クエリパラメータ   |
 
 ---
 
@@ -142,24 +142,24 @@ const CalendarNavigationContext = createContext<CalendarNavigationContextValue |
 
 ### Zustand
 
-| ストア | 説明 | 理由 |
-|--------|------|------|
-| `useAuthStore` | 認証状態 | 頻繁な更新、アプリ全体で使用 |
-| `useSidebarStore` | サイドバー開閉 | 多数のコンポーネントから参照 |
-| `useCalendarSettingsStore` | カレンダー設定 | 永続化が必要 |
-| `useEventStore` | イベント管理 | 複雑な状態、デバッグツール必要 |
-| `useTaskStore` | タスク管理 | 複雑な状態、デバッグツール必要 |
+| ストア                     | 説明           | 理由                           |
+| -------------------------- | -------------- | ------------------------------ |
+| `useAuthStore`             | 認証状態       | 頻繁な更新、アプリ全体で使用   |
+| `useSidebarStore`          | サイドバー開閉 | 多数のコンポーネントから参照   |
+| `useCalendarSettingsStore` | カレンダー設定 | 永続化が必要                   |
+| `useEventStore`            | イベント管理   | 複雑な状態、デバッグツール必要 |
+| `useTaskStore`             | タスク管理     | 複雑な状態、デバッグツール必要 |
 
 ### Context API（正当な理由あり）
 
-| Context | 理由 |
-|---------|------|
-| `ThemeProvider` (next-themes) | 外部ライブラリ |
-| `FormProvider` (react-hook-form) | 外部ライブラリ |
-| `DndProvider` (react-dnd) | 外部ライブラリ |
-| `CalendarNavigationContext` | 特定機能内、低頻度更新 |
-| `GlobalSearchProvider` | シンプルなboolean状態 |
-| `ToastProvider` | UIライブラリパターン |
+| Context                          | 理由                   |
+| -------------------------------- | ---------------------- |
+| `ThemeProvider` (next-themes)    | 外部ライブラリ         |
+| `FormProvider` (react-hook-form) | 外部ライブラリ         |
+| `DndProvider` (react-dnd)        | 外部ライブラリ         |
+| `CalendarNavigationContext`      | 特定機能内、低頻度更新 |
+| `GlobalSearchProvider`           | シンプルなboolean状態  |
+| `ToastProvider`                  | UIライブラリパターン   |
 
 ---
 

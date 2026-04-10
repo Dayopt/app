@@ -29,16 +29,16 @@ Storybook「Quality Dashboard」で可視化
 
 ## メトリクス一覧
 
-| メトリクス | 計測内容 | ソース |
-|---|---|---|
-| **型安全性** | TypeScript型エラー数 | `tsc --noEmit` |
-| **テストカバレッジ** | statements / functions / branches | Vitest + Istanbul |
-| **RLSカバレッジ** | RLS有効テーブル数 / ポリシー数 | マイグレーションSQL解析 |
-| **Storyカバレッジ** | Story付きUIコンポーネント率 | `src/components/ui/` スキャン |
-| **Feature境界違反** | cross-feature import数 | `.feature-boundary-budget.json` |
-| **循環依存** | 循環参照サイクル数 | madge |
-| **Dead Code** | 未使用export / ファイル数 | knip |
-| **アクセシビリティ** | axe違反数 | Storybook Vitest |
+| メトリクス           | 計測内容                          | ソース                          |
+| -------------------- | --------------------------------- | ------------------------------- |
+| **型安全性**         | TypeScript型エラー数              | `tsc --noEmit`                  |
+| **テストカバレッジ** | statements / functions / branches | Vitest + Istanbul               |
+| **RLSカバレッジ**    | RLS有効テーブル数 / ポリシー数    | マイグレーションSQL解析         |
+| **Storyカバレッジ**  | Story付きUIコンポーネント率       | `src/components/ui/` スキャン   |
+| **Feature境界違反**  | cross-feature import数            | `.feature-boundary-budget.json` |
+| **循環依存**         | 循環参照サイクル数                | madge                           |
+| **Dead Code**        | 未使用export / ファイル数         | knip                            |
+| **アクセシビリティ** | axe違反数                         | Storybook Vitest                |
 
 ---
 
@@ -97,7 +97,10 @@ knipのJSON出力を直接確認。
       "branches": { "covered": 280, "total": 450, "pct": 62.22 }
     },
     "rlsCoverage": {
-      "tablesWithRls": 17, "totalTables": 17, "pct": 100, "policies": 73
+      "tablesWithRls": 17,
+      "totalTables": 17,
+      "pct": 100,
+      "policies": 73
     },
     "storyCoverage": { "covered": 34, "total": 34, "pct": 100 },
     "featureBoundaries": { "violations": 0 },

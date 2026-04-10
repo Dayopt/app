@@ -92,11 +92,11 @@ Sentryダッシュボード表示
 
 手動の `reportToSentry()` 呼び出しに加え、以下の3つの自動報告が有効です：
 
-| パイプライン | 送信元 | 対象 |
-|---|---|---|
-| **CSP違反** | `/api/csp-report` | ブラウザ拡張機能以外のCSP違反 |
-| **tRPCエラー** | `handleServiceError()` | `INTERNAL_SERVER_ERROR` マッピングのエラー |
-| **ユーザーコンテキスト** | 認証レイヤー | ログイン中ユーザーのID（自動付与） |
+| パイプライン             | 送信元                 | 対象                                       |
+| ------------------------ | ---------------------- | ------------------------------------------ |
+| **CSP違反**              | `/api/csp-report`      | ブラウザ拡張機能以外のCSP違反              |
+| **tRPCエラー**           | `handleServiceError()` | `INTERNAL_SERVER_ERROR` マッピングのエラー |
+| **ユーザーコンテキスト** | 認証レイヤー           | ログイン中ユーザーのID（自動付与）         |
 
 ### 環境別設定
 
@@ -304,11 +304,7 @@ const { result, duration } = await withTrace(
 import * as Sentry from '@sentry/nextjs';
 
 // ブラウザ拡張機能由来の違反はSentryクォータ節約のため除外
-const IGNORED_URI_PREFIXES = [
-  'chrome-extension://',
-  'moz-extension://',
-  'safari-extension://',
-];
+const IGNORED_URI_PREFIXES = ['chrome-extension://', 'moz-extension://', 'safari-extension://'];
 
 // 拡張機能以外のCSP違反のみ送信
 Sentry.captureMessage(`CSP Violation: ${directive}`, {
@@ -319,6 +315,7 @@ Sentry.captureMessage(`CSP Violation: ${directive}`, {
 ```
 
 **ポイント**:
+
 - ブラウザ拡張機能のCSP違反は無視（`chrome-extension://` 等）
 - `warning` レベルで送信（`error` ではない）
 - Sentryダッシュボードで `type:csp-violation` タグでフィルタ可能
@@ -342,13 +339,13 @@ if (trpcCode === 'INTERNAL_SERVER_ERROR') {
 
 **報告対象の判定**:
 
-| tRPC コード | Sentryに報告 | 理由 |
-|---|---|---|
-| `INTERNAL_SERVER_ERROR` | **する** | サーバー側の異常 |
-| `BAD_REQUEST` | しない | ユーザー入力エラー |
-| `NOT_FOUND` | しない | 通常のリクエスト |
-| `UNAUTHORIZED` | しない | 認証切れ等 |
-| 未知のエラー | **する** | 予期しない障害 |
+| tRPC コード             | Sentryに報告 | 理由               |
+| ----------------------- | ------------ | ------------------ |
+| `INTERNAL_SERVER_ERROR` | **する**     | サーバー側の異常   |
+| `BAD_REQUEST`           | しない       | ユーザー入力エラー |
+| `NOT_FOUND`             | しない       | 通常のリクエスト   |
+| `UNAUTHORIZED`          | しない       | 認証切れ等         |
+| 未知のエラー            | **する**     | 予期しない障害     |
 
 ### Sentry.setUser() 自動設定
 

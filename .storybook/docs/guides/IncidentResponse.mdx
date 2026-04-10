@@ -15,12 +15,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## インシデントレベル定義
 
-| レベル | 定義 | 対応目標 | 例 |
-|--------|------|----------|-----|
-| **P0** | サービス全停止 / セキュリティ侵害 | 即時対応 | DB障害、不正アクセス |
-| **P1** | 主要機能が使えない | 1時間以内 | デプロイ失敗、Webhook停止 |
-| **P2** | 一部機能に影響 | 4時間以内 | Sentryエラー急増 |
-| **P3** | 軽微な不具合 | 翌営業日 | UIの表示崩れ |
+| レベル | 定義                              | 対応目標  | 例                        |
+| ------ | --------------------------------- | --------- | ------------------------- |
+| **P0** | サービス全停止 / セキュリティ侵害 | 即時対応  | DB障害、不正アクセス      |
+| **P1** | 主要機能が使えない                | 1時間以内 | デプロイ失敗、Webhook停止 |
+| **P2** | 一部機能に影響                    | 4時間以内 | Sentryエラー急増          |
+| **P3** | 軽微な不具合                      | 翌営業日  | UIの表示崩れ              |
 
 ---
 
@@ -49,13 +49,13 @@ NEXT_PUBLIC_MAINTENANCE_MODE=true
 
 ### 重要ダッシュボードURL
 
-| ダッシュボード | URL |
-|---------------|-----|
-| Vercel | https://vercel.com/dashboard |
-| Sentry | https://sentry.io（プロジェクト: dayopt） |
-| Supabase | https://supabase.com/dashboard |
-| Stripe | https://dashboard.stripe.com |
-| Supabase Status | https://status.supabase.com |
+| ダッシュボード  | URL                                       |
+| --------------- | ----------------------------------------- |
+| Vercel          | https://vercel.com/dashboard              |
+| Sentry          | https://sentry.io（プロジェクト: dayopt） |
+| Supabase        | https://supabase.com/dashboard            |
+| Stripe          | https://dashboard.stripe.com              |
+| Supabase Status | https://status.supabase.com               |
 
 ---
 
@@ -224,15 +224,15 @@ npm run lint:boundaries  # feature境界違反
 
 エラーカテゴリで優先度を判断（`src/platform/sentry/integration.ts` のカテゴリ定義）:
 
-| カテゴリ | Sentryタグ | 優先度 | アクション |
-|---------|-----------|--------|-----------|
-| **DB** | `errorCategory:DB` | P0 → Playbook 1 | 即時対応 |
-| **AUTH** | `errorCategory:AUTH` | P1 | 認証系を確認 |
-| **SYSTEM** | `errorCategory:SYSTEM` | P1 | インフラ確認 |
-| **EXTERNAL** | `errorCategory:EXTERNAL` | P2 | 外部サービス障害を待機 |
-| **BIZ** | `errorCategory:BIZ` | P3 | 通常バグ修正 |
-| **VALIDATION** | `errorCategory:VALIDATION` | P3 | 入力バリデーション改善 |
-| **RATE** | `errorCategory:RATE` | P3 | レート制限調整 |
+| カテゴリ       | Sentryタグ                 | 優先度          | アクション             |
+| -------------- | -------------------------- | --------------- | ---------------------- |
+| **DB**         | `errorCategory:DB`         | P0 → Playbook 1 | 即時対応               |
+| **AUTH**       | `errorCategory:AUTH`       | P1              | 認証系を確認           |
+| **SYSTEM**     | `errorCategory:SYSTEM`     | P1              | インフラ確認           |
+| **EXTERNAL**   | `errorCategory:EXTERNAL`   | P2              | 外部サービス障害を待機 |
+| **BIZ**        | `errorCategory:BIZ`        | P3              | 通常バグ修正           |
+| **VALIDATION** | `errorCategory:VALIDATION` | P3              | 入力バリデーション改善 |
+| **RATE**       | `errorCategory:RATE`       | P3              | レート制限調整         |
 
 ### 復旧
 
@@ -348,15 +348,15 @@ ORDER BY created_at DESC;
 
 ### タイムライン
 
-| 時刻 | イベント |
-|------|---------|
-| HH:MM | 検知（Sentryアラート / 手動発見） |
-| HH:MM | 初動開始 |
+| 時刻  | イベント                                 |
+| ----- | ---------------------------------------- |
+| HH:MM | 検知（Sentryアラート / 手動発見）        |
+| HH:MM | 初動開始                                 |
 | HH:MM | メンテナンスモード有効化（該当する場合） |
-| HH:MM | 原因特定 |
-| HH:MM | 修正デプロイ / ロールバック |
-| HH:MM | 復旧確認 |
-| HH:MM | メンテナンスモード解除 |
+| HH:MM | 原因特定                                 |
+| HH:MM | 修正デプロイ / ロールバック              |
+| HH:MM | 復旧確認                                 |
+| HH:MM | メンテナンスモード解除                   |
 
 ### 根本原因
 

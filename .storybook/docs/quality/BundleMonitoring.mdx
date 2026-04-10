@@ -12,25 +12,25 @@ Dayoptアプリケーションのバンドルサイズ監視とパフォーマ�
 
 ### JavaScript
 
-| 項目 | 制限 |
-|------|------|
-| メインJS合計 | 800KB |
+| 項目           | 制限  |
+| -------------- | ----- |
+| メインJS合計   | 800KB |
 | 初期読み込みJS | 500KB |
-| 個別チャンク | 250KB |
+| 個別チャンク   | 250KB |
 
 ### CSS
 
-| 項目 | 制限 |
-|------|------|
-| CSS合計 | 150KB |
+| 項目            | 制限  |
+| --------------- | ----- |
+| CSS合計         | 150KB |
 | 初期読み込みCSS | 100KB |
 
 ### 総合
 
-| 項目 | 制限 |
-|------|------|
-| 全バンドル合計 | 1MB |
-| 警告しきい値 | 80%（制限の80%に到達で警告） |
+| 項目           | 制限                         |
+| -------------- | ---------------------------- |
+| 全バンドル合計 | 1MB                          |
+| 警告しきい値   | 80%（制限の80%に到達で警告） |
 
 ---
 
@@ -84,35 +84,35 @@ npm run lint:imports           # インポート順序チェック
 
 ```tsx
 // ❌ 避ける：静的インポート（大きなコンポーネント）
-import HeavyComponent from './HeavyComponent'
+import HeavyComponent from './HeavyComponent';
 
 // ✅ 推奨：Next.js dynamic imports
-import dynamic from 'next/dynamic'
+import dynamic from 'next/dynamic';
 const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
   loading: () => <div>Loading...</div>,
-})
+});
 ```
 
 ### 2. ライブラリのTree-shaking
 
 ```tsx
 // ❌ 避ける：ライブラリ全体のインポート
-import * as lodash from 'lodash'
+import * as lodash from 'lodash';
 
 // ✅ 推奨：必要な関数のみインポート
-import { debounce } from 'lodash'
-import { format } from 'date-fns'
+import { debounce } from 'lodash';
+import { format } from 'date-fns';
 ```
 
 ### 3. バレルファイルの適切な使用
 
 ```tsx
 // ❌ 避ける：バレルファイルから大量インポート
-import { A, B, C, D, E, F } from '@/components'
+import { A, B, C, D, E, F } from '@/components';
 
 // ✅ 推奨：直接インポート
-import A from '@/components/A'
-import B from '@/components/B'
+import A from '@/components/A';
+import B from '@/components/B';
 ```
 
 ---
@@ -131,7 +131,7 @@ const BUNDLE_LIMITS = {
   maxInitialCSS: 100 * 1024,
   maxTotal: 1000 * 1024,
   warningThreshold: 0.8,
-}
+};
 ```
 
 ---

@@ -69,33 +69,33 @@ import { SmartErrorBoundary, DatabaseErrorFallback } from '@/components/common'
 ### 自動リトライフック
 
 ```tsx
-import { useApiRetry, useDataFetchRetry } from '@/components/common'
+import { useApiRetry, useDataFetchRetry } from '@/components/common';
 
 // API呼び出し用
 const { execute, isLoading, retry, error } = useApiRetry(async () => {
-  const response = await fetch('/api/data')
-  if (!response.ok) throw new Error(`API Error: ${response.status}`)
-  return response.json()
-})
+  const response = await fetch('/api/data');
+  if (!response.ok) throw new Error(`API Error: ${response.status}`);
+  return response.json();
+});
 
 // データフェッチ用
 const dataRetry = useDataFetchRetry(async () => {
-  return await fetchUserData()
-})
+  return await fetchUserData();
+});
 ```
 
 ---
 
 ## カテゴリ別フォールバック
 
-| フォールバック | 用途 | 特徴 |
-|--------------|------|------|
-| `NetworkErrorFallback` | ネットワーク接続エラー | Wi-Fi・接続確認の案内 |
-| `DatabaseErrorFallback` | データベースエラー | 自動修復中の表示 |
-| `APIErrorFallback` | API通信エラー | サーバー通信問題の説明 |
-| `AuthErrorFallback` | 認証エラー | ログインページへの誘導 |
-| `UIErrorFallback` | UIコンポーネントエラー | 軽量な再表示ボタン |
-| `GenericErrorFallback` | 汎用エラー | あらゆるエラーに対応 |
+| フォールバック          | 用途                   | 特徴                   |
+| ----------------------- | ---------------------- | ---------------------- |
+| `NetworkErrorFallback`  | ネットワーク接続エラー | Wi-Fi・接続確認の案内  |
+| `DatabaseErrorFallback` | データベースエラー     | 自動修復中の表示       |
+| `APIErrorFallback`      | API通信エラー          | サーバー通信問題の説明 |
+| `AuthErrorFallback`     | 認証エラー             | ログインページへの誘導 |
+| `UIErrorFallback`       | UIコンポーネントエラー | 軽量な再表示ボタン     |
+| `GenericErrorFallback`  | 汎用エラー             | あらゆるエラーに対応   |
 
 ### 自動選択（推奨）
 
@@ -139,8 +139,8 @@ const FallbackComponent = selectErrorFallback(error)
 
 ```tsx
 <GlobalErrorBoundary
-  maxRetries={3}        // 最大リトライ回数
-  retryDelay={1000}     // 初期遅延時間（ms）
+  maxRetries={3} // 最大リトライ回数
+  retryDelay={1000} // 初期遅延時間（ms）
   onError={(error, errorInfo, retryCount) => {
     // Sentryへの送信など
   }}
@@ -158,7 +158,7 @@ const config = {
   backoffFactor: 2,
   maxDelay: 30000,
   shouldRetry: (error: Error, retryCount: number) => {
-    return error.message.includes('network') && retryCount < 3
+    return error.message.includes('network') && retryCount < 3;
   },
   onRetry: (error: Error, retryCount: number) => {
     // リトライ時のコールバック
@@ -166,7 +166,7 @@ const config = {
   onFinalFailure: (error: Error, retryCount: number) => {
     // 最終失敗時のコールバック
   },
-}
+};
 ```
 
 ---
@@ -202,13 +202,13 @@ const config = {
 const apiRetry = useApiRetry(apiCall, {
   maxRetries: 3,
   initialDelay: 1000,
-})
+});
 
 // ユーザーアクション：控えめにリトライ
 const userActionRetry = useUserActionRetry(userAction, {
   maxRetries: 1,
   initialDelay: 2000,
-})
+});
 ```
 
 ---

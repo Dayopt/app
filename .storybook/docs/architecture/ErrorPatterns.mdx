@@ -10,15 +10,15 @@ Dayoptの統一エラー管理システム。エラーコード体系、自動�
 
 ## エラーコード体系（7カテゴリ）
 
-| カテゴリ | コード範囲 | 例 |
-|---------|-----------|-----|
-| **AUTH** | 1xxx | `INVALID_TOKEN`(1001), `EXPIRED_TOKEN`(1002), `NO_PERMISSION`(1003) |
-| **VALIDATION** | 2xxx | `REQUIRED_FIELD`(2001), `INVALID_FORMAT`(2002), `INVALID_EMAIL`(2004) |
-| **DB** | 3xxx | `CONNECTION_FAILED`(3001), `QUERY_TIMEOUT`(3002), `NOT_FOUND`(3004) |
-| **BIZ** | 4xxx | ビジネスロジックエラー |
-| **EXTERNAL** | 5xxx | 外部サービス連携エラー |
-| **SYSTEM** | 6xxx | システム・インフラエラー |
-| **RATE** | 7xxx | レート制限エラー |
+| カテゴリ       | コード範囲 | 例                                                                    |
+| -------------- | ---------- | --------------------------------------------------------------------- |
+| **AUTH**       | 1xxx       | `INVALID_TOKEN`(1001), `EXPIRED_TOKEN`(1002), `NO_PERMISSION`(1003)   |
+| **VALIDATION** | 2xxx       | `REQUIRED_FIELD`(2001), `INVALID_FORMAT`(2002), `INVALID_EMAIL`(2004) |
+| **DB**         | 3xxx       | `CONNECTION_FAILED`(3001), `QUERY_TIMEOUT`(3002), `NOT_FOUND`(3004)   |
+| **BIZ**        | 4xxx       | ビジネスロジックエラー                                                |
+| **EXTERNAL**   | 5xxx       | 外部サービス連携エラー                                                |
+| **SYSTEM**     | 6xxx       | システム・インフラエラー                                              |
+| **RATE**       | 7xxx       | レート制限エラー                                                      |
 
 ---
 
@@ -76,12 +76,12 @@ function UserProfile() {
 
 ### カテゴリ別リトライ設定
 
-| カテゴリ | リトライ | 戦略 |
-|---------|---------|------|
-| AUTH | 無効 | 認証エラーはリトライしない |
-| DB | 有効（3回） | 指数バックオフ + ジッター |
-| EXTERNAL | 有効（3回） | 指数バックオフ |
-| RATE | 有効 | Retry-After ヘッダーに従う |
+| カテゴリ | リトライ    | 戦略                       |
+| -------- | ----------- | -------------------------- |
+| AUTH     | 無効        | 認証エラーはリトライしない |
+| DB       | 有効（3回） | 指数バックオフ + ジッター  |
+| EXTERNAL | 有効（3回） | 指数バックオフ             |
+| RATE     | 有効        | Retry-After ヘッダーに従う |
 
 ### サーキットブレーカー
 
@@ -141,11 +141,11 @@ const error = createAppError(
 
 エラーは自動的にSentryに送信され、以下で分類される:
 
-| 分類 | 内容 |
-|------|------|
-| **タグ** | errorCode, errorCategory, severity, domain, team |
-| **コンテキスト** | errorPattern, errorMetadata |
-| **フィンガープリント** | 自動グルーピング |
+| 分類                   | 内容                                             |
+| ---------------------- | ------------------------------------------------ |
+| **タグ**               | errorCode, errorCategory, severity, domain, team |
+| **コンテキスト**       | errorPattern, errorMetadata                      |
+| **フィンガープリント** | 自動グルーピング                                 |
 
 ```typescript
 import { reportToSentry } from '@/lib/sentry';
@@ -279,7 +279,7 @@ src/app/
 export const ERROR_CODES = {
   // 既存のコード...
   NEW_ERROR: 4100, // 4000番台 = BIZカテゴリ
-}
+};
 ```
 
 ### 2. パターン追加
@@ -297,7 +297,7 @@ export const ERROR_PATTERNS: Record<number, ErrorPattern> = {
     urgency: 'medium',
     emoji: '⚠️',
   },
-}
+};
 ```
 
 ---

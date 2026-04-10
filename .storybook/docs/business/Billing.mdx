@@ -10,13 +10,13 @@ Dayoptの Stripe サブスクリプション課金システムの技術ドキュ
 
 ## 概要
 
-| 項目 | 内容 |
-|------|------|
-| プラン構成 | Free ($0) / Pro ($5/月) |
-| 年額 | $48/年（20% OFF） |
-| トライアル | 7日間無料 |
-| 決済基盤 | Stripe Checkout + Customer Portal + Webhook |
-| ステータス管理 | Supabase `profiles` テーブル |
+| 項目           | 内容                                        |
+| -------------- | ------------------------------------------- |
+| プラン構成     | Free ($0) / Pro ($5/月)                     |
+| 年額           | $48/年（20% OFF）                           |
+| トライアル     | 7日間無料                                   |
+| 決済基盤       | Stripe Checkout + Customer Portal + Webhook |
+| ステータス管理 | Supabase `profiles` テーブル                |
 
 ユーザーは Free プランで基本機能を利用し、Pro にアップグレードすると全指標・無制限タグ・API・データエクスポート・無制限AIが解放される。
 
@@ -71,11 +71,11 @@ Stripe Event
 
 マイグレーション: `20260317120000_add_stripe_billing_columns.sql`
 
-| カラム | 型 | デフォルト | 説明 |
-|--------|-----|----------|------|
-| `stripe_customer_id` | `text UNIQUE` | `NULL` | Stripe Customer ID (`cus_xxx`) |
-| `subscription_status` | `text NOT NULL` | `'free'` | サブスクリプション状態 |
-| `subscription_id` | `text UNIQUE` | `NULL` | Stripe Subscription ID (`sub_xxx`) |
+| カラム                | 型              | デフォルト | 説明                               |
+| --------------------- | --------------- | ---------- | ---------------------------------- |
+| `stripe_customer_id`  | `text UNIQUE`   | `NULL`     | Stripe Customer ID (`cus_xxx`)     |
+| `subscription_status` | `text NOT NULL` | `'free'`   | サブスクリプション状態             |
+| `subscription_id`     | `text UNIQUE`   | `NULL`     | Stripe Subscription ID (`sub_xxx`) |
 
 **インデックス**: `idx_profiles_stripe_customer_id` — Webhook ハンドラでの高速検索用
 
@@ -87,25 +87,25 @@ Stripe Event
 type SubscriptionStatus = 'free' | 'active' | 'past_due' | 'canceled' | 'trialing';
 ```
 
-| ステータス | 意味 | Pro機能 |
-|-----------|------|---------|
-| `free` | 未課金 / 完全解約後 | 不可 |
-| `trialing` | 7日間トライアル中 | **可** |
-| `active` | 有効なサブスクリプション | **可** |
-| `past_due` | 支払い遅延（リトライ中） | 不可 |
-| `canceled` | 解約済み | 不可 |
+| ステータス | 意味                     | Pro機能 |
+| ---------- | ------------------------ | ------- |
+| `free`     | 未課金 / 完全解約後      | 不可    |
+| `trialing` | 7日間トライアル中        | **可**  |
+| `active`   | 有効なサブスクリプション | **可**  |
+| `past_due` | 支払い遅延（リトライ中） | 不可    |
+| `canceled` | 解約済み                 | 不可    |
 
 ### Stripe Status マッピング
 
 Webhook で受け取る Stripe の `Subscription.Status` を Dayopt のステータスに変換する:
 
-| Stripe Status | Dayopt Status |
-|---------------|---------------|
-| `active` | `active` |
-| `trialing` | `trialing` |
-| `past_due` | `past_due` |
-| `canceled`, `unpaid`, `incomplete_expired` | `canceled` |
-| `incomplete`, `paused`, その他 | `free` |
+| Stripe Status                              | Dayopt Status |
+| ------------------------------------------ | ------------- |
+| `active`                                   | `active`      |
+| `trialing`                                 | `trialing`    |
+| `past_due`                                 | `past_due`    |
+| `canceled`, `unpaid`, `incomplete_expired` | `canceled`    |
+| `incomplete`, `paused`, その他             | `free`        |
 
 ---
 
@@ -145,13 +145,14 @@ Proユーザー "プランを管理" クリック
 
 エンドポイント: `POST /api/webhooks/stripe`
 
-| イベント | 処理 |
-|---------|------|
-| `checkout.session.completed` | `syncSubscriptionStatus(customerId, subscriptionId, 'active')` |
+| イベント                        | 処理                                                              |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `checkout.session.completed`    | `syncSubscriptionStatus(customerId, subscriptionId, 'active')`    |
 | `customer.subscription.updated` | `mapStripeStatus()` でステータス変換 → `syncSubscriptionStatus()` |
-| `customer.subscription.deleted` | `syncSubscriptionStatus(customerId, null, 'free')` |
+| `customer.subscription.deleted` | `syncSubscriptionStatus(customerId, null, 'free')`                |
 
 **セキュリティ**:
+
 - `stripe-signature` ヘッダーを `stripe.webhooks.constructEvent()` で検証
 - `createServiceRoleClient()` で RLS をバイパス（Webhook にはユーザーコンテキストがないため）
 
@@ -209,11 +210,11 @@ publicProcedure          ← 認証不要
 
 ## 環境変数
 
-| 変数名 | 用途 | 設定場所 |
-|--------|------|---------|
-| `STRIPE_SECRET_KEY` | Stripe API シークレットキー (`sk_test_xxx` / `sk_live_xxx`) | サーバーサイドのみ (`src/env.ts`) |
-| `STRIPE_WEBHOOK_SECRET` | Webhook 署名検証シークレット (`whsec_xxx`) | サーバーサイドのみ |
-| `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID` | Pro プランの Price ID (`price_xxx`) | クライアント公開 |
+| 変数名                            | 用途                                                        | 設定場所                          |
+| --------------------------------- | ----------------------------------------------------------- | --------------------------------- |
+| `STRIPE_SECRET_KEY`               | Stripe API シークレットキー (`sk_test_xxx` / `sk_live_xxx`) | サーバーサイドのみ (`src/env.ts`) |
+| `STRIPE_WEBHOOK_SECRET`           | Webhook 署名検証シークレット (`whsec_xxx`)                  | サーバーサイドのみ                |
+| `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID` | Pro プランの Price ID (`price_xxx`)                         | クライアント公開                  |
 
 **注意**: `STRIPE_SECRET_KEY` が未設定の場合、`getStripe()` は `null` を返す（graceful degradation）。課金が必須の処理では `requireStripe()` を使用し、未設定時にエラーをスローする。
 
@@ -239,11 +240,11 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ### テストカード
 
-| カード番号 | 用途 |
-|-----------|------|
-| `4242 4242 4242 4242` | 成功 |
+| カード番号            | 用途           |
+| --------------------- | -------------- |
+| `4242 4242 4242 4242` | 成功           |
 | `4000 0025 0000 3155` | 3Dセキュア認証 |
-| `4000 0000 0000 9995` | 支払い失敗 |
+| `4000 0000 0000 9995` | 支払い失敗     |
 
 有効期限: 任意の未来日、CVC: 任意の3桁
 
@@ -257,13 +258,13 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 
 ## 関連ファイル
 
-| ファイル | 役割 |
-|---------|------|
-| `src/platform/stripe/client.ts` | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
-| `src/features/settings/server/billing-service.ts` | 課金ビジネスロジック（Service層） |
-| `src/features/settings/server/billing-router.ts` | tRPC Router（Router層） |
-| `src/app/api/webhooks/stripe/route.ts` | Webhook エンドポイント |
-| `src/platform/trpc/procedures.ts` | `proProcedure` 定義 |
-| `src/features/settings/components/billing-settings.tsx` | 課金設定UI |
-| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql` | DBマイグレーション |
-| `src/stories/docs/Pricing.mdx` | 価格戦略ドキュメント |
+| ファイル                                                            | 役割                                                       |
+| ------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `src/platform/stripe/client.ts`                                     | Stripe クライアント初期化（`getStripe` / `requireStripe`） |
+| `src/features/settings/server/billing-service.ts`                   | 課金ビジネスロジック（Service層）                          |
+| `src/features/settings/server/billing-router.ts`                    | tRPC Router（Router層）                                    |
+| `src/app/api/webhooks/stripe/route.ts`                              | Webhook エンドポイント                                     |
+| `src/platform/trpc/procedures.ts`                                   | `proProcedure` 定義                                        |
+| `src/features/settings/components/billing-settings.tsx`             | 課金設定UI                                                 |
+| `supabase/migrations/20260317120000_add_stripe_billing_columns.sql` | DBマイグレーション                                         |
+| `src/stories/docs/Pricing.mdx`                                      | 価格戦略ドキュメント                                       |

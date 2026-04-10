@@ -10,11 +10,11 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 
 ## コマンド
 
-| コマンド | ソース | 用途 |
-|----------|--------|------|
-| `npm run types:generate` | Production DB | 本番スキーマから生成（推奨） |
-| `npm run types:generate:staging` | Staging DB | ステージングスキーマから生成 |
-| `npm run types:generate:local` | Local DB | ローカルから生成（`supabase start` 必要） |
+| コマンド                         | ソース        | 用途                                      |
+| -------------------------------- | ------------- | ----------------------------------------- |
+| `npm run types:generate`         | Production DB | 本番スキーマから生成（推奨）              |
+| `npm run types:generate:staging` | Staging DB    | ステージングスキーマから生成              |
+| `npm run types:generate:local`   | Local DB      | ローカルから生成（`supabase start` 必要） |
 
 全コマンドとも `src/types/supabase.ts` に出力。
 
@@ -74,8 +74,8 @@ export type TagRow = Database['public']['Tables']['tags']['Row'];
 
 ## トラブルシューティング
 
-| エラー | 対処 |
-|--------|------|
-| `project_id not found` | Supabase プロジェクトの存在を確認 |
-| `connection refused` | ローカル: `supabase start` を実行 / リモート: ネットワーク確認 |
+| エラー                 | 対処                                                                         |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `project_id not found` | Supabase プロジェクトの存在を確認                                            |
+| `connection refused`   | ローカル: `supabase start` を実行 / リモート: ネットワーク確認               |
 | 生成された型がおかしい | 最新のマイグレーションが適用されているか確認。`supabase db reset` でリセット |
