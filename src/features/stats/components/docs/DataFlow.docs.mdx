@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Stats/Docs/Data Flow" />
+<Meta title="Features/Stats/Guide/Data Flow" />
 
 # Data Flow
 
@@ -37,36 +37,36 @@ PostgreSQL RPC 関数
 
 **ルーター**: `src/features/entry/server/statistics.ts`
 
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `getCumulativeTime` | dateRange | 期間内の記録時間合計 |
-| `getStreak` | — | 連続アクティビティ日数 |
-| `getPlanRate` | dateRange | 計画率 |
-| `getEstimationAccuracy` | dateRange | タグ別見積もり精度 |
-| `getEnergyMap` | dateRange | 時間帯×曜日エネルギー分布 |
-| `getContextSwitches` | dateRange | タスク切替回数 |
-| `getBlankRate` | dateRange + wake/sleep | 空白時間率 |
+| エンドポイント          | Input                  | 説明                      |
+| ----------------------- | ---------------------- | ------------------------- |
+| `getCumulativeTime`     | dateRange              | 期間内の記録時間合計      |
+| `getStreak`             | —                      | 連続アクティビティ日数    |
+| `getPlanRate`           | dateRange              | 計画率                    |
+| `getEstimationAccuracy` | dateRange              | タグ別見積もり精度        |
+| `getEnergyMap`          | dateRange              | 時間帯×曜日エネルギー分布 |
+| `getContextSwitches`    | dateRange              | タスク切替回数            |
+| `getBlankRate`          | dateRange + wake/sleep | 空白時間率                |
 
 ### Layer 2: チャート
 
 **ルーター**: `src/features/entry/server/statistics.ts`
 
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `getDailyHours` | `{ year }` | ヒートマップ用日次集計 |
-| `getMonthlyTrend` | `{ months? }` | 月次推移 |
-| `getDayOfWeekDistribution` | dateRange? | 曜日別分布 |
-| `getHourlyDistribution` | dateRange? | 時間帯分布 |
+| エンドポイント             | Input         | 説明                   |
+| -------------------------- | ------------- | ---------------------- |
+| `getDailyHours`            | `{ year }`    | ヒートマップ用日次集計 |
+| `getMonthlyTrend`          | `{ months? }` | 月次推移               |
+| `getDayOfWeekDistribution` | dateRange?    | 曜日別分布             |
+| `getHourlyDistribution`    | dateRange?    | 時間帯分布             |
 
 ### Layer 3: インサイト
 
 **ルーター**: `src/features/stats/server/insights-router.ts`（新規）
 
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `insights.getInsight` | `{ periodType, periodStart }` | 特定期間のインサイト取得 |
-| `insights.listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧 |
-| `insights.updateNote` | `{ insightId, userNote }` | ユーザーメモ更新 |
+| エンドポイント          | Input                              | 説明                     |
+| ----------------------- | ---------------------------------- | ------------------------ |
+| `insights.getInsight`   | `{ periodType, periodStart }`      | 特定期間のインサイト取得 |
+| `insights.listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧           |
+| `insights.updateNote`   | `{ insightId, userNote }`          | ユーザーメモ更新         |
 
 ---
 
@@ -74,10 +74,10 @@ PostgreSQL RPC 関数
 
 ### useStatsFilterStore (Zustand)
 
-| State | 型 | 説明 |
-|-------|----|------|
-| `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度 |
-| `currentDate` | `Date` | ナビゲーション基準日 |
+| State         | 型                                     | 説明                 |
+| ------------- | -------------------------------------- | -------------------- |
+| `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度             |
+| `currentDate` | `Date`                                 | ナビゲーション基準日 |
 
 ### タブ状態
 

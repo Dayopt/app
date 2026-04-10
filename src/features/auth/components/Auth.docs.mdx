@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Auth/Docs" />
+<Meta title="Features/Auth/Guide" />
 
 # Auth
 
@@ -47,21 +47,21 @@ SessionMonitorProvider          セッション監視プロバイダー
 
 ### useAuthStore
 
-| State | 説明 |
-|-------|------|
-| `user` | Supabase User オブジェクト |
-| `session` | セッション情報 |
-| `loading` | 認証処理中 |
-| `error` | エラー状態 |
+| State     | 説明                       |
+| --------- | -------------------------- |
+| `user`    | Supabase User オブジェクト |
+| `session` | セッション情報             |
+| `loading` | 認証処理中                 |
+| `error`   | エラー状態                 |
 
-| Action | 説明 |
-|--------|------|
-| `signIn(email, password)` | メール認証 |
-| `signUp(email, password)` | 新規登録 |
-| `signInWithOAuth(provider)` | OAuth認証 |
-| `signOut()` | ログアウト |
-| `resetPassword(email)` | パスワードリセット |
-| `updatePassword(password)` | パスワード更新 |
+| Action                      | 説明               |
+| --------------------------- | ------------------ |
+| `signIn(email, password)`   | メール認証         |
+| `signUp(email, password)`   | 新規登録           |
+| `signInWithOAuth(provider)` | OAuth認証          |
+| `signOut()`                 | ログアウト         |
+| `resetPassword(email)`      | パスワードリセット |
+| `updatePassword(password)`  | パスワード更新     |
 
 devtools ミドルウェア付き、タイムアウト処理（5秒）。
 
@@ -69,39 +69,39 @@ devtools ミドルウェア付き、タイムアウト処理（5秒）。
 
 ## Hooks
 
-| Hook | 用途 |
-|------|------|
-| `useAuth()` | ストアラッパー（user, session, 全アクション） |
-| `useSessionMonitor()` | セッションタイムアウト監視 |
+| Hook                  | 用途                                          |
+| --------------------- | --------------------------------------------- |
+| `useAuth()`           | ストアラッパー（user, session, 全アクション） |
+| `useSessionMonitor()` | セッションタイムアウト監視                    |
 
 ---
 
 ## セキュリティ
 
-| 対策 | 説明 |
-|------|------|
-| OWASP準拠 | パスワードリセットエラーのマスキング |
-| IPレートリミット | `ip-rate-limit.ts` |
-| 監査ログ | `audit-log.ts`（認証イベント記録） |
-| エラーサニタイズ | `sanitize-auth-error.ts` |
+| 対策             | 説明                                 |
+| ---------------- | ------------------------------------ |
+| OWASP準拠        | パスワードリセットエラーのマスキング |
+| IPレートリミット | `ip-rate-limit.ts`                   |
+| 監査ログ         | `audit-log.ts`（認証イベント記録）   |
+| エラーサニタイズ | `sanitize-auth-error.ts`             |
 
 ---
 
 ## OAuth プロバイダー
 
-| プロバイダー | 設定 |
-|------------|------|
-| Google | `auth-config.ts` |
-| Apple | `auth-config.ts` |
-| GitHub | `auth-config.ts` |
+| プロバイダー | 設定             |
+| ------------ | ---------------- |
+| Google       | `auth-config.ts` |
+| Apple        | `auth-config.ts` |
+| GitHub       | `auth-config.ts` |
 
 ---
 
 ## バリデーション
 
-| スキーマ | バリデーション |
-|---------|--------------|
-| `loginSchema` | メール形式、パスワード必須 |
+| スキーマ       | バリデーション             |
+| -------------- | -------------------------- |
+| `loginSchema`  | メール形式、パスワード必須 |
 | `signupSchema` | メール形式、パスワード強度 |
 
 Zod ベースのバリデーション。

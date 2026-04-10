@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Stats/Docs/Layer Architecture" />
+<Meta title="Features/Stats/Guide/Layer Architecture" />
 
 # Layer Architecture
 
@@ -22,11 +22,11 @@ Layer 3 (LLM インサイト)  L1 + L2 データから自然言語の気づき�
 
 Layer（計算の複雑度）と Tab（UIの分類）は**直交する**概念。
 
-| | Review タブ | Progress タブ | Insights タブ |
-|---|---|---|---|
-| **Layer 1** | KPI 8カード | — | — |
-| **Layer 2** | — | チャート 4つ | — |
-| **Layer 3** | — | — | LLM インサイト |
+|             | Review タブ | Progress タブ | Insights タブ  |
+| ----------- | ----------- | ------------- | -------------- |
+| **Layer 1** | KPI 8カード | —             | —              |
+| **Layer 2** | —           | チャート 4つ  | —              |
+| **Layer 3** | —           | —             | LLM インサイト |
 
 現在は 1:1 だが、将来コンポーネントがタブ間を移動する可能性がある。例: Rule Insights（L1）が Review タブに配置される予定。
 

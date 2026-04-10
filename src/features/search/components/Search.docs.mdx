@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Search/Docs" />
+<Meta title="Features/Search/Guide" />
 
 # Search
 
@@ -10,12 +10,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| 起動 | `Cmd/Ctrl + K` |
-| UI | 検索モーダル |
-| 検索対象 | Tags、Blocks（エントリのメモ） |
-| 状態管理 | React Context（`GlobalSearchProvider`） |
+| 項目         | 値                                            |
+| ------------ | --------------------------------------------- |
+| 起動         | `Cmd/Ctrl + K`                                |
+| UI           | 検索モーダル                                  |
+| 検索対象     | Tags、Blocks（エントリのメモ）                |
+| 状態管理     | React Context（`GlobalSearchProvider`）       |
 | データソース | クライアントサイド（`useTags`, `useEntries`） |
 
 ---
@@ -33,24 +33,24 @@ GlobalSearchProvider            Context プロバイダー + キーバインド
 
 ## 動作
 
-| 状態 | 表示内容 |
-|------|---------|
-| **空クエリ** | タグ一覧（カラードット + タグ名） |
+| 状態         | 表示内容                                              |
+| ------------ | ----------------------------------------------------- |
+| **空クエリ** | タグ一覧（カラードット + タグ名）                     |
 | **入力あり** | タグ名マッチ + ブロック（description / タグ名マッチ） |
 
 ### 選択時の動作
 
-| 対象 | 動作 |
-|------|------|
-| **Tag** | `showOnlyTag(tagId)` — そのタグだけフィルターON |
-| **Block** | カレンダーでその日に遷移 + Inspector を開く |
+| 対象      | 動作                                            |
+| --------- | ----------------------------------------------- |
+| **Tag**   | `showOnlyTag(tagId)` — そのタグだけフィルターON |
+| **Block** | カレンダーでその日に遷移 + Inspector を開く     |
 
 ---
 
 ## Hooks
 
-| Hook | 用途 |
-|------|------|
+| Hook                | 用途                                |
+| ------------------- | ----------------------------------- |
 | `useGlobalSearch()` | Context hook（open, close, isOpen） |
 
 ---
@@ -74,9 +74,9 @@ Cmd/Ctrl + K → GlobalSearchModal 表示
 
 ## 連携
 
-| 連携先 | 操作 |
-|-------|------|
-| `useEntryInspectorStore` | Block 選択時に Inspector を開く |
+| 連携先                   | 操作                                      |
+| ------------------------ | ----------------------------------------- |
+| `useEntryInspectorStore` | Block 選択時に Inspector を開く           |
 | `useCalendarFilterStore` | Tag 選択時に showOnlyTag でフィルター適用 |
 
 ---
