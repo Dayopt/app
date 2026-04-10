@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Supabase Server Client
  *

@@ -3,6 +3,8 @@
  * 全APIルーターの統合とエクスポート
  */
 
+import 'server-only';
+
 import { suggestionsRouter } from '@/features/ai/server/suggestions-router';
 import { userRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';

@@ -21,9 +21,16 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP } from 'next/font/google';
 import { Suspense } from 'react';
 
+import dynamic from 'next/dynamic';
+
 import { cn } from '@/lib/utils';
 import { DeferredAnalytics } from '@/platform/analytics/DeferredAnalytics';
-import { WebVitalsReporter } from '@/platform/sentry/WebVitalsReporter';
+
+const WebVitalsReporter = dynamic(
+  () =>
+    import('@/platform/sentry/WebVitalsReporter').then((m) => ({ default: m.WebVitalsReporter })),
+  { ssr: false },
+);
 
 // next/font による最適化されたフォント読み込み（Variable Font: optical size軸有効）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）

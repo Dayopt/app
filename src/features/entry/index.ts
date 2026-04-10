@@ -11,9 +11,7 @@
 export type {
   CreateEntryInput,
   Entry,
-  EntryFilters,
   EntryOrigin,
-  EntryState,
   EntryWithTags,
   FulfillmentScore,
   UpdateEntryInput,
@@ -33,36 +31,26 @@ export {
   getEntryByIdSchema,
   updateEntrySchema,
 } from './schemas/entry';
-export type { EntryFilter, GetEntryByIdInput } from './schemas/entry';
 
 // =============================================================================
 // Hooks
 // =============================================================================
-export {
-  useBlockPlace,
-  useEntries,
-  useEntry,
-  useEntryCreate,
-  useEntryMutations,
-  useEntryTags,
-} from './hooks';
+export { useBlockPlace, useEntries, useEntryMutations } from './hooks';
 
 // =============================================================================
 // Stores
 // =============================================================================
 export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
-export type { AnchorRect } from './stores/useEntryInspectorStore';
 
 // =============================================================================
 // Lib (actual-time overlay)
 // =============================================================================
-export { NO_OVERLAY, computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
-export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
 
 // =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
-export { getEntryState, isEntryPast } from './lib/entry-status';
+export { getEntryState } from './lib/entry-status';
 
 // =============================================================================
 // Lib (iCal export)
@@ -77,19 +65,10 @@ export { isNewEntry } from './lib/new-entry-tracker';
 // =============================================================================
 // Components (EntryCard)
 // =============================================================================
-export { EntryCard, EntryCardContent } from './components/card';
-export type { EntryCardPosition, EntryCardProps } from './components/card';
+export { EntryCard } from './components/card';
+export type { EntryCardPosition } from './components/card';
 
 // =============================================================================
-// Components
-// =============================================================================
-export { EntryInspector } from './components/inspector/EntryInspector';
-export { LoadingState } from './components/shared/LoadingState';
-
-// Inspector hooks
-export { useInspectorKeyboard } from './components/inspector/hooks';
-
-// =============================================================================
-// Server (Service layer — for server-side consumers like ai feature)
+// Server (Service layer — server-only ガードで保護済み)
 // =============================================================================
 export { EntryService } from './server/entry-service';

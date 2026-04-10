@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Supabase OAuth 2.1 認証ユーティリティ
  *

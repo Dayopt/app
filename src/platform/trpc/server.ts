@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * tRPC Server-side Helpers（App Router用）
  *

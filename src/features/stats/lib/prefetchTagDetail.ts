@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { headers } from 'next/headers';
 
 import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
@@ -8,10 +10,14 @@ import { computeStatsDateRange } from '../utils/computeDateRange';
 /**
  * タグ詳細ページ用 prefetch
  *
- * URL searchParams から読み取った granularity を使い、
+ * 旧: 個別8本のRPC → 新: getTagOverview (7並列) + getTagTimeline (2並列) の2本。
  * クライアント側と同じクエリキーでプリフェッチ → キャッシュヒット保証。
  */
-export async function prefetchTagDetailData(tagId: string, granularity: StatsGranularity = 'week') {
+export async function prefetchTagDetailData(
+  tagId: string,
+  granularity: StatsGranularity = 'week',
+  tagName: string = '',
+) {
   const helpers = await createServerHelpers();
 
   const now = new Date();
@@ -19,18 +25,19 @@ export async function prefetchTagDetailData(tagId: string, granularity: StatsGra
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
   const dateRange = computeStatsDateRange(now, granularity, serverTimezone);
 
-  const tagDateRange = { tagId, ...dateRange };
-
   try {
     await Promise.all([
-      helpers.entries.getTagCumulativeTime.prefetch(tagDateRange),
-      helpers.entries.getTagAvgFulfillment.prefetch(tagDateRange),
-      helpers.entries.getTagPlanRate.prefetch(tagDateRange),
-      helpers.entries.getTagHourlyDistribution.prefetch(tagDateRange),
-      helpers.entries.getTagDowDistribution.prefetch(tagDateRange),
-      helpers.entries.getTagFulfillmentDistribution.prefetch(tagDateRange),
-      helpers.entries.getTagAccuracyTrend.prefetch({ ...tagDateRange, bucket: 'week' }),
-      helpers.entries.getTagRecentEntries.prefetch({ tagId }),
+      helpers.entries.getTagOverview.prefetch({
+        tagId,
+        tagName: tagName || tagId,
+        ...dateRange,
+      }),
+      helpers.entries.getTagTimeline.prefetch({
+        tagId,
+        bucket: granularity === 'day' ? 'day' : granularity === 'year' ? 'month' : 'week',
+        recentLimit: 8,
+        ...dateRange,
+      }),
     ]);
   } catch {
     // 認証エラー等はスキップ（クライアント側で処理）

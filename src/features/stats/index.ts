@@ -24,20 +24,6 @@ export type { StatsGranularity } from './stores/useStatsFilterStore';
 // =============================================================================
 // Types
 // =============================================================================
-export type {
-  BlankRateData,
-  ContextSwitchData,
-  DeepUtilizationData,
-  EnergyMapRow,
-  EntryRateData,
-  EstimationAccuracyData,
-  MetricData,
-  MetricDefinition,
-  MetricFormat,
-  MetricId,
-  MetricTrend,
-  MetricValueParts,
-} from './types/metrics.types';
 export type { StatsViewProps } from './types/stats.types';
 
 // =============================================================================
@@ -51,5 +37,7 @@ export {
   formatMetricValueParts,
   getMetricTrend,
 } from './lib/metrics';
+// prefetchStatsData / prefetchTagDetailData はサーバー専用（next/headers使用）。
+// 各ファイルに import 'server-only' ガード済み。
 export { prefetchStatsData } from './lib/prefetch';
 export { prefetchTagDetailData } from './lib/prefetchTagDetail';

@@ -49,6 +49,7 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
             alt="Dayopt"
             width={20}
             height={20}
+            priority
             className="rounded-lg"
           />
           <span className="text-foreground text-sm font-medium tracking-tight">Dayopt</span>

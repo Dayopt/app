@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Suggestions Service
  *

@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Stripe クライアント初期化
  *

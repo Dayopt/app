@@ -3,6 +3,8 @@
  * プロシージャ定義とコンテキスト管理
  */
 
+import 'server-only';
+
 import { createHash, timingSafeEqual } from 'crypto';
 
 import * as Sentry from '@sentry/nextjs';
