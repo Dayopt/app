@@ -27,30 +27,18 @@ export const badgesRouter = createTRPCRouter({
     }),
 
   /**
-   * バッジ判定実行
+   * バッジ判定 + 進捗データを一括取得
+   *
+   * fetchSourceData / getEarnedSet を1回だけ呼び、
+   * 判定（INSERT）と進捗計算を同時に行う。（旧 evaluate + getProgress を統合）
    */
-  evaluate: protectedProcedure
-    .meta({ description: 'バッジ判定を実行し、新規獲得バッジを返却' })
+  evaluateWithProgress: protectedProcedure
+    .meta({ description: 'バッジ判定+進捗データを一括取得' })
     .mutation(async ({ ctx }) => {
       const service = createBadgesService(ctx.supabase);
 
       try {
-        return await service.evaluate(ctx.userId);
-      } catch (error) {
-        return handleServiceError(error);
-      }
-    }),
-
-  /**
-   * バッジ進捗データ
-   */
-  getProgress: protectedProcedure
-    .meta({ description: '未獲得バッジの進捗データ取得' })
-    .query(async ({ ctx }) => {
-      const service = createBadgesService(ctx.supabase);
-
-      try {
-        return await service.getProgress(ctx.userId);
+        return await service.evaluateWithProgress(ctx.userId);
       } catch (error) {
         return handleServiceError(error);
       }

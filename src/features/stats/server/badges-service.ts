@@ -306,16 +306,18 @@ export class BadgesService {
       profileResult,
       tagsResult,
     ] = await Promise.all([
-      // 1. entries
+      // 1. entries（ソフト削除を除外）
       this.supabase
         .from('entries')
         .select('start_time, end_time, duration_minutes')
-        .eq('user_id', userId),
-      // 2. entry_tags + entry duration
+        .eq('user_id', userId)
+        .is('deleted_at', null),
+      // 2. entry_tags + entry duration（ソフト削除を除外）
       this.supabase
         .from('entries')
         .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
-        .eq('user_id', userId),
+        .eq('user_id', userId)
+        .is('deleted_at', null),
       // 3. palette_items count
       this.supabase
         .from('palette_items')
