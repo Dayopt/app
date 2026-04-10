@@ -7,7 +7,8 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
+
+import { useTagTimelineData } from '../../hooks/useTagDetailData';
 
 const FULFILLMENT_EMOJI: Record<number, string> = {
   3: '😊',
@@ -37,10 +38,8 @@ function formatDate(iso: string): string {
 export function TagRecentBlocks({ tagId }: TagRecentBlocksProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data, isPending, isError, refetch } = api.entries.getTagRecentEntries.useQuery({
-    tagId,
-    limit: 8,
-  });
+  const { data: timeline, isPending, isError, refetch } = useTagTimelineData(tagId);
+  const data = timeline?.recentEntries ?? null;
 
   if (isPending) {
     return (

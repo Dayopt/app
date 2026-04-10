@@ -1,17 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
 
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { useTagOverviewData } from '../../hooks/useTagDetailData';
 import { formatHours } from '../../utils/formatHours';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
@@ -24,6 +20,7 @@ const chartConfig = {
 
 interface TagHourlyChartProps {
   tagId: string;
+  tagName?: string | undefined;
 }
 
 /**
@@ -31,22 +28,11 @@ interface TagHourlyChartProps {
  *
  * 横棒グラフで各時間帯の利用分数を表示。
  */
-export function TagHourlyChart({ tagId }: TagHourlyChartProps) {
+export function TagHourlyChart({ tagId, tagName }: TagHourlyChartProps) {
   const t = useTranslations('calendar.stats.tagDetail');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  const { data, isPending } = api.entries.getTagHourlyDistribution.useQuery({
-    tagId,
-    ...dateRange,
-  });
+  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const data = overview?.hourly ?? null;
 
   if (isPending) {
     return (
