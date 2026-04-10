@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
@@ -103,7 +103,12 @@ export const onboardingRouter = createTRPCRouter({
 
       // クロノタイプ設定 or ロケール設定（指定がある場合）
       if (input.chronotypeType || input.locale) {
-        const settingsUpsert: Record<string, unknown> = { user_id: ctx.userId };
+        const settingsUpsert: {
+          user_id: string;
+          chronotype_type?: string;
+          chronotype_enabled?: boolean;
+          preferred_locale?: string;
+        } = { user_id: ctx.userId };
         if (input.chronotypeType) {
           settingsUpsert.chronotype_type = input.chronotypeType;
           settingsUpsert.chronotype_enabled = true;
