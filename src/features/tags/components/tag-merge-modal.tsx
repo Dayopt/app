@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl';
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { logger } from '@/lib/logger';
@@ -50,6 +51,9 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [error, setError] = useState('');
   const [view, setView] = useState<MergeView>({ type: 'grid' });
+
+  // フォーカストラップ・初期フォーカス・フォーカス復元（PC のみ、モバイルは Drawer が処理）
+  useFocusTrap(panelRef, open && !isMobile);
 
   // モーダルが開いたらリセット
   const [prevOpen, setPrevOpen] = useState(open);
@@ -301,7 +305,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
       <div
         ref={panelRef}
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-label={t('calendar.filter.mergeTag.title')}
         className={cn(
           'bg-card border-border-subtle shadow-card absolute flex flex-col border',

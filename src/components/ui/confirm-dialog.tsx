@@ -1,11 +1,12 @@
 'use client';
 
-import { type ReactNode, useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
 import { useDialogKeyboard } from '@/hooks/useDialogKeyboard';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -95,9 +96,13 @@ export function ConfirmDialog({
   const t = useTranslations();
   const [isLoading, setIsLoading] = useState(false);
   const mounted = useHasMounted();
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // ESCキーでダイアログを閉じる
   useDialogKeyboard(open, isLoading, onClose);
+
+  // フォーカストラップ・初期フォーカス・フォーカス復元
+  useFocusTrap(panelRef, open);
 
   const handleConfirm = useCallback(async () => {
     setIsLoading(true);
@@ -155,13 +160,15 @@ export function ConfirmDialog({
     <div
       className="animate-in fade-in bg-overlay z-overlay-confirm fixed inset-0 flex items-center justify-center backdrop-blur-md duration-150"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-description"
     >
       {/* ダイアログコンテンツ: bg-card, rounded-2xl, p-6 */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+        tabIndex={-1}
         className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border-subtle shadow-card rounded-2xl border p-6 duration-150"
         style={{ width: `min(calc(100vw - 32px), ${maxWidth}px)` }}
         onClick={(e) => e.stopPropagation()}

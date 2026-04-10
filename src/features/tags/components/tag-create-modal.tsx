@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { ActionFooter } from '@/components/ui/action-footer';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { getColorDisplayName } from '@/components/ui/color-palette-picker';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSupportText } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useSubmitShortcut } from '@/hooks/useSubmitShortcut';
 import { logger } from '@/lib/logger';
@@ -62,6 +63,10 @@ export function TagCreateModal({
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // フォーカストラップ・初期フォーカス・フォーカス復元
+  useFocusTrap(panelRef, isOpen);
   const mounted = useHasMounted();
 
   // 既存タグからグループ候補を算出
@@ -194,11 +199,13 @@ export function TagCreateModal({
     <div
       className="z-overlay-modal fixed inset-0 flex items-center justify-center"
       onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tag-create-dialog-title"
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tag-create-dialog-title"
+        tabIndex={-1}
         className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border-subtle shadow-card rounded-2xl border p-6 duration-150"
         style={{ width: 'min(calc(100vw - 32px), 400px)' }}
         onClick={(e) => e.stopPropagation()}
