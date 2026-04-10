@@ -10,7 +10,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+  stories: [
+    '../src/**/*.mdx',
+    '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    './docs/**/*.mdx',
+    './docs/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+  ],
   addons: [
     '@storybook/addon-a11y',
     '@vueless/storybook-dark-mode',
