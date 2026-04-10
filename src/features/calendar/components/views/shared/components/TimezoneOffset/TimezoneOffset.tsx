@@ -18,7 +18,13 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   const tActions = useTranslations('calendar.actions');
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
-  const updateMutation = api.userSettings.update.useMutation();
+  const utils = api.useUtils();
+  const updateMutation = api.userSettings.update.useMutation({
+    onSuccess: () => {
+      void utils.userSettings.get.invalidate();
+      void utils.entries.invalidate();
+    },
+  });
 
   const getUTCOffset = (tz: string): string => {
     try {

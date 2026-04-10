@@ -28,7 +28,7 @@ export function useEntry(id: string, options?: { includeTags?: boolean; enabled?
       include: options?.includeTags ? { tags: true } : undefined,
     },
     {
-      ...cacheStrategies.plans, // staleTime: 30秒, gcTime: 2分
+      ...cacheStrategies.plans, // staleTime: 30秒, gcTime: 10分
       retry: 1,
       enabled: options?.enabled ?? true,
       // plans.list キャッシュからプレースホルダーデータを即座に表示

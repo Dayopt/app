@@ -29,8 +29,11 @@ export function NotificationSettings() {
   const t = useTranslations();
   const utils = api.useUtils();
 
-  // 通知設定を取得
-  const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery();
+  // 通知設定を取得（useNotificationPreferences と同じキャッシュ設定）
+  const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   // ユーザー設定を取得（メール言語用）
   const { data: userSettings } = api.userSettings.get.useQuery();

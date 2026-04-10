@@ -79,7 +79,9 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       if (context?.tempId) useCalendarFilterStore.getState().removeTag(context.tempId);
       if (showToast) toast.error(t('toast.createFailed'));
     },
-    onSettled: () => {},
+    onSettled: () => {
+      void utils.tags.list.invalidate();
+    },
   });
 }
 

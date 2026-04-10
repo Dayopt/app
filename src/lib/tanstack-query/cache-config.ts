@@ -62,7 +62,7 @@ export const cacheStrategies = {
   itemTags: standardCache,
   tagStats: standardCache,
   tagUsage: shortTermCache, // タグ使用数は頻繁に更新される
-  userSettings: staticCache,
+  userSettings: standardCache, // 全コールサイトで CACHE_5_MINUTES (5min) を使用しているため実態に合わせる
   plans: activeCache, // プランはカレンダー表示で重要
   planActivities: shortTermCache, // アクティビティ履歴は少し遅れてもOK
   recordActivities: shortTermCache, // レコードアクティビティ履歴
