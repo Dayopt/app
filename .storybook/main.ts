@@ -49,6 +49,36 @@ const config: StorybookConfig = {
   core: {
     disableTelemetry: true,
   },
+  previewHead: (head) => `
+    ${head}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Noto+Sans+JP:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --font-inter: 'Inter', sans-serif;
+        --font-noto-jp: 'Noto Sans JP', sans-serif;
+      }
+    </style>
+    <script>
+      document.documentElement.setAttribute('lang', 'ja');
+    </script>
+  `,
+  managerHead: (head) => `
+    ${head}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Noto+Sans+JP:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      document.documentElement.setAttribute('lang', 'ja');
+    </script>
+  `,
   viteFinal: async (config) => {
     // パスエイリアス設定
     config.resolve = config.resolve || {};

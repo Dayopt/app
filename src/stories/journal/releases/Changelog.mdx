@@ -1,0 +1,151 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Journal/Releases/Changelog" /># Changelog
+
+Dayopt Marketing のバージョン履歴と変更点。
+
+---
+
+## [v0.3.0] - 2026-01-16
+
+### Dayoptとしての形を整えたリリース
+
+UI統一、パフォーマンス改善、タグシステム刷新、デザインシステム整理を一気に進めた週の成果。
+
+#### 追加
+
+- `journal/decisions/2026-01-13-domain-url-structure.md` - ドメイン・URL構造決定
+- `journal/decisions/2026-01-15-tag-management-consolidation.md` - タグ管理UI統合
+- 創業者エピソード「名前Dayoptに込めた想い」
+- 週次振り返り（W03）の習慣化
+
+#### 変更
+
+- **ブランド統一**: 全リポジトリでDayoptに統一完了
+- **タグシステム**: TagGroup廃止 → 親子モデル（parentId）に移行
+- **デザインシステム**: DADS v2.0（Surface階層を4段階に簡素化）
+
+#### 品質基盤
+
+- Lighthouse CI導入（Phase 1/2の段階的アプローチ）
+- PostHog SDK導入（プロダクト分析）
+- Sentry修正
+
+#### 導出した原則
+
+- **「使う場所で作れる」原則**: 機能の入口は使う文脈に置く。管理専用ページは作らない。
+
+#### 週の進化
+
+```
+見た目（UI統一）→ 速度（Lighthouse）→ 構造（タグ親子）→ 整理（削除）
+```
+
+#### 関連
+
+- 日記: 2026-01-13 〜 2026-01-16
+- ADR: ドメイン決定、タグ管理UI統合
+
+---
+
+## [v0.2.0] - 2025-01-06
+
+### アプリ名「Dayopt」決定 & ブランド基盤確立
+
+プロダクトの正式名称が決定し、ブランドの基盤が整った。
+
+#### 追加
+
+- アプリ名「Dayopt」決定、ドメイン `dayopt.app` 取得
+- `strategy/brand/logo-references.md` - ロゴ参考資料
+- `strategy/sns/` - SNS戦略・各プラットフォーム方針
+- `strategy/roadmap.md` - リリースまでのチェックリスト
+- GAFA-First原則をCLAUDE.mdに追加
+
+#### 変更
+
+- 5本柱 → 3本柱（strategy, customers, journal）に簡素化
+- `decisions/` を `journal/decisions/` に移動
+- `releases/` を `journal/releases/` に移動
+- BoxLog → Dayopt への一括リネーム
+
+#### 決定事項
+
+- **アプリ名**: Dayopt（デイオプト）
+- **ドメイン**: dayopt.app（Vercel Domains、$15/年）
+- **SNSハンドル**: @dayoptapp で統一予定
+- **メール基盤**: トランザクション=Resend、ビジネス=検討中
+- **絶対原則**: GAFA-First（99%は既存の成功事例に従う）
+
+#### 関連Issue
+
+- #27 Dayopt 関連アカウント・ハンドル取得
+- #28 Dayopt メール基盤の設計・構築
+
+---
+
+## [v0.1.0] - 2025-12-25
+
+### 5本柱構造の確立 & ドキュメント専用化
+
+リポジトリの目的を「司令塔」として再定義し、構造をシンプル化。
+
+#### 追加
+
+- `strategy/` - 戦略・プロダクト原則（新規）
+- `customers/` - 顧客の声（新規、運用方針確定）
+- `journal/2025-12.md` - 月次日記の運用開始
+
+#### 変更
+
+- リポジトリ名を `boxlog-compass` → `marketing` に変更
+- `CLAUDE.md` - 330行 → 140行に簡素化（v7.0）
+- ディレクトリ構造を15本 → 5本柱に整理
+
+#### 削除
+
+- `graveyard/` - 未使用のため削除
+- `research/` 配下のコード要素（Makefile、package.json等）を削除
+
+#### 5本柱
+
+```
+strategy/   - 戦略・プロダクト原則
+customers/  - 顧客の声
+decisions/  - 意思決定ログ
+marketing/  - マーケ方針
+journal/    - 日々の記録
+```
+
+#### 決定事項
+
+- リポジトリ名: `boxlog-compass` → `marketing`（役割を明確化）
+- ドキュメント専用: コード実装は `dayopt-web` / `dayopt-app` で管理
+- 顧客の声: 自動化重視、軽い運用から開始
+- journal: 日々の思考を書き連ねる形式
+- バージョニング: v0.x.x（リリース前）→ v1.0.0（リリース時）
+
+#### 関連PR
+
+- （このブランチのPRリンクを後で追加）
+
+---
+
+## バージョニング方針
+
+- `v0.x.x` - リリース前（準備期間）
+- `v1.0.0` - プロダクトリリース
+- `v1.x.x` - リリース後〜2年目
+- `v2.x.x` - 3年目〜（以降、年単位でメジャー更新）
+
+---
+
+## 差分リンク
+
+- [v0.3.0](https://github.com/t3-nico/marketing/compare/v0.2.0...v0.3.0) - v0.2.0からの差分
+- [v0.2.0](https://github.com/t3-nico/marketing/compare/v0.1.0...v0.2.0) - v0.1.0からの差分
+- [v0.1.0](https://github.com/t3-nico/marketing/releases/tag/v0.1.0) - 初回リリース
+
+---
+
+_フォーマット: [Keep a Changelog](https://keepachangelog.com/) を参考_

@@ -1,5 +1,5 @@
 import { Meta } from '@storybook/addon-docs/blocks';
-import { Mermaid } from '../../../../.storybook/components/Mermaid';
+import { Mermaid } from '../../../../.storybook/decorators/Mermaid';
 
 <Meta title="Docs/Architecture/PWA" />
 
@@ -42,22 +42,23 @@ Dayoptのオフライン対応・インストール体験・プッシュ通知�
     SW -- "キャッシュ" --> Cache
     Cache -- "オフライン時" --> App
     TRPC --> SB
+
 `} />
 
 ---
 
 ## レイヤー構成
 
-| レイヤー | 技術 | 役割 |
-|---------|------|------|
-| **Service Worker** | \`public/sw.js\` | 静的アセットキャッシュ、オフラインフォールバック、Background Sync |
-| **Sync Queue** | \`src/lib/pwa/sync-queue.ts\` | オフラインmutationのIndexedDB永続化 + dedup |
-| **Sync Processor** | \`src/lib/pwa/sync-processor.ts\` | オンライン復帰時のmutation再送 |
-| **Query Persist** | \`src/lib/tanstack-query/persist-storage.ts\` | TanStack Queryキャッシュの IndexedDB永続化 |
-| **Storage Adapter** | \`src/lib/zustand/storage.ts\` | Zustand persistのプラットフォーム抽象化 |
-| **Install Prompt** | \`src/lib/pwa/install-prompt.ts\` | PWAインストール促進 |
-| **iOS Workarounds** | \`src/lib/pwa/ios-workarounds.ts\` | iOS Safari固有の制約対応 |
-| **App Badge** | \`src/lib/pwa/app-badge.ts\` | 通知未読数のアプリバッジ表示 |
+| レイヤー            | 技術                                          | 役割                                                              |
+| ------------------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| **Service Worker**  | \`public/sw.js\`                              | 静的アセットキャッシュ、オフラインフォールバック、Background Sync |
+| **Sync Queue**      | \`src/lib/pwa/sync-queue.ts\`                 | オフラインmutationのIndexedDB永続化 + dedup                       |
+| **Sync Processor**  | \`src/lib/pwa/sync-processor.ts\`             | オンライン復帰時のmutation再送                                    |
+| **Query Persist**   | \`src/lib/tanstack-query/persist-storage.ts\` | TanStack Queryキャッシュの IndexedDB永続化                        |
+| **Storage Adapter** | \`src/lib/zustand/storage.ts\`                | Zustand persistのプラットフォーム抽象化                           |
+| **Install Prompt**  | \`src/lib/pwa/install-prompt.ts\`             | PWAインストール促進                                               |
+| **iOS Workarounds** | \`src/lib/pwa/ios-workarounds.ts\`            | iOS Safari固有の制約対応                                          |
+| **App Badge**       | \`src/lib/pwa/app-badge.ts\`                  | 通知未読数のアプリバッジ表示                                      |
 
 ---
 
@@ -88,28 +89,29 @@ Dayoptのオフライン対応・インストール体験・プッシュ通知�
     SQ->>API: vanillaTrpc.mutate()
     API-->>SQ: 成功
     SQ->>SQ: IndexedDBから削除
+
 `} />
 
 ### Mutation圧縮（Deduplication）
 
 同じエンティティへの複数mutationを自動圧縮する:
 
-| パターン | 圧縮結果 |
-|---------|---------|
+| パターン                                  | 圧縮結果                         |
+| ----------------------------------------- | -------------------------------- |
 | `entries.update(A)` → `entries.update(A)` | inputをマージして1件に（後勝ち） |
-| `entries.create(A)` → `entries.delete(A)` | 両方削除（net no-op） |
-| `entries.update(A)` → `entries.delete(A)` | deleteのみ残す |
+| `entries.create(A)` → `entries.delete(A)` | 両方削除（net no-op）            |
+| `entries.update(A)` → `entries.delete(A)` | deleteのみ残す                   |
 
 ---
 
 ## Service Worker キャッシュ戦略
 
-| リクエスト種別 | 戦略 | 詳細 |
-|---------------|------|------|
-| **ナビゲーション** | Network First | 失敗時はキャッシュ → `/offline` ページ |
-| **静的アセット** | Cache First | JS/CSS/画像/フォント → ネットワークフォールバック |
-| **動的リクエスト** | Network First | GETのみキャッシュ → キャッシュフォールバック |
-| **除外** | No Cache | HMR、認証API、tRPC API |
+| リクエスト種別     | 戦略          | 詳細                                              |
+| ------------------ | ------------- | ------------------------------------------------- |
+| **ナビゲーション** | Network First | 失敗時はキャッシュ → `/offline` ページ            |
+| **静的アセット**   | Cache First   | JS/CSS/画像/フォント → ネットワークフォールバック |
+| **動的リクエスト** | Network First | GETのみキャッシュ → キャッシュフォールバック      |
+| **除外**           | No Cache      | HMR、認証API、tRPC API                            |
 
 ```
 // キャッシュバージョニング
@@ -140,11 +142,11 @@ dayopt-dynamic-v2 → 動的レスポンス（短期）
 >
 ```
 
-| 設定 | 値 | 理由 |
-|------|-----|------|
-| **maxAge** | 2時間 | staticCache の gcTime に合わせる |
-| **buster** | APP_VERSION | デプロイ時に古いキャッシュを自動破棄 |
-| **シリアライザー** | superjson | tRPCと同じ（Date型のround-trip保証） |
+| 設定               | 値          | 理由                                 |
+| ------------------ | ----------- | ------------------------------------ |
+| **maxAge**         | 2時間       | staticCache の gcTime に合わせる     |
+| **buster**         | APP_VERSION | デプロイ時に古いキャッシュを自動破棄 |
+| **シリアライザー** | superjson   | tRPCと同じ（Date型のround-trip保証） |
 
 ---
 
@@ -158,7 +160,7 @@ import { platformStorage } from '@/lib/zustand/storage';
 
 persist(storeCreator, {
   name: 'calendar-settings',
-  storage: platformStorage(),  // localStorage ベース
+  storage: platformStorage(), // localStorage ベース
 });
 
 // React Native（将来）
@@ -176,24 +178,26 @@ setPlatformStorageBackend({
 
 ## iOS Safari 固有対応
 
-| 問題 | 対策 | ファイル |
-|------|------|---------|
-| SWキャッシュ7日失効 | 定期的にSW ping（3日ごと + visibilitychange時） | `startSWKeepAlive()` |
-| `100vh` バグ | `--vh` CSS変数で実際のビューポート高さを設定 | `fixIOSViewportHeight()` |
-| スワイプバック離脱 | history sentinel エントリで popstate をガード | `preventStandaloneNavLoss()` |
-| 外部リンクでSafariに遷移 | click ハンドラで `window.open` に差替え | `patchExternalLinks()` |
-| `beforeinstallprompt` 非対応 | iOS専用「共有→ホーム画面に追加」ガイドUI | `IOSInstallGuide` |
-| スプラッシュスクリーン | 8デバイスサイズの `apple-touch-startup-image` | `layout.tsx` |
+| 問題                         | 対策                                            | ファイル                     |
+| ---------------------------- | ----------------------------------------------- | ---------------------------- |
+| SWキャッシュ7日失効          | 定期的にSW ping（3日ごと + visibilitychange時） | `startSWKeepAlive()`         |
+| `100vh` バグ                 | `--vh` CSS変数で実際のビューポート高さを設定    | `fixIOSViewportHeight()`     |
+| スワイプバック離脱           | history sentinel エントリで popstate をガード   | `preventStandaloneNavLoss()` |
+| 外部リンクでSafariに遷移     | click ハンドラで `window.open` に差替え         | `patchExternalLinks()`       |
+| `beforeinstallprompt` 非対応 | iOS専用「共有→ホーム画面に追加」ガイドUI        | `IOSInstallGuide`            |
+| スプラッシュスクリーン       | 8デバイスサイズの `apple-touch-startup-image`   | `layout.tsx`                 |
 
 ---
 
 ## インストール促進
 
 ### Android / Chrome系
+
 `beforeinstallprompt` イベントをキャプチャし、カスタム `InstallBanner` を表示。
 dismissすると7日間非表示（localStorage）。
 
 ### iOS Safari
+
 `IOSInstallGuide` コンポーネントで「共有→ホーム画面に追加」の手順を表示。
 standalone mode 検知済みの場合は非表示。
 
@@ -201,12 +205,12 @@ standalone mode 検知済みの場合は非表示。
 
 ## 同期状態UI
 
-| 状態 | 表示 |
-|------|------|
-| オフライン | `CloudOff` + "オフライン" |
-| 同期待ち | `Loader2`（回転）+ "同期待ちN件" |
-| 同期失敗 | `AlertTriangle` + "同期失敗N件" + クリアボタン |
-| 正常 | 非表示 |
+| 状態       | 表示                                           |
+| ---------- | ---------------------------------------------- |
+| オフライン | `CloudOff` + "オフライン"                      |
+| 同期待ち   | `Loader2`（回転）+ "同期待ちN件"               |
+| 同期失敗   | `AlertTriangle` + "同期失敗N件" + クリアボタン |
+| 正常       | 非表示                                         |
 
 - `SyncStatusIndicator` → `AppHeader` 右側に配置（全ページ共通）
 - オフライン↔オンライン切替時に toast 通知
@@ -278,14 +282,18 @@ public/
 ## テスト
 
 ### ユニットテスト（60件）
+
 `src/lib/pwa/__tests__/offline-sync.test.ts`
+
 - sync-queue: enqueue/getAll/updateEntry/removeEntry/clearCompleted
 - sync-processor: processQueue + online復帰 + 二重処理防止
 - offline-mutation: ネットワークエラー判定 + mutationKey抽出
 - フルフロー: enqueue → dedup → processQueue → 削除
 
 ### E2Eテスト（スケルトン）
+
 `src/test/e2e/pwa/offline-sync.spec.ts`
+
 - Playwright使用、本番ビルドでのみ動作
 - manifest/SW/オフラインページの検証
 - オフライン→オンライン同期フロー（TODO: 実装待ち）
