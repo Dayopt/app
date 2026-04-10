@@ -29,7 +29,7 @@ try {
  * 実データがない場合はサンプルデータを使用。
  */
 const meta = {
-  title: 'Docs/Quality/Dashboard',
+  title: 'Architecture/Quality/Dashboard',
   component: QualityDashboard,
   parameters: { layout: 'fullscreen' },
   tags: ['docs-only'],
