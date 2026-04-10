@@ -1,7 +1,5 @@
 // DateDisplay コンポーネント群
 export { DateDisplay } from './DateDisplay';
-export { DateDisplayRow } from './DateDisplayRow';
-export { DayDisplay } from './DayDisplay';
 
 // 型定義
 export type * from './DateDisplay.types';

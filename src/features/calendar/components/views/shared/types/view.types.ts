@@ -30,17 +30,6 @@ export interface DayColumnProps {
   className?: string | undefined;
 }
 
-/** 日付表示コンポーネントのプロパティ */
-export interface DayDisplayProps {
-  date: Date;
-  isToday?: boolean;
-  isWeekend?: boolean;
-  isSelected?: boolean;
-  format?: 'short' | 'long' | 'numeric';
-  onClick?: (date: Date) => void;
-  className?: string;
-}
-
 /** 空状態コンポーネントのプロパティ */
 export interface EmptyStateProps {
   title?: string;

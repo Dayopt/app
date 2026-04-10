@@ -12,19 +12,6 @@ export interface DateDisplayProps {
   onDoubleClick?: ((date: Date) => void) | undefined;
 }
 
-/** DateDisplayRow コンポーネントのプロパティ */
-export interface DateDisplayRowProps {
-  dates: Date[];
-  className?: string | undefined;
-  selectedDate?: Date | undefined;
-  showDayNames?: boolean | undefined;
-  showMonthYear?: boolean | undefined;
-  dayNameFormat?: 'short' | 'long' | 'narrow' | undefined;
-  dateFormat?: string | undefined;
-  onDateClick?: ((date: Date) => void) | undefined;
-  onDateDoubleClick?: ((date: Date) => void) | undefined;
-}
-
 /** DateDisplay のスタイル計算に使用するプロパティ */
 export interface DateDisplayStyleProps {
   isToday: boolean;
