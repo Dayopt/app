@@ -45,7 +45,8 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 // =============================================================================
 // Lib (actual-time overlay)
 // =============================================================================
-export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export { NO_OVERLAY, computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export type { ActualTimeDiffOverlay } from './lib/actual-time-overlay';
 
 // =============================================================================
 // Lib (entry-status utilities)
@@ -66,7 +67,7 @@ export { isNewEntry } from './lib/new-entry-tracker';
 // Components (EntryCard)
 // =============================================================================
 export { EntryCard } from './components/card';
-export type { EntryCardPosition } from './components/card';
+export type { EntryCardPosition, EntryCardProps } from './components/card';
 
 // =============================================================================
 // Server (Service layer — server-only ガードで保護済み)

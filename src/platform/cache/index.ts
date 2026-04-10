@@ -16,7 +16,7 @@
  */
 
 // キャッシュユーティリティ
-export { createCachedTagsFetcher, getUserTagsCacheTag } from './tag-cache';
+export { getUserTagsCacheTag } from './tag-cache';
 
 // サーバーアクション（キャッシュ無効化）
-export { invalidateCalendarCache, invalidateUserTagsCache } from './actions';
+export { invalidateUserTagsCache } from './actions';

@@ -15,7 +15,6 @@ export { NotificationItem } from './components/NotificationItem';
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useNotificationPreferences } from './hooks/useNotificationPreferences';
 export { useNotifications } from './hooks/useNotifications';
 export {
   useNotificationMutations,
@@ -26,22 +25,4 @@ export {
 // =============================================================================
 // Types
 // =============================================================================
-export type { Notification, NotificationEntity, NotificationType } from './types';
-
-// =============================================================================
-// Utils
-// =============================================================================
-export {
-  checkBrowserNotificationSupport,
-  filterNotificationsByTab,
-  getDateGroupKey,
-  groupNotificationsByDate,
-  requestNotificationPermission,
-  showBrowserNotification,
-} from './utils/notification-helpers';
-export type { ActivityTab, DateGroupKey, GroupedNotifications } from './utils/notification-helpers';
-
-// =============================================================================
-// Transformers
-// =============================================================================
-export { transformNotificationEntities, transformNotificationEntity } from './lib/transformers';
+export type { ActivityTab } from './utils/notification-helpers';

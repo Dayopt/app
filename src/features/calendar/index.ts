@@ -39,15 +39,8 @@ export {
 } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
-// Contexts
-// =============================================================================
-export { useCalendarEntryActions } from './contexts/CalendarEntryActionsContext';
-export type { CalendarEntryActions } from './contexts/CalendarEntryActionsContext';
-
-// =============================================================================
 // Hooks
 // =============================================================================
-export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
@@ -67,12 +60,3 @@ export { useEntryOperations } from './hooks/operations/useEntryOperations';
 export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
 export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
-
-// =============================================================================
-// Grid Constants (used by settings feature)
-// =============================================================================
-export {
-  HOUR_HEIGHT,
-  HOUR_HEIGHT_DENSITIES,
-} from './components/views/shared/constants/grid.constants';
-export type { HourHeightDensity } from './components/views/shared/constants/grid.constants';

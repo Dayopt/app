@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidateTag } from 'next/cache';
 
 import { getUserTagsCacheTag } from './tag-cache';
 
@@ -22,21 +22,6 @@ function safeRevalidateTag(tag: string): void {
 }
 
 /**
- * Next.js revalidatePathを安全に呼び出す
- *
- * Router Cache（staleTimes.dynamic: 30s）を含むサーバーサイドキャッシュを
- * パス単位で無効化する。revalidateTagと同様にtRPCコンテキストでの
- * エラーを安全に無視する。
- */
-function safeRevalidatePath(path: string, type?: 'layout' | 'page'): void {
-  try {
-    revalidatePath(path, type);
-  } catch {
-    // tRPCコンテキストからの呼び出し時は無視
-  }
-}
-
-/**
  * ユーザーのタグキャッシュを無効化
  *
  * タグのmutation（create/update/delete/merge/reorder）後に呼び出す。
@@ -51,21 +36,4 @@ function safeRevalidatePath(path: string, type?: 'layout' | 'page'): void {
  */
 export async function invalidateUserTagsCache(userId: string): Promise<void> {
   safeRevalidateTag(getUserTagsCacheTag(userId));
-}
-
-/**
- * カレンダー・Stats関連ページのRouter Cacheを無効化
- *
- * エントリの作成/更新/削除後に呼び出すことで、
- * next.config.mjsのstaleTimes.dynamic（30s）による
- * stale Router Cacheを即座にクリアする。
- *
- * @example
- * // tRPCルーターで使用
- * await service.createEntry({ ... });
- * await invalidateCalendarCache();
- */
-export async function invalidateCalendarCache(): Promise<void> {
-  // layoutレベルで無効化し、配下の全ページ（day/week/[nday]/stats）を一括クリア
-  safeRevalidatePath('/[locale]/(app)', 'layout');
 }
