@@ -1,0 +1,66 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Welcome" />
+
+# Dayopt
+
+タイムボクシング × 時間記録 × タスク × カレンダーを一体化した、個人向け生産性アプリ。
+
+---
+
+## Tech Stack
+
+Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zustand / Supabase / tRPC v11 / Zod / shadcn/ui / Sentry
+
+## セットアップ
+
+```bash
+npm install
+npm run dev          # 開発サーバー（localhost:3000）
+npm run storybook    # Storybook（localhost:6006）
+```
+
+### 検証コマンド
+
+```bash
+npm run typecheck        # 型チェック
+npm run lint             # ESLint
+npm run lint:boundaries  # feature境界チェック
+npm run test:run         # ユニットテスト
+```
+
+---
+
+## セクション
+
+### Architecture
+
+技術スタックとインフラ構成。
+
+- [Tech Stack](?path=/docs/architecture-tech-stack--docs)
+
+### Strategy
+
+ブランド戦略、マーケティング、SNS運用方針。
+
+- [Brand Messaging](?path=/docs/strategy-brand-messaging--docs) — JTBD・コアメッセージ設計
+- [Persona](?path=/docs/strategy-brand-persona--docs) — ターゲットユーザー定義
+- [Competitors](?path=/docs/strategy-competitors--docs) — 競合分析・差別化軸
+- [Growth Cycle](?path=/docs/strategy-growth-cycle--docs) — 認知→登録→定着→課金→口コミ
+- [Roadmap](?path=/docs/strategy-roadmap--docs) — Now/Next/Later ロードマップ
+
+### Decisions
+
+設計判断の記録（ADR形式）。
+
+- [001 App Naming](?path=/docs/decisions-001-app-naming--docs) — アプリ名「Dayopt」の決定
+- [002 Record Feature Design](?path=/docs/decisions-002-record-feature-design--docs) — Record DB設計
+- [006 Storybook Adoption](?path=/docs/decisions-006-storybook-adoption--docs) — Storybook導入の決め手
+
+### Components
+
+UIコンポーネントとStory。サイドバーの **Components** / **Features** から閲覧。
+
+### Docs
+
+技術ドキュメント（アーキテクチャ、a11y、品質、ガイド）。サイドバーの **Docs** から閲覧。
