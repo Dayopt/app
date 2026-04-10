@@ -28,7 +28,7 @@ export function useWeekendNavigation({
 
   useEffect(() => {
     latestRef.current = { viewType, currentDate, showWeekends, navigateToDate };
-  });
+  }, [viewType, currentDate, showWeekends, navigateToDate]);
 
   /**
    * 週末を考慮して日付を調整
