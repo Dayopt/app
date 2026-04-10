@@ -228,7 +228,7 @@ function AvatarUpload({
           ),
         })}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps({ 'aria-label': t('avatarAlt') })} />
 
         {/* アバター画像またはプレースホルダー */}
         {displayUrl ? (

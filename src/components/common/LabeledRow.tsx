@@ -1,6 +1,13 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import {
+  Children,
+  type ReactElement,
+  type ReactNode,
+  cloneElement,
+  isValidElement,
+  useId,
+} from 'react';
 
 import { ChevronRight } from 'lucide-react';
 
@@ -24,6 +31,7 @@ interface LabeledRowProps {
  * - min-h-11 (44px) でタッチターゲット保証
  * - variant="navigate" で ChevronRight 自動表示 + 行タップ可能
  * - variant="action" で destructive カラー
+ * - control variant の子要素に aria-labelledby を自動注入（a11y）
  *
  * 現在は主に Settings / Chronotype の設定系UIで使用。
  * DAG上 settings (Cross-cutting) と chronotype (Layer 0) の共通依存先として common/ に配置。
@@ -35,8 +43,24 @@ export function LabeledRow({
   variant = 'control',
   onClick,
 }: LabeledRowProps) {
+  const autoLabelId = useId();
   const isNavigate = variant === 'navigate';
   const isAction = variant === 'action';
+  const isControl = variant === 'control';
+
+  // control variant の子要素に aria-labelledby を自動注入
+  const enhancedChildren =
+    isControl && children
+      ? Children.map(children, (child) => {
+          if (!isValidElement(child)) return child;
+          const props = child.props as Record<string, unknown>;
+          // 既に aria-label / aria-labelledby を持つ要素はスキップ
+          if (props['aria-label'] || props['aria-labelledby']) return child;
+          return cloneElement(child as ReactElement<Record<string, unknown>>, {
+            'aria-labelledby': autoLabelId,
+          });
+        })
+      : children;
 
   const content = (
     <div
@@ -47,13 +71,18 @@ export function LabeledRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className={cn('text-base', isAction && 'text-destructive')}>{label}</div>
+        <div
+          id={isControl ? autoLabelId : undefined}
+          className={cn('text-base', isAction && 'text-destructive')}
+        >
+          {label}
+        </div>
         {description ? (
           <div className="text-muted-foreground mt-1 text-sm">{description}</div>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {children}
+        {enhancedChildren}
         {isNavigate && <ChevronRight className="text-muted-foreground size-4" />}
       </div>
     </div>

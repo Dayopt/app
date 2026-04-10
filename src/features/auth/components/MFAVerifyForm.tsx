@@ -132,9 +132,11 @@ export function MFAVerifyForm({
                       {t('auth.mfaVerify.recoveryCodeInput')}
                     </FieldLabel>
                     <Input
+                      id="recovery-code"
                       value={recoveryCode}
                       onChange={(e) => onRecoveryCodeChange(e.target.value.toUpperCase())}
                       placeholder={t('auth.mfaVerify.recoveryCodePlaceholder')}
+                      aria-label={t('auth.mfaVerify.recoveryCodeInput')}
                       className="text-center font-mono text-lg tracking-widest"
                       maxLength={9}
                       autoComplete="off"

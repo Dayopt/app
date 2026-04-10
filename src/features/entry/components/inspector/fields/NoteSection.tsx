@@ -70,6 +70,7 @@ export function NoteSection({
         placeholder={placeholder}
         disabled={disabled}
         maxLength={maxLength}
+        aria-label={label}
         rows={1}
         className="bg-input text-foreground placeholder:text-muted-foreground focus-visible:ring-ring field-sizing-content max-h-40 min-h-8 resize-none overflow-y-auto rounded-lg border border-transparent px-4 py-2 text-sm leading-normal shadow-inner outline-none focus-visible:ring-2"
       />

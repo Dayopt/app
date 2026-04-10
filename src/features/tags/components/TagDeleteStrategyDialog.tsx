@@ -106,6 +106,7 @@ export function TagDeleteStrategyDialog({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('deleteStrategy.searchTags')}
+                  aria-label={t('deleteStrategy.searchTags')}
                   className="pl-8"
                 />
               </div>

@@ -157,6 +157,7 @@ export function TagRenameDialog({
           <Input
             ref={inputRef}
             id="tag-rename-input"
+            aria-label={t('calendar.filter.rename')}
             value={name}
             onChange={(e) => {
               setName(e.target.value);

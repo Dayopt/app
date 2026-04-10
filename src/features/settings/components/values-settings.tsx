@@ -218,6 +218,7 @@ function ValueCategoryCollapsible({
             value={text}
             onChange={(e) => onTextChange(category, e.target.value)}
             placeholder={t('settings.values.placeholder')}
+            aria-label={t(`settings.values.categories.${category}`)}
             className="min-h-15 resize-none text-base md:text-sm"
             rows={2}
           />

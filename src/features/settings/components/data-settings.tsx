@@ -218,7 +218,14 @@ function RestoreSection() {
       <div className="border-border flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8">
         <Upload className="text-muted-foreground mb-2 h-8 w-8" />
         <p className="text-muted-foreground text-base md:text-sm">{t('dropzone')}</p>
-        <input ref={fileInputRef} type="file" accept=".json" className="hidden" disabled />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          disabled
+          aria-hidden="true"
+        />
         <Button
           variant="ghost"
           className="mt-4"
@@ -436,6 +443,7 @@ function DeletionSection() {
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             placeholder={keyword}
+            aria-label={t('typeToConfirm', { keyword })}
             autoFocus
           />
         </div>
