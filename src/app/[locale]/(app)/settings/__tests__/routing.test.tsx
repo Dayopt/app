@@ -20,7 +20,7 @@ vi.mock('next-intl', () => ({
   useLocale: () => 'ja',
 }));
 
-vi.mock('@/platform/i18n/navigation', async () => {
+vi.mock('@/lib/i18n/navigation', async () => {
   const React = await import('react');
   return {
     Link: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>
@@ -100,7 +100,7 @@ vi.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/platform/trpc', () => ({
+vi.mock('@/lib/trpc', () => ({
   api: {
     billing: {
       getOverview: {

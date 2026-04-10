@@ -8,9 +8,9 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import {
   createCheckoutSession,

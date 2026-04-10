@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { vanillaTrpc } from '@/platform/trpc/client';
+import { vanillaTrpc } from '@/lib/trpc/client';
 
 import { logger } from '@/lib/logger';
 import { initSyncProcessor, setSyncExecutor } from '@/lib/pwa/sync-processor';

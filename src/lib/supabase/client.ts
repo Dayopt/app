@@ -14,7 +14,7 @@
  * 使用例:
  * ```tsx
  * 'use client'
- * import { createClient } from '@/platform/supabase/client'
+ * import { createClient } from '@/lib/supabase/client'
  *
  * export function SignInButton() {
  *   const supabase = createClient()

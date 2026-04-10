@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { entriesToICal } from '@/features/entry';
 import { logger } from '@/lib/logger';
 import { icalFeedRateLimit } from '@/lib/rate-limit/upstash';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
  * トークンからユーザーIDを取得

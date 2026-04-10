@@ -123,8 +123,8 @@ export function create{Entity}Service(supabase: SupabaseClient<Database>) {
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { create{Entity}Service } from './{feature}-service';
 
 export const {feature}Router = createTRPCRouter({
@@ -192,7 +192,7 @@ export const {feature}Router = createTRPCRouter({
 ### 3. メインルーターに登録
 
 ```typescript
-// src/platform/trpc/root.ts
+// src/lib/trpc/root.ts
 import { {feature}Router } from '@/features/{feature}/server/router';
 
 export const appRouter = createTRPCRouter({
@@ -216,8 +216,8 @@ export const appRouter = createTRPCRouter({
 ## 重要なインポートパス
 
 ```typescript
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
-import { handleServiceError } from '@/platform/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
 import { logger } from '@/lib/logger';
 import type { Database } from '@/lib/database.types';
 ```
@@ -230,7 +230,7 @@ import type { Database } from '@/lib/database.types';
 - [ ] `handleServiceError` でエラーハンドリング
 - [ ] `user_id` でフィルタリング（マルチテナント）
 - [ ] テストファイル作成
-- [ ] `src/platform/trpc/root.ts` に登録
+- [ ] `src/lib/trpc/root.ts` に登録
 
 ## 既存ルーター参考
 

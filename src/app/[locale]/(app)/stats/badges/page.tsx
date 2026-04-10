@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BadgeSection } from '@/features/stats';
-import type { Locale } from '@/platform/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
 
 export async function generateMetadata({
   params,

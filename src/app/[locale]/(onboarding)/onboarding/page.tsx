@@ -18,10 +18,10 @@ import {
   ChronotypeQuiz,
 } from '@/features/chronotype';
 import { OnboardingWizard } from '@/features/onboarding';
+import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { useRouter } from '@/platform/i18n/navigation';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import type { QuizCallbacks } from '@/features/onboarding';
 import type { PresetChronotypeType } from '@/types/chronotype';

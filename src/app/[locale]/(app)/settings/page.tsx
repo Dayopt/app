@@ -1,6 +1,6 @@
 'use client';
 
-import { Link, useRouter } from '@/platform/i18n/navigation';
+import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useEffect, useState } from 'react';
 
 import {
@@ -26,8 +26,8 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { api } from '@/lib/trpc';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
-import { api } from '@/platform/trpc';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useAuthStore } from '@/stores/useAuthStore';

@@ -4,7 +4,7 @@ import { Suspense, lazy, useEffect } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { CACHE_5_MINUTES } from '@/lib/date';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import type { SettingsCategory } from '../types';
 

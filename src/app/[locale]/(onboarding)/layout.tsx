@@ -9,7 +9,7 @@
  */
 import type { Metadata } from 'next';
 
-import { IntlProvider } from '@/platform/i18n';
+import { IntlProvider } from '@/lib/i18n';
 import { OnboardingProviders } from '@/shell/providers/OnboardingProviders';
 
 /** オンボーディングページはクロール不要（noindex） */

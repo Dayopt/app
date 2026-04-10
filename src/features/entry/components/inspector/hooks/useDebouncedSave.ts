@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { logger } from '@/lib/logger';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { useEntryMutations } from '../../../hooks/useEntryMutations';
 import { useEntryTags } from '../../../hooks/useEntryTags';

@@ -13,8 +13,8 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { MFAVerifyForm } from '@/features/auth';
-import { createClient } from '@/platform/supabase/client';
-import { vanillaTrpc } from '@/platform/trpc/client';
+import { createClient } from '@/lib/supabase/client';
+import { vanillaTrpc } from '@/lib/trpc/client';
 
 type VerifyMode = 'totp' | 'recovery';
 

@@ -21,7 +21,7 @@ import {
 } from '@/lib/rate-limit/upstash';
 import { RECAPTCHA_CONFIG } from '@/lib/recaptcha/config';
 import { isScoreAboveThreshold, verifyRecaptchaV3 } from '@/lib/recaptcha/verify';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 const authPostSchema = z.discriminatedUnion('action', [
   z.object({

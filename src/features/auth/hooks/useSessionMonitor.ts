@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { SESSION_CONFIG, SESSION_SECURITY } from '@/lib/auth/session-config';
 import { logger } from '@/lib/logger';
-import { SESSION_CONFIG, SESSION_SECURITY } from '@/platform/auth/session-config';
-import { createClient } from '@/platform/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 import { useAuthStore } from '@/stores/useAuthStore';
 

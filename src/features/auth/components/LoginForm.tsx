@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Link } from '@/platform/i18n/navigation';
+import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,8 @@ import { Input } from '@/components/ui/input';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/platform/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';

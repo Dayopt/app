@@ -25,7 +25,7 @@ import {
   extractBearerToken,
   OAuthError,
   verifyOAuthToken,
-} from '@/platform/supabase/oauth';
+} from '@/lib/supabase/oauth';
 
 import type { Database } from '@/lib/database.types';
 

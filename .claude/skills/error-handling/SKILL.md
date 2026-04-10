@@ -219,7 +219,7 @@ const mutation = api.tags.create.useMutation({
 ## Sentry連携
 
 ```typescript
-// platform/sentry/integration.ts
+// lib/sentry/integration.ts
 import * as Sentry from '@sentry/nextjs';
 import { AppError } from '@/lib/errors';
 
@@ -302,8 +302,8 @@ ErrorBoundary配置時：
 
 ```
 src/lib/errors/                  # エラーコード・パターン定義
-src/platform/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
-src/platform/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
+src/lib/sentry/             # Sentry連携（integration.ts, performance.ts, trace.ts）
+src/lib/trpc/errors.ts      # tRPCエラーハンドリング（handleServiceError）
 src/lib/tanstack-query/          # TanStack Queryキャッシュ・楽観的更新
 ```
 

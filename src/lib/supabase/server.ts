@@ -16,7 +16,7 @@ import 'server-only';
  * 使用例:
  * ```tsx
  * // Server Component
- * import { createClient } from '@/platform/supabase/server'
+ * import { createClient } from '@/lib/supabase/server'
  *
  * export default async function DashboardPage() {
  *   const supabase = createClient()
@@ -33,7 +33,7 @@ import 'server-only';
  * ```tsx
  * // Server Action
  * 'use server'
- * import { createClient } from '@/platform/supabase/server'
+ * import { createClient } from '@/lib/supabase/server'
  *
  * export async function updateProfile(formData: FormData) {
  *   const supabase = createClient()

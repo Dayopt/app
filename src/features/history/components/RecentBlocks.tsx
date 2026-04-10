@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
 
 interface RecentBlocksProps {

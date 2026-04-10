@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createMockContext } from '@/test/trpc-test-helpers';
 
-import { createCallerFactory } from '@/platform/trpc/procedures';
+import { createCallerFactory } from '@/lib/trpc/procedures';
 
 import { billingRouter } from '../billing-router';
 
@@ -25,7 +25,7 @@ vi.mock('../billing-service', () => ({
 }));
 
 // handleServiceError のモック（ServiceError を TRPCError に変換する）
-vi.mock('@/platform/trpc/errors', () => ({
+vi.mock('@/lib/trpc/errors', () => ({
   handleServiceError: vi.fn((error: unknown) => {
     throw error;
   }),

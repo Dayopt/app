@@ -88,7 +88,7 @@ function generateFingerprint(error: AppError): string[] {
  *
  * @example
  * ```typescript
- * import { reportToSentry } from '@/platform/sentry'
+ * import { reportToSentry } from '@/lib/sentry'
  * import { AppError } from '@/config/error-patterns'
  *
  * try {

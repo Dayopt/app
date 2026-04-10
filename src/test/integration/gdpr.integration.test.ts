@@ -20,7 +20,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { userRouter } from '@/features/auth/server/router';
 import type { Database } from '@/lib/database.types';
-import type { Context } from '@/platform/trpc/procedures';
+import type { Context } from '@/lib/trpc/procedures';
 import { createTestCaller } from '@/test/trpc-test-helpers';
 
 // 環境変数からSupabase接続情報を取得

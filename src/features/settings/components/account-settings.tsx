@@ -8,9 +8,9 @@ import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
-import { useRouter } from '@/platform/i18n/navigation';
-import { createClient } from '@/platform/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 import { LabeledRow } from '@/components/common/LabeledRow';

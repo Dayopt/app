@@ -15,12 +15,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/hooks/useTheme';
-import { usePathname, useRouter } from '@/platform/i18n/navigation';
-import { routing, type Locale } from '@/platform/i18n/routing';
+import { usePathname, useRouter } from '@/lib/i18n/navigation';
+import { routing, type Locale } from '@/lib/i18n/routing';
 
 import { useTourStore } from '@/features/tour';
 import { getTimeZones } from '@/lib/timezone-utils';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
 import { useUserSettings } from '../hooks/useUserSettings';

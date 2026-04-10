@@ -19,7 +19,7 @@ import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { badgesRouter } from '@/features/stats/server/badges-router';
 import { tagsRouter } from '@/features/tags/server/router';
-import { createTRPCRouter } from '@/platform/trpc/procedures';
+import { createTRPCRouter } from '@/lib/trpc/procedures';
 
 /**
  * メインAPIルーター

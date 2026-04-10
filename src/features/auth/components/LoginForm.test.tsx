@@ -29,7 +29,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/platform/i18n/navigation', async () => {
+vi.mock('@/lib/i18n/navigation', async () => {
   const React = await import('react');
   return {
     Link: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>
@@ -44,7 +44,7 @@ vi.mock('@/stores/useAuthStore', () => ({
     selector({ signIn: mockSignIn }),
 }));
 
-vi.mock('@/platform/supabase/client', () => ({
+vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       mfa: {

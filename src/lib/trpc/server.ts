@@ -9,7 +9,7 @@ import 'server-only';
  * @example
  * ```tsx
  * // Server Component (page.tsx)
- * import { createServerHelpers, HydrationBoundary, dehydrate } from '@/platform/trpc/server'
+ * import { createServerHelpers, HydrationBoundary, dehydrate } from '@/lib/trpc/server'
  *
  * export default async function Page() {
  *   const helpers = await createServerHelpers()
@@ -34,8 +34,8 @@ import superjson from 'superjson';
 
 import { env } from '@/env';
 import type { Database } from '@/lib/database.types';
-import type { Context } from '@/platform/trpc/procedures';
-import { appRouter } from '@/platform/trpc/root';
+import type { Context } from '@/lib/trpc/procedures';
+import { appRouter } from '@/lib/trpc/root';
 
 // Re-export for convenience
 export { dehydrate, HydrationBoundary };

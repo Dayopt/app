@@ -25,7 +25,7 @@ Sentryはリアルタイムエラー追跡・パフォーマンス監視プラ�
 
 ```typescript
 // エラーパターン辞書との統合
-import { reportToSentry } from '@/platform/sentry';
+import { reportToSentry } from '@/lib/sentry';
 import { AppError } from '@/config/error-patterns';
 
 try {
@@ -202,7 +202,7 @@ curl http://localhost:3000/api/test/sentry?type=error
 #### 基本的な使い方
 
 ```typescript
-import { reportToSentry } from '@/platform/sentry';
+import { reportToSentry } from '@/lib/sentry';
 import { AppError } from '@/config/error-patterns';
 
 try {
@@ -220,7 +220,7 @@ try {
 #### Reactコンポーネントでのエラー
 
 ```typescript
-import { handleReactError } from '@/platform/sentry';
+import { handleReactError } from '@/lib/sentry';
 
 class ErrorBoundary extends React.Component {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -232,7 +232,7 @@ class ErrorBoundary extends React.Component {
 #### APIルートでのエラー
 
 ```typescript
-import { handleApiError } from '@/platform/sentry';
+import { handleApiError } from '@/lib/sentry';
 
 export async function GET(request: Request) {
   try {
@@ -265,7 +265,7 @@ Web Vitalsは `instrumentation-client.ts` で自動計測されます。
 #### カスタムパフォーマンストレース
 
 ```typescript
-import { withTrace, traceApiCall, traceDbQuery } from '@/platform/sentry';
+import { withTrace, traceApiCall, traceDbQuery } from '@/lib/sentry';
 
 // API呼び出し計測
 const tasks = await traceApiCall('GET /tasks', async () => {

@@ -5,8 +5,8 @@ import { Suspense } from 'react';
 import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
 import { prefetchStatsData, StatsView } from '@/features/stats';
-import type { Locale } from '@/platform/i18n/routing';
-import { HydrationBoundary } from '@/platform/trpc/server';
+import type { Locale } from '@/lib/i18n/routing';
+import { HydrationBoundary } from '@/lib/trpc/server';
 
 export const dynamic = 'force-dynamic';
 

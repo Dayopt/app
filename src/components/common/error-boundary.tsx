@@ -8,7 +8,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 
 import { logger } from '@/lib/logger';
-import { handleReactError, SentryErrorHandler } from '@/platform/sentry';
+import { handleReactError, SentryErrorHandler } from '@/lib/sentry';
 import { useTranslations } from 'next-intl';
 
 interface Props {

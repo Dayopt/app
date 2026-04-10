@@ -15,7 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { notificationPreferencesRouter } from '@/features/notifications/server/preferences-router';
 import type { Database } from '@/lib/database.types';
-import type { Context } from '@/platform/trpc/procedures';
+import type { Context } from '@/lib/trpc/procedures';
 import { createTestCaller } from '@/test/trpc-test-helpers';
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';

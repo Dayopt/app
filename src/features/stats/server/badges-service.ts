@@ -13,7 +13,7 @@ import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 import { chronotypeCustomZonesSchema, getChronotypeProfile } from '@/features/chronotype';
 import { logger } from '@/lib/logger';
-import { ServiceError } from '@/platform/trpc/errors';
+import { ServiceError } from '@/lib/trpc/errors';
 import type { ChronotypeType, ProductivityLevel, ProductivityZone } from '@/types/chronotype';
 
 import { BADGE_DEFINITIONS } from '../constants/badge-definitions';

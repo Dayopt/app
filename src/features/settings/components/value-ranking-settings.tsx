@@ -30,8 +30,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
 
 import type { DragEndEvent, DropAnimation, Modifier } from '@dnd-kit/core';
 import type { AnimateLayoutChanges } from '@dnd-kit/sortable';

@@ -1,6 +1,6 @@
 // タグ取得用クエリフック
 
-import { trpc } from '@/platform/trpc/client';
+import { trpc } from '@/lib/trpc/client';
 
 /**
  * タグ一覧取得フック（5分キャッシュ）

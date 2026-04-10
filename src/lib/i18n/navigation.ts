@@ -9,7 +9,7 @@ import { routing } from './routing';
  *
  * @example
  * ```tsx
- * import { Link, useRouter, usePathname } from '@/platform/i18n/navigation'
+ * import { Link, useRouter, usePathname } from '@/lib/i18n/navigation'
  *
  * // Link: <Link href="/about">About</Link>
  * //       → /ja/about または /en/about（現在の言語に応じて）

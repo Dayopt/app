@@ -3,7 +3,7 @@
  * 通知設定を取得し、各チャネルの通知可否を判定する
  */
 
-import { trpc } from '@/platform/trpc/client';
+import { trpc } from '@/lib/trpc/client';
 
 /**
  * 通知設定を取得するhook

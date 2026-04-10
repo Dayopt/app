@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { useRouter } from '@/platform/i18n/navigation';
+import { useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useUnreadCount } from '../hooks/useNotificationsData';
 import type { ActivityTab } from '../lib/notification-helpers';

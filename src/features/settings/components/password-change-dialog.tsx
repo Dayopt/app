@@ -16,11 +16,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { checkPasswordPwned } from '@/lib/auth/pwned-password';
 import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 import { getDisplayName } from '@/lib/user';
-import { checkPasswordPwned } from '@/platform/auth/pwned-password';
-import { createClient } from '@/platform/supabase/client';
-import { api } from '@/platform/trpc';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 interface PasswordChangeDialogProps {

@@ -4,8 +4,8 @@
  * リマインダー通知管理API
  */
 
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { listNotificationsSchema, markAllAsReadSchema, notificationIdSchema } from '../schemas';
 import { createNotificationService } from './service-index';
 

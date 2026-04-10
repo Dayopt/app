@@ -9,7 +9,7 @@
 
 import { useMemo } from 'react';
 
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';

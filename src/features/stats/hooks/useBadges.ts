@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { toast } from '@/lib/toast';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { BADGE_MAP } from '../constants/badge-definitions';
 

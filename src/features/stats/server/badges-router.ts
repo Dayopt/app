@@ -4,8 +4,8 @@
  * バッジ（ゲーミフィケーション）API
  */
 
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { createBadgesService } from './badges-service';
 

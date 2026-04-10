@@ -19,7 +19,7 @@ import {
   checkBrowserNotificationSupport,
   requestNotificationPermission,
 } from '@/lib/browser-notification';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';

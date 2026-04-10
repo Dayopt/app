@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';

@@ -12,7 +12,7 @@ import { ActivityContent, useUnreadCount } from '@/features/notifications';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { useRouter } from '@/platform/i18n/navigation';
+import { useRouter } from '@/lib/i18n/navigation';
 import { AppHeader } from '@/shell/components/AppHeader';
 
 const TABS: ActivityTab[] = ['all', 'reminders', 'ai'];

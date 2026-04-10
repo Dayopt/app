@@ -10,8 +10,8 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, proProcedure } from '@/platform/trpc/procedures';
+import { traceDbQuery } from '@/lib/sentry/trace';
+import { createTRPCRouter, proProcedure } from '@/lib/trpc/procedures';
 
 /** 統計クエリの共通エラーハンドラー */
 function handleTagStatsError(operation: string, error: unknown): never {

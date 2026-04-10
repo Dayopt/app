@@ -15,12 +15,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/lib/auth/recovery-codes';
 import { logger } from '@/lib/logger';
-import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/recovery-codes';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/platform/trpc/procedures';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
 
 /** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */

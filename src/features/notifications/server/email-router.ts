@@ -34,9 +34,9 @@ import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
-import type { Context } from '@/platform/trpc/procedures';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import type { Context } from '@/lib/trpc/procedures';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import * as Sentry from '@sentry/nextjs';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする

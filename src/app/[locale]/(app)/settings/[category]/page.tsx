@@ -11,7 +11,7 @@ import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/feature
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { Link, useRouter } from '@/platform/i18n/navigation';
+import { Link, useRouter } from '@/lib/i18n/navigation';
 import { AppHeader } from '@/shell/components/AppHeader';
 import { useShellStore } from '@/shell/stores/useShellStore';
 

@@ -21,7 +21,7 @@ import { buildAIContext, buildSystemPrompt, createAITools } from '@/features/ai/
 import { DEFAULT_MODELS, FREE_TIER_MODEL, SUPPORTED_MODELS } from '@/features/ai/server/types';
 import { createAIUsageService } from '@/features/ai/server/usage-service';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 import type { AIProviderId } from '@/features/ai/server/types';
 import type { UIMessage } from 'ai';

@@ -16,7 +16,7 @@ import superjson from 'superjson';
 
 import { Toaster } from '@/components/ui/toast';
 import { AuthStoreInitializer } from '@/features/auth';
-import { api, getBaseUrl } from '@/platform/trpc';
+import { api, getBaseUrl } from '@/lib/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 function isAuthError(error: unknown): boolean {

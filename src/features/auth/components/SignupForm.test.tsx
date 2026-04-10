@@ -24,7 +24,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/platform/i18n/navigation', async () => {
+vi.mock('@/lib/i18n/navigation', async () => {
   const React = await import('react');
   return {
     Link: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>
@@ -40,7 +40,7 @@ vi.mock('@/stores/useAuthStore', () => ({
 }));
 
 // パスワードチェックのモック（オプショナル機能）
-vi.mock('@/platform/auth/pwned-password', () => ({
+vi.mock('@/lib/auth/pwned-password', () => ({
   checkPasswordPwned: vi.fn().mockResolvedValue(false),
 }));
 
@@ -180,7 +180,7 @@ describe('SignupForm', () => {
       const user = userEvent.setup();
 
       // パスワードチェックが例外を投げる状態をシミュレート
-      const { checkPasswordPwned } = await import('@/platform/auth/pwned-password');
+      const { checkPasswordPwned } = await import('@/lib/auth/pwned-password');
       vi.mocked(checkPasswordPwned).mockRejectedValueOnce(new Error('API Error'));
 
       mockSignUp.mockResolvedValue({
@@ -204,7 +204,7 @@ describe('SignupForm', () => {
     it('漏洩パスワード検出時はエラーが表示される', async () => {
       const user = userEvent.setup();
 
-      const { checkPasswordPwned } = await import('@/platform/auth/pwned-password');
+      const { checkPasswordPwned } = await import('@/lib/auth/pwned-password');
       vi.mocked(checkPasswordPwned).mockResolvedValueOnce(true);
 
       renderWithProviders(<SignupForm />);

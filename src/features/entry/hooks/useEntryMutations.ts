@@ -11,7 +11,7 @@
 
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { clearNew, markNew } from '../lib/new-entry-tracker';

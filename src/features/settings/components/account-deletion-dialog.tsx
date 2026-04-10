@@ -20,8 +20,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/client';
-import { api } from '@/platform/trpc';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 
 /**
  * 🗑️ Account Deletion Dialog Component

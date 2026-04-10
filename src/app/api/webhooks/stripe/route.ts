@@ -31,9 +31,9 @@ import type { SubscriptionStatus } from '@/features/settings/server/billing-serv
 import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { requireStripe } from '@/platform/stripe/client';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { requireStripe } from '@/lib/stripe/client';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 // ─── Slack 通知 ──────────────────────────────────────
 

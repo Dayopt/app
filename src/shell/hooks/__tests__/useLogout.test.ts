@@ -11,14 +11,14 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/platform/i18n/navigation', () => ({
+vi.mock('@/lib/i18n/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
     refresh: mockRefresh,
   }),
 }));
 
-vi.mock('@/platform/supabase/client', () => ({
+vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       signOut: mockSignOut,

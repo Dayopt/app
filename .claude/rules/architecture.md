@@ -37,8 +37,8 @@ src/features/{feature}/server/
 └── __tests__/
 ```
 
-- ルーター集約: `src/platform/trpc/root.ts`
-- 共通: `@/platform/trpc/procedures`（createTRPCRouter, protectedProcedure）、`@/platform/trpc/errors`（handleServiceError）
+- ルーター集約: `src/lib/trpc/root.ts`
+- 共通: `@/lib/trpc/procedures`（createTRPCRouter, protectedProcedure）、`@/lib/trpc/errors`（handleServiceError）
 - 詳細: `.claude/skills/trpc-router-creating/SKILL.md`
 
 ## 楽観的更新

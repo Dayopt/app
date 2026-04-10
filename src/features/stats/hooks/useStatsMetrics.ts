@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { METRIC_DEFINITIONS, METRIC_ORDER } from '../lib/metricDefinitions';
 import {

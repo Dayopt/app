@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { formatHours } from '../../utils/formatHours';
 

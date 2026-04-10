@@ -23,12 +23,11 @@ import { Suspense } from 'react';
 
 import dynamic from 'next/dynamic';
 
+import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
 import { cn } from '@/lib/utils';
-import { DeferredAnalytics } from '@/platform/analytics/DeferredAnalytics';
 
 const WebVitalsReporter = dynamic(
-  () =>
-    import('@/platform/sentry/WebVitalsReporter').then((m) => ({ default: m.WebVitalsReporter })),
+  () => import('@/lib/sentry/WebVitalsReporter').then((m) => ({ default: m.WebVitalsReporter })),
   { ssr: false },
 );
 

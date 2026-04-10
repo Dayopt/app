@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 
+import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
-import { useRouter } from '@/platform/i18n/navigation';
-import { createClient } from '@/platform/supabase/client';
 import { useTranslations } from 'next-intl';
 
 /**

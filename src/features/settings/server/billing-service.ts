@@ -13,8 +13,8 @@ import type Stripe from 'stripe';
 import { getAppUrl } from '@/lib/app-url';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { requireStripe } from '@/platform/stripe/client';
-import { ServiceError } from '@/platform/trpc/errors';
+import { requireStripe } from '@/lib/stripe/client';
+import { ServiceError } from '@/lib/trpc/errors';
 
 // ===== Types =====
 

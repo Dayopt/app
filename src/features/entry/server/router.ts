@@ -12,9 +12,9 @@ import { z } from 'zod';
 import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import {
   bulkDeleteEntrySchema,
   bulkUpdateEntrySchema,

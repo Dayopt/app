@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 
-import { ServiceError } from '@/platform/trpc/errors';
+import { ServiceError } from '@/lib/trpc/errors';
 
 type ServiceSupabaseClient = SupabaseClient<Database>;
 

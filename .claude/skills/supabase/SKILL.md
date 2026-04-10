@@ -155,7 +155,7 @@ SET session_replication_role = DEFAULT;
 
 ```typescript
 import { useEffect } from 'react';
-import { createClient } from '@/platform/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 export function useEntityRealtime(onUpdate: () => void) {
   useEffect(() => {
@@ -219,7 +219,7 @@ export function useEntityRealtime() {
 ## クライアント設定
 
 ```typescript
-// src/platform/supabase/client.ts
+// src/lib/supabase/client.ts
 import { createBrowserClient } from '@supabase/ssr';
 
 export function createClient() {
@@ -231,7 +231,7 @@ export function createClient() {
 ```
 
 ```typescript
-// src/platform/supabase/server.ts
+// src/lib/supabase/server.ts
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 

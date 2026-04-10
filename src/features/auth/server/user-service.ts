@@ -11,8 +11,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { getStripe } from '@/platform/stripe/client';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { getStripe } from '@/lib/stripe/client';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 /**
  * User Service エラー

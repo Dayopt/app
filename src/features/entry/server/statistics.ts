@@ -12,8 +12,8 @@ import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/platform/trpc/procedures';
+import { traceDbQuery } from '@/lib/sentry/trace';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す

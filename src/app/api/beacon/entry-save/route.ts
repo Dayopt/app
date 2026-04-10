@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 import { EntryService } from '@/features/entry/server/entry-service';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 /** beacon で更新可能なフィールド（updateEntrySchema と同等） */
 const ALLOWED_FIELDS = new Set([

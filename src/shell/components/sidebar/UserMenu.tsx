@@ -33,8 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useRouter } from '@/lib/i18n/navigation';
 import { getInitials } from '@/lib/user';
-import { useRouter } from '@/platform/i18n/navigation';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useLocale, useTranslations } from 'next-intl';

@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockRefreshSession = vi.fn().mockResolvedValue({ error: null });
-vi.mock('@/platform/supabase/client', () => ({
+vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       refreshSession: mockRefreshSession,
@@ -25,7 +25,7 @@ vi.mock('../stores/useAuthStore', () => ({
     selector({ session: mockSession, signOut: mockSignOut }),
 }));
 
-vi.mock('@/platform/auth/session-config', () => ({
+vi.mock('@/lib/auth/session-config', () => ({
   SESSION_CONFIG: {
     idleTimeout: 60,
   },

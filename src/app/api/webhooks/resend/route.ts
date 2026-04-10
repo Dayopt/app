@@ -19,7 +19,7 @@ export const maxDuration = 30;
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {

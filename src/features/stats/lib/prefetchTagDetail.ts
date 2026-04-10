@@ -2,7 +2,7 @@ import 'server-only';
 
 import { headers } from 'next/headers';
 
-import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
+import { createServerHelpers, dehydrate } from '@/lib/trpc/server';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { computeStatsDateRange } from '../utils/computeDateRange';

@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import * as Sentry from '@sentry/nextjs';
 
 /** 通知設定操作の共通エラーハンドラ */

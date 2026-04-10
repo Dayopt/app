@@ -8,7 +8,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import * as Sentry from '@sentry/nextjs';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';

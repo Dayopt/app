@@ -24,7 +24,7 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // CLI scripts (console.log is expected)
     'scripts/**',
-    'src/platform/i18n/scripts/**',
+    'src/lib/i18n/scripts/**',
     'src/styles/scripts/**',
   ]),
 
@@ -226,14 +226,14 @@ const eslintConfig = defineConfig([
       'src/hooks/**/*.{ts,tsx}',
       'src/stores/**/*.{ts,tsx}',
       'src/shell/**/*.{ts,tsx}',
-      'src/platform/**/*.{ts,tsx}',
+      'src/lib/**/*.{ts,tsx}',
     ],
     ignores: [
       'src/shell/layout/**',            // Layout Composition Layer
       'src/shell/providers/**',          // Provider Composition Layer
       'src/shell/providers.tsx',         // Provider root
       'src/shell/hooks/**',             // Realtime等のComposition hooks
-      'src/platform/trpc/root.ts',      // Server Composition Layer (router aggregator)
+      'src/lib/trpc/root.ts',            // Server Composition Layer (router aggregator)
       'src/components/dnd/**',           // DnD (stories only)
       'src/components/**/*.stories.*',   // Storybook files
       'src/shell/**/*.stories.*',        // Storybook files

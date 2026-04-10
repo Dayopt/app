@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { usePathname } from '@/platform/i18n/navigation';
+import { usePathname } from '@/lib/i18n/navigation';
 
 import { TOUR_START_DELAY } from '../constants';
 import { useAutoAdvance } from '../hooks/useAutoAdvance';

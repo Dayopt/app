@@ -51,7 +51,7 @@ const AxeAccessibilityChecker =
     : () => null;
 
 import { AuthStoreInitializer } from '@/features/auth';
-import { api, getBaseUrl } from '@/platform/trpc';
+import { api, getBaseUrl } from '@/lib/trpc';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）

@@ -12,7 +12,7 @@
  * 使用例:
  * ```tsx
  * // middleware.ts
- * import { updateSession } from '@/platform/supabase/middleware'
+ * import { updateSession } from '@/lib/supabase/middleware'
  *
  * export async function middleware(request: NextRequest) {
  *   const { response, supabase } = await updateSession(request)

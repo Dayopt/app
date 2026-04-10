@@ -25,7 +25,7 @@ import type { AnyRouter } from '@trpc/server';
 import { expect, vi } from 'vitest';
 
 import type { Database } from '@/lib/database.types';
-import { createCallerFactory, type Context } from '@/platform/trpc/procedures';
+import { createCallerFactory, type Context } from '@/lib/trpc/procedures';
 
 // Re-export factories for backward compatibility
 export { createMockEntry, createMockTag } from '@/test/factories';

@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useUpdateEntityTagsInCache } from './useUpdateEntityTagsInCache';
 
 /** tRPC utils 型 */

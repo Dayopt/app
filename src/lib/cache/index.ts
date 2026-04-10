@@ -6,12 +6,12 @@
  *
  * @example
  * // Service層でキャッシュ付き取得
- * import { createCachedTagsFetcher } from '@/platform/cache';
+ * import { createCachedTagsFetcher } from '@/lib/cache';
  * const getCachedTags = createCachedTagsFetcher(supabase, userId);
  * const tags = await getCachedTags();
  *
  * // tRPCルーターでキャッシュ無効化
- * import { invalidateUserTagsCache } from '@/platform/cache';
+ * import { invalidateUserTagsCache } from '@/lib/cache';
  * await invalidateUserTagsCache(userId);
  */
 

@@ -15,7 +15,7 @@
  */
 import type { Metadata } from 'next';
 
-import { IntlProvider } from '@/platform/i18n';
+import { IntlProvider } from '@/lib/i18n';
 import { BaseLayout } from '@/shell/layout/base-layout';
 import { Providers } from '@/shell/providers';
 

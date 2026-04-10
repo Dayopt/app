@@ -12,7 +12,7 @@
  */
 
 import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 /**
  * 通知一覧取得
