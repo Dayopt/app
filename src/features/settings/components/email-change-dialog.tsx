@@ -122,6 +122,8 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   placeholder="new@example.com"
                   required
                   autoComplete="email"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'email-change-error' : undefined}
                 />
               </div>
 
@@ -140,7 +142,11 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
+                <div
+                  id="email-change-error"
+                  role="alert"
+                  className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm"
+                >
                   {error}
                 </div>
               )}

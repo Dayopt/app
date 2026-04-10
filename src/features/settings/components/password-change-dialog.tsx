@@ -168,6 +168,8 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                     maxLength={64}
                     autoComplete="current-password"
                     className="pr-8"
+                    aria-invalid={!!error}
+                    aria-describedby={error ? 'password-change-error' : undefined}
                   />
                   <Button
                     type="button"
@@ -263,7 +265,11 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
+                <div
+                  id="password-change-error"
+                  role="alert"
+                  className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm"
+                >
                   {error}
                 </div>
               )}
