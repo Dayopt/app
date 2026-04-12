@@ -2,12 +2,12 @@
 
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { GlobalSearchContext } from '@/hooks/use-global-search';
+import { GlobalSearchContext } from '@/lib/hooks/use-global-search';
 import { GlobalSearchModal } from '../components/global-search-modal';
 
 // Re-export for backward compatibility
-export { useGlobalSearch } from '@/hooks/use-global-search';
-export type { GlobalSearchContextType } from '@/hooks/use-global-search';
+export { useGlobalSearch } from '@/lib/hooks/use-global-search';
+export type { GlobalSearchContextType } from '@/lib/hooks/use-global-search';
 
 /** グローバル検索コンテキストを提供するプロバイダー（Cmd/Ctrl+K キーボードショートカット付き） */
 export const GlobalSearchProvider = ({ children }: { children: ReactNode }) => {

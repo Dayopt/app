@@ -12,8 +12,8 @@ import React, {
 
 import { usePathname } from 'next/navigation';
 
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 
 import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';

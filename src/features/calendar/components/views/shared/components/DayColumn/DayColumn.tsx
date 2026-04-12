@@ -14,8 +14,8 @@ import type { DayColumnProps } from '../../types/view.types';
 
 import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({

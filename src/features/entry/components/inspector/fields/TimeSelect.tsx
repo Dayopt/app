@@ -6,7 +6,7 @@ import { CheckIcon, Clock, Flag } from 'lucide-react';
 
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 

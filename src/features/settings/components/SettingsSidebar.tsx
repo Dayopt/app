@@ -7,8 +7,8 @@ import { Link } from '@/lib/i18n/navigation';
 import { useTranslations } from 'next-intl';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { useShellStore } from '@/shell/stores/useShellStore';
 

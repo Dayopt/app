@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EntryCard } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 import { useInteraction } from '../../../../interaction';

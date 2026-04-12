@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 
 /**
  * オフライン/オンライン切り替え時にtoast通知を表示するフック

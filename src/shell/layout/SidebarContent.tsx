@@ -21,8 +21,8 @@ import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/f
 import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { useTheme } from '@/hooks/useTheme';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useTheme } from '@/lib/hooks/useTheme';
 import { SidebarSection } from '@/shell/components/sidebar';
 
 /** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルター・パレットを組み立てる Composition Layer） */

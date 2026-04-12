@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { useIsMutating } from '@tanstack/react-query';
 
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
 

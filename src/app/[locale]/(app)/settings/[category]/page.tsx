@@ -8,9 +8,9 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
-import { useHasMounted } from '@/hooks/useHasMounted';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { Link, useRouter } from '@/lib/i18n/navigation';
 import { AppHeader } from '@/shell/components/AppHeader';
 import { useShellStore } from '@/shell/stores/useShellStore';

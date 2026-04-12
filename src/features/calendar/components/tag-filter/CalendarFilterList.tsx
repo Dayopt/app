@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useIsFetching } from '@tanstack/react-query';
 
 import { TagDeleteStrategyDialog, tagKeys, useDeleteTag, useTags } from '@/features/tags';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { api } from '@/lib/trpc';
 import { SidebarSection } from '@/shell/components/sidebar';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';

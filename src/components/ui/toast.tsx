@@ -1,7 +1,7 @@
 'use client';
 
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';

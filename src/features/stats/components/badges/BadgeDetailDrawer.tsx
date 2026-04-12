@@ -13,7 +13,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
 import { getProgressPercent } from '../../lib/badge-utils';

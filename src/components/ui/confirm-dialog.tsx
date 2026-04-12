@@ -5,9 +5,9 @@ import { createPortal } from 'react-dom';
 
 import { ActionFooter } from '@/components/ui/action-footer';
 import { Button } from '@/components/ui/button';
-import { useDialogKeyboard } from '@/hooks/useDialogKeyboard';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { useHasMounted } from '@/hooks/useHasMounted';
+import { useDialogKeyboard } from '@/lib/hooks/useDialogKeyboard';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 

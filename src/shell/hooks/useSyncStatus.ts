@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
 
 import type { SyncQueueEntry } from '@/lib/pwa/sync-queue';
 

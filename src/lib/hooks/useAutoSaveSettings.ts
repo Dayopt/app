@@ -3,8 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { useDebouncedCallback } from '@/hooks/useDebounce';
 import { getErrorMessage } from '@/lib/errors';
+import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { logger } from '@/lib/logger';
 
 interface UseAutoSaveSettingsOptions<T> {

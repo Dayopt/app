@@ -9,8 +9,8 @@ import { SectionCard } from '@/components/common/SectionCard';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 

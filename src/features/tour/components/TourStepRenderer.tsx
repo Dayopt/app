@@ -1,6 +1,6 @@
 'use client';
 
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 import { TourStepCenter } from './TourStepCenter';
 import { TourStepPopover } from './TourStepPopover';

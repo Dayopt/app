@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 
 import { generateChronotypeGradient, getChronotypeProfile } from '@/features/chronotype';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/lib/hooks/useTheme';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 export function useChronotypeGradient(): string | null {

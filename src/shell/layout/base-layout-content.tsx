@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
 import { CalendarNavigationProvider } from '@/features/calendar';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
 import { OfflineIndicator } from '@/shell/providers/OfflineIndicator';
 

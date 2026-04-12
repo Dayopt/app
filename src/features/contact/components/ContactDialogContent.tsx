@@ -32,7 +32,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 import type { ContactCategory } from '../types';
 

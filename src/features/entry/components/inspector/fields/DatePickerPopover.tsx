@@ -14,8 +14,8 @@ import { useTranslations } from 'next-intl';
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
-import { useDateFormat } from '@/hooks/useDateFormat';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useDateFormat } from '@/lib/hooks/useDateFormat';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 interface DatePickerPopoverProps {
   selectedDate: Date | undefined;

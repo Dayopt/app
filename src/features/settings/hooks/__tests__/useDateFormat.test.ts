@@ -17,7 +17,7 @@ vi.mock('@/stores/useCalendarSettingsStore', () => ({
   },
 }));
 
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDateFormat } from '@/lib/hooks/useDateFormat';
 
 describe('useDateFormat', () => {
   const testDate = new Date('2026-02-21T14:30:00');

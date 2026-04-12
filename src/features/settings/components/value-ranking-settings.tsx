@@ -28,8 +28,8 @@ import { SectionCard } from '@/components/common/SectionCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 

@@ -12,8 +12,8 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'calendar-mobile-hint-dismissed';

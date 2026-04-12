@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/lib/hooks/useTheme';
 import { usePathname, useRouter } from '@/lib/i18n/navigation';
 import { routing, type Locale } from '@/lib/i18n/routing';
 

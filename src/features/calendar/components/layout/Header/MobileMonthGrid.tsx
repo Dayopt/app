@@ -16,7 +16,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useMemo } from 'react';
 
-import { useHasMounted } from '@/hooks/useHasMounted';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { cn } from '@/lib/utils';
 import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 

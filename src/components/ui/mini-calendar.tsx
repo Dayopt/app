@@ -1,6 +1,6 @@
 'use client';
 
-import { useHasMounted } from '@/hooks/useHasMounted';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { memo, useCallback, useMemo, useState } from 'react';
 
 import {

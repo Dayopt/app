@@ -18,8 +18,8 @@ import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/u
 
 import { LabeledRow } from '@/components/common/LabeledRow';
 import { SectionCard } from '@/components/common/SectionCard';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 
 import { ChronotypeQuiz } from './chronotype-quiz';
 
@@ -28,7 +28,7 @@ import type {
   ChronotypeType,
   PresetChronotypeType,
   ProductivityZone,
-} from '@/types/chronotype';
+} from '@/lib/types/chronotype';
 
 type ViewState = 'idle' | 'quiz';
 
