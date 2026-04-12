@@ -11,11 +11,10 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useCalendarFilterStore, useCalendarNavigationStore } from '@/features/calendar';
 import { useEntries, useEntryInspectorStore } from '@/features/entry';
 import { TagIcon, useTags } from '@/features/tags';
 import { formatDateShort, formatTimeRange } from '@/lib/date/format';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
-import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useTranslations } from 'next-intl';
 

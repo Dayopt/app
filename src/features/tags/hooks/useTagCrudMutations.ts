@@ -3,6 +3,7 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
+import { useCalendarFilterStore } from '@/features/calendar';
 import type { TagColorName } from '@/lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import {
@@ -12,7 +13,6 @@ import {
   updatePaginatedList,
 } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/lib/trpc/client';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 
 import type { Tag } from '../types';
 

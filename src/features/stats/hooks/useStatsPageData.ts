@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { api } from '@/lib/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
 import type { StatsPageData } from '../types/metrics.types';

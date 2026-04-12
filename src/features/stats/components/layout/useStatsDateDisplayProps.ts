@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 
 import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
 

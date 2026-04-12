@@ -32,8 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { cn } from '@/lib/utils';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 export interface MiniCalendarProps {
   selectedDate?: Date | undefined;

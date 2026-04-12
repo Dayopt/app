@@ -17,12 +17,11 @@ import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { useCalendarNavigationStore, useCalendarSettingsStore } from '@/features/calendar';
 import type { CalendarViewType } from '@/lib/calendar-constants';
 import { getMultiDayCount, isMultiDayView } from '@/lib/calendar-constants';
 import { convertToTimezone } from '@/lib/date/timezone';
 import { snapToNextInterval } from '@/lib/time-utils';
-import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { createListQueryPredicate } from './mutations/mutationUtils';
 import { useEntryMutations } from './useEntryMutations';

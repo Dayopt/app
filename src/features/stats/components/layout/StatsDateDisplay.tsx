@@ -5,8 +5,8 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { cn } from '@/lib/utils';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { Locale } from 'date-fns';
 

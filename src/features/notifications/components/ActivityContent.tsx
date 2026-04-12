@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar';
 
 import type { NotificationType } from '../schemas';
 

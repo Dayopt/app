@@ -14,7 +14,7 @@ import React, { useCallback, useMemo } from 'react';
 import { getChronotypeProfile } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { formatTimeString } from '../../../../interaction/time-math';
 
 import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';

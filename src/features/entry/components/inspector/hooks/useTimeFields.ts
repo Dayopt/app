@@ -11,9 +11,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
 import { api } from '@/lib/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import type { EntryWithTags } from '../../../types/entry';
 
 interface UseTimeFieldsOptions {

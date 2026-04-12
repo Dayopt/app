@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import {

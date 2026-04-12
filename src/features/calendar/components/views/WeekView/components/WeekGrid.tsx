@@ -6,7 +6,7 @@ import { getWeek, isToday } from 'date-fns';
 
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 
 import {
   CalendarDateHeader,

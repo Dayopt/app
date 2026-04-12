@@ -8,10 +8,10 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
 import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';

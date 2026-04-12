@@ -7,8 +7,8 @@ import { useCallback } from 'react';
 
 import { format } from 'date-fns';
 
-import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import type { DateFormatType } from '@/features/calendar';
+import { useCalendarSettingsStore } from '@/features/calendar';
 
 interface UseDateFormatReturn {
   dateFormat: DateFormatType;

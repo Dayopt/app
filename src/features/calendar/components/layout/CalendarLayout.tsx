@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/components/common/DateNavigator';
 import { DateNavigator } from '@/components/common/DateNavigator';
+import type { CalendarSettings } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { AppHeader } from '@/shell/components/AppHeader';
-import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 

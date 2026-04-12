@@ -43,6 +43,11 @@ export {
 // =============================================================================
 
 // Stores: Cross-feature (used by composition layer in app/)
+export { useCalendarFilterStore } from './stores/useCalendarFilterStore';
+export type { CalendarFilterActions, CalendarFilterState } from './stores/useCalendarFilterStore';
+export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
+export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
+export type { CalendarSettings, DateFormatType } from './stores/useCalendarSettingsStore';
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
 
 // Hooks: Cross-feature (used by composition layer in app/)

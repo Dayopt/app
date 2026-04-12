@@ -9,8 +9,8 @@
 
 import { useMemo } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar';
 import { api } from '@/lib/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';

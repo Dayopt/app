@@ -15,8 +15,8 @@ import type {
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import type { CalendarSettings, DateFormatType } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import type { CalendarSettings, DateFormatType } from '@/features/calendar';
+import { useCalendarSettingsStore } from '@/features/calendar';
 
 /**
  * ユーザー設定をDBと同期するhook

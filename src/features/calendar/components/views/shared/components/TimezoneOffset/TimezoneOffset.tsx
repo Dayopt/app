@@ -3,10 +3,10 @@
 import { useTranslations } from 'next-intl';
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 /** TimezoneOffset コンポーネントのプロパティ */
 interface TimezoneOffsetProps {
