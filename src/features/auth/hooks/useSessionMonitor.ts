@@ -8,7 +8,7 @@ import { SESSION_CONFIG, SESSION_SECURITY } from '@/lib/auth/session-config';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore } from '../stores/useAuthStore';
 
 export interface SessionMonitorState {
   /** セッションが有効かどうか */

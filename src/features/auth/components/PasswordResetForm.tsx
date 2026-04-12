@@ -18,8 +18,8 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useTranslations } from 'next-intl';
+import { useAuthStore } from '../stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 

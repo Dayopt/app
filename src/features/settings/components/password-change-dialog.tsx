@@ -16,12 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/features/auth';
 import { checkPasswordPwned } from '@/lib/auth/pwned-password';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';
 import { getDisplayName } from '@/lib/user';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 interface PasswordChangeDialogProps {
   open: boolean;

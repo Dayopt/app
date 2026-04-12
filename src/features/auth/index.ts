@@ -11,6 +11,15 @@ export { SignupForm } from './components/SignupForm';
 
 // State management - Zustand store
 export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
+export {
+  selectError,
+  selectIsAuthenticated,
+  selectLoading,
+  selectSession,
+  selectSessionExpired,
+  selectUser,
+  useAuthStore,
+} from './stores/useAuthStore';
 
 // Hooks
 export { useSessionMonitor } from './hooks/useSessionMonitor';

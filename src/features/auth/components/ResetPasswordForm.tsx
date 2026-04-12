@@ -15,8 +15,8 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { Link } from '@/lib/i18n/navigation';
 import { cn } from '@/lib/utils';
 
-import { useAuthStore } from '@/stores/useAuthStore';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
+import { useAuthStore } from '../stores/useAuthStore';
 
 /** 新しいパスワード設定フォーム。URLのaccess_token/refresh_tokenを利用してパスワードを更新する */
 export function ResetPasswordForm({ className, ...props }: React.ComponentProps<'div'>) {

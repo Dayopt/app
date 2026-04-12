@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthStore } from '@/features/auth';
 import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
@@ -30,7 +31,6 @@ import { api } from '@/lib/trpc';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useShellStore } from '@/shell/stores/useShellStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 /**
  * 設定ページのルート

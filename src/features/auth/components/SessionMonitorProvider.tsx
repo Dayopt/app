@@ -7,7 +7,7 @@ import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
-import { selectSessionExpired, useAuthStore } from '@/stores/useAuthStore';
+import { selectSessionExpired, useAuthStore } from '../stores/useAuthStore';
 
 import { useSessionMonitor } from '../hooks/useSessionMonitor';
 

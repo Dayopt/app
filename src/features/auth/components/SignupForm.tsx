@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore } from '../stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { signupSchema, type SignupFormData } from '../schemas/auth.schema';
