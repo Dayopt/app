@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { HoverTooltip } from '@/components/ui/tooltip';
 import { useAuthStore } from '@/features/auth';
 import { useGlobalSearch } from '@/lib/hooks/use-global-search';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
-import { useShellStore } from '@/shell/stores/useShellStore';
 import { useTranslations } from 'next-intl';
 
 import { UserMenu } from './UserMenu';

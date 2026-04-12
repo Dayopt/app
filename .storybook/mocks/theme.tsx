@@ -1,7 +1,7 @@
 import { useDarkMode } from '@vueless/storybook-dark-mode';
 import { type ReactNode, useMemo } from 'react';
 
-import { ThemeContext } from '../../src/shell/providers/theme-provider';
+import { ThemeContext } from '../../src/app/[locale]/(app)/_providers/theme-provider';
 
 const noop = () => {};
 

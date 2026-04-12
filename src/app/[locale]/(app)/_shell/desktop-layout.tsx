@@ -5,13 +5,13 @@ import { useMemo } from 'react';
 
 import { PanelLeft } from 'lucide-react';
 
+import { AppHeader } from '@/components/shell/AppHeader';
+import { Sidebar } from '@/components/shell/sidebar';
 import { isCalendarViewPath } from '@/features/calendar';
 import { ActivityPopover } from '@/features/notifications';
 import { cn } from '@/lib/utils';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { Sidebar } from '@/shell/components/sidebar';
 
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';

@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { CalendarSettings } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
-import { useShellStore } from '@/shell/stores/useShellStore';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../../types/calendar.types';

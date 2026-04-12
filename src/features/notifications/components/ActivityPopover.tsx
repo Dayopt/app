@@ -12,7 +12,7 @@ import { HoverTooltip } from '@/components/ui/tooltip';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUnreadCount } from '../hooks/useNotificationsData';
 import type { ActivityTab } from '../lib/notification-helpers';
 import { ActivityContent } from './ActivityContent';

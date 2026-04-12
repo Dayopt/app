@@ -226,18 +226,12 @@ const eslintConfig = defineConfig([
   {
     files: [
       'src/components/**/*.{ts,tsx}',
-      'src/shell/**/*.{ts,tsx}',
       'src/lib/**/*.{ts,tsx}',
     ],
     ignores: [
-      'src/shell/layout/**',            // Layout Composition Layer
-      'src/shell/providers/**',          // Provider Composition Layer
-      'src/shell/providers.tsx',         // Provider root
-      'src/shell/hooks/**',             // Realtime等のComposition hooks
       'src/lib/trpc/root.ts',            // Server Composition Layer (router aggregator)
       'src/components/dnd/**',           // DnD (stories only)
       'src/components/**/*.stories.*',   // Storybook files
-      'src/shell/**/*.stories.*',        // Storybook files
     ],
     rules: {
       'no-restricted-imports': ['off', {

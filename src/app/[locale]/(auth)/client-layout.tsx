@@ -11,7 +11,7 @@
 import { Toaster } from '@/components/ui/toast';
 import { AuthLayout } from '@/features/auth';
 import { RecaptchaScript } from '@/lib/recaptcha';
-import { PublicProviders } from '@/shell/providers/PublicProviders';
+import { PublicProviders } from './_providers/PublicProviders';
 
 export function AuthClientLayout({ children }: { children: React.ReactNode }) {
   return (

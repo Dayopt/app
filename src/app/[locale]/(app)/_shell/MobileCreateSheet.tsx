@@ -10,7 +10,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 const SNAP_POINTS = [0.95] as const;
 

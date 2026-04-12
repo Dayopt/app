@@ -2,7 +2,7 @@
 
 import { CompactDateNavigator } from '@/components/common/DateNavigator';
 import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
-import { AppHeader } from '@/shell/components/AppHeader';
+import { AppHeader } from '@/components/shell/AppHeader';
 
 import type { NavigationDirection } from '@/components/common/DateNavigator';
 

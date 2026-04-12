@@ -42,10 +42,10 @@ import {
   useUngroupTags,
   useUpdateTag,
 } from '@/features/tags';
+import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../TagRenameDialog';
 

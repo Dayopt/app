@@ -3,7 +3,7 @@
 import { AlertTriangle, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useSyncStatus } from '../hooks/useSyncStatus';
+import { useSyncStatus } from '@/lib/hooks/useSyncStatus';
 
 /**
  * 同期状態インジケーター

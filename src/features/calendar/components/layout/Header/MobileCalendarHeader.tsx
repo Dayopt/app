@@ -6,11 +6,11 @@ import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
+import { AppHeader } from '@/components/shell/AppHeader';
+import { MobileCreateButton } from '@/components/shell/MobileCreateButton';
 import { Button } from '@/components/ui/button';
 import { useGlobalSearch } from '@/lib/hooks/use-global-search';
 import { cn } from '@/lib/utils';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { MobileCreateButton } from '@/shell/components/MobileCreateButton';
 
 import type { NavigationDirection } from '@/components/common/DateNavigator';
 

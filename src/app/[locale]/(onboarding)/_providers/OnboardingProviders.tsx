@@ -14,10 +14,10 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
 
+import { ThemeProvider } from '@/app/[locale]/(app)/_providers/theme-provider';
 import { Toaster } from '@/components/ui/toast';
 import { AuthStoreInitializer } from '@/features/auth';
 import { api, getBaseUrl } from '@/lib/trpc';
-import { ThemeProvider } from '@/shell/providers/theme-provider';
 
 function isAuthError(error: unknown): boolean {
   if (error instanceof TRPCClientError) {

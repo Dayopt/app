@@ -14,7 +14,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Button } from '@/components/ui/button';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { PRESET_AUTH, PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
 import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import type { SettingsCategory } from '../types';

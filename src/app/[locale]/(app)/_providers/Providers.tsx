@@ -52,7 +52,7 @@ const AxeAccessibilityChecker =
 
 import { AuthStoreInitializer } from '@/features/auth';
 import { api, getBaseUrl } from '@/lib/trpc';
-import { ThemeProvider } from '@/shell/providers/theme-provider';
+import { ThemeProvider } from './theme-provider';
 
 // SessionMonitorProviderを遅延ロード（セッション失効通知 + タイムアウト警告）
 const SessionMonitorProvider = dynamic(
@@ -70,7 +70,7 @@ const GlobalSearchProvider = dynamic(
 
 // ServiceWorkerProviderを遅延ロード（PWAオフライン対応）
 const ServiceWorkerProvider = dynamic(
-  () => import('@/shell/providers/ServiceWorkerProvider').then((mod) => mod.ServiceWorkerProvider),
+  () => import('./ServiceWorkerProvider').then((mod) => mod.ServiceWorkerProvider),
   { ssr: false },
 );
 

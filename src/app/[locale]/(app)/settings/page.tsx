@@ -26,11 +26,11 @@ import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { api } from '@/lib/trpc';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
-import { useLogout } from '@/shell/hooks/useLogout';
-import { useShellStore } from '@/shell/stores/useShellStore';
 
 /**
  * 設定ページのルート

@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { AppHeader } from '@/components/shell/AppHeader';
 import { isCalendarViewPath } from '@/features/calendar';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';

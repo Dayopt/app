@@ -1,5 +1,5 @@
 import type { CalendarViewType } from '@/features/calendar';
-import { formatCalendarDateParam } from '@/features/calendar/lib/date-param';
+import { formatCalendarDateParam } from '@/features/calendar';
 
 export function getLocaleFromPathname(pathname: string | null | undefined): 'ja' | 'en' {
   const segments = pathname?.split('/') ?? [];

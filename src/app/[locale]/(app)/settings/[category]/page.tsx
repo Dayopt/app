@@ -6,14 +6,14 @@ import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { AppHeader } from '@/components/shell/AppHeader';
 import { Button } from '@/components/ui/button';
 import { isValidCategory, SETTINGS_CATEGORIES, SettingsContent } from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { Link, useRouter } from '@/lib/i18n/navigation';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 /**
  * 設定カテゴリページ

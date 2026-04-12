@@ -32,11 +32,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useLogout } from '@/lib/hooks/useLogout';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getInitials } from '@/lib/user';
-import { useLogout } from '@/shell/hooks/useLogout';
-import { useShellStore } from '@/shell/stores/useShellStore';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { SettingsCategory } from '@/lib/types/settings';

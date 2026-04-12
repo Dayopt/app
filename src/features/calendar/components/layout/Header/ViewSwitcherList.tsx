@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
-import { useShellStore } from '@/shell/stores/useShellStore';
 import { useCalendarNavigation } from '../../../hooks/navigation/CalendarNavigationContext';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { isMultiDayView } from '../../../types/calendar.types';

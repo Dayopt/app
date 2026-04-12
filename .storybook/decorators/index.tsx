@@ -8,6 +8,7 @@
 import type { Decorator } from '@storybook/nextjs-vite';
 import { useDarkMode } from '@vueless/storybook-dark-mode';
 import { NextIntlClientProvider } from 'next-intl';
+import { useEffect } from 'react';
 
 import { StorybookThemeProvider } from '../mocks/theme';
 import type { MockResponseMap } from '../mocks/trpc';
@@ -29,11 +30,12 @@ export const providerDecorator: Decorator = (Story, context) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks -- Storybook decorator は React コンポーネントとして実行される
   const isDark = useDarkMode();
 
-  if (typeof document !== 'undefined') {
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- Storybook decorator は React コンポーネントとして実行される
+  useEffect(() => {
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(isDark ? 'dark' : 'light');
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-  }
+  }, [isDark]);
 
   // parameters.trpcMocks / trpcPending / trpcError を読み取り
   const trpcMocks = context.parameters.trpcMocks as MockResponseMap | undefined;
@@ -50,9 +52,9 @@ export const providerDecorator: Decorator = (Story, context) => {
         {...(trpcError !== undefined ? { error: trpcError } : {})}
       >
         <NextIntlClientProvider locale="ja" messages={messages}>
-          <main>
+          <div>
             <Story />
-          </main>
+          </div>
         </NextIntlClientProvider>
       </StoryTRPCProvider>
     </StorybookThemeProvider>

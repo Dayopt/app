@@ -1,6 +1,6 @@
 'use client';
 
-import { SyncStatusIndicator } from '@/shell/components/SyncStatusIndicator';
+import { SyncStatusIndicator } from '@/components/shell/SyncStatusIndicator';
 
 interface AppHeaderProps {
   /** 左スロット: 戻るボタン、MobileCreateButton等 */

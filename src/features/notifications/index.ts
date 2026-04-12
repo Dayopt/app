@@ -15,6 +15,7 @@ export { NotificationItem } from './components/NotificationItem';
 // =============================================================================
 // Hooks
 // =============================================================================
+export { useNotificationBadge } from './hooks/useNotificationBadge';
 export { useNotifications } from './hooks/useNotifications';
 export {
   useNotificationMutations,

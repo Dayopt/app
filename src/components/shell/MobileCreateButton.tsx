@@ -4,7 +4,7 @@ import { SquarePlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 /** モバイル用作成シート開閉ボタン（md:hidden） */
 export function MobileCreateButton() {

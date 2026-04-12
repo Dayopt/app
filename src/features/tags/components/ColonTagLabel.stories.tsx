@@ -3,7 +3,7 @@ import { fn } from 'storybook/test';
 
 import type { CalendarEvent } from '@/lib/types/calendar-event';
 
-import { BlockItem } from '@/shell/components/sidebar/BlockItem';
+import { BlockItem } from '@/components/shell/sidebar/BlockItem';
 
 import { EntryCardContent } from '../../entry/components/card/EntryCardContent';
 import { TagIcon } from './TagIcon';

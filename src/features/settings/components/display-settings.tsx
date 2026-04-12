@@ -20,9 +20,9 @@ import { routing, type Locale } from '@/lib/i18n/routing';
 
 import type { DateFormatType } from '@/features/calendar';
 import { useTourStore } from '@/features/tour';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/lib/trpc';
-import { useShellStore } from '@/shell/stores/useShellStore';
 import { useUserSettings } from '../hooks/useUserSettings';
 
 import { LabeledRow } from '@/components/common/LabeledRow';

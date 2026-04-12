@@ -14,6 +14,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
+import { SidebarSection } from '@/components/shell/sidebar';
 import { Button } from '@/components/ui/button';
 import { MiniCalendar } from '@/components/ui/mini-calendar';
 import { HoverTooltip } from '@/components/ui/tooltip';
@@ -23,7 +24,6 @@ import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useTheme } from '@/lib/hooks/useTheme';
-import { SidebarSection } from '@/shell/components/sidebar';
 
 /** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルター・パレットを組み立てる Composition Layer） */
 export function SidebarContent() {

@@ -16,8 +16,8 @@
 import type { Metadata } from 'next';
 
 import { IntlProvider } from '@/lib/i18n';
-import { BaseLayout } from '@/shell/layout/base-layout';
-import { Providers } from '@/shell/providers';
+import { Providers } from './_providers/Providers';
+import { BaseLayout } from './_shell/base-layout';
 
 /** 認証必須ページはクロール不要（noindex） */
 export const metadata: Metadata = {

@@ -10,7 +10,7 @@
 import type { Metadata } from 'next';
 
 import { IntlProvider } from '@/lib/i18n';
-import { OnboardingProviders } from '@/shell/providers/OnboardingProviders';
+import { OnboardingProviders } from './_providers/OnboardingProviders';
 
 /** オンボーディングページはクロール不要（noindex） */
 export const metadata: Metadata = {

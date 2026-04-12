@@ -10,9 +10,9 @@ import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useUnreadCount } from '@/features/notifications';
 import { useStatsFilterStore } from '@/features/stats';
+import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 

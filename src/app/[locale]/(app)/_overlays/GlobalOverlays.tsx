@@ -9,8 +9,8 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { Toaster } from '@/components/ui/toast';
 import { useEntryInspectorStore } from '@/features/entry';
 import { usePaletteItems, usePaletteMutations } from '@/features/palette';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
 

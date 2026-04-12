@@ -13,7 +13,7 @@
 
 'use client';
 
-import { PublicThemeProvider } from '@/shell/providers/public-theme-provider';
+import { PublicThemeProvider } from './public-theme-provider';
 
 interface PublicProvidersProps {
   children: React.ReactNode;

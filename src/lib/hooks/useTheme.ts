@@ -1,1 +1,1 @@
-export { useTheme } from '@/shell/providers/theme-provider';
+export { useTheme } from '@/app/[locale]/(app)/_providers/theme-provider';

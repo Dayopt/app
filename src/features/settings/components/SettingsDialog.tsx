@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { XIcon } from 'lucide-react';
 
 import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 import { SettingsContent } from './SettingsContent';

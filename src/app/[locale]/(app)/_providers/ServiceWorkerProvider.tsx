@@ -5,15 +5,15 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useNotificationBadge } from '@/features/notifications/hooks/useNotificationBadge';
+import { useNotificationBadge } from '@/features/notifications';
 
-import { InstallBanner } from '../components/InstallBanner';
-import { IOSInstallGuide } from '../components/IOSInstallGuide';
-import { useInstallPrompt } from '../hooks/useInstallPrompt';
-import { useOfflineToast } from '../hooks/useOfflineToast';
-import { usePWAInit } from '../hooks/usePWA';
-import { useServiceWorker } from '../hooks/useServiceWorker';
-import { useSyncProcessor } from '../hooks/useSyncProcessor';
+import { InstallBanner } from '@/components/shell/InstallBanner';
+import { IOSInstallGuide } from '@/components/shell/IOSInstallGuide';
+import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
+import { useOfflineToast } from '@/lib/hooks/useOfflineToast';
+import { usePWAInit } from '@/lib/hooks/usePWA';
+import { useServiceWorker } from '@/lib/hooks/useServiceWorker';
+import { useSyncProcessor } from '@/lib/hooks/useSyncProcessor';
 
 /**
  * Service Worker プロバイダー

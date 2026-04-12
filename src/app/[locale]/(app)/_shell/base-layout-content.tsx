@@ -9,7 +9,7 @@ import { CalendarNavigationProvider } from '@/features/calendar';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
-import { OfflineIndicator } from '@/shell/providers/OfflineIndicator';
+import { OfflineIndicator } from '@/app/[locale]/(app)/_providers/OfflineIndicator';
 
 import { DesktopLayout } from './desktop-layout';
 import { MobileLayout } from './mobile-layout';
