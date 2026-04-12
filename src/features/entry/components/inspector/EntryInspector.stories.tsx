@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 import type { FulfillmentScore } from '../../types/entry';
 
 // Story 内のみ: Composition Layer 連携プレビュー用
-// eslint-disable-next-line no-restricted-imports
+// TODO: re-enable eslint-disable-next-line no-restricted-imports with boundary rules
 import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
