@@ -1,4 +1,8 @@
-import type { ChronotypeProfile, ChronotypeSettings, ProductivityZone } from '@/types/chronotype';
+import type {
+  ChronotypeProfile,
+  ChronotypeSettings,
+  ProductivityZone,
+} from '@/lib/types/chronotype';
 import { describe, expect, it } from 'vitest';
 import {
   getChronotypeProfile,

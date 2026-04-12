@@ -27,7 +27,7 @@ export interface TimeColumnProps {
   format?: '12h' | '24h' | undefined; // 時刻表示形式
   className?: string | undefined;
   /** Chronotype ゾーン（deep/ease ラベル装飾用） */
-  zones?: import('@/types/chronotype').ProductivityZone[] | undefined;
+  zones?: import('@/lib/types/chronotype').ProductivityZone[] | undefined;
 }
 
 /** グリッド線コンポーネントのプロパティ */

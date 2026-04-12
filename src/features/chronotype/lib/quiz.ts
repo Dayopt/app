@@ -1,4 +1,4 @@
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 /** 各選択肢のスコア配分 */
 export interface QuizOptionScores {

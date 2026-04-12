@@ -15,7 +15,7 @@ import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 /** Chronotype type (inline to avoid cross-feature import) */
 const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);

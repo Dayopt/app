@@ -3,9 +3,9 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 
+import type { SettingsCategory } from '@/lib/types/settings';
 import { createSelectors } from '@/lib/zustand/createSelectors';
 import { platformStorage } from '@/lib/zustand/storage';
-import type { SettingsCategory } from '@/types/settings';
 
 // ── Sheet Types ──
 

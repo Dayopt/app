@@ -2,7 +2,7 @@ import type {
   ChronotypeProfile,
   PresetChronotypeType,
   ProductivityLevel,
-} from '@/types/chronotype';
+} from '@/lib/types/chronotype';
 
 /** 生産性レベルの表示順 */
 export const CHRONOTYPE_LEVEL_ORDER: ProductivityLevel[] = [

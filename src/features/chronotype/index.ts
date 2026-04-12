@@ -3,7 +3,7 @@ export type {
   ChronotypeType,
   PresetChronotypeType,
   ProductivityZone,
-} from '@/types/chronotype';
+} from '@/lib/types/chronotype';
 export { ChronotypeQuiz } from './components/chronotype-quiz';
 export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chronotype-settings';
 export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';

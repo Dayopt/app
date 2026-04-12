@@ -16,7 +16,11 @@ import {
 } from '../lib/constants';
 import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
-import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/types/chronotype';
+import type {
+  ChronotypeType,
+  PresetChronotypeType,
+  ProductivityZone,
+} from '@/lib/types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components（tRPC/Zustandに依存しないpure版）

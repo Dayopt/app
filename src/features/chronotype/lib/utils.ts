@@ -5,7 +5,7 @@ import type {
   ChronotypeSettings,
   ChronotypeType,
   ProductivityZone,
-} from '@/types/chronotype';
+} from '@/lib/types/chronotype';
 
 /**
  * クロノタイプ設定からプロフィールを取得する

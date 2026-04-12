@@ -3,8 +3,8 @@ import { devtools, persist } from 'zustand/middleware';
 
 import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
+import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
 import { platformStorage } from '@/lib/zustand/storage';
-import type { ChronotypeSettings as ChronotypeSettingsState } from '@/types/chronotype';
 
 export type { CalendarViewType } from '@/lib/calendar-constants';
 

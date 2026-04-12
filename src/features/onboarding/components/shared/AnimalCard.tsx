@@ -1,6 +1,6 @@
 'use client';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 interface AnimalCardProps {
   type: PresetChronotypeType;

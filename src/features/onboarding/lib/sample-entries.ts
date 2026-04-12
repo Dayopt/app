@@ -5,7 +5,7 @@
  * プリセットタグ + サンプルエントリを自動配置する。
  */
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // プリセットタグ

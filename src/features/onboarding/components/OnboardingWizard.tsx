@@ -7,7 +7,7 @@ import { StepIndicator } from './shared/StepIndicator';
 
 import type { OnboardingStep } from '../types';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 import { ChronotypeStep } from './steps/ChronotypeStep';
 import { WelcomeStep } from './steps/WelcomeStep';

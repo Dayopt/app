@@ -24,7 +24,7 @@ import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 
 import type { QuizCallbacks } from '@/features/onboarding';
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 export default function OnboardingPage() {
   const router = useRouter();

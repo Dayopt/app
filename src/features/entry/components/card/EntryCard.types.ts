@@ -2,7 +2,7 @@
  * EntryCard 専用の型定義
  */
 
-import type { CalendarEvent } from '@/types/calendar-event';
+import type { CalendarEvent } from '@/lib/types/calendar-event';
 
 import type { AnchorRect } from '../../stores/useEntryInspectorStore';
 

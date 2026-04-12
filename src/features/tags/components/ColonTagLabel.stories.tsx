@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import type { CalendarEvent } from '@/types/calendar-event';
+import type { CalendarEvent } from '@/lib/types/calendar-event';
 
 import { BlockItem } from '@/shell/components/sidebar/BlockItem';
 

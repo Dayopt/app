@@ -1,4 +1,4 @@
-import type { ProductivityZone } from '@/types/chronotype';
+import type { ProductivityZone } from '@/lib/types/chronotype';
 
 // ============================================
 // Chronotype Gradient Generator

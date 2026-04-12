@@ -31,15 +31,15 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';
 import { getInitials } from '@/lib/user';
 import { useLogout } from '@/shell/hooks/useLogout';
 import { useShellStore } from '@/shell/stores/useShellStore';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { SettingsCategory } from '@/types/settings';
+import type { SettingsCategory } from '@/lib/types/settings';
 
 /** ユーザーメニュー（アバター + ドロップダウン）。設定・ヘルプ・ログアウトへのアクセスを提供する。 */
 export function UserMenu({

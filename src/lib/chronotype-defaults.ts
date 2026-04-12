@@ -1,4 +1,4 @@
-import type { ChronotypeSettings } from '@/types/chronotype';
+import type { ChronotypeSettings } from '@/lib/types/chronotype';
 
 /** クロノタイプ設定のデフォルト値 */
 export const DEFAULT_CHRONOTYPE_SETTINGS: ChronotypeSettings = {
