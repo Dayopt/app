@@ -1,6 +1,6 @@
 'use client';
 
-import { closeModal as closeModalAction, useModalStore } from '@/stores/useModalStore';
+import { closeModal as closeModalAction, useModalStore } from '@/lib/hooks/useModalStore';
 import { useCreateTag, useTags } from '../hooks';
 import { TagCreateModal } from './tag-create-modal';
 

@@ -226,7 +226,6 @@ const eslintConfig = defineConfig([
   {
     files: [
       'src/components/**/*.{ts,tsx}',
-      'src/stores/**/*.{ts,tsx}',
       'src/shell/**/*.{ts,tsx}',
       'src/lib/**/*.{ts,tsx}',
     ],
