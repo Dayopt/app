@@ -189,28 +189,17 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     },
 
     /**
-     * 全ブロック（entries + entry_tags + 関連activities）を削除
+     * 全ブロック（entries + entry_tags）を削除
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
-      // entry_tags → entry_activities → entries の順で削除
+      // entry_tags → entries の順で削除
       // RLSがuser_idで制約しているため、他ユーザーのデータは影響しない
       const { error: tagError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
       if (tagError) {
         throw new UserServiceError(
           'DELETE_DATA_FAILED',
           `entry_tags deletion failed: ${tagError.message}`,
-        );
-      }
-
-      const { error: actError } = await supabase
-        .from('entry_activities')
-        .delete()
-        .eq('user_id', userId);
-      if (actError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_activities deletion failed: ${actError.message}`,
         );
       }
 
@@ -235,23 +224,12 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * entries, tags, 設定, 通知設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
-      // 依存関係順に削除: entry_tags → activities → instances → entries → tags → settings
+      // 依存関係順に削除: entry_tags → instances → entries → tags → settings
       const { error: etError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
       if (etError) {
         throw new UserServiceError(
           'DELETE_DATA_FAILED',
           `entry_tags deletion failed: ${etError.message}`,
-        );
-      }
-
-      const { error: eaError } = await supabase
-        .from('entry_activities')
-        .delete()
-        .eq('user_id', userId);
-      if (eaError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_activities deletion failed: ${eaError.message}`,
         );
       }
 
