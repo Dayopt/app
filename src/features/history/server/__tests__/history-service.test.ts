@@ -31,16 +31,8 @@ describe('HistoryService', () => {
 
   describe('getRecentBlocks', () => {
     it('should return empty array when no entries exist', async () => {
-      // palette_items: 空
-      const pinnedMock = createChainableMock([]);
-      // entry_tags: 空
       const entryMock = createChainableMock([]);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -48,7 +40,6 @@ describe('HistoryService', () => {
     });
 
     it('should aggregate entries by tag+duration and sort by score', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -82,12 +73,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -98,35 +84,7 @@ describe('HistoryService', () => {
       expect(result[1]).toMatchObject({ tagId: 'tag-b', durationMinutes: 60, score: 0.4 });
     });
 
-    it('should exclude pinned items', async () => {
-      const pinnedMock = createChainableMock([{ tag_id: 'tag-a', duration_minutes: 30 }]);
-      const entryRows = [
-        {
-          tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
-        },
-      ];
-      const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
-
-      const result = await service.getRecentBlocks(userId);
-
-      expect(result).toEqual([]);
-    });
-
     it('should skip deleted entries', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -140,12 +98,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -153,7 +106,6 @@ describe('HistoryService', () => {
     });
 
     it('should calculate duration from start_time/end_time when duration_minutes is null', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -167,12 +119,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -181,7 +128,6 @@ describe('HistoryService', () => {
     });
 
     it('should snap duration to 15-minute intervals', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -205,12 +151,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -219,7 +160,6 @@ describe('HistoryService', () => {
     });
 
     it('should keep only the highest-scoring duration per tag', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -253,12 +193,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -269,7 +204,6 @@ describe('HistoryService', () => {
     });
 
     it('should limit results to 8 items', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = Array.from({ length: 10 }, (_, i) => ({
         tag_id: `tag-${i}`,
         entries: {
@@ -281,12 +215,7 @@ describe('HistoryService', () => {
         },
       }));
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -294,7 +223,6 @@ describe('HistoryService', () => {
     });
 
     it('should apply recency weights correctly', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-today',
@@ -348,12 +276,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
@@ -365,33 +288,13 @@ describe('HistoryService', () => {
       expect(result[4]!.score).toBe(0.2);
     });
 
-    it('should throw FETCH_PINNED_FAILED on palette_items error', async () => {
-      const pinnedMock = createChainableMock(null, { message: 'DB error' });
-      mockSupabase.from.mockReturnValue(pinnedMock);
-
-      await expect(service.getRecentBlocks(userId)).rejects.toThrow(HistoryServiceError);
-
-      try {
-        await service.getRecentBlocks(userId);
-      } catch (error) {
-        expect((error as HistoryServiceError).code).toBe('FETCH_PINNED_FAILED');
-      }
-    });
-
     it('should throw FETCH_ENTRIES_FAILED on entry_tags error', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryMock = createChainableMock(null, { message: 'DB error' });
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       await expect(service.getRecentBlocks(userId)).rejects.toThrow(HistoryServiceError);
 
       try {
-        callCount = 0;
         await service.getRecentBlocks(userId);
       } catch (error) {
         expect((error as HistoryServiceError).code).toBe('FETCH_ENTRIES_FAILED');
@@ -399,7 +302,6 @@ describe('HistoryService', () => {
     });
 
     it('should skip entries with zero or negative duration', async () => {
-      const pinnedMock = createChainableMock([]);
       const entryRows = [
         {
           tag_id: 'tag-a',
@@ -423,12 +325,7 @@ describe('HistoryService', () => {
         },
       ];
       const entryMock = createChainableMock(entryRows);
-
-      let callCount = 0;
-      mockSupabase.from.mockImplementation(() => {
-        callCount++;
-        return callCount === 1 ? pinnedMock : entryMock;
-      });
+      mockSupabase.from.mockReturnValue(entryMock);
 
       const result = await service.getRecentBlocks(userId);
 
