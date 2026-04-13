@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/lib/components/ui/card';
 
-import { formatHours } from '../../utils/formatHours';
+import { formatHours } from '../../lib/format-hours';
 
 const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0];

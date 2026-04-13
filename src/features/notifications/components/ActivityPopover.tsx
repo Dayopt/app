@@ -14,7 +14,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUnreadCount } from '../hooks/useNotificationsData';
-import type { ActivityTab } from '../lib/notification-helpers';
+import type { ActivityTab } from '../lib/notification-filters';
 import { ActivityContent } from './ActivityContent';
 
 const TABS: ActivityTab[] = ['all', 'reminders', 'ai'];

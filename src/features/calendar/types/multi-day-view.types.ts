@@ -1,4 +1,4 @@
-import type { GridViewProps } from '../shared';
+import type { GridViewProps } from './base.types';
 
 /** MultiDayView の固有Props（GridViewPropsを継承） */
 export interface MultiDayViewProps extends GridViewProps {

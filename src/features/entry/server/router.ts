@@ -26,7 +26,7 @@ import {
 } from '../schemas/entry';
 import { createEntryService } from './service-index';
 
-import { removeUndefinedFields } from '../lib/entry-utils';
+import { removeUndefinedFields } from '../lib/entry-normalization';
 
 // =============================================================================
 // エントリ作成 日次レート制限（インメモリフォールバック）

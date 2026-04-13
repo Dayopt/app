@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { checkBrowserNotificationSupport, getDateGroupKey } from './notification-helpers';
+import { checkBrowserNotificationSupport, getDateGroupKey } from './notification-filters';
 
 describe('notification-helpers', () => {
   describe('getDateGroupKey', () => {

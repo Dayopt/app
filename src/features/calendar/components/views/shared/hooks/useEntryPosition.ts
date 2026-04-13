@@ -6,8 +6,8 @@ import { useMemo } from 'react';
 
 import type { EntryCardPosition } from '@/features/entry';
 import { layoutEntryToVerticalPosition } from '../../../../lib/grid';
+import type { TimedEntry } from '../../../../types/entry.types';
 import { HOUR_HEIGHT } from '../constants/grid.constants';
-import type { TimedEntry } from '../types/entry.types';
 
 import { useEntryLayoutCalculator } from './useEntryLayoutCalculator';
 

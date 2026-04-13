@@ -4,7 +4,7 @@ import {
   computeMonthCount,
   computePreviousDateRange,
   computeStatsDateRange,
-} from './computeDateRange';
+} from './compute-date-range';
 
 describe('computeStatsDateRange', () => {
   beforeEach(() => {

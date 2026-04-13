@@ -9,12 +9,12 @@ import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { cn } from '@/lib/utils';
 
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
 import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
 } from '../lib/constants';
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import type {
   ChronotypeType,

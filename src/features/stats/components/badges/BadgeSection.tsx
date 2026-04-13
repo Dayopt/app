@@ -6,7 +6,7 @@ import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { BADGE_COUNT } from '../../constants/badge-definitions';
 import { useBadges } from '../../hooks/useBadges';
-import { buildBadgeStatuses, countEarnedBadges } from '../../lib/badge-utils';
+import { buildBadgeStatuses, countEarnedBadges } from '../../lib/badge-status';
 import { BadgeDetailDrawer } from './BadgeDetailDrawer';
 import { BadgeGrid } from './BadgeGrid';
 

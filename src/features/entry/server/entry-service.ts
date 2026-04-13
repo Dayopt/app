@@ -8,7 +8,8 @@ import 'server-only';
 
 import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-utils';
+import { ServiceError } from '@/lib/trpc/errors';
+import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 
 import type {
   CreateEntryOptions,
@@ -477,12 +478,9 @@ export class EntryService {
 /**
  * エントリサービスエラー
  */
-export class EntryServiceError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
+export class EntryServiceError extends ServiceError {
+  constructor(code: string, message: string) {
+    super(code, message);
     this.name = 'EntryServiceError';
   }
 }

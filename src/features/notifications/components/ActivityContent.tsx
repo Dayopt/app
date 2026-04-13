@@ -15,8 +15,8 @@ import { Spinner } from '@/lib/components/ui/spinner';
 import type { NotificationType } from '../schemas';
 
 import { useNotificationMutations, useNotificationsList } from '../hooks/useNotificationsData';
-import type { ActivityTab } from '../lib/notification-helpers';
-import { filterNotificationsByTab, groupNotificationsByDate } from '../lib/notification-helpers';
+import type { ActivityTab } from '../lib/notification-filters';
+import { filterNotificationsByTab, groupNotificationsByDate } from '../lib/notification-filters';
 import { NotificationItem } from './NotificationItem';
 
 interface NotificationData {

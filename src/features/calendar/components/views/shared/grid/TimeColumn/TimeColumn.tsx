@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { TIME_COLUMN_WIDTH } from '../../constants/grid.constants';
 
-import type { TimeColumnProps } from '../../types/grid.types';
+import type { TimeColumnProps } from '../../../../../types/grid.types';
 
 /**
  * 時間ラベルをフォーマット

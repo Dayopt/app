@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import type { TimedEntry } from '../../components/views/shared/types/entry.types';
+import type { TimedEntry } from '../../types/entry.types';
 
 import {
   calculateEntryLayouts,

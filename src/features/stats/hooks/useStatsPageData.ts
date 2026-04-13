@@ -6,13 +6,13 @@ import { useMemo } from 'react';
 import { useCalendarSettingsStore } from '@/features/calendar';
 import { api } from '@/lib/trpc';
 
-import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import type { StatsPageData } from '../types/metrics.types';
 import {
   computeMonthCount,
   computePreviousDateRange,
   computeStatsDateRange,
-} from '../utils/computeDateRange';
+} from '../lib/compute-date-range';
+import { useStatsFilterStore } from '../stores/useStatsFilterStore';
+import type { StatsPageData } from '../types/metrics.types';
 
 /**
  * useStatsPageData — Stats ページ全データを 1 RPC で取得

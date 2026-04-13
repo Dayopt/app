@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/ca
 import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useTagOverviewData } from '../../hooks/useTagDetailData';
-import { formatHours } from '../../utils/formatHours';
+import { formatHours } from '../../lib/format-hours';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
 const chartConfig = {

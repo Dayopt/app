@@ -16,9 +16,9 @@ import { memo, useMemo } from 'react';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { convertToTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { timeToPixels } from '../../../../../lib/grid';
+import type { CurrentTimeLineProps } from '../../../../../types/grid.types';
 import { CURRENT_TIME_DOT_SIZE, HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
 import { useCurrentTime } from '../../hooks/useCurrentTime';
-import type { CurrentTimeLineProps } from '../../types/grid.types';
 
 export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLine({
   hourHeight = HOUR_HEIGHT,

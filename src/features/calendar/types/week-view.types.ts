@@ -1,6 +1,9 @@
 import type { CSSProperties } from 'react';
 
-import type { BaseEntryPosition, CalendarEvent, DateTimeSelection, GridViewProps } from '../shared';
+import type { BaseEntryPosition, GridViewProps } from './base.types';
+import type { CalendarEvent } from './calendar.types';
+
+import type { DateTimeSelection } from '../components/views/shared';
 
 /** WeekView の固有Props（GridViewPropsを継承して時間グリッド機能を使用） */
 export interface WeekViewProps extends GridViewProps {

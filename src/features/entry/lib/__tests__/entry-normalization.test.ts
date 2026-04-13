@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeDateTimeConsistency, removeUndefinedFields } from '../entry-utils';
+import { normalizeDateTimeConsistency, removeUndefinedFields } from '../entry-normalization';
 
 describe('removeUndefinedFields', () => {
   it('removes undefined fields', () => {

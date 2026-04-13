@@ -12,7 +12,7 @@ import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import { CalendarDateHeader, DateDisplay, ScrollableCalendarLayout } from '../shared';
 import { CalendarGridContent } from '../shared/components/CalendarGridContent';
 
-import type { DayViewProps } from './DayView.types';
+import type { DayViewProps } from '../../../types/day-view.types';
 import { useDayView } from './hooks/useDayView';
 
 /** 1日表示のカレンダービューコンポーネント */

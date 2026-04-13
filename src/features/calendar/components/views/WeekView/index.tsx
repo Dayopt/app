@@ -2,7 +2,7 @@
 export { WeekView } from './WeekView';
 
 // 型定義
-export type * from './WeekView.types';
+export type * from '../../../types/week-view.types';
 
 // フック
 export { useWeekEntries } from './hooks/useWeekEntries';

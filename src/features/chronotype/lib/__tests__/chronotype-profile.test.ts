@@ -10,7 +10,7 @@ import {
   getEnabledChronotypeProfile,
   getProductivityZoneForHour,
   getVisibleProductivityZones,
-} from '../utils';
+} from '../chronotype-profile';
 
 describe('getChronotypeProfile', () => {
   it('returns lion preset for lion type', () => {

@@ -89,9 +89,9 @@ export {
   Z_INDEX,
 } from './constants/grid.constants';
 
-// ===== 型定義 =====
-export type * from './types/base.types';
-export type * from './types/entry.types';
-export type * from './types/grid.types';
-export type { TimeSlot } from './types/grid.types';
-export type * from './types/view.types';
+// ===== 型定義（centralized types/ から re-export） =====
+export type * from '../../../types/base.types';
+export type * from '../../../types/entry.types';
+export type * from '../../../types/grid.types';
+export type { TimeSlot } from '../../../types/grid.types';
+export type * from '../../../types/view.types';

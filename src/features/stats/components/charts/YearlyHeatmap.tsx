@@ -15,7 +15,7 @@ import {
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { api } from '@/lib/trpc';
 
-import { formatHours } from '../../utils/formatHours';
+import { formatHours } from '../../lib/format-hours';
 
 /**
  * 年間ヒートマップ（CSS grid 実装、ライブラリ不使用）

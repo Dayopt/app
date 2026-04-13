@@ -4,16 +4,8 @@
  */
 
 // CalendarEvent, ViewDateRange, CalendarViewType を Source of Truth から直接エクスポート
-export type {
-  CalendarEvent,
-  CalendarViewType,
-  ViewDateRange,
-} from '../../../../types/calendar.types';
-import type {
-  CalendarEvent,
-  CalendarViewType,
-  ViewDateRange,
-} from '../../../../types/calendar.types';
+export type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
+import type { CalendarEvent, CalendarViewType, ViewDateRange } from './calendar.types';
 
 /**
  * 全ビューで共通する最小限のプロパティ

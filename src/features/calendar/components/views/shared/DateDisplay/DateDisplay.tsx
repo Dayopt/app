@@ -6,7 +6,7 @@ import { format, isToday } from 'date-fns';
 
 import { cn } from '@/lib/utils';
 
-import type { DateDisplayProps } from './DateDisplay.types';
+import type { DateDisplayProps } from '../../../../types/date-display.types';
 
 // 日付表示用のフォーマットユーティリティ
 const useDateFormats = (

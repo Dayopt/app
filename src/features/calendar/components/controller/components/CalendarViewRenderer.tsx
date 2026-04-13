@@ -5,9 +5,9 @@ import React, { Suspense, useMemo } from 'react';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
+import type { GridViewProps } from '../../../types/base.types';
 import type { CalendarViewType } from '../../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
-import type { GridViewProps } from '../../views/shared/types/base.types';
 
 import { CalendarViewSkeleton } from './CalendarViewSkeleton';
 

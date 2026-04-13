@@ -14,8 +14,8 @@ import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';

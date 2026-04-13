@@ -13,9 +13,9 @@ import { useMemo } from 'react';
 import { useCalendarSettingsStore } from '@/features/calendar';
 import { api } from '@/lib/trpc';
 
+import { computeStatsDateRange } from '../lib/compute-date-range';
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../utils/computeDateRange';
 
 function granularityToBucket(g: StatsGranularity): 'week' | 'month' | 'day' {
   switch (g) {

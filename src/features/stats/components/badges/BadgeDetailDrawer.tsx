@@ -16,7 +16,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popo
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
-import { getProgressPercent } from '../../lib/badge-utils';
+import { getProgressPercent } from '../../lib/badge-status';
 import type { BadgeRank, BadgeWithStatus } from '../../types/badge.types';
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeDateTimeConsistency } from '../entry-utils';
+import { normalizeDateTimeConsistency } from '../entry-normalization';
 
 describe('normalizeDateTimeConsistency — エッジケース', () => {
   describe('真夜中境界（Date boundary）', () => {

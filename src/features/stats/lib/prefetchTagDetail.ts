@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { createServerHelpers, dehydrate } from '@/lib/trpc/server';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../utils/computeDateRange';
+import { computeStatsDateRange } from './compute-date-range';
 
 /**
  * タグ詳細ページ用 prefetch

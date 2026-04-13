@@ -2,7 +2,7 @@
  * ビュー関連の型定義
  */
 
-import type { CalendarEvent, CalendarViewType } from '../../../../types/calendar.types';
+import type { CalendarEvent, CalendarViewType } from './calendar.types';
 import type { EntryInteractionHandler } from './entry.types';
 
 /** @deprecated CalendarViewType を使用してください */

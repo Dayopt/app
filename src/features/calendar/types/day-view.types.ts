@@ -1,8 +1,10 @@
 import type { CSSProperties } from 'react';
 
-import type { CalendarEvent } from '../../../types/calendar.types';
+import type { GridViewProps } from './base.types';
+import type { CalendarEvent } from './calendar.types';
+import type { TimeSlot } from './grid.types';
 
-import type { DateTimeSelection, GridViewProps, TimeSlot } from '../shared';
+import type { DateTimeSelection } from '../components/views/shared';
 
 /** DayViewの固有Props（GridViewPropsを継承して時間グリッド機能を使用） */
 export type DayViewProps = GridViewProps;

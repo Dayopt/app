@@ -18,9 +18,9 @@ import {
 } from '../shared';
 import { useResponsiveHourHeight } from '../shared/hooks/useResponsiveHourHeight';
 
+import type { MultiDayViewProps } from '../../../types/multi-day-view.types';
 import { CalendarGridContent } from '../shared/components/CalendarGridContent';
 import { useMultiDayView } from './hooks/useMultiDayView';
-import type { MultiDayViewProps } from './MultiDayView.types';
 
 /**
  * MultiDayView - N日間表示の汎用コンポーネント（2〜9日間）

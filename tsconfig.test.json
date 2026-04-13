@@ -7,10 +7,10 @@
   "include": [
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/test/setup.ts",
-    "src/test/trpc-test-helpers.ts",
-    "src/test/factories/**/*.ts",
-    "src/test/e2e/**/*.ts"
+    "src/lib/test/setup.ts",
+    "src/lib/test/trpc-test-helpers.ts",
+    "src/lib/test/factories/**/*.ts",
+    "src/lib/test/e2e/**/*.ts"
   ],
-  "exclude": ["node_modules", "src/test/integration/**"]
+  "exclude": ["node_modules", "src/lib/test/integration/**"]
 }

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
+import type { UseWeekViewOptions, UseWeekViewReturn } from '../../../../types/week-view.types';
 import { useCurrentPeriod, useDateUtilities, useEntriesByDate } from '../../shared';
-import type { UseWeekViewOptions, UseWeekViewReturn } from '../WeekView.types';
 
 /**
  * WeekView専用のロジックを管理するフック

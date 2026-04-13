@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/lib/components/ui/card';
 
-import { formatHours } from '../../utils/formatHours';
+import { formatHours } from '../../lib/format-hours';
 
 interface MonthlyTrendChartProps {
   data: Array<{ month: string; hours: number }>;

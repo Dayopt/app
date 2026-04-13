@@ -2,7 +2,7 @@
  * エントリ関連の型定義
  */
 
-import type { CalendarEvent } from '../../../../types/calendar.types';
+import type { CalendarEvent } from './calendar.types';
 
 /** 時間指定エントリ型（startDate/endDateをstart/endにエイリアス） */
 export type TimedEntry = CalendarEvent & {

@@ -2,7 +2,7 @@
 export { DateDisplay } from './DateDisplay';
 
 // 型定義
-export type * from './DateDisplay.types';
+export type * from '../../../../types/date-display.types';
 
 // ヘッダー関連の共有コンポーネント（ビュー専用）
 // ページ全体のヘッダー機能は layout/Header/ を使用
