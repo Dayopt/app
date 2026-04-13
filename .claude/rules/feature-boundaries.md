@@ -45,6 +45,29 @@ feature固有のモジュール（hooks, stores, schemas）は feature内に配�
 | Provider Composition   | `src/shell/providers/`                     |
 | Shell State / Contexts | `src/shell/stores/`, `src/shell/contexts/` |
 
+## Feature標準ディレクトリ構造
+
+```
+features/{name}/
+  index.ts          # barrel（公開API、これだけ外から見える）
+  components/       # UIコンポーネント
+  hooks/            # React hooks
+  types.ts          # 型定義（複雑なfeatureは types/ ディレクトリ）
+  constants.ts      # 定数
+  lib/              # 内部ロジック（utils/は使わない、lib/に統一）
+  server/           # tRPC router + service
+  stores/           # Zustand stores
+  schemas/          # Zod schemas
+```
+
+使わないサブディレクトリは作らない。あるなら必ずこの名前。
+
+## エラーハンドリング
+
+- 全ServiceErrorは `ServiceError`（`@/lib/trpc/errors`）を継承
+- ルーターのcatchブロックは `handleServiceError(error)` を使用
+- guard clause（バリデーション系throw）は `TRPCError` 直接で可
+
 ## 要点
 
 - feature内部を編集する時、同層・上位featureを見る必要がない
