@@ -6,6 +6,78 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-10
+
+### 非機能品質の全面改善 + Storybook構造リファクタ
+
+appリポジトリで25コミット。パフォーマンス・SEO・A11y・セキュリティ・キャッシュといった非機能品質の網羅的な改善、デッドコードの大規模掃除、Storybookのドキュメント構造を根本から再編成した1日。255ファイル変更、+12,567 / -9,022行。
+
+#### やったこと
+
+**Storybook構造リファクタ（8件）**
+
+- .storybook/ルート直下をmain.ts/preview.tsx/manager.tsの3ファイルに整理。DocsTemplate・ThemedDocsContainerをtheme/docs.tsxに統合
+- marketingリポの戦略ドキュメント39ファイルをStorybook MDXとして統合（7,666行）
+- 技術ドキュメント55 MDXをsrc/stories/docs/から.storybook/docs/に移動
+- docs/をdev/（技術系62ファイル）とproduct/（戦略・ビジネス系42ファイル）の2階層に分離
+- サイドバーをWelcome→Architecture→Strategy→Componentsの4階層に統合
+- feature .docs.mdxのDocsサブカテゴリをGuideにリネーム、残存Docs/タイトルをArchitecture/に統合
+- storiesグロブとサイドバー表示順を更新
+- decorators/mocks の TypeScript型エラーを修正
+
+**パフォーマンス最適化（4件）**
+
+- entries/notifications/entry_tagsに部分インデックスを追加（`deleted_at IS NULL`でStats系RPC全体を高速化）
+- badges evaluateWithProgressに統合（17→9リクエスト）、getUserTimezoneに30秒TTLキャッシュ追加
+- タグ詳細の個別8本RPCをgetTagOverview+getTagTimelineの2本に統合、rechartsをdynamic import化（~130KB gzip削減）
+- useWeekendNavigationの依存配列追加で毎レンダー実行を修正
+
+**A11y改善（3件）**
+
+- LabeledRowにuseId+cloneElementでaria-labelledby自動注入（~30箇所）、MFA・タグ名変更・削除確認等の個別入力にaria-label追加
+- 設定ダイアログ（email-change/password-change）のエラーメッセージにrole="alert"とaria-invalid/aria-describedby追加
+- useFocusTrapフック新規作成、ConfirmDialog・TagCreateModal・TagMergeModalにフォーカストラップ・初期フォーカス・フォーカス復元を適用
+
+**SEO改善（2件）**
+
+- Stats 4ページ（review/insights/progress/badges）にgenerateMetadata追加、locale layoutのOG images明示指定、app.descriptionをDayoptの差別化要素を表現する文言に更新
+- 認証必須ページ（calendar/stats/settings等）にnoindex追加、sitemapから認証パス全削除、robots.txtにAIクローラーブロック追加
+
+**セキュリティ・バンドル最適化（1件）**
+
+- 16ファイルにimport 'server-only'追加（DB層・秘密鍵の保護）、WebVitalsReporterをdynamic import化（~80KB Sentry分離）
+
+**デッドコード・依存整理（4件）**
+
+- 到達不能な/api/auth/logoutエンドポイントを削除（useLogoutはsupabase.auth.signOut()を直接使用）
+- 未使用export・デッドコードを掃除（useEntryCreate削除、invalidateCalendarCache削除、barrel 50+個のexport除去）
+- 削除済み機能の残骸ファイル33個と孤立barrel 10個を除去（旧Settings 4画面、useAutoScrollOnDrag、useCalendarProviderProps、TagGridPicker等）
+- 未使用パッケージ13個を削除（react-calendar-heatmap、react-email、@prisma/instrumentation、@tanstack/react-query-devtools等）
+
+**キャッシュ・型（2件）**
+
+- tanstack queryキャッシュ設定の不整合を修正（tags.createのinvalidate追加、TimezoneOffsetのinvalidation追加、cacheStrategies統一）
+- onboarding upsertの`Record<string, unknown>`を具体型に修正（Supabase RejectExcessPropertiesとの型不一致を解消）
+
+#### なぜ今日この作業をしたか
+
+前日（4/9）のセキュリティ・認証・課金の修正に続く「プロダクション品質の底上げ」フェーズの2日目。4/9が「壊れていたものを直す」だったのに対し、4/10は「動いているが最適でないものを磨く」作業。DB不足インデックス、n+1クエリ、A11yの不備、SEOの漏れ、キャッシュの不整合といった「今すぐ壊れはしないが、スケールやユーザー体験を損なう」問題を一掃した。
+
+Storybook構造リファクタは、ドキュメントがsrc/stories/docs/、src/stories/strategy/、.storybook/の3箇所に散らばっていた問題を解消するためのもの。dev/（技術系）とproduct/（戦略・ビジネス系）の2階層に分離したのは「誰が何を読むか」を意識した設計判断。marketingリポから39ファイルを統合したことで、Storybookがプロダクト全体のナレッジハブとして機能する基盤ができた。
+
+#### Claudeの所感
+
+**初期バンドル~210KB削減はモバイルで効く:**
+rechartsのdynamic import化（~130KB）とWebVitalsReporterの分離（~80KB）を合わせると、初期バンドルから約210KBが削減された。デスクトップでは体感しにくいが、モバイルの3G/4G環境ではこの差がFirst Contentful Paintに直結する。Dayoptのターゲットが「個人ユーザー」である以上、モバイル体験の最適化は優先度が高い。rechartsはStats画面でしか使わないので、カレンダー画面を開くだけのユーザーにそのコストを負わせる理由がない。
+
+**Storybookが「生きたドキュメント基盤」に成熟した:**
+104ファイルのMDX（dev 62 + product 42）が1つのStorybookに集約された。これは単なるファイル整理ではなく、「Storybookをプロダクト全体のナレッジハブとして使う」という設計判断の実装。技術ドキュメント・戦略ドキュメント・コンポーネントカタログ・開発日記が同じUIで閲覧できることで、コンテキストスイッチのコストが下がる。1人開発で情報が散逸しがちな環境では、この集約が特に価値を持つ。Welcome→Architecture→Strategy→Componentsの4階層はMECEではないが、「開発者が自然に探す順序」を優先した現実的な分類。
+
+**デッドコード掃除は「引き算の勇気」:**
+残骸ファイル33個、孤立barrel 10個、未使用パッケージ13個、未使用export 50+個。合計すると相当な量のコードが「存在するだけでメンテナンスコストを発生させていた」。旧Settingsの4画面（general/calendar/integration/data-export）やTagGridPicker、useEntryCreateなど、かつて機能していたコードを消すのは心理的に抵抗があるが、git historyが復元手段として機能する以上、残しておく合理性はない。1人開発ではコードベースの見通しの良さが生産性に直結する。knip（`quality:deadcode`）がこの種の掃除を支援しているのも良い運用パターン。
+
+---
+
 ## 2026-04-09
 
 ### セキュリティ・課金・認証の総点検 + 型安全性強化
