@@ -45,7 +45,7 @@ interface EntryTagRow {
 // ─────────────────────────────────────────────────────────
 
 export class HistoryServiceError extends ServiceError {
-  constructor(code: 'FETCH_PINNED_FAILED' | 'FETCH_ENTRIES_FAILED', message: string) {
+  constructor(code: 'FETCH_ENTRIES_FAILED', message: string) {
     super(code, message);
     this.name = 'HistoryServiceError';
   }
@@ -75,21 +75,6 @@ export class HistoryService {
     return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES || SNAP_MINUTES;
   }
 
-  /** ピン留め済みの tag+duration セットを取得（除外用） */
-  private async fetchPinnedSet(userId: string): Promise<Set<string>> {
-    const { data, error } = await this.supabase
-      .from('palette_items')
-      .select('tag_id, duration_minutes')
-      .eq('user_id', userId)
-      .eq('is_pinned', true);
-
-    if (error) {
-      throw new HistoryServiceError('FETCH_PINNED_FAILED', error.message);
-    }
-
-    return new Set((data ?? []).map((p) => `${p.tag_id}:${p.duration_minutes}`));
-  }
-
   /** 直近14日のエントリ+タグを取得 */
   private async fetchRecentEntries(userId: string): Promise<EntryTagRow[]> {
     const cutoff = new Date();
@@ -113,7 +98,6 @@ export class HistoryService {
 
   /** 直近2週間の使用パターンを頻度×鮮度で集計 */
   async getRecentBlocks(userId: string): Promise<RecentBlockItem[]> {
-    const pinnedSet = await this.fetchPinnedSet(userId);
     const rows = await this.fetchRecentEntries(userId);
 
     const now = new Date();
@@ -135,9 +119,6 @@ export class HistoryService {
 
       const snappedDuration = this.snapDuration(durationMinutes);
       const key = `${row.tag_id}:${snappedDuration}`;
-
-      // ピン留め済みを除外
-      if (pinnedSet.has(key)) continue;
 
       const weight = this.recencyWeight(new Date(entry.created_at), now);
       const existing = scores.get(key);

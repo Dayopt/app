@@ -1,5 +1,5 @@
 /**
- * バッジ定義 — 全15個
+ * バッジ定義 — 全14個
  *
  * カテゴリ:
  * - growth: 段階成長型（ブロンズ→シルバー→ゴールド）
@@ -57,7 +57,7 @@ const GROWTH_BADGES: BadgeDefinition[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// 探索系（6個）
+// 探索系（5個）
 // ---------------------------------------------------------------------------
 
 const EXPLORATION_BADGES: BadgeDefinition[] = [
@@ -67,14 +67,6 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     nameKey: 'badges.tags5.name',
     descriptionKey: 'badges.tags5.description',
     icon: 'Compass',
-    isTiered: false,
-  },
-  {
-    id: 'palette-first',
-    category: 'exploration',
-    nameKey: 'badges.paletteFirst.name',
-    descriptionKey: 'badges.paletteFirst.description',
-    icon: 'Palette',
     isTiered: false,
   },
   {

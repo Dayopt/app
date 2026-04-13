@@ -4,8 +4,8 @@
  * バッジ判定・取得のビジネスロジック。
  * Supabaseを直接クエリし、chronotype(Layer 0)のbarrelのみimport。
  *
- * パフォーマンス: 全バッジの素材データを一括取得（7クエリ）し、
- * メモリ上で20バッジを判定する。個別クエリのN+1を回避。
+ * パフォーマンス: 全バッジの素材データを一括取得（6クエリ）し、
+ * メモリ上でバッジを判定する。個別クエリのN+1を回避。
  */
 
 import { format, startOfWeek } from 'date-fns';
@@ -71,7 +71,6 @@ interface BadgeSourceData {
   streak: number;
   entryCount: number;
   distinctTagCount: number;
-  paletteExists: boolean;
   chronotypeEnabled: boolean;
   entriesWithTime: number;
   hasFullDay: boolean;
@@ -290,7 +289,7 @@ export class BadgesService {
   }
 
   // =========================================================================
-  // Internal: Batch data fetch (7 parallel queries)
+  // Internal: Batch data fetch (6 parallel queries)
   // =========================================================================
 
   private async fetchSourceData(userId: string): Promise<BadgeSourceData> {
@@ -300,7 +299,6 @@ export class BadgesService {
     const [
       entriesResult,
       entryTagsResult,
-      paletteResult,
       settingsResult,
       activeDatesResult,
       profileResult,
@@ -318,12 +316,7 @@ export class BadgesService {
         .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
         .eq('user_id', userId)
         .is('deleted_at', null),
-      // 3. palette_items count
-      this.supabase
-        .from('palette_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      // 4. user_settings (TZ・chronotype情報を含む)
+      // 3. user_settings (TZ・chronotype情報を含む)
       this.supabase
         .from('user_settings')
         .select(
@@ -473,7 +466,6 @@ export class BadgesService {
       streak,
       entryCount: entries.length,
       distinctTagCount: tagIds.size,
-      paletteExists: (paletteResult.count ?? 0) > 0,
       chronotypeEnabled,
       entriesWithTime,
       hasFullDay,
@@ -503,8 +495,6 @@ export class BadgesService {
         return source.maxTagMinutes; // 段階: 3000(50h) → 6000(100h) → 12000(200h)
       case 'tags-5':
         return source.distinctTagCount;
-      case 'palette-first':
-        return source.paletteExists ? 1 : 0;
       case 'deep-zone':
         return source.hasDeepZoneEntry ? 1 : 0;
       case 'full-day':
