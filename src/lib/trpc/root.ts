@@ -14,7 +14,6 @@ import { emailRouter } from '@/features/notifications/server/email-router';
 import { notificationPreferencesRouter } from '@/features/notifications/server/preferences-router';
 import { notificationsRouter } from '@/features/notifications/server/router';
 import { onboardingRouter } from '@/features/onboarding/server/router';
-import { paletteRouter } from '@/features/palette/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { badgesRouter } from '@/features/stats/server/badges-router';
@@ -31,7 +30,6 @@ export const appRouter = createTRPCRouter({
   email: emailRouter,
   entries: entriesRouter,
   history: historyRouter,
-  palette: paletteRouter,
   suggestions: suggestionsRouter,
   tags: tagsRouter,
   user: userRouter,
