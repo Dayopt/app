@@ -53,7 +53,7 @@ export function useEntryForm() {
     scheduleDate,
     startTime,
     endTime,
-    reminderMinutes,
+    reminderEnabled,
     actualStartTime,
     actualEndTime,
     handleScheduleDateChange,
@@ -99,7 +99,7 @@ export function useEntryForm() {
       endTime,
       actualStartTime,
       actualEndTime,
-      reminderMinutes,
+      reminderEnabled,
     },
 
     handlers: {

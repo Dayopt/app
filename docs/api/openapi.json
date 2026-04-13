@@ -3215,10 +3215,8 @@
             "maximum": 3,
             "nullable": true
           },
-          "reminder_minutes": {
-            "type": "integer",
-            "minimum": 0,
-            "nullable": true
+          "reminder_enabled": {
+            "type": "boolean"
           }
         },
         "required": ["title"],
@@ -3277,10 +3275,8 @@
                 "maximum": 3,
                 "nullable": true
               },
-              "reminder_minutes": {
-                "type": "integer",
-                "minimum": 0,
-                "nullable": true
+              "reminder_enabled": {
+                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -3373,10 +3369,8 @@
                 "maximum": 3,
                 "nullable": true
               },
-              "reminder_minutes": {
-                "type": "integer",
-                "minimum": 0,
-                "nullable": true
+              "reminder_enabled": {
+                "type": "boolean"
               }
             },
             "additionalProperties": false

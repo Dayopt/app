@@ -144,7 +144,6 @@ export function useBlockPlace() {
           title: params.tagName,
           start_time: params.startTime.toISOString(),
           end_time: end.toISOString(),
-          duration_minutes: params.durationMinutes,
           tagId: params.tagId,
         },
         {

@@ -33,8 +33,8 @@ CREATE TABLE public.entries (
   recurrence_type TEXT NOT NULL DEFAULT 'none',  -- none/daily/weekly/monthly/yearly/weekdays
   recurrence_end_date DATE,
   recurrence_rule TEXT,          -- RFC 5545 RRULE（複雑な繰り返し用）
-  reminder_minutes INTEGER,      -- リマインダー（開始N分前）
-  reminder_at TIMESTAMPTZ,       -- 自動計算: start_time - reminder_minutes
+  reminder_enabled BOOLEAN NOT NULL DEFAULT false, -- リマインダーON/OFF
+  reminder_at TIMESTAMPTZ,       -- 自動計算: reminder_enabled=true → start_time
   reminder_sent BOOLEAN NOT NULL DEFAULT false,
   reviewed_at TIMESTAMPTZ,       -- 完了マーク日時
   origin TEXT NOT NULL DEFAULT 'planned',
@@ -67,21 +67,6 @@ CREATE TABLE public.entry_tags (
   entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE UNIQUE,
   tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- entry_activities: エントリ操作履歴
--- 変更追跡用。entry削除時は entry_id = NULL（SET NULL）で履歴は残る
-CREATE TABLE public.entry_activities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entry_id UUID REFERENCES public.entries(id) ON DELETE SET NULL,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  action_type TEXT NOT NULL,     -- created/updated/time_changed/tag_added/... etc.
-  field_name TEXT,
-  old_value TEXT,
-  new_value TEXT,
-  metadata JSONB DEFAULT '{}',
-  schema_version SMALLINT NOT NULL DEFAULT 2,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- entry_instances: 繰り返しエントリの例外インスタンス

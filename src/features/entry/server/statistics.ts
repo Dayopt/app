@@ -789,6 +789,58 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   // ---------------------------------------------------------------------------
+  // Time P/L Data
+  // ---------------------------------------------------------------------------
+
+  /** Time P/L 用のタグ別予実データ + 日次ポイント */
+  getTimePL: protectedProcedure
+    .meta({ description: 'Time P/L データ取得（タグ別予実 + 日次累積）' })
+    .input(
+      z.object({
+        startDate: z.string().datetime({ offset: true }),
+        endDate: z.string().datetime({ offset: true }),
+        prevStart: z.string().datetime({ offset: true }).optional(),
+        prevEnd: z.string().datetime({ offset: true }).optional(),
+        wakeHour: z.number().min(0).max(23).default(7),
+        sleepHour: z.number().min(0).max(23).default(23),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const { supabase, userId } = ctx;
+
+        // NOTE: get_time_pl_data は新規追加のため database.types.ts にまだ含まれない。
+        // 型生成後にこの as never キャストを除去する。
+        const { data, error } = await traceDbQuery('stats.get_time_pl_data', async () =>
+          supabase.rpc(
+            'get_time_pl_data' as never,
+            stripUndefined({
+              p_user_id: userId,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+              p_prev_start: input.prevStart,
+              p_prev_end: input.prevEnd,
+              p_wake_hour: input.wakeHour,
+              p_sleep_hour: input.sleepHour,
+            }) as never,
+          ),
+        );
+
+        if (error) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: `Failed to fetch time PL data: ${error.message}`,
+            cause: error,
+          });
+        }
+
+        return data as unknown as TimePLResponse;
+      } catch (error) {
+        handleStatsError('getTimePL', error);
+      }
+    }),
+
+  // ---------------------------------------------------------------------------
   // Unified Stats Page Data (12 RPCs → 1 round-trip)
   // ---------------------------------------------------------------------------
 
@@ -925,4 +977,32 @@ export interface StatsPageData {
     month: string;
     hours: number;
   }>;
+}
+
+/** get_time_pl_data DB関数のレスポンス型 */
+export interface TimePLResponse {
+  tags: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    tagIcon: string | null;
+    budgetMinutes: number;
+    actualMinutes: number;
+    isPlanned: boolean;
+  }>;
+  prevTags: Array<{
+    tagId: string;
+    tagName: string;
+    tagColor: string;
+    tagIcon: string | null;
+    budgetMinutes: number;
+    actualMinutes: number;
+    isPlanned: boolean;
+  }>;
+  dailyPoints: Array<{
+    label: string;
+    budgetMinutes: number;
+    actualMinutes: number;
+  }>;
+  availableMinutes: number;
 }

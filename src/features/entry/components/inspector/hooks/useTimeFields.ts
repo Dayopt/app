@@ -3,8 +3,8 @@
 /**
  * 時間フィールドの状態管理
  *
- * scheduleDate, startTime, endTime, actualStartTime, actualEndTime,
- * reminderMinutes の local state と変更ハンドラーを提供。
+ * scheduleDate, startTime, endTime, actualStartTime, actualEndTime
+ * の local state と変更ハンドラーを提供。
  *
  * 保存は useDebouncedSave に委譲。
  */
@@ -21,9 +21,9 @@ interface UseTimeFieldsOptions {
   entry: EntryWithTags | null;
   entryId: string | null;
   /** useDebouncedSave.save — デバウンス保存 */
-  save: (fields: Record<string, string | number | null | undefined>) => void;
+  save: (fields: Record<string, string | number | boolean | null | undefined>) => void;
   /** useDebouncedSave.saveImmediate — 即時保存 */
-  saveImmediate: (fields: Record<string, string | number | null | undefined>) => void;
+  saveImmediate: (fields: Record<string, string | number | boolean | null | undefined>) => void;
 }
 
 /** HH:MM 形式の時間文字列を生成 */
@@ -31,9 +31,9 @@ function toHHMM(date: Date): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
-/** Inspectorの時間・リマインダーフィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
+/** Inspectorの時間フィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
  * @param options - entry, entryId, save, saveImmediate
- * @returns scheduleDate, startTime, endTime, actualStartTime, actualEndTime, reminderMinutes および各ハンドラー
+ * @returns scheduleDate, startTime, endTime, actualStartTime, actualEndTime および各ハンドラー
  */
 export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFieldsOptions) {
   const timezone = useCalendarSettingsStore((state) => state.timezone);
@@ -55,7 +55,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null);
   const [actualStartTime, setActualStartTime] = useState<string | null>(null);
   const [actualEndTime, setActualEndTime] = useState<string | null>(null);
 
@@ -80,8 +79,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
         setEndTime('');
       }
 
-      setReminderMinutes(entry.reminder_minutes ?? null);
-
       if (entry.actual_start_time) {
         const actualStart = parseISOToUserTimezone(entry.actual_start_time, timezone);
         setActualStartTime(toHHMM(actualStart));
@@ -99,7 +96,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       setScheduleDate(undefined);
       setStartTime('');
       setEndTime('');
-      setReminderMinutes(null);
       setActualStartTime(null);
       setActualEndTime(null);
     }
@@ -211,15 +207,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     [scheduleDate, save, timezone, timeConflictError],
   );
 
-  // リマインダー: 即時保存
-  const handleReminderChange = useCallback(
-    (minutes: number | null) => {
-      setReminderMinutes(minutes);
-      saveImmediate({ reminder_minutes: minutes });
-    },
-    [saveImmediate],
-  );
-
   // 記録時間: 即時保存（サーバー側で隣接auto-shrink）
   const handleActualStartChange = useCallback(
     (time: string | null) => {
@@ -294,14 +281,12 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     scheduleDate,
     startTime,
     endTime,
-    reminderMinutes,
     actualStartTime,
     actualEndTime,
     today,
     handleScheduleDateChange,
     handleStartTimeChange,
     handleEndTimeChange,
-    handleReminderChange,
     handleActualStartChange,
     handleActualEndChange,
     setStartTimeLocal,

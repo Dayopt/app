@@ -8,13 +8,12 @@
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
 --   create_default_notification_preferences() — auth.users INSERT → notification_preferences 自動作成
---   compute_reminder_at()                     — entries の reminder_at を start_time - reminder_minutes で自動計算
+--   compute_reminder_at()                     — entries の reminder_at を reminder_enabled + start_time から自動計算
 
 -- ■ クリーンアップ関数（pg_cron で定期実行）
 --   cleanup_old_login_attempts()              — 90日超のログイン試行を削除
 --   cleanup_old_auth_audit_logs()             — 365日超の監査ログを削除
 --   delete_old_notifications()                — 既読30日超の通知を削除
---   cleanup_old_plan_activities()             — 365日超の操作履歴を削除
 
 -- ■ RPC 関数
 --   increment_ai_usage(user_id, month)        — AI使用量をアトミックにインクリメント（UPSERT）

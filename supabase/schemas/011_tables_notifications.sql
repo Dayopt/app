@@ -25,7 +25,7 @@ CREATE TABLE public.notification_preferences (
   enable_browser_notifications BOOLEAN NOT NULL DEFAULT false,
   enable_email_notifications BOOLEAN NOT NULL DEFAULT false,
   enable_push_notifications BOOLEAN NOT NULL DEFAULT false,
-  default_reminder_minutes INTEGER DEFAULT 15,
+  default_reminder_enabled BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

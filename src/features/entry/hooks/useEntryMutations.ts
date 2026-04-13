@@ -74,14 +74,8 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         end_time: input.end_time ?? null,
         actual_start_time: null,
         actual_end_time: null,
-        backed_up_start_time: null,
-        backed_up_end_time: null,
-        duration_minutes: input.duration_minutes ?? null,
+        duration_minutes: null,
         fulfillment_score: input.fulfillment_score ?? null,
-        reminder_minutes: input.reminder_minutes ?? null,
-        reminder_at: null,
-        reminder_sent: false,
-        reviewed_at: null,
         deleted_at: null,
         user_id: '',
         created_at: new Date().toISOString(),
@@ -208,10 +202,8 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       if (data.actual_end_time !== undefined) updateData.actual_end_time = data.actual_end_time;
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description;
-      if (data.reminder_minutes !== undefined) updateData.reminder_minutes = data.reminder_minutes;
       if (data.fulfillment_score !== undefined)
         updateData.fulfillment_score = data.fulfillment_score;
-      if (data.duration_minutes !== undefined) updateData.duration_minutes = data.duration_minutes;
       if (data.origin !== undefined) updateData.origin = data.origin;
 
       // 4. TanStack Queryキャッシュを楽観的に更新

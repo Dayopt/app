@@ -198,7 +198,6 @@ async function createSampleEntriesForUser(
     start_time: plan.startTime,
     end_time: plan.endTime,
     description: plan.description ?? '__onboarding_sample__',
-    reminder_minutes: plan.reminderMinutes,
   }));
 
   const { data: insertedEntries, error: entriesError } = await supabase

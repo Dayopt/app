@@ -28,7 +28,7 @@ entries:
   fulfillment_score INT CHECK (fulfillment_score BETWEEN 1 AND 3)
   -- 1: 微妙, 2: 普通, 3: 良い
 
-  reminder_minutes INT
+  reminder_enabled BOOLEAN DEFAULT false
 
   reviewed_at TIMESTAMPTZ
   -- 旧completed_at。充実度入力時にセット。

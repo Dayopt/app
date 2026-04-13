@@ -51,7 +51,7 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
     endTime,
     actualStartTime,
     actualEndTime,
-    reminderMinutes,
+    reminderEnabled,
   } = fields;
   const {
     handleTagChange,
@@ -358,7 +358,7 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
           />
 
           {/* リマインダー */}
-          <ReminderRow value={reminderMinutes} onChange={handleReminderChange} />
+          <ReminderRow value={reminderEnabled} onChange={handleReminderChange} />
 
           {/* メモ */}
           <NoteSection

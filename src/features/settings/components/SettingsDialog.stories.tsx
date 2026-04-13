@@ -27,7 +27,7 @@ import { SettingsDialog } from './SettingsDialog';
 const MOCK_NOTIFICATION_PREFERENCES = {
   emailEnabled: true,
   pushEnabled: false,
-  reminderMinutes: 15,
+  reminderEnabled: true,
 };
 
 const MOCK_PROFILE = {

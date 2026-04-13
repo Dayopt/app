@@ -22,8 +22,8 @@ const meta = {
 export default meta;
 type Story = StoryObj;
 
-function ReminderRowDemo({ initialValue = null }: { initialValue?: number | null }) {
-  const [value, setValue] = useState<number | null>(initialValue);
+function ReminderRowDemo({ initialValue = false }: { initialValue?: boolean }) {
+  const [value, setValue] = useState(initialValue);
   return (
     <div className="w-72">
       <ReminderRow value={value} onChange={setValue} />
@@ -38,14 +38,14 @@ export const Default: Story = {
 
 /** 開始時通知ON */
 export const Enabled: Story = {
-  render: () => <ReminderRowDemo initialValue={0} />,
+  render: () => <ReminderRowDemo initialValue />,
 };
 
 /** コールバックのみ（非インタラクティブ確認用） */
 export const WithCallbacks: Story = {
   render: () => (
     <div className="w-72">
-      <ReminderRow value={null} onChange={fn()} />
+      <ReminderRow value={false} onChange={fn()} />
     </div>
   ),
 };
@@ -60,7 +60,7 @@ export const AllPatterns: Story = {
       </div>
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">ON（開始時に通知）</p>
-        <ReminderRowDemo initialValue={0} />
+        <ReminderRowDemo initialValue />
       </div>
     </div>
   ),

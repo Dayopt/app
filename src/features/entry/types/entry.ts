@@ -27,12 +27,6 @@ export interface Entry {
   actual_end_time: string | null;
   duration_minutes: number | null;
   fulfillment_score: FulfillmentScore | null;
-  reminder_minutes: number | null;
-  reviewed_at: string | null;
-  /** 計画外にする前の予定開始時刻（復元用） */
-  backed_up_start_time: string | null;
-  /** 計画外にする前の予定終了時刻（復元用） */
-  backed_up_end_time: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -54,9 +48,7 @@ export interface CreateEntryInput {
   origin?: EntryOrigin;
   start_time?: string;
   end_time?: string;
-  duration_minutes?: number;
   fulfillment_score?: FulfillmentScore;
-  reminder_minutes?: number;
 }
 
 /**
@@ -70,12 +62,7 @@ export interface UpdateEntryInput {
   end_time?: string;
   actual_start_time?: string | null;
   actual_end_time?: string | null;
-  duration_minutes?: number;
   fulfillment_score?: FulfillmentScore | null;
-  reminder_minutes?: number;
-  reviewed_at?: string | null;
-  backed_up_start_time?: string | null;
-  backed_up_end_time?: string | null;
 }
 
 /**

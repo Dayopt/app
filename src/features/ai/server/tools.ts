@@ -201,9 +201,7 @@ export function createAITools(supabase: AISupabaseClient, userId: string): ToolS
           // entries テーブルから全エントリを取得
           const { data: entries, error: entriesError } = await supabase
             .from('entries')
-            .select(
-              'start_time, end_time, duration_minutes, origin, reviewed_at, fulfillment_score',
-            )
+            .select('start_time, end_time, duration_minutes, origin, fulfillment_score')
             .eq('user_id', userId)
             .gte('start_time', startDate.toISOString());
 
@@ -216,8 +214,7 @@ export function createAITools(supabase: AISupabaseClient, userId: string): ToolS
           let reviewedEntries = 0;
 
           for (const entry of entries ?? []) {
-            // reviewed_at が設定されている = 振り返り済み
-            if (entry.reviewed_at) reviewedEntries++;
+            if (entry.fulfillment_score != null) reviewedEntries++;
 
             if (entry.origin === 'planned') {
               // Planned entries: use start_time/end_time

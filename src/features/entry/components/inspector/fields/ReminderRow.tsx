@@ -12,8 +12,8 @@ import { useTranslations } from 'next-intl';
 import { ReminderToggle } from './ReminderToggle';
 
 interface ReminderRowProps {
-  value: number | null;
-  onChange: (minutes: number | null) => void;
+  value: boolean;
+  onChange: (enabled: boolean) => void;
 }
 
 /** Inspectorの開始時通知設定行（アイコン + ラベル + ReminderToggle） */

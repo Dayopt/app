@@ -296,18 +296,6 @@ export class EntryService {
 
     const updateData = removeUndefinedFields(normalizedInput) as TablesUpdate<'entries'>;
 
-    // reviewed_at 自動設定: fulfillment_score が設定されたら reviewed_at をセット
-    const inputWithFulfillment = input as { fulfillment_score?: number | null };
-    if (
-      inputWithFulfillment.fulfillment_score != null &&
-      oldData?.fulfillment_score !== inputWithFulfillment.fulfillment_score
-    ) {
-      updateData.reviewed_at = new Date().toISOString();
-    } else if (inputWithFulfillment.fulfillment_score === null && oldData?.reviewed_at) {
-      // 充実度をクリアした場合、reviewed_at もクリア
-      updateData.reviewed_at = null;
-    }
-
     const { data, error } = await this.supabase
       .from('entries')
       .update(updateData)

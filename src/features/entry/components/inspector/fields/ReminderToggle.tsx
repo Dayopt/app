@@ -4,7 +4,6 @@
  * 開始時通知ON/OFFトグル
  *
  * ブロック開始時に通知するかどうかを切り替える。
- * ON → onChange(0), OFF → onChange(null)
  */
 
 import { Bell, BellOff } from 'lucide-react';
@@ -13,12 +12,11 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/lib/components/ui/button';
 import { Switch } from '@/lib/components/ui/switch';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { isReminderEnabled } from '@/lib/reminder';
 import { cn } from '@/lib/utils';
 
 interface ReminderToggleProps {
-  value: number | null;
-  onChange: (value: number | null) => void;
+  value: boolean;
+  onChange: (value: boolean) => void;
   variant?: 'inspector' | 'compact' | 'button' | 'icon';
   disabled?: boolean;
   className?: string;
@@ -34,10 +32,10 @@ export function ReminderToggle({
 }: ReminderToggleProps) {
   const t = useTranslations();
 
-  const enabled = isReminderEnabled(value);
+  const enabled = value;
 
   const handleToggle = (checked: boolean) => {
-    onChange(checked ? 0 : null);
+    onChange(checked);
   };
 
   if (variant === 'icon') {

@@ -129,33 +129,6 @@ describe('createEntrySchema — timeOrderRefine バリデーション', () => {
     });
   });
 
-  describe('duration_minutes の min(1) バリデーション', () => {
-    it('duration_minutes: 0 は invalid（min(1)）', () => {
-      const result = createEntrySchema.safeParse(validEntry({ duration_minutes: 0 }));
-      expect(result.success).toBe(false);
-    });
-
-    it('duration_minutes: 1 は valid', () => {
-      const result = createEntrySchema.safeParse(validEntry({ duration_minutes: 1 }));
-      expect(result.success).toBe(true);
-    });
-
-    it('duration_minutes: -1 は invalid', () => {
-      const result = createEntrySchema.safeParse(validEntry({ duration_minutes: -1 }));
-      expect(result.success).toBe(false);
-    });
-
-    it('duration_minutes: null は valid（nullable）', () => {
-      const result = createEntrySchema.safeParse(validEntry({ duration_minutes: null }));
-      expect(result.success).toBe(true);
-    });
-
-    it('duration_minutes: 1.5 は invalid（int）', () => {
-      const result = createEntrySchema.safeParse(validEntry({ duration_minutes: 1.5 }));
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe('title のバリデーション', () => {
     it('200文字は valid', () => {
       const result = createEntrySchema.safeParse(validEntry({ title: 'a'.repeat(200) }));
@@ -210,10 +183,5 @@ describe('updateEntrySchema — partial フィールドの振る舞い', () => {
   it('end_time のみ（start_time なし）では timeOrderRefine はスキップ', () => {
     const result = updateEntrySchema.safeParse({ end_time: '2025-03-15T09:00:00Z' });
     expect(result.success).toBe(true);
-  });
-
-  it('duration_minutes を 0 で更新しようとすると invalid', () => {
-    const result = updateEntrySchema.safeParse({ duration_minutes: 0 });
-    expect(result.success).toBe(false);
   });
 });

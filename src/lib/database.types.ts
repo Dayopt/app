@@ -179,7 +179,7 @@ export type Database = {
           id: string;
           origin: string;
           reminder_at: string | null;
-          reminder_minutes: number | null;
+          reminder_enabled: boolean;
           reminder_sent: boolean;
           reviewed_at: string | null;
           start_time: string | null;
@@ -201,7 +201,7 @@ export type Database = {
           id?: string;
           origin?: string;
           reminder_at?: string | null;
-          reminder_minutes?: number | null;
+          reminder_enabled?: boolean;
           reminder_sent?: boolean;
           reviewed_at?: string | null;
           start_time?: string | null;
@@ -223,7 +223,7 @@ export type Database = {
           id?: string;
           origin?: string;
           reminder_at?: string | null;
-          reminder_minutes?: number | null;
+          reminder_enabled?: boolean;
           reminder_sent?: boolean;
           reviewed_at?: string | null;
           start_time?: string | null;
@@ -377,7 +377,7 @@ export type Database = {
         Row: {
           created_at: string;
           default_reminder_enabled: boolean;
-          default_reminder_minutes: number | null;
+
           enable_browser_notifications: boolean;
           enable_burnout_warnings: boolean;
           enable_daily_insights: boolean;
@@ -392,7 +392,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           default_reminder_enabled?: boolean;
-          default_reminder_minutes?: number | null;
+
           enable_browser_notifications?: boolean;
           enable_burnout_warnings?: boolean;
           enable_daily_insights?: boolean;
@@ -407,7 +407,7 @@ export type Database = {
         Update: {
           created_at?: string;
           default_reminder_enabled?: boolean;
-          default_reminder_minutes?: number | null;
+
           enable_browser_notifications?: boolean;
           enable_burnout_warnings?: boolean;
           enable_daily_insights?: boolean;
@@ -821,7 +821,7 @@ export type Database = {
           id: string;
           origin: string;
           reminder_at: string | null;
-          reminder_minutes: number | null;
+          reminder_enabled: boolean;
           reminder_sent: boolean;
           reviewed_at: string | null;
           start_time: string | null;

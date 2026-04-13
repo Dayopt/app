@@ -22,11 +22,9 @@ const ALLOWED_FIELDS = new Set([
   'origin',
   'start_time',
   'end_time',
-  'duration_minutes',
   'actual_start_time',
   'actual_end_time',
   'fulfillment_score',
-  'reminder_minutes',
 ]);
 
 const beaconPayloadSchema = z.object({

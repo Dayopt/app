@@ -209,16 +209,14 @@ describe('EntryService.update', () => {
     }
   });
 
-  it('fulfillment_score 設定時に reviewed_at が自動セットされる', async () => {
+  it('fulfillment_score が正常に設定される', async () => {
     const existing = createMockEntry({
       id: 'entry-1',
       fulfillment_score: null,
-      reviewed_at: null,
     });
     const updated = {
       ...existing,
       fulfillment_score: 2,
-      reviewed_at: new Date().toISOString(),
     };
 
     const { service, mockSupabase } = createService();
@@ -237,7 +235,6 @@ describe('EntryService.update', () => {
     });
 
     expect(result.fulfillment_score).toBe(2);
-    expect(result.reviewed_at).toBeTruthy();
   });
 });
 
