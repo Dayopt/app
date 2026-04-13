@@ -39,5 +39,11 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "supabase/functions/**", "src/lib/test/integration/**", "scripts/**"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions/**",
+    "src/lib/test/integration/**",
+    "src/lib/test/storybook-setup*.ts",
+    "scripts/**"
+  ]
 }
