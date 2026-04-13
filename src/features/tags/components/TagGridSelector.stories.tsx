@@ -4,9 +4,9 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Check, ChevronDown, ChevronLeft, Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/lib/components/ui/button';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
+import { Input } from '@/lib/components/ui/input';
 import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 

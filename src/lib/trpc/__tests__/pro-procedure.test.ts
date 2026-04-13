@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { describe, expect, it } from 'vitest';
 
-import { createChainableMock } from '@/test/trpc-test-helpers';
+import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { createCallerFactory, createTRPCRouter, proProcedure } from '../procedures';
 

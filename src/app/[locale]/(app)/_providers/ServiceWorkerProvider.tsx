@@ -7,8 +7,8 @@ import { useTranslations } from 'next-intl';
 
 import { useNotificationBadge } from '@/features/notifications';
 
-import { InstallBanner } from '@/components/shell/InstallBanner';
-import { IOSInstallGuide } from '@/components/shell/IOSInstallGuide';
+import { InstallBanner } from '@/lib/components/shell/InstallBanner';
+import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
 import { useOfflineToast } from '@/lib/hooks/useOfflineToast';
 import { usePWAInit } from '@/lib/hooks/usePWA';

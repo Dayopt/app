@@ -10,9 +10,9 @@
 import { Bell, BellOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { Button } from '@/lib/components/ui/button';
+import { Switch } from '@/lib/components/ui/switch';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { isReminderEnabled } from '@/lib/reminder';
 import { cn } from '@/lib/utils';
 

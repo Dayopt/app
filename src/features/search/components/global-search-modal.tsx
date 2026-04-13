@@ -2,6 +2,9 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+import { useCalendarFilterStore, useCalendarNavigationStore } from '@/features/calendar';
+import { useEntries, useEntryInspectorStore } from '@/features/entry';
+import { TagIcon, useTags } from '@/features/tags';
 import {
   Command,
   CommandEmpty,
@@ -9,11 +12,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useCalendarFilterStore, useCalendarNavigationStore } from '@/features/calendar';
-import { useEntries, useEntryInspectorStore } from '@/features/entry';
-import { TagIcon, useTags } from '@/features/tags';
+} from '@/lib/components/ui/command';
+import { Dialog, DialogContent, DialogTitle } from '@/lib/components/ui/dialog';
 import { formatDateShort, formatTimeRange } from '@/lib/date/format';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useTranslations } from 'next-intl';

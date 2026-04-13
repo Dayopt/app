@@ -3,8 +3,8 @@
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
 import { cn } from '@/lib/utils';
 
 import { useDiscoveries } from '../../hooks/useDiscoveries';

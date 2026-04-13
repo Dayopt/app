@@ -11,8 +11,8 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import {
   Field,
   FieldDescription,
@@ -21,9 +21,9 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldSupportText,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { createClient } from '@/lib/supabase/client';

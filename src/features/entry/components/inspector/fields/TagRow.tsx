@@ -23,15 +23,15 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
+import { TagIcon, TagQuickSelector } from '@/features/tags';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { TagIcon, TagQuickSelector } from '@/features/tags';
+} from '@/lib/components/ui/dropdown-menu';
 import type { TagColorEntry } from '@/lib/tag-colors';
 
 interface TagRowProps {

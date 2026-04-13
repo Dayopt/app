@@ -4,8 +4,8 @@ import { useTranslations } from 'next-intl';
 
 import { Line, LineChart, XAxis, YAxis } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useTagTimelineData } from '../../hooks/useTagDetailData';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';

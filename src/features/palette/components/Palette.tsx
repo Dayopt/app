@@ -12,10 +12,10 @@ import { useMemo } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/components/shell/sidebar';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/lib/components/shell/sidebar';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 
 import { usePaletteMutations } from '../hooks/usePaletteMutations';
 import { usePaletteItems } from '../hooks/usePaletteQuery';

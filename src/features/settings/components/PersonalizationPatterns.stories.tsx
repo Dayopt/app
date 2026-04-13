@@ -22,13 +22,13 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { GripVertical } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/lib/components/ui/badge';
+import { Label } from '@/lib/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
+import { Textarea } from '@/lib/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
-import { SectionCard } from '@/components/common/SectionCard';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 
 import type { DragEndEvent, DropAnimation, Modifier } from '@dnd-kit/core';
 import type { AnimateLayoutChanges } from '@dnd-kit/sortable';

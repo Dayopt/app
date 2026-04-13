@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Archive, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Button } from '@/lib/components/ui/button';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 
 const meta = {
   title: 'Patterns/Confirmation',

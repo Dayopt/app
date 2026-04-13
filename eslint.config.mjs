@@ -225,13 +225,12 @@ const eslintConfig = defineConfig([
   // Shared layer: cannot import from features (dependency inversion)
   {
     files: [
-      'src/components/**/*.{ts,tsx}',
       'src/lib/**/*.{ts,tsx}',
     ],
     ignores: [
       'src/lib/trpc/root.ts',            // Server Composition Layer (router aggregator)
-      'src/components/dnd/**',           // DnD (stories only)
-      'src/components/**/*.stories.*',   // Storybook files
+      'src/lib/components/dnd/**',       // DnD (stories only)
+      'src/lib/components/**/*.stories.*', // Storybook files
     ],
     rules: {
       'no-restricted-imports': ['off', {
@@ -335,9 +334,9 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // src/test/ではconsole許可（テストユーティリティ）
+  // src/lib/test/ではconsole許可（テストユーティリティ）
   {
-    files: ['src/test/**/*.{js,ts,tsx}'],
+    files: ['src/lib/test/**/*.{js,ts,tsx}'],
     rules: {
       'no-console': 'off',
     },

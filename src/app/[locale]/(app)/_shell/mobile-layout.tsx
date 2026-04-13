@@ -3,8 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
-import { AppHeader } from '@/components/shell/AppHeader';
 import { isCalendarViewPath } from '@/features/calendar';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { BottomTabBar } from './BottomTabBar';
 

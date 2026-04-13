@@ -13,8 +13,8 @@ import type { FulfillmentScore } from '../../types/entry';
 // TODO: re-enable eslint-disable-next-line no-restricted-imports with boundary rules
 import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { Spinner } from '@/components/ui/spinner';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
+import { Spinner } from '@/lib/components/ui/spinner';
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockReminderRow, MockTagRow } from './story-helpers';
 

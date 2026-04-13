@@ -7,9 +7,9 @@
 import { Bell, ChevronDown, FolderOpen, Plus, Trash2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { HoverTooltip } from '@/components/ui/tooltip';
 import type { Tag } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /** Inspector風コンテナ（400px幅） */

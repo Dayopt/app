@@ -5,7 +5,9 @@ import { useCallback, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth';
+import { checkPasswordPwned } from '@/lib/auth/pwned-password';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +15,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuthStore } from '@/features/auth';
-import { checkPasswordPwned } from '@/lib/auth/pwned-password';
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
+import { Label } from '@/lib/components/ui/label';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';

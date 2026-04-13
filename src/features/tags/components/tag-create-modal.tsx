@@ -3,11 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { ActionFooter } from '@/components/ui/action-footer';
-import { Button } from '@/components/ui/button';
-import { getColorDisplayName } from '@/components/ui/color-palette-picker';
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSupportText } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { ActionFooter } from '@/lib/components/ui/action-footer';
+import { Button } from '@/lib/components/ui/button';
+import { getColorDisplayName } from '@/lib/components/ui/color-palette-picker';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSupportText,
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { logger } from '@/lib/logger';

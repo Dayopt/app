@@ -3,9 +3,9 @@
 import { usePathname } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
-import { PageNav } from '@/components/shell/sidebar';
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
+import { PageNav } from '@/lib/components/shell/sidebar';
 import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';

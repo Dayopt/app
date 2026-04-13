@@ -8,8 +8,8 @@
  */
 'use client';
 
-import { Toaster } from '@/components/ui/toast';
 import { AuthLayout } from '@/features/auth';
+import { Toaster } from '@/lib/components/ui/toast';
 import { RecaptchaScript } from '@/lib/recaptcha';
 import { PublicProviders } from './_providers/PublicProviders';
 

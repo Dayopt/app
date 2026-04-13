@@ -5,10 +5,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { SectionCard } from '@/components/common/SectionCard';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/lib/components/ui/collapsible';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Textarea } from '@/lib/components/ui/textarea';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 import { api } from '@/lib/trpc';

@@ -6,8 +6,8 @@ import NextImage from 'next/image';
 
 import { Link } from '@/lib/i18n/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import {
   Field,
   FieldDescription,
@@ -15,8 +15,8 @@ import {
   FieldGroup,
   FieldLabel,
   FieldSupportText,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { useAuthStore } from '../stores/useAuthStore';

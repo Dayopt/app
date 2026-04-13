@@ -4,11 +4,11 @@ import { useCallback, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { SectionCard } from '@/components/common/SectionCard';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import { Label } from '@/lib/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Textarea } from '@/lib/components/ui/textarea';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 import { api } from '@/lib/trpc';

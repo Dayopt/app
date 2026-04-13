@@ -11,13 +11,13 @@ import { useCallback, useMemo } from 'react';
 import { TRPCClientError } from '@trpc/client';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
 import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_SELECTABLE_TYPES,
   ChronotypeQuiz,
 } from '@/features/chronotype';
 import { OnboardingWizard } from '@/features/onboarding';
+import { Button } from '@/lib/components/ui/button';
 import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';

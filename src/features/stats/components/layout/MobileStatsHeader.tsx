@@ -1,10 +1,10 @@
 'use client';
 
-import { CompactDateNavigator } from '@/components/common/DateNavigator';
-import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
-import { AppHeader } from '@/components/shell/AppHeader';
+import { CompactDateNavigator } from '@/lib/components/common/DateNavigator';
+import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
 
-import type { NavigationDirection } from '@/components/common/DateNavigator';
+import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
 import { StatsDateDisplay } from './StatsDateDisplay';

@@ -17,20 +17,20 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/lib/components/ui/button';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { Input } from '@/lib/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/lib/components/ui/select';
 import { api } from '@/lib/trpc';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 import { InfoBox } from './InfoBox';
 
 type ExportFormat = 'json' | 'csv';

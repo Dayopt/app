@@ -11,8 +11,8 @@ import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
 import { MFAVerifyForm } from '@/features/auth';
+import { Button } from '@/lib/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 import { vanillaTrpc } from '@/lib/trpc/client';
 

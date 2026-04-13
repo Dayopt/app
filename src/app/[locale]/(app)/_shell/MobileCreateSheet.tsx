@@ -7,9 +7,9 @@ import { useTranslations } from 'next-intl';
 
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 const SNAP_POINTS = [0.95] as const;

@@ -13,7 +13,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node', // 統合テストはNode環境で実行
-    include: ['src/test/integration/**/*.{test,spec}.ts'],
+    include: ['src/lib/test/integration/**/*.{test,spec}.ts'],
     testTimeout: 30000, // 統合テストは時間がかかる可能性があるため30秒
     hookTimeout: 30000,
   },

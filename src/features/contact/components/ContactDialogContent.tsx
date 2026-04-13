@@ -12,14 +12,14 @@
 
 import { useCallback, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/lib/components/ui/dialog';
 import {
   Drawer,
   DrawerClose,
@@ -28,10 +28,10 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from '@/components/ui/drawer';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
+} from '@/lib/components/ui/drawer';
+import { Label } from '@/lib/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
+import { Textarea } from '@/lib/components/ui/textarea';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 
 import type { ContactCategory } from '../types';

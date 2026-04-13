@@ -7,11 +7,17 @@ import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { Link } from '@/lib/i18n/navigation';
 import { cn } from '@/lib/utils';
 

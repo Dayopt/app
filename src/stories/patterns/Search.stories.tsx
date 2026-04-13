@@ -3,8 +3,9 @@ import { Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { TagIcon } from '@/features/tags';
+import { Badge } from '@/lib/components/ui/badge';
+import { Button } from '@/lib/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -12,10 +13,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { TagIcon } from '@/features/tags';
+} from '@/lib/components/ui/command';
+import { Input } from '@/lib/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
 
 const meta = {
   title: 'Patterns/Search',

@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { ChronotypeSettingsPanel as ChronotypeSettings } from '@/features/chronotype';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';

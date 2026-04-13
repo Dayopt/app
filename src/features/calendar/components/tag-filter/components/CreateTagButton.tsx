@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 
-import { Button } from '@/components/ui/button';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { Button } from '@/lib/components/ui/button';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 
 /** 新規タグ作成モーダルを開くボタンコンポーネント */
 export function CreateTagButton() {

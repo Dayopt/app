@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock, createMockSupabase } from '@/test/trpc-test-helpers';
+import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
-import { createMockEntry } from '@/test/factories';
+import { createMockEntry } from '@/lib/test/factories';
 
 import { EntryService, EntryServiceError } from '../entry-service';
 import type { ServiceSupabaseClient } from '../types';

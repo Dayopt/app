@@ -15,11 +15,11 @@ import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';

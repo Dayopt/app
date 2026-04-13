@@ -11,8 +11,8 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from '@/components/ui/drawer';
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+} from '@/lib/components/ui/drawer';
+import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock } from '@/test/trpc-test-helpers';
+import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
 

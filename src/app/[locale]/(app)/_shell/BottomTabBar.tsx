@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useUnreadCount } from '@/features/notifications';
 import { useStatsFilterStore } from '@/features/stats';
+import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';

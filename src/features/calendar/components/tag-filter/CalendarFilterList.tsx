@@ -6,12 +6,12 @@ import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useIsFetching } from '@tanstack/react-query';
 
-import { SidebarSection } from '@/components/shell/sidebar';
 import { TagDeleteStrategyDialog, tagKeys, useDeleteTag, useTags } from '@/features/tags';
+import { SidebarSection } from '@/lib/components/shell/sidebar';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { api } from '@/lib/trpc';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';

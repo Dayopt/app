@@ -4,9 +4,9 @@ import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Suspense, useEffect, useMemo } from 'react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useTag } from '@/features/tags';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';

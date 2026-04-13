@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
-import { Skeleton } from '@/components/ui/skeleton';
 import { InsightsView, prefetchStatsData } from '@/features/stats';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
 import { HydrationBoundary } from '@/lib/trpc/server';
 

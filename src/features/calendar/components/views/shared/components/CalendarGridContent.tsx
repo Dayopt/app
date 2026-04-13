@@ -4,10 +4,10 @@ import React, { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EntryCard } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 

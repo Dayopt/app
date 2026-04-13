@@ -14,10 +14,10 @@
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
-import { ErrorState } from '@/components/common/ErrorState';
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { Spinner } from '@/components/ui/spinner';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { ErrorState } from '@/lib/components/common/ErrorState';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
+import { Spinner } from '@/lib/components/ui/spinner';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useEntry } from '../../hooks/useEntry';
 import { useInspectorURLSync } from '../../hooks/useInspectorURLSync';

@@ -14,14 +14,14 @@ import { Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
-import { SidebarSection } from '@/components/shell/sidebar';
-import { Button } from '@/components/ui/button';
-import { MiniCalendar } from '@/components/ui/mini-calendar';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
 import { RecentBlocks } from '@/features/history';
 import { Palette, usePaletteMutations } from '@/features/palette';
 import { useStatsFilterStore } from '@/features/stats';
+import { SidebarSection } from '@/lib/components/shell/sidebar';
+import { Button } from '@/lib/components/ui/button';
+import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useTheme } from '@/lib/hooks/useTheme';
 

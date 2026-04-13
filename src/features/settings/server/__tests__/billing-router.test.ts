@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockContext } from '@/test/trpc-test-helpers';
+import { createMockContext } from '@/lib/test/trpc-test-helpers';
 
 import { createCallerFactory } from '@/lib/trpc/procedures';
 

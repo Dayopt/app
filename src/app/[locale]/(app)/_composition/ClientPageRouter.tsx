@@ -5,9 +5,9 @@ import { useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { isCalendarViewPath } from '@/features/calendar';
 import { InsightsView, ProgressView, StatsView } from '@/features/stats';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { SidebarPageNav } from '../_shell/SidebarPageNav';
 

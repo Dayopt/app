@@ -3,11 +3,11 @@
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/lib/components/ui/input-otp';
 
 type VerifyMode = 'totp' | 'recovery';
 

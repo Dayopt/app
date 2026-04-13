@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { BADGE_COUNT } from '../../constants/badge-definitions';
 import { useBadges } from '../../hooks/useBadges';

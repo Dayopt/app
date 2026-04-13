@@ -5,10 +5,10 @@ import { useMemo } from 'react';
 
 import { PanelLeft } from 'lucide-react';
 
-import { AppHeader } from '@/components/shell/AppHeader';
-import { Sidebar } from '@/components/shell/sidebar';
 import { isCalendarViewPath } from '@/features/calendar';
 import { ActivityPopover } from '@/features/notifications';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { Sidebar } from '@/lib/components/shell/sidebar';
 import { cn } from '@/lib/utils';
 
 import { useShellStore } from '@/lib/stores/useShellStore';

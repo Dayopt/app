@@ -14,9 +14,9 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ActionFooter } from '@/components/ui/action-footer';
-import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ActionFooter } from '@/lib/components/ui/action-footer';
+import { Button } from '@/lib/components/ui/button';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';

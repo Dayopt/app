@@ -12,8 +12,8 @@ import { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { MiniCalendar } from '@/components/ui/mini-calendar';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
+import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 import { useDateFormat } from '@/lib/hooks/useDateFormat';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 

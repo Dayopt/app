@@ -4,8 +4,8 @@ import { format, getWeek } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { DateRangeDisplayProps } from '@/components/common/DateRangeDisplay';
 import { useCalendarSettingsStore } from '@/features/calendar';
+import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
 import { cn } from '@/lib/utils';
 
 import type { Locale } from 'date-fns';

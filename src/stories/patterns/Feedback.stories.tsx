@@ -3,7 +3,7 @@ import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 
 import { toast } from '@/lib/toast';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 
 const meta = {
   title: 'Patterns/Feedback',

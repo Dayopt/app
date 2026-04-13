@@ -1,7 +1,7 @@
 'use client';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { TagIcon } from '@/features/tags';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
 import { formatMinutesDuration } from '../data/timePL.derivers';

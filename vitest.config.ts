@@ -19,7 +19,7 @@ export default defineConfig({
       reportsDirectory: './coverage',
       exclude: [
         'node_modules/',
-        'src/test/',
+        'src/lib/test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData/',
@@ -42,7 +42,7 @@ export default defineConfig({
           name: 'unit',
           globals: true,
           environment: 'happy-dom',
-          setupFiles: ['./src/test/setup.ts'],
+          setupFiles: ['./src/lib/test/setup.ts'],
           include: ['**/*.{test,spec}.{ts,tsx}'],
           exclude: [
             'node_modules',
@@ -80,7 +80,7 @@ export default defineConfig({
               },
             ],
           },
-          setupFiles: ['./src/test/storybook-setup.ts'],
+          setupFiles: ['./src/lib/test/storybook-setup.ts'],
         },
       },
       // Storybook Dark mode テスト（beforeEach で .dark クラスを強制適用）
@@ -107,7 +107,7 @@ export default defineConfig({
               },
             ],
           },
-          setupFiles: ['./src/test/storybook-setup-dark.ts'],
+          setupFiles: ['./src/lib/test/storybook-setup-dark.ts'],
         },
       },
     ],

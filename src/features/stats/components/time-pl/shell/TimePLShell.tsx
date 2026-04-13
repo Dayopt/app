@@ -2,9 +2,9 @@
 
 import { FileSpreadsheet } from 'lucide-react';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { Card, CardContent, CardHeader } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 import { getAccuracyColors } from '../data/timePL.derivers';

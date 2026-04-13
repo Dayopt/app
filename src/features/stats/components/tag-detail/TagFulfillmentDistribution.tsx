@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useTagOverviewData } from '../../hooks/useTagDetailData';
 

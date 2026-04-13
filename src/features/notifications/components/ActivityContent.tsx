@@ -5,11 +5,11 @@ import { useCallback, useMemo } from 'react';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { useCalendarSettingsStore } from '@/features/calendar';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
+import { Button } from '@/lib/components/ui/button';
+import { Spinner } from '@/lib/components/ui/spinner';
 
 import type { NotificationType } from '../schemas';
 

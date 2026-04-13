@@ -3,8 +3,14 @@
 import { useTranslations } from 'next-intl';
 import { Fragment, useMemo, useState } from 'react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 import type { EnergyMapRow } from '../../types/metrics.types';

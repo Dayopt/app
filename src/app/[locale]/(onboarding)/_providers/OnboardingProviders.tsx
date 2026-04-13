@@ -15,8 +15,8 @@ import { httpBatchLink, loggerLink, TRPCClientError } from '@trpc/client';
 import superjson from 'superjson';
 
 import { ThemeProvider } from '@/app/[locale]/(app)/_providers/theme-provider';
-import { Toaster } from '@/components/ui/toast';
 import { AuthStoreInitializer } from '@/features/auth';
+import { Toaster } from '@/lib/components/ui/toast';
 import { api, getBaseUrl } from '@/lib/trpc';
 
 function isAuthError(error: unknown): boolean {

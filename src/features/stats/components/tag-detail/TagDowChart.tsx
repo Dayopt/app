@@ -4,8 +4,8 @@ import { useTranslations } from 'next-intl';
 
 import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useTagOverviewData } from '../../hooks/useTagDetailData';
 import { formatHours } from '../../utils/formatHours';

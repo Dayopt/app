@@ -5,11 +5,11 @@ import { useCallback, useState } from 'react';
 import { Bell, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { Button } from '@/lib/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/components/ui/tabs';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { useRouter } from '@/lib/i18n/navigation';
 import { useShellStore } from '@/lib/stores/useShellStore';

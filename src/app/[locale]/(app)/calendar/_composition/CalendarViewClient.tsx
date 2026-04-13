@@ -12,8 +12,8 @@
 
 import { PanelLeft } from 'lucide-react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { CalendarController, useCalendarNavigation } from '@/features/calendar';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { SidebarPageNav } from '../../_shell/SidebarPageNav';
 import { useCalendarComposition } from './useCalendarComposition';

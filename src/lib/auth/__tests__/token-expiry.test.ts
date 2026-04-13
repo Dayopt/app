@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createMockContext } from '@/test/trpc-test-helpers';
+import { createMockContext } from '@/lib/test/trpc-test-helpers';
 
 import type { SessionData } from '../session-config';
 import {

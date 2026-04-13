@@ -5,10 +5,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { useCalendarSettingsStore } from '@/features/calendar';
+import { Button } from '@/lib/components/ui/button';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Switch } from '@/lib/components/ui/switch';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -16,9 +16,9 @@ import { cn } from '@/lib/utils';
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
 import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 
 import { ChronotypeQuiz } from './chronotype-quiz';

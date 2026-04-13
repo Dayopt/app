@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/lib/components/ui/select';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';

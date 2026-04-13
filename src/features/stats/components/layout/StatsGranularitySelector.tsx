@@ -3,13 +3,13 @@
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/lib/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/lib/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';

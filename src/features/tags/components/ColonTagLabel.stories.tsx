@@ -3,12 +3,12 @@ import { fn } from 'storybook/test';
 
 import type { CalendarEvent } from '@/lib/types/calendar-event';
 
-import { BlockItem } from '@/components/shell/sidebar/BlockItem';
+import { BlockItem } from '@/lib/components/shell/sidebar/BlockItem';
 
 import { EntryCardContent } from '../../entry/components/card/EntryCardContent';
 import { TagIcon } from './TagIcon';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 
 /**
  * ColonTagLabel — コロンタグの separator 表示

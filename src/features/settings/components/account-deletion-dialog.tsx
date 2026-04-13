@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,9 +16,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+} from '@/lib/components/ui/alert-dialog';
+import { Button } from '@/lib/components/ui/button';
+import { Input } from '@/lib/components/ui/input';
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { api } from '@/lib/trpc';
