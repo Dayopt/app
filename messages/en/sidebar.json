@@ -7,31 +7,14 @@
     "calendar": {
       "title": "Calendar"
     },
-    "palette": {
-      "title": "Palette",
-      "empty": "Register your go-to blocks for quick daily scheduling",
-      "emptyHint": "You can also add from history",
-      "add": "Add to palette",
-      "tagLabel": "Tag",
-      "tagPlaceholder": "Select tag",
-      "durationLabel": "Duration",
-      "durationPlaceholder": "Select duration",
-      "duplicateError": "This combination is already pinned",
-      "pinFailed": "Failed to pin",
-      "unpinFailed": "Failed to unpin",
-      "updateFailed": "Failed to update",
-      "remove": "Remove",
-      "changeDuration": "Change duration",
-      "tagAssignFailed": "Failed to assign tag",
+    "history": {
       "placed": "Added {name} at {time}",
-      "overlapError": "{time} overlaps with an existing block",
-      "tagDeleted": "Tag deleted"
+      "overlapError": "{time} overlaps with an existing block"
     },
     "recentBlocks": {
       "title": "Recent",
       "empty": "No recent blocks",
-      "emptyHint": "Will appear automatically when you add blocks to the calendar",
-      "pinned": "Added to palette"
+      "emptyHint": "Will appear automatically when you add blocks to the calendar"
     }
   }
 }

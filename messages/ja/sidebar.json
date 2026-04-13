@@ -7,31 +7,14 @@
     "calendar": {
       "title": "カレンダー"
     },
-    "palette": {
-      "title": "パレット",
-      "empty": "よく使うブロックを登録しておくと毎朝すばやく配置できます",
-      "emptyHint": "履歴から追加もできます",
-      "add": "パレットに追加",
-      "tagLabel": "タグ",
-      "tagPlaceholder": "タグを選択",
-      "durationLabel": "時間",
-      "durationPlaceholder": "時間を選択",
-      "duplicateError": "この組み合わせは既に登録済みです",
-      "pinFailed": "ピン留めできませんでした。もう一度お試しください",
-      "unpinFailed": "ピン解除できませんでした。もう一度お試しください",
-      "updateFailed": "更新できませんでした。もう一度お試しください",
-      "remove": "パレットから削除",
-      "tagDeleted": "タグが削除されました",
-      "changeDuration": "時間を変更",
-      "tagAssignFailed": "タグの割り当てができませんでした。もう一度お試しください",
+    "history": {
       "placed": "{name} を {time} に追加しました",
       "overlapError": "{time} は既存のブロックと重複しています"
     },
     "recentBlocks": {
       "title": "履歴",
       "empty": "まだ履歴がありません",
-      "emptyHint": "カレンダーにブロックを追加すると自動で表示されます",
-      "pinned": "パレットに追加しました"
+      "emptyHint": "カレンダーにブロックを追加すると自動で表示されます"
     }
   }
 }

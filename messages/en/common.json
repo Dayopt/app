@@ -94,10 +94,6 @@
       "restoring": "Restoring...",
       "clear": "Clear",
       "options": "Options",
-      "addToPalette": "Add to palette",
-      "addedToPalette": "Added to palette",
-      "removeFromPalette": "Remove from palette",
-      "removedFromPalette": "Removed from palette",
       "more": "More actions",
       "retry": "Try again"
     },

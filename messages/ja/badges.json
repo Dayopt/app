@@ -28,10 +28,6 @@
       "name": "5種のタグ",
       "description": "5種類のタグを使用"
     },
-    "paletteFirst": {
-      "name": "パレット登録",
-      "description": "パレットに初めて登録"
-    },
     "deepZone": {
       "name": "Deep Zone",
       "description": "Deep Zoneに初めてブロックを配置",
@@ -40,7 +36,7 @@
     "fullDay": {
       "name": "フル活用",
       "description": "1日に8ブロック以上記録",
-      "hint": "パレットを活用して効率的に記録"
+      "hint": "履歴を活用して効率的に記録"
     },
     "groupFirst": {
       "name": "グループ作成",

@@ -77,7 +77,6 @@
     },
     "contextMenu": {
       "title": "Entry actions",
-      "addToPalette": "Add to Palette",
       "delete": "Delete"
     },
     "toast": {

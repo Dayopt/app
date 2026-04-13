@@ -94,10 +94,6 @@
       "restoring": "復元中...",
       "clear": "クリア",
       "options": "オプション",
-      "addToPalette": "パレットに追加",
-      "addedToPalette": "パレットに追加しました。次回からすぐ使えます",
-      "removeFromPalette": "パレットから解除",
-      "removedFromPalette": "パレットから解除しました",
       "more": "その他の操作",
       "retry": "もう一度試す"
     },
