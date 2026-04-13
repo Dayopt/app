@@ -15,8 +15,8 @@ import {
 } from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
+import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import * as Sentry from '@sentry/nextjs';
 
 type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'];
 
@@ -84,25 +84,6 @@ const userSettingsSchema = z.object({
   preferredLocale: z.enum(['en', 'ja']).optional(),
 });
 
-/**
- * 設定操作の共通エラーハンドラ
- * @param operation - 操作名（ログ用）
- * @param error - 発生したエラー
- */
-function handleSettingsError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
-  Sentry.captureException(error, { tags: { source: 'settings_router', operation } });
-  logger.error('Settings operation failed', {
-    operation,
-    error: error instanceof Error ? error.message : String(error),
-  });
-  throw new TRPCError({
-    code: 'INTERNAL_SERVER_ERROR',
-    message: '設定の操作に失敗した',
-    cause: error,
-  });
-}
-
 /** ユーザー設定のtRPCルーター（取得・更新・iCalトークン管理） */
 export const userSettingsRouter = createTRPCRouter({
   /**
@@ -130,10 +111,7 @@ export const userSettingsRouter = createTRPCRouter({
         if (error && error.code !== 'PGRST116') {
           // PGRST116 = no rows returned（設定がまだない場合）
           logger.error('UserSettings fetch error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '設定の取得に失敗した',
-          });
+          handleServiceError(error);
         }
 
         // 設定がない場合はnullを返す（クライアント側でデフォルト値を使用）
@@ -195,7 +173,7 @@ export const userSettingsRouter = createTRPCRouter({
             ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
       } catch (error) {
-        return handleSettingsError('get', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -292,10 +270,7 @@ export const userSettingsRouter = createTRPCRouter({
 
         if (error) {
           logger.error('UserSettings update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return {
@@ -303,7 +278,7 @@ export const userSettingsRouter = createTRPCRouter({
           settings: data,
         };
       } catch (error) {
-        return handleSettingsError('update', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -334,17 +309,14 @@ export const userSettingsRouter = createTRPCRouter({
 
         if (error && error.code !== 'PGRST116') {
           logger.error('iCal token fetch error:', error);
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to fetch iCal token',
-          });
+          handleServiceError(error);
         }
 
         // ical_feed_token は生成型に未反映のため Record 経由で取得
         const token = (data as Record<string, unknown> | null)?.ical_feed_token;
         return { token: (token as string) ?? null };
       } catch (error) {
-        return handleSettingsError('getICalToken', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -375,10 +347,7 @@ export const userSettingsRouter = createTRPCRouter({
 
         if (error) {
           logger.error('iCal token upsert error:', error);
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to regenerate iCal token',
-          });
+          handleServiceError(error);
         }
 
         // ical_feed_tokenは生成型に未反映のためSQL実行
@@ -391,16 +360,13 @@ export const userSettingsRouter = createTRPCRouter({
 
         if (updateError) {
           logger.error('iCal token update error:', updateError);
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to regenerate iCal token',
-          });
+          handleServiceError(updateError);
         }
 
         const token = (updated as Record<string, unknown>).ical_feed_token;
         return { token: token as string };
       } catch (error) {
-        return handleSettingsError('regenerateICalToken', error);
+        return handleServiceError(error);
       }
     }),
 });

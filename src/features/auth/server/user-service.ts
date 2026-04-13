@@ -13,13 +13,14 @@ import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { ServiceError } from '@/lib/trpc/errors';
 
 /**
  * User Service エラー
  */
-export class UserServiceError extends Error {
+export class UserServiceError extends ServiceError {
   constructor(
-    public code:
+    code:
       | 'DELETE_FAILED'
       | 'DELETE_DATA_FAILED'
       | 'EXPORT_FAILED'
@@ -28,7 +29,7 @@ export class UserServiceError extends Error {
       | 'INVALID_INPUT',
     message: string,
   ) {
-    super(message);
+    super(code, message);
     this.name = 'UserServiceError';
   }
 }

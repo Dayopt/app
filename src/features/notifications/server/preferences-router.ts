@@ -8,23 +8,8 @@ import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
+import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import * as Sentry from '@sentry/nextjs';
-
-/** 通知設定操作の共通エラーハンドラ */
-function handlePreferencesError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
-  Sentry.captureException(error, { tags: { source: 'preferences_router', operation } });
-  logger.error('Notification preferences operation failed', {
-    operation,
-    error: error instanceof Error ? error.message : String(error),
-  });
-  throw new TRPCError({
-    code: 'INTERNAL_SERVER_ERROR',
-    message: '通知設定の操作に失敗した',
-    cause: error,
-  });
-}
 
 /** 通知設定（ブラウザ / メール / プッシュ / リマインダーON/OFF）を管理する tRPC ルーター */
 export const notificationPreferencesRouter = createTRPCRouter({
@@ -54,10 +39,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error && error.code !== 'PGRST116') {
           logger.error('NotificationPreferences fetch error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の取得に失敗した',
-          });
+          handleServiceError(error);
         }
 
         // 設定がない場合はデフォルト値を返す
@@ -85,7 +67,7 @@ export const notificationPreferencesRouter = createTRPCRouter({
           enableWeeklyReports: data.enable_weekly_reports ?? true,
         };
       } catch (error) {
-        return handlePreferencesError('get', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -118,15 +100,12 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error) {
           logger.error('NotificationPreferences update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updateBrowserNotifications', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -159,15 +138,12 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error) {
           logger.error('NotificationPreferences update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updateEmailNotifications', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -200,15 +176,12 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error) {
           logger.error('NotificationPreferences update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updatePushNotifications', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -258,15 +231,12 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error) {
           logger.error('NotificationPreferences type update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updateNotificationTypePreferences', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -299,15 +269,12 @@ export const notificationPreferencesRouter = createTRPCRouter({
 
         if (error) {
           logger.error('NotificationPreferences reminder update error', { error });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '通知設定の更新に失敗した',
-          });
+          handleServiceError(error);
         }
 
         return { success: true };
       } catch (error) {
-        return handlePreferencesError('updateDefaultReminderEnabled', error);
+        return handleServiceError(error);
       }
     }),
 });

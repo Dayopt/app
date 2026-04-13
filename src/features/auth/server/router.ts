@@ -141,10 +141,7 @@ export const userRouter = createTRPCRouter({
 
       if (fetchError) {
         logger.error('Failed to fetch recovery codes:', fetchError);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to verify recovery code',
-        });
+        handleServiceError(fetchError);
       }
 
       if (!codes || codes.length === 0) {
@@ -172,10 +169,7 @@ export const userRouter = createTRPCRouter({
 
       if (rpcError || !used) {
         logger.error('Failed to mark recovery code as used:', rpcError);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to use recovery code',
-        });
+        handleServiceError(rpcError ?? new Error('Failed to use recovery code'));
       }
 
       // MFA factorをunenrollしてAAL要件を解除
@@ -196,10 +190,7 @@ export const userRouter = createTRPCRouter({
         }
       } catch (err) {
         logger.error('Failed to unenroll MFA factor:', err);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Recovery code verified but failed to disable MFA',
-        });
+        handleServiceError(err);
       }
 
       // 残りのコード数を取得

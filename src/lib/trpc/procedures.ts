@@ -15,7 +15,6 @@ import superjson from 'superjson';
 import { z } from 'zod';
 
 import { env } from '@/env';
-import { createAppError, ERROR_CODES } from '@/lib/errors/error-patterns';
 import { logger } from '@/lib/logger';
 import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import {
@@ -26,6 +25,7 @@ import {
   OAuthError,
   verifyOAuthToken,
 } from '@/lib/supabase/oauth';
+import { ServiceError } from '@/lib/trpc/errors';
 
 import type { Database } from '@/lib/database.types';
 
@@ -324,9 +324,7 @@ export const protectedProcedure = t.procedure
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'Authentication required',
-        cause: createAppError('Authentication required', ERROR_CODES.INVALID_TOKEN, {
-          source: 'trpc_middleware',
-        }),
+        cause: new ServiceError('INVALID_TOKEN', 'Authentication required'),
       });
     }
 
@@ -371,15 +369,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: `Failed to fetch profile: ${error.message}`,
-        cause: createAppError(
-          'Failed to fetch profile for pro check',
-          ERROR_CODES.SYSTEM_INTERNAL_ERROR,
-          {
-            source: 'trpc_middleware',
-            userId: ctx.userId,
-            supabaseError: error.message,
-          },
-        ),
+        cause: new ServiceError('FETCH_FAILED', 'Failed to fetch profile for pro check'),
       });
     }
 
@@ -395,10 +385,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Pro plan required',
-      cause: createAppError('Pro subscription required', ERROR_CODES.NO_PERMISSION, {
-        source: 'trpc_middleware',
-        userId: ctx.userId,
-      }),
+      cause: new ServiceError('FORBIDDEN', 'Pro subscription required'),
     });
   }
 
@@ -418,10 +405,7 @@ export const adminProcedure = protectedProcedure
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Admin permission required',
-        cause: createAppError('Admin permission required', ERROR_CODES.NO_PERMISSION, {
-          source: 'trpc_middleware',
-          userId: ctx.userId,
-        }),
+        cause: new ServiceError('FORBIDDEN', 'Admin permission required'),
       });
     }
 

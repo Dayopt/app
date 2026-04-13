@@ -6,17 +6,18 @@
  */
 
 import type { Database } from '@/lib/database.types';
+import { ServiceError } from '@/lib/trpc/errors';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Palette Service エラー
  */
-export class PaletteServiceError extends Error {
+export class PaletteServiceError extends ServiceError {
   constructor(
-    public readonly code: 'FETCH_FAILED' | 'PIN_FAILED' | 'UNPIN_FAILED' | 'UPDATE_FAILED',
+    code: 'FETCH_FAILED' | 'PIN_FAILED' | 'UNPIN_FAILED' | 'UPDATE_FAILED',
     message: string,
   ) {
-    super(message);
+    super(code, message);
     this.name = 'PaletteServiceError';
   }
 }

@@ -1,6 +1,5 @@
 /**
  * Sentry連携システム
- * エラーパターン辞書との統合による自動分類・構造化レポーティング
  *
  * 注意: Sentryの初期化は instrumentation.ts / instrumentation-client.ts で行われます。
  * このファイルはヘルパー関数のみを提供します。
@@ -8,97 +7,8 @@
 
 import * as Sentry from '@sentry/nextjs';
 
-import { AppError, type ErrorCategory, type SeverityLevel } from '@/lib/errors/error-patterns';
+import { ServiceError } from '@/lib/trpc/errors';
 
-/**
- * カテゴリ別Sentryタグ設定
- */
-const CATEGORY_TAGS: Record<ErrorCategory, Record<string, string>> = {
-  AUTH: {
-    domain: 'authentication',
-    priority: 'high',
-    team: 'security',
-    alerting: 'immediate',
-  },
-  VALIDATION: {
-    domain: 'user-input',
-    priority: 'medium',
-    team: 'frontend',
-    alerting: 'batch',
-  },
-  DB: {
-    domain: 'database',
-    priority: 'critical',
-    team: 'backend',
-    alerting: 'immediate',
-  },
-  BIZ: {
-    domain: 'business-logic',
-    priority: 'medium',
-    team: 'product',
-    alerting: 'daily',
-  },
-  EXTERNAL: {
-    domain: 'third-party',
-    priority: 'medium',
-    team: 'integration',
-    alerting: 'hourly',
-  },
-  SYSTEM: {
-    domain: 'infrastructure',
-    priority: 'critical',
-    team: 'devops',
-    alerting: 'immediate',
-  },
-  RATE: {
-    domain: 'rate-limiting',
-    priority: 'low',
-    team: 'backend',
-    alerting: 'daily',
-  },
-};
-
-/**
- * 重要度をSentryのレベルにマッピング
- */
-function mapSeverityToSentryLevel(severity: SeverityLevel): Sentry.SeverityLevel {
-  switch (severity) {
-    case 'critical':
-      return 'fatal';
-    case 'high':
-      return 'error';
-    case 'medium':
-      return 'warning';
-    case 'low':
-      return 'info';
-    default:
-      return 'error';
-  }
-}
-
-/**
- * エラーのフィンガープリントを生成
- */
-function generateFingerprint(error: AppError): string[] {
-  return ['dayopt', error.category, error.code.toString()];
-}
-
-/**
- * AppErrorをSentryに報告
- *
- * @example
- * ```typescript
- * import { reportToSentry } from '@/lib/sentry'
- * import { AppError } from '@/config/error-patterns'
- *
- * try {
- *   await riskyOperation()
- * } catch (error) {
- *   const appError = new AppError('操作に失敗', 'SYSTEM_ERROR_500', { error })
- *   reportToSentry(appError)
- * }
- * ```
- */
 const PII_KEYS = new Set([
   'email',
   'mail',
@@ -122,40 +32,18 @@ function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unk
   return sanitized;
 }
 
+/**
+ * ServiceErrorをSentryに報告
+ */
 export function reportToSentry(
-  error: AppError,
+  error: ServiceError,
   userContext?: { userId?: string; ip?: string; userAgent?: string },
 ): void {
   Sentry.withScope((scope) => {
-    // エラーコード・カテゴリ・重要度をタグ付け
     scope.setTag('errorCode', error.code);
-    scope.setTag('errorCategory', error.category);
-    scope.setTag('severity', error.severity);
+    scope.setFingerprint(['dayopt', error.code]);
+    scope.setContext('errorInfo', sanitizeMetadata({ code: error.code, message: error.message }));
 
-    // カテゴリ別タグを追加
-    const categoryTags = CATEGORY_TAGS[error.category];
-    Object.entries(categoryTags).forEach(([key, value]) => {
-      scope.setTag(key, value);
-    });
-
-    // フィンガープリントとレベル設定
-    scope.setFingerprint(generateFingerprint(error));
-    scope.setLevel(mapSeverityToSentryLevel(error.severity));
-
-    // エラーパターン情報をコンテキストに追加
-    scope.setContext('errorPattern', {
-      code: error.code,
-      category: error.category,
-      severity: error.severity,
-      userMessage: error.userMessage,
-    });
-
-    // メタデータがあればPII除外してコンテキストに追加
-    if (error.metadata) {
-      scope.setContext('errorMetadata', sanitizeMetadata(error.metadata));
-    }
-
-    // ユーザーコンテキストを設定
     if (userContext?.userId) {
       scope.setUser({
         id: userContext.userId,
@@ -174,16 +62,18 @@ export class SentryErrorHandler {
   /**
    * 汎用エラーハンドリング
    */
-  static handleError(error: Error | AppError, context?: Record<string, unknown>): void {
-    if (error instanceof AppError) {
+  static handleError(error: Error, context?: Record<string, unknown>): void {
+    if (error instanceof ServiceError) {
       reportToSentry(error);
     } else {
-      // 通常のErrorをAppErrorに変換してレポート
-      const appError = new AppError(error.message, 'SYSTEM_ERROR_500', {
-        originalError: error,
-        ...context,
+      // 通常のErrorをServiceErrorに変換してレポート
+      const serviceError = new ServiceError('INTERNAL_SERVER_ERROR', error.message);
+      Sentry.withScope((scope) => {
+        if (context) {
+          scope.setContext('errorContext', sanitizeMetadata(context));
+        }
+        Sentry.captureException(serviceError);
       });
-      reportToSentry(appError);
     }
   }
 

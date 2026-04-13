@@ -4,13 +4,13 @@
  */
 
 import * as Sentry from '@sentry/nextjs';
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
+import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
@@ -39,24 +39,12 @@ export const onboardingRouter = createTRPCRouter({
 
       if (profileResult.error) {
         logger.error('Onboarding getProfile error:', profileResult.error);
-        Sentry.captureException(profileResult.error, {
-          tags: { source: 'onboarding', operation: 'getProfile' },
-        });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch profile: ${profileResult.error.message}`,
-        });
+        handleServiceError(profileResult.error);
       }
 
       if (userResult.error) {
         logger.error('Onboarding getUser error:', userResult.error);
-        Sentry.captureException(userResult.error, {
-          tags: { source: 'onboarding', operation: 'getProfile_user' },
-        });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch user info: ${userResult.error.message}`,
-        });
+        handleServiceError(userResult.error);
       }
 
       // OAuth名がなければメールアドレスの@前をフォールバックに
@@ -95,10 +83,7 @@ export const onboardingRouter = createTRPCRouter({
 
       if (profileError) {
         logger.error('Onboarding complete profile error', { error: profileError });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'プロフィールの更新に失敗した',
-        });
+        handleServiceError(profileError);
       }
 
       // クロノタイプ設定 or ロケール設定（指定がある場合）
@@ -155,10 +140,7 @@ export const onboardingRouter = createTRPCRouter({
 
       if (error) {
         logger.error('Onboarding reset error', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'オンボーディングのリセットに失敗した',
-        });
+        handleServiceError(error);
       }
 
       return { success: true };

@@ -39,11 +39,7 @@ export const contactRouter = createTRPCRouter({
 
       if (authError) {
         logger.error('Failed to get user for contact form', { error: authError });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'ユーザー情報の取得に失敗した',
-          cause: authError,
-        });
+        handleServiceError(authError);
       }
 
       const userEmail = user?.email ?? 'unknown';
