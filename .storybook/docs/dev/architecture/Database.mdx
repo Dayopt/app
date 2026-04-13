@@ -35,12 +35,6 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 | ----------------- | ------------ | ------------------------------------------------- |
 | **notifications** | ユーザー通知 | type, priority, title, message, is_read, entry_id |
 
-### アクティビティログ（1テーブル）
-
-| テーブル             | 役割             | 主要カラム                                              |
-| -------------------- | ---------------- | ------------------------------------------------------- |
-| **entry_activities** | エントリ変更履歴 | entry_id, action_type, field_name, old_value, new_value |
-
 ### セキュリティ/監査（3テーブル）
 
 | テーブル               | 役割                                 | 主要カラム                                                |
@@ -97,18 +91,6 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
                    │ tag_id  (FK)     │
                    │ UNIQUE(entry,tag) │
                    └──────────────────┘
-
-        ▼
-┌──────────────────┐
-│ entry_activities  │
-│──────────────────│
-│ entry_id (FK)     │
-│ action_type       │
-│ field_name        │
-│ old_value         │
-│ new_value         │
-└──────────────────┘
-
 
 === セキュリティ/監査 ===
 
@@ -168,12 +150,11 @@ EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
 
 ## 定期クリーンアップ（pg_cron）
 
-| ジョブ                     | スケジュール   | 保持期間         | 対象テーブル     |
-| -------------------------- | -------------- | ---------------- | ---------------- |
-| `cleanup-login-attempts`   | 毎日 03:00 UTC | 90日             | login_attempts   |
-| `cleanup-auth-audit-logs`  | 毎日 03:10 UTC | 365日            | auth_audit_logs  |
-| `cleanup-notifications`    | 毎日 03:20 UTC | 30日（既読のみ） | notifications    |
-| `cleanup-entry-activities` | 毎日 03:30 UTC | 365日            | entry_activities |
+| ジョブ                    | スケジュール   | 保持期間         | 対象テーブル    |
+| ------------------------- | -------------- | ---------------- | --------------- |
+| `cleanup-login-attempts`  | 毎日 03:00 UTC | 90日             | login_attempts  |
+| `cleanup-auth-audit-logs` | 毎日 03:10 UTC | 365日            | auth_audit_logs |
+| `cleanup-notifications`   | 毎日 03:20 UTC | 30日（既読のみ） | notifications   |
 
 ---
 
