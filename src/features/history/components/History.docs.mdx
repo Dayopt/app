@@ -15,9 +15,8 @@ import { Meta } from '@storybook/addon-docs/blocks';
 | 対象期間     | 直近14日間                                        |
 | スコアリング | 頻度×鮮度（recency-weighted frequency）           |
 | 最大表示数   | 同タグは最頻 duration のみ（上限なし）            |
-| 除外対象     | パレットにピン留め済みの tag+duration パターン    |
 | duration     | 15分単位にスナップ（`Math.round(min / 15) * 15`） |
-| 配置         | サイドバー内、パレットセクションの下              |
+| 配置         | サイドバー内、フィルターセクションの下            |
 
 ---
 
@@ -48,9 +47,9 @@ RecentBlocks                   サイドバーセクション UI
 
 ## Hooks
 
-| Hook              | 用途                                                     |
-| ----------------- | -------------------------------------------------------- |
-| `useBlockPlace()` | ブロック配置（entry feature 提供、palette/history 共通） |
+| Hook              | 用途                               |
+| ----------------- | ---------------------------------- |
+| `useBlockPlace()` | ブロック配置（entry feature 提供） |
 
 ---
 
@@ -71,22 +70,7 @@ duration 15分スナップ
   ↓
 tag_id:duration をキーにスコア加算（鮮度係数）
   ↓
-ピン留め済みパターンを除外
-  ↓
 スコア降順 → 同タグは最頻 duration のみ
   ↓
 RecentBlocks で表示
 ```
-
----
-
-## パレットとの関係
-
-| 機能     | パレット（Palette）             | 履歴（History）                      |
-| -------- | ------------------------------- | ------------------------------------ |
-| データ源 | `palette_items`（手動ピン留め） | `entry_tags` + `entries`（自動集計） |
-| 管理方式 | ユーザーが手動で追加/削除       | 使用実績から自動生成                 |
-| 並び順   | `sort_order`（手動）            | スコア降順（自動）                   |
-| UI       | BlockItem（共通）               | BlockItem（共通）                    |
-
-ピン留め済みの tag+duration パターンは履歴から自動除外される。

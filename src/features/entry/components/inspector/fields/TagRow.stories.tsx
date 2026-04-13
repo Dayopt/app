@@ -10,7 +10,7 @@ import { TagRow } from './TagRow';
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * タグ未設定時は「タグを追加」を表示。
- * 右側に「…」メニュー（パレット登録/解除・統計・削除）を配置。
+ * 右側に「…」メニュー（統計・削除）を配置。
  */
 const meta = {
   title: 'Features/Entry/Inspector/TagRow',
@@ -55,7 +55,7 @@ const greenTag: TagColorEntry = {
 // Stories
 // ---------------------------------------------------------------------------
 
-/** タグ設定済み（青）+ …メニュー（パレット追加・統計・削除）。 */
+/** タグ設定済み（青）+ …メニュー（統計・削除）。 */
 export const WithMenu: Story = {
   render: () => (
     <div className="w-72">
@@ -65,28 +65,6 @@ export const WithMenu: Story = {
         tagColorClasses={blueTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        onPinToPalette={fn()}
-        isPinnedInPalette={false}
-        onViewStats={fn()}
-        onDelete={fn()}
-      />
-    </div>
-  ),
-};
-
-/** パレット登録済み → …メニューに「パレットから解除」が表示される。 */
-export const PinnedInPalette: Story = {
-  render: () => (
-    <div className="w-72">
-      <TagRow
-        tagId="tag-blue-id"
-        tagName="仕事"
-        tagColorClasses={blueTag}
-        onTagChange={fn()}
-        onCreateAndSelect={fn()}
-        onPinToPalette={fn()}
-        onUnpinFromPalette={fn()}
-        isPinnedInPalette={true}
         onViewStats={fn()}
         onDelete={fn()}
       />
@@ -111,7 +89,7 @@ export const ColonTag: Story = {
   ),
 };
 
-/** 削除のみ（パレット・統計なし）。 */
+/** 削除のみ（統計なし）。 */
 export const DeleteOnly: Story = {
   render: () => (
     <div className="w-72">
@@ -147,30 +125,13 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">フルメニュー（未登録）</p>
+        <p className="text-muted-foreground text-xs">フルメニュー</p>
         <TagRow
           tagId="tag-1"
           tagName="仕事"
           tagColorClasses={blueTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
-          onPinToPalette={fn()}
-          isPinnedInPalette={false}
-          onViewStats={fn()}
-          onDelete={fn()}
-        />
-      </div>
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">フルメニュー（パレット登録済み）</p>
-        <TagRow
-          tagId="tag-2"
-          tagName="プライベート"
-          tagColorClasses={redTag}
-          onTagChange={fn()}
-          onCreateAndSelect={fn()}
-          onPinToPalette={fn()}
-          onUnpinFromPalette={fn()}
-          isPinnedInPalette={true}
           onViewStats={fn()}
           onDelete={fn()}
         />
