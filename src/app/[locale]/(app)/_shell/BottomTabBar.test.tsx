@@ -11,24 +11,29 @@ const mockResetToServer = vi.fn();
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
   useRouter: () => ({ push: mockPush }),
+  redirect: vi.fn(),
 }));
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/features/calendar', () => ({
-  useCalendarNavigation: () => ({
-    viewType: 'week',
-    currentDate: new Date(2026, 2, 25, 23, 45, 0, 0),
-  }),
-}));
+vi.mock('@/features/calendar', async () => {
+  const dateFns = await import('date-fns');
+  return {
+    useCalendarNavigation: () => ({
+      viewType: 'week',
+      currentDate: new Date(2026, 2, 25, 23, 45, 0, 0),
+    }),
+    formatCalendarDateParam: (date: Date) => dateFns.format(date, 'yyyy-MM-dd'),
+  };
+});
 
 vi.mock('@/features/notifications', () => ({
   useUnreadCount: () => ({ data: 3 }),
 }));
 
-vi.mock('@/shell/stores/useClientRouterStore', () => ({
+vi.mock('@/lib/stores/useClientRouterStore', () => ({
   useClientRouterStore: (
     selector: (state: {
       switchToPage: typeof mockSwitchToPage;
@@ -43,7 +48,7 @@ vi.mock('@/shell/stores/useClientRouterStore', () => ({
     }),
 }));
 
-vi.mock('@/stores/useAuthStore', () => ({
+vi.mock('@/features/auth', () => ({
   useAuthStore: (
     selector: (state: {
       user: { email: string; user_metadata: Record<string, unknown> };
@@ -57,6 +62,11 @@ vi.mock('@/stores/useAuthStore', () => ({
         },
       },
     }),
+}));
+
+vi.mock('@/features/stats', () => ({
+  useStatsFilterStore: (selector: (state: { granularity: string; currentDate: Date }) => unknown) =>
+    selector({ granularity: 'week', currentDate: new Date(2026, 2, 25) }),
 }));
 
 import { BottomTabBar } from './BottomTabBar';

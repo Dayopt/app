@@ -6,6 +6,17 @@ import { afterEach, vi } from 'vitest';
 // server-only: テスト環境ではサーバーコンポーネント制約を無効化
 vi.mock('server-only', () => ({}));
 
+// next/navigation のモック（next-intl が内部で依存）
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),
+  usePathname: () => '/',
+  useParams: () => ({}),
+  useSearchParams: () => new URLSearchParams(),
+  redirect: vi.fn(),
+  permanentRedirect: vi.fn(),
+  notFound: vi.fn(),
+}));
+
 // next-intl のモック
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,

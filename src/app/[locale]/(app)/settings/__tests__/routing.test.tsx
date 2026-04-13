@@ -8,7 +8,6 @@ let mockCategory = 'profile';
 const mockReplace = vi.fn();
 const mockPush = vi.fn();
 const mockOpenSettings = vi.fn();
-const mockOpenContact = vi.fn();
 const mockLogout = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -41,26 +40,21 @@ vi.mock('@/features/settings', () => ({
   SettingsContent: ({ category }: { category: string }) => <div>{category}</div>,
 }));
 
-vi.mock('@/hooks/useHasMounted', () => ({
+vi.mock('@/lib/hooks/useHasMounted', () => ({
   useHasMounted: () => mockHasMounted,
 }));
 
-vi.mock('@/hooks/useMediaQuery', () => ({
+vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => mockIsMobile,
 }));
 
-vi.mock('@/shell/stores/useShellStore', () => ({
+vi.mock('@/lib/stores/useShellStore', () => ({
   useShellStore: (
     selector: (state: { openSettings: typeof mockOpenSettings; openSheet: () => void }) => unknown,
   ) => selector({ openSettings: mockOpenSettings, openSheet: vi.fn() }),
 }));
 
-vi.mock('@/shell/stores/useContactStore', () => ({
-  useContactStore: (selector: (state: { open: typeof mockOpenContact }) => unknown) =>
-    selector({ open: mockOpenContact }),
-}));
-
-vi.mock('@/stores/useAuthStore', () => ({
+vi.mock('@/features/auth', () => ({
   useAuthStore: (
     selector: (state: {
       user: { email: string; user_metadata: Record<string, unknown> };
@@ -74,17 +68,17 @@ vi.mock('@/stores/useAuthStore', () => ({
     }),
 }));
 
-vi.mock('@/shell/hooks/useLogout', () => ({
+vi.mock('@/lib/hooks/useLogout', () => ({
   useLogout: () => ({ logout: mockLogout, isLoggingOut: false }),
 }));
 
-vi.mock('@/components/ui/avatar', () => ({
+vi.mock('@/lib/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AvatarImage: () => null,
   AvatarFallback: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/ui/button', () => ({
+vi.mock('@/lib/components/ui/button', () => ({
   Button: ({
     children,
     asChild,
@@ -96,7 +90,7 @@ vi.mock('@/components/ui/button', () => ({
   }) => (asChild ? children : <button {...props}>{children}</button>),
 }));
 
-vi.mock('@/components/ui/scroll-area', () => ({
+vi.mock('@/lib/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -110,7 +104,7 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
-vi.mock('@/shell/components/AppHeader', () => ({
+vi.mock('@/lib/components/shell/AppHeader', () => ({
   AppHeader: ({
     children,
     leftSlot,

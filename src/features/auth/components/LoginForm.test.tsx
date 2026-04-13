@@ -39,7 +39,7 @@ vi.mock('@/lib/i18n/navigation', async () => {
   };
 });
 
-vi.mock('@/stores/useAuthStore', () => ({
+vi.mock('@/features/auth/stores/useAuthStore', () => ({
   useAuthStore: (selector: (state: { signIn: typeof mockSignIn }) => typeof mockSignIn) =>
     selector({ signIn: mockSignIn }),
 }));

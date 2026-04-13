@@ -54,6 +54,12 @@ export default defineConfig({
             '**/integration/**',
           ],
           css: true,
+          server: {
+            deps: {
+              // next-intl が ESM で next/navigation を拡張子なしで import し解決失敗する問題を回避
+              inline: ['next-intl'],
+            },
+          },
         },
       },
       // Storybook テスト（ブラウザ: Playwright chromium）
@@ -115,6 +121,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // next-intl が ESM で next/navigation を拡張子なしで import する問題を回避
+      'next/navigation': path.resolve(__dirname, './node_modules/next/navigation.js'),
     },
   },
 });
