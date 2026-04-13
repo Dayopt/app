@@ -4,6 +4,7 @@ import { format, getWeek } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import { useCalendarSettingsStore } from '@/features/calendar';
 import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
 import { cn } from '@/lib/utils';

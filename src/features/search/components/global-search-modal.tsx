@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar storesをlib層に抽出
 import { useCalendarFilterStore, useCalendarNavigationStore } from '@/features/calendar';
 import { useEntries, useEntryInspectorStore } from '@/features/entry';
 import { TagIcon, useTags } from '@/features/tags';

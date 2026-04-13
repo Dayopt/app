@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import { useCalendarSettingsStore } from '@/features/calendar';
 import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
 

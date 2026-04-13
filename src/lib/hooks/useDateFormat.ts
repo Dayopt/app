@@ -7,7 +7,9 @@ import { useCallback } from 'react';
 
 import { format } from 'date-fns';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import type { DateFormatType } from '@/features/calendar';
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import { useCalendarSettingsStore } from '@/features/calendar';
 
 interface UseDateFormatReturn {

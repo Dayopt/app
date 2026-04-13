@@ -1,6 +1,6 @@
 {
   "_comment": "Feature boundary violation budget (ratchet). Do not increase these numbers.",
-  "_updated": "2026-02-26",
+  "_updated": "2026-04-13",
   "crossImports": {},
   "selfImports": {}
 }

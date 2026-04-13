@@ -4,6 +4,7 @@ import { PanelLeft, Search } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: auth storeをlib層に抽出
 import { useAuthStore } from '@/features/auth';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';

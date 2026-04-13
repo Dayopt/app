@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import { useCalendarSettingsStore } from '@/features/calendar';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
