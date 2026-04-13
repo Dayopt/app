@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * MFA Recovery Codes
  *
@@ -13,6 +15,8 @@
  */
 
 import { createHmac, randomBytes } from 'crypto';
+
+import { env } from '@/env';
 
 /**
  * リカバリーコードの設定
@@ -31,7 +35,7 @@ const RECOVERY_CODE_CONFIG = {
  * 環境変数から取得し、未設定の場合はフォールバック値を使用
  */
 function getHmacPepper(): string {
-  const pepper = process.env.RECOVERY_CODE_PEPPER;
+  const pepper = env.RECOVERY_CODE_PEPPER ?? process.env.RECOVERY_CODE_PEPPER;
   if (!pepper) {
     throw new Error('RECOVERY_CODE_PEPPER is not set. Recovery codes require a pepper for HMAC.');
   }

@@ -96,39 +96,23 @@ export function useMFA(): UseMFAReturn {
     }
   }, [supabase]);
 
-  // リカバリーコード生成・保存
+  // リカバリーコード生成・保存（Server Action経由）
   const generateAndSaveRecoveryCodes = useCallback(async (): Promise<string[] | null> => {
     try {
-      const { generateRecoveryCodes, hashRecoveryCode } = await import('@/lib/auth/recovery-codes');
-      const codes = generateRecoveryCodes();
-
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) {
-        throw new Error('User not found');
-      }
-
-      // 既存のコードを削除
-      await supabase.from('mfa_recovery_codes').delete().eq('user_id', userData.user.id);
-
-      // 新しいコードを保存
-      const codesForDb = codes.map((code) => ({
-        user_id: userData.user!.id,
-        code_hash: hashRecoveryCode(code),
-      }));
-
-      const { error: insertError } = await supabase.from('mfa_recovery_codes').insert(codesForDb);
-
-      if (insertError) {
-        logger.error('Failed to save recovery codes:', insertError);
+      const { generateAndSaveRecoveryCodesAction } = await import(
+        '@/features/settings/server/recovery-code-actions'
+      );
+      const { codes, error } = await generateAndSaveRecoveryCodesAction();
+      if (error) {
+        logger.error('Failed to generate recovery codes:', error);
         return null;
       }
-
       return codes;
     } catch (err) {
       logger.error('Recovery code generation error:', err);
       return null;
     }
-  }, [supabase]);
+  }, []);
 
   // 初回マウント時にMFA状態チェック
   useEffect(() => {
