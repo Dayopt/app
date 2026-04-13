@@ -168,8 +168,6 @@ export type Database = {
         Row: {
           actual_end_time: string | null;
           actual_start_time: string | null;
-          backed_up_end_time: string | null;
-          backed_up_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -178,10 +176,6 @@ export type Database = {
           fulfillment_score: number | null;
           id: string;
           origin: string;
-          reminder_at: string | null;
-          reminder_enabled: boolean;
-          reminder_sent: boolean;
-          reviewed_at: string | null;
           start_time: string | null;
           title: string;
           updated_at: string | null;
@@ -190,20 +184,13 @@ export type Database = {
         Insert: {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
-          backed_up_end_time?: string | null;
-          backed_up_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
-          duration_minutes?: number | null;
           end_time?: string | null;
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
-          reminder_at?: string | null;
-          reminder_enabled?: boolean;
-          reminder_sent?: boolean;
-          reviewed_at?: string | null;
           start_time?: string | null;
           title: string;
           updated_at?: string | null;
@@ -212,20 +199,13 @@ export type Database = {
         Update: {
           actual_end_time?: string | null;
           actual_start_time?: string | null;
-          backed_up_end_time?: string | null;
-          backed_up_start_time?: string | null;
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
-          duration_minutes?: number | null;
           end_time?: string | null;
           fulfillment_score?: number | null;
           id?: string;
           origin?: string;
-          reminder_at?: string | null;
-          reminder_enabled?: boolean;
-          reminder_sent?: boolean;
-          reviewed_at?: string | null;
           start_time?: string | null;
           title?: string;
           updated_at?: string | null;
@@ -525,7 +505,6 @@ export type Database = {
           subscription_id: string | null;
           subscription_status: string;
           updated_at: string;
-          username: string | null;
         };
         Insert: {
           avatar_url?: string | null;
@@ -538,7 +517,6 @@ export type Database = {
           subscription_id?: string | null;
           subscription_status?: string;
           updated_at?: string;
-          username?: string | null;
         };
         Update: {
           avatar_url?: string | null;
@@ -551,7 +529,6 @@ export type Database = {
           subscription_id?: string | null;
           subscription_status?: string;
           updated_at?: string;
-          username?: string | null;
         };
         Relationships: [];
       };
@@ -810,8 +787,6 @@ export type Database = {
         Returns: {
           actual_end_time: string | null;
           actual_start_time: string | null;
-          backed_up_end_time: string | null;
-          backed_up_start_time: string | null;
           created_at: string | null;
           deleted_at: string | null;
           description: string | null;
@@ -820,10 +795,6 @@ export type Database = {
           fulfillment_score: number | null;
           id: string;
           origin: string;
-          reminder_at: string | null;
-          reminder_enabled: boolean;
-          reminder_sent: boolean;
-          reviewed_at: string | null;
           start_time: string | null;
           title: string;
           updated_at: string | null;
