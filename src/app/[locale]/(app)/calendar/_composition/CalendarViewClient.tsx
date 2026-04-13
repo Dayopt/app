@@ -100,7 +100,6 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onTimeRangeSelect={composition.onTimeRangeSelect}
           onUpdateEntry={composition.onUpdateEntry}
           onDeleteEntry={composition.onDeleteEntry}
-          getAddToPaletteHandler={composition.getAddToPaletteHandler}
           onDeleteEntryConfirm={composition.onDeleteEntryConfirm}
           onNavigate={composition.onNavigate}
           onViewChange={composition.onViewChange}

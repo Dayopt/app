@@ -66,7 +66,6 @@ export interface CalendarCompositionResult {
   onDeleteEntry: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntry'];
 
   // === Context menu actions ===
-  getAddToPaletteHandler: ReturnType<typeof useCalendarCrudHandlers>['getAddToPaletteHandler'];
   onDeleteEntryConfirm: ReturnType<typeof useCalendarCrudHandlers>['onDeleteEntryConfirm'];
 
   // === Navigation handlers ===

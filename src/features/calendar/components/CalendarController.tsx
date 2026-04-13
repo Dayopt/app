@@ -67,7 +67,6 @@ export interface CalendarControllerProps {
   onDeleteEntry: (entryId: string) => void;
 
   // --- Context menu actions ---
-  getAddToPaletteHandler?: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
@@ -104,7 +103,6 @@ export function CalendarController({
   onTimeRangeSelect,
   onUpdateEntry,
   onDeleteEntry,
-  getAddToPaletteHandler,
   onDeleteEntryConfirm,
   onNavigate,
   onViewChange,
@@ -224,7 +222,6 @@ export function CalendarController({
           entry={contextMenuEvent}
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
-          onAddToPalette={getAddToPaletteHandler?.(contextMenuEvent)}
           onDelete={onDeleteEntryConfirm}
         />
       ) : null}
