@@ -8,10 +8,8 @@ export { TimeRow, TimeRowPlaceholder } from './TimeRow';
 export { TimeSelect } from './TimeSelect';
 export type { TimeIconType } from './TimeSelect';
 
-// スコア・設定
+// スコア
 export { FulfillmentRow } from './FulfillmentRow';
-export { ReminderRow } from './ReminderRow';
-export { ReminderToggle } from './ReminderToggle';
 
 // タグ・メモ・アラート
 export { NoteSection } from './NoteSection';

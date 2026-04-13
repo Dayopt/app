@@ -25,7 +25,6 @@ import {
   DateRow,
   FulfillmentRow,
   NoteSection,
-  ReminderRow,
   TagRow,
   TimeConflictAlert,
   TimeDiffBlock,
@@ -44,15 +43,8 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
   const { entryId, entry, fields, handlers, state, actions } = useEntryForm();
-  const {
-    selectedTagId,
-    scheduleDate,
-    startTime,
-    endTime,
-    actualStartTime,
-    actualEndTime,
-    reminderEnabled,
-  } = fields;
+  const { selectedTagId, scheduleDate, startTime, endTime, actualStartTime, actualEndTime } =
+    fields;
   const {
     handleTagChange,
     handleScheduleDateChange,
@@ -60,7 +52,6 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
     handleEndTimeChange,
     handleActualStartChange,
     handleActualEndChange,
-    handleReminderChange,
     setStartTimeLocal,
     setEndTimeLocal,
     resetActualTimesLocal,
@@ -356,9 +347,6 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
               high: t('entry.inspector.time.fulfillmentTooltipHigh'),
             }}
           />
-
-          {/* リマインダー */}
-          <ReminderRow value={reminderEnabled} onChange={handleReminderChange} />
 
           {/* メモ */}
           <NoteSection

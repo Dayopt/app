@@ -4,8 +4,7 @@
  * Plan/Record の Inspector Stories で共通利用するモックデータとコンポーネント
  */
 
-import { Bell, ChevronDown, FolderOpen, Plus, Trash2, X } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { ChevronDown, FolderOpen, Plus, Trash2, X } from 'lucide-react';
 
 import type { Tag } from '@/features/tags';
 import { TagIcon } from '@/features/tags';
@@ -92,28 +91,6 @@ export function MockTagRow({
       >
         <Trash2 className="size-4" />
       </button>
-    </div>
-  );
-}
-
-/** モック用リマインダー行（ReminderRow は store 依存のためモック） */
-export function MockReminderRow() {
-  const t = useTranslations();
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Bell className="text-muted-foreground size-4 flex-shrink-0" />
-        <span className="text-muted-foreground text-sm">{t('common.reminder.label')}</span>
-      </div>
-      <div className="-mr-2">
-        <button
-          type="button"
-          className="text-muted-foreground hover:bg-state-hover inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm transition-colors"
-          aria-label="Add reminder"
-        >
-          {t('common.reminder.add')}
-        </button>
-      </div>
     </div>
   );
 }

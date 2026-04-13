@@ -16,7 +16,7 @@ import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicro
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Spinner } from '@/lib/components/ui/spinner';
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
-import { InspectorFrame, MockReminderRow, MockTagRow } from './story-helpers';
+import { InspectorFrame, MockTagRow } from './story-helpers';
 
 /**
  * Entry Inspector — 統一エントリモデルの表示確認
@@ -140,9 +140,6 @@ function InspectorContent({
               high: t('entry.inspector.time.fulfillmentHigh'),
             }}
           />
-
-          {/* Reminder */}
-          <MockReminderRow />
 
           {/* Note */}
           <NoteSection

@@ -247,7 +247,6 @@ const presetSampleEntries: CalendarEvent[] = [
   preset('preset-2', 'Draft Proposal', 'var(--tag-blue)', 10, 0, 90, {
     ...closed,
     tagId: 'tag-work',
-    reminderEnabled: true,
     // 10分遅れて開始 → 上部に斜線
     actualStartDate: makeDate(today, 10, 10),
     actualEndDate: makeDate(today, 11, 30),
