@@ -4,10 +4,10 @@
  * Inspector フォーム（Level 2）
  *
  * useEntryForm() で全状態を取得し、フラットにフィールドを描画する。
- * onPinToPalette は Composition Layer（GlobalOverlays）から注入される。
+ * onViewStats は Composition Layer（GlobalOverlays）から注入される。
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
@@ -17,7 +17,6 @@ import { useCreateTag, useTagsMap } from '@/features/tags';
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { localTimeToUTCISO } from '@/lib/date-utils';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
-import { computeDuration } from '@/lib/time-utils';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { useEntryMutations } from '../../hooks/useEntryMutations';
 import type { FulfillmentScore } from '../../types/entry';
@@ -34,29 +33,13 @@ import {
 } from './fields';
 import { useEntryForm } from './hooks/useEntryForm';
 
-/** 15分単位にスナップ（パレット登録用） */
-function snapToQuarter(minutes: number): number {
-  return Math.round(minutes / 15) * 15 || 15;
-}
-
 interface EntryInspectorFormProps {
-  /** パレットへのピン留めコールバック（Composition Layer から注入） */
-  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
-  /** パレットから解除コールバック（Composition Layer から注入） */
-  onUnpinFromPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
-  /** パレット登録済みチェック関数（Composition Layer から注入） */
-  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
   /** 統計を見るコールバック（Composition Layer から注入） */
   onViewStats?: ((tagId: string) => void) | undefined;
 }
 
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
-export function EntryInspectorForm({
-  onPinToPalette,
-  onUnpinFromPalette,
-  isPinnedInPalette,
-  onViewStats,
-}: EntryInspectorFormProps) {
+export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -239,27 +222,6 @@ export function EntryInspectorForm({
   const effectiveActualStart = actualStartTime ?? startTime;
   const effectiveActualEnd = actualEndTime ?? endTime;
 
-  // Duration
-  const plannedDuration = useMemo(() => computeDuration(startTime, endTime), [startTime, endTime]);
-
-  // パレット登録ハンドラ + 登録済みチェック
-  const snappedDuration = plannedDuration > 0 ? snapToQuarter(plannedDuration) : 0;
-
-  const handlePinToPalette = useCallback(() => {
-    if (!selectedTagId || snappedDuration <= 0 || !onPinToPalette) return;
-    onPinToPalette(selectedTagId, snappedDuration);
-  }, [selectedTagId, snappedDuration, onPinToPalette]);
-
-  const isPinned =
-    !!isPinnedInPalette && !!selectedTagId && snappedDuration > 0
-      ? isPinnedInPalette(selectedTagId, snappedDuration)
-      : false;
-
-  const handleUnpinFromPalette = useCallback(() => {
-    if (!selectedTagId || snappedDuration <= 0 || !onUnpinFromPalette) return;
-    onUnpinFromPalette(selectedTagId, snappedDuration);
-  }, [selectedTagId, snappedDuration, onUnpinFromPalette]);
-
   const handleViewStats = useCallback(() => {
     if (!selectedTagId || !onViewStats) return;
     onViewStats(selectedTagId);
@@ -278,11 +240,6 @@ export function EntryInspectorForm({
         tagColor={selectedTag?.color}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
-        onPinToPalette={
-          onPinToPalette && selectedTagId && snappedDuration > 0 ? handlePinToPalette : undefined
-        }
-        onUnpinFromPalette={onUnpinFromPalette && isPinned ? handleUnpinFromPalette : undefined}
-        isPinnedInPalette={isPinned}
         onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
         onDelete={handleDelete}
         isUnplanned={isUnplanned}

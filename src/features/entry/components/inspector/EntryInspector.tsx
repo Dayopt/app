@@ -34,23 +34,12 @@ function InspectorURLSyncHandler() {
 }
 
 interface EntryInspectorProps {
-  /** パレットへのピン留めコールバック（Composition Layer から注入） */
-  onPinToPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
-  /** パレットから解除コールバック（Composition Layer から注入） */
-  onUnpinFromPalette?: ((tagId: string, durationMinutes: number) => void) | undefined;
-  /** パレット登録済みチェック関数（Composition Layer から注入） */
-  isPinnedInPalette?: ((tagId: string, durationMinutes: number) => boolean) | undefined;
   /** 統計を見るコールバック（Composition Layer から注入） */
   onViewStats?: ((tagId: string) => void) | undefined;
 }
 
 /** Inspectorのトップレベルコンポーネント（モバイル=Drawer / PC=FloatingPopover でレスポンシブ分岐） */
-export function EntryInspector({
-  onPinToPalette,
-  onUnpinFromPalette,
-  isPinnedInPalette,
-  onViewStats,
-}: EntryInspectorProps) {
+export function EntryInspector({ onViewStats }: EntryInspectorProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -106,14 +95,7 @@ export function EntryInspector({
       </div>
     );
   } else {
-    content = (
-      <EntryInspectorForm
-        onPinToPalette={onPinToPalette}
-        onUnpinFromPalette={onUnpinFromPalette}
-        isPinnedInPalette={isPinnedInPalette}
-        onViewStats={onViewStats}
-      />
-    );
+    content = <EntryInspectorForm onViewStats={onViewStats} />;
   }
 
   // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
