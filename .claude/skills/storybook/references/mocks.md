@@ -25,7 +25,7 @@ parameters: {
 
 ### StoryTRPCProvider で直接ラップ
 
-AllPatterns 内で複数状態を並べる場合に使用。
+AllPatterns 内で複数状態を並べる場合に使用。ネストした内側の Provider が外側の providerDecorator の tRPC 層を上書きする。
 
 ```tsx
 import { StoryTRPCProvider } from '../../../.storybook/mocks/trpc';
@@ -56,6 +56,10 @@ export const AllPatterns: Story = {
 | `createPendingLink()`         | ローディング維持リンク                  |
 | `createErrorLink(path, code)` | エラーリンク                            |
 | `MockResponseMap`             | 型: `Record<string, unknown>`           |
+
+`MockResponseMap` は現時点では `Record<string, unknown>` で運用。将来的に router 型から推論する可能性があるが、現状はこのままで良い。型を厳格化しようとしないこと。
+
+`createMockLink` は `StoryTRPCProvider` では対応できないケース（例: カスタム httpBatchLink オプションのテスト）でのみ使用。
 
 ---
 
@@ -103,36 +107,4 @@ Story 間で共通のモックデータ。
 
 ```tsx
 import { PRESET_AUTH, PRESET_USER_SETTINGS } from '../../../.storybook/mocks/presets';
-```
-
----
-
-## 旧パターンからの移行
-
-### Before（40行のボイラープレート）
-
-```tsx
-// 各Storyファイルに重複
-function createMockLink(responseMap) { ... }
-function createPendingLink() { ... }
-function MockProvider({ children, responseMap, pending }) { ... }
-
-const meta = {
-  decorators: [(Story) => <MockProvider responseMap={...}><Story /></MockProvider>],
-};
-```
-
-### After（parameters 宣言のみ）
-
-```tsx
-const meta = {
-  parameters: {
-    trpcMocks: { 'userSettings.get': PRESET_USER_SETTINGS.default },
-    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
-  },
-};
-
-export const Loading: Story = {
-  parameters: { trpcPending: true },
-};
 ```

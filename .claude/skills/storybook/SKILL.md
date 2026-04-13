@@ -7,49 +7,238 @@ maxTurns: 15
 
 # Storybook Story作成スキル
 
-## 3つの原則
+## 絶対ルール
 
-1. **Storybookが正**: Storyにあるパターンのみ使用可。新パターンは先にStoryを追加
-2. **AllPatterns必須**: 全コンポーネントStoryに `AllPatterns` Story を含める
-3. **セマンティックトークンのみ**: 直接カラー (`text-blue-500`) 禁止
-
----
-
-## レイヤー判定
-
-| 場所                         | title prefix         | テンプレート      |
-| ---------------------------- | -------------------- | ----------------- |
-| `src/components/ui/`         | `Components/UI/`     | UI Component      |
-| `src/components/common/`     | `Components/Common/` | UI Component      |
-| `src/shell/components/`      | `Components/Shell/`  | UI Component      |
-| `src/features/*/components/` | `Features/`          | Feature Component |
-| `src/styles/tokens/`         | `Foundations/`       | Foundation        |
-| `src/stories/patterns/`      | `Patterns/`          | Pattern           |
+1. **セマンティックトークンのみ**。直接カラー禁止。これだけでダークモード対応完了
+2. **全Storyファイルに AllPatterns Story 必須**
+3. **Storybook MCP の出力とこのスキルが矛盾したらこのスキルが正**
+4. **Canvas にテキスト説明を入れない**（AllPatterns含む。Foundations/Patterns 除く）
+5. **play 関数はユーザー操作で状態が変わるコンポーネントにのみ書く**
 
 ---
 
-## モック戦略（意思決定ツリー）
+## Step 1: パスからレイヤーとテンプレートを決定
 
-```
-コンポーネントの依存は？
-│
-├── props のみ           → モック不要（グローバルデコレータで十分）
-│
-├── tRPC クエリ/ミューテーション
-│   ├── デフォルトデータで十分 → trpc-defaults.ts に追加
-│   └── Story固有データが必要 → parameters.trpcMocks で指定
-│       ├── ローディング状態   → parameters: { trpcPending: true }
-│       └── エラー状態        → parameters: { trpcError: { path, code } }
-│
-├── Zustand ストア
-│   └── parameters.storeMocks で指定
-│       例: storeMocks: { useAuthStore: PRESET_AUTH.authenticated }
-│
-└── AllPatterns内で複数状態を並べる
-    └── <StoryTRPCProvider mocks={...}> で直接ラップ
+### UI Component
+
+**パス**: `src/components/ui/`, `src/components/common/`, `src/shell/components/`
+**title**: `Components/UI/` or `Components/Common/` or `Components/Shell/`
+**layout**: `centered`
+**モック**: 不要（props only）
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+import { MyComponent } from './my-component';
+
+const meta = {
+  title: 'Components/UI/MyComponent',
+  component: MyComponent,
+  tags: ['autodocs'],
+  parameters: { layout: 'centered' },
+} satisfies Meta<typeof MyComponent>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** 基本的な使用例。 */
+export const Default: Story = {
+  args: {
+    /* props */
+  },
+};
+
+/** 無効状態。 */
+export const Disabled: Story = {
+  args: { disabled: true },
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      <MyComponent />
+      <MyComponent disabled />
+    </div>
+  ),
+};
 ```
 
-**参照**: `references/mock-patterns.md` に API 詳細
+#### 状態を持つ場合の Interactive Wrapper
+
+```tsx
+/** デフォルト状態。 */
+export const Default: Story = {
+  render: function DefaultStory() {
+    const [value, setValue] = useState(false);
+    return <MyComponent checked={value} onCheckedChange={setValue} />;
+  },
+};
+```
+
+---
+
+### Feature Component
+
+**パス**: `src/features/*/components/`
+**title**: `Features/{feature名}/`
+**layout**: `padded`
+**モック**: `parameters.trpcMocks` + `parameters.storeMocks` で宣言
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+import { PRESET_AUTH, PRESET_USER_SETTINGS } from '../../../.storybook/mocks/presets';
+import { StoryTRPCProvider } from '../../../.storybook/mocks/trpc';
+
+import { MyFeatureComponent } from './my-feature-component';
+
+const meta = {
+  title: 'Features/Settings/MyFeatureComponent',
+  component: MyFeatureComponent,
+  tags: ['autodocs'],
+  parameters: {
+    layout: 'padded',
+    trpcMocks: { 'userSettings.get': PRESET_USER_SETTINGS.default },
+    storeMocks: { useAuthStore: PRESET_AUTH.authenticated },
+  },
+} satisfies Meta<typeof MyFeatureComponent>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** デフォルト状態。 */
+export const Default: Story = {};
+
+/** ローディング状態。 */
+export const Loading: Story = {
+  parameters: { trpcPending: true },
+};
+
+/** エラー状態。 */
+export const Error: Story = {
+  parameters: {
+    trpcError: { path: 'userSettings.get', code: 'INTERNAL_SERVER_ERROR' },
+  },
+};
+
+/** 全パターン一覧。 */
+export const AllPatterns: Story = {
+  render: () => (
+    <div className="space-y-12">
+      <div>
+        <StoryTRPCProvider mocks={{ 'userSettings.get': PRESET_USER_SETTINGS.default }}>
+          <MyFeatureComponent />
+        </StoryTRPCProvider>
+      </div>
+      <div>
+        <StoryTRPCProvider pending>
+          <MyFeatureComponent />
+        </StoryTRPCProvider>
+      </div>
+    </div>
+  ),
+};
+```
+
+#### Feature Component のモック戦略
+
+- **デフォルト**: `meta.parameters` に `trpcMocks` + `storeMocks` を宣言
+- **Story固有データ**: 個別Storyの `parameters.trpcMocks` で上書き（default mocks とマージされる）
+- **Loading/Error**: `parameters: { trpcPending: true }` / `parameters: { trpcError: {...} }`
+- **AllPatterns内**: `<StoryTRPCProvider>` で直接ラップ。外側の providerDecorator の tRPC 層を上書きする（ネストした内側が勝つ）
+- **詳細**: → `references/mocks.md`
+
+---
+
+### Foundation
+
+**パス**: `src/styles/tokens/`
+**title**: `Foundations/`
+**layout**: `fullscreen`
+**モック**: 不要
+**テキスト見出し**: 許可（トークン可視化のため）
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+const meta = {
+  title: 'Foundations/Colors',
+  parameters: { layout: 'fullscreen' },
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj;
+
+function ColorSwatch({
+  tailwindClass,
+  description,
+}: {
+  tailwindClass: string;
+  description?: string;
+}) {
+  const token = tailwindClass.replace(/^(?:bg|text|border|ring)-/, '');
+  return (
+    <div className="flex items-center gap-4 py-2">
+      <div
+        className="border-border size-12 shrink-0 rounded-lg border"
+        style={{ backgroundColor: `var(--${token})` }}
+      />
+      <div>
+        <code className="text-sm font-medium">{tailwindClass}</code>
+        {description && <p className="text-muted-foreground mt-1 text-xs">{description}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Surface トークン。 */
+export const Surfaces: Story = {
+  render: () => (
+    <div className="p-8">
+      <h2 className="mb-6 text-xl font-medium">Surface Colors</h2>
+      <ColorSwatch tailwindClass="bg-background" description="ページ地" />
+      <ColorSwatch tailwindClass="bg-card" description="カード・パネル" />
+    </div>
+  ),
+};
+```
+
+---
+
+### Pattern
+
+**パス**: `src/stories/patterns/`
+**title**: `Patterns/`
+**layout**: `fullscreen`
+**モック**: 不要
+**テキスト見出し**: 許可（パターンドキュメントのため）
+
+```tsx
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+import { Button } from '@/components/ui/button';
+
+const meta = {
+  title: 'Patterns/Feedback',
+  parameters: { layout: 'fullscreen' },
+} satisfies Meta;
+
+export default meta;
+type Story = StoryObj;
+
+/** 使い分けガイド。 */
+export const Overview: Story = {
+  render: () => (
+    <div className="p-8">
+      <h1 className="mb-2 text-2xl font-medium">Feedback Patterns</h1>
+      <p className="text-muted-foreground mb-8">
+        ユーザーへのフィードバック。Toast、Alert、InlineMessage の使い分け。
+      </p>
+    </div>
+  ),
+};
+```
 
 ---
 
@@ -58,23 +247,10 @@ maxTurns: 15
 ### CSF3 + satisfies Meta
 
 ```tsx
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-
-const meta = {
-  title: 'Components/UI/MyComponent',
-  component: MyComponent,
-  tags: ['autodocs'],
-  parameters: { layout: 'fullscreen' },
-} satisfies Meta<typeof MyComponent>;
-
+const meta = { ... } satisfies Meta<typeof MyComponent>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 ```
-
-### Canvas と Docs の分離
-
-- **Canvas**: render のみ。見出し・説明テキストは入れない（Foundations/Patterns 除く）
-- **Docs**: テキスト説明 + Controls
 
 ### JSDoc
 
@@ -85,16 +261,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = { ... };
 ```
 
-### AllPatterns Story
+### play 関数
 
-```tsx
-/** 全パターン一覧。 */
-export const AllPatterns: Story = {
-  render: () => <div className="flex flex-col items-start gap-6">{/* 全バリアント */}</div>,
-};
-```
-
-### play 関数（インタラクションテスト）
+ユーザー操作で状態が変わるコンポーネント（フォーム、トグル等）にのみ使用。
 
 ```tsx
 import { expect, userEvent, within } from 'storybook/test';
@@ -124,31 +293,9 @@ export const ClickTest: Story = {
 ## チェックリスト
 
 - [ ] `satisfies Meta<typeof Component>` + `StoryObj<typeof meta>`
-- [ ] `AllPatterns` Story 作成
+- [ ] `AllPatterns` Story 含む
 - [ ] JSDoc は1行・句点つき
-- [ ] セマンティックトークンのみ使用
+- [ ] セマンティックトークンのみ（直接カラー・hex 禁止）
 - [ ] アイコンボタンに `aria-label`
-- [ ] Canvas にテキストなし（Foundations/Patterns除く）
-- [ ] `npm run storybook:coverage` で確認
-
----
-
-## 詳細ドキュメント
-
-| ドキュメント                  | 内容                               |
-| ----------------------------- | ---------------------------------- |
-| `templates/story.md`          | 全レイヤーのテンプレート集         |
-| `references/mock-patterns.md` | tRPC/Store モック API リファレンス |
-| `references/dark-mode.md`     | ダークモード3層アーキテクチャ      |
-| `references/mcp-addon.md`     | Storybook MCP Server 連携          |
-
-## デザイントークン早見表
-
-| カテゴリ        | 許可値                                                                     |
-| --------------- | -------------------------------------------------------------------------- |
-| **Spacing**     | `0`, `1`(4px), `2`(8px), `4`(16px), `6`(24px), `8`(32px), `12`, `16`, `24` |
-| **Radius**      | `rounded-none`, `rounded-lg`(8px), `rounded-2xl`(16px), `rounded-full`     |
-| **Icon Size**   | `size-3.5`, `size-4`, `size-5`, `size-6`, `size-8`, `size-10`              |
-| **Font Weight** | `font-normal`, `font-medium` のみ                                          |
-| **Shadow**      | `shadow-xs`(input), `shadow-sm`(Raised), `shadow-card`(Overlay)            |
-| **Transition**  | `transition-colors duration-150`（標準）                                   |
+- [ ] Canvas にテキストなし（AllPatterns含む。Foundations/Patterns除く）
+- [ ] layout がレイヤーのデフォルトと一致（UI=centered, Feature=padded, Foundation/Pattern=fullscreen）
