@@ -6,13 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Link } from '@/platform/i18n/navigation';
+import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import {
   Field,
   FieldDescription,
@@ -21,13 +21,14 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldSupportText,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
+import { getSafeRedirectPath } from '@/lib/safe-redirect';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import { createClient } from '@/platform/supabase/client';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore } from '../stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { loginSchema, type LoginFormData } from '../schemas/auth.schema';
@@ -43,9 +44,11 @@ import { loginSchema, type LoginFormData } from '../schemas/auth.schema';
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const locale = (params?.locale as string) || 'ja';
   const t = useTranslations();
   const signIn = useAuthStore((state) => state.signIn);
+  const redirectPath = getSafeRedirectPath(searchParams?.get('redirect'));
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -88,16 +91,24 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
             '[LoginForm] MFA check failed, redirecting to MFA verify for safety:',
             mfaError,
           );
-          router.push(`/${locale}/auth/mfa-verify`);
+          const mfaUrl =
+            redirectPath !== '/calendar/day'
+              ? `/${locale}/auth/mfa-verify?redirect=${encodeURIComponent(redirectPath)}`
+              : `/${locale}/auth/mfa-verify`;
+          router.push(mfaUrl);
           return;
         }
 
         if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
-          router.push(`/${locale}/auth/mfa-verify`);
+          const mfaUrl =
+            redirectPath !== '/calendar/day'
+              ? `/${locale}/auth/mfa-verify?redirect=${encodeURIComponent(redirectPath)}`
+              : `/${locale}/auth/mfa-verify`;
+          router.push(mfaUrl);
           return;
         }
 
-        router.push(`/${locale}/calendar/day`);
+        router.push(`/${locale}${redirectPath}`);
       }
     } catch (err) {
       logger.error('[LoginForm] Unexpected error:', err);

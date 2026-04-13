@@ -12,9 +12,9 @@ import React, {
 
 import { usePathname } from 'next/navigation';
 
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useCalendarNavigationStore } from '@/features/calendar/stores/useCalendarNavigationStore';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
 import { formatCalendarDateParam, parseCalendarDateParam } from '../../lib/date-param';
 import { isCalendarViewPath } from '../../lib/route-utils';

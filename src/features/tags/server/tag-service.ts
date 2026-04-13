@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Tag Service
  *
@@ -17,6 +19,7 @@
  */
 
 import type { Database } from '@/lib/database.types';
+import { ServiceError } from '@/lib/trpc/errors';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Tag, TagDeleteStrategy } from '../types';
 
@@ -108,9 +111,9 @@ export interface ReorderTagUpdate {
 /**
  * Tag Service エラー
  */
-export class TagServiceError extends Error {
+export class TagServiceError extends ServiceError {
   constructor(
-    public readonly code:
+    code:
       | 'FETCH_FAILED'
       | 'CREATE_FAILED'
       | 'UPDATE_FAILED'
@@ -125,7 +128,7 @@ export class TagServiceError extends Error {
       | 'GROUP_NAME_CONFLICT',
     message: string,
   ) {
-    super(message);
+    super(code, message);
     this.name = 'TagServiceError';
   }
 }

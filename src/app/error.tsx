@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import * as Sentry from '@sentry/nextjs';
 
 interface ErrorProps {

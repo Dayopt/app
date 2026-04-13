@@ -2,13 +2,19 @@
  * Badges Service
  *
  * バッジ判定・取得のビジネスロジック。
- * Supabaseを直接クエリし、他featureのimportは行わない。
+ * Supabaseを直接クエリし、chronotype(Layer 0)のbarrelのみimport。
  *
- * パフォーマンス: 全バッジの素材データを一括取得（6クエリ）し、
+ * パフォーマンス: 全バッジの素材データを一括取得（7クエリ）し、
  * メモリ上で20バッジを判定する。個別クエリのN+1を回避。
  */
 
-import { ServiceError } from '@/platform/trpc/errors';
+import { format, startOfWeek } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+import { chronotypeCustomZonesSchema, getChronotypeProfile } from '@/features/chronotype';
+import { logger } from '@/lib/logger';
+import { ServiceError } from '@/lib/trpc/errors';
+import type { ChronotypeType, ProductivityLevel, ProductivityZone } from '@/lib/types/chronotype';
 
 import { BADGE_DEFINITIONS } from '../constants/badge-definitions';
 import type {
@@ -32,6 +38,26 @@ export class BadgesServiceError extends ServiceError {
 }
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** 非tieredバッジの目標値（指定なしは 1） */
+const NON_TIERED_TARGETS: Partial<Record<string, number>> = {
+  'tags-5': 5,
+  'chronotype-trio': 3,
+  'full-week': 7,
+};
+
+/** 5段階の生産性レベルを3ティアに集約 */
+const TIER_MAP: Record<ProductivityLevel, 'high' | 'mid' | 'low'> = {
+  warmup: 'high',
+  deep: 'high',
+  ease: 'mid',
+  recovery: 'low',
+  winddown: 'low',
+};
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -50,6 +76,7 @@ interface BadgeSourceData {
   entriesWithTime: number;
   hasFullDay: boolean;
   hasEarlyBird: boolean;
+  hasDeepZoneEntry: boolean;
   fullWeekDays: number;
   maxTagMinutes: number;
   hasGroupTag: boolean;
@@ -57,6 +84,87 @@ interface BadgeSourceData {
   isWeeklyBest: boolean;
   isProSubscriber: boolean;
   accountAgeDays: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers (pure functions)
+// ---------------------------------------------------------------------------
+
+/** user_settings からクロノタイプゾーンを解決する */
+function resolveZones(
+  settings: {
+    chronotype_enabled: boolean | null;
+    chronotype_type: string | null;
+    chronotype_custom_zones: unknown;
+  } | null,
+): ProductivityZone[] {
+  if (!settings?.chronotype_enabled) return [];
+  if (settings.chronotype_custom_zones) {
+    const parsed = chronotypeCustomZonesSchema.safeParse(settings.chronotype_custom_zones);
+    if (parsed.success) return parsed.data;
+  }
+  const type = settings.chronotype_type ?? 'bear';
+  if (type === 'custom') return [];
+  return getChronotypeProfile(type as ChronotypeType).productivityZones;
+}
+
+/** early-bird 閾値: 最初の deep zone 開始時刻（なければ7時） */
+function getEarlyBirdThreshold(zones: ProductivityZone[]): number {
+  const deepZones = zones.filter((z) => z.level === 'deep');
+  if (deepZones.length === 0) return 7;
+  return Math.min(...deepZones.map((z) => z.startHour));
+}
+
+/** エントリの時間帯がカバーする3ティア数を返す（0-3） */
+function computeChronotypeZoneCount(
+  entries: Array<{ start_time: string | null }>,
+  zones: ProductivityZone[],
+  timezone: string,
+): number {
+  if (zones.length === 0) return 0;
+  const tiersHit = new Set<'high' | 'mid' | 'low'>();
+  for (const entry of entries) {
+    if (!entry.start_time) continue;
+    const h = parseInt(formatInTimeZone(new Date(entry.start_time), timezone, 'HH'), 10);
+    const zone = zones.find((z) =>
+      z.startHour <= z.endHour
+        ? h >= z.startHour && h < z.endHour
+        : h >= z.startHour || h < z.endHour,
+    );
+    if (zone) tiersHit.add(TIER_MAP[zone.level]);
+  }
+  return tiersHit.size;
+}
+
+/** deep レベルのゾーン内にエントリがあるか */
+function hasAnyDeepZoneEntry(
+  entries: Array<{ start_time: string | null }>,
+  zones: ProductivityZone[],
+  timezone: string,
+): boolean {
+  const deepZones = zones.filter((z) => z.level === 'deep');
+  if (deepZones.length === 0) return false;
+  return entries.some((entry) => {
+    if (!entry.start_time) return false;
+    const h = parseInt(formatInTimeZone(new Date(entry.start_time), timezone, 'HH'), 10);
+    return deepZones.some((z) =>
+      z.startHour <= z.endHour
+        ? h >= z.startHour && h < z.endHour
+        : h >= z.startHour || h < z.endHour,
+    );
+  });
+}
+
+/** ユーザーTZ基準の今週（カレンダー週）7日間の日付文字列 */
+function getCurrentWeekDateStrings(timezone: string, weekStartsOn: 0 | 1 | 6): string[] {
+  const zonedNow = toZonedTime(new Date(), timezone);
+  const ws = startOfWeek(zonedNow, { weekStartsOn });
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws.getTime() + i * 24 * 60 * 60 * 1000);
+    dates.push(format(d, 'yyyy-MM-dd'));
+  }
+  return dates;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,12 +200,31 @@ export class BadgesService {
 
   /** バッジ判定を実行し、新規獲得バッジを返却 */
   async evaluate(userId: string): Promise<NewlyEarnedBadge[]> {
+    const { newlyEarned } = await this.evaluateWithProgress(userId);
+    return newlyEarned;
+  }
+
+  /** 未獲得バッジの進捗データ */
+  async getProgress(userId: string): Promise<BadgeProgress[]> {
+    const { progress } = await this.evaluateWithProgress(userId);
+    return progress;
+  }
+
+  /**
+   * バッジ判定 + 進捗データを一括取得
+   *
+   * fetchSourceData / getEarnedSet を1回だけ呼び、
+   * 判定（INSERT）と進捗計算を同時に行う。
+   */
+  async evaluateWithProgress(
+    userId: string,
+  ): Promise<{ newlyEarned: NewlyEarnedBadge[]; progress: BadgeProgress[] }> {
     const [earned, source] = await Promise.all([
       this.getEarnedSet(userId),
       this.fetchSourceData(userId),
     ]);
 
-    // 獲得候補を収集
+    // --- 判定: 獲得候補を収集 ---
     const candidates: { badgeId: string; rank: BadgeRank | null }[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
@@ -112,7 +239,8 @@ export class BadgesService {
         }
       } else {
         if (this.isAlreadyEarned(earned, badge.id, null)) continue;
-        if (value >= 1) {
+        const target = NON_TIERED_TARGETS[badge.id] ?? 1;
+        if (value >= target) {
           candidates.push({ badgeId: badge.id, rank: null });
         }
       }
@@ -126,24 +254,20 @@ export class BadgesService {
       }),
     );
 
-    return results.filter((r): r is NewlyEarnedBadge => r !== null);
-  }
+    const newlyEarned = results.filter((r): r is NewlyEarnedBadge => r !== null);
 
-  /** 未獲得バッジの進捗データ */
-  async getProgress(userId: string): Promise<BadgeProgress[]> {
-    const [earned, source] = await Promise.all([
-      this.getEarnedSet(userId),
-      this.fetchSourceData(userId),
-    ]);
-
+    // --- 進捗: INSERT後の earned を反映 ---
+    const updatedEarned = [
+      ...earned,
+      ...newlyEarned.map((n) => ({ badge_id: n.badgeId, rank: n.rank })),
+    ];
     const progressList: BadgeProgress[] = [];
 
     for (const badge of BADGE_DEFINITIONS) {
       const currentValue = this.computeValue(badge, source);
 
       if (badge.isTiered && badge.thresholds) {
-        // 段階成長型: 次の目標があればそれを、なければ最終段階を返す（常にプログレスバー表示）
-        const nextThreshold = this.getNextThreshold(badge, earned);
+        const nextThreshold = this.getNextThreshold(badge, updatedEarned);
         const lastThreshold = badge.thresholds[badge.thresholds.length - 1]!;
         const target = nextThreshold ?? lastThreshold;
         progressList.push({
@@ -153,24 +277,25 @@ export class BadgesService {
           rank: target.rank,
         });
       } else {
-        if (this.isAlreadyEarned(earned, badge.id, null)) continue;
+        if (this.isAlreadyEarned(updatedEarned, badge.id, null)) continue;
         progressList.push({
           badgeId: badge.id,
           currentValue,
-          targetValue: 1,
+          targetValue: NON_TIERED_TARGETS[badge.id] ?? 1,
         });
       }
     }
 
-    return progressList;
+    return { newlyEarned, progress: progressList };
   }
 
   // =========================================================================
-  // Internal: Batch data fetch (6 parallel queries)
+  // Internal: Batch data fetch (7 parallel queries)
   // =========================================================================
 
   private async fetchSourceData(userId: string): Promise<BadgeSourceData> {
-    const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+    const sinceDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const sinceDateStr = formatInTimeZone(sinceDate, 'UTC', 'yyyy-MM-dd');
 
     const [
       entriesResult,
@@ -181,29 +306,33 @@ export class BadgesService {
       profileResult,
       tagsResult,
     ] = await Promise.all([
-      // 1. entries
+      // 1. entries（ソフト削除を除外）
       this.supabase
         .from('entries')
         .select('start_time, end_time, duration_minutes')
-        .eq('user_id', userId),
-      // 2. entry_tags + entry duration
+        .eq('user_id', userId)
+        .is('deleted_at', null),
+      // 2. entry_tags + entry duration（ソフト削除を除外）
       this.supabase
         .from('entries')
         .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
-        .eq('user_id', userId),
+        .eq('user_id', userId)
+        .is('deleted_at', null),
       // 3. palette_items count
       this.supabase
         .from('palette_items')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId),
-      // 4. user_settings
+      // 4. user_settings (TZ・chronotype情報を含む)
       this.supabase
         .from('user_settings')
-        .select('chronotype_enabled')
+        .select(
+          'chronotype_enabled, chronotype_type, chronotype_custom_zones, timezone, week_starts_on',
+        )
         .eq('user_id', userId)
         .single(),
-      // 5. active_dates RPC
-      this.supabase.rpc('get_active_dates', { p_user_id: userId, p_since: since }),
+      // 5. active_dates RPC (p_start_date: DATE string)
+      this.supabase.rpc('get_active_dates', { p_user_id: userId, p_start_date: sinceDateStr }),
       // 6. profile
       this.supabase
         .from('profiles')
@@ -217,17 +346,33 @@ export class BadgesService {
     const entries = entriesResult.data ?? [];
     const entryTagRows = entryTagsResult.data ?? [];
     const settings = settingsResult.data;
-    const activeDates = activeDatesResult.data ?? [];
     const profile = profileResult.data;
     const tags = tagsResult.data ?? [];
+
+    // --- Active dates (with error logging) ---
+    if (activeDatesResult.error) {
+      logger.warn('badges: get_active_dates failed', { error: activeDatesResult.error });
+    }
+    const activeDates = activeDatesResult.data ?? [];
+
+    // --- User timezone & chronotype zones ---
+    const timezone = settings?.timezone ?? 'UTC';
+    const weekStartsOn = ([0, 1, 6] as const).includes(settings?.week_starts_on as 0 | 1 | 6)
+      ? (settings!.week_starts_on as 0 | 1 | 6)
+      : 1;
+    const zones = resolveZones(settings);
 
     // --- Streak ---
     const dateSet = new Set(activeDates);
     let streak = 0;
-    const today = new Date();
+    const todayStr = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+    const todayMs = new Date(todayStr).getTime();
     for (let i = 0; i < 365; i++) {
-      const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = formatInTimeZone(
+        new Date(todayMs - i * 24 * 60 * 60 * 1000),
+        'UTC',
+        'yyyy-MM-dd',
+      );
       if (dateSet.has(dateStr)) {
         streak++;
       } else {
@@ -235,14 +380,17 @@ export class BadgesService {
       }
     }
 
+    // --- Full-week: カレンダー週ベース（ユーザーTZ） ---
+    const currentWeekDates = getCurrentWeekDateStrings(timezone, weekStartsOn);
+    const fullWeekDays = currentWeekDates.filter((d) => dateSet.has(d)).length;
+
     // --- Entries with time ---
     const entriesWithTime = entries.filter((e) => e.start_time).length;
 
     // --- Per-day aggregations ---
     const dateCount = new Map<string, number>();
     let hasEarlyBird = false;
-    const recentDaysOfWeek = new Set<number>();
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const earlyBirdThreshold = getEarlyBirdThreshold(zones);
 
     // --- Weekly hours for self-best detection ---
     const weekMinutes = new Map<string, number>();
@@ -250,17 +398,12 @@ export class BadgesService {
     for (const entry of entries) {
       if (!entry.start_time) continue;
       const date = entry.start_time.slice(0, 10);
-      const startMs = new Date(entry.start_time).getTime();
-      const hour = new Date(entry.start_time).getUTCHours();
+      const hour = parseInt(formatInTimeZone(new Date(entry.start_time), timezone, 'HH'), 10);
 
       dateCount.set(date, (dateCount.get(date) ?? 0) + 1);
 
-      // TODO: ユーザーTZで判定すべき（現在はUTC）
-      if (hour < 7) hasEarlyBird = true;
-
-      if (startMs >= oneWeekAgo) {
-        recentDaysOfWeek.add(new Date(entry.start_time).getDay());
-      }
+      // ユーザーTZで判定: custom_zones の最初の deep zone 開始前
+      if (hour < earlyBirdThreshold) hasEarlyBird = true;
 
       // Weekly minutes (ISO week key)
       if (entry.duration_minutes) {
@@ -275,6 +418,7 @@ export class BadgesService {
     const hasFullDay = [...dateCount.values()].some((c) => c >= 8);
 
     // --- Weekly champion: current week is personal best ---
+    const today = new Date();
     const thisWeekStart = new Date(today);
     thisWeekStart.setDate(today.getDate() - today.getDay());
     const thisWeekKey = thisWeekStart.toISOString().slice(0, 10);
@@ -307,19 +451,9 @@ export class BadgesService {
     // --- Group tag (colon syntax: "group:name") ---
     const hasGroupTag = tags.some((t) => t.name.includes(':'));
 
-    // --- Chronotype zones used (Deep/Ease/Neutral) ---
-    // 簡易判定: chronotype有効 + エントリの時間帯分布から3ゾーン判定
-    // TODO: 厳密にはuser_settingsのchronotype_custom_zonesを参照すべき
-    let chronotypeZoneCount = 0;
-    if (settings?.chronotype_enabled && entriesWithTime > 0) {
-      const hours = entries
-        .filter((e) => e.start_time)
-        .map((e) => new Date(e.start_time!).getUTCHours());
-      const hasMorning = hours.some((h) => h >= 6 && h < 12);
-      const hasAfternoon = hours.some((h) => h >= 12 && h < 18);
-      const hasEvening = hours.some((h) => h >= 18 || h < 6);
-      chronotypeZoneCount = [hasMorning, hasAfternoon, hasEvening].filter(Boolean).length;
-    }
+    // --- Chronotype zones: custom_zones ベースで3ティア判定 ---
+    const chronotypeZoneCount = computeChronotypeZoneCount(entries, zones, timezone);
+    const hasDeepZoneEntry = hasAnyDeepZoneEntry(entries, zones, timezone);
 
     // --- Account age ---
     const createdAt = profile?.created_at;
@@ -330,7 +464,10 @@ export class BadgesService {
     // --- Settings & Profile ---
     const chronotypeEnabled = settings?.chronotype_enabled ?? false;
     const subscriptionStatus = profile?.subscription_status;
-    const isProSubscriber = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+    const isProSubscriber =
+      subscriptionStatus === 'active' ||
+      subscriptionStatus === 'trialing' ||
+      subscriptionStatus === 'past_due';
 
     return {
       streak,
@@ -341,7 +478,8 @@ export class BadgesService {
       entriesWithTime,
       hasFullDay,
       hasEarlyBird,
-      fullWeekDays: recentDaysOfWeek.size,
+      hasDeepZoneEntry,
+      fullWeekDays,
       maxTagMinutes,
       hasGroupTag,
       chronotypeZoneCount,
@@ -364,21 +502,21 @@ export class BadgesService {
       case 'tag-hours':
         return source.maxTagMinutes; // 段階: 3000(50h) → 6000(100h) → 12000(200h)
       case 'tags-5':
-        return source.distinctTagCount >= 5 ? 1 : 0;
+        return source.distinctTagCount;
       case 'palette-first':
         return source.paletteExists ? 1 : 0;
       case 'deep-zone':
-        return source.chronotypeEnabled && source.entriesWithTime > 0 ? 1 : 0;
+        return source.hasDeepZoneEntry ? 1 : 0;
       case 'full-day':
         return source.hasFullDay ? 1 : 0;
       case 'group-first':
         return source.hasGroupTag ? 1 : 0;
       case 'chronotype-trio':
-        return source.chronotypeZoneCount >= 3 ? 1 : 0;
+        return source.chronotypeZoneCount;
       case 'early-bird':
         return source.hasEarlyBird ? 1 : 0;
       case 'full-week':
-        return source.fullWeekDays >= 7 ? 1 : 0;
+        return source.fullWeekDays;
       case 'weekly-champion':
         return source.isWeeklyBest ? 1 : 0;
       case 'pro-signup':

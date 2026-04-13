@@ -2,7 +2,7 @@
 export { DayView } from './DayView';
 
 // 型定義
-export type * from './DayView.types';
+export type * from '../../../types/day-view.types';
 
 // フック
 export { useDayEntries, useDayEntries as useDayEvents } from './hooks/useDayEntries';

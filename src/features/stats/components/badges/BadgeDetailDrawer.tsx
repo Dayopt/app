@@ -11,12 +11,12 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from '@/components/ui/drawer';
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { useIsMobile } from '@/hooks/useIsMobile';
+} from '@/lib/components/ui/drawer';
+import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
-import { getProgressPercent } from '../../lib/badge-utils';
+import { getProgressPercent } from '../../lib/badge-status';
 import type { BadgeRank, BadgeWithStatus } from '../../types/badge.types';
 
 // ---------------------------------------------------------------------------

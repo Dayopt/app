@@ -7,12 +7,13 @@
  * @see src/features/entry/components/inspector/hooks/useDebouncedSave.ts
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { EntryService } from '@/features/entry/server/entry-service';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 /** beacon で更新可能なフィールド（updateEntrySchema と同等） */
 const ALLOWED_FIELDS = new Set([
@@ -73,6 +74,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     logger.error('[beacon/entry-save] Failed to save entry:', error);
+    Sentry.captureException(error, {
+      tags: { source: 'beacon_entry_save' },
+    });
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

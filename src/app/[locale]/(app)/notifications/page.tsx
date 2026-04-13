@@ -5,15 +5,15 @@ import { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ActivityTab } from '@/features/notifications';
 import { ActivityContent, useUnreadCount } from '@/features/notifications';
-import { useHasMounted } from '@/hooks/useHasMounted';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { useRouter } from '@/platform/i18n/navigation';
-import { AppHeader } from '@/shell/components/AppHeader';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { ScrollArea } from '@/lib/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/components/ui/tabs';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useRouter } from '@/lib/i18n/navigation';
 
 const TABS: ActivityTab[] = ['all', 'reminders', 'ai'];
 

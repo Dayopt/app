@@ -1,4 +1,4 @@
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 /** パレットアイテム一覧の query hook */
 export function usePaletteItems() {

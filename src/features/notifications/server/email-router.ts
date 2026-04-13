@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Email tRPC Router
  *
@@ -32,10 +34,10 @@ import { WelcomeEmail } from '@/emails/WelcomeEmail';
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
-import type { Context } from '@/platform/trpc/procedures';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
-import * as Sentry from '@sentry/nextjs';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { handleServiceError } from '@/lib/trpc/errors';
+import type { Context } from '@/lib/trpc/procedures';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 // 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {
@@ -68,11 +70,7 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
 
   if (error) {
     logger.error('Failed to fetch user info for email verification', { error });
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'ユーザー情報の取得に失敗した',
-      cause: error,
-    });
+    handleServiceError(error);
   }
 
   if (!user?.email || user.email !== inputEmail) {
@@ -134,29 +132,11 @@ async function sendEmail({
 
   if (error) {
     logger.error(`${context} failed`, { error });
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'メール送信に失敗した',
-    });
+    handleServiceError(error);
   }
 
   logger.info(`${context} sent`, { emailId: data?.id });
   return { success: true as const, emailId: data?.id };
-}
-
-/** メール操作の共通エラーハンドラ */
-function handleEmailError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
-  Sentry.captureException(error, { tags: { source: 'email_router', operation } });
-  logger.error('Email operation failed', {
-    operation,
-    error: error instanceof Error ? error.message : String(error),
-  });
-  throw new TRPCError({
-    code: 'INTERNAL_SERVER_ERROR',
-    message: 'メール操作に失敗した',
-    cause: error,
-  });
 }
 
 /** メール送信（ウェルカム / Trial / Pro / 課金 / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
@@ -187,7 +167,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Welcome email',
         });
       } catch (error) {
-        return handleEmailError('sendWelcome', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -223,7 +203,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Trial start email',
         });
       } catch (error) {
-        return handleEmailError('sendTrialStart', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -259,7 +239,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Trial expiring email',
         });
       } catch (error) {
-        return handleEmailError('sendTrialExpiring', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -293,7 +273,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Trial expired email',
         });
       } catch (error) {
-        return handleEmailError('sendTrialExpired', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -327,7 +307,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Pro start email',
         });
       } catch (error) {
-        return handleEmailError('sendProStart', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -363,7 +343,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Payment failed email',
         });
       } catch (error) {
-        return handleEmailError('sendPaymentFailed', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -397,7 +377,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Payment recovered email',
         });
       } catch (error) {
-        return handleEmailError('sendPaymentRecovered', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -431,7 +411,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Password changed email',
         });
       } catch (error) {
-        return handleEmailError('sendPasswordChanged', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -467,7 +447,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Cancellation confirm email',
         });
       } catch (error) {
-        return handleEmailError('sendCancellationConfirm', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -508,7 +488,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Reminder email',
         });
       } catch (error) {
-        return handleEmailError('sendReminder', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -549,7 +529,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Account deletion email',
         });
       } catch (error) {
-        return handleEmailError('sendAccountDeletion', error);
+        return handleServiceError(error);
       }
     }),
 
@@ -598,7 +578,7 @@ export const emailRouter = createTRPCRouter({
           context: 'Test email',
         });
       } catch (error) {
-        return handleEmailError('sendTest', error);
+        return handleServiceError(error);
       }
     }),
 });

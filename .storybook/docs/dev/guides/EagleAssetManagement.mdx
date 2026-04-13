@@ -1,0 +1,452 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Architecture/Guides/Eagle Asset Management" />
+
+# Dayopt Eagle デザインアセット管理設計書
+
+> このドキュメントはDayoptのデザインアセットをEagle + MCP + Claude Codeで一元管理するための設計仕様。
+> Claude CodeのSkillやCLAUDE.mdから参照する運用ドキュメントとして使用する。
+
+---
+
+## 1. ライブラリ構成
+
+### 1.1 ライブラリ方針
+
+Dayopt専用ライブラリを新規作成する。既存の混在ライブラリとは分離。
+
+- ライブラリ名: `Dayopt Design`
+- 用途: Dayoptに関するすべてのデザインアセット
+
+### 1.2 フォルダ構造
+
+```
+Dayopt Design/
+├── Components/                    ← Storybookスナップショット（自動管理）
+│   ├── UI/                        ← Button, Dialog, Badge, Input, Select...
+│   ├── Shell/                     ← AppHeader, BottomTabBar, Sidebar/...
+│   └── Common/                    ← ErrorBoundary, EmptyState, DateNavigator...
+├── Features/                      ← 機能コンポーネント（自動管理）
+│   ├── Calendar/                  ← Views/{Day,Week,Grid}, Header, Sidebar...
+│   ├── Settings/                  ← Account, Display, Billing, Data...
+│   ├── Stats/                     ← Badges, Insights, Progress, Review...
+│   ├── Entry/                     ← Card, Content, Inspector/...
+│   ├── Auth/                      ← Login, Signup, MFA...
+│   └── Tags/ Onboarding/ Tour/ etc.
+├── Foundations/                    ← カラー、タイポグラフィ、spacing、radius
+├── Inspiration/                   ← 参考UI・UXリファレンス
+│   ├── Timeboxing/
+│   ├── Dashboard/
+│   └── Mobile UX/
+├── Marketing/                     ← ローンチ・プロモーション素材
+│   ├── Product Hunt/
+│   ├── LP/
+│   └── Social/
+└── Archive/                       ← 自動移動先（前世代スナップショット、ボツ案）
+```
+
+> フォルダ構造は Storybook のサイドバー階層をそのまま反映する。
+> コンポーネントフォルダは撮影・同期時に動的に作成される。
+
+### 1.3 スマートフォルダ（保存済み検索）
+
+初期セットアップ時に以下を作成:
+
+| スマートフォルダ名        | 条件                               |
+| ------------------------- | ---------------------------------- |
+| 🔍 要レビュー             | ★3以下 AND タグ `current`          |
+| 🌙 Darkモード全件         | タグ `dark`                        |
+| 📅 今週更新               | 更新日 = 今週 AND タグ `component` |
+| ⚠️ ブランドカラー逸脱候補 | タグ `color-check`                 |
+| 🔗 インスピ→実装リンク    | タグが `ref:` プレフィックスを含む |
+
+---
+
+## 2. タグ体系
+
+### 2.1 タグカテゴリ
+
+タグはフラットだが、プレフィックスで意味的にグループ化する。
+
+#### 種別（必須・自動付与）
+
+- `component` — Storybookスナップショット
+- `token` — デザイントークン素材
+- `inspiration` — 参考UI
+- `marketing` — LP/PH/SNS素材
+
+#### 状態（必須・自動付与）
+
+- `current` — 最新の正スナップショット
+- `deprecated` — 前世代（Archive移動済み）
+- `draft` — WIP・検討中
+
+#### テーマ
+
+- `light`
+- `dark`
+
+#### ビューポート
+
+- `mobile` — 375px
+- `desktop` — 1280px
+
+#### Feature セクション（自動検出）
+
+- `calendar` / `stats` / `settings` / `entry` / `auth`
+- `tags` / `tour` / `onboarding` / `chronotype`
+- `notifications` / `history` / `palette` / `search` / `contact`
+
+#### パスセグメント（自動付与）
+
+Storybook タイトルの階層がそのままタグになる。
+例: `Components/UI/Button` → `components`, `ui`, `button`
+
+#### デザイン要素（任意・手動）
+
+- `color:primary-blue`
+- `color:amber-h70`
+- `color:green-h150`
+- `tab-bar`
+
+#### バージョン（リリース単位）
+
+- `v0.9` — プレローンチ
+- `v1.0` — ローンチ版
+- 以降インクリメント
+
+#### インスピレーション紐づけ
+
+- `ref:{component-name}` — 例: `ref:bottom-sheet`, `ref:entry-card`
+- インスピレーション画像と実装スナップショットの両方に付与
+
+### 2.2 タグ自動生成ルール
+
+Storybook タイトル階層とバリアント名からタグを自動生成する。
+
+```
+Storybook title: Components/UI/Button
+Story name: AllPatterns
+ファイル名: Components_UI_Button--AllPatterns_dark_mobile.png
+
+→ 自動タグ:
+  component, current, button, components, ui, allpatterns, dark, mobile
+```
+
+パース規則:
+
+1. `--` の左側をパスとして分割 → 最後のセグメントがコンポーネント名、それ以外がフォルダパス+タグ
+2. `--` の右側をバリアント+テーマ+ビューポートとして分割
+3. パスの各セグメントが自動的にタグ化される（kebab-case）
+4. Feature セクション名（calendar, stats 等）がパスに含まれていれば自動付与
+
+---
+
+## 3. ファイル命名規約
+
+### 3.1 Storybookスナップショット（自動生成）
+
+```
+{StorybookTitle}--{StoryName}_{theme}_{viewport}.png
+```
+
+Storybook のタイトル階層がそのままファイル名になる（`/` は `_` に変換）。
+
+具体例:
+
+```
+Components_UI_Button--AllPatterns_dark_mobile.png
+Components_UI_Button--Default_light_mobile.png
+Components_Shell_AppHeader--Default_dark_mobile.png
+Features_Calendar_Views_Grid_TimeColumn--Default_light_desktop.png
+Features_Settings_DisplaySettings--Default_dark_mobile.png
+Features_Entry_Card--WithRecord_light_mobile.png
+Foundations_Colors--AllColors_dark_mobile.png
+Foundations_Icons--Sizes_light_mobile.png
+```
+
+### 3.2 デザイントークン素材
+
+```
+token-{type}-{name}.png
+```
+
+例:
+
+```
+token-color-palette-full.png
+token-color-chronotype-zones.png
+token-typography-scale.png
+token-radius-specimens.png
+token-icon-sizes.png
+```
+
+### 3.3 マーケティング素材
+
+```
+{YYYY-MM-DD}_{channel}-{description}-{version}.png
+```
+
+例:
+
+```
+2026-04-08_ph-hero-v1.png
+2026-04-08_ph-gallery-stats-v2.png
+2026-04-10_lp-og-image-v1.png
+2026-04-12_social-launch-announcement-v1.png
+```
+
+### 3.4 インスピレーション
+
+命名制約なし。Eagle取込時の元ファイル名をそのまま使用。
+タグ（種別 `inspiration` + 参考先 `ref:{name}` + カテゴリ）で管理。
+
+---
+
+## 4. ライフサイクル管理
+
+### 4.1 スナップショットの世代管理ポリシー
+
+**最新のみをComponents/に保持。前回分はArchive/へ自動移動。**
+
+スナップショット更新フロー:
+
+1. Storycapが新しい画像を `screenshots/` に出力
+2. スクリプトがComponents/内の同名ファイルを検知
+3. 既存ファイルに `deprecated` タグを付与、`current` タグを除去
+4. 既存ファイルをArchive/フォルダへ移動
+5. 新しいファイルをComponents/の適切なサブフォルダへ追加
+6. タグ自動付与（`current` + ファイル名パースによるタグ群）
+
+### 4.2 Archive保持期間
+
+- **30日経過した `deprecated` アイテムは自動削除**（moveToTrash）
+- 必要に応じて削除前に★5を付ければ保持対象から除外
+
+### 4.3 ★レーティングの運用ルール
+
+| ★    | 意味           | 用途                                   |
+| ---- | -------------- | -------------------------------------- |
+| ★5   | 確定・保護対象 | 削除対象から除外。リリース確定デザイン |
+| ★4   | 承認済み       | レビュー完了、問題なし                 |
+| ★3   | 要レビュー     | 自動生成直後のデフォルト               |
+| ★2   | 要修正         | 問題あり、修正予定                     |
+| ★1   | ボツ           | 次回クリーンアップで削除候補           |
+| なし | 未評価         | 新規取込直後                           |
+
+### 4.4 メモ（annotation）フィールドの活用
+
+Storybookスナップショットには以下を自動でメモに格納:
+
+```
+storybook: http://localhost:6006/?path=/story/{story-id}
+source: src/components/{path}/{ComponentName}.tsx
+captured: 2026-04-08T14:30:00+09:00
+storycap-hash: {前回との差分検知用ハッシュ}
+```
+
+Claude Codeが「このコンポーネントのソースどこ？」と聞かれたとき、
+Eagle MCP → `get_item_info` → メモからパスを抽出して応答できる。
+
+---
+
+## 5. ビューポート戦略
+
+### 5.1 撮影対象ビューポート
+
+| ビューポート | 幅     | 用途                         |
+| ------------ | ------ | ---------------------------- |
+| mobile       | 375px  | メイン。全コンポーネント     |
+| desktop      | 1280px | Statsページ等の2カラム時のみ |
+
+### 5.2 ルール（Storybook カテゴリ準拠）
+
+| カテゴリ                        | mobile | desktop | 理由                             |
+| ------------------------------- | ------ | ------- | -------------------------------- |
+| Features/Calendar/Views/        | ✓      | ✓       | Day/Week/Grid のページレイアウト |
+| Features/Settings/              | ✓      | ✓       | 設定画面各種                     |
+| Features/Stats/                 | ✓      | ✓       | 統計タブ各種                     |
+| Features/Auth/                  | ✓      | ✓       | 認証画面                         |
+| Features/Onboarding/            | ✓      | ✓       | オンボーディング                 |
+| Components/Shell/Sidebar/       | ✓      | ✓       | デスクトップでレイアウト変化     |
+| Components/UI/                  | ✓      | -       | プリミティブ（差分小）           |
+| Components/Common/              | ✓      | -       | ユーティリティ                   |
+| Components/Shell/ (Sidebar以外) | ✓      | -       | BottomTabBar, AppHeader          |
+| Foundations/                    | ✓      | -       | デザイントークン                 |
+| その他 Feature コンポーネント   | ✓      | -       | 個別UIパーツ                     |
+
+フォルダは分けず、タグ（`mobile` / `desktop`）で管理。
+
+---
+
+## 6. Eagle固有機能の役割割り当て
+
+| Eagle機能              | Dayoptでの用途                                              |
+| ---------------------- | ----------------------------------------------------------- |
+| ★レーティング          | デザインレビュー状態（§4.3参照）                            |
+| メモ                   | Storybook URL、ソースパス、撮影日時、差分ハッシュ           |
+| カラーパレット自動抽出 | ブランドカラー準拠チェック。逸脱時に `color-check` タグ付与 |
+| スマートフォルダ       | 動的ビュー（§1.3参照）                                      |
+| タグ                   | 全メタデータの中心（§2参照）                                |
+
+### 6.1 カラーパレット準拠チェック
+
+Eagleが画像から自動抽出する支配色を、Dayoptブランドカラーと照合:
+
+```
+ブランドカラー定義:
+- Primary Blue: #2563EB (近傍許容: ΔE < 15)
+- Amber H70 (Deep zone): #F59E0B
+- Green H150 (Ease zone): #22C55E
+- Neutral Gray系: #F8FAFC ~ #0F172A
+
+許容外の支配色が検出された場合 → `color-check` タグを自動付与
+```
+
+---
+
+## 7. インスピレーション → 実装のトレーサビリティ
+
+### 7.1 紐づけルール
+
+参考デザインを保存するとき:
+
+1. `inspiration` タグを付与
+2. 参考にするコンポーネントの `ref:{component-name}` タグを付与
+
+実装スナップショットにも同じ `ref:{component-name}` タグが自動で付く。
+
+### 7.2 活用例
+
+```
+Eagle検索: "ref:bottom-sheet"
+→ 結果:
+  - [inspiration] Uber Eats の bottom sheet UI → ★4
+  - [inspiration] Apple Maps の地図上 sheet → ★3
+  - [component] organisms-bottom-sheet--create-entry-light-mobile.png → ★5 current
+```
+
+「このコンポーネント、どの参考UIを元にデザインしたっけ？」に即答できる。
+
+---
+
+## 8. スナップショットパイプライン
+
+### 8.1 全体フロー
+
+```
+[Storybook]
+    ↓ Storycap (Playwright)
+[screenshots/]  ← ローカルに画像出力
+    ↓ eagle-sync スクリプト
+[Eagle MCP]
+    ├── addFromPath → Components/{category}/
+    ├── update → タグ自動付与
+    ├── update → メモにメタデータ格納
+    └── (既存分) → deprecated化 → Archive/へ移動
+```
+
+### 8.2 Storycap設定方針
+
+```js
+// .storycap.config.js
+module.exports = {
+  serverCmd: 'npx storybook dev -p 6006 --no-open',
+  captureTimeout: 10000,
+  viewports: {
+    mobile: { width: 375, height: 812 },
+    desktop: { width: 1280, height: 800 },
+  },
+  // ファイル名テンプレート（命名規約に準拠）
+  outDir: './screenshots',
+  // 各storyに対して light/dark × mobile/desktop の組み合わせ
+};
+```
+
+### 8.3 eagle-sync スクリプト概要
+
+```
+入力: screenshots/ ディレクトリ内の .png ファイル群
+処理:
+  1. ファイル名をパースしてメタデータ抽出
+  2. Eagle MCP: get_folder_list → 対象フォルダID取得
+  3. Eagle MCP: get_item_list → 同名の既存アイテム検索
+  4. 既存あり → update（deprecated タグ付与）→ 別フォルダへ移動相当の処理
+  5. Eagle MCP: add_item_from_path → 新規追加
+  6. Eagle MCP: update → タグ・メモ一括設定
+  7. レポート出力（追加N件、更新N件、削除候補N件）
+```
+
+### 8.4 実行タイミング
+
+- **手動**: Claude Codeから `eagle-sync` スキルを呼び出し
+- **CI連携（将来）**: GitHub Actions の post-merge でStorycap → eagle-sync
+- **推奨頻度**: 機能ブランチマージ後、またはデザイン変更コミット後
+
+---
+
+## 9. Claude Code Skill設計
+
+### 9.1 スキル一覧
+
+| スキル名          | トリガー例                                         | 動作                                      |
+| ----------------- | -------------------------------------------------- | ----------------------------------------- |
+| eagle-sync        | 「スナップショット更新して」                       | Storycap実行 → Eagle取込 → レポート       |
+| eagle-lookup      | 「BottomSheetのデザイン見せて」                    | Eagle MCP検索 → サムネイル/メタデータ返却 |
+| eagle-review      | 「未レビューのコンポーネント一覧」                 | ★3以下 + current を検索してリスト表示     |
+| eagle-cleanup     | 「Archiveの古いスナップショット整理して」          | 30日超のdeprecatedアイテムをmoveToTrash   |
+| eagle-inspiration | 「bottom-sheetの参考UIと実装を並べて」             | ref:タグで検索、インスピと実装を対比表示  |
+| eagle-color-check | 「ブランドカラーから外れてるコンポーネントある？」 | color-checkタグのアイテムをリスト表示     |
+
+### 9.2 ディレクトリ配置
+
+```
+~/.claude/skills/eagle-dayopt/
+├── SKILL.md                  ← スキル本体（description + 手順）
+├── scripts/
+│   ├── eagle-sync.sh         ← Storycap実行 + Eagle取込
+│   ├── eagle-cleanup.sh      ← Archive整理
+│   └── parse-filename.sh     ← ファイル名→タグ変換ユーティリティ
+├── references/
+│   └── tag-taxonomy.md       ← タグ体系リファレンス（§2を抽出）
+└── assets/
+    └── storycap.config.js    ← Storycap設定テンプレート
+```
+
+---
+
+## 10. 初期セットアップ手順
+
+### Phase 1: Eagle側
+
+1. Dayopt Design ライブラリ新規作成
+2. フォルダ構造作成（§1.2）
+3. スマートフォルダ作成（§1.3）
+
+### Phase 2: パイプライン構築
+
+4. Storycap導入・設定
+5. eagle-sync スクリプト実装
+6. ファイル命名テンプレート→タグ変換ロジック実装
+7. ライフサイクル管理（deprecated化・Archive移動）実装
+8. メモフィールド自動格納実装
+
+### Phase 3: Claude Code Skill
+
+9. SKILL.md作成（eagle-dayoptスキル）
+10. scripts/ 実装
+11. 動作確認（手動トリガーで一連のフロー実行）
+
+### Phase 4: 運用開始
+
+12. 既存インスピレーション画像をInspiration/へ移動・タグ付け
+13. デザイントークン素材を撮影・取込
+14. マーケティング素材フォルダにPH/LP用素材を整理
+
+---
+
+## 変更履歴
+
+| 日付       | 内容     |
+| ---------- | -------- |
+| 2026-04-08 | 初版作成 |

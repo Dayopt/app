@@ -24,9 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import type { Tag } from '@/features/tags';
 import {
   TagDeleteStrategyDialog,
@@ -41,11 +39,13 @@ import {
   useUngroupTags,
   useUpdateTag,
 } from '@/features/tags';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../TagRenameDialog';
 

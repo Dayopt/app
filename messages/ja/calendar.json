@@ -222,11 +222,15 @@
       "noTagData": "この期間のタグデータがありません",
       "review": {
         "emptyTitle": "新しい1週間が始まりました",
-        "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます"
+        "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
+        "errorTitle": "統計データを読み込めませんでした",
+        "errorDescription": "しばらくしてからもう一度お試しください"
       },
       "progress": {
         "emptyTitle": "トレンドの準備中です",
-        "emptyDescription": "エントリーが増えると、ここにパターンが見えてきます"
+        "emptyDescription": "エントリーが増えると、ここにパターンが見えてきます",
+        "errorTitle": "進捗データを読み込めませんでした",
+        "errorDescription": "しばらくしてからもう一度お試しください"
       },
       "periodDay": "日",
       "periodWeek": "週",
@@ -323,6 +327,8 @@
         "loading": "読み込み中…",
         "emptyTitle": "発見の準備中です",
         "emptyDescription": "もう少しデータが貯まると、パターンが見えてきます",
+        "errorTitle": "インサイトを読み込めませんでした",
+        "errorDescription": "しばらくしてからもう一度お試しください",
         "timePatternHighFulfillment": "{day}の{hour}時台は、充実度が高い傾向があります",
         "bestEstimationTag": "この期間で最も見積もりが正確だったタグは「{tagName}」でした（平均誤差 {deviation}分）",
         "blankTimeIncrease": "空白時間が前期間より {minutes}分 増えています",

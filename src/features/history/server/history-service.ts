@@ -6,6 +6,7 @@
  */
 
 import type { Database } from '@/lib/database.types';
+import { ServiceError } from '@/lib/trpc/errors';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ─────────────────────────────────────────────────────────
@@ -43,12 +44,9 @@ interface EntryTagRow {
 // エラー
 // ─────────────────────────────────────────────────────────
 
-export class HistoryServiceError extends Error {
-  constructor(
-    public readonly code: 'FETCH_PINNED_FAILED' | 'FETCH_ENTRIES_FAILED',
-    message: string,
-  ) {
-    super(message);
+export class HistoryServiceError extends ServiceError {
+  constructor(code: 'FETCH_PINNED_FAILED' | 'FETCH_ENTRIES_FAILED', message: string) {
+    super(code, message);
     this.name = 'HistoryServiceError';
   }
 }

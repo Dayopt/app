@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useTranslations } from 'next-intl';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 
 import { PlanVsRecordContent } from './content/PlanVsRecordContent';
 import { TagExplainContent } from './content/TagExplainContent';

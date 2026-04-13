@@ -10,6 +10,6 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/test/integration/**/*.ts", "src/test/trpc-test-helpers.ts"],
+  "include": ["src/lib/test/integration/**/*.ts", "src/lib/test/trpc-test-helpers.ts"],
   "exclude": ["node_modules"]
 }

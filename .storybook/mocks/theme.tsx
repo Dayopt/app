@@ -1,14 +1,14 @@
 import { useDarkMode } from '@vueless/storybook-dark-mode';
 import { type ReactNode, useMemo } from 'react';
 
-import { ThemeContext } from '../../src/shell/providers/theme-provider';
+import { ThemeContext } from '../../src/app/[locale]/(app)/_providers/theme-provider';
 
 const noop = () => {};
 
 /** Storybook用の軽量ThemeProvider — tRPC/DB不要でuseDarkModeと連動 */
 export function StorybookThemeProvider({ children }: { children: ReactNode }) {
   const isDark = useDarkMode();
-  const resolvedTheme = isDark ? 'dark' : ('light' as const);
+  const resolvedTheme: 'light' | 'dark' = isDark ? 'dark' : 'light';
 
   const value = useMemo(
     () => ({

@@ -24,14 +24,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { SectionCard } from '@/components/common/SectionCard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import { Badge } from '@/lib/components/ui/badge';
+import { Button } from '@/lib/components/ui/button';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
 
 import type { DragEndEvent, DropAnimation, Modifier } from '@dnd-kit/core';
 import type { AnimateLayoutChanges } from '@dnd-kit/sortable';

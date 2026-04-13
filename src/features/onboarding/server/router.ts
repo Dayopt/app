@@ -3,18 +3,19 @@
  * オンボーディングの完了管理API
  */
 
-import { TRPCError } from '@trpc/server';
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { generateSampleEntries, PRESET_TAGS } from '../lib/sample-entries';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 /** Chronotype type (inline to avoid cross-feature import) */
 const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
@@ -38,18 +39,12 @@ export const onboardingRouter = createTRPCRouter({
 
       if (profileResult.error) {
         logger.error('Onboarding getProfile error:', profileResult.error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch profile: ${profileResult.error.message}`,
-        });
+        handleServiceError(profileResult.error);
       }
 
       if (userResult.error) {
         logger.error('Onboarding getUser error:', userResult.error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to fetch user info: ${userResult.error.message}`,
-        });
+        handleServiceError(userResult.error);
       }
 
       // OAuth名がなければメールアドレスの@前をフォールバックに
@@ -88,15 +83,17 @@ export const onboardingRouter = createTRPCRouter({
 
       if (profileError) {
         logger.error('Onboarding complete profile error', { error: profileError });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'プロフィールの更新に失敗した',
-        });
+        handleServiceError(profileError);
       }
 
       // クロノタイプ設定 or ロケール設定（指定がある場合）
       if (input.chronotypeType || input.locale) {
-        const settingsUpsert: Record<string, unknown> = { user_id: ctx.userId };
+        const settingsUpsert: {
+          user_id: string;
+          chronotype_type?: string;
+          chronotype_enabled?: boolean;
+          preferred_locale?: string;
+        } = { user_id: ctx.userId };
         if (input.chronotypeType) {
           settingsUpsert.chronotype_type = input.chronotypeType;
           settingsUpsert.chronotype_enabled = true;
@@ -107,7 +104,7 @@ export const onboardingRouter = createTRPCRouter({
 
         const { error: settingsError } = await ctx.supabase
           .from('user_settings')
-          .upsert(settingsUpsert as never, { onConflict: 'user_id' })
+          .upsert(settingsUpsert, { onConflict: 'user_id' })
           .select()
           .single();
 
@@ -121,6 +118,9 @@ export const onboardingRouter = createTRPCRouter({
       const chronotype = input.chronotypeType as PresetChronotypeType | undefined;
       createSampleEntriesForUser(ctx.supabase, ctx.userId, chronotype ?? null).catch((err) => {
         logger.error('Failed to create sample entries:', err);
+        Sentry.captureException(err, {
+          tags: { source: 'onboarding', operation: 'create_sample_entries' },
+        });
       });
 
       return { success: true };
@@ -140,10 +140,7 @@ export const onboardingRouter = createTRPCRouter({
 
       if (error) {
         logger.error('Onboarding reset error', { error });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'オンボーディングのリセットに失敗した',
-        });
+        handleServiceError(error);
       }
 
       return { success: true };
@@ -182,7 +179,7 @@ async function createSampleEntriesForUser(
 
   const { data: insertedTags, error: tagsError } = await supabase
     .from('tags')
-    .insert(tagRows as never)
+    .insert(tagRows)
     .select('id, name');
 
   if (tagsError || !insertedTags) {
@@ -206,7 +203,7 @@ async function createSampleEntriesForUser(
 
   const { data: insertedEntries, error: entriesError } = await supabase
     .from('entries')
-    .insert(entryRows as never)
+    .insert(entryRows)
     .select('id');
 
   if (entriesError || !insertedEntries) {
@@ -220,12 +217,12 @@ async function createSampleEntriesForUser(
       const entryId = (insertedEntries[i] as { id: string }).id;
       const tagId = tagNameToId.get(PRESET_TAGS[plan.tagKey].name);
       if (!entryId || !tagId) return null;
-      return { entry_id: entryId, tag_id: tagId };
+      return { user_id: userId, entry_id: entryId, tag_id: tagId };
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
 
   if (entryTagRows.length > 0) {
-    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows as never);
+    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows);
 
     if (linkError) {
       logger.error('Entry-tag link insert error:', linkError);

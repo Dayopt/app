@@ -31,7 +31,7 @@ Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
 ### 全ネームスペースのマージ
 
-`src/platform/i18n/request.ts` が全ネームスペースを一括ロードし、`Object.assign` でルートレベルにマージする。
+`src/lib/i18n/request.ts` が全ネームスペースを一括ロードし、`Object.assign` でルートレベルにマージする。
 
 ```
 messages/en/common.json  → { common: {...}, actions: {...}, confirm: {...}, ... }
@@ -46,7 +46,7 @@ messages/en/calendar.json → { calendar: {...} }
 
 ### ロードされるネームスペース
 
-`src/platform/i18n/request.ts` の `NAMESPACES` 配列に登録されたファイルのみロードされる:
+`src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録されたファイルのみロードされる:
 
 ```typescript
 const NAMESPACES = [
@@ -318,13 +318,13 @@ const t = useTranslations();
 
 1. URLパスから言語を検出（`/ja/*` → 日本語）
 2. デフォルトは英語（プレフィックスなし）
-3. ミドルウェア（`src/platform/supabase/middleware.ts`）が自動処理
+3. ミドルウェア（`src/lib/supabase/middleware.ts`）が自動処理
 
 ## 関連ファイル
 
-- `src/platform/i18n/routing.ts` - ルーティング設定
-- `src/platform/i18n/request.ts` - メッセージローダー（NAMESPACES 定義）
-- `src/platform/i18n/navigation.ts` - ナビゲーションユーティリティ
-- `src/platform/supabase/middleware.ts` - 言語検出 + Auth ミドルウェア
-- `src/platform/i18n/scripts/check-keys.ts` - キー差分チェック（`npm run i18n:check`）
-- `src/platform/i18n/scripts/find-unused.ts` - 未使用キー検出（`npm run i18n:unused`）
+- `src/lib/i18n/routing.ts` - ルーティング設定
+- `src/lib/i18n/request.ts` - メッセージローダー（NAMESPACES 定義）
+- `src/lib/i18n/navigation.ts` - ナビゲーションユーティリティ
+- `src/lib/supabase/middleware.ts` - 言語検出 + Auth ミドルウェア
+- `src/lib/i18n/scripts/check-keys.ts` - キー差分チェック（`npm run i18n:check`）
+- `src/lib/i18n/scripts/find-unused.ts` - 未使用キー検出（`npm run i18n:unused`）

@@ -1,7 +1,7 @@
+import type { UseDayViewOptions, UseDayViewReturn } from '../../../../types/day-view.types';
 import { useEntryStyles } from '../../shared/hooks/useEntryStyles';
 import { useIsToday } from '../../shared/hooks/useIsToday';
 import { useTimeSlots } from '../../shared/hooks/useTimeSlots';
-import type { UseDayViewOptions, UseDayViewReturn } from '../DayView.types';
 
 import { useDayEntries } from './useDayEntries';
 

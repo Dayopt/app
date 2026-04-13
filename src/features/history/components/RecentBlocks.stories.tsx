@@ -9,9 +9,9 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { TagIcon } from '@/features/tags';
-import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/lib/components/shell/sidebar';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 
 // ─────────────────────────────────────────────────────────
 // Helper Component

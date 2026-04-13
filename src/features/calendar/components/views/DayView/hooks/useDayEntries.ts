@@ -1,6 +1,6 @@
+import type { UseDayEntriesOptions, UseDayEntriesReturn } from '../../../../types/day-view.types';
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useViewEntries } from '../../shared/hooks/useViewEntries';
-import type { UseDayEntriesOptions, UseDayEntriesReturn } from '../DayView.types';
 
 /**
  * DayView用のエントリ処理フック

@@ -13,7 +13,7 @@
 import { AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import { logger } from '@/lib/logger';
 
 interface ErrorProps {

@@ -2,21 +2,25 @@ import { useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Switch } from '@/lib/components/ui/switch';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 import { cn } from '@/lib/utils';
 
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
 import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_PRESETS,
   CHRONOTYPE_SELECTABLE_TYPES,
 } from '../lib/constants';
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
-import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '@/types/chronotype';
+import type {
+  ChronotypeType,
+  PresetChronotypeType,
+  ProductivityZone,
+} from '@/lib/types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components（tRPC/Zustandに依存しないpure版）

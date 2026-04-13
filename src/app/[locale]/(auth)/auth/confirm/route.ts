@@ -14,7 +14,7 @@ import type { EmailOtpType } from '@supabase/auth-js';
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

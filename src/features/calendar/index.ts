@@ -39,17 +39,15 @@ export {
 } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
-// Contexts
-// =============================================================================
-export { useCalendarEntryActions } from './contexts/CalendarEntryActionsContext';
-export type { CalendarEntryActions } from './contexts/CalendarEntryActionsContext';
-
-// =============================================================================
 // Hooks
 // =============================================================================
-export { useCalendarSidebarLayout } from './hooks/ui/useCalendarSidebarLayout';
 
 // Stores: Cross-feature (used by composition layer in app/)
+export { useCalendarFilterStore } from './stores/useCalendarFilterStore';
+export type { CalendarFilterActions, CalendarFilterState } from './stores/useCalendarFilterStore';
+export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
+export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
+export type { CalendarSettings, DateFormatType } from './stores/useCalendarSettingsStore';
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
 
 // Hooks: Cross-feature (used by composition layer in app/)
@@ -68,11 +66,4 @@ export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-para
 export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
 
-// =============================================================================
-// Grid Constants (used by settings feature)
-// =============================================================================
-export {
-  HOUR_HEIGHT,
-  HOUR_HEIGHT_DENSITIES,
-} from './components/views/shared/constants/grid.constants';
-export type { HourHeightDensity } from './components/views/shared/constants/grid.constants';
+// ここにないものはfeature内部専用

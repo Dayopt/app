@@ -1,9 +1,9 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { routing } from '@/lib/i18n/routing';
 import { logger } from '@/lib/logger';
-import { routing } from '@/platform/i18n/routing';
-import { updateSession } from '@/platform/supabase/middleware';
+import { updateSession } from '@/lib/supabase/middleware';
 
 // next-intlのミドルウェアを作成
 const intlMiddleware = createMiddleware(routing);

@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Dayopt",
-    "description": "タスク管理アプリケーション",
+    "description": "タイムボクシング・時間記録・タスク・カレンダーを一つに",
     "version": "v1.0.0",
     "keywords": ["タスク管理", "生産性向上", "プロジェクト管理"]
   },
@@ -98,7 +98,8 @@
       "addedToPalette": "パレットに追加しました。次回からすぐ使えます",
       "removeFromPalette": "パレットから解除",
       "removedFromPalette": "パレットから解除しました",
-      "more": "その他の操作"
+      "more": "その他の操作",
+      "retry": "もう一度試す"
     },
     "confirm": {
       "delete": {

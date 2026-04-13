@@ -6,12 +6,12 @@ export interface Tag {
   id: string;
   /** タグ名。コロン記法で2階層を表現（例: "開発:api"） */
   name: string;
-  user_id: string | null;
+  user_id: string;
   color: string | null;
   /** Lucideアイコン名（例: "briefcase"）。null = 色ドットにフォールバック */
   icon: string | null;
   is_active: boolean;
-  sort_order?: number | null;
+  sort_order: number;
   created_at: string | null;
   updated_at: string | null;
 }

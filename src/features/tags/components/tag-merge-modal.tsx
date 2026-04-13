@@ -14,11 +14,12 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ActionFooter } from '@/components/ui/action-footer';
-import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { useHasMounted } from '@/hooks/useHasMounted';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { ActionFooter } from '@/lib/components/ui/action-footer';
+import { Button } from '@/lib/components/ui/button';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { logger } from '@/lib/logger';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,9 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [error, setError] = useState('');
   const [view, setView] = useState<MergeView>({ type: 'grid' });
+
+  // フォーカストラップ・初期フォーカス・フォーカス復元（PC のみ、モバイルは Drawer が処理）
+  useFocusTrap(panelRef, open && !isMobile);
 
   // モーダルが開いたらリセット
   const [prevOpen, setPrevOpen] = useState(open);
@@ -301,7 +305,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
       <div
         ref={panelRef}
         role="dialog"
-        aria-modal="false"
+        aria-modal="true"
         aria-label={t('calendar.filter.mergeTag.title')}
         className={cn(
           'bg-card border-border-subtle shadow-card absolute flex flex-col border',

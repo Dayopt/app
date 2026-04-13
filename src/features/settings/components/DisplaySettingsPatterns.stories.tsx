@@ -8,13 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from '@/lib/components/ui/select';
+import { Switch } from '@/lib/components/ui/switch';
 
 import { getTimeZones } from '@/lib/timezone-utils';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components

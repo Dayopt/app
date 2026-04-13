@@ -9,10 +9,10 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Settings } from 'lucide-react';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/lib/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/components/ui/tabs';
 
-import type { ActivityTab } from '../lib/notification-helpers';
+import type { ActivityTab } from '../lib/notification-filters';
 import type { NotificationType } from '../schemas';
 import { ActivityContent } from './ActivityContent';
 

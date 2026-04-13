@@ -6,14 +6,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
-import { DateNavigator } from '@/components/common/DateNavigator';
-import { DateRangeDisplay } from '@/components/common/DateRangeDisplay';
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { TagIcon } from '@/features/tags';
+import { DateNavigator } from '@/lib/components/common/DateNavigator';
+import { DateRangeDisplay } from '@/lib/components/common/DateRangeDisplay';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { addDays, addMonths, addWeeks } from '@/lib/date/core';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { useShellStore } from '@/shell/stores/useShellStore';
 
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';

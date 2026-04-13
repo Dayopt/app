@@ -1,0 +1,48 @@
+/**
+ * tRPCメインルーター
+ * 全APIルーターの統合とエクスポート
+ */
+
+import 'server-only';
+
+import { suggestionsRouter } from '@/features/ai/server/suggestions-router';
+import { userRouter } from '@/features/auth/server/router';
+import { contactRouter } from '@/features/contact/server/router';
+import { entriesRouter } from '@/features/entry/server/router-index';
+import { historyRouter } from '@/features/history/server/router';
+import { emailRouter } from '@/features/notifications/server/email-router';
+import { notificationPreferencesRouter } from '@/features/notifications/server/preferences-router';
+import { notificationsRouter } from '@/features/notifications/server/router';
+import { onboardingRouter } from '@/features/onboarding/server/router';
+import { paletteRouter } from '@/features/palette/server/router';
+import { billingRouter } from '@/features/settings/server/billing-router';
+import { userSettingsRouter } from '@/features/settings/server/router';
+import { badgesRouter } from '@/features/stats/server/badges-router';
+import { tagsRouter } from '@/features/tags/server/router';
+import { createTRPCRouter } from '@/lib/trpc/procedures';
+
+/**
+ * メインAPIルーター
+ */
+export const appRouter = createTRPCRouter({
+  badges: badgesRouter,
+  billing: billingRouter,
+  contact: contactRouter,
+  email: emailRouter,
+  entries: entriesRouter,
+  history: historyRouter,
+  palette: paletteRouter,
+  suggestions: suggestionsRouter,
+  tags: tagsRouter,
+  user: userRouter,
+  notifications: notificationsRouter,
+  notificationPreferences: notificationPreferencesRouter,
+  onboarding: onboardingRouter,
+  userSettings: userSettingsRouter,
+});
+
+/**
+ * AppRouter型のエクスポート
+ * クライアント側で型推論に使用
+ */
+export type AppRouter = typeof appRouter;

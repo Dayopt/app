@@ -1,0 +1,303 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { Mermaid } from '../../../decorators/Mermaid';
+
+<Meta title="Architecture/PWA" />
+
+# PWA（Progressive Web App）
+
+Dayoptのオフライン対応・インストール体験・プッシュ通知の技術アーキテクチャ。
+
+---
+
+## 全体像
+
+<Mermaid chart={`graph TD
+    subgraph Browser["🌐 ブラウザ"]
+        App["React App"]
+        TQ["TanStack Query<br/>(offlineFirst)"]
+        ZS["Zustand Store<br/>(platformStorage)"]
+        SQ["Sync Queue<br/>(IndexedDB)"]
+        IDB["Query Cache<br/>(IndexedDB)"]
+    end
+
+    subgraph SW["⚙️ Service Worker"]
+        Cache["Cache API<br/>(static + dynamic)"]
+        BS["Background Sync"]
+        MSG["Message Handler"]
+    end
+
+    subgraph Server["☁️ サーバー"]
+        TRPC["tRPC API"]
+        SB["Supabase"]
+    end
+
+    App <--> TQ
+    App <--> ZS
+    TQ -- "永続化" --> IDB
+    TQ -- "mutation失敗" --> SQ
+    SQ -- "Background Sync" --> BS
+    BS -- "SYNC_MUTATION" --> MSG
+    MSG -- "再送" --> App
+    App -- "vanillaTrpc" --> TRPC
+    SW -- "キャッシュ" --> Cache
+    Cache -- "オフライン時" --> App
+    TRPC --> SB
+
+`} />
+
+---
+
+## レイヤー構成
+
+| レイヤー            | 技術                                          | 役割                                                              |
+| ------------------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| **Service Worker**  | \`public/sw.js\`                              | 静的アセットキャッシュ、オフラインフォールバック、Background Sync |
+| **Sync Queue**      | \`src/lib/pwa/sync-queue.ts\`                 | オフラインmutationのIndexedDB永続化 + dedup                       |
+| **Sync Processor**  | \`src/lib/pwa/sync-processor.ts\`             | オンライン復帰時のmutation再送                                    |
+| **Query Persist**   | \`src/lib/tanstack-query/persist-storage.ts\` | TanStack Queryキャッシュの IndexedDB永続化                        |
+| **Storage Adapter** | \`src/lib/zustand/storage.ts\`                | Zustand persistのプラットフォーム抽象化                           |
+| **Install Prompt**  | \`src/lib/pwa/install-prompt.ts\`             | PWAインストール促進                                               |
+| **iOS Workarounds** | \`src/lib/pwa/ios-workarounds.ts\`            | iOS Safari固有の制約対応                                          |
+| **App Badge**       | \`src/lib/pwa/app-badge.ts\`                  | 通知未読数のアプリバッジ表示                                      |
+
+---
+
+## オフライン同期フロー
+
+<Mermaid chart={`sequenceDiagram
+    participant U as ユーザー
+    participant App as React App
+    participant MC as MutationCache
+    participant SQ as Sync Queue (IDB)
+    participant SW as Service Worker
+    participant API as tRPC API
+
+    Note over U,API: オフライン時
+    U->>App: エントリ作成
+    App->>MC: mutation実行
+    MC-->>MC: networkError発生
+    MC->>SQ: handleOfflineMutationError()
+    SQ->>SQ: IndexedDBに永続化
+    SQ->>SW: Background Sync登録
+
+    Note over U,API: オンライン復帰時
+    SW->>SW: sync イベント発火
+    SW->>App: SYNC_MUTATION メッセージ
+    App->>SQ: deduplicateQueue()
+    SQ->>SQ: 同一エンティティのupdate圧縮
+    App->>SQ: processQueue()
+    SQ->>API: vanillaTrpc.mutate()
+    API-->>SQ: 成功
+    SQ->>SQ: IndexedDBから削除
+
+`} />
+
+### Mutation圧縮（Deduplication）
+
+同じエンティティへの複数mutationを自動圧縮する:
+
+| パターン                                  | 圧縮結果                         |
+| ----------------------------------------- | -------------------------------- |
+| `entries.update(A)` → `entries.update(A)` | inputをマージして1件に（後勝ち） |
+| `entries.create(A)` → `entries.delete(A)` | 両方削除（net no-op）            |
+| `entries.update(A)` → `entries.delete(A)` | deleteのみ残す                   |
+
+---
+
+## Service Worker キャッシュ戦略
+
+| リクエスト種別     | 戦略          | 詳細                                              |
+| ------------------ | ------------- | ------------------------------------------------- |
+| **ナビゲーション** | Network First | 失敗時はキャッシュ → `/offline` ページ            |
+| **静的アセット**   | Cache First   | JS/CSS/画像/フォント → ネットワークフォールバック |
+| **動的リクエスト** | Network First | GETのみキャッシュ → キャッシュフォールバック      |
+| **除外**           | No Cache      | HMR、認証API、tRPC API                            |
+
+```
+// キャッシュバージョニング
+CACHE_VERSION = '2'
+dayopt-static-v2  → 静的アセット（長期）
+dayopt-dynamic-v2 → 動的レスポンス（短期）
+```
+
+---
+
+## TanStack Query キャッシュ永続化
+
+タブを閉じて再度開いた際にキャッシュデータをIndexedDBから即座に復元する。
+
+```typescript
+// src/shell/providers.tsx
+<PersistQueryClientProvider
+  client={queryClient}
+  persistOptions={{
+    persister: queryPersister,    // IndexedDB (superjsonシリアライズ)
+    maxAge: 2 * 60 * 60 * 1000,  // 2時間
+    buster: CACHE_BUSTER,        // デプロイ毎にキャッシュ破棄
+    dehydrateOptions: {
+      shouldDehydrateQuery: (q) => q.state.status === 'success',
+      shouldDehydrateMutation: () => false, // mutation はsync queueで管理
+    },
+  }}
+>
+```
+
+| 設定               | 値          | 理由                                 |
+| ------------------ | ----------- | ------------------------------------ |
+| **maxAge**         | 2時間       | staticCache の gcTime に合わせる     |
+| **buster**         | APP_VERSION | デプロイ時に古いキャッシュを自動破棄 |
+| **シリアライザー** | superjson   | tRPCと同じ（Date型のround-trip保証） |
+
+---
+
+## Zustand Storage Adapter
+
+全6ストアが `platformStorage()` を使用。React Native移行時は `setPlatformStorageBackend()` で `AsyncStorage` を注入するだけ。
+
+```typescript
+// Web（現行）
+import { platformStorage } from '@/lib/zustand/storage';
+
+persist(storeCreator, {
+  name: 'calendar-settings',
+  storage: platformStorage(), // localStorage ベース
+});
+
+// React Native（将来）
+import AsyncStorage from '@react-native-async-storage/async-storage';
+setPlatformStorageBackend({
+  getItem: (name) => AsyncStorage.getItem(name),
+  setItem: (name, value) => AsyncStorage.setItem(name, value),
+  removeItem: (name) => AsyncStorage.removeItem(name),
+});
+```
+
+対象ストア: `useLayoutStore` / `useCalendarSettingsStore` / `useCalendarFilterStore` / `useCalendarScrollStore` / `useTourStore` / `createFilterStore`
+
+---
+
+## iOS Safari 固有対応
+
+| 問題                         | 対策                                            | ファイル                     |
+| ---------------------------- | ----------------------------------------------- | ---------------------------- |
+| SWキャッシュ7日失効          | 定期的にSW ping（3日ごと + visibilitychange時） | `startSWKeepAlive()`         |
+| `100vh` バグ                 | `--vh` CSS変数で実際のビューポート高さを設定    | `fixIOSViewportHeight()`     |
+| スワイプバック離脱           | history sentinel エントリで popstate をガード   | `preventStandaloneNavLoss()` |
+| 外部リンクでSafariに遷移     | click ハンドラで `window.open` に差替え         | `patchExternalLinks()`       |
+| `beforeinstallprompt` 非対応 | iOS専用「共有→ホーム画面に追加」ガイドUI        | `IOSInstallGuide`            |
+| スプラッシュスクリーン       | 8デバイスサイズの `apple-touch-startup-image`   | `layout.tsx`                 |
+
+---
+
+## インストール促進
+
+### Android / Chrome系
+
+`beforeinstallprompt` イベントをキャプチャし、カスタム `InstallBanner` を表示。
+dismissすると7日間非表示（localStorage）。
+
+### iOS Safari
+
+`IOSInstallGuide` コンポーネントで「共有→ホーム画面に追加」の手順を表示。
+standalone mode 検知済みの場合は非表示。
+
+---
+
+## 同期状態UI
+
+| 状態       | 表示                                           |
+| ---------- | ---------------------------------------------- |
+| オフライン | `CloudOff` + "オフライン"                      |
+| 同期待ち   | `Loader2`（回転）+ "同期待ちN件"               |
+| 同期失敗   | `AlertTriangle` + "同期失敗N件" + クリアボタン |
+| 正常       | 非表示                                         |
+
+- `SyncStatusIndicator` → `AppHeader` 右側に配置（全ページ共通）
+- オフライン↔オンライン切替時に toast 通知
+
+---
+
+## App Badge
+
+通知の未読数を PWA アプリアイコンのバッジに反映。
+
+```typescript
+// useNotificationBadge.ts（ServiceWorkerProvider内で呼び出し）
+const { data: unreadCount } = useUnreadCount();
+useEffect(() => {
+  if (unreadCount !== undefined) setAppBadge(unreadCount);
+}, [unreadCount]);
+```
+
+対応ブラウザ: Chrome 81+、Edge 81+（iOS Safari非対応）
+
+---
+
+## ファイル構成
+
+```
+src/lib/pwa/
+├── index.ts              # 公開API（バレルエクスポート）
+├── sync-queue.ts         # IndexedDB同期キュー + dedup
+├── sync-processor.ts     # キュー処理 + online/SWメッセージ連携
+├── offline-mutation.ts   # MutationCache.onError → キュー永続化
+├── app-badge.ts          # App Badging API ラッパー
+├── install-prompt.ts     # beforeinstallprompt イベント管理
+├── ios-workarounds.ts    # iOS Safari固有対策
+└── __tests__/
+    └── offline-sync.test.ts  # 統合テスト（60件）
+
+src/lib/zustand/
+├── createSelectors.ts    # auto-selectors（既存）
+└── storage.ts            # プラットフォーム抽象ストレージ
+
+src/lib/tanstack-query/
+├── cache-config.ts       # キャッシュ戦略定義（既存）
+├── optimistic-mutation.ts # 楽観的更新ユーティリティ（既存）
+└── persist-storage.ts    # IndexedDB永続化アダプター
+
+src/shell/
+├── hooks/
+│   ├── useInstallPrompt.ts   # インストール促進Hook
+│   ├── usePWA.ts             # PWA共通初期化Hook
+│   ├── useSyncProcessor.ts   # 同期プロセッサーHook
+│   ├── useSyncStatus.ts      # 同期状態Hook
+│   ├── useOfflineToast.ts    # オフラインtoast Hook
+│   └── useServiceWorker.ts   # SW登録・更新Hook（既存）
+├── components/
+│   ├── InstallBanner.tsx     # インストール促進バナー
+│   ├── IOSInstallGuide.tsx   # iOS向けインストール手順
+│   └── SyncStatusIndicator.tsx # 同期状態表示
+└── providers/
+    └── ServiceWorkerProvider.tsx # PWA全機能統合
+
+public/
+├── sw.js                 # Service Worker
+├── manifest.json         # PWAマニフェスト
+└── splash/               # iOSスプラッシュスクリーン（8サイズ）
+```
+
+---
+
+## テスト
+
+### ユニットテスト（60件）
+
+`src/lib/pwa/__tests__/offline-sync.test.ts`
+
+- sync-queue: enqueue/getAll/updateEntry/removeEntry/clearCompleted
+- sync-processor: processQueue + online復帰 + 二重処理防止
+- offline-mutation: ネットワークエラー判定 + mutationKey抽出
+- フルフロー: enqueue → dedup → processQueue → 削除
+
+### E2Eテスト（スケルトン）
+
+`src/test/e2e/pwa/offline-sync.spec.ts`
+
+- Playwright使用、本番ビルドでのみ動作
+- manifest/SW/オフラインページの検証
+- オフライン→オンライン同期フロー（TODO: 実装待ち）
+
+---
+
+**最終更新**: 2026-03-19 | **バージョン**: v1.0

@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import type { PaletteItem } from './usePaletteQuery';
 

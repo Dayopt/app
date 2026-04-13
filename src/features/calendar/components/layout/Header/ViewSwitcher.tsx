@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { buttonVariants } from '@/components/ui/button';
+import type { CalendarSettings } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { buttonVariants } from '@/lib/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -16,11 +18,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/lib/components/ui/dropdown-menu';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
-import { useShellStore } from '@/shell/stores/useShellStore';
-import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
 import type { CalendarViewType } from '../../../types/calendar.types';

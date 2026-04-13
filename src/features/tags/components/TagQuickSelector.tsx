@@ -15,12 +15,12 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ActionFooter } from '@/components/ui/action-footer';
-import { Button } from '@/components/ui/button';
-import { getColorDisplayName } from '@/components/ui/color-palette-picker';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { useHasMounted } from '@/hooks/useHasMounted';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { ActionFooter } from '@/lib/components/ui/action-footer';
+import { Button } from '@/lib/components/ui/button';
+import { getColorDisplayName } from '@/lib/components/ui/color-palette-picker';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
+import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';

@@ -10,7 +10,7 @@
 import { Frown, Meh, Smile } from 'lucide-react';
 import { useCallback } from 'react';
 
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 import type { FulfillmentScore } from '../../../types/entry';

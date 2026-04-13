@@ -5,10 +5,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { Input } from '@/lib/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import type { Tag, TagDeleteStrategy } from '../types';
 import { TagIcon } from './TagIcon';
@@ -106,6 +106,7 @@ export function TagDeleteStrategyDialog({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={t('deleteStrategy.searchTags')}
+                  aria-label={t('deleteStrategy.searchTags')}
                   className="pl-8"
                 />
               </div>

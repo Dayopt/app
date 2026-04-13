@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +16,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+} from '@/lib/components/ui/alert-dialog';
+import { Button } from '@/lib/components/ui/button';
+import { Input } from '@/lib/components/ui/input';
 import { logger } from '@/lib/logger';
-import { api } from '@/platform/trpc';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 
 /**
  * 🗑️ Account Deletion Dialog Component
@@ -38,12 +39,18 @@ export function AccountDeletionDialog() {
   const [confirmText, setConfirmText] = useState('');
 
   const deleteAccountMutation = api.user.deleteAccount.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(t('settings.account.deletion.success'));
       setIsOpen(false);
 
-      // 即座にサインアウトページへリダイレクト
-      window.location.href = '/auth/signout';
+      // ローカルセッションをクリアしてからリダイレクト
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch {
+        // auth.users 削除済みのため signOut が失敗する可能性がある — 無視して続行
+      }
+      window.location.href = '/auth/login';
     },
     onError: (error) => {
       logger.error('Account deletion failed', error, {

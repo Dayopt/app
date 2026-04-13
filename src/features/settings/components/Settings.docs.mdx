@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Settings/Docs" />
+<Meta title="Features/Settings/Guide" />
 
 # Settings
 
@@ -10,16 +10,16 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## カテゴリ一覧
 
-| カテゴリ | 説明 |
-|---------|------|
-| **General** | テーマ、言語、日付フォーマット |
-| **Calendar** | タイムゾーン、時間形式、週開始日、ビューデフォルト |
-| **Personalization** | ACT価値観、重要度ランキング |
-| **Notifications** | メール/プッシュ通知、リマインダー設定 |
-| **Data Controls** | GDPR データエクスポート、バックアップ |
-| **Integrations** | APIキー管理、外部連携 |
-| **Account** | プロフィール、メール、パスワード、MFA |
-| **Subscription** | プラン管理（UIスタブ） |
+| カテゴリ            | 説明                                               |
+| ------------------- | -------------------------------------------------- |
+| **General**         | テーマ、言語、日付フォーマット                     |
+| **Calendar**        | タイムゾーン、時間形式、週開始日、ビューデフォルト |
+| **Personalization** | ACT価値観、重要度ランキング                        |
+| **Notifications**   | メール/プッシュ通知、リマインダー設定              |
+| **Data Controls**   | GDPR データエクスポート、バックアップ              |
+| **Integrations**    | APIキー管理、外部連携                              |
+| **Account**         | プロフィール、メール、パスワード、MFA              |
+| **Subscription**    | プラン管理（UIスタブ）                             |
 
 ---
 
@@ -47,12 +47,12 @@ LabeledRow                      フォーム行コンポーネント
 
 ### ダイアログ
 
-| ダイアログ | 用途 |
-|-----------|------|
-| `DisplayNameDialog` | 表示名変更 |
-| `AvatarChangeDialog` | アバター変更 |
-| `EmailChangeDialog` | メールアドレス変更 |
-| `PasswordChangeDialog` | パスワード変更 |
+| ダイアログ              | 用途                   |
+| ----------------------- | ---------------------- |
+| `DisplayNameDialog`     | 表示名変更             |
+| `AvatarChangeDialog`    | アバター変更           |
+| `EmailChangeDialog`     | メールアドレス変更     |
+| `PasswordChangeDialog`  | パスワード変更         |
 | `AccountDeletionDialog` | アカウント削除（GDPR） |
 
 ---
@@ -61,50 +61,50 @@ LabeledRow                      フォーム行コンポーネント
 
 ### useSettingsModalStore
 
-| State | 説明 |
-|-------|------|
-| `isOpen` | モーダル開閉 |
+| State              | 説明           |
+| ------------------ | -------------- |
+| `isOpen`           | モーダル開閉   |
 | `selectedCategory` | 選択中カテゴリ |
 
 ### useCalendarSettingsStore（persist）
 
-| State | 説明 |
-|-------|------|
-| timezone | タイムゾーン |
-| timeFormat / dateFormat | 時間・日付形式 |
-| weekStartDay | 週開始日 |
-| chronotype | クロノタイプ設定 |
-| sleepSchedule | 睡眠スケジュール |
+| State                   | 説明             |
+| ----------------------- | ---------------- |
+| timezone                | タイムゾーン     |
+| timeFormat / dateFormat | 時間・日付形式   |
+| weekStartDay            | 週開始日         |
+| chronotype              | クロノタイプ設定 |
+| sleepSchedule           | 睡眠スケジュール |
 
 ---
 
 ## Hooks
 
-| Hook | 用途 |
-|------|------|
-| `useUserSettings()` | DB同期（fetch + mutation） |
-| `useAutoSaveSettings()` | デバウンス自動保存 |
-| `useDateFormat()` | 日付フォーマットユーティリティ |
-| `useMFA()` | 多要素認証ロジック |
-| `useSettingsModalURLSync()` | URL状態同期 |
+| Hook                        | 用途                           |
+| --------------------------- | ------------------------------ |
+| `useUserSettings()`         | DB同期（fetch + mutation）     |
+| `useAutoSaveSettings()`     | デバウンス自動保存             |
+| `useDateFormat()`           | 日付フォーマットユーティリティ |
+| `useMFA()`                  | 多要素認証ロジック             |
+| `useSettingsModalURLSync()` | URL状態同期                    |
 
 ---
 
 ## tRPC ルーター
 
-| エンドポイント | タイプ | 説明 |
-|-------------|-------|------|
-| `userSettings.get` | query | ユーザー設定取得 |
+| エンドポイント        | タイプ   | 説明                                  |
+| --------------------- | -------- | ------------------------------------- |
+| `userSettings.get`    | query    | ユーザー設定取得                      |
 | `userSettings.update` | mutation | 設定更新（Zodスキーマバリデーション） |
 
 ---
 
 ## デザイン仕様
 
-| 項目 | 値 |
-|------|-----|
-| PC表示 | Dialog（フルスクリーン風） |
-| モバイル | Sheet（ボトムアップ） |
+| 項目           | 値                                         |
+| -------------- | ------------------------------------------ |
+| PC表示         | Dialog（フルスクリーン風）                 |
+| モバイル       | Sheet（ボトムアップ）                      |
 | ナビゲーション | 左サイドバー（PC）/ リスト選択（モバイル） |
 
 ---

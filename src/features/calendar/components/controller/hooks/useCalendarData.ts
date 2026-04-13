@@ -5,15 +5,15 @@ import { useDeferredValue, useEffect, useMemo } from 'react';
 import { addDays, subDays } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { api } from '@/lib/trpc';
 import * as Sentry from '@sentry/nextjs';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
 import { calculateViewDateRange } from '../../../lib/range';
 

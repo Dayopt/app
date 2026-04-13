@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-import type { Locale } from '@/platform/i18n';
+import type { Locale } from '@/lib/i18n';
 
 interface AuthPageProps {
   params: Promise<{ locale: Locale }>;

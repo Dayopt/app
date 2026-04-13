@@ -34,8 +34,18 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     return null;
   }
 
-  const startDate = snapMinutes(new Date(entry.start_time));
-  const endDate = snapMinutes(new Date(entry.end_time));
+  const isUnplanned = entry.origin === 'unplanned';
+
+  // 計画外エントリは actual 時間を表示位置に使用（start_time = end_time で duration=0 のため）
+  const startDate =
+    isUnplanned && entry.actual_start_time
+      ? snapMinutes(new Date(entry.actual_start_time))
+      : snapMinutes(new Date(entry.start_time));
+  const endDate =
+    isUnplanned && entry.actual_end_time
+      ? snapMinutes(new Date(entry.actual_end_time))
+      : snapMinutes(new Date(entry.end_time));
+
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
   const entryState = getEntryState(entry);

@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Billing Service
  *
@@ -11,8 +13,8 @@ import type Stripe from 'stripe';
 import { getAppUrl } from '@/lib/app-url';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { requireStripe } from '@/platform/stripe/client';
-import { ServiceError } from '@/platform/trpc/errors';
+import { requireStripe } from '@/lib/stripe/client';
+import { ServiceError } from '@/lib/trpc/errors';
 
 // ===== Types =====
 
@@ -111,7 +113,7 @@ async function getOrCreateCustomer(
   // profiles に保存
   const { error } = await supabase
     .from('profiles')
-    .update({ stripe_customer_id: customer.id } as never)
+    .update({ stripe_customer_id: customer.id })
     .eq('id', userId);
 
   if (error) {
@@ -134,15 +136,21 @@ export async function createCheckoutSession(
   const stripe = requireStripe();
   const customerId = await getOrCreateCustomer(stripe, supabase, userId, email);
 
+  // 過去にサブスクリプション履歴がある場合はトライアルを付与しない
+  const existingSubs = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 1,
+  });
+  const hasTrialHistory = existingSubs.data.length > 0;
+
   const appUrl = getAppUrl();
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: 7,
-    },
+    subscription_data: hasTrialHistory ? {} : { trial_period_days: 7 },
     success_url: `${appUrl}/settings/subscription?success=true`,
     cancel_url: `${appUrl}/settings/subscription?canceled=true`,
     metadata: {
@@ -375,16 +383,16 @@ export async function syncSubscriptionStatus(
     .update({
       subscription_status: status,
       subscription_id: subscriptionId,
-    } as never)
-    .eq('stripe_customer_id' as never, stripeCustomerId)
-    .select('id' as never);
+    })
+    .eq('stripe_customer_id', stripeCustomerId)
+    .select('id');
 
   if (error) {
     logger.error('Failed to sync subscription status', { stripeCustomerId, status, error });
     throw new BillingServiceError('UPDATE_FAILED', 'Failed to sync subscription status');
   }
 
-  const rowsUpdated = (data as unknown[] | null)?.length ?? 0;
+  const rowsUpdated = data?.length ?? 0;
 
   if (rowsUpdated === 0) {
     logger.warn('No profile found for stripe_customer_id during sync', {

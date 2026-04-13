@@ -8,14 +8,14 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useUpdateTag } from '@/features/tags';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 import { TagRenameDialog } from '../../TagRenameDialog';
 
-import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { Checkbox } from '@/lib/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 
 import { FilterItemMenu, UntaggedItemMenu } from './FilterItemMenu';
 import { useFilterItemEdit } from './useFilterItemEdit';

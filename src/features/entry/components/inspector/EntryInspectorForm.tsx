@@ -13,8 +13,8 @@ import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useCreateTag, useTagsMap } from '@/features/tags';
+import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { localTimeToUTCISO } from '@/lib/date-utils';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { computeDuration } from '@/lib/time-utils';

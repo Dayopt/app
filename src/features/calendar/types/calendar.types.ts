@@ -1,6 +1,6 @@
 // CalendarEvent は共有層（@/types）が canonical source
 // feature 間で共有するため features/ 内には定義しない
-export type { CalendarEvent } from '@/types/calendar-event';
+export type { CalendarEvent } from '@/lib/types/calendar-event';
 
 // CalendarViewType 関連は共有層（@/lib/calendar-constants）が canonical source
 // store も参照するため feature 内には置けない

@@ -29,7 +29,7 @@ export { TimezoneOffset } from './components/TimezoneOffset';
 
 // DateDisplay - 日付表示
 export type * from './DateDisplay';
-export { DateDisplay, DateDisplayRow, DayDisplay } from './DateDisplay';
+export { DateDisplay } from './DateDisplay';
 
 // ===== カスタムフック =====
 export { useCurrentTime } from './hooks/useCurrentTime';
@@ -89,9 +89,9 @@ export {
   Z_INDEX,
 } from './constants/grid.constants';
 
-// ===== 型定義 =====
-export type * from './types/base.types';
-export type * from './types/entry.types';
-export type * from './types/grid.types';
-export type { TimeSlot } from './types/grid.types';
-export type * from './types/view.types';
+// ===== 型定義（centralized types/ から re-export） =====
+export type * from '../../../types/base.types';
+export type * from '../../../types/entry.types';
+export type * from '../../../types/grid.types';
+export type { TimeSlot } from '../../../types/grid.types';
+export type * from '../../../types/view.types';

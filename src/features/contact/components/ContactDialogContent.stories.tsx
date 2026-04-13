@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, screen, userEvent, within } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 
 import type { ContactCategory } from '../types';
 import { ContactDialogContent } from './ContactDialogContent';

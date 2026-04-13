@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useEntryMutations } from '@/features/entry';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 import { useTranslations } from 'next-intl';
 
 import type { CalendarEvent } from '../../types/calendar.types';

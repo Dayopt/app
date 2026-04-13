@@ -19,11 +19,13 @@ import type { Decorator } from '@storybook/nextjs-vite';
 import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
-import { useCalendarNavigationStore } from '@/stores/useCalendarNavigationStore';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
-import { useModalStore } from '@/stores/useModalStore';
+import { useAuthStore } from '@/features/auth';
+import {
+  useCalendarFilterStore,
+  useCalendarNavigationStore,
+  useCalendarSettingsStore,
+} from '@/features/calendar';
+import { useModalStore } from '@/lib/hooks/useModalStore';
 
 // ─────────────────────────────────────────────────────────
 // Registry

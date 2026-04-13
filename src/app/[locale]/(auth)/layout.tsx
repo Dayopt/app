@@ -13,7 +13,7 @@
  */
 import type { Metadata } from 'next';
 
-import { IntlProvider } from '@/platform/i18n';
+import { IntlProvider } from '@/lib/i18n';
 
 import { AuthClientLayout } from './client-layout';
 

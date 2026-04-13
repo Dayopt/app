@@ -47,6 +47,10 @@ npm run quality:deadcode # 未使用コード検出（knip）
 - `export default`（App Router特殊ファイル例外） → named export
 - `React.FC` → `export function ComponentName() {}`
 - `@/features/X` を他featureから直接import → Composition Layer経由
+- `features/` 内に新しいトップレベルfeatureを勝手に作らない → 相談すること
+- `lib/` から `features/` をimportしない → 依存方向は features → lib のみ
+- barrel（`index.ts`）以外のdeep importをしない → `@/features/X` 経由のみ
+- `utils.ts` / `helpers.ts` という名前のファイルを作らない → 責務を表す具体名にする
 
 ## ワークフロー
 
@@ -61,6 +65,16 @@ npm run quality:deadcode # 未使用コード検出（knip）
 
 - **日本語で記述する**
 - Conventional Commits形式: `feat(scope): 説明`, `fix(scope): 説明`
+
+| prefix     | 用途                           |
+| ---------- | ------------------------------ |
+| `feat`     | 新機能追加                     |
+| `fix`      | バグ修正                       |
+| `refactor` | 機能変更なしのコード改善       |
+| `chore`    | ビルド、CI、依存関係、設定変更 |
+| `docs`     | ドキュメントのみの変更         |
+| `test`     | テストの追加・修正             |
+| `perf`     | パフォーマンス改善             |
 
 ## ルール体系
 

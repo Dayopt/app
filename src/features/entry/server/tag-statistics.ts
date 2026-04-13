@@ -10,12 +10,18 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { traceDbQuery } from '@/lib/sentry/trace';
+import { createTRPCRouter, proProcedure } from '@/lib/trpc/procedures';
 
 /** 統計クエリの共通エラーハンドラー */
 function handleTagStatsError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
+  // TRPCError も Sentry に報告してから再スロー（内側throwのDB起因エラーを補足）
+  if (error instanceof TRPCError) {
+    Sentry.captureException(error.cause ?? error, {
+      tags: { source: 'tag_statistics_router', operation },
+    });
+    throw error;
+  }
 
   Sentry.captureException(error, {
     tags: { source: 'tag_statistics_router', operation },
@@ -29,6 +35,14 @@ function handleTagStatsError(operation: string, error: unknown): never {
     message: `Failed to fetch tag statistics (${operation}): ${error instanceof Error ? error.message : String(error)}`,
     cause: error,
   });
+}
+
+/** Optional date range params を exactOptionalPropertyTypes 互換で構築 */
+function buildDateRange(startDate?: string, endDate?: string) {
+  return {
+    ...(startDate !== undefined && { p_start_date: startDate }),
+    ...(endDate !== undefined && { p_end_date: endDate }),
+  };
 }
 
 // =============================================================================
@@ -75,18 +89,18 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Consolidated: Tag Overview (7 DB calls in parallel)
   // ---------------------------------------------------------------------------
 
-  getTagOverview: protectedProcedure
+  getTagOverview: proProcedure
     .meta({ description: 'タグ詳細ページ用統合概要データ' })
     .input(tagOverviewInput)
     .query(async ({ ctx, input }) => {
       try {
         const { supabase, userId } = ctx;
+        const dateRange = buildDateRange(input.startDate, input.endDate);
         const rpcParams = {
           p_user_id: userId,
           p_tag_id: input.tagId,
-          p_start_date: input.startDate ?? null,
-          p_end_date: input.endDate ?? null,
-        } as never;
+          ...dateRange,
+        };
 
         // コロン記法のprefixを抽出（子タグ取得用）
         const colonIndex = input.tagName.indexOf(':');
@@ -102,21 +116,17 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
           childRes,
         ] = await traceDbQuery('tag_stats.get_tag_overview', () =>
           Promise.all([
-            supabase.rpc('get_tag_cumulative_time' as never, rpcParams),
-            supabase.rpc('get_tag_avg_fulfillment' as never, rpcParams),
-            supabase.rpc('get_tag_plan_rate' as never, rpcParams),
-            supabase.rpc('get_tag_fulfillment_distribution' as never, rpcParams),
-            supabase.rpc('get_tag_hourly_distribution' as never, rpcParams),
-            supabase.rpc('get_tag_dow_distribution' as never, rpcParams),
-            supabase.rpc(
-              'get_child_tag_breakdown' as never,
-              {
-                p_user_id: userId,
-                p_prefix: prefix,
-                p_start_date: input.startDate ?? null,
-                p_end_date: input.endDate ?? null,
-              } as never,
-            ),
+            supabase.rpc('get_tag_cumulative_time', rpcParams),
+            supabase.rpc('get_tag_avg_fulfillment', rpcParams),
+            supabase.rpc('get_tag_plan_rate', rpcParams),
+            supabase.rpc('get_tag_fulfillment_distribution', rpcParams),
+            supabase.rpc('get_tag_hourly_distribution', rpcParams),
+            supabase.rpc('get_tag_dow_distribution', rpcParams),
+            supabase.rpc('get_child_tag_breakdown', {
+              p_user_id: userId,
+              p_prefix: prefix,
+              ...dateRange,
+            }),
           ]),
         );
 
@@ -201,33 +211,27 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Consolidated: Tag Timeline (2 DB calls in parallel)
   // ---------------------------------------------------------------------------
 
-  getTagTimeline: protectedProcedure
+  getTagTimeline: proProcedure
     .meta({ description: 'タグ詳細ページ用タイムラインデータ' })
     .input(tagTimelineInput)
     .query(async ({ ctx, input }) => {
       try {
         const { supabase, userId } = ctx;
+        const dateRange = buildDateRange(input.startDate, input.endDate);
 
         const [trendRes, recentRes] = await traceDbQuery('tag_stats.get_tag_timeline', () =>
           Promise.all([
-            supabase.rpc(
-              'get_tag_accuracy_trend' as never,
-              {
-                p_user_id: userId,
-                p_tag_id: input.tagId,
-                p_start_date: input.startDate ?? null,
-                p_end_date: input.endDate ?? null,
-                p_bucket: input.bucket ?? 'week',
-              } as never,
-            ),
-            supabase.rpc(
-              'get_tag_recent_entries' as never,
-              {
-                p_user_id: userId,
-                p_tag_id: input.tagId,
-                p_limit: input.recentLimit ?? 8,
-              } as never,
-            ),
+            supabase.rpc('get_tag_accuracy_trend', {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              ...dateRange,
+              ...(input.bucket !== undefined && { p_bucket: input.bucket }),
+            }),
+            supabase.rpc('get_tag_recent_entries', {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              ...(input.recentLimit !== undefined && { p_limit: input.recentLimit }),
+            }),
           ]),
         );
 
@@ -274,7 +278,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Cumulative Time
   // ---------------------------------------------------------------------------
 
-  getTagCumulativeTime: protectedProcedure
+  getTagCumulativeTime: proProcedure
     .meta({ description: 'タグ別合計時間' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -282,15 +286,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_cumulative_time', async () =>
-          supabase.rpc(
-            'get_tag_cumulative_time' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_tag_cumulative_time', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...buildDateRange(input.startDate, input.endDate),
+          }),
         );
 
         if (error) {
@@ -312,7 +312,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Average Fulfillment
   // ---------------------------------------------------------------------------
 
-  getTagAvgFulfillment: protectedProcedure
+  getTagAvgFulfillment: proProcedure
     .meta({ description: 'タグ別平均充実度' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -320,15 +320,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_avg_fulfillment', async () =>
-          supabase.rpc(
-            'get_tag_avg_fulfillment' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_tag_avg_fulfillment', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...buildDateRange(input.startDate, input.endDate),
+          }),
         );
 
         if (error) {
@@ -353,7 +349,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Plan Rate
   // ---------------------------------------------------------------------------
 
-  getTagPlanRate: protectedProcedure
+  getTagPlanRate: proProcedure
     .meta({ description: 'タグ別計画率' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -361,15 +357,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_plan_rate', async () =>
-          supabase.rpc(
-            'get_tag_plan_rate' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_tag_plan_rate', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...buildDateRange(input.startDate, input.endDate),
+          }),
         );
 
         if (error) {
@@ -399,7 +391,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Hourly Distribution
   // ---------------------------------------------------------------------------
 
-  getTagHourlyDistribution: protectedProcedure
+  getTagHourlyDistribution: proProcedure
     .meta({ description: 'タグ別時間帯分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -409,15 +401,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery(
           'tag_stats.get_tag_hourly_distribution',
           async () =>
-            supabase.rpc(
-              'get_tag_hourly_distribution' as never,
-              {
-                p_user_id: userId,
-                p_tag_id: input.tagId,
-                p_start_date: input.startDate ?? null,
-                p_end_date: input.endDate ?? null,
-              } as never,
-            ),
+            supabase.rpc('get_tag_hourly_distribution', {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              ...buildDateRange(input.startDate, input.endDate),
+            }),
         );
 
         if (error) {
@@ -447,7 +435,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Day-of-Week Distribution
   // ---------------------------------------------------------------------------
 
-  getTagDowDistribution: protectedProcedure
+  getTagDowDistribution: proProcedure
     .meta({ description: 'タグ別曜日分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -455,15 +443,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_dow_distribution', async () =>
-          supabase.rpc(
-            'get_tag_dow_distribution' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_tag_dow_distribution', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...buildDateRange(input.startDate, input.endDate),
+          }),
         );
 
         if (error) {
@@ -495,7 +479,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Child Tag Breakdown (colon notation)
   // ---------------------------------------------------------------------------
 
-  getChildTagBreakdown: protectedProcedure
+  getChildTagBreakdown: proProcedure
     .meta({ description: 'コロン記法子タグ内訳' })
     .input(childTagInput)
     .query(async ({ ctx, input }) => {
@@ -503,15 +487,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_child_tag_breakdown', async () =>
-          supabase.rpc(
-            'get_child_tag_breakdown' as never,
-            {
-              p_user_id: userId,
-              p_prefix: input.prefix,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_child_tag_breakdown', {
+            p_user_id: userId,
+            p_prefix: input.prefix,
+            ...buildDateRange(input.startDate, input.endDate),
+          }),
         );
 
         if (error) {
@@ -544,7 +524,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Fulfillment Distribution
   // ---------------------------------------------------------------------------
 
-  getTagFulfillmentDistribution: protectedProcedure
+  getTagFulfillmentDistribution: proProcedure
     .meta({ description: 'タグ別充実度分布' })
     .input(tagDateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -554,15 +534,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery(
           'tag_stats.get_tag_fulfillment_distribution',
           async () =>
-            supabase.rpc(
-              'get_tag_fulfillment_distribution' as never,
-              {
-                p_user_id: userId,
-                p_tag_id: input.tagId,
-                p_start_date: input.startDate ?? null,
-                p_end_date: input.endDate ?? null,
-              } as never,
-            ),
+            supabase.rpc('get_tag_fulfillment_distribution', {
+              p_user_id: userId,
+              p_tag_id: input.tagId,
+              ...buildDateRange(input.startDate, input.endDate),
+            }),
         );
 
         if (error) {
@@ -587,7 +563,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Accuracy Trend
   // ---------------------------------------------------------------------------
 
-  getTagAccuracyTrend: protectedProcedure
+  getTagAccuracyTrend: proProcedure
     .meta({ description: 'タグ別見積もり精度推移' })
     .input(
       tagDateRangeInput.extend({
@@ -599,16 +575,12 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_accuracy_trend', async () =>
-          supabase.rpc(
-            'get_tag_accuracy_trend' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-              p_bucket: input.bucket ?? 'week',
-            } as never,
-          ),
+          supabase.rpc('get_tag_accuracy_trend', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...buildDateRange(input.startDate, input.endDate),
+            ...(input.bucket !== undefined && { p_bucket: input.bucket }),
+          }),
         );
 
         if (error) {
@@ -638,7 +610,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
   // Tag Recent Entries
   // ---------------------------------------------------------------------------
 
-  getTagRecentEntries: protectedProcedure
+  getTagRecentEntries: proProcedure
     .meta({ description: 'タグの直近エントリ一覧' })
     .input(
       z.object({
@@ -651,14 +623,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('tag_stats.get_tag_recent_entries', async () =>
-          supabase.rpc(
-            'get_tag_recent_entries' as never,
-            {
-              p_user_id: userId,
-              p_tag_id: input.tagId,
-              p_limit: input.limit ?? 10,
-            } as never,
-          ),
+          supabase.rpc('get_tag_recent_entries', {
+            p_user_id: userId,
+            p_tag_id: input.tagId,
+            ...(input.limit !== undefined && { p_limit: input.limit }),
+          }),
         );
 
         if (error) {

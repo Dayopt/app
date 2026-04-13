@@ -1,7 +1,7 @@
 'use client';
 
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useEffect, useRef } from 'react';
+import { useAuthStore } from './useAuthStore';
 
 /**
  * AuthStore初期化コンポーネント

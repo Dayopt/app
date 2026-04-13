@@ -3,16 +3,16 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 
-import { Link } from '@/platform/i18n/navigation';
+import { Link } from '@/lib/i18n/navigation';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import {
   Field,
   FieldDescription,
@@ -21,12 +21,12 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldSupportText,
-} from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useAuthStore } from '../stores/useAuthStore';
 
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
 import { signupSchema, type SignupFormData } from '../schemas/auth.schema';
@@ -38,7 +38,7 @@ import { signupSchema, type SignupFormData } from '../schemas/auth.schema';
 async function safeCheckPasswordPwned(password: string): Promise<boolean> {
   try {
     // 動的インポートでエラーハンドリングを強化
-    const { checkPasswordPwned } = await import('@/platform/auth/pwned-password');
+    const { checkPasswordPwned } = await import('@/lib/auth/pwned-password');
     return await checkPasswordPwned(password);
   } catch (err) {
     logger.warn('[SignupForm] Pwned password check failed, skipping:', err);
@@ -63,6 +63,8 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const {
     register,
@@ -88,18 +90,44 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const { error } = await signUp(data.email, data.password);
-      if (error) {
-        const errorKey = getAuthErrorKey(error.message, 'signup');
+      const result = await signUp(data.email, data.password);
+      if (result.error) {
+        const errorKey = getAuthErrorKey(result.error.message, 'signup');
         setServerError(t(errorKey));
-      } else {
+      } else if (result.data.session) {
+        // メール確認不要 — そのままアプリへ
         router.push(`/${locale}/calendar/day`);
+      } else {
+        // メール確認が必要 — 確認待ちUIを表示
+        setPendingEmail(data.email);
+        setEmailConfirmationPending(true);
       }
     } catch (err) {
       logger.error('[SignupForm] Signup error:', err);
       setServerError(t('auth.errors.unexpectedError'));
     }
   };
+
+  if (emailConfirmationPending) {
+    return (
+      <div className={cn('flex flex-col gap-6', className)} {...props}>
+        <Card className="overflow-hidden p-0">
+          <CardContent className="flex flex-col items-center gap-4 p-6 text-center md:p-8">
+            <div className="bg-muted flex size-10 items-center justify-center rounded-full">
+              <Mail className="text-muted-foreground size-5" />
+            </div>
+            <h1 className="text-2xl font-medium">{t('auth.signupForm.checkEmail')}</h1>
+            <p className="text-muted-foreground text-sm">
+              {t('auth.signupForm.confirmationSent', { email: pendingEmail })}
+            </p>
+            <Link href="/auth/login" className="text-primary text-sm underline underline-offset-4">
+              {t('auth.signupForm.backToLogin')}
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>

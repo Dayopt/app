@@ -13,7 +13,7 @@ import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
 import { APP_VERSION } from '@/lib/app-info';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { collectEnvironment } from '../lib/collect-environment';
 import type { ContactCategory } from '../types';

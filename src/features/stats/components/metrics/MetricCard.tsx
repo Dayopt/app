@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import type { MetricTrend, MetricValueParts } from '../../types/metrics.types';

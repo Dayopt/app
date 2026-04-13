@@ -4,16 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
 import { useIsFetching } from '@tanstack/react-query';
 
 import { TagDeleteStrategyDialog, tagKeys, useDeleteTag, useTags } from '@/features/tags';
-import { useIsMobile } from '@/hooks/useIsMobile';
-import { api } from '@/platform/trpc';
-import { SidebarSection } from '@/shell/components/sidebar';
+import { SidebarSection } from '@/lib/components/shell/sidebar';
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { api } from '@/lib/trpc';
 import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
 
 import { CreateTagButton } from './components/CreateTagButton';
@@ -30,9 +30,13 @@ export function CalendarFilterList() {
   const t = useTranslations();
   const isMobile = useIsMobile();
   const { data: tags, isLoading: tagsLoading } = useTags();
-  const { data: tagStats } = api.entries.getTagStats.useQuery();
+  const { data: tagStats, isError: isTagStatsError } = api.entries.getTagStats.useQuery();
 
-  const tagPlanCounts = useMemo(() => tagStats?.counts ?? {}, [tagStats?.counts]);
+  // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）
+  const tagPlanCounts = useMemo(
+    () => (isTagStatsError ? null : (tagStats?.counts ?? {})),
+    [tagStats?.counts, isTagStatsError],
+  );
 
   const deleteTagMutation = useDeleteTag();
 
@@ -69,10 +73,10 @@ export function CalendarFilterList() {
     entryCount: number;
   } | null>(null);
 
-  // 削除ハンドラー: エントリ0件なら即削除、1件以上ならダイアログ表示
+  // 削除ハンドラー: stats未取得/エラー時は安全側に倒して常に確認ダイアログを表示
   const handleDeleteTag = useCallback(
     (tagId: string, tagName: string) => {
-      const entryCount = tagPlanCounts[tagId] ?? 0;
+      const entryCount = tagPlanCounts === null ? 1 : (tagPlanCounts[tagId] ?? 0);
       if (entryCount === 0) {
         deleteTagMutation.mutate({ id: tagId });
       } else {
@@ -125,7 +129,7 @@ export function CalendarFilterList() {
             <TagFlatList
               tags={tags}
               visibleTagIds={visibleTagIds}
-              tagCounts={tagPlanCounts}
+              tagCounts={tagPlanCounts ?? {}}
               onToggleTag={toggleTag}
               onDeleteTag={handleDeleteTag}
               onShowOnlyTag={showOnlyTag}

@@ -2,11 +2,11 @@
 
 import { useTranslations } from 'next-intl';
 
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/lib/components/ui/select';
 import { getTimeZones } from '@/lib/timezone-utils';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
 /** TimezoneOffset コンポーネントのプロパティ */
 interface TimezoneOffsetProps {
@@ -18,7 +18,13 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   const tActions = useTranslations('calendar.actions');
   const timezone = useCalendarSettingsStore((s) => s.timezone);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
-  const updateMutation = api.userSettings.update.useMutation();
+  const utils = api.useUtils();
+  const updateMutation = api.userSettings.update.useMutation({
+    onSuccess: () => {
+      void utils.userSettings.get.invalidate();
+      void utils.entries.invalidate();
+    },
+  });
 
   const getUTCOffset = (tz: string): string => {
     try {

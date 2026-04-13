@@ -15,12 +15,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/lib/auth/recovery-codes';
 import { logger } from '@/lib/logger';
-import { isValidRecoveryCodeFormat, verifyRecoveryCode } from '@/platform/auth/recovery-codes';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
 
 /** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */
@@ -99,8 +99,8 @@ export const userRouter = createTRPCRouter({
    * ユーザーデータエクスポート
    * GDPR "Right to Data Portability" 準拠
    */
-  exportData: protectedProcedure
-    .meta({ description: 'ユーザーデータエクスポート（GDPR対応）' })
+  exportData: proProcedure
+    .meta({ description: 'ユーザーデータエクスポート（GDPR対応・Pro限定）' })
     .query(async ({ ctx }) => {
       try {
         const service = createUserService(ctx.supabase);
@@ -141,10 +141,7 @@ export const userRouter = createTRPCRouter({
 
       if (fetchError) {
         logger.error('Failed to fetch recovery codes:', fetchError);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to verify recovery code',
-        });
+        handleServiceError(fetchError);
       }
 
       if (!codes || codes.length === 0) {
@@ -172,10 +169,7 @@ export const userRouter = createTRPCRouter({
 
       if (rpcError || !used) {
         logger.error('Failed to mark recovery code as used:', rpcError);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to use recovery code',
-        });
+        handleServiceError(rpcError ?? new Error('Failed to use recovery code'));
       }
 
       // MFA factorをunenrollしてAAL要件を解除
@@ -196,10 +190,7 @@ export const userRouter = createTRPCRouter({
         }
       } catch (err) {
         logger.error('Failed to unenroll MFA factor:', err);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Recovery code verified but failed to disable MFA',
-        });
+        handleServiceError(err);
       }
 
       // 残りのコード数を取得

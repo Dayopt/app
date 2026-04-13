@@ -3,8 +3,8 @@
 /**
  * バッジデータ取得・判定フック
  *
- * list + progress でUI表示（高速）。
- * evaluate はバックグラウンドで実行し、新規獲得時のみトースト + refetch。
+ * list → evaluateWithProgress の2段階。
+ * evaluateWithProgress が判定+進捗を1回のfetchSourceDataで返す。
  */
 
 import { useEffect, useRef } from 'react';
@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { toast } from '@/lib/toast';
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 import { BADGE_MAP } from '../constants/badge-definitions';
 
@@ -24,14 +24,8 @@ export function useBadges() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const progressQuery = api.badges.getProgress.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
-    // list が返ってから進捗を取得（直列ではなくlist優先で表示を速く）
-    enabled: !listQuery.isPending,
-  });
-
-  const evaluateMutation = api.badges.evaluate.useMutation({
-    onSuccess: (newlyEarned) => {
+  const evaluateMutation = api.badges.evaluateWithProgress.useMutation({
+    onSuccess: ({ newlyEarned }) => {
       if (newlyEarned.length > 0) {
         for (const badge of newlyEarned) {
           const def = BADGE_MAP.get(badge.badgeId);
@@ -41,14 +35,13 @@ export function useBadges() {
             toast.success(`${name}${rankLabel} ${t('earned')}`);
           }
         }
-        // 新規獲得があった場合のみrefetch
+        // 新規獲得があった場合のみ list を refetch
         void listQuery.refetch();
-        void progressQuery.refetch();
       }
     },
   });
 
-  // list取得完了後にevaluateをバックグラウンド実行
+  // list取得完了後にevaluateWithProgressをバックグラウンド実行
   useEffect(() => {
     if (hasEvaluated.current || listQuery.isPending) return;
     hasEvaluated.current = true;
@@ -58,8 +51,8 @@ export function useBadges() {
 
   return {
     earnedBadges: listQuery.data ?? [],
-    progress: progressQuery.data ?? [],
+    progress: evaluateMutation.data?.progress ?? [],
     isPending: listQuery.isPending,
-    isError: listQuery.isError || progressQuery.isError,
+    isError: listQuery.isError || evaluateMutation.isError,
   };
 }

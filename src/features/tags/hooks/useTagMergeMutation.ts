@@ -3,7 +3,7 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { trpc } from '@/platform/trpc/client';
+import { trpc } from '@/lib/trpc/client';
 
 /** タグマージフック（楽観的更新付き）。ソースタグの関連付けをターゲットに移行して削除する */
 export function useMergeTag() {

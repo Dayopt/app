@@ -6,13 +6,13 @@ import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { useGlobalSearch } from '@/hooks/use-global-search';
+import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { MobileCreateButton } from '@/lib/components/shell/MobileCreateButton';
+import { Button } from '@/lib/components/ui/button';
+import { useGlobalSearch } from '@/lib/hooks/use-global-search';
 import { cn } from '@/lib/utils';
-import { AppHeader } from '@/shell/components/AppHeader';
-import { MobileCreateButton } from '@/shell/components/MobileCreateButton';
 
-import type { NavigationDirection } from '@/components/common/DateNavigator';
+import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 
 import { MobileMonthGrid } from './MobileMonthGrid';
 import { MobileYearStrip } from './MobileYearStrip';

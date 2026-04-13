@@ -2,7 +2,7 @@
  * Storybook用モックデータプリセット
  *
  * Story間で共通のモックデータを集約。
- * テスト用ファクトリ（src/test/factories/）と併用する。
+ * テスト用ファクトリ（src/lib/test/factories/）と併用する。
  *
  * @example
  * import { PRESET_USER_SETTINGS, PRESET_AUTH } from '../../../.storybook/mocks/presets';
@@ -15,7 +15,7 @@
  * } satisfies Meta;
  */
 
-import { createMockTag } from '@/test/factories';
+import { createMockTag } from '@/lib/test/factories';
 
 // ─────────────────────────────────────────────────────────
 // Tags

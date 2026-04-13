@@ -5,14 +5,18 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { SectionCard } from '@/components/common/SectionCard';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/lib/components/ui/collapsible';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Textarea } from '@/lib/components/ui/textarea';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
 
 import type { PersonalizationCategory, PersonalizationValues } from '../types/personalization';
 import { PERSONALIZATION_CATEGORIES } from '../types/personalization';
@@ -218,6 +222,7 @@ function ValueCategoryCollapsible({
             value={text}
             onChange={(e) => onTextChange(category, e.target.value)}
             placeholder={t('settings.values.placeholder')}
+            aria-label={t(`settings.values.categories.${category}`)}
             className="min-h-15 resize-none text-base md:text-sm"
             rows={2}
           />

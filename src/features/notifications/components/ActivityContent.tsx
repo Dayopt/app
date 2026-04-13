@@ -5,17 +5,18 @@ import { useCallback, useMemo } from 'react';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/common/EmptyState';
-import { ErrorState } from '@/components/common/ErrorState';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
+import { useCalendarSettingsStore } from '@/features/calendar';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
+import { Button } from '@/lib/components/ui/button';
+import { Spinner } from '@/lib/components/ui/spinner';
 
 import type { NotificationType } from '../schemas';
 
 import { useNotificationMutations, useNotificationsList } from '../hooks/useNotificationsData';
-import type { ActivityTab } from '../lib/notification-helpers';
-import { filterNotificationsByTab, groupNotificationsByDate } from '../lib/notification-helpers';
+import type { ActivityTab } from '../lib/notification-filters';
+import { filterNotificationsByTab, groupNotificationsByDate } from '../lib/notification-filters';
 import { NotificationItem } from './NotificationItem';
 
 interface NotificationData {

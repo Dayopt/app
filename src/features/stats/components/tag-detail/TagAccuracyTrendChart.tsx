@@ -1,18 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
 
 import { Line, LineChart, XAxis, YAxis } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
-import type { StatsGranularity } from '../../stores/useStatsFilterStore';
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { useTagTimelineData } from '../../hooks/useTagDetailData';
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '../ui/chart';
 
 const chartConfig = {
@@ -21,17 +16,6 @@ const chartConfig = {
     color: 'var(--primary)',
   },
 } satisfies ChartConfig;
-
-function granularityToBucket(g: StatsGranularity): 'week' | 'month' | 'day' {
-  switch (g) {
-    case 'day':
-      return 'day';
-    case 'year':
-      return 'month';
-    default:
-      return 'week';
-  }
-}
 
 interface TagAccuracyTrendChartProps {
   tagId: string;
@@ -44,23 +28,9 @@ interface TagAccuracyTrendChartProps {
  */
 export function TagAccuracyTrendChart({ tagId }: TagAccuracyTrendChartProps) {
   const t = useTranslations('calendar.stats.tagDetail');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  const bucket = granularityToBucket(granularity);
-
-  const { data, isPending } = api.entries.getTagAccuracyTrend.useQuery({
-    tagId,
-    bucket,
-    ...dateRange,
-  });
+  const { data: timeline, isPending } = useTagTimelineData(tagId);
+  const data = timeline?.trend ?? null;
 
   if (isPending) {
     return (

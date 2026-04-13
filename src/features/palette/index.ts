@@ -11,3 +11,5 @@ export { Palette } from './components/Palette';
 // Hooks
 export { usePaletteItems, usePaletteMutations } from './hooks';
 export type { PaletteItem } from './hooks';
+
+// ここにないものはfeature内部専用

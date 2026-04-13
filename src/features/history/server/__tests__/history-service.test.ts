@@ -6,7 +6,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock, createMockSupabase } from '@/test/trpc-test-helpers';
+import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
 import { createHistoryService, HistoryService, HistoryServiceError } from '../history-service';
 

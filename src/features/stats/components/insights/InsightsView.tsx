@@ -3,7 +3,8 @@
 import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/common/EmptyState';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
 import { cn } from '@/lib/utils';
 
 import { useDiscoveries } from '../../hooks/useDiscoveries';
@@ -18,8 +19,16 @@ import { DiscoveryList } from './DiscoveryList';
  */
 export function InsightsView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats.discoveries');
-  const { data: pageData } = useStatsPageData();
+  const { data: pageData, isError } = useStatsPageData();
   const { discoveries, isLoading } = useDiscoveries(pageData);
+
+  if (isError) {
+    return (
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+        <ErrorState title={t('errorTitle')} description={t('errorDescription')} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

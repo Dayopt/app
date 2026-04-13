@@ -5,16 +5,16 @@ import { useCallback, useState } from 'react';
 import { Bell, Settings } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { HoverTooltip } from '@/components/ui/tooltip';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
-import { useRouter } from '@/platform/i18n/navigation';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { Button } from '@/lib/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/components/ui/tabs';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useRouter } from '@/lib/i18n/navigation';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUnreadCount } from '../hooks/useNotificationsData';
-import type { ActivityTab } from '../lib/notification-helpers';
+import type { ActivityTab } from '../lib/notification-filters';
 import { ActivityContent } from './ActivityContent';
 
 const TABS: ActivityTab[] = ['all', 'reminders', 'ai'];

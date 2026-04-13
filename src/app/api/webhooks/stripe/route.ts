@@ -31,9 +31,9 @@ import type { SubscriptionStatus } from '@/features/settings/server/billing-serv
 import { syncSubscriptionStatus } from '@/features/settings/server/billing-service';
 import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { requireStripe } from '@/platform/stripe/client';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { requireStripe } from '@/lib/stripe/client';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
 
 // ─── Slack 通知 ──────────────────────────────────────
 
@@ -72,8 +72,8 @@ async function getUserByCustomerId(
 ): Promise<{ email: string; userName: string; locale: EmailLocale } | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name' as never)
-    .eq('stripe_customer_id' as never, stripeCustomerId)
+    .select('id, full_name')
+    .eq('stripe_customer_id', stripeCustomerId)
     .single();
 
   if (error || !data) {
@@ -81,7 +81,7 @@ async function getUserByCustomerId(
     return null;
   }
 
-  const profile = data as unknown as { id: string; full_name: string | null };
+  const profile = data;
 
   // Supabase Auth からメールアドレスを取得
   const {
@@ -213,8 +213,8 @@ export async function POST(request: NextRequest) {
   // ─── 冪等性ガード ───────────────────────────────────
   // 同一 event.id の重複処理を防止（Stripe はリトライする）
   const { error: idempotencyError } = await supabase
-    .from('stripe_webhook_events' as never)
-    .insert({ event_id: event.id, event_type: event.type } as never);
+    .from('stripe_webhook_events')
+    .insert({ event_id: event.id, event_type: event.type });
 
   if (idempotencyError) {
     // 23505 = unique_violation → 処理済みイベント
@@ -428,6 +428,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
+    // 処理失敗時は冪等性レコードを削除してStripeのリトライを受け入れ可能にする
+    await supabase
+      .from('stripe_webhook_events' as never)
+      .delete()
+      .eq('event_id' as never, event.id);
+
     logger.error('Stripe webhook processing error', { error, eventType: event.type });
     Sentry.captureException(error, {
       tags: { source: 'stripe_webhook', eventType: event.type },

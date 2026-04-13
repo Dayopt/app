@@ -15,19 +15,21 @@ const mockSignIn = vi.fn();
 
 // MFAモックの状態を管理（テストごとに変更可能）
 const mockMfaGetAAL = vi.fn();
+let mockSearchParams = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ locale: 'ja' }),
   useRouter: () => ({
     push: mockPush,
   }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-vi.mock('@/platform/i18n/navigation', async () => {
+vi.mock('@/lib/i18n/navigation', async () => {
   const React = await import('react');
   return {
     Link: ({ children, href, ...props }: { children: React.ReactNode; href: string }) =>
@@ -37,12 +39,12 @@ vi.mock('@/platform/i18n/navigation', async () => {
   };
 });
 
-vi.mock('@/stores/useAuthStore', () => ({
+vi.mock('@/features/auth/stores/useAuthStore', () => ({
   useAuthStore: (selector: (state: { signIn: typeof mockSignIn }) => typeof mockSignIn) =>
     selector({ signIn: mockSignIn }),
 }));
 
-vi.mock('@/platform/supabase/client', () => ({
+vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       mfa: {
@@ -57,6 +59,8 @@ describe('LoginForm', () => {
     vi.clearAllMocks();
     // デフォルトのMFAモック（MFA不要）
     mockMfaGetAAL.mockResolvedValue({ data: null, error: null });
+    // デフォルトのSearchParamsをリセット
+    mockSearchParams = new URLSearchParams();
   });
 
   describe('レンダリング', () => {
@@ -262,6 +266,46 @@ describe('LoginForm', () => {
       // 例外時はエラーメッセージが表示される
       await waitFor(() => {
         expect(screen.getByRole('alert')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('redirectパラメータ対応', () => {
+    it('redirectパラメータがある場合、ログイン後にそのパスへ遷移する', async () => {
+      mockSearchParams = new URLSearchParams('redirect=/stats/insights');
+      const user = userEvent.setup();
+      mockSignIn.mockResolvedValue({
+        data: { user: { id: '123' }, session: {} },
+        error: null,
+      });
+
+      renderWithProviders(<LoginForm />);
+
+      await user.type(screen.getByLabelText(/auth\.loginForm\.email/), 'test@example.com');
+      await user.type(screen.getByLabelText(/auth\.loginForm\.password/), 'password123');
+      await user.click(screen.getByRole('button', { name: 'auth.loginForm.loginButton' }));
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/ja/stats/insights');
+      });
+    });
+
+    it('不正なredirectパラメータはフォールバックされる', async () => {
+      mockSearchParams = new URLSearchParams('redirect=//evil.com');
+      const user = userEvent.setup();
+      mockSignIn.mockResolvedValue({
+        data: { user: { id: '123' }, session: {} },
+        error: null,
+      });
+
+      renderWithProviders(<LoginForm />);
+
+      await user.type(screen.getByLabelText(/auth\.loginForm\.email/), 'test@example.com');
+      await user.type(screen.getByLabelText(/auth\.loginForm\.password/), 'password123');
+      await user.click(screen.getByRole('button', { name: 'auth.loginForm.loginButton' }));
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/ja/calendar/day');
       });
     });
   });

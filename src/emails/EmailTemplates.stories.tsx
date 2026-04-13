@@ -30,7 +30,7 @@ import { TrialStartEmail } from './TrialStartEmail';
 import { WelcomeEmail } from './WelcomeEmail';
 
 const meta = {
-  title: 'Docs/Email',
+  title: 'Architecture/Email',
   parameters: {
     layout: 'fullscreen',
   },

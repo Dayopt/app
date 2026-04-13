@@ -7,13 +7,13 @@ import { calculateEntryLayouts, type EntryLayout } from '../../../../lib/layout'
 import { applyTimezoneToDisplayDates } from '../../../../lib/plan-data-adapter';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
-import { getDateKey, isValidEvent, sortEventsByDateKeys } from '../../shared';
-import { HOUR_HEIGHT } from '../../shared/constants/grid.constants';
 import type {
   UseWeekEntriesOptions,
   UseWeekEntriesReturn,
   WeekEntryPosition,
-} from '../WeekView.types';
+} from '../../../../types/week-view.types';
+import { getDateKey, isValidEvent, sortEventsByDateKeys } from '../../shared';
+import { HOUR_HEIGHT } from '../../shared/constants/grid.constants';
 
 /**
  * 週ビューでのエントリ位置計算専用フック

@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { isSameDay } from 'date-fns';
 
 import { getDateKey } from '@/lib/date';
-import type { CalendarEvent } from '../types/base.types';
+import type { CalendarEvent } from '../../../../types/base.types';
 import { isValidEvent } from '../utils/dateHelpers';
 import { sortAgendaEventsByDateKeys, sortEventsByDateKeys } from '../utils/entrySorting';
 

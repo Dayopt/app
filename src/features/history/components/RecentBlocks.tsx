@@ -12,11 +12,11 @@ import { useMemo } from 'react';
 import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { HoverTooltip } from '@/components/ui/tooltip';
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
-import { api } from '@/platform/trpc';
-import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/shell/components/sidebar';
+import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/lib/components/shell/sidebar';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { api } from '@/lib/trpc';
 
 interface RecentBlocksProps {
   onPinItem?: (tagId: string, durationMinutes: number) => void;

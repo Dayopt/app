@@ -8,14 +8,14 @@ import { Plus } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import React, { memo, useMemo } from 'react';
 
+import type { DayColumnProps } from '../../../../../types/view.types';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 import { useEntryPosition } from '../../hooks/useEntryPosition';
-import type { DayColumnProps } from '../../types/view.types';
 
 import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({

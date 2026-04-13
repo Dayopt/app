@@ -1,26 +1,11 @@
 import type { Preview } from '@storybook/nextjs-vite';
-import { useDarkMode } from '@vueless/storybook-dark-mode';
-import { NextIntlClientProvider } from 'next-intl';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
-import '../src/styles/globals.css';
-import { DocsTemplate } from './DocsTemplate';
-import { ThemedDocsContainer } from './ThemedDocsContainer';
-import { dayoptDarkTheme, dayoptLightTheme } from './dayoptTheme';
-import { storeMockDecorator } from './mocks/stores';
-import { StorybookThemeProvider } from './mocks/theme';
-import type { MockResponseMap } from './mocks/trpc';
-import { StoryTRPCProvider } from './mocks/trpc';
-import './storybook-overrides.css';
-
-// メッセージファイルを自動収集（namespace追加時に変更不要）
-const messageModules = import.meta.glob<Record<string, string>>('../messages/ja/*.json', {
-  eager: true,
-});
-const messages = Object.values(messageModules).reduce<Record<string, unknown>>(
-  (acc, mod) => ({ ...acc, ...mod }),
-  {},
-);
+import '../src/lib/styles/globals.css';
+import { providerDecorator, storeMockDecorator } from './decorators';
+import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
+import { DocsTemplate, ThemedDocsContainer } from './theme/docs';
+import './theme/overrides.css';
 
 const preview: Preview = {
   parameters: {
@@ -56,7 +41,15 @@ const preview: Preview = {
     options: {
       storySort: {
         method: 'alphabetical',
-        order: ['Docs', 'Foundations', 'Components', 'Features', 'Patterns'],
+        order: [
+          'Welcome',
+          'Architecture',
+          'Strategy',
+          'Components',
+          'Features',
+          'Foundations',
+          'Patterns',
+        ],
       },
     },
     darkMode: {
@@ -98,34 +91,7 @@ const preview: Preview = {
     // Zustand ストアモック（parameters.storeMocks）
     storeMockDecorator,
     // テーマ + tRPC + i18n プロバイダ
-    (Story, context) => {
-      const isDark = useDarkMode();
-
-      if (typeof document !== 'undefined') {
-        document.documentElement.classList.remove('light', 'dark');
-        document.documentElement.classList.add(isDark ? 'dark' : 'light');
-        document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-      }
-
-      // parameters.trpcMocks / trpcPending / trpcError を読み取り
-      const trpcMocks = context.parameters.trpcMocks as MockResponseMap | undefined;
-      const trpcPending = context.parameters.trpcPending as boolean | undefined;
-      const trpcError = context.parameters.trpcError as
-        | { path: string; code: string; message?: string }
-        | undefined;
-
-      return (
-        <StorybookThemeProvider>
-          <StoryTRPCProvider mocks={trpcMocks} pending={trpcPending} error={trpcError}>
-            <NextIntlClientProvider locale="ja" messages={messages}>
-              <main>
-                <Story />
-              </main>
-            </NextIntlClientProvider>
-          </StoryTRPCProvider>
-        </StorybookThemeProvider>
-      );
-    },
+    providerDecorator,
   ],
 };
 

@@ -5,24 +5,6 @@
  * このファイルは設定固有の機能（日本語ラベル、DateFormatType依存）を提供。
  */
 
-import { formatDateWithTimezone } from '@/lib/date';
-
-import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
-
-// ========================================
-// @/lib/date からの再エクスポート
-// ========================================
-export {
-  convertFromTimezone,
-  convertToTimezone,
-  formatDateWithTimezone,
-  formatInTimezone,
-  formatInTimezone as formatInTimeZone,
-  formatTimeWithTimezone,
-  getBrowserTimezone,
-  getTimezoneAbbreviation,
-} from '@/lib/date';
-
 // ========================================
 // 設定固有の機能
 // ========================================
@@ -62,56 +44,4 @@ export function getTimeZones(): TimezoneInfoJa[] {
   ];
 
   return timezones.sort((a, b) => a.offset - b.offset);
-}
-
-/**
- * 時間のみのフォーマット（時間軸用）
- *
- * カレンダーの時間軸ラベルなど、時間のみを表示する際に使用。
- */
-export function formatHour(hour: number, timeFormat: '12h' | '24h'): string {
-  if (timeFormat === '24h') {
-    return `${hour}:00`;
-  }
-
-  if (hour === 0) return '12:00 AM';
-  if (hour === 12) return '12:00 PM';
-  if (hour < 12) return `${hour}:00 AM`;
-  return `${hour - 12}:00 PM`;
-}
-
-/**
- * 日付をユーザー設定のフォーマットで表示
- *
- * DateFormatType（設定固有の型）を使用するため、このファイルに残す。
- *
- * @param date - フォーマットする日付
- * @param dateFormat - 日付フォーマット設定
- * @param timezone - オプションのタイムゾーン
- */
-export function formatDateWithSettings(
-  date: Date,
-  dateFormat: DateFormatType,
-  timezone?: string,
-): string {
-  return formatDateWithTimezone(date, dateFormat, timezone);
-}
-
-/**
- * 日付と時刻をユーザー設定のフォーマットで表示
- *
- * @param date - フォーマットする日付
- * @param dateFormat - 日付フォーマット設定
- * @param timeFormat - 時間フォーマット設定
- * @param timezone - オプションのタイムゾーン
- */
-export function formatDateTimeWithSettings(
-  date: Date,
-  dateFormat: DateFormatType,
-  timeFormat: '12h' | '24h',
-  timezone?: string,
-): string {
-  const timeFormatString = timeFormat === '24h' ? 'HH:mm' : 'h:mm a';
-  const fullFormat = `${dateFormat} ${timeFormatString}`;
-  return formatDateWithTimezone(date, fullFormat, timezone);
 }

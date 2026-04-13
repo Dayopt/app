@@ -16,10 +16,10 @@
 
 import { z } from 'zod';
 
+import { invalidateUserTagsCache } from '@/lib/cache';
 import { logger } from '@/lib/logger';
-import { invalidateUserTagsCache } from '@/platform/cache';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { createTagService } from './tag-service';
 
 /**

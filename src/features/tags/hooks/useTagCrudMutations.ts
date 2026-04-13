@@ -3,6 +3,8 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar filter storeをlib層に抽出
+import { useCalendarFilterStore } from '@/features/calendar';
 import type { TagColorName } from '@/lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import {
@@ -11,8 +13,7 @@ import {
   snapshotQuery,
   updatePaginatedList,
 } from '@/lib/tanstack-query/optimistic-mutation';
-import { trpc } from '@/platform/trpc/client';
-import { useCalendarFilterStore } from '@/stores/useCalendarFilterStore';
+import { trpc } from '@/lib/trpc/client';
 
 import type { Tag } from '../types';
 
@@ -79,7 +80,9 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       if (context?.tempId) useCalendarFilterStore.getState().removeTag(context.tempId);
       if (showToast) toast.error(t('toast.createFailed'));
     },
-    onSettled: () => {},
+    onSettled: () => {
+      void utils.tags.list.invalidate();
+    },
   });
 }
 

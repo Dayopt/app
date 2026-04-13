@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { api } from '@/platform/trpc';
+import type { api } from '@/lib/trpc';
 
 import {
   createListQueryPredicate,

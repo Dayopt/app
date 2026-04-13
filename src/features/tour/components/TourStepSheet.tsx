@@ -1,6 +1,6 @@
 'use client';
 
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/lib/components/ui/sheet';
 
 import { TourStepCard } from './TourStepCard';
 

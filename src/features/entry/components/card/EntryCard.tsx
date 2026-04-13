@@ -99,19 +99,35 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // 左アクセントの幅（統一: 3px = --border-indicator トークン相当）
   const accentWidth = 3;
 
+  // 計画外カードの内側オフセット（親の実線ボーダーと重ならないよう内側に配置）
+  const unplannedInset = isUnplanned ? accentWidth + 2 : 0;
+
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
       position: 'absolute' as const,
       top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
-      left: `${safePosition.left}%`,
-      width: `calc(${safePosition.width}% - 8px)`,
+      left: isUnplanned
+        ? `calc(${safePosition.left}% + ${unplannedInset}px)`
+        : `${safePosition.left}%`,
+      width: isUnplanned
+        ? `calc(${safePosition.width}% - 8px - ${unplannedInset}px)`
+        : `calc(${safePosition.width}% - 8px)`,
       height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
     }),
-    [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style],
+    [
+      safePosition,
+      overlay,
+      applyPositionAdjust,
+      isSelected,
+      isDragging,
+      style,
+      isUnplanned,
+      unplannedInset,
+    ],
   );
 
   // 超過オーバーレイの外枠（タグ色の破線で一周 + 角丸）
@@ -366,7 +382,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            isUnplanned ? '' : colorClasses ? colorClasses.tint : 'bg-muted',
+            isUnplanned ? 'bg-background' : colorClasses ? colorClasses.tint : 'bg-muted',
           )}
         >
           <EntryCardContent

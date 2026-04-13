@@ -7,9 +7,9 @@
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { ThemeProvider } from '@/app/[locale]/(app)/_providers/theme-provider';
 import { useTourStore } from '@/features/tour';
-import { ThemeProvider } from '@/shell/providers/theme-provider';
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
 import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 

@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Contact Service
  *
@@ -7,7 +9,7 @@
  */
 
 import { env } from '@/env';
-import { ServiceError } from '@/platform/trpc/errors';
+import { ServiceError } from '@/lib/trpc/errors';
 
 import type { ContactFormInput } from '../types';
 

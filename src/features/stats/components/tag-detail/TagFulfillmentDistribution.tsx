@@ -1,15 +1,11 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/card';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 
-import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { computeStatsDateRange } from '../../utils/computeDateRange';
+import { useTagOverviewData } from '../../hooks/useTagDetailData';
 
 const SCORE_CONFIG = [
   { score: 3, emoji: '😊', label: 'Good' },
@@ -19,6 +15,7 @@ const SCORE_CONFIG = [
 
 interface TagFulfillmentDistributionProps {
   tagId: string;
+  tagName?: string | undefined;
 }
 
 /**
@@ -26,22 +23,11 @@ interface TagFulfillmentDistributionProps {
  *
  * 😊/😐/😞 の割合をバーで表示。
  */
-export function TagFulfillmentDistribution({ tagId }: TagFulfillmentDistributionProps) {
+export function TagFulfillmentDistribution({ tagId, tagName }: TagFulfillmentDistributionProps) {
   const t = useTranslations('calendar.stats.tagDetail');
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const granularity = useStatsFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
 
-  const dateRange = useMemo(
-    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
-    [currentDate, granularity, timezone, weekStartsOn],
-  );
-
-  const { data, isPending } = api.entries.getTagFulfillmentDistribution.useQuery({
-    tagId,
-    ...dateRange,
-  });
+  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const data = overview?.fulfillmentDist ?? null;
 
   if (isPending) {
     return (

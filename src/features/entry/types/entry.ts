@@ -1,10 +1,10 @@
 // Entry型定義（Canonical source）
 // plans + records を統合した entries テーブルに対応
 
-// 共有層が必要とする型は @/types/entry に残置（shared layerはfeaturesをimportできない）
-import type { EntryOrigin, FulfillmentScore } from '@/types/entry';
+// 共有層が必要とする型は @/lib/types/entry に配置（shared layerはfeaturesをimportできない）
+import type { EntryOrigin, FulfillmentScore } from '@/lib/types/entry';
 
-export type { EntryOrigin, EntryState, FulfillmentScore } from '@/types/entry';
+export type { EntryOrigin, EntryState, FulfillmentScore } from '@/lib/types/entry';
 
 /**
  * エントリ基本型（entries テーブルに対応）
@@ -30,9 +30,9 @@ export interface Entry {
   reminder_minutes: number | null;
   reviewed_at: string | null;
   /** 計画外にする前の予定開始時刻（復元用） */
-  backed_up_start_time?: string | null | undefined;
+  backed_up_start_time: string | null;
   /** 計画外にする前の予定終了時刻（復元用） */
-  backed_up_end_time?: string | null | undefined;
+  backed_up_end_time: string | null;
   created_at: string | null;
   updated_at: string | null;
 }

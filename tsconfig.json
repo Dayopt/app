@@ -19,7 +19,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@/components/ui/kibo-ui/*": ["./src/components/ui/kibo-ui/*"]
+      "@/lib/components/ui/kibo-ui/*": ["./src/lib/components/ui/kibo-ui/*"]
     },
     "types": ["node"],
     "forceConsistentCasingInFileNames": true,
@@ -39,5 +39,11 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "supabase/functions/**", "src/test/integration/**", "scripts/**"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions/**",
+    "src/lib/test/integration/**",
+    "src/lib/test/storybook-setup*.ts",
+    "scripts/**"
+  ]
 }

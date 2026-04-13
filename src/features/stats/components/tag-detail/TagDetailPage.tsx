@@ -1,21 +1,33 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import { Suspense, useEffect, useMemo } from 'react';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useTag } from '@/features/tags';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 import type { StatsGranularity } from '../../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../../stores/useStatsFilterStore';
-import { TagAccuracyTrendChart } from './TagAccuracyTrendChart';
 import { TagDetailHero } from './TagDetailHero';
-import { TagDowChart } from './TagDowChart';
 import { TagFulfillmentDistribution } from './TagFulfillmentDistribution';
-import { TagHourlyChart } from './TagHourlyChart';
 import { TagRecentBlocks } from './TagRecentBlocks';
+
+// recharts (~130KB gzip) を使うチャートは dynamic import で分離
+const TagHourlyChart = dynamic(
+  () => import('./TagHourlyChart').then((m) => ({ default: m.TagHourlyChart })),
+  { ssr: false },
+);
+const TagDowChart = dynamic(
+  () => import('./TagDowChart').then((m) => ({ default: m.TagDowChart })),
+  { ssr: false },
+);
+const TagAccuracyTrendChart = dynamic(
+  () => import('./TagAccuracyTrendChart').then((m) => ({ default: m.TagAccuracyTrendChart })),
+  { ssr: false },
+);
 
 interface TagDetailPageProps {
   tagId: string;
@@ -50,6 +62,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
   }, [granularity, currentDate, syncGranularity, syncCurrentDate]);
 
   const { data: tag } = useTag(tagId);
+  const tagName = tag?.name;
 
   return (
     <div className="scrollbar-stable flex-1 overflow-y-auto">
@@ -57,7 +70,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
         {/* ① Hero: 合計時間 + KPI + 子タグバー */}
         <FeatureErrorBoundary featureName="tag-detail-hero">
           <Suspense fallback={<Skeleton className="h-28 w-full rounded-2xl" />}>
-            <TagDetailHero tagId={tagId} tagName={tag?.name ?? ''} />
+            <TagDetailHero tagId={tagId} tagName={tagName} />
           </Suspense>
         </FeatureErrorBoundary>
 
@@ -69,12 +82,12 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
             <FeatureErrorBoundary featureName="tag-detail-hourly">
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
-                <TagHourlyChart tagId={tagId} />
+                <TagHourlyChart tagId={tagId} tagName={tagName} />
               </Suspense>
             </FeatureErrorBoundary>
             <FeatureErrorBoundary featureName="tag-detail-dow">
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
-                <TagDowChart tagId={tagId} />
+                <TagDowChart tagId={tagId} tagName={tagName} />
               </Suspense>
             </FeatureErrorBoundary>
           </div>
@@ -88,7 +101,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
             <FeatureErrorBoundary featureName="tag-detail-fulfillment">
               <Suspense fallback={<Skeleton className="h-32 w-full rounded-2xl" />}>
-                <TagFulfillmentDistribution tagId={tagId} />
+                <TagFulfillmentDistribution tagId={tagId} tagName={tagName} />
               </Suspense>
             </FeatureErrorBoundary>
             <FeatureErrorBoundary featureName="tag-detail-accuracy">

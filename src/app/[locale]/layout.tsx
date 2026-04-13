@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server';
 
 import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
-import type { Locale } from '@/platform/i18n/routing';
-import { routing } from '@/platform/i18n/routing';
+import type { Locale } from '@/lib/i18n/routing';
+import { routing } from '@/lib/i18n/routing';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -75,6 +75,14 @@ export async function generateMetadata({
       siteName: t('name'),
       title: t('name'),
       description: t('description'),
+      images: [
+        {
+          url: `${getAppUrl()}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: t('name'),
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
@@ -82,6 +90,7 @@ export async function generateMetadata({
       creator: '@dayopt',
       title: t('name'),
       description: t('description'),
+      images: [`${getAppUrl()}/opengraph-image`],
     },
     alternates: {
       canonical: `${getAppUrl()}/${validLocale}`,

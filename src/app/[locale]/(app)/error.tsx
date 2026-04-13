@@ -14,7 +14,7 @@ import { AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import { logger } from '@/lib/logger';
 
 interface ErrorProps {

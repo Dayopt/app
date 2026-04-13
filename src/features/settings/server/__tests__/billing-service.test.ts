@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock } from '@/test/trpc-test-helpers';
+import { createChainableMock } from '@/lib/test/trpc-test-helpers';
 
 import { BillingServiceError, getBillingInfo, syncSubscriptionStatus } from '../billing-service';
 
 // Stripe SDK モック
-vi.mock('@/platform/stripe/client', () => ({
+vi.mock('@/lib/stripe/client', () => ({
   requireStripe: vi.fn(() => ({
     customers: {
       create: vi.fn(),

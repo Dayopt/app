@@ -6,15 +6,15 @@ import { toast } from '@/lib/toast';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth';
+import { Badge } from '@/lib/components/ui/badge';
+import { Button } from '@/lib/components/ui/button';
+import { useRouter } from '@/lib/i18n/navigation';
 import { logger } from '@/lib/logger';
-import { useRouter } from '@/platform/i18n/navigation';
-import { createClient } from '@/platform/supabase/client';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { createClient } from '@/lib/supabase/client';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 import { AccountDeletionDialog } from './account-deletion-dialog';
 import { EmailChangeDialog } from './email-change-dialog';
 import { PasswordChangeDialog } from './password-change-dialog';

@@ -5,9 +5,9 @@ import { useCallback, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Button } from '@/lib/components/ui/button';
+import { Label } from '@/lib/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
 
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_PRESETS } from '../lib/constants';
 import {
@@ -16,7 +16,7 @@ import {
   QUIZ_QUESTION_COUNT,
 } from '../lib/quiz';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 interface ChronotypeQuizProps {
   onComplete: (type: PresetChronotypeType) => void;

@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef } from 'react';
 
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 
 import { TourStepCard } from './TourStepCard';
 

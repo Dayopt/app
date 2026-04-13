@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Tour/Docs" />
+<Meta title="Features/Tour/Guide" />
 
 # Tour
 
@@ -10,13 +10,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
+| 項目         | 値                                                                            |
+| ------------ | ----------------------------------------------------------------------------- |
 | 総ステップ数 | 5（intro / grid-drag-plan / select-tag-plan / explain-tags / plan-vs-record） |
-| 表示条件 | カレンダーページ（`/calendar`）かつ未完了 |
-| 完了フラグ | `useTourStore`（localStorage に persist） |
-| 自動進行 | DOM MutationObserver でエントリカード出現を監視 |
-| 配置方式 | center（Dialog）/ top・bottom（Popover）の2種 |
+| 表示条件     | カレンダーページ（`/calendar`）かつ未完了                                     |
+| 完了フラグ   | `useTourStore`（localStorage に persist）                                     |
+| 自動進行     | DOM MutationObserver でエントリカード出現を監視                               |
+| 配置方式     | center（Dialog）/ top・bottom（Popover）の2種                                 |
 
 ---
 
@@ -47,30 +47,30 @@ TourOrchestrator                フック合成のみ行うルートコンポー
 
 #### ステータス一覧
 
-| ステータス | 説明 |
-|-----------|------|
-| `idle` | 待機中（未開始または完了フラグなし） |
+| ステータス     | 説明                                       |
+| -------------- | ------------------------------------------ |
+| `idle`         | 待機中（未開始または完了フラグなし）       |
 | `before-enter` | ステップ表示前の事前処理中（スクロール等） |
-| `active` | ステップ表示中 |
-| `done` | 全ステップ完了、完了カード表示 |
-| `completed` | ツアー完了済み（localStorage に永続化） |
+| `active`       | ステップ表示中                             |
+| `done`         | 全ステップ完了、完了カード表示             |
+| `completed`    | ツアー完了済み（localStorage に永続化）    |
 
 #### イベント一覧
 
-| イベント | 説明 |
-|---------|------|
-| `START` | ツアー開始（skipWhen を評価してアクティブステップを解決） |
-| `BEFORE_ENTER_COMPLETE` | 事前処理完了通知 |
-| `NEXT` | 次のステップへ |
-| `PREV` | 前のステップへ（beforeEnter は再実行しない） |
-| `SKIP` | ツアーをスキップして completed 状態へ |
-| `COMPLETE` | done 状態から completed 状態へ遷移 |
-| `RESET` | ステータスと completed フラグをリセット |
+| イベント                | 説明                                                      |
+| ----------------------- | --------------------------------------------------------- |
+| `START`                 | ツアー開始（skipWhen を評価してアクティブステップを解決） |
+| `BEFORE_ENTER_COMPLETE` | 事前処理完了通知                                          |
+| `NEXT`                  | 次のステップへ                                            |
+| `PREV`                  | 前のステップへ（beforeEnter は再実行しない）              |
+| `SKIP`                  | ツアーをスキップして completed 状態へ                     |
+| `COMPLETE`              | done 状態から completed 状態へ遷移                        |
+| `RESET`                 | ステータスと completed フラグをリセット                   |
 
 ### Zustand Stores
 
-| Store | 用途 | persist |
-|-------|------|---------|
+| Store          | 用途                               | persist                       |
+| -------------- | ---------------------------------- | ----------------------------- |
 | `useTourStore` | FSM の状態保持と `send` 関数を提供 | Yes（`completed` フラグのみ） |
 
 persist では `completed` フラグのみ保存し、`steps` 配列は START 時に毎回 `resolveActiveSteps()` で再解決する。
@@ -79,12 +79,12 @@ persist では `completed` フラグのみ保存し、`steps` 配列は START �
 
 ## Hooks
 
-| Hook | 用途 |
-|------|------|
-| `useTourSnapshot()` | FSM 状態から `currentStep / stepIndex / totalSteps / canGoBack / isLastStep` を派生 |
-| `useTourAutoStart(enabled)` | カレンダーページで 500ms 後に自動開始 |
-| `useAutoAdvance(strategy, active, onAdvance, validator, onFail)` | DOM MutationObserver でステップを自動進行 |
-| `useBeforeEnter(action, stepId, active, onComplete)` | ステップ前処理（スクロール・要素待機等）を実行 |
+| Hook                                                             | 用途                                                                                |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `useTourSnapshot()`                                              | FSM 状態から `currentStep / stepIndex / totalSteps / canGoBack / isLastStep` を派生 |
+| `useTourAutoStart(enabled)`                                      | カレンダーページで 500ms 後に自動開始                                               |
+| `useAutoAdvance(strategy, active, onAdvance, validator, onFail)` | DOM MutationObserver でステップを自動進行                                           |
+| `useBeforeEnter(action, stepId, active, onComplete)`             | ステップ前処理（スクロール・要素待機等）を実行                                      |
 
 ---
 
@@ -92,25 +92,25 @@ persist では `completed` フラグのみ保存し、`steps` 配列は START �
 
 `src/features/tour/constants.ts` の `TOUR_STEPS` 配列でステップを定義する。
 
-| ステップID | 配置 | 自動進行 | 説明 |
-|-----------|------|---------|------|
-| `intro` | center | なし | ツアー導入（Dialog） |
-| `grid-drag-plan` | bottom | `[data-tag-palette]` 出現で進行 | カレンダーグリッドのドラッグ操作 |
-| `select-tag-plan` | bottom | `[data-entry-card]` 出現で進行 | タグ選択でプラン作成 |
-| `explain-tags` | center | なし | タグ概念説明（リッチコンテンツ） |
-| `plan-vs-record` | center | なし | Plan と Record の違い説明 |
+| ステップID        | 配置   | 自動進行                        | 説明                             |
+| ----------------- | ------ | ------------------------------- | -------------------------------- |
+| `intro`           | center | なし                            | ツアー導入（Dialog）             |
+| `grid-drag-plan`  | bottom | `[data-tag-palette]` 出現で進行 | カレンダーグリッドのドラッグ操作 |
+| `select-tag-plan` | bottom | `[data-entry-card]` 出現で進行  | タグ選択でプラン作成             |
+| `explain-tags`    | center | なし                            | タグ概念説明（リッチコンテンツ） |
+| `plan-vs-record`  | center | なし                            | Plan と Record の違い説明        |
 
 ### ステップ定義の主要フィールド
 
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `id` | `TourStepId` | ステップ識別子 |
-| `targetSelector` | string | Popover アンカー要素のセレクタ（center は空文字） |
-| `placement` | `TourStepPlacement` | 配置方向 |
-| `autoAdvance` | `AutoAdvanceStrategy?` | DOM 監視による自動進行設定 |
-| `beforeEnter` | `BeforeEnterAction?` | ステップ前の scroll-to / wait-for 処理 |
-| `skipWhen` | `SkipCondition?` | true を返すとそのステップをスキップ |
-| `contentKey` | `TourContentKey?` | リッチコンテンツキー（`tag-explain` / `plan-vs-record-visual`） |
+| フィールド       | 型                     | 説明                                                            |
+| ---------------- | ---------------------- | --------------------------------------------------------------- |
+| `id`             | `TourStepId`           | ステップ識別子                                                  |
+| `targetSelector` | string                 | Popover アンカー要素のセレクタ（center は空文字）               |
+| `placement`      | `TourStepPlacement`    | 配置方向                                                        |
+| `autoAdvance`    | `AutoAdvanceStrategy?` | DOM 監視による自動進行設定                                      |
+| `beforeEnter`    | `BeforeEnterAction?`   | ステップ前の scroll-to / wait-for 処理                          |
+| `skipWhen`       | `SkipCondition?`       | true を返すとそのステップをスキップ                             |
+| `contentKey`     | `TourContentKey?`      | リッチコンテンツキー（`tag-explain` / `plan-vs-record-visual`） |
 
 ---
 

@@ -1,6 +1,6 @@
 import { Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Features/Contact/Docs" />
+<Meta title="Features/Contact/Guide" />
 
 # Contact
 
@@ -10,14 +10,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目 | 値 |
-|------|-----|
-| カテゴリ | bug / feature / question / other |
-| メッセージ | 最小10文字 / 最大5000文字 |
-| 送信先 | GitHub Issues（`GITHUB_CONTACT_REPO` で指定） |
-| レート制限 | Upstash（userId ベース） |
-| 認証 | ログイン必須（`protectedProcedure`） |
-| 環境情報 | appVersion / OS / ブラウザ / タイムゾーン / 言語を自動収集 |
+| 項目       | 値                                                         |
+| ---------- | ---------------------------------------------------------- |
+| カテゴリ   | bug / feature / question / other                           |
+| メッセージ | 最小10文字 / 最大5000文字                                  |
+| 送信先     | GitHub Issues（`GITHUB_CONTACT_REPO` で指定）              |
+| レート制限 | Upstash（userId ベース）                                   |
+| 認証       | ログイン必須（`protectedProcedure`）                       |
+| 環境情報   | appVersion / OS / ブラウザ / タイムゾーン / 言語を自動収集 |
 
 ---
 
@@ -44,35 +44,35 @@ Contact 機能専用の Zustand ストアは存在しない。ダイアログの
 
 ### Mutation
 
-| Hook | 用途 |
-|------|------|
+| Hook                               | 用途                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
 | `api.contact.submit.useMutation()` | フォーム送信。成功時に toast + ダイアログ閉じる。レート制限エラー時は専用メッセージ表示 |
 
 ### ユーティリティ
 
-| 関数 | 用途 |
-|------|------|
+| 関数                             | 用途                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------- |
 | `collectEnvironment(appVersion)` | `navigator.userAgent` から OS・ブラウザを検出し、タイムゾーン・言語とともに返す |
 
 ---
 
 ## tRPC ルーター
 
-| エンドポイント | タイプ | 説明 |
-|-------------|-------|------|
+| エンドポイント   | タイプ   | 説明                                                         |
+| ---------------- | -------- | ------------------------------------------------------------ |
 | `contact.submit` | mutation | カテゴリ・メッセージ・環境情報を受け取り GitHub Issue を作成 |
 
 ### バリデーションスキーマ（`contactFormSchema`）
 
-| フィールド | 型 | バリデーション |
-|-----------|-----|--------------|
-| `category` | enum | 'bug' / 'feature' / 'question' / 'other' |
-| `message` | string | min(10) / max(5000) |
-| `environment.appVersion` | string | - |
-| `environment.os` | string | UA から自動検出 |
-| `environment.browser` | string | UA から自動検出 |
-| `environment.timezone` | string | `Intl.DateTimeFormat` から取得 |
-| `environment.language` | string | `navigator.language` から取得 |
+| フィールド               | 型     | バリデーション                           |
+| ------------------------ | ------ | ---------------------------------------- |
+| `category`               | enum   | 'bug' / 'feature' / 'question' / 'other' |
+| `message`                | string | min(10) / max(5000)                      |
+| `environment.appVersion` | string | -                                        |
+| `environment.os`         | string | UA から自動検出                          |
+| `environment.browser`    | string | UA から自動検出                          |
+| `environment.timezone`   | string | `Intl.DateTimeFormat` から取得           |
+| `environment.language`   | string | `navigator.language` から取得            |
 
 ---
 

@@ -7,16 +7,22 @@ import { useTranslations } from 'next-intl';
 import NextImage from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { HoverTooltip } from '@/components/ui/tooltip';
+import { Button } from '@/lib/components/ui/button';
+import { Card, CardContent } from '@/lib/components/ui/card';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { Link } from '@/lib/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Link } from '@/platform/i18n/navigation';
 
-import { useAuthStore } from '@/stores/useAuthStore';
 import { getAuthErrorKey } from '../lib/sanitize-auth-error';
+import { useAuthStore } from '../stores/useAuthStore';
 
 /** 新しいパスワード設定フォーム。URLのaccess_token/refresh_tokenを利用してパスワードを更新する */
 export function ResetPasswordForm({ className, ...props }: React.ComponentProps<'div'>) {

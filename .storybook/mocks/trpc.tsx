@@ -34,8 +34,8 @@ import type { TRPCLink } from '@trpc/client';
 import { observable } from '@trpc/server/observable';
 import type { ReactNode } from 'react';
 
-import type { AppRouter } from '@/platform/trpc';
-import { api } from '@/platform/trpc';
+import type { AppRouter } from '@/lib/trpc';
+import { api } from '@/lib/trpc';
 
 import { DEFAULT_TRPC_MOCKS } from './trpc-defaults';
 

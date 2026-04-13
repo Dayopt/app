@@ -1,6 +1,6 @@
 import { addons } from 'storybook/manager-api';
 
-import { dayoptDarkTheme, dayoptLightTheme } from './dayoptTheme';
+import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
 
 const isDark =
   typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;

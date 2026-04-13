@@ -12,9 +12,9 @@ import { z } from 'zod';
 import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
-import { captureBusinessEvent } from '@/platform/sentry';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { captureBusinessEvent } from '@/lib/sentry';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import {
   bulkDeleteEntrySchema,
   bulkUpdateEntrySchema,
@@ -26,7 +26,7 @@ import {
 } from '../schemas/entry';
 import { createEntryService } from './service-index';
 
-import { removeUndefinedFields } from '../lib/entry-utils';
+import { removeUndefinedFields } from '../lib/entry-normalization';
 
 // =============================================================================
 // エントリ作成 日次レート制限（インメモリフォールバック）
@@ -66,8 +66,24 @@ async function isEntryCreateLimited(userId: string): Promise<boolean> {
 }
 
 // =============================================================================
-// ユーザータイムゾーン取得ヘルパー
+// ユーザータイムゾーン取得ヘルパー（短寿命キャッシュ）
 // =============================================================================
+
+/** TTL付きキャッシュエントリ */
+interface TzCacheEntry {
+  timezone: string;
+  expiresAt: number;
+}
+
+/**
+ * ユーザーID → タイムゾーンの短寿命キャッシュ（30秒TTL）
+ *
+ * デバウンス保存（500ms間隔）で高頻度に呼ばれる getUserTimezone の
+ * DBラウンドトリップを削減する。TTLが短いため、ユーザーがタイムゾーンを
+ * 変更しても30秒以内に反映される。
+ */
+const tzCache = new Map<string, TzCacheEntry>();
+const TZ_CACHE_TTL_MS = 30_000;
 
 /**
  * user_settings からタイムゾーンを取得（失敗時は 'UTC' にフォールバック）
@@ -76,12 +92,29 @@ async function getUserTimezone(
   supabase: Parameters<typeof createEntryService>[0],
   userId: string,
 ): Promise<string> {
+  const now = Date.now();
+  const cached = tzCache.get(userId);
+  if (cached && cached.expiresAt > now) {
+    return cached.timezone;
+  }
+
   const { data } = await supabase
     .from('user_settings')
     .select('timezone')
     .eq('user_id', userId)
     .single();
-  return (data?.timezone as string | null | undefined) ?? 'UTC';
+  const timezone = (data?.timezone as string | null | undefined) ?? 'UTC';
+
+  tzCache.set(userId, { timezone, expiresAt: now + TZ_CACHE_TTL_MS });
+
+  // キャッシュ肥大化防止（サーバーレス環境では通常不要だが安全策）
+  if (tzCache.size > 1000) {
+    for (const [key, entry] of tzCache) {
+      if (entry.expiresAt <= now) tzCache.delete(key);
+    }
+  }
+
+  return timezone;
 }
 
 // =============================================================================

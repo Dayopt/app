@@ -1,8 +1,10 @@
+import 'server-only';
+
 import { headers } from 'next/headers';
 
-import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
+import { createServerHelpers, dehydrate } from '@/lib/trpc/server';
 
-import { computePreviousDateRange, computeStatsDateRange } from '../utils/computeDateRange';
+import { computePreviousDateRange, computeStatsDateRange } from './compute-date-range';
 
 /**
  * Stats ページ用 prefetch

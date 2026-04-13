@@ -1,0 +1,500 @@
+/**
+ * tRPCサーバー設定
+ * プロシージャ定義とコンテキスト管理
+ */
+
+import 'server-only';
+
+import { createHash, timingSafeEqual } from 'crypto';
+
+import * as Sentry from '@sentry/nextjs';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { initTRPC, TRPCError } from '@trpc/server';
+import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
+import superjson from 'superjson';
+import { z } from 'zod';
+
+import { env } from '@/env';
+import { logger } from '@/lib/logger';
+import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
+import {
+  AuthMode,
+  createServiceRoleClient,
+  detectAuthMode,
+  extractBearerToken,
+  OAuthError,
+  verifyOAuthToken,
+} from '@/lib/supabase/oauth';
+import { ServiceError } from '@/lib/trpc/errors';
+
+import type { Database } from '@/lib/database.types';
+
+/**
+ * プロシージャメタデータ（API仕様書自動生成用）
+ */
+export interface ProcedureMeta {
+  /** OpenAPI description */
+  description?: string;
+  /** 認証レベル */
+  auth?: 'public' | 'protected' | 'pro' | 'admin';
+  /** エンドポイント固有のレート制限（グローバル100 req/minを上書き） */
+  rateLimit?: { requests: number; window: string };
+  /** 非推奨フラグ */
+  deprecated?: boolean;
+}
+
+/**
+ * リクエストコンテキストの型定義
+ */
+export interface TrpcRequestLike {
+  headers: Record<string, string | undefined>;
+  cookies: Record<string, string | undefined>;
+  socket?: {
+    remoteAddress?: string | undefined;
+  };
+}
+
+/** tRPCレスポンスの最低限のインターフェース */
+export interface TrpcResponseLike {
+  headers?: Headers;
+  setHeader?: (name: string, value: string | readonly string[]) => void;
+  end?: (...args: unknown[]) => void;
+}
+
+/** tRPCプロシージャのコンテキスト型 */
+export interface Context {
+  req: TrpcRequestLike;
+  res: TrpcResponseLike;
+  userId?: string | undefined;
+  sessionId?: string | undefined;
+  supabase: SupabaseClient<Database>;
+  /** 認証モード（session, oauth, service-role） */
+  authMode: AuthMode;
+  /** OAuth 2.1トークン（oauth modeの場合のみ） */
+  accessToken?: string | undefined;
+  /** JWTカスタムクレームから取得したサブスクリプション状態（custom_access_token hook） */
+  subscriptionStatus?: string | undefined;
+}
+
+/**
+ * コンテキスト作成関数
+ *
+ * 3つの認証モードをサポート：
+ * 1. session: Cookie認証（既存、ブラウザ用）
+ * 2. oauth: OAuth 2.1トークン認証（MCP用）
+ * 3. service-role: Service Role Key認証（管理者用）
+ */
+export async function createTRPCContext(opts: {
+  req: TrpcRequestLike;
+  res: TrpcResponseLike;
+}): Promise<Context> {
+  const { req, res } = opts;
+
+  // リクエストヘッダーから認証モードを自動検出
+  const authMode = detectAuthMode(req.headers as Record<string, string>);
+
+  // 認証情報の取得
+  let userId: string | undefined;
+  let sessionId: string | undefined;
+  let accessToken: string | undefined;
+  let supabase: SupabaseClient<Database>;
+
+  // 1. OAuth 2.1トークン認証（MCP用）
+  if (authMode === 'oauth') {
+    try {
+      const authHeader =
+        typeof req.headers['authorization'] === 'string' ? req.headers['authorization'] : null;
+      const token = extractBearerToken(authHeader);
+
+      const verificationResult = await verifyOAuthToken(token);
+
+      userId = verificationResult.userId;
+      accessToken = verificationResult.accessToken;
+      sessionId = verificationResult.accessToken;
+      supabase = verificationResult.client;
+    } catch (error) {
+      if (error instanceof OAuthError) {
+        logger.error('OAuth token verification failed', { message: error.message });
+      }
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: error instanceof OAuthError ? error.message : 'OAuth authentication failed',
+        cause: error,
+      });
+    }
+  }
+  // 2. Service Role認証（管理者用）
+  else if (authMode === 'service-role') {
+    try {
+      const apiKey = typeof req.headers['x-api-key'] === 'string' ? req.headers['x-api-key'] : null;
+      const expectedKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!apiKey || !expectedKey || !safeCompare(apiKey, expectedKey)) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid or missing API key',
+        });
+      }
+
+      // Service Role Client作成（RLSバイパス）
+      supabase = createServiceRoleClient();
+      userId = undefined; // Admin操作ではuserIdはundefined
+    } catch (error) {
+      logger.error('Service role authentication failed', { error });
+      throw error;
+    }
+  }
+  // 3. Session Cookie認証（既存、ブラウザ用）
+  else {
+    const { createServerClient } = await import('@supabase/ssr');
+
+    supabase = createServerClient<Database>(
+      env.NEXT_PUBLIC_SUPABASE_URL,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return Object.entries(req.cookies).map(([name, value]) => ({
+              name,
+              value: value ?? '',
+            }));
+          },
+          setAll() {
+            // tRPC API routes cannot set cookies (read-only context)
+          },
+        },
+      },
+    );
+
+    try {
+      // getUser()はSupabase Authサーバーに問い合わせてJWTを検証する（getSession()は署名未検証）
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        userId = user.id;
+        // セッションからアクセストークンを取得（ログ・追跡用）
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        sessionId = session?.access_token;
+      }
+    } catch {
+      // 認証エラーは無視（ゲストユーザーとして扱う）
+    }
+  }
+
+  // JWTカスタムクレームからsubscription_statusを取得（custom_access_token hook）
+  let subscriptionStatus: string | undefined;
+  const tokenToDecode = accessToken ?? sessionId;
+  if (tokenToDecode) {
+    try {
+      const payload = tokenToDecode.split('.')[1];
+      if (payload) {
+        const claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<
+          string,
+          unknown
+        >;
+        subscriptionStatus =
+          typeof claims['subscription_status'] === 'string'
+            ? claims['subscription_status']
+            : undefined;
+      }
+    } catch {
+      // JWTデコード失敗時はundefined（proProcedureでフォールバック）
+    }
+  }
+
+  return {
+    req,
+    res,
+    userId,
+    sessionId,
+    accessToken,
+    supabase,
+    authMode,
+    subscriptionStatus,
+  };
+}
+
+/** Fetch API用tRPCコンテキスト作成（App Router Route Handler向け） */
+export async function createFetchTRPCContext(opts: FetchCreateContextFnOptions): Promise<Context> {
+  return createTRPCContext({
+    req: createRequestLike(opts.req),
+    res: { headers: opts.resHeaders },
+  });
+}
+
+/**
+ * tRPCインスタンス初期化
+ */
+const t = initTRPC
+  .context<Context>()
+  .meta<ProcedureMeta>()
+  .create({
+    transformer: superjson,
+    errorFormatter({ shape, error }) {
+      const isProduction = process.env.NODE_ENV === 'production';
+
+      // プロダクションではサーバー起因エラーの詳細を隠す（DB情報漏洩防止）
+      const SERVER_ERROR_CODES = new Set([
+        'INTERNAL_SERVER_ERROR',
+        'TIMEOUT',
+        'CLIENT_CLOSED_REQUEST',
+      ]);
+      const message =
+        isProduction && SERVER_ERROR_CODES.has(error.code)
+          ? 'サーバーエラーが発生した'
+          : shape.message;
+
+      return {
+        ...shape,
+        message,
+        data: {
+          ...shape.data,
+          // 開発環境でのみスタックトレースを含める
+          stack: isProduction ? undefined : error.stack,
+        },
+      };
+    },
+  });
+
+/**
+ * 公開プロシージャ（認証不要）
+ */
+export const publicProcedure = t.procedure.meta({ auth: 'public' });
+
+/**
+ * per-userId レート制限（100 req/min）
+ *
+ * Upstash 有効時は Redis ベース（分散環境対応）、
+ * 未設定時はインメモリフォールバック。
+ *
+ * ⚠️ インメモリフォールバックの制約:
+ * Vercel Serverless 環境ではインスタンスごとに状態が分離され、
+ * コールドスタートでリセットされるため実質的に制限が効かない。
+ * 本番環境では必ず Upstash Redis を設定すること。
+ */
+const USER_RATE_LIMIT = 100;
+const USER_RATE_WINDOW_MS = 60 * 1000;
+const userRequestLog = new Map<string, number[]>();
+
+function isUserRateLimitedInMemory(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = userRequestLog.get(userId) ?? [];
+  const recent = timestamps.filter((t) => now - t < USER_RATE_WINDOW_MS);
+  recent.push(now);
+  userRequestLog.set(userId, recent);
+
+  // メモリリーク防止
+  if (userRequestLog.size > 10000) {
+    for (const [key, ts] of userRequestLog) {
+      if (ts.every((t) => now - t > USER_RATE_WINDOW_MS)) {
+        userRequestLog.delete(key);
+      }
+    }
+  }
+
+  return recent.length > USER_RATE_LIMIT;
+}
+
+async function isUserRateLimited(userId: string): Promise<boolean> {
+  // Upstash が有効な場合は Redis ベースのレート制限を使用
+  if (trpcUserRateLimit) {
+    try {
+      const { success } = await trpcUserRateLimit.limit(userId);
+      return !success;
+    } catch {
+      // Redis エラー時はインメモリにフォールバック（可用性優先）
+      return isUserRateLimitedInMemory(userId);
+    }
+  }
+  // Upstash 未設定時はインメモリ実装
+  return isUserRateLimitedInMemory(userId);
+}
+
+/**
+ * 認証が必要なプロシージャ
+ */
+export const protectedProcedure = t.procedure
+  .meta({ auth: 'protected' })
+  .use(async ({ ctx, next }) => {
+    if (!ctx.userId) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required',
+        cause: new ServiceError('INVALID_TOKEN', 'Authentication required'),
+      });
+    }
+
+    // per-userId レート制限
+    if (await isUserRateLimited(ctx.userId)) {
+      throw new TRPCError({
+        code: 'TOO_MANY_REQUESTS',
+        message: 'Too many requests. Please try again later.',
+      });
+    }
+
+    // Sentryにユーザーコンテキストを設定（IDのみ、GDPR準拠）
+    Sentry.setUser({ id: ctx.userId });
+
+    return next({
+      ctx: {
+        ...ctx,
+        userId: ctx.userId, // TypeScriptの型保証のため
+      },
+    });
+  });
+
+/**
+ * Pro プラン以上が必要なプロシージャ
+ *
+ * JWTカスタムクレーム（custom_access_token hook）から subscription_status を読み取り。
+ * クレーム未設定時はDBフォールバック（hook未適用の既存セッション対応）。
+ * past_due: Stripe dunning（回収リトライ）期間中はアクセス維持。
+ */
+export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
+  let status = ctx.subscriptionStatus;
+
+  // JWTクレームが未設定の場合のみDBフォールバック（hook適用前の既存トークン対応）
+  if (!status) {
+    const { data, error } = await ctx.supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', ctx.userId)
+      .single();
+
+    if (error) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: `Failed to fetch profile: ${error.message}`,
+        cause: new ServiceError('FETCH_FAILED', 'Failed to fetch profile for pro check'),
+      });
+    }
+
+    status = (data as Record<string, unknown> | null)?.subscription_status as string | undefined;
+  }
+
+  // Sentryにプラン情報をタグ付け（エラー分析時のフィルタ用）
+  Sentry.setTag('user.plan', status ?? 'free');
+
+  const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
+
+  if (!isProActive) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Pro plan required',
+      cause: new ServiceError('FORBIDDEN', 'Pro subscription required'),
+    });
+  }
+
+  return next({ ctx });
+});
+
+/**
+ * 管理者権限が必要なプロシージャ
+ */
+export const adminProcedure = protectedProcedure
+  .meta({ auth: 'admin' })
+  .use(async ({ ctx, next }) => {
+    // ここで管理者権限の確認を行う
+    const isAdmin = await checkAdminPermission(ctx.userId);
+
+    if (!isAdmin) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Admin permission required',
+        cause: new ServiceError('FORBIDDEN', 'Admin permission required'),
+      });
+    }
+
+    return next({ ctx });
+  });
+
+/**
+ * ルーター作成関数
+ */
+export const createTRPCRouter = t.router;
+
+/**
+ * プロシージャのマージ関数
+ */
+export const mergeRouters = t.mergeRouters;
+
+/**
+ * テスト用callerファクトリ
+ */
+export const createCallerFactory = t.createCallerFactory;
+
+/**
+ * ヘルパー関数
+ */
+
+async function checkAdminPermission(_userId: string): Promise<boolean> {
+  // TODO: 管理機能が必要になった時点で実装する
+  // 候補: ADMIN_USER_IDS 環境変数によるホワイトリスト or profiles.is_admin カラム
+  // 現在 adminProcedure を使用するルーターは存在しない（deny-by-default で安全）
+  return false;
+}
+
+/**
+ * タイミング攻撃耐性のある文字列比較
+ */
+function safeCompare(a: string, b: string): boolean {
+  const hashA = createHash('sha256').update(a).digest();
+  const hashB = createHash('sha256').update(b).digest();
+  return timingSafeEqual(hashA, hashB);
+}
+
+/**
+ * 入力スキーマ用のヘルパー
+ */
+export const createInputSchema = <T extends z.ZodRawShape>(shape: T) => {
+  return z.object(shape).strict(); // 厳密モードで未知のプロパティを拒否
+};
+
+/**
+ * ページネーション用の共通スキーマ
+ */
+export const paginationSchema = z.object({
+  page: z.number().min(1).default(1),
+  limit: z.number().min(1).max(100).default(20),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+/** ページネーション入力の型定義 */
+export type PaginationInput = z.infer<typeof paginationSchema>;
+
+function createRequestLike(req: Request): TrpcRequestLike {
+  const headers = Object.fromEntries(
+    Array.from(req.headers.entries(), ([key, value]) => [key.toLowerCase(), value]),
+  );
+
+  return {
+    headers,
+    cookies: parseCookieHeader(req.headers.get('cookie')),
+  };
+}
+
+function parseCookieHeader(cookieHeader: string | null): Record<string, string> {
+  if (!cookieHeader) return {};
+
+  const cookies: Record<string, string> = {};
+
+  for (const cookie of cookieHeader.split(';')) {
+    const [rawName, ...rawValue] = cookie.trim().split('=');
+    if (!rawName) continue;
+
+    const value = rawValue.join('=') || '';
+
+    try {
+      cookies[rawName] = decodeURIComponent(value);
+    } catch {
+      cookies[rawName] = value;
+    }
+  }
+
+  return cookies;
+}

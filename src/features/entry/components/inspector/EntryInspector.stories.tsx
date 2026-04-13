@@ -10,11 +10,11 @@ import type { ReactNode } from 'react';
 import type { FulfillmentScore } from '../../types/entry';
 
 // Story 内のみ: Composition Layer 連携プレビュー用
-// eslint-disable-next-line no-restricted-imports
+// eslint-disable-next-line no-restricted-imports -- Story: stats deep import for preview
 import { EntryMicroInsight } from '@/features/stats/components/shared/EntryMicroInsight';
 
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { Spinner } from '@/components/ui/spinner';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
+import { Spinner } from '@/lib/components/ui/spinner';
 import { DateRow, FulfillmentRow, NoteSection, TimeDiffBlock, TimeRow } from './fields';
 import { InspectorFrame, MockReminderRow, MockTagRow } from './story-helpers';
 

@@ -12,8 +12,8 @@ import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { traceDbQuery } from '@/platform/sentry/trace';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { traceDbQuery } from '@/lib/sentry/trace';
+import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
@@ -45,7 +45,13 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): StripUndefin
 
 /** 統計クエリの共通エラーハンドラー */
 function handleStatsError(operation: string, error: unknown): never {
-  if (error instanceof TRPCError) throw error;
+  // TRPCError も Sentry に報告してから再スロー（内側throwのDB起因エラーを補足）
+  if (error instanceof TRPCError) {
+    Sentry.captureException(error.cause ?? error, {
+      tags: { source: 'statistics_router', operation },
+    });
+    throw error;
+  }
 
   Sentry.captureException(error, {
     tags: { source: 'statistics_router', operation },
@@ -128,12 +134,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_time_by_tag', async () =>
           supabase.rpc(
-            'get_time_by_tag' as never,
-            {
+            'get_time_by_tag',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input?.startDate ?? null,
-              p_end_date: input?.endDate ?? null,
-            } as never,
+              p_start_date: input?.startDate,
+              p_end_date: input?.endDate,
+            }),
           ),
         );
 
@@ -194,7 +200,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get hourly distribution (DB function) */
-  getHourlyDistribution: protectedProcedure
+  getHourlyDistribution: proProcedure
     .meta({ description: '時間帯別分布取得（2時間スロット）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -242,7 +248,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get day of week distribution (DB function) */
-  getDayOfWeekDistribution: protectedProcedure
+  getDayOfWeekDistribution: proProcedure
     .meta({ description: '曜日別分布取得（月曜始まり）' })
     .input(dateRangeInput.optional())
     .query(async ({ ctx, input }) => {
@@ -286,7 +292,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** Get monthly trend (DB function) */
-  getMonthlyTrend: protectedProcedure
+  getMonthlyTrend: proProcedure
     .meta({ description: '月別トレンド取得（デフォルト12ヶ月）' })
     .input(z.object({ months: z.number().min(1).max(120).optional() }).optional())
     .query(async ({ ctx, input }) => {
@@ -345,7 +351,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** エントリ率: origin='planned' / 全エントリ */
-  getEntryRate: protectedProcedure
+  getEntryRate: proProcedure
     .meta({ description: 'エントリ率KPI（計画エントリ / 全エントリ）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -354,12 +360,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_plan_rate', async () =>
           supabase.rpc(
-            'get_plan_rate' as never,
-            {
+            'get_plan_rate',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -388,7 +394,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 見積もり精度: タグ別の予定時間 vs 実績時間 */
-  getEstimationAccuracy: protectedProcedure
+  getEstimationAccuracy: proProcedure
     .meta({ description: '見積もり精度KPI（タグ別の予定vs実績）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -397,12 +403,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_estimation_accuracy', async () =>
           supabase.rpc(
-            'get_estimation_accuracy' as never,
-            {
+            'get_estimation_accuracy',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -439,7 +445,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** エネルギーマップ: 時間帯×曜日の活動分布（既存DB関数のラッパー） */
-  getEnergyMap: protectedProcedure
+  getEnergyMap: proProcedure
     .meta({ description: 'エネルギーマップ（時間帯×曜日の活動分布）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -447,14 +453,11 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
-          supabase.rpc(
-            'get_energy_map' as never,
-            {
-              p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
-          ),
+          supabase.rpc('get_energy_map', {
+            p_user_id: userId,
+            p_start: input.startDate ?? '',
+            p_end: input.endDate ?? '',
+          }),
         );
 
         if (error) {
@@ -486,7 +489,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** コンテキストスイッチ: 連続エントリ間のタグ変化回数 */
-  getContextSwitches: protectedProcedure
+  getContextSwitches: proProcedure
     .meta({ description: 'コンテキストスイッチ回数（タグ変化頻度）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -495,12 +498,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_context_switches', async () =>
           supabase.rpc(
-            'get_context_switches' as never,
-            {
+            'get_context_switches',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -527,7 +530,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 空白率: 活動可能時間のうちスケジュールされていない時間の割合 */
-  getBlankRate: protectedProcedure
+  getBlankRate: proProcedure
     .meta({ description: '空白率KPI（未スケジュール時間の割合）' })
     .input(
       dateRangeInput.extend({
@@ -541,14 +544,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_blank_rate', async () =>
           supabase.rpc(
-            'get_blank_rate' as never,
-            {
+            'get_blank_rate',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
               p_wake_hour: input.wakeHour,
               p_sleep_hour: input.sleepHour,
-            } as never,
+            }),
           ),
         );
 
@@ -579,7 +582,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 合計記録時間（分） */
-  getCumulativeTime: protectedProcedure
+  getCumulativeTime: proProcedure
     .meta({ description: '合計記録時間取得（分単位）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -588,12 +591,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_cumulative_time', async () =>
           supabase.rpc(
-            'get_cumulative_time' as never,
-            {
+            'get_cumulative_time',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -613,7 +616,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
     }),
 
   /** 平均充実度 */
-  getAvgFulfillment: protectedProcedure
+  getAvgFulfillment: proProcedure
     .meta({ description: '平均充実度取得（1-5スケール）' })
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
@@ -622,12 +625,12 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_avg_fulfillment', async () =>
           supabase.rpc(
-            'get_avg_fulfillment' as never,
-            {
+            'get_avg_fulfillment',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
-            } as never,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
+            }),
           ),
         );
 
@@ -641,7 +644,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const result = data as { avgFulfillment: number | null; entryCount: number } | null;
         return {
-          avgFulfillment: result?.avgFulfillment ?? null,
+          avgFulfillment: result?.avgFulfillment ?? undefined,
           entryCount: result?.entryCount ?? 0,
         };
       } catch (error) {
@@ -670,7 +673,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_active_dates', async () =>
           supabase.rpc('get_active_dates', {
             p_user_id: userId,
-            p_since: since.toISOString(),
+            p_start_date: formatInTimeZone(since, timezone, 'yyyy-MM-dd'),
           }),
         );
 
@@ -710,7 +713,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** 全KPIを1クエリで取得 */
-  getStatsOverview: protectedProcedure
+  getStatsOverview: proProcedure
     .meta({ description: '全KPIサマリー一括取得（7指標を1クエリ）' })
     .input(
       dateRangeInput.extend({
@@ -724,14 +727,14 @@ export const entriesStatisticsRouter = createTRPCRouter({
 
         const { data, error } = await traceDbQuery('stats.get_kpi_summary', async () =>
           supabase.rpc(
-            'get_stats_kpi_summary' as never,
-            {
+            'get_stats_kpi_summary',
+            stripUndefined({
               p_user_id: userId,
-              p_start_date: input.startDate ?? null,
-              p_end_date: input.endDate ?? null,
+              p_start_date: input.startDate,
+              p_end_date: input.endDate,
               p_wake_hour: input.wakeHour,
               p_sleep_hour: input.sleepHour,
-            } as never,
+            }),
           ),
         );
 
@@ -761,7 +764,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
             totalMinutes: result?.cumulativeTime?.totalMinutes ?? 0,
           },
           avgFulfillment: {
-            avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? null,
+            avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? undefined,
             entryCount: result?.avgFulfillment?.entryCount ?? 0,
           },
           entryRate: {
@@ -790,7 +793,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
   // ---------------------------------------------------------------------------
 
   /** Stats ページ全データを 1 RPC で取得 */
-  getStatsPageData: protectedProcedure
+  getStatsPageData: proProcedure
     .meta({ description: 'Stats全データ一括取得（12クエリ統合）' })
     .input(
       z.object({
@@ -809,20 +812,17 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { supabase, userId } = ctx;
 
         const { data, error } = await traceDbQuery('stats.get_stats_page_data', async () =>
-          supabase.rpc(
-            'get_stats_page_data' as never,
-            {
-              p_user_id: userId,
-              p_start_date: input.startDate,
-              p_end_date: input.endDate,
-              p_prev_start: input.prevStart,
-              p_prev_end: input.prevEnd,
-              p_year: input.year,
-              p_monthly_months: input.monthlyMonths,
-              p_wake_hour: input.wakeHour,
-              p_sleep_hour: input.sleepHour,
-            } as never,
-          ),
+          supabase.rpc('get_stats_page_data', {
+            p_user_id: userId,
+            p_start_date: input.startDate,
+            p_end_date: input.endDate,
+            p_prev_start: input.prevStart,
+            p_prev_end: input.prevEnd,
+            p_year: input.year,
+            p_monthly_months: input.monthlyMonths,
+            p_wake_hour: input.wakeHour,
+            p_sleep_hour: input.sleepHour,
+          }),
         );
 
         if (error) {
@@ -834,7 +834,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         }
 
         // DB関数が返すJSONをそのまま返す（型はクライアント側で定義）
-        return data as StatsPageData;
+        return data as unknown as StatsPageData;
       } catch (error) {
         handleStatsError('getStatsPageData', error);
       }

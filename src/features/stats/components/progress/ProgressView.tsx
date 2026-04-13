@@ -3,7 +3,8 @@
 import { TrendingUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { EmptyState } from '@/components/common/EmptyState';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
 import { cn } from '@/lib/utils';
 
 import { useStatsPageData } from '../../hooks/useStatsPageData';
@@ -24,11 +25,16 @@ export function ProgressView({ className }: StatsViewProps) {
   const t = useTranslations('calendar.stats');
   const { data: pageData, isPending, isFetching, isError } = useStatsPageData();
 
+  if (isError) {
+    return (
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+        <ErrorState title={t('progress.errorTitle')} description={t('progress.errorDescription')} />
+      </div>
+    );
+  }
+
   const hasNoData =
-    !isPending &&
-    !isFetching &&
-    !isError &&
-    (!pageData?.timeByTag || pageData.timeByTag.length === 0);
+    !isPending && !isFetching && (!pageData?.timeByTag || pageData.timeByTag.length === 0);
 
   if (hasNoData) {
     return (

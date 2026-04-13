@@ -11,7 +11,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/lib/components/ui/alert-dialog';
 import { useTranslations } from 'next-intl';
 
 interface SessionTimeoutDialogProps {

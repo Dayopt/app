@@ -2,7 +2,7 @@
 
 import { ArrowRight, Lightbulb, MessageCircleQuestion } from 'lucide-react';
 
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/lib/components/ui/card';
 import { cn } from '@/lib/utils';
 
 import type {

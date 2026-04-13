@@ -13,9 +13,19 @@
  * @see src/shell/providers.tsx - フルProviders定義
  * @see ./_overlays/GlobalOverlays.tsx - グローバルダイアログ群
  */
-import { IntlProvider } from '@/platform/i18n';
-import { BaseLayout } from '@/shell/layout/base-layout';
-import { Providers } from '@/shell/providers';
+import type { Metadata } from 'next';
+
+import { IntlProvider } from '@/lib/i18n';
+import { Providers } from './_providers/Providers';
+import { BaseLayout } from './_shell/base-layout';
+
+/** 認証必須ページはクロール不要（noindex） */
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 import { ClientPageRouter } from './_composition/ClientPageRouter';
 import { GlobalOverlays } from './_overlays/GlobalOverlays';

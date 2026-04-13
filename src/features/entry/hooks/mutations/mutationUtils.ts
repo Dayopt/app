@@ -4,7 +4,7 @@
  * mutation フック共通のユーティリティ関数
  */
 
-import { api } from '@/platform/trpc';
+import { api } from '@/lib/trpc';
 
 /**
  * 一時ID生成（楽観的作成用）

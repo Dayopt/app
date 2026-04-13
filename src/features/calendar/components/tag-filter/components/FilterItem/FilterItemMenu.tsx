@@ -3,7 +3,8 @@
 import { BarChart3, Eye, FolderUp, Merge, Palette, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColorPaletteMenuItems } from '@/components/ui/color-palette-picker';
+import { IconPicker, TagIcon } from '@/features/tags';
+import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -11,8 +12,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-} from '@/components/ui/dropdown-menu';
-import { IconPicker, TagIcon } from '@/features/tags';
+} from '@/lib/components/ui/dropdown-menu';
 import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 

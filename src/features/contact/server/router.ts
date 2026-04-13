@@ -8,8 +8,8 @@ import { TRPCError } from '@trpc/server';
 
 import { logger } from '@/lib/logger';
 import { contactRateLimit } from '@/lib/rate-limit/upstash';
-import { handleServiceError } from '@/platform/trpc/errors';
-import { createTRPCRouter, protectedProcedure } from '@/platform/trpc/procedures';
+import { handleServiceError } from '@/lib/trpc/errors';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
 import { contactFormSchema } from '../schemas';
 import { createGitHubIssue } from './contact-service';
@@ -39,11 +39,7 @@ export const contactRouter = createTRPCRouter({
 
       if (authError) {
         logger.error('Failed to get user for contact form', { error: authError });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'ユーザー情報の取得に失敗した',
-          cause: authError,
-        });
+        handleServiceError(authError);
       }
 
       const userEmail = user?.email ?? 'unknown';

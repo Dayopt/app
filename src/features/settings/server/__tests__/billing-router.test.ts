@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockContext } from '@/test/trpc-test-helpers';
+import { createMockContext } from '@/lib/test/trpc-test-helpers';
 
-import { createCallerFactory } from '@/platform/trpc/procedures';
+import { createCallerFactory } from '@/lib/trpc/procedures';
 
 import { billingRouter } from '../billing-router';
 
@@ -25,11 +25,15 @@ vi.mock('../billing-service', () => ({
 }));
 
 // handleServiceError のモック（ServiceError を TRPCError に変換する）
-vi.mock('@/platform/trpc/errors', () => ({
-  handleServiceError: vi.fn((error: unknown) => {
-    throw error;
-  }),
-}));
+vi.mock('@/lib/trpc/errors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/trpc/errors')>();
+  return {
+    ...actual,
+    handleServiceError: vi.fn((error: unknown) => {
+      throw error;
+    }),
+  };
+});
 
 // billing-service のモックを取得
 const billingServiceMock = await import('../billing-service');

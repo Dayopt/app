@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import type { CalendarViewType } from '@/features/calendar';
 import { calculateViewDateRange } from '@/features/calendar';
 import { logger } from '@/lib/logger';
-import { createServerHelpers, dehydrate } from '@/platform/trpc/server';
+import { createServerHelpers, dehydrate } from '@/lib/trpc/server';
 
 /**
  * ローカル日付の 00:00:00 を UTC midnight として正規化した ISO 文字列を生成

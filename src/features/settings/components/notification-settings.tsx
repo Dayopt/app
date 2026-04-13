@@ -5,32 +5,35 @@ import { useCallback, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { Badge } from '@/components/ui/badge';
+import {
+  checkBrowserNotificationSupport,
+  requestNotificationPermission,
+} from '@/lib/browser-notification';
+import { Badge } from '@/lib/components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
-import {
-  checkBrowserNotificationSupport,
-  requestNotificationPermission,
-} from '@/lib/browser-notification';
-import { api } from '@/platform/trpc';
+} from '@/lib/components/ui/select';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Switch } from '@/lib/components/ui/switch';
+import { api } from '@/lib/trpc';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 
 /** 通知設定コンポーネント。ブラウザ通知・メール通知・プッシュ通知の有効/無効を管理する */
 export function NotificationSettings() {
   const t = useTranslations();
   const utils = api.useUtils();
 
-  // 通知設定を取得
-  const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery();
+  // 通知設定を取得（useNotificationPreferences と同じキャッシュ設定）
+  const { data: preferences, isLoading } = api.notificationPreferences.get.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   // ユーザー設定を取得（メール言語用）
   const { data: userSettings } = api.userSettings.get.useQuery();

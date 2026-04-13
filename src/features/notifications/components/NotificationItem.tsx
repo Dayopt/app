@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { Bell, Brain, Lightbulb, Sparkles, Trash2, Zap } from 'lucide-react';

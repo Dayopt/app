@@ -1,12 +1,15 @@
+import 'server-only';
+
 /**
  * Entries Service
  *
  * entries テーブルのビジネスロジック
  */
 
-import type { TablesUpdate } from '@/lib/database.types';
+import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-utils';
+import { ServiceError } from '@/lib/trpc/errors';
+import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 
 import type {
   CreateEntryOptions,
@@ -157,9 +160,10 @@ export class EntryService {
     const endTimeExclusive = new Date(new Date(endTime).getTime() - 1000).toISOString();
     const startTimeExclusive = new Date(new Date(startTime).getTime() + 1000).toISOString();
 
+    // まず予定時間ベースで候補を取得
     let query = this.supabase
       .from('entries')
-      .select('id')
+      .select('id, actual_start_time, actual_end_time, start_time, end_time')
       .eq('user_id', userId)
       .not('start_time', 'is', null)
       .not('end_time', 'is', null)
@@ -177,7 +181,20 @@ export class EntryService {
       return [];
     }
 
-    return data?.map((row) => row.id) ?? [];
+    if (!data) return [];
+
+    // actual 時間が記録されているエントリは、実質的な占有範囲で再判定
+    // 「予定9:00-10:00、実績9:00-9:45」→ 9:45-10:00は空きとみなす
+    const newStart = new Date(startTime).getTime() + 1000;
+    const newEnd = new Date(endTime).getTime() - 1000;
+
+    return data
+      .filter((row) => {
+        const effectiveStart = new Date(row.actual_start_time ?? row.start_time!).getTime();
+        const effectiveEnd = new Date(row.actual_end_time ?? row.end_time!).getTime();
+        return effectiveStart < newEnd && effectiveEnd > newStart;
+      })
+      .map((row) => row.id);
   }
 
   /**
@@ -210,12 +227,13 @@ export class EntryService {
     const insertData = {
       user_id: userId,
       origin,
+      title: normalizedInput.title,
       ...removeUndefinedFields(normalizedInput),
-    };
+    } as TablesInsert<'entries'>;
 
     const { data, error } = await this.supabase
       .from('entries')
-      .insert(insertData as never)
+      .insert(insertData)
       .select()
       .single();
 
@@ -460,12 +478,9 @@ export class EntryService {
 /**
  * エントリサービスエラー
  */
-export class EntryServiceError extends Error {
-  constructor(
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
+export class EntryServiceError extends ServiceError {
+  constructor(code: string, message: string) {
+    super(code, message);
     this.name = 'EntryServiceError';
   }
 }

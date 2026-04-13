@@ -6,7 +6,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
-import { EmptyState } from '@/components/common/EmptyState';
+import { EmptyState } from '@/lib/components/common/EmptyState';
+import { ErrorState } from '@/lib/components/common/ErrorState';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -100,9 +101,18 @@ export function StatsView({ className }: StatsViewProps) {
     return evaluateRuleInsights(current, null);
   }, [pageData, dateRange.startDate, dateRange.endDate]);
 
+  // エラー状態
+  if (isError) {
+    return (
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+        <ErrorState title={t('review.errorTitle')} description={t('review.errorDescription')} />
+      </div>
+    );
+  }
+
   // 空状態判定
   const isAllLoaded = !isPending;
-  const hasNoData = isAllLoaded && !isFetching && !isError && tagSegments.length === 0;
+  const hasNoData = isAllLoaded && !isFetching && tagSegments.length === 0;
 
   if (hasNoData) {
     return (

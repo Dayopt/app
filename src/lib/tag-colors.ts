@@ -4,8 +4,8 @@
  * DBにはカラー名（"blue" 等）を保存。
  * レンダリングはCSS変数 + Tailwindクラス経由。HEXは使わない。
  *
- * @see src/styles/tokens/colors.css — OKLCH値の定義
- * @see src/styles/tailwind-theme.css — Tailwindマッピング
+ * @see src/lib/styles/tokens/colors.css — OKLCH値の定義
+ * @see src/lib/styles/tailwind-theme.css — Tailwindマッピング
  */
 
 // ========================================

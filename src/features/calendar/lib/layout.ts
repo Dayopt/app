@@ -5,7 +5,7 @@
  * エントリカードの位置計算、予定vs記録の差分オーバーレイ計算を提供。
  */
 
-import type { EntryColumn, TimedEntry } from '../components/views/shared/types/entry.types';
+import type { EntryColumn, TimedEntry } from '../types/entry.types';
 
 import { MIN_EVENT_HEIGHT } from './grid';
 

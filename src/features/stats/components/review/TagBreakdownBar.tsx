@@ -1,7 +1,7 @@
 'use client';
 
-import { ColonTagLabel } from '@/components/ui/colon-tag-label';
 import { TagIcon } from '@/features/tags';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 

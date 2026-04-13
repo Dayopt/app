@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { createClient } from '@/platform/supabase/client';
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
+import { Label } from '@/lib/components/ui/label';
+import { createClient } from '@/lib/supabase/client';
 import { InfoBox } from './InfoBox';
 
 interface EmailChangeDialogProps {
@@ -122,6 +122,8 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
                   placeholder="new@example.com"
                   required
                   autoComplete="email"
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'email-change-error' : undefined}
                 />
               </div>
 
@@ -140,7 +142,11 @@ export function EmailChangeDialog({ open, onOpenChange, currentEmail }: EmailCha
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
+                <div
+                  id="email-change-error"
+                  role="alert"
+                  className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm"
+                >
                   {error}
                 </div>
               )}

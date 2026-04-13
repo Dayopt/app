@@ -5,7 +5,9 @@ import { useCallback, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth';
+import { checkPasswordPwned } from '@/lib/auth/pwned-password';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,15 +15,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
+import { Label } from '@/lib/components/ui/label';
 import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
+import { api } from '@/lib/trpc';
 import { getDisplayName } from '@/lib/user';
-import { checkPasswordPwned } from '@/platform/auth/pwned-password';
-import { createClient } from '@/platform/supabase/client';
-import { api } from '@/platform/trpc';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 interface PasswordChangeDialogProps {
   open: boolean;
@@ -168,6 +168,8 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
                     maxLength={64}
                     autoComplete="current-password"
                     className="pr-8"
+                    aria-invalid={!!error}
+                    aria-describedby={error ? 'password-change-error' : undefined}
                   />
                   <Button
                     type="button"
@@ -263,7 +265,11 @@ export function PasswordChangeDialog({ open, onOpenChange }: PasswordChangeDialo
               </div>
 
               {error && (
-                <div className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm">
+                <div
+                  id="password-change-error"
+                  role="alert"
+                  className="border-destructive text-destructive rounded-lg border p-4 text-base md:text-sm"
+                >
                   {error}
                 </div>
               )}

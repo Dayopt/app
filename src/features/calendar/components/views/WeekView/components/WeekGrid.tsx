@@ -6,7 +6,7 @@ import { getWeek, isToday } from 'date-fns';
 
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 
 import {
   CalendarDateHeader,
@@ -19,7 +19,7 @@ import { CalendarGridContent } from '../../shared/components/CalendarGridContent
 import { useResponsiveHourHeight } from '../../shared/hooks/useResponsiveHourHeight';
 import { useWeekEntries } from '../hooks/useWeekEntries';
 
-import type { WeekGridProps } from '../WeekView.types';
+import type { WeekGridProps } from '../../../../types/week-view.types';
 
 /**
  * WeekGrid - 週表示のメイングリッドコンポーネント

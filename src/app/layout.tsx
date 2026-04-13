@@ -15,15 +15,15 @@
  * @see src/app/[locale]/(auth)/layout.tsx - 認証ページ用Providers
  * @see src/app/[locale]/legal/layout.tsx - 法的文書用Providers
  */
-import '@/styles/globals.css';
+import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP } from 'next/font/google';
 import { Suspense } from 'react';
 
+import { DeferredAnalytics } from '@/lib/analytics/DeferredAnalytics';
+import { WebVitalsReporter } from '@/lib/sentry/WebVitalsReporter';
 import { cn } from '@/lib/utils';
-import { DeferredAnalytics } from '@/platform/analytics/DeferredAnalytics';
-import { WebVitalsReporter } from '@/platform/sentry/WebVitalsReporter';
 
 // next/font による最適化されたフォント読み込み（Variable Font: optical size軸有効）
 // preload: true でLCP改善（デフォルトでtrueだが明示的に指定）

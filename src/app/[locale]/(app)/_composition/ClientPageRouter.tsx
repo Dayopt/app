@@ -5,11 +5,11 @@ import { useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { FeatureErrorBoundary } from '@/components/common/error-boundary';
 import { isCalendarViewPath } from '@/features/calendar';
 import { InsightsView, ProgressView, StatsView } from '@/features/stats';
-import { SidebarPageNav } from '@/shell/layout/SidebarPageNav';
-import { useClientRouterStore } from '@/shell/stores/useClientRouterStore';
+import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
+import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
+import { SidebarPageNav } from '../_shell/SidebarPageNav';
 
 import { CalendarViewClient } from '../calendar/_composition/CalendarViewClient';
 import { StatsLayoutShell } from '../stats/_composition/StatsLayoutShell';

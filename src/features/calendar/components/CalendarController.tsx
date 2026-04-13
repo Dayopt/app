@@ -20,7 +20,7 @@ import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/ca
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
-import type { CalendarSettings } from '@/stores/useCalendarSettingsStore';
+import type { CalendarSettings } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 

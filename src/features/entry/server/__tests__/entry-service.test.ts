@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock, createMockSupabase } from '@/test/trpc-test-helpers';
+import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
-import { createMockEntry } from '@/test/factories';
+import { createMockEntry } from '@/lib/test/factories';
 
 import { EntryService, EntryServiceError } from '../entry-service';
 import type { ServiceSupabaseClient } from '../types';
@@ -42,8 +42,16 @@ describe('EntryService.create', () => {
   it('重複チェック有効時にアプリレベルで TIME_OVERLAP を返す', async () => {
     const { service, mockSupabase } = createService();
 
-    // checkTimeOverlap 用: 重複あり
-    const overlapMock = createChainableMock([{ id: 'existing-entry' }]);
+    // checkTimeOverlap 用: 重複あり（actual未記録 → 予定時間で判定）
+    const overlapMock = createChainableMock([
+      {
+        id: 'existing-entry',
+        start_time: '2026-03-17T10:00:00Z',
+        end_time: '2026-03-17T11:00:00Z',
+        actual_start_time: null,
+        actual_end_time: null,
+      },
+    ]);
     // create 用（呼ばれないはず）
     const insertMock = createChainableMock(createMockEntry());
 
@@ -327,7 +335,22 @@ describe('EntryService.checkTimeOverlap', () => {
 
   it('重複ありでIDリストを返す', async () => {
     const { service, mockSupabase } = createService();
-    const mock = createChainableMock([{ id: 'overlap-1' }, { id: 'overlap-2' }]);
+    const mock = createChainableMock([
+      {
+        id: 'overlap-1',
+        start_time: '2026-03-17T10:00:00Z',
+        end_time: '2026-03-17T11:00:00Z',
+        actual_start_time: null,
+        actual_end_time: null,
+      },
+      {
+        id: 'overlap-2',
+        start_time: '2026-03-17T10:30:00Z',
+        end_time: '2026-03-17T11:30:00Z',
+        actual_start_time: null,
+        actual_end_time: null,
+      },
+    ]);
     mockSupabase.from.mockReturnValue(mock);
 
     const result = await service.checkTimeOverlap({

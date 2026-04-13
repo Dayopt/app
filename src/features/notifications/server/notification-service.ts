@@ -5,7 +5,7 @@
  */
 
 import type { TablesUpdate } from '@/lib/database.types';
-import { ServiceError } from '@/platform/trpc/errors';
+import { ServiceError } from '@/lib/trpc/errors';
 
 import type {
   CreateNotificationOptions,

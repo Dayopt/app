@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { calculateEntryLayouts } from '../../../../lib/layout';
-import type { TimedEntry } from '../types/entry.types';
+import type { TimedEntry } from '../../../../types/entry.types';
 
 // Re-export EntryLayout type for consumers
 export type { EntryLayout } from '../../../../lib/layout';

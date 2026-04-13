@@ -4,7 +4,8 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,13 +13,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
+import { Label } from '@/lib/components/ui/label';
 import { logger } from '@/lib/logger';
+import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/lib/toast';
-import { createClient } from '@/platform/supabase/client';
-import { useAuthStore } from '@/stores/useAuthStore';
 
 interface DisplayNameDialogProps {
   open: boolean;

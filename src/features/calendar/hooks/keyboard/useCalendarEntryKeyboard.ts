@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { localTimeToUTCISO } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { toast } from '@/lib/toast';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 import { useTranslations } from 'next-intl';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';
 import type { ShortcutDef } from './shortcut-registry';

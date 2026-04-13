@@ -7,8 +7,18 @@
  *
  * @see src/shell/providers/OnboardingProviders.tsx
  */
-import { IntlProvider } from '@/platform/i18n';
-import { OnboardingProviders } from '@/shell/providers/OnboardingProviders';
+import type { Metadata } from 'next';
+
+import { IntlProvider } from '@/lib/i18n';
+import { OnboardingProviders } from './_providers/OnboardingProviders';
+
+/** オンボーディングページはクロール不要（noindex） */
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 /** オンボーディングページで必要なnamespace */
 const ONBOARDING_NAMESPACES = ['common', 'onboarding', 'tour', 'error'];

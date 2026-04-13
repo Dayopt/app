@@ -4,8 +4,9 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { AvatarUpload } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/features/auth';
+import { AvatarUpload } from '@/lib/components/ui/avatar';
+import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +14,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from '@/lib/components/ui/dialog';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/client';
-import { deleteAvatar, uploadAvatar } from '@/platform/supabase/storage';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { createClient } from '@/lib/supabase/client';
+import { deleteAvatar, uploadAvatar } from '@/lib/supabase/storage';
 
 interface AvatarChangeDialogProps {
   open: boolean;

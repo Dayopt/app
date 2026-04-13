@@ -9,7 +9,7 @@
  * useMediaQuery のモックで PC/Mobile 両レイアウトを確認。
  */
 
-import { useShellStore } from '@/shell/stores/useShellStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { SETTINGS_CATEGORIES } from '../constants';

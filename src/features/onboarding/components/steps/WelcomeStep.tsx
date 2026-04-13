@@ -4,9 +4,9 @@ import { useCallback } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/lib/components/ui/button';
+import { Input } from '@/lib/components/ui/input';
+import { Label } from '@/lib/components/ui/label';
 
 interface WelcomeStepProps {
   displayName: string;

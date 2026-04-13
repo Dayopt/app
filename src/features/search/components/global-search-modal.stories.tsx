@@ -9,7 +9,7 @@ import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 
 import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
 import { GlobalSearchModal } from './global-search-modal';

@@ -49,7 +49,7 @@ export const BREAKPOINT_VALUES = {
  *
  * @example
  * ```tsx
- * import { useMediaQuery } from '@/hooks/useMediaQuery'
+ * import { useMediaQuery } from '@/lib/hooks/useMediaQuery'
  * import { MEDIA_QUERIES } from '@/lib/breakpoints'
  *
  * const isMobile = useMediaQuery(MEDIA_QUERIES.mobile)

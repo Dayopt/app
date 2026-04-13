@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "Dayopt",
-    "description": "Task management application",
+    "description": "Timeboxing, time tracking, tasks, and calendar — unified",
     "version": "v1.0.0",
     "keywords": ["task management", "productivity", "project management"]
   },
@@ -98,7 +98,8 @@
       "addedToPalette": "Added to palette",
       "removeFromPalette": "Remove from palette",
       "removedFromPalette": "Removed from palette",
-      "more": "More actions"
+      "more": "More actions",
+      "retry": "Try again"
     },
     "confirm": {
       "delete": {

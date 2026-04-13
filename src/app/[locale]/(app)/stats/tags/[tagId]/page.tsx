@@ -3,11 +3,11 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
 import type { StatsGranularity } from '@/features/stats';
 import { prefetchTagDetailData, TagDetailPage } from '@/features/stats';
-import type { Locale } from '@/platform/i18n/routing';
-import { HydrationBoundary } from '@/platform/trpc/server';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import type { Locale } from '@/lib/i18n/routing';
+import { HydrationBoundary } from '@/lib/trpc/server';
 
 export const dynamic = 'force-dynamic';
 

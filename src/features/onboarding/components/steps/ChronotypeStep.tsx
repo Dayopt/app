@@ -5,9 +5,9 @@ import { useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 
-import type { PresetChronotypeType } from '@/types/chronotype';
+import type { PresetChronotypeType } from '@/lib/types/chronotype';
 
 import { AnimalCard } from '../shared/AnimalCard';
 

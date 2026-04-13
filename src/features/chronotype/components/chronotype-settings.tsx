@@ -5,21 +5,22 @@ import { useCallback, useMemo, useState } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
+// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
+import { useCalendarSettingsStore } from '@/features/calendar';
+import { Button } from '@/lib/components/ui/button';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Switch } from '@/lib/components/ui/switch';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { api } from '@/platform/trpc';
-import { useCalendarSettingsStore } from '@/stores/useCalendarSettingsStore';
 
+import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/utils';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
-import { useAutoSaveSettings } from '@/hooks/useAutoSaveSettings';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
+import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 
 import { ChronotypeQuiz } from './chronotype-quiz';
 
@@ -28,7 +29,7 @@ import type {
   ChronotypeType,
   PresetChronotypeType,
   ProductivityZone,
-} from '@/types/chronotype';
+} from '@/lib/types/chronotype';
 
 type ViewState = 'idle' | 'quiz';
 

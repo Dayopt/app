@@ -7,12 +7,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createChainableMock, createMockSupabase } from '@/test/trpc-test-helpers';
+import { createChainableMock, createMockSupabase } from '@/lib/test/trpc-test-helpers';
 
 import { FREE_TIER_MONTHLY_LIMIT } from '../types';
 import { createAIUsageService } from '../usage-service';
 
-import type { MockSupabaseClient } from '@/test/trpc-test-helpers';
+import type { MockSupabaseClient } from '@/lib/test/trpc-test-helpers';
 import type { AISupabaseClient } from '../types';
 
 // ---------------------------------------------------------------------------

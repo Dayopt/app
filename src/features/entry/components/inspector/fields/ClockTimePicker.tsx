@@ -13,7 +13,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import { cn } from '@/lib/utils';
 
 // ─── 定数 ────────────────────────────────────────────

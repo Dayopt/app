@@ -4,29 +4,29 @@ import { useCallback } from 'react';
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/lib/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
-import { useTheme } from '@/hooks/useTheme';
-import { usePathname, useRouter } from '@/platform/i18n/navigation';
-import { routing, type Locale } from '@/platform/i18n/routing';
+} from '@/lib/components/ui/select';
+import { Skeleton } from '@/lib/components/ui/skeleton';
+import { Switch } from '@/lib/components/ui/switch';
+import { useTheme } from '@/lib/hooks/useTheme';
+import { usePathname, useRouter } from '@/lib/i18n/navigation';
+import { routing, type Locale } from '@/lib/i18n/routing';
 
+import type { DateFormatType } from '@/features/calendar';
 import { useTourStore } from '@/features/tour';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTimeZones } from '@/lib/timezone-utils';
-import { api } from '@/platform/trpc';
-import { useShellStore } from '@/shell/stores/useShellStore';
-import type { DateFormatType } from '@/stores/useCalendarSettingsStore';
+import { api } from '@/lib/trpc';
 import { useUserSettings } from '../hooks/useUserSettings';
 
-import { LabeledRow } from '@/components/common/LabeledRow';
-import { SectionCard } from '@/components/common/SectionCard';
+import { LabeledRow } from '@/lib/components/common/LabeledRow';
+import { SectionCard } from '@/lib/components/common/SectionCard';
 
 /**
  * 表示設定コンポーネント

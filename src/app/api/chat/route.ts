@@ -17,13 +17,19 @@ import { convertToModelMessages, stepCountIs, streamText } from 'ai';
 import { NextResponse } from 'next/server';
 
 import { env } from '@/env';
-import { buildAIContext, buildSystemPrompt, createAITools } from '@/features/ai/server';
-import { DEFAULT_MODELS, FREE_TIER_MODEL, SUPPORTED_MODELS } from '@/features/ai/server/types';
-import { createAIUsageService } from '@/features/ai/server/usage-service';
+import {
+  buildAIContext,
+  buildSystemPrompt,
+  createAITools,
+  createAIUsageService,
+  DEFAULT_MODELS,
+  FREE_TIER_MODEL,
+  SUPPORTED_MODELS,
+} from '@/features/ai';
 import { logger } from '@/lib/logger';
-import { createClient } from '@/platform/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
-import type { AIProviderId } from '@/features/ai/server/types';
+import type { AIProviderId } from '@/features/ai';
 import type { UIMessage } from 'ai';
 
 export const maxDuration = 60;

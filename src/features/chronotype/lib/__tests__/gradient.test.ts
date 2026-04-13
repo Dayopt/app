@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CHRONOTYPE_PRESETS } from '../constants';
 import { generateChronotypeGradient, getActiveZoneLevel } from '../gradient';
 
-import type { ProductivityZone } from '@/types/chronotype';
+import type { ProductivityZone } from '@/lib/types/chronotype';
 
 describe('generateChronotypeGradient', () => {
   it('ゾーンが空なら "none" を返す', () => {

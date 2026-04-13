@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { ActionFooter } from '@/components/ui/action-footer';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Field, FieldError } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { useTags } from '@/features/tags';
+import { ActionFooter } from '@/lib/components/ui/action-footer';
+import { Button } from '@/lib/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/lib/components/ui/dialog';
+import { Field, FieldError } from '@/lib/components/ui/field';
+import { Input } from '@/lib/components/ui/input';
 import { TAG_NAME_MAX_LENGTH } from '@/lib/tag-colors';
 
 interface TagRenameDialogProps {
@@ -157,6 +157,7 @@ export function TagRenameDialog({
           <Input
             ref={inputRef}
             id="tag-rename-input"
+            aria-label={t('calendar.filter.rename')}
             value={name}
             onChange={(e) => {
               setName(e.target.value);

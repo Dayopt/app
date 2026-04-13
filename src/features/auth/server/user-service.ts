@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * User Service
  *
@@ -9,14 +11,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { createServiceRoleClient } from '@/platform/supabase/oauth';
+import { getStripe } from '@/lib/stripe/client';
+import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { ServiceError } from '@/lib/trpc/errors';
 
 /**
  * User Service エラー
  */
-export class UserServiceError extends Error {
+export class UserServiceError extends ServiceError {
   constructor(
-    public code:
+    code:
       | 'DELETE_FAILED'
       | 'DELETE_DATA_FAILED'
       | 'EXPORT_FAILED'
@@ -25,7 +29,7 @@ export class UserServiceError extends Error {
       | 'INVALID_INPUT',
     message: string,
   ) {
-    super(message);
+    super(code, message);
     this.name = 'UserServiceError';
   }
 }
@@ -117,6 +121,41 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           'Failed to delete avatar files, continuing with account deletion',
           storageError,
         );
+      }
+
+      // Stripe サブスクリプション解約 + Customer 削除（GDPR対応）
+      const stripe = getStripe();
+      if (stripe) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+          const stripeCustomerId = (profile as Record<string, unknown> | null)
+            ?.stripe_customer_id as string | null;
+
+          if (stripeCustomerId) {
+            // 全サブスクリプションを即時解約（active, trialing, past_due, paused）
+            const subscriptions = await stripe.subscriptions.list({
+              customer: stripeCustomerId,
+            });
+            for (const sub of subscriptions.data) {
+              if (['active', 'trialing', 'past_due', 'paused'].includes(sub.status)) {
+                await stripe.subscriptions.cancel(sub.id);
+              }
+            }
+
+            // Customer 削除（支払い情報・請求書も削除）
+            await stripe.customers.del(stripeCustomerId);
+          }
+        } catch (stripeError) {
+          logger.warn(
+            'Failed to cancel Stripe subscription, continuing with account deletion',
+            stripeError,
+          );
+        }
       }
 
       // Service Role クライアントで CASCADE 対象外のPIIデータを削除
