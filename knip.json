@@ -8,7 +8,7 @@
     "src/**/*.stories.tsx",
     "src/**/*.test.{ts,tsx}",
     "src/**/*.spec.{ts,tsx}",
-    "src/stories/**",
+    ".storybook/stories/**",
     "src/test/**",
     "src/emails/**"
   ],
