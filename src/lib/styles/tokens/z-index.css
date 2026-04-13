@@ -8,6 +8,7 @@
  * ============================================ */
 @theme {
   --z-index-bottom-tab: 40;
+  --z-index-bottom-strip: 45;
   --z-index-dropdown: 50;
   --z-index-popover: 100;
   --z-index-sheet: 150;
