@@ -8,8 +8,8 @@
  *   --hue-brand: 259.8145 (青紫)
  *   --primary (dark): oklch(0.5 0.188 259.8145) ≈ #5b3cc4
  *
- * @see src/styles/tokens/primitives.css
- * @see src/styles/tokens/colors.css
+ * @see src/lib/styles/tokens/primitives.css
+ * @see src/lib/styles/tokens/colors.css
  */
 
 /** OG画像用カラー定数（Satori CSS変数非対応のためhex値で定義） */

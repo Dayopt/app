@@ -29,7 +29,7 @@
  * ============================================ */
 @import 'tw-animate-css';
 @import './animations.css';
-@import '../features/calendar/calendar.css';
+@import '../../features/calendar/calendar.css';
 
 /* ============================================
  * Vendor Integrations

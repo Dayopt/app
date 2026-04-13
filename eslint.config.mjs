@@ -25,7 +25,7 @@ const eslintConfig = defineConfig([
     // CLI scripts (console.log is expected)
     'scripts/**',
     'src/lib/i18n/scripts/**',
-    'src/styles/scripts/**',
+    'src/lib/styles/scripts/**',
   ]),
 
   // Tailwind CSS: 任意値(arbitrary value)の使用を警告

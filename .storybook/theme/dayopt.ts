@@ -1,12 +1,12 @@
 /**
  * Dayopt Storybook カスタムテーマ
  *
- * src/styles/tokens/colors.css のデザイントークンから変換したhex値を使用。
+ * src/lib/styles/tokens/colors.css のデザイントークンから変換したhex値を使用。
  * Storybook の create() API は CSS変数を受け付けないため、
  * 各値にトークン参照コメントを付けて同期を保つ。
  *
  * トークン変更時はこのファイルも更新すること。
- * @see src/styles/tokens/colors.css
+ * @see src/lib/styles/tokens/colors.css
  */
 import { create } from 'storybook/theming/create';
 

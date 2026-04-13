@@ -15,7 +15,7 @@
  * @see src/app/[locale]/(auth)/layout.tsx - 認証ページ用Providers
  * @see src/app/[locale]/legal/layout.tsx - 法的文書用Providers
  */
-import '@/styles/globals.css';
+import '@/lib/styles/globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import { Inter, Noto_Sans_JP } from 'next/font/google';

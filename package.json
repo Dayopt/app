@@ -6,7 +6,7 @@
     "*.css",
     "*.scss",
     "*.sass",
-    "src/styles/globals.css"
+    "src/lib/styles/globals.css"
   ],
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
@@ -16,7 +16,7 @@
     "lint": "eslint . --max-warnings 0",
     "lint:boundaries": "tsx scripts/check-feature-boundaries.ts",
     "lint:boundaries:update": "tsx scripts/check-feature-boundaries.ts --update",
-    "lint:tokens": "tsx src/styles/scripts/check-tokens.ts",
+    "lint:tokens": "tsx src/lib/styles/scripts/check-tokens.ts",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",

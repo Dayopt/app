@@ -179,14 +179,14 @@ interface ColorToken {
 function buildVarMap(): Map<string, string> {
   const varMap = new Map<string, string>();
 
-  const primPath = path.join(ROOT, 'src/styles/tokens/primitives.css');
+  const primPath = path.join(ROOT, 'src/lib/styles/tokens/primitives.css');
   const primCss = fs.readFileSync(primPath, 'utf-8');
   for (const line of primCss.split('\n')) {
     const m = line.match(/^\s*--([\w-]+):\s*(.+?)\s*;/);
     if (m) varMap.set(`--${m[1]}`, m[2]);
   }
 
-  const colorsPath = path.join(ROOT, 'src/styles/tokens/colors.css');
+  const colorsPath = path.join(ROOT, 'src/lib/styles/tokens/colors.css');
   const colorsCss = fs.readFileSync(colorsPath, 'utf-8');
   for (const line of colorsCss.split('\n')) {
     const m = line.match(/^\s*--([\w-]+):\s*(.+?)\s*;/);
@@ -209,7 +209,7 @@ function resolveVars(value: string, varMap: Map<string, string>, depth = 0): str
 }
 
 function parseColorTokens(): ColorToken[] {
-  const cssPath = path.join(ROOT, 'src/styles/tokens/colors.css');
+  const cssPath = path.join(ROOT, 'src/lib/styles/tokens/colors.css');
   const css = fs.readFileSync(cssPath, 'utf-8');
   const varMap = buildVarMap();
 
@@ -343,7 +343,7 @@ async function importColors(
         `value: ${token.value}`,
         `hex: ${hex}`,
         `group: ${token.group}`,
-        `source: src/styles/tokens/colors.css`,
+        `source: src/lib/styles/tokens/colors.css`,
       ].join('\n');
 
       await addItemToEagle({
