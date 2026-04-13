@@ -22,8 +22,6 @@
 -- ■ notification_preferences: user_id = (select auth.uid())
 -- ■ entry_instances: user_id = (select auth.uid())
 
--- ■ entry_activities: EXISTS(entries WHERE id = entry_id AND user_id = auth.uid())
-
 -- ■ notifications: SELECT/UPDATE/DELETE は user_id = auth.uid()、INSERT は service_role のみ
 -- ■ login_attempts: INSERT/ALL は service_role、DELETE は自分のemailのみ
 -- ■ auth_audit_logs: SELECT は user_id = auth.uid()、INSERT は service_role のみ
