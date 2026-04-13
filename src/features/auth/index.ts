@@ -1,5 +1,11 @@
-// Auth feature exports
-// Component exports - individually exported to avoid conflicts
+/**
+ * Auth Feature - Public API
+ *
+ * この barrel export は外部から参照される公開インターフェースを定義する。
+ * 内部モジュールへの直接参照（deep import）は避け、ここからのみ import すること。
+ */
+
+// --- Components ---
 export { AuthLayout } from './components/AuthLayout';
 export { LoginForm } from './components/LoginForm';
 export { MFAVerifyForm } from './components/MFAVerifyForm';
@@ -9,7 +15,7 @@ export { SessionMonitorProvider } from './components/SessionMonitorProvider';
 export { SessionTimeoutDialog } from './components/SessionTimeoutDialog';
 export { SignupForm } from './components/SignupForm';
 
-// State management - Zustand store
+// --- Stores ---
 export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
 export {
   selectError,
@@ -21,5 +27,7 @@ export {
   useAuthStore,
 } from './stores/useAuthStore';
 
-// Hooks
+// --- Hooks ---
 export { useSessionMonitor } from './hooks/useSessionMonitor';
+
+// ここにないものはfeature内部専用

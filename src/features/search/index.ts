@@ -19,3 +19,5 @@ export { GlobalSearchModal } from './components/global-search-modal';
 // Hooks
 // =============================================================================
 export { GlobalSearchProvider, useGlobalSearch } from './hooks/use-global-search';
+
+// ここにないものはfeature内部専用

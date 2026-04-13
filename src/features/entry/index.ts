@@ -73,3 +73,5 @@ export type { EntryCardPosition, EntryCardProps } from './components/card';
 // Server (Service layer — server-only ガードで保護済み)
 // =============================================================================
 export { EntryService } from './server/entry-service';
+
+// ここにないものはfeature内部専用

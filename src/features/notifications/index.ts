@@ -26,4 +26,6 @@ export {
 // =============================================================================
 // Types
 // =============================================================================
-export type { ActivityTab } from './utils/notification-helpers';
+export type { ActivityTab } from './lib/notification-filters';
+
+// ここにないものはfeature内部専用

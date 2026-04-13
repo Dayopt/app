@@ -42,3 +42,5 @@ export { TagService } from './server/tag-service';
 
 // Types
 export type { Tag } from './types';
+
+// ここにないものはfeature内部専用

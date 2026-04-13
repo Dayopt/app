@@ -41,3 +41,5 @@ export {
 // 各ファイルに import 'server-only' ガード済み。
 export { prefetchStatsData } from './lib/prefetch';
 export { prefetchTagDetailData } from './lib/prefetchTagDetail';
+
+// ここにないものはfeature内部専用

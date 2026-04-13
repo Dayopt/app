@@ -1,7 +1,11 @@
 /**
  * History Feature - Public API
  *
- * 直近の使用パターンを頻度×鮮度でスコアリングし表示する履歴機能。
+ * この barrel export は外部から参照される公開インターフェースを定義する。
+ * 内部モジュールへの直接参照（deep import）は避け、ここからのみ import すること。
  */
 
+// --- Components ---
 export { RecentBlocks } from './components/RecentBlocks';
+
+// ここにないものはfeature内部専用

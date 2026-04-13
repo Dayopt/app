@@ -33,3 +33,5 @@ export { useUserSettings } from './hooks/useUserSettings';
 // Note: getCurrentTimezone / setUserTimezone は削除済み。
 // タイムゾーンの取得は Zustand ストア (useCalendarSettingsStore) を使用すること。
 // ブラウザTZの検出には getBrowserTimezone from '@/lib/date' を使用。
+
+// ここにないものはfeature内部専用

@@ -65,3 +65,5 @@ export { useEntryOperations } from './hooks/operations/useEntryOperations';
 export { formatCalendarDateParam, parseCalendarDateParam } from './lib/date-param';
 export { calculateViewDateRange } from './lib/range';
 export { isCalendarViewPath } from './lib/route-utils';
+
+// ここにないものはfeature内部専用
