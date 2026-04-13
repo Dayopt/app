@@ -4,7 +4,7 @@
  * useBlockPlace — ブロック配置フック
  *
  * 「エントリ作成 + タグ設定」のフローを統一。
- * palette / history の共通ロジックを集約。
+ * 履歴からのブロック配置ロジックを集約。
  *
  * - カレンダー表示日に配置（別日を見ていればその日に）
  * - Undo 付きトースト
@@ -135,7 +135,7 @@ export function useBlockPlace() {
       if (hasOverlapInCache(queryClient, params.startTime, end)) {
         const displayStart = convertToTimezone(params.startTime, timezone);
         const timeStr = formatHHmm(displayStart);
-        toast.error(t('sidebar.palette.overlapError', { time: timeStr }));
+        toast.error(t('sidebar.history.overlapError', { time: timeStr }));
         return;
       }
 
@@ -152,7 +152,7 @@ export function useBlockPlace() {
             // Undo 付きトースト
             const displayStart = convertToTimezone(params.startTime, timezone);
             const timeStr = formatHHmm(displayStart);
-            toast.success(t('sidebar.palette.placed', { name: params.tagName, time: timeStr }), {
+            toast.success(t('sidebar.history.placed', { name: params.tagName, time: timeStr }), {
               duration: 5000,
               action: {
                 label: t('common.undo'),

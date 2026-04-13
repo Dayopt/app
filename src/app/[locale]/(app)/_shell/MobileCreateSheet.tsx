@@ -2,21 +2,16 @@
 
 import { useCallback, useState } from 'react';
 
-import { toast } from '@/lib/toast';
-import { useTranslations } from 'next-intl';
-
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 import { RecentBlocks } from '@/features/history';
-import { Palette, usePaletteMutations } from '@/features/palette';
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 const SNAP_POINTS = [0.95] as const;
 
-/** モバイル用作成ボトムシート — Palette + RecentBlocks（Composition Layer） */
+/** モバイル用作成ボトムシート — RecentBlocks（Composition Layer） */
 export function MobileCreateSheet() {
-  const t = useTranslations();
   const activeSheet = useShellStore((s) => s.activeSheet);
   const open = activeSheet?.type === 'mobileCreate';
   const openSheet = useShellStore((s) => s.openSheet);
@@ -32,7 +27,6 @@ export function MobileCreateSheet() {
     [openSheet, closeSheet],
   );
   const [snap, setSnap] = useState<number | string | null>(SNAP_POINTS[0]);
-  const { pinItem } = usePaletteMutations();
 
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
@@ -42,16 +36,6 @@ export function MobileCreateSheet() {
       }
     },
     [setOpen],
-  );
-
-  // 履歴からのピン留め — 成功時にtoastで通知
-  const handlePinFromHistory = useCallback(
-    (tagId: string, durationMinutes: number) => {
-      pinItem(tagId, durationMinutes, {
-        onSuccess: () => toast.success(t('sidebar.recentBlocks.pinned')),
-      });
-    },
-    [pinItem, t],
   );
 
   // ブロッククリック時のみシートを閉じる（data-block-action属性で判定）
@@ -84,8 +68,7 @@ export function MobileCreateSheet() {
           onClick={handleBlockClick}
           role="presentation"
         >
-          <Palette />
-          <RecentBlocks onPinItem={handlePinFromHistory} />
+          <RecentBlocks />
         </div>
       </DrawerContent>
     </Drawer>
