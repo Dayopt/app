@@ -64,7 +64,7 @@ RecentBlocks                   サイドバーセクション UI
 ## データフロー
 
 ```
-entry_tags + entries（直近14日）
+entries（直近14日、tag_id JOIN tags）
   ↓ Supabase join
 duration 15分スナップ
   ↓
