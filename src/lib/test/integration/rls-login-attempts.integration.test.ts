@@ -69,7 +69,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS: login_attempts テーブル', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_ID,
       email: TEST_EMAIL,
-      username: `testuser_rls_login_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });

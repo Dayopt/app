@@ -58,7 +58,7 @@ vi.mock('@/features/auth', () => ({
       user: {
         email: 'tester@example.com',
         user_metadata: {
-          username: 'Tester',
+          full_name: 'Tester',
         },
       },
     }),

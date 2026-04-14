@@ -43,7 +43,7 @@ export const contactRouter = createTRPCRouter({
       }
 
       const userEmail = user?.email ?? 'unknown';
-      const userName = user?.user_metadata?.username ?? user?.user_metadata?.full_name ?? 'Unknown';
+      const userName = user?.user_metadata?.full_name ?? 'Unknown';
 
       try {
         const result = await createGitHubIssue({

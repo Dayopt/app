@@ -27,7 +27,7 @@ export class NotificationService {
    * 通知一覧を取得（entry titleをJOIN）
    */
   async list(options: ListNotificationsOptions) {
-    const { userId, isRead, type, limit = 50, offset = 0 } = options;
+    const { userId, unreadOnly, type, limit = 50, offset = 0 } = options;
 
     let query = this.supabase
       .from('notifications')
@@ -36,8 +36,8 @@ export class NotificationService {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (isRead !== undefined) {
-      query = query.eq('is_read', isRead);
+    if (unreadOnly) {
+      query = query.is('read_at', null);
     }
 
     if (type) {
@@ -64,7 +64,7 @@ export class NotificationService {
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('is_read', false);
+      .is('read_at', null);
 
     if (error) {
       throw new NotificationServiceError(
@@ -104,14 +104,17 @@ export class NotificationService {
    * 通知を作成
    */
   async create(options: CreateNotificationOptions): Promise<NotificationRow> {
-    const { userId, type, entryId } = options;
+    const { userId, type, title, entryId, fireAt, data } = options;
 
     const { data: result, error } = await this.supabase
       .from('notifications')
       .insert({
         user_id: userId,
         type,
-        entry_id: entryId,
+        title,
+        entry_id: entryId ?? null,
+        fire_at: fireAt ?? null,
+        data: (data ?? {}) as import('@/lib/database.types').Json,
       })
       .select()
       .single();
@@ -130,10 +133,9 @@ export class NotificationService {
    * 通知を更新
    */
   async update(options: UpdateNotificationOptions): Promise<NotificationRow> {
-    const { userId, notificationId, isRead, readAt } = options;
+    const { userId, notificationId, readAt } = options;
 
     const updateData: TablesUpdate<'notifications'> = {};
-    if (isRead !== undefined) updateData.is_read = isRead;
     if (readAt !== undefined) updateData.read_at = readAt;
 
     const { data, error } = await this.supabase
@@ -164,7 +166,6 @@ export class NotificationService {
     return this.update({
       userId,
       notificationId,
-      isRead: true,
       readAt: new Date().toISOString(),
     });
   }
@@ -178,11 +179,10 @@ export class NotificationService {
     let query = this.supabase
       .from('notifications')
       .update({
-        is_read: true,
         read_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
-      .eq('is_read', false);
+      .is('read_at', null);
 
     if (type) {
       query = query.eq('type', type);
@@ -251,7 +251,7 @@ export class NotificationService {
       .from('notifications')
       .delete()
       .eq('user_id', userId)
-      .eq('is_read', true)
+      .not('read_at', 'is', null)
       .select();
 
     if (error) {

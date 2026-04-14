@@ -11,8 +11,7 @@
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
-  username TEXT UNIQUE,          -- メール@前から自動生成、重複時はsuffix付与
-  full_name TEXT,
+  full_name TEXT,                 -- 表示名
   avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

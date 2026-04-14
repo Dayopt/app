@@ -57,7 +57,7 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { username: `testuser_${Date.now()}` },
+      user_metadata: { full_name: `testuser_${Date.now()}` },
       app_metadata: {},
       id: TEST_USER_ID,
     });
@@ -70,7 +70,6 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_ID,
       email: TEST_EMAIL,
-      username: `testuser_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
