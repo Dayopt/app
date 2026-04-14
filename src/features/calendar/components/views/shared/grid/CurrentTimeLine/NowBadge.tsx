@@ -23,8 +23,8 @@ export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
   const chronotype = useCalendarSettingsStore((s) => s.chronotype);
 
   const zoneLevel = useMemo(() => {
-    if (!chronotype.enabled) return null;
-    const profile = getChronotypeProfile(chronotype.type, chronotype.customZones);
+    if (!chronotype) return null;
+    const profile = getChronotypeProfile(chronotype.type);
     return getActiveZoneLevel(profile.productivityZones, currentHour);
   }, [chronotype, currentHour]);
 

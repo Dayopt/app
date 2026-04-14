@@ -169,23 +169,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
 
       await caller.update({
         timezone: 'Europe/London',
-        showUtcOffset: true,
       });
 
       const settings = await caller.get();
       expect(settings?.timezone).toBe('Europe/London');
-      expect(settings?.showUtcOffset).toBe(true);
-    });
-
-    it('should update date format settings', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await caller.update({
-        dateFormat: 'yyyy-MM-dd',
-      });
-
-      const settings = await caller.get();
-      expect(settings?.dateFormat).toBe('yyyy-MM-dd');
     });
 
     it('should update week settings', async () => {
@@ -253,17 +240,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
         caller.update({
           // @ts-expect-error - Testing invalid input
           timeFormat: 'invalid',
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should reject invalid date format', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await expect(
-        caller.update({
-          // @ts-expect-error - Testing invalid input
-          dateFormat: 'invalid-format',
         }),
       ).rejects.toThrow();
     });

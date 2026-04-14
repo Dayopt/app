@@ -90,13 +90,11 @@ export const onboardingRouter = createTRPCRouter({
       if (input.chronotypeType || input.locale) {
         const settingsUpsert: {
           user_id: string;
-          chronotype_type?: string;
-          chronotype_enabled?: boolean;
+          chronotype_settings?: { type: string } | null;
           preferred_locale?: string;
         } = { user_id: ctx.userId };
         if (input.chronotypeType) {
-          settingsUpsert.chronotype_type = input.chronotypeType;
-          settingsUpsert.chronotype_enabled = true;
+          settingsUpsert.chronotype_settings = { type: input.chronotypeType };
         }
         if (input.locale) {
           settingsUpsert.preferred_locale = input.locale;

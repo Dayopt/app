@@ -146,8 +146,8 @@ export const ScrollableCalendarLayout = ({
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
   const chronotype = useCalendarSettingsStore((s) => s.chronotype);
   const chronotypeZones = useMemo(() => {
-    if (!chronotype.enabled) return undefined;
-    return getChronotypeProfile(chronotype.type, chronotype.customZones).productivityZones;
+    if (!chronotype) return undefined;
+    return getChronotypeProfile(chronotype.type).productivityZones;
   }, [chronotype]);
 
   // 現在時刻のフォーマット（設定に応じて 24h/12h）

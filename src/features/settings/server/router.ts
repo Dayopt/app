@@ -8,7 +8,6 @@ import { z } from 'zod';
 
 import type { ChronotypeType } from '@/features/chronotype';
 import {
-  chronotypeCustomZonesSchema,
   chronotypeTypeSchema,
   generateChronotypeGradient,
   getChronotypeProfile,
@@ -24,13 +23,8 @@ type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'
 const userSettingsSchema = z.object({
   // タイムゾーン設定
   timezone: z.string().optional(),
-  showUtcOffset: z.boolean().optional(),
-
   // 時間表示形式
   timeFormat: z.enum(['24h', '12h']).optional(),
-
-  // 日付表示形式
-  dateFormat: z.enum(['yyyy/MM/dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'yyyy-MM-dd']).optional(),
 
   // 週の設定
   weekStartsOn: z.union([z.literal(0), z.literal(1), z.literal(6)]).optional(),
@@ -41,13 +35,8 @@ const userSettingsSchema = z.object({
   defaultDuration: z.number().min(5).max(480).optional(),
   snapInterval: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional(),
 
-  // 表示設定
-  showDeclinedEvents: z.boolean().optional(),
-
-  // クロノタイプ設定
-  chronotypeEnabled: z.boolean().optional(),
-  chronotypeType: chronotypeTypeSchema.optional(),
-  chronotypeCustomZones: chronotypeCustomZonesSchema.optional(),
+  // クロノタイプ設定（null で無効化）
+  chronotypeType: chronotypeTypeSchema.nullable().optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
@@ -118,22 +107,23 @@ export const userSettingsRouter = createTRPCRouter({
         // snake_case → camelCase に変換
         return {
           timezone: data.timezone,
-          showUtcOffset: data.show_utc_offset,
           timeFormat: data.time_format as '24h' | '12h',
-          dateFormat: data.date_format as 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd',
           weekStartsOn: data.week_starts_on as 0 | 1 | 6,
           showWeekends: data.show_weekends,
           showWeekNumbers: data.show_week_numbers,
           defaultDuration: data.default_duration,
           snapInterval: data.snap_interval as 5 | 10 | 15 | 30,
-          showDeclinedEvents: data.show_declined_events,
-          chronotype: {
-            enabled: data.chronotype_enabled,
-            type: data.chronotype_type as ChronotypeType,
-            customZones: data.chronotype_custom_zones,
-            gradientLight: data.chronotype_gradient_light,
-            gradientDark: data.chronotype_gradient_dark,
-          },
+          chronotype: (() => {
+            const cs = data.chronotype_settings as { type: string } | null;
+            if (!cs) return null;
+            const type = cs.type as ChronotypeType;
+            const zones = getChronotypeProfile(type).productivityZones;
+            return {
+              type,
+              gradientLight: generateChronotypeGradient(zones, 'light'),
+              gradientDark: generateChronotypeGradient(zones, 'dark'),
+            };
+          })(),
           defaultView: (data as Record<string, unknown>).default_view as
             | 'day'
             | '3day'
@@ -192,9 +182,7 @@ export const userSettingsRouter = createTRPCRouter({
         };
 
         if (input.timezone !== undefined) updateData.timezone = input.timezone;
-        if (input.showUtcOffset !== undefined) updateData.show_utc_offset = input.showUtcOffset;
         if (input.timeFormat !== undefined) updateData.time_format = input.timeFormat;
-        if (input.dateFormat !== undefined) updateData.date_format = input.dateFormat;
         if (input.weekStartsOn !== undefined) updateData.week_starts_on = input.weekStartsOn;
         if (input.showWeekends !== undefined) updateData.show_weekends = input.showWeekends;
         if (input.showWeekNumbers !== undefined)
@@ -202,32 +190,10 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.defaultDuration !== undefined)
           updateData.default_duration = input.defaultDuration;
         if (input.snapInterval !== undefined) updateData.snap_interval = input.snapInterval;
-        if (input.showDeclinedEvents !== undefined)
-          updateData.show_declined_events = input.showDeclinedEvents;
-        if (input.chronotypeEnabled !== undefined)
-          updateData.chronotype_enabled = input.chronotypeEnabled;
-        if (input.chronotypeType !== undefined) updateData.chronotype_type = input.chronotypeType;
-        if (input.chronotypeCustomZones !== undefined)
-          updateData.chronotype_custom_zones = input.chronotypeCustomZones;
-
-        // Chronotype 設定変更時に gradient を再計算
-        if (
-          input.chronotypeType !== undefined ||
-          input.chronotypeCustomZones !== undefined ||
-          input.chronotypeEnabled !== undefined
-        ) {
-          const type = input.chronotypeType ?? 'bear';
-          const customZones = input.chronotypeCustomZones;
-          const profile = getChronotypeProfile(type, customZones);
-          const zones = profile.productivityZones;
-
-          if (input.chronotypeEnabled === false || zones.length === 0) {
-            updateData.chronotype_gradient_light = null;
-            updateData.chronotype_gradient_dark = null;
-          } else {
-            updateData.chronotype_gradient_light = generateChronotypeGradient(zones, 'light');
-            updateData.chronotype_gradient_dark = generateChronotypeGradient(zones, 'dark');
-          }
+        if (input.chronotypeType !== undefined) {
+          updateData.chronotype_settings = input.chronotypeType
+            ? { type: input.chronotypeType }
+            : null;
         }
 
         if (input.defaultView !== undefined)

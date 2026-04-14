@@ -188,8 +188,10 @@ export async function buildAIContext(
     },
     timezone: settings?.timezone ?? 'UTC',
     chronotype: {
-      type: (settings?.chronotype_type as ChronotypeType) ?? 'bear',
-      enabled: settings?.chronotype_enabled ?? false,
+      type:
+        ((settings?.chronotype_settings as { type: string } | null)?.type as ChronotypeType) ??
+        'bear',
+      enabled: settings?.chronotype_settings != null,
     },
     tags: tags.map((t) => ({ name: t.name, color: t.color ?? '#888' })),
   };

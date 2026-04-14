@@ -17,7 +17,7 @@ export function useChronotypeGradient(): string | null {
   const { resolvedTheme } = useTheme();
 
   return useMemo(() => {
-    if (!chronotype.enabled) return null;
+    if (!chronotype) return null;
     const mode = resolvedTheme === 'dark' ? 'dark' : ('light' as const);
 
     // DB に保存済みの gradient があればそれを使う
@@ -25,7 +25,7 @@ export function useChronotypeGradient(): string | null {
     if (stored) return stored;
 
     // フォールバック: クライアント側で生成
-    const profile = getChronotypeProfile(chronotype.type, chronotype.customZones);
+    const profile = getChronotypeProfile(chronotype.type);
     return generateChronotypeGradient(profile.productivityZones, mode);
   }, [chronotype, chronotypeGradient, resolvedTheme]);
 }

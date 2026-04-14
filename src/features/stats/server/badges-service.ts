@@ -11,7 +11,7 @@
 import { format, startOfWeek } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-import { chronotypeCustomZonesSchema, getChronotypeProfile } from '@/features/chronotype';
+import { getChronotypeProfile } from '@/features/chronotype';
 import { logger } from '@/lib/logger';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { ChronotypeType, ProductivityLevel, ProductivityZone } from '@/lib/types/chronotype';
@@ -92,19 +92,13 @@ interface BadgeSourceData {
 /** user_settings からクロノタイプゾーンを解決する */
 function resolveZones(
   settings: {
-    chronotype_enabled: boolean | null;
-    chronotype_type: string | null;
-    chronotype_custom_zones: unknown;
+    chronotype_settings: unknown;
   } | null,
 ): ProductivityZone[] {
-  if (!settings?.chronotype_enabled) return [];
-  if (settings.chronotype_custom_zones) {
-    const parsed = chronotypeCustomZonesSchema.safeParse(settings.chronotype_custom_zones);
-    if (parsed.success) return parsed.data;
-  }
-  const type = settings.chronotype_type ?? 'bear';
-  if (type === 'custom') return [];
-  return getChronotypeProfile(type as ChronotypeType).productivityZones;
+  const cs = settings?.chronotype_settings as { type: string } | null;
+  if (!cs) return [];
+  const type = cs.type as ChronotypeType;
+  return getChronotypeProfile(type).productivityZones;
 }
 
 /** early-bird 閾値: 最初の deep zone 開始時刻（なければ7時） */
@@ -319,9 +313,7 @@ export class BadgesService {
       // 3. user_settings (TZ・chronotype情報を含む)
       this.supabase
         .from('user_settings')
-        .select(
-          'chronotype_enabled, chronotype_type, chronotype_custom_zones, timezone, week_starts_on',
-        )
+        .select('chronotype_settings, timezone, week_starts_on')
         .eq('user_id', userId)
         .single(),
       // 5. active_dates RPC (p_start_date: DATE string)
@@ -455,7 +447,7 @@ export class BadgesService {
       : 0;
 
     // --- Settings & Profile ---
-    const chronotypeEnabled = settings?.chronotype_enabled ?? false;
+    const chronotypeEnabled = settings?.chronotype_settings != null;
     const subscriptionStatus = profile?.subscription_status;
     const isProSubscriber =
       subscriptionStatus === 'active' ||
