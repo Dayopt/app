@@ -45,6 +45,18 @@ const userSettingsSchema = z.object({
   // テーマ設定
   theme: z.enum(['light', 'dark', 'system']).optional(),
 
+  // パーソナライゼーション（JSONB 一括更新）
+  personalizationValues: z
+    .record(
+      z.string(),
+      z.object({
+        text: z.string().max(500),
+        importance: z.number().min(1).max(10),
+      }),
+    )
+    .optional(),
+  rankedValues: z.array(z.string().max(50)).max(5).optional(),
+
   // メール送信言語
   preferredLocale: z.enum(['en', 'ja']).optional(),
 });
@@ -104,20 +116,24 @@ export const userSettingsRouter = createTRPCRouter({
               gradientDark: generateChronotypeGradient(zones, 'dark'),
             };
           })(),
-          defaultView: (data as Record<string, unknown>).default_view as
-            | 'day'
-            | '3day'
-            | '5day'
-            | 'week'
-            | undefined,
-          hourHeightDensity: (data as Record<string, unknown>).hour_height_density as
+          defaultView: data.default_view as 'day' | '3day' | '5day' | 'week' | undefined,
+          hourHeightDensity: data.hour_height_density as
             | 'compact'
             | 'default'
             | 'spacious'
             | undefined,
           theme: data.theme as 'light' | 'dark' | 'system',
-          preferredLocale:
-            ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
+          personalization: (() => {
+            const p = (data as Record<string, unknown>).personalization as Record<
+              string,
+              unknown
+            > | null;
+            return {
+              values: (p?.values ?? {}) as Record<string, { text: string; importance: number }>,
+              rankedValues: (p?.rankedValues ?? []) as string[],
+            };
+          })(),
+          preferredLocale: (data.preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
       } catch (error) {
         return handleServiceError(error);
@@ -161,13 +177,28 @@ export const userSettingsRouter = createTRPCRouter({
             : null;
         }
 
-        if (input.defaultView !== undefined)
-          (updateData as Record<string, unknown>).default_view = input.defaultView;
+        if (input.defaultView !== undefined) updateData.default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)
-          (updateData as Record<string, unknown>).hour_height_density = input.hourHeightDensity;
+          updateData.hour_height_density = input.hourHeightDensity;
         if (input.theme !== undefined) updateData.theme = input.theme;
+        if (input.personalizationValues !== undefined || input.rankedValues !== undefined) {
+          // 既存の personalization を取得してマージ
+          const { data: current } = await ctx.supabase
+            .from('user_settings')
+            .select('personalization')
+            .eq('user_id', userId)
+            .single();
+          const existing = (current?.personalization as Record<string, unknown>) ?? {};
+          (updateData as Record<string, unknown>).personalization = {
+            ...existing,
+            ...(input.personalizationValues !== undefined && {
+              values: input.personalizationValues,
+            }),
+            ...(input.rankedValues !== undefined && { rankedValues: input.rankedValues }),
+          };
+        }
         if (input.preferredLocale !== undefined)
-          (updateData as Record<string, unknown>).preferred_locale = input.preferredLocale;
+          updateData.preferred_locale = input.preferredLocale;
 
         const { data, error } = await ctx.supabase
           .from('user_settings')

@@ -56,6 +56,7 @@ export type Database = {
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
+          duration_minutes?: number | null;
           end_time?: string | null;
           fulfillment_score?: number | null;
           id?: string;
@@ -72,6 +73,7 @@ export type Database = {
           created_at?: string | null;
           deleted_at?: string | null;
           description?: string | null;
+          duration_minutes?: number | null;
           end_time?: string | null;
           fulfillment_score?: number | null;
           id?: string;
@@ -291,6 +293,7 @@ export type Database = {
           default_view: string;
           hour_height_density: string;
           id: string;
+          personalization: Json | null;
           preferred_locale: string;
           show_week_numbers: boolean;
           show_weekends: boolean;
@@ -309,6 +312,7 @@ export type Database = {
           default_view?: string;
           hour_height_density?: string;
           id?: string;
+          personalization?: Json | null;
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
@@ -327,6 +331,7 @@ export type Database = {
           default_view?: string;
           hour_height_density?: string;
           id?: string;
+          personalization?: Json | null;
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
@@ -364,6 +369,7 @@ export type Database = {
           id: string;
           origin: string;
           start_time: string | null;
+          tag_id: string | null;
           title: string;
           updated_at: string | null;
           user_id: string;
@@ -391,7 +397,6 @@ export type Database = {
         Args: { p_entry_ids: string[]; p_user_id: string };
         Returns: number;
       };
-      cleanup_old_plan_activities: { Args: never; Returns: undefined };
       count_unused_recovery_codes: {
         Args: { p_user_id: string };
         Returns: number;
@@ -654,8 +659,20 @@ export type Database = {
           tag_name: string;
         }[];
       };
+      get_time_pl_data: {
+        Args: {
+          p_end_date: string;
+          p_prev_end?: string;
+          p_prev_start?: string;
+          p_sleep_hour?: number;
+          p_start_date: string;
+          p_user_id: string;
+          p_wake_hour?: number;
+        };
+        Returns: Json;
+      };
       get_timeboxing_adherence: {
-        Args: { p_end_date: string; p_start_date: string; p_user_id: string };
+        Args: { p_end: string; p_start: string; p_user_id: string };
         Returns: Json;
       };
       get_total_time: { Args: { p_user_id: string }; Returns: Json };
@@ -664,11 +681,15 @@ export type Database = {
       get_weekly_focus_score: {
         Args: { p_user_id: string; p_weeks?: number };
         Returns: {
+          entry_count: number;
           focus_score: number;
-          total_hours: number;
           unique_tags: number;
-          week: string;
+          week_start: string;
         }[];
+      };
+      get_weekly_reflection_data: {
+        Args: { p_user_id: string; p_week_start: string };
+        Returns: Json;
       };
       increment_tag_sort_orders: {
         Args: { p_user_id: string };
