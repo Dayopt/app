@@ -6,6 +6,36 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-14
+
+### DBスキーマの大掃除 — 19テーブルから10テーブルへ
+
+29コミット、161ファイル変更（+2,674 / -7,255行）。DB・entry・notifications・settings・calendar・auth・ai・chronotype・stats・onboardingの全領域に渡る大規模リファクタリング。
+
+#### やったこと
+
+- **テーブル削除（9テーブル）**: entry_activities, entry_tags, chat_conversations, reflections, ai_usage, notification_preferences, login_attempts, auth_audit_logs, \_backup_record_activities
+- **カラム削除（20+カラム）**: reminder_minutes, username, date_format, business_hours, show_declined_events, show_utc_offset, plan_record_mode, AI関連5カラム, color_scheme, クロノタイプ8カラム→1 jsonb統合
+- **テーブル構造変更（2テーブル）**: notifications簡素化（read_at/title/fire_at追加）、entries.tag_id統合（entry_tags廃止）
+- **feature削除（1ディレクトリ）**: ai feature全体を削除（router, service, prompt-builder, tests等）
+- **新規追加**: time P/L RPC関数、統計hook
+
+#### なぜ今日この作業をしたか
+
+テーブル構成の全体調査から始まった。19テーブルの現状を説明する中で、「これ本当に要る？」という疑問が自然に浮かんだ。reminder_minutesは既にON/OFFトグルに簡素化済みなのにINT型のまま、usernameはソーシャル機能がないのにUNIQUE制約を維持、business_hoursはUIで一切参照されていない、AI関連テーブルは機能自体を削除済み。どれも「いつか使うかも」で残していたものだった。
+
+PMF前のプロダクトにとって、使っていないカラムやテーブルは負債でしかない。型定義の肥大化、マイグレーションの複雑化、新規開発者のオンボーディングコスト。entry_tagsの1:1制約は中間テーブルの存在理由そのものを否定していた。今日一気に整理したことで、スキーマがプロダクトの実態を正確に反映するようになった。
+
+#### Claudeの所感
+
+**スキーマは生き物である** — 19テーブルから10テーブルへの削減は、単なる「お掃除」ではなく、プロダクトが何であるかの再定義だった。AI機能、チャット、リフレクション、パレットといった「あったらいいな」機能群を思い切って落とし、タイムボクシング×時間記録というコアに集中する判断が、スキーマレベルで実行された。
+
+**entry_tags統合の設計的妥当性** — 1エントリ1タグという制約は、中間テーブルのN:N構造と根本的に矛盾していた。entries.tag_idへの統合はJOINコストの削減だけでなく、データモデルが業務ルールを正直に表現するようになったという意味で、アーキテクチャ上の大きな前進。
+
+**locale→dateFormat導出パターン** — DB保存をやめ、localeから動的に導出する方式は「設定の削減」の良いモデルケース。ユーザーに選択肢を与えるほど設定UIが複雑になる。localeという上位概念から自動決定できるなら、それが最もシンプル。PMF後にパワーユーザーから要望があれば、その時に復活させればいい。
+
+---
+
 ## 2026-04-13
 
 ### src/構造の全面統合 + パレット機能完全削除
