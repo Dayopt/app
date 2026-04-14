@@ -96,10 +96,8 @@ CREATE TABLE public.user_settings (
   default_duration INTEGER NOT NULL DEFAULT 60,
   snap_interval SMALLINT NOT NULL DEFAULT 15,  -- 5/10/15/30分
   -- 表示設定
-  show_utc_offset BOOLEAN NOT NULL DEFAULT true,
   show_weekends BOOLEAN NOT NULL DEFAULT true,
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
-  show_declined_events BOOLEAN NOT NULL DEFAULT false,
   default_view TEXT NOT NULL DEFAULT 'week',
   hour_height_density TEXT NOT NULL DEFAULT 'default',
   -- クロノタイプ
@@ -113,7 +111,6 @@ CREATE TABLE public.user_settings (
   -- テーマ
   theme TEXT NOT NULL DEFAULT 'system',
   color_scheme TEXT NOT NULL DEFAULT 'blue',
-  date_format TEXT NOT NULL DEFAULT 'yyyy/MM/dd',
   -- AI設定
   personalization_values JSONB DEFAULT '{}',
   ai_communication_style TEXT DEFAULT 'coach',
