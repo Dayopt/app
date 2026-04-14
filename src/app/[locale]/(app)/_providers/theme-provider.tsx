@@ -6,13 +6,10 @@ import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
 type Theme = 'light' | 'dark' | 'system';
-type ColorScheme = 'blue' | 'green' | 'purple' | 'orange' | 'red';
 
 interface ThemeContextType {
   theme: Theme;
-  colorScheme: ColorScheme;
   setTheme: (theme: Theme) => void;
-  setColorScheme: (colorScheme: ColorScheme) => void;
   resolvedTheme: 'light' | 'dark';
   isPending: boolean;
 }
@@ -20,7 +17,7 @@ interface ThemeContextType {
 /** @internal Storybook グローバルデコレータ用にexport */
 export const ThemeContext = createContext<ThemeContextType | null>(null);
 
-/** テーマコンテキストを取得するフック（テーマ・カラースキームの取得/設定） */
+/** テーマコンテキストを取得するフック */
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
@@ -50,43 +47,16 @@ function syncThemeColor() {
   meta.content = bg;
 }
 
-// カラースキーム適用（コンポーネント外に定義して参照安定性を確保）
-function applyColorScheme(scheme: ColorScheme, _currentTheme: 'light' | 'dark') {
-  const root = window.document.documentElement;
-
-  // Remove existing color scheme classes
-  root.classList.remove(
-    'scheme-blue',
-    'scheme-green',
-    'scheme-purple',
-    'scheme-orange',
-    'scheme-red',
-  );
-
-  // Add new color scheme class
-  root.classList.add(`scheme-${scheme}`);
-
-  // NOTE: CSS変数の上書きを無効化
-  // modern-minimalテーマのOKLCH値を使用するため、
-  // RGB値での上書きは行わない
-}
-
 // localStorageから安全に値を取得（SSR対応・フォールバック用）
 const getStoredTheme = (): Theme => {
   if (typeof window === 'undefined') return 'system';
   return (localStorage.getItem('theme') as Theme) || 'system';
 };
 
-const getStoredColorScheme = (): ColorScheme => {
-  if (typeof window === 'undefined') return 'blue';
-  return (localStorage.getItem('colorScheme') as ColorScheme) || 'blue';
-};
-
-/** テーマ・カラースキームをDB連携で管理するProvider */
+/** テーマをDB連携で管理するProvider */
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
   // 初期値はlocalStorageから（SSR対応・DB取得前のフォールバック）
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(getStoredColorScheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   const utils = api.useUtils();
@@ -114,9 +84,6 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- 非同期DB設定の反映はuseEffect内でのみ可能
         setThemeState(dbSettings.theme);
       }
-      if (dbSettings.colorScheme) {
-        setColorSchemeState(dbSettings.colorScheme);
-      }
     }
   }, [dbSettings, isPending]);
 
@@ -130,20 +97,6 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       }
       // DBに保存（認証済みの場合）
       updateMutation.mutate({ theme: newTheme });
-    },
-    [updateMutation],
-  );
-
-  // カラースキーム設定（DB保存 + ローカル状態更新）
-  const setColorScheme = useCallback(
-    (newColorScheme: ColorScheme) => {
-      setColorSchemeState(newColorScheme);
-      // localStorageにも保存（フォールバック用）
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('colorScheme', newColorScheme);
-      }
-      // DBに保存（認証済みの場合）
-      updateMutation.mutate({ colorScheme: newColorScheme });
     },
     [updateMutation],
   );
@@ -171,12 +124,9 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- matchMediaによるテーマ解決はブラウザAPI依存
     setResolvedTheme(newResolvedTheme);
 
-    // Apply color scheme CSS variables
-    applyColorScheme(colorScheme, newResolvedTheme);
-
     // theme-color メタタグをCSSトークンから同期
     syncThemeColor();
-  }, [theme, colorScheme]);
+  }, [theme]);
 
   // Listen for system theme changes
   useEffect(() => {
@@ -190,21 +140,18 @@ export const ThemeProvider = ({ children }: ThemeProviderProps) => {
       setResolvedTheme(newResolvedTheme);
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(newResolvedTheme);
-      applyColorScheme(colorScheme, newResolvedTheme);
       syncThemeColor();
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme, colorScheme]);
+  }, [theme]);
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        colorScheme,
         setTheme,
-        setColorScheme,
         resolvedTheme,
         isPending,
       }}
