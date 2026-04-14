@@ -406,10 +406,10 @@ export type Database = {
           created_at: string;
           data: Json | null;
           entry_id: string | null;
+          fire_at: string | null;
           id: string;
-          is_read: boolean;
           read_at: string | null;
-          reflection_id: string | null;
+          title: string;
           type: string;
           user_id: string;
         };
@@ -417,10 +417,10 @@ export type Database = {
           created_at?: string;
           data?: Json | null;
           entry_id?: string | null;
+          fire_at?: string | null;
           id?: string;
-          is_read?: boolean;
           read_at?: string | null;
-          reflection_id?: string | null;
+          title: string;
           type: string;
           user_id: string;
         };
@@ -428,67 +428,19 @@ export type Database = {
           created_at?: string;
           data?: Json | null;
           entry_id?: string | null;
+          fire_at?: string | null;
           id?: string;
-          is_read?: boolean;
           read_at?: string | null;
-          reflection_id?: string | null;
+          title?: string;
           type?: string;
           user_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: 'notifications_reflection_id_fkey';
-            columns: ['reflection_id'];
-            isOneToOne: false;
-            referencedRelation: 'reflections';
-            referencedColumns: ['id'];
-          },
-          {
             foreignKeyName: 'notifications_related_plan_id_fkey';
             columns: ['entry_id'];
             isOneToOne: false;
             referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      palette_items: {
-        Row: {
-          created_at: string;
-          duration_minutes: number;
-          id: string;
-          is_pinned: boolean;
-          sort_order: number;
-          tag_id: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          duration_minutes: number;
-          id?: string;
-          is_pinned?: boolean;
-          sort_order?: number;
-          tag_id: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          duration_minutes?: number;
-          id?: string;
-          is_pinned?: boolean;
-          sort_order?: number;
-          tag_id?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'palette_items_tag_id_fkey';
-            columns: ['tag_id'];
-            isOneToOne: false;
-            referencedRelation: 'tags';
             referencedColumns: ['id'];
           },
         ];
