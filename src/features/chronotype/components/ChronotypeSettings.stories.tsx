@@ -9,7 +9,7 @@ import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { cn } from '@/lib/utils';
 
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
+import { getChronotypeProfile, getDeepHours, getEaseHours } from '../lib/chronotype-profile';
 import {
   CHRONOTYPE_EMOJI,
   CHRONOTYPE_PRESETS,
@@ -106,7 +106,7 @@ function ChronotypeSettingsDemo({
 }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [selectedType, setSelectedType] = useState<ChronotypeType>(initialType);
-  const selectedProfile = getPresetChronotypeProfile(selectedType);
+  const selectedProfile = getChronotypeProfile(selectedType);
 
   const handleSelectType = (type: PresetChronotypeType) => {
     setSelectedType(type);

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** クロノタイプ種別のZodスキーマ */
-export const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin', 'custom']);
+export const chronotypeTypeSchema = z.enum(['lion', 'bear', 'wolf', 'dolphin']);
 
 /** 生産性レベルのZodスキーマ */
 export const chronotypeLevelSchema = z.enum(['warmup', 'deep', 'ease', 'recovery', 'winddown']);

@@ -1,7 +1,4 @@
 import type { ChronotypeSettings } from '@/lib/types/chronotype';
 
-/** クロノタイプ設定のデフォルト値 */
-export const DEFAULT_CHRONOTYPE_SETTINGS: ChronotypeSettings = {
-  enabled: false,
-  type: 'bear',
-};
+/** クロノタイプ設定のデフォルト値（null = 未設定） */
+export const DEFAULT_CHRONOTYPE_SETTINGS: ChronotypeSettings | null = null;

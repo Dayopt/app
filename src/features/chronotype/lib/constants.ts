@@ -71,10 +71,4 @@ export const CHRONOTYPE_PRESETS: Record<ChronotypeProfile['type'], ChronotypePro
       { startHour: 14, endHour: 16, level: 'ease', label: 'ディップ' },
     ],
   },
-  custom: {
-    type: 'custom',
-    name: 'Custom',
-    description: '自分だけのリズムを設定できます',
-    productivityZones: [],
-  },
 };

@@ -1,8 +1,4 @@
-import type {
-  ChronotypeProfile,
-  ChronotypeSettings,
-  ProductivityZone,
-} from '@/lib/types/chronotype';
+import type { ChronotypeProfile, ProductivityZone } from '@/lib/types/chronotype';
 import { describe, expect, it } from 'vitest';
 import {
   getChronotypeProfile,
@@ -37,23 +33,6 @@ describe('getChronotypeProfile', () => {
     expect(profile.productivityZones.length).toBeGreaterThan(0);
   });
 
-  it('returns custom type with provided custom zones', () => {
-    const customZones: ProductivityZone[] = [
-      { startHour: 8, endHour: 12, level: 'deep', label: 'Custom Deep' },
-      { startHour: 14, endHour: 18, level: 'recovery', label: 'Custom Recovery' },
-    ];
-
-    const profile = getChronotypeProfile('custom', customZones);
-    expect(profile.type).toBe('custom');
-    expect(profile.productivityZones).toEqual(customZones);
-  });
-
-  it('returns empty zones for custom type without custom zones', () => {
-    const profile = getChronotypeProfile('custom');
-    expect(profile.type).toBe('custom');
-    expect(profile.productivityZones).toEqual([]);
-  });
-
   it('returns the same preset for a type called multiple times', () => {
     const profile1 = getChronotypeProfile('lion');
     const profile2 = getChronotypeProfile('lion');
@@ -64,51 +43,14 @@ describe('getChronotypeProfile', () => {
 });
 
 describe('getEnabledChronotypeProfile', () => {
-  it('returns profile when enabled is true', () => {
-    const settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'> = {
-      enabled: true,
-      type: 'lion',
-    };
-
-    const profile = getEnabledChronotypeProfile(settings);
+  it('returns profile when settings is non-null', () => {
+    const profile = getEnabledChronotypeProfile({ type: 'lion' });
     expect(profile).not.toBeNull();
     expect(profile?.type).toBe('lion');
   });
 
-  it('returns null when enabled is false', () => {
-    const settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'> = {
-      enabled: false,
-      type: 'bear',
-    };
-
-    const profile = getEnabledChronotypeProfile(settings);
-    expect(profile).toBeNull();
-  });
-
-  it('returns custom profile with custom zones when enabled', () => {
-    const customZones: ProductivityZone[] = [
-      { startHour: 9, endHour: 13, level: 'deep', label: 'My Deep' },
-    ];
-
-    const settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'> = {
-      enabled: true,
-      type: 'custom',
-      customZones,
-    };
-
-    const profile = getEnabledChronotypeProfile(settings);
-    expect(profile).not.toBeNull();
-    expect(profile?.type).toBe('custom');
-    expect(profile?.productivityZones).toEqual(customZones);
-  });
-
-  it('returns null regardless of type when disabled', () => {
-    const settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'> = {
-      enabled: false,
-      type: 'custom',
-    };
-
-    const profile = getEnabledChronotypeProfile(settings);
+  it('returns null when settings is null', () => {
+    const profile = getEnabledChronotypeProfile(null);
     expect(profile).toBeNull();
   });
 });
@@ -151,7 +93,7 @@ describe('getProductivityZoneForHour', () => {
   it('returns correct zone for midnight-crossing zone (startHour > endHour)', () => {
     // Inline data for midnight-crossing test (no preset has this anymore)
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night ease' }],
@@ -178,7 +120,7 @@ describe('getProductivityZoneForHour', () => {
 
   it('handles boundary hours correctly in midnight-crossing zones', () => {
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night ease' }],
@@ -241,7 +183,7 @@ describe('getVisibleProductivityZones', () => {
   it('handles midnight-crossing zones correctly (above view)', () => {
     // Inline profile with midnight-crossing zone 23-1
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night' }],
@@ -256,7 +198,7 @@ describe('getVisibleProductivityZones', () => {
 
   it('handles midnight-crossing zones correctly (below view)', () => {
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night' }],
@@ -271,7 +213,7 @@ describe('getVisibleProductivityZones', () => {
 
   it('handles midnight-crossing zones partially in view (above midnight only)', () => {
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night' }],
@@ -286,7 +228,7 @@ describe('getVisibleProductivityZones', () => {
 
   it('handles midnight-crossing zones partially in view (below midnight only)', () => {
     const profile: ChronotypeProfile = {
-      type: 'custom',
+      type: 'bear',
       name: 'Test',
       description: '',
       productivityZones: [{ startHour: 23, endHour: 1, level: 'ease', label: 'Night' }],
@@ -447,13 +389,8 @@ describe('Integration tests', () => {
     });
   });
 
-  it('getEnabledChronotypeProfile with enabled:true returns same as getChronotypeProfile', () => {
-    const settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'> = {
-      enabled: true,
-      type: 'lion',
-    };
-
-    const enabledProfile = getEnabledChronotypeProfile(settings);
+  it('getEnabledChronotypeProfile with non-null settings returns same as getChronotypeProfile', () => {
+    const enabledProfile = getEnabledChronotypeProfile({ type: 'lion' });
     const directProfile = getChronotypeProfile('lion');
 
     expect(enabledProfile?.type).toBe(directProfile.type);
