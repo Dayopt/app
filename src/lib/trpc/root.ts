@@ -5,7 +5,6 @@
 
 import 'server-only';
 
-import { suggestionsRouter } from '@/features/ai/server/suggestions-router';
 import { userRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { entriesRouter } from '@/features/entry/server/router-index';
@@ -29,7 +28,6 @@ export const appRouter = createTRPCRouter({
   email: emailRouter,
   entries: entriesRouter,
   history: historyRouter,
-  suggestions: suggestionsRouter,
   tags: tagsRouter,
   user: userRouter,
   notifications: notificationsRouter,
