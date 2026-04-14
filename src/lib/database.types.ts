@@ -201,6 +201,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      reports: {
+        Row: {
+          content: Json;
+          created_at: string;
+          id: string;
+          period_end: string;
+          period_start: string;
+          period_type: string;
+          summary: string;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          created_at?: string;
+          id?: string;
+          period_end: string;
+          period_start: string;
+          period_type: string;
+          summary: string;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          id?: string;
+          period_end?: string;
+          period_start?: string;
+          period_type?: string;
+          summary?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       stripe_webhook_events: {
         Row: {
           event_id: string;
