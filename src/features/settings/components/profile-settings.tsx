@@ -14,6 +14,8 @@ import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';
 import { DisplayNameDialog } from './display-name-dialog';
+import { ValueRankingSettings } from './value-ranking-settings';
+import { ValuesSettings } from './values-settings';
 
 /**
  * プロフィール設定コンポーネント
@@ -62,6 +64,12 @@ export function ProfileSettings() {
 
       {/* クロノタイプ */}
       <ChronotypeSettings />
+
+      {/* 価値観キーワードランキング */}
+      <ValueRankingSettings />
+
+      {/* 価値評定スケール */}
+      <ValuesSettings />
 
       {/* Dialogs */}
       <AvatarChangeDialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog} />
