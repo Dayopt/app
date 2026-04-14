@@ -687,10 +687,6 @@ export type Database = {
           week_start: string;
         }[];
       };
-      get_weekly_reflection_data: {
-        Args: { p_user_id: string; p_week_start: string };
-        Returns: Json;
-      };
       increment_tag_sort_orders: {
         Args: { p_user_id: string };
         Returns: undefined;
