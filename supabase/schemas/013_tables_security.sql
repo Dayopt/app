@@ -12,6 +12,6 @@ CREATE TABLE public.mfa_recovery_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   code_hash TEXT NOT NULL,
-  used_at TIMESTAMPTZ,           -- NULL = 未使用
+  used_at TIMESTAMPTZ,            -- NULL = 未使用
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
