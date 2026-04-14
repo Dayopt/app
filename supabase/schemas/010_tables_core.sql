@@ -21,6 +21,9 @@ CREATE TABLE public.profiles (
   email TEXT NOT NULL UNIQUE,
   full_name TEXT,                 -- 表示名
   avatar_url TEXT,
+  stripe_customer_id TEXT,       -- Stripe顧客ID
+  subscription_id TEXT,          -- Stripeサブスクリプション ID
+  subscription_status TEXT NOT NULL DEFAULT 'free', -- free / trialing / active / canceled / past_due
   onboarding_completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -62,6 +65,7 @@ CREATE TABLE public.tags (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   color TEXT,                     -- red/orange/amber/green/teal/blue/indigo/violet/pink/gray
+  icon TEXT,                      -- Lucideアイコン名
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT true,  -- false = ソフトデリート（マージ時）
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -69,15 +73,8 @@ CREATE TABLE public.tags (
   UNIQUE (user_id, name)
 );
 
--- entry_tags: エントリとタグの関連（entries.tag_id 統合後は廃止予定）
--- UNIQUE(entry_id) → 1エントリに1タグのみ
-CREATE TABLE public.entry_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE UNIQUE,
-  tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+-- entry_tags: 削除済み（20260415000000_inline_entry_tag_id.sql）
+-- entries.tag_id に統合
 
 -- entry_instances: 削除済み（20260319130003_cleanup_recurrence_remnants.sql）
 
@@ -95,12 +92,17 @@ CREATE TABLE public.user_settings (
   show_weekends BOOLEAN NOT NULL DEFAULT true,
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
   default_view TEXT NOT NULL DEFAULT 'week',
+  hour_height_density TEXT NOT NULL DEFAULT 'default', -- compact / default / comfortable
   -- クロノタイプ
   chronotype_settings JSONB,      -- { type: 'bear'|'lion'|'wolf'|'dolphin' } or null
   -- ロケール
   preferred_locale TEXT NOT NULL DEFAULT 'en',   -- en / ja
   -- テーマ
   theme TEXT NOT NULL DEFAULT 'system',
+  -- パーソナライゼーション（将来のAI機能用、構造未定）
+  personalization JSONB,
+  -- iCalフィード
+  ical_feed_token UUID DEFAULT gen_random_uuid(), -- iCal連携用トークン
   -- メタ
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
