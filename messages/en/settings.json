@@ -367,13 +367,10 @@
     },
     "values": {
       "title": "Value Assessment Scale",
-      "description": "Write freely about what matters to you in each area. AI uses your input as context for insights. Everything is optional — the more you write, the better the accuracy.",
+      "description": "Write freely about what matters to you in each area. Just the areas you care about — no need to fill them all. AI uses your input as context for insights.",
       "settingsSaved": "Values saved",
       "placeholder": "What matters to you about this area...",
-      "importance": "Importance",
-      "setImportance": "Set importance to {value}",
-      "filledCount": "Filled: {count} / {total} areas",
-      "filled": "Filled",
+      "filledCount": "{count} / {total} filled",
       "categories": {
         "family": "Family",
         "familyPrompt": "What do you value most in your family relationships?",
@@ -397,8 +394,45 @@
         "healthPrompt": "What do you focus on for your health?",
         "environment": "Environment",
         "environmentPrompt": "What matters to you about the environment?",
-        "art": "Art & Creativity",
-        "artPrompt": "What do you value in creative activities?"
+        "finance": "Finance & Money",
+        "financePrompt": "What matters to you about how you use money?"
+      },
+      "examples": {
+        "family": [
+          "Have dinner with the kids every day",
+          "Spend weekends outdoors as a family",
+          "Call parents at least once a month"
+        ],
+        "romance": ["Listen attentively to my partner", "Take a trip together once a year"],
+        "parenting": [
+          "Nurture my child's curiosity",
+          "Think together rather than scold",
+          "Read a picture book every night"
+        ],
+        "friends": ["Have dinner with friends once a month", "Build relationships I can rely on"],
+        "career": [
+          "Protect deep focus time every day",
+          "Contribute to the team",
+          "Keep learning new skills"
+        ],
+        "selfGrowth": [
+          "Read for 30 minutes daily",
+          "Keep a reflection journal",
+          "Try one new challenge per month"
+        ],
+        "leisure": ["Spend weekends in nature", "Make time to fully enjoy hobbies"],
+        "spirituality": [
+          "Meditate for 5 minutes each morning",
+          "Write down 3 things I'm grateful for"
+        ],
+        "community": ["Participate in local events", "Volunteer regularly"],
+        "health": ["Sleep 7+ hours", "Exercise 3 times a week", "Eat a balanced diet"],
+        "environment": ["Use reusable bags and bottles", "Reduce food waste"],
+        "finance": [
+          "Distinguish needs from wants",
+          "Set a monthly savings goal",
+          "Think about long-term wealth building"
+        ]
       },
       "ranking": {
         "title": "Value Keywords",

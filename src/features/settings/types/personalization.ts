@@ -18,7 +18,7 @@ export type PersonalizationCategory =
   | 'community'
   | 'health'
   | 'environment'
-  | 'art';
+  | 'finance';
 
 /** カテゴリごとの価値観 */
 export interface PersonalizationValue {
@@ -47,7 +47,7 @@ export const PERSONALIZATION_CATEGORIES: PersonalizationCategory[] = [
   'community',
   'health',
   'environment',
-  'art',
+  'finance',
 ];
 
 /** AIコミュニケーションスタイルの選択肢一覧 */
