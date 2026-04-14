@@ -1,8 +1,6 @@
 /**
  * Plan Reminder Email Template
  * プランリマインダー通知メール
- *
- * notification_preferences.enable_email_notifications が有効な場合に送信
  */
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';

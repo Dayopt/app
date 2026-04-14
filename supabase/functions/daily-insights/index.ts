@@ -155,36 +155,8 @@ Deno.serve(async (req) => {
 
     let totalNotifications = 0;
 
-    // ユーザーの通知タイプ別設定を一括取得
-    const { data: allPrefs } = await supabase
-      .from('notification_preferences')
-      .select('user_id, enable_daily_insights, enable_energy_insights, enable_burnout_warnings')
-      .in(
-        'user_id',
-        activeUsers.map((u) => u.user_id),
-      );
-
-    const prefsMap = new Map((allPrefs ?? []).map((p) => [p.user_id, p]));
-
     for (const user of activeUsers) {
       try {
-        // ユーザーの通知タイプ別設定を確認
-        const userPrefs = prefsMap.get(user.user_id);
-        const enabledTypes = {
-          ai_insight: userPrefs?.enable_daily_insights ?? true,
-          energy_insight: userPrefs?.enable_energy_insights ?? true,
-          burnout_warning: userPrefs?.enable_burnout_warnings ?? true,
-        };
-
-        // 全タイプ無効なら KPI 集計自体をスキップ
-        if (
-          !enabledTypes.ai_insight &&
-          !enabledTypes.energy_insight &&
-          !enabledTypes.burnout_warning
-        ) {
-          continue;
-        }
-
         // 2. KPI 集計
         const { data: kpiData, error: kpiError } = await supabase.rpc(
           'get_stats_kpi_summary' as never,
@@ -252,11 +224,8 @@ Deno.serve(async (req) => {
           }
         }
 
-        // 5. ユーザー設定で無効な通知タイプを除外
-        const filteredRows = rows.filter((r) => enabledTypes[r.type]);
-
-        // 6. 同日の重複チェック → INSERT
-        if (filteredRows.length > 0) {
+        // 5. 同日の重複チェック → INSERT
+        if (rows.length > 0) {
           // 今日すでに送った通知タイプを除外
           const { data: existing } = await supabase
             .from('notifications')
@@ -265,11 +234,11 @@ Deno.serve(async (req) => {
             .gte('created_at', `${today}T00:00:00Z`)
             .in(
               'type',
-              filteredRows.map((r) => r.type),
+              rows.map((r) => r.type),
             );
 
           const existingTypes = new Set((existing ?? []).map((n) => n.type));
-          const newRows = filteredRows.filter((r) => !existingTypes.has(r.type));
+          const newRows = rows.filter((r) => !existingTypes.has(r.type));
 
           if (newRows.length > 0) {
             const { error: insertError } = await supabase.from('notifications').insert(newRows);

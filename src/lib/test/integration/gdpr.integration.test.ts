@@ -162,7 +162,6 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('records');
       expect(result.data).toHaveProperty('planTags');
       expect(result.data).toHaveProperty('recordTags');
-      expect(result.data).toHaveProperty('notificationPreferences');
       expect(result.data).toHaveProperty('userSettings');
     });
 

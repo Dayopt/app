@@ -18,15 +18,5 @@ CREATE TABLE public.notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- notification_preferences: ユーザーごとの通知設定
--- auth.users 作成時に create_default_notification_preferences() で自動生成
-CREATE TABLE public.notification_preferences (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  enable_browser_notifications BOOLEAN NOT NULL DEFAULT false,
-  enable_email_notifications BOOLEAN NOT NULL DEFAULT false,
-  enable_push_notifications BOOLEAN NOT NULL DEFAULT false,
-  default_reminder_enabled BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+-- notification_preferences: 削除済み（20260414130000_drop_notification_preferences.sql）
+-- 未実装機能のスイッチのみだったため不要。将来必要時は profiles に jsonb で吸収。

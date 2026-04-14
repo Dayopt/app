@@ -39,13 +39,6 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - **RLS**: `auth.uid() = user_id` で自分の通知のみアクセス
 - **インデックス**: `(user_id) WHERE read_at IS NULL`（未読通知の高速取得）
 
-### notification_preferences テーブル
-
-| カラム                         | 型      | 説明                         |
-| ------------------------------ | ------- | ---------------------------- |
-| `enable_browser_notifications` | BOOLEAN | ブラウザ通知ON/OFF           |
-| `default_reminder_enabled`     | BOOLEAN | デフォルトリマインダーON/OFF |
-
 ---
 
 ## データフロー
@@ -73,7 +66,6 @@ src/features/notifications/
 │   └── Notifications.docs.mdx        ドキュメント
 ├── hooks/
 │   ├── useNotifications.ts            ブラウザ通知管理
-│   ├── useNotificationPreferences.ts  通知設定取得
 │   ├── useNotificationBadge.ts        PWA バッジ管理
 │   └── useNotificationsData.ts        tRPCデータ取得・楽観的更新
 ├── lib/
@@ -81,7 +73,6 @@ src/features/notifications/
 │   └── transformers.ts                Entity → Notification変換
 ├── server/
 │   ├── router.ts                      tRPC ルーター
-│   ├── preferences-router.ts          設定 tRPC ルーター
 │   ├── notification-service.ts        サービス層
 │   └── types.ts                       サーバー型定義
 ├── schemas.ts                         Zod スキーマ
@@ -93,18 +84,15 @@ src/features/notifications/
 
 ## tRPC ルーター
 
-| プロシージャ                                           | タイプ   | 説明                              |
-| ------------------------------------------------------ | -------- | --------------------------------- |
-| `notifications.list`                                   | query    | 通知一覧取得（entry titleをJOIN） |
-| `notifications.unreadCount`                            | query    | 未読数取得                        |
-| `notifications.getById`                                | query    | 通知詳細取得                      |
-| `notifications.markAsRead`                             | mutation | 個別既読化                        |
-| `notifications.markAllAsRead`                          | mutation | 一括既読化                        |
-| `notifications.delete`                                 | mutation | 通知削除                          |
-| `notifications.deleteAllRead`                          | mutation | 既読通知全削除                    |
-| `notificationPreferences.get`                          | query    | 設定取得                          |
-| `notificationPreferences.updateBrowserNotifications`   | mutation | ブラウザ通知ON/OFF                |
-| `notificationPreferences.updateDefaultReminderEnabled` | mutation | リマインダーON/OFF                |
+| プロシージャ                  | タイプ   | 説明                              |
+| ----------------------------- | -------- | --------------------------------- |
+| `notifications.list`          | query    | 通知一覧取得（entry titleをJOIN） |
+| `notifications.unreadCount`   | query    | 未読数取得                        |
+| `notifications.getById`       | query    | 通知詳細取得                      |
+| `notifications.markAsRead`    | mutation | 個別既読化                        |
+| `notifications.markAllAsRead` | mutation | 一括既読化                        |
+| `notifications.delete`        | mutation | 通知削除                          |
+| `notifications.deleteAllRead` | mutation | 既読通知全削除                    |
 
 ---
 

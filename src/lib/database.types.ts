@@ -353,54 +353,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      notification_preferences: {
-        Row: {
-          created_at: string;
-          default_reminder_enabled: boolean;
-
-          enable_browser_notifications: boolean;
-          enable_burnout_warnings: boolean;
-          enable_daily_insights: boolean;
-          enable_email_notifications: boolean;
-          enable_energy_insights: boolean;
-          enable_push_notifications: boolean;
-          enable_weekly_reports: boolean;
-          id: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          default_reminder_enabled?: boolean;
-
-          enable_browser_notifications?: boolean;
-          enable_burnout_warnings?: boolean;
-          enable_daily_insights?: boolean;
-          enable_email_notifications?: boolean;
-          enable_energy_insights?: boolean;
-          enable_push_notifications?: boolean;
-          enable_weekly_reports?: boolean;
-          id?: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          default_reminder_enabled?: boolean;
-
-          enable_browser_notifications?: boolean;
-          enable_burnout_warnings?: boolean;
-          enable_daily_insights?: boolean;
-          enable_email_notifications?: boolean;
-          enable_energy_insights?: boolean;
-          enable_push_notifications?: boolean;
-          enable_weekly_reports?: boolean;
-          id?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       notifications: {
         Row: {
           created_at: string;
@@ -626,14 +578,9 @@ export type Database = {
         Row: {
           ai_communication_style: string | null;
           ai_custom_style_prompt: string | null;
-          chronotype_custom_zones: Json | null;
-          chronotype_enabled: boolean;
-          chronotype_gradient_dark: string | null;
-          chronotype_gradient_light: string | null;
-          chronotype_type: string;
+          chronotype_settings: Json | null;
           color_scheme: string;
           created_at: string;
-          date_format: string;
           default_duration: number;
           default_view: string;
           hour_height_density: string;
@@ -642,8 +589,6 @@ export type Database = {
           personalization_values: Json | null;
           plan_record_mode: string;
           preferred_locale: string;
-          show_declined_events: boolean;
-          show_utc_offset: boolean;
           show_week_numbers: boolean;
           show_weekends: boolean;
           snap_interval: number;
@@ -657,14 +602,9 @@ export type Database = {
         Insert: {
           ai_communication_style?: string | null;
           ai_custom_style_prompt?: string | null;
-          chronotype_custom_zones?: Json | null;
-          chronotype_enabled?: boolean;
-          chronotype_gradient_dark?: string | null;
-          chronotype_gradient_light?: string | null;
-          chronotype_type?: string;
+          chronotype_settings?: Json | null;
           color_scheme?: string;
           created_at?: string;
-          date_format?: string;
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
@@ -673,8 +613,6 @@ export type Database = {
           personalization_values?: Json | null;
           plan_record_mode?: string;
           preferred_locale?: string;
-          show_declined_events?: boolean;
-          show_utc_offset?: boolean;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
           snap_interval?: number;
@@ -688,14 +626,9 @@ export type Database = {
         Update: {
           ai_communication_style?: string | null;
           ai_custom_style_prompt?: string | null;
-          chronotype_custom_zones?: Json | null;
-          chronotype_enabled?: boolean;
-          chronotype_gradient_dark?: string | null;
-          chronotype_gradient_light?: string | null;
-          chronotype_type?: string;
+          chronotype_settings?: Json | null;
           color_scheme?: string;
           created_at?: string;
-          date_format?: string;
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
@@ -704,8 +637,6 @@ export type Database = {
           personalization_values?: Json | null;
           plan_record_mode?: string;
           preferred_locale?: string;
-          show_declined_events?: boolean;
-          show_utc_offset?: boolean;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
           snap_interval?: number;

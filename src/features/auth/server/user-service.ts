@@ -72,7 +72,6 @@ export interface ExportDataResult {
     entries: Row<'entries'>[];
     tags: Row<'tags'>[];
     entryTags: Row<'entry_tags'>[];
-    notificationPreferences: Row<'notification_preferences'> | null;
     userSettings: Row<'user_settings'> | null;
   };
 }
@@ -260,17 +259,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         );
       }
 
-      const { error: notifError } = await supabase
-        .from('notification_preferences')
-        .delete()
-        .eq('user_id', userId);
-      if (notifError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `notification_preferences deletion failed: ${notifError.message}`,
-        );
-      }
-
       logger.info('All user data deleted (account preserved)', { userId });
       return { success: true };
     },
@@ -282,21 +270,14 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     async exportData(options: ExportDataOptions): Promise<ExportDataResult> {
       const { userId } = options;
 
-      const [
-        profileResult,
-        entriesResult,
-        tagsResult,
-        entryTagsResult,
-        notificationPreferencesResult,
-        userSettingsResult,
-      ] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('entries').select('*').eq('user_id', userId),
-        supabase.from('tags').select('*').eq('user_id', userId),
-        supabase.from('entry_tags').select('*').eq('user_id', userId),
-        supabase.from('notification_preferences').select('*').eq('user_id', userId).single(),
-        supabase.from('user_settings').select('*').eq('user_id', userId).single(),
-      ]);
+      const [profileResult, entriesResult, tagsResult, entryTagsResult, userSettingsResult] =
+        await Promise.all([
+          supabase.from('profiles').select('*').eq('id', userId).single(),
+          supabase.from('entries').select('*').eq('user_id', userId),
+          supabase.from('tags').select('*').eq('user_id', userId),
+          supabase.from('entry_tags').select('*').eq('user_id', userId),
+          supabase.from('user_settings').select('*').eq('user_id', userId).single(),
+        ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {
         throw new UserServiceError(
@@ -331,7 +312,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           entries: entriesResult.data || [],
           tags: tagsResult.data || [],
           entryTags: entryTagsResult.data || [],
-          notificationPreferences: notificationPreferencesResult.data || null,
           userSettings: userSettingsResult.data || null,
         },
       };

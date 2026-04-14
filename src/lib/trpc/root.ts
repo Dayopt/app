@@ -11,7 +11,6 @@ import { contactRouter } from '@/features/contact/server/router';
 import { entriesRouter } from '@/features/entry/server/router-index';
 import { historyRouter } from '@/features/history/server/router';
 import { emailRouter } from '@/features/notifications/server/email-router';
-import { notificationPreferencesRouter } from '@/features/notifications/server/preferences-router';
 import { notificationsRouter } from '@/features/notifications/server/router';
 import { onboardingRouter } from '@/features/onboarding/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
@@ -34,7 +33,6 @@ export const appRouter = createTRPCRouter({
   tags: tagsRouter,
   user: userRouter,
   notifications: notificationsRouter,
-  notificationPreferences: notificationPreferencesRouter,
   onboarding: onboardingRouter,
   userSettings: userSettingsRouter,
 });
