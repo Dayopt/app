@@ -31,9 +31,6 @@ CREATE TABLE public.entries (
   end_time TIMESTAMPTZ,         -- カレンダー上の終了時刻
   actual_start_time TIMESTAMPTZ, -- 実績開始時刻
   actual_end_time TIMESTAMPTZ,   -- 実績終了時刻
-  recurrence_type TEXT NOT NULL DEFAULT 'none',  -- none/daily/weekly/monthly/yearly/weekdays
-  recurrence_end_date DATE,
-  recurrence_rule TEXT,          -- RFC 5545 RRULE（複雑な繰り返し用）
   origin TEXT NOT NULL DEFAULT 'planned',
   fulfillment_score INTEGER,     -- 充実度 1-3（低/中/高）
   duration_minutes INTEGER GENERATED ALWAYS AS (
@@ -73,22 +70,7 @@ CREATE TABLE public.entry_tags (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- entry_instances: 繰り返しエントリの例外インスタンス
--- 特定日の変更（時間変更/キャンセル/移動）を管理
-CREATE TABLE public.entry_instances (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE,
-  instance_date DATE NOT NULL,
-  instance_start TIMESTAMPTZ,
-  instance_end TIMESTAMPTZ,
-  exception_type TEXT,           -- modified/cancelled/moved
-  original_date DATE,
-  title TEXT,
-  description TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (entry_id, instance_date)
-);
+-- entry_instances: 削除済み（20260319130003_cleanup_recurrence_remnants.sql）
 
 -- user_settings: ユーザー設定（1ユーザー1レコード）
 CREATE TABLE public.user_settings (
