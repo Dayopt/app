@@ -41,10 +41,6 @@ const userSettingsSchema = z.object({
   defaultDuration: z.number().min(5).max(480).optional(),
   snapInterval: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional(),
 
-  // 営業時間
-  businessHoursStart: z.number().min(0).max(23).optional(),
-  businessHoursEnd: z.number().min(0).max(23).optional(),
-
   // 表示設定
   showDeclinedEvents: z.boolean().optional(),
 
@@ -130,10 +126,6 @@ export const userSettingsRouter = createTRPCRouter({
           showWeekNumbers: data.show_week_numbers,
           defaultDuration: data.default_duration,
           snapInterval: data.snap_interval as 5 | 10 | 15 | 30,
-          businessHours: {
-            start: data.business_hours_start,
-            end: data.business_hours_end,
-          },
           showDeclinedEvents: data.show_declined_events,
           chronotype: {
             enabled: data.chronotype_enabled,
@@ -210,10 +202,6 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.defaultDuration !== undefined)
           updateData.default_duration = input.defaultDuration;
         if (input.snapInterval !== undefined) updateData.snap_interval = input.snapInterval;
-        if (input.businessHoursStart !== undefined)
-          updateData.business_hours_start = input.businessHoursStart;
-        if (input.businessHoursEnd !== undefined)
-          updateData.business_hours_end = input.businessHoursEnd;
         if (input.showDeclinedEvents !== undefined)
           updateData.show_declined_events = input.showDeclinedEvents;
         if (input.chronotypeEnabled !== undefined)

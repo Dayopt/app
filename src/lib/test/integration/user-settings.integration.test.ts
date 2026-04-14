@@ -216,19 +216,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       expect(settings?.snapInterval).toBe(15);
     });
 
-    it('should update business hours', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await caller.update({
-        businessHoursStart: 9,
-        businessHoursEnd: 18,
-      });
-
-      const settings = await caller.get();
-      expect(settings?.businessHours?.start).toBe(9);
-      expect(settings?.businessHours?.end).toBe(18);
-    });
-
     it('should update chronotype settings', async () => {
       const caller = createTestCaller(userSettingsRouter, ctx);
 

@@ -626,8 +626,6 @@ export type Database = {
         Row: {
           ai_communication_style: string | null;
           ai_custom_style_prompt: string | null;
-          business_hours_end: number;
-          business_hours_start: number;
           chronotype_custom_zones: Json | null;
           chronotype_enabled: boolean;
           chronotype_gradient_dark: string | null;
@@ -659,8 +657,6 @@ export type Database = {
         Insert: {
           ai_communication_style?: string | null;
           ai_custom_style_prompt?: string | null;
-          business_hours_end?: number;
-          business_hours_start?: number;
           chronotype_custom_zones?: Json | null;
           chronotype_enabled?: boolean;
           chronotype_gradient_dark?: string | null;
@@ -692,8 +688,6 @@ export type Database = {
         Update: {
           ai_communication_style?: string | null;
           ai_custom_style_prompt?: string | null;
-          business_hours_end?: number;
-          business_hours_start?: number;
           chronotype_custom_zones?: Json | null;
           chronotype_enabled?: boolean;
           chronotype_gradient_dark?: string | null;

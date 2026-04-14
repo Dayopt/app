@@ -95,8 +95,6 @@ CREATE TABLE public.user_settings (
   week_starts_on SMALLINT NOT NULL DEFAULT 1,  -- 0=Sun, 1=Mon, 6=Sat
   default_duration INTEGER NOT NULL DEFAULT 60,
   snap_interval SMALLINT NOT NULL DEFAULT 15,  -- 5/10/15/30分
-  business_hours_start SMALLINT NOT NULL DEFAULT 9,
-  business_hours_end SMALLINT NOT NULL DEFAULT 18,
   -- 表示設定
   show_utc_offset BOOLEAN NOT NULL DEFAULT true,
   show_weekends BOOLEAN NOT NULL DEFAULT true,
