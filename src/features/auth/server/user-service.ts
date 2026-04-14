@@ -156,22 +156,8 @@ export function createUserService(supabase: SupabaseClient<Database>) {
         }
       }
 
-      // Service Role クライアントで CASCADE 対象外のPIIデータを削除
-      const adminClient = createServiceRoleClient();
-
-      try {
-        // login_attempts: email基準でCASCADE対象外
-        await adminClient.from('login_attempts').delete().eq('email', userEmail);
-        // auth_audit_logs: ON DELETE SET NULL でIP/UA等のPIIが残存するため手動削除
-        await adminClient.from('auth_audit_logs').delete().eq('user_id', userId);
-      } catch (cleanupError) {
-        logger.warn(
-          'Failed to delete PII from non-cascaded tables, continuing with account deletion',
-          cleanupError,
-        );
-      }
-
       // auth.users を削除 → CASCADE DELETE により全テーブルのユーザーデータが自動削除される
+      const adminClient = createServiceRoleClient();
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
 
       if (deleteError) {

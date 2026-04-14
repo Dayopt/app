@@ -8,42 +8,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      auth_audit_logs: {
-        Row: {
-          created_at: string;
-          event_type: string;
-          geo_city: string | null;
-          geo_country: string | null;
-          id: string;
-          ip_address: string | null;
-          metadata: Json | null;
-          user_agent: string | null;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          event_type: string;
-          geo_city?: string | null;
-          geo_country?: string | null;
-          id?: string;
-          ip_address?: string | null;
-          metadata?: Json | null;
-          user_agent?: string | null;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          event_type?: string;
-          geo_city?: string | null;
-          geo_country?: string | null;
-          id?: string;
-          ip_address?: string | null;
-          metadata?: Json | null;
-          user_agent?: string | null;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       email_suppressions: {
         Row: {
           created_at: string;
@@ -127,36 +91,6 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
-      };
-      login_attempts: {
-        Row: {
-          attempt_time: string;
-          created_at: string;
-          email: string;
-          id: string;
-          ip_address: string | null;
-          is_successful: boolean;
-          user_agent: string | null;
-        };
-        Insert: {
-          attempt_time?: string;
-          created_at?: string;
-          email: string;
-          id?: string;
-          ip_address?: string | null;
-          is_successful?: boolean;
-          user_agent?: string | null;
-        };
-        Update: {
-          attempt_time?: string;
-          created_at?: string;
-          email?: string;
-          id?: string;
-          ip_address?: string | null;
-          is_successful?: boolean;
-          user_agent?: string | null;
-        };
-        Relationships: [];
       };
       mfa_recovery_codes: {
         Row: {
@@ -351,18 +285,12 @@ export type Database = {
       };
       user_settings: {
         Row: {
-          ai_communication_style: string | null;
-          ai_custom_style_prompt: string | null;
           chronotype_settings: Json | null;
-          color_scheme: string;
           created_at: string;
           default_duration: number;
           default_view: string;
           hour_height_density: string;
           id: string;
-          personalization_ranked_values: Json | null;
-          personalization_values: Json | null;
-          plan_record_mode: string;
           preferred_locale: string;
           show_week_numbers: boolean;
           show_weekends: boolean;
@@ -375,18 +303,12 @@ export type Database = {
           week_starts_on: number;
         };
         Insert: {
-          ai_communication_style?: string | null;
-          ai_custom_style_prompt?: string | null;
           chronotype_settings?: Json | null;
-          color_scheme?: string;
           created_at?: string;
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
           id?: string;
-          personalization_ranked_values?: Json | null;
-          personalization_values?: Json | null;
-          plan_record_mode?: string;
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
@@ -399,18 +321,12 @@ export type Database = {
           week_starts_on?: number;
         };
         Update: {
-          ai_communication_style?: string | null;
-          ai_custom_style_prompt?: string | null;
           chronotype_settings?: Json | null;
-          color_scheme?: string;
           created_at?: string;
           default_duration?: number;
           default_view?: string;
           hour_height_density?: string;
           id?: string;
-          personalization_ranked_values?: Json | null;
-          personalization_values?: Json | null;
-          plan_record_mode?: string;
           preferred_locale?: string;
           show_week_numbers?: boolean;
           show_weekends?: boolean;
@@ -475,8 +391,6 @@ export type Database = {
         Args: { p_entry_ids: string[]; p_user_id: string };
         Returns: number;
       };
-      cleanup_old_auth_audit_logs: { Args: never; Returns: undefined };
-      cleanup_old_login_attempts: { Args: never; Returns: undefined };
       cleanup_old_plan_activities: { Args: never; Returns: undefined };
       count_unused_recovery_codes: {
         Args: { p_user_id: string };
@@ -781,15 +695,6 @@ export type Database = {
             };
             Returns: Json;
           };
-      record_login_attempt: {
-        Args: {
-          p_email: string;
-          p_ip_address?: string;
-          p_is_successful?: boolean;
-          p_user_agent?: string;
-        };
-        Returns: string;
-      };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
         Returns: {

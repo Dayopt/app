@@ -8,12 +8,9 @@
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
 -- ■ クリーンアップ関数（pg_cron で定期実行）
---   cleanup_old_login_attempts()              — 90日超のログイン試行を削除
---   cleanup_old_auth_audit_logs()             — 365日超の監査ログを削除
 --   delete_old_notifications()                — 既読30日超の通知を削除
 
 -- ■ RPC 関数
---   record_login_attempt(email, ip, success, ua) — ログイン試行を記録
 --   merge_tags(user_id, source, target)       — タグをマージ（entry_tags移行 + ソース非アクティブ化）
 --   use_recovery_code(user_id, code_hash)     — MFAリカバリーコードを使用済みにマーク
 --   count_unused_recovery_codes(user_id)      — 未使用リカバリーコード数

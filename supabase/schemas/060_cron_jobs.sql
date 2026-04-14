@@ -9,8 +9,6 @@
 
 -- | ジョブ名                    | スケジュール    | 対象関数                         | 保持期間  |
 -- |-----------------------------|-----------------|----------------------------------|-----------|
--- | cleanup-login-attempts      | 0 3 * * * (毎日 03:00) | cleanup_old_login_attempts()     | 90日      |
--- | cleanup-auth-audit-logs     | 10 3 * * * (毎日 03:10) | cleanup_old_auth_audit_logs()   | 365日     |
 -- | cleanup-notifications       | 20 3 * * * (毎日 03:20) | delete_old_notifications()      | 既読30日  |
 -- | cleanup-plan-activities     | 30 3 * * * (毎日 03:30) | cleanup_old_plan_activities()   | 365日     |
 
