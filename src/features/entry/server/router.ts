@@ -207,21 +207,13 @@ export const entriesCoreRouter = createTRPCRouter({
           timezone,
         });
 
-        // タグ指定時: エントリ作成と同時にタグを関連付け
+        // タグ指定時: entries.tag_id を直接設定
         if (tagId && result.id) {
-          const { error: tagError } = await ctx.supabase.from('entry_tags').insert({
-            user_id: ctx.userId,
-            entry_id: result.id,
-            tag_id: tagId,
-          });
-          if (tagError) {
-            // タグ関連付け失敗はエントリ作成を巻き戻さない（ベストエフォート）
-            captureBusinessEvent('entry.tag_attach_failed', {
-              entryId: result.id,
-              tagId,
-              error: tagError.message,
-            });
-          }
+          await ctx.supabase
+            .from('entries')
+            .update({ tag_id: tagId })
+            .eq('id', result.id)
+            .eq('user_id', ctx.userId);
         }
 
         captureBusinessEvent('entry.created', {
@@ -346,29 +338,11 @@ export const entriesCoreRouter = createTRPCRouter({
       const { supabase, userId } = ctx;
       const { entryIds, tagId } = input;
 
-      // 既存タグを削除
-      const { error: deleteError } = await supabase
-        .from('entry_tags')
-        .delete()
-        .in('entry_id', entryIds)
+      const { error, count } = await supabase
+        .from('entries')
+        .update({ tag_id: tagId })
+        .in('id', entryIds)
         .eq('user_id', userId);
-
-      if (deleteError) {
-        logger.error('Failed to clear existing tags', { error: deleteError });
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグのクリアに失敗した',
-        });
-      }
-
-      // 新しいタグを設定
-      const entryTagsToInsert = entryIds.map((entryId) => ({
-        user_id: userId,
-        entry_id: entryId,
-        tag_id: tagId,
-      }));
-
-      const { error, count } = await supabase.from('entry_tags').insert(entryTagsToInsert);
 
       if (error) {
         logger.error('Failed to bulk set tag', { error });
@@ -415,11 +389,10 @@ export const entriesCoreRouter = createTRPCRouter({
       }
 
       const { error } = await supabase
-        .from('entry_tags')
-        .upsert(
-          { user_id: userId, entry_id: entryId, tag_id: tagId },
-          { onConflict: 'user_id,entry_id,tag_id', ignoreDuplicates: true },
-        );
+        .from('entries')
+        .update({ tag_id: tagId })
+        .eq('id', entryId)
+        .eq('user_id', userId);
 
       if (error) {
         logger.error('Failed to add tag to entry', { error });
@@ -451,12 +424,12 @@ export const entriesCoreRouter = createTRPCRouter({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Entry not found' });
       }
 
-      const { error, count } = await supabase
-        .from('entry_tags')
-        .delete()
-        .eq('entry_id', entryId)
-        .eq('tag_id', tagId)
-        .eq('user_id', userId);
+      const { error } = await supabase
+        .from('entries')
+        .update({ tag_id: null })
+        .eq('id', entryId)
+        .eq('user_id', userId)
+        .eq('tag_id', tagId);
 
       if (error) {
         logger.error('Failed to remove tag from entry', { error });
@@ -466,7 +439,7 @@ export const entriesCoreRouter = createTRPCRouter({
         });
       }
 
-      return { success: true, removed: (count ?? 0) > 0 };
+      return { success: true, removed: true };
     }),
 
   /** エントリのタグを設定（1エントリ1タグ、null で解除） */
@@ -502,35 +475,18 @@ export const entriesCoreRouter = createTRPCRouter({
         }
       }
 
-      // 既存の関連を削除
-      const { error: deleteError } = await supabase
-        .from('entry_tags')
-        .delete()
-        .eq('entry_id', entryId)
+      const { error } = await supabase
+        .from('entries')
+        .update({ tag_id: tagId })
+        .eq('id', entryId)
         .eq('user_id', userId);
 
-      if (deleteError) {
-        logger.error('Failed to remove existing tags', { error: deleteError });
+      if (error) {
+        logger.error('Failed to set tag', { error });
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'タグの削除に失敗した',
+          message: 'タグの設定に失敗した',
         });
-      }
-
-      // 新しいタグを設定
-      if (tagId) {
-        const { error: insertError } = await supabase.from('entry_tags').insert({
-          user_id: userId,
-          entry_id: entryId,
-          tag_id: tagId,
-        });
-        if (insertError) {
-          logger.error('Failed to set tag', { error: insertError });
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'タグの設定に失敗した',
-          });
-        }
       }
 
       return { success: true, tagId };

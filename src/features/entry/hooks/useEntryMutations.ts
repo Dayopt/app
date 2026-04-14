@@ -80,6 +80,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         user_id: '',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        tag_id: input.tagId ?? null,
         tagId: input.tagId ?? null,
       };
 

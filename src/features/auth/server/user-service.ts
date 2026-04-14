@@ -71,7 +71,6 @@ export interface ExportDataResult {
     profile: Row<'profiles'> | null;
     entries: Row<'entries'>[];
     tags: Row<'tags'>[];
-    entryTags: Row<'entry_tags'>[];
     userSettings: Row<'user_settings'> | null;
   };
 }
@@ -188,20 +187,10 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     },
 
     /**
-     * 全ブロック（entries + entry_tags）を削除
+     * 全ブロック（entries）を削除
      * タグ・設定・プロフィールは保持
      */
     async deleteBlocks(userId: string): Promise<{ deletedCount: number }> {
-      // entry_tags → entries の順で削除
-      // RLSがuser_idで制約しているため、他ユーザーのデータは影響しない
-      const { error: tagError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
-      if (tagError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_tags deletion failed: ${tagError.message}`,
-        );
-      }
-
       const { data: deleted, error: entryError } = await supabase
         .from('entries')
         .delete()
@@ -223,15 +212,7 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * entries, tags, 設定, 通知設定を全削除
      */
     async deleteAllData(userId: string): Promise<{ success: true }> {
-      // 依存関係順に削除: entry_tags → instances → entries → tags → settings
-      const { error: etError } = await supabase.from('entry_tags').delete().eq('user_id', userId);
-      if (etError) {
-        throw new UserServiceError(
-          'DELETE_DATA_FAILED',
-          `entry_tags deletion failed: ${etError.message}`,
-        );
-      }
-
+      // 依存関係順に削除: entries → tags → settings
       const { error: entryError } = await supabase.from('entries').delete().eq('user_id', userId);
       if (entryError) {
         throw new UserServiceError(
@@ -270,14 +251,12 @@ export function createUserService(supabase: SupabaseClient<Database>) {
     async exportData(options: ExportDataOptions): Promise<ExportDataResult> {
       const { userId } = options;
 
-      const [profileResult, entriesResult, tagsResult, entryTagsResult, userSettingsResult] =
-        await Promise.all([
-          supabase.from('profiles').select('*').eq('id', userId).single(),
-          supabase.from('entries').select('*').eq('user_id', userId),
-          supabase.from('tags').select('*').eq('user_id', userId),
-          supabase.from('entry_tags').select('*').eq('user_id', userId),
-          supabase.from('user_settings').select('*').eq('user_id', userId).single(),
-        ]);
+      const [profileResult, entriesResult, tagsResult, userSettingsResult] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('entries').select('*').eq('user_id', userId),
+        supabase.from('tags').select('*').eq('user_id', userId),
+        supabase.from('user_settings').select('*').eq('user_id', userId).single(),
+      ]);
 
       if (profileResult.error && profileResult.error.code !== 'PGRST116') {
         throw new UserServiceError(
@@ -297,13 +276,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           `Tags fetch error: ${tagsResult.error.message}`,
         );
       }
-      if (entryTagsResult.error) {
-        throw new UserServiceError(
-          'EXPORT_FAILED',
-          `Entry tags fetch error: ${entryTagsResult.error.message}`,
-        );
-      }
-
       return {
         exportedAt: new Date().toISOString(),
         userId,
@@ -311,7 +283,6 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           profile: profileResult.data || null,
           entries: entriesResult.data || [],
           tags: tagsResult.data || [],
-          entryTags: entryTagsResult.data || [],
           userSettings: userSettingsResult.data || null,
         },
       };

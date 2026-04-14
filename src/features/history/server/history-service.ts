@@ -28,16 +28,14 @@ export interface RecentBlockItem {
   score: number;
 }
 
-/** Supabase inner join で取得される entry_tags + entries の行型 */
+/** entries テーブルから取得される行型（tag_id 含む） */
 interface EntryTagRow {
   tag_id: string;
-  entries: {
-    duration_minutes: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    deleted_at: string | null;
-    created_at: string;
-  };
+  duration_minutes: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  deleted_at: string | null;
+  created_at: string;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -81,12 +79,11 @@ export class HistoryService {
     cutoff.setDate(cutoff.getDate() - LOOKBACK_DAYS);
 
     const { data, error } = await this.supabase
-      .from('entry_tags')
-      .select(
-        'tag_id, entries!inner(duration_minutes, start_time, end_time, deleted_at, created_at)',
-      )
+      .from('entries')
+      .select('tag_id, duration_minutes, start_time, end_time, deleted_at, created_at')
       .eq('user_id', userId)
-      .gte('entries.created_at', cutoff.toISOString());
+      .not('tag_id', 'is', null)
+      .gte('created_at', cutoff.toISOString());
 
     if (error) {
       throw new HistoryServiceError('FETCH_ENTRIES_FAILED', error.message);
@@ -104,15 +101,13 @@ export class HistoryService {
     const scores = new Map<string, RecentBlockItem>();
 
     for (const row of rows) {
-      const entry = row.entries;
-
-      if (entry.deleted_at) continue;
+      if (row.deleted_at) continue;
 
       // duration_minutes が未設定の場合、start_time/end_time から算出
-      let durationMinutes = entry.duration_minutes;
-      if (!durationMinutes && entry.start_time && entry.end_time) {
+      let durationMinutes = row.duration_minutes;
+      if (!durationMinutes && row.start_time && row.end_time) {
         durationMinutes = Math.round(
-          (new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 60000,
+          (new Date(row.end_time).getTime() - new Date(row.start_time).getTime()) / 60000,
         );
       }
       if (!durationMinutes || durationMinutes <= 0) continue;
@@ -120,7 +115,7 @@ export class HistoryService {
       const snappedDuration = this.snapDuration(durationMinutes);
       const key = `${row.tag_id}:${snappedDuration}`;
 
-      const weight = this.recencyWeight(new Date(entry.created_at), now);
+      const weight = this.recencyWeight(new Date(row.created_at), now);
       const existing = scores.get(key);
 
       if (existing) {

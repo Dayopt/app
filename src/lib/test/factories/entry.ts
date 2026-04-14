@@ -20,6 +20,7 @@ export function createMockEntry(overrides: Partial<EntryRow> = {}): EntryRow {
     duration_minutes: null,
     fulfillment_score: null,
     deleted_at: null,
+    tag_id: null,
     created_at: now,
     updated_at: now,
     ...overrides,

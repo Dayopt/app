@@ -43,33 +43,27 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z', // today → weight 1.0
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z', // today → weight 1.0
         },
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T08:00:00Z', // today → weight 1.0
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T08:00:00Z', // today → weight 1.0
         },
         {
           tag_id: 'tag-b',
-          entries: {
-            duration_minutes: 60,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-20T10:00:00Z', // 4 days ago → weight 0.4
-          },
+          duration_minutes: 60,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-20T10:00:00Z', // 4 days ago → weight 0.4
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -88,13 +82,11 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: '2026-03-23T00:00:00Z',
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: '2026-03-23T00:00:00Z',
+          created_at: '2026-03-24T10:00:00Z',
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -109,13 +101,11 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: null,
-            start_time: '2026-03-24T10:00:00Z',
-            end_time: '2026-03-24T10:45:00Z', // 45min → snaps to 45
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: null,
+          start_time: '2026-03-24T10:00:00Z',
+          end_time: '2026-03-24T10:45:00Z', // 45min → snaps to 45
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z',
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -131,23 +121,19 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 22, // snaps to 15
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: 22, // snaps to 15
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z',
         },
         {
           tag_id: 'tag-b',
-          entries: {
-            duration_minutes: 38, // snaps to 45
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: 38, // snaps to 45
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z',
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -163,33 +149,27 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z', // weight 1.0
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z', // weight 1.0
         },
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 60,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T09:00:00Z', // weight 1.0
-          },
+          duration_minutes: 60,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T09:00:00Z', // weight 1.0
         },
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 60,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T08:00:00Z', // weight 1.0
-          },
+          duration_minutes: 60,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T08:00:00Z', // weight 1.0
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -206,13 +186,11 @@ describe('HistoryService', () => {
     it('should limit results to 8 items', async () => {
       const entryRows = Array.from({ length: 10 }, (_, i) => ({
         tag_id: `tag-${i}`,
-        entries: {
-          duration_minutes: 30,
-          start_time: null,
-          end_time: null,
-          deleted_at: null,
-          created_at: '2026-03-24T10:00:00Z',
-        },
+        duration_minutes: 30,
+        start_time: null,
+        end_time: null,
+        deleted_at: null,
+        created_at: '2026-03-24T10:00:00Z',
       }));
       const entryMock = createChainableMock(entryRows);
       mockSupabase.from.mockReturnValue(entryMock);
@@ -226,53 +204,43 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-today',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T06:00:00Z', // < 1 day → 1.0
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T06:00:00Z', // < 1 day → 1.0
         },
         {
           tag_id: 'tag-yesterday',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-23T00:00:00Z', // ~1.5 days → 0.8
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-23T00:00:00Z', // ~1.5 days → 0.8
         },
         {
           tag_id: 'tag-3days',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-21T12:00:00Z', // ~3 days → 0.6
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-21T12:00:00Z', // ~3 days → 0.6
         },
         {
           tag_id: 'tag-week',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-18T12:00:00Z', // ~6 days → 0.4
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-18T12:00:00Z', // ~6 days → 0.4
         },
         {
           tag_id: 'tag-old',
-          entries: {
-            duration_minutes: 30,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-14T12:00:00Z', // ~10 days → 0.2
-          },
+          duration_minutes: 30,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-14T12:00:00Z', // ~10 days → 0.2
         },
       ];
       const entryMock = createChainableMock(entryRows);
@@ -288,7 +256,7 @@ describe('HistoryService', () => {
       expect(result[4]!.score).toBe(0.2);
     });
 
-    it('should throw FETCH_ENTRIES_FAILED on entry_tags error', async () => {
+    it('should throw FETCH_ENTRIES_FAILED on query error', async () => {
       const entryMock = createChainableMock(null, { message: 'DB error' });
       mockSupabase.from.mockReturnValue(entryMock);
 
@@ -305,23 +273,19 @@ describe('HistoryService', () => {
       const entryRows = [
         {
           tag_id: 'tag-a',
-          entries: {
-            duration_minutes: 0,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: 0,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z',
         },
         {
           tag_id: 'tag-b',
-          entries: {
-            duration_minutes: -5,
-            start_time: null,
-            end_time: null,
-            deleted_at: null,
-            created_at: '2026-03-24T10:00:00Z',
-          },
+          duration_minutes: -5,
+          start_time: null,
+          end_time: null,
+          deleted_at: null,
+          created_at: '2026-03-24T10:00:00Z',
         },
       ];
       const entryMock = createChainableMock(entryRows);

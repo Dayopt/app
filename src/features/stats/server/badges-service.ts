@@ -304,12 +304,13 @@ export class BadgesService {
         .select('start_time, end_time, duration_minutes')
         .eq('user_id', userId)
         .is('deleted_at', null),
-      // 2. entry_tags + entry duration（ソフト削除を除外）
+      // 2. entries with tag（ソフト削除を除外）
       this.supabase
         .from('entries')
-        .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
+        .select('tag_id, duration_minutes, start_time, created_at')
         .eq('user_id', userId)
-        .is('deleted_at', null),
+        .is('deleted_at', null)
+        .not('tag_id', 'is', null),
       // 3. user_settings (TZ・chronotype情報を含む)
       this.supabase
         .from('user_settings')
@@ -420,15 +421,10 @@ export class BadgesService {
     const tagMinutes = new Map<string, number>();
 
     for (const entry of entryTagRows) {
-      const entryTags = entry.entry_tags as unknown as Array<{
-        tag_id: string;
-        created_at: string | null;
-      }>;
-      for (const tag of entryTags) {
-        tagIds.add(tag.tag_id);
-        const minutes = entry.duration_minutes ?? 0;
-        tagMinutes.set(tag.tag_id, (tagMinutes.get(tag.tag_id) ?? 0) + minutes);
-      }
+      const tagId = entry.tag_id as string;
+      tagIds.add(tagId);
+      const minutes = entry.duration_minutes ?? 0;
+      tagMinutes.set(tagId, (tagMinutes.get(tagId) ?? 0) + minutes);
     }
 
     const maxTagMinutes = Math.max(0, ...[...tagMinutes.values()]);

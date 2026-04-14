@@ -8,72 +8,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      _backup_record_activities: {
-        Row: {
-          action_type: string | null;
-          created_at: string | null;
-          field_name: string | null;
-          id: string | null;
-          metadata: Json | null;
-          new_value: string | null;
-          old_value: string | null;
-          record_id: string | null;
-          schema_version: number | null;
-          user_id: string | null;
-        };
-        Insert: {
-          action_type?: string | null;
-          created_at?: string | null;
-          field_name?: string | null;
-          id?: string | null;
-          metadata?: Json | null;
-          new_value?: string | null;
-          old_value?: string | null;
-          record_id?: string | null;
-          schema_version?: number | null;
-          user_id?: string | null;
-        };
-        Update: {
-          action_type?: string | null;
-          created_at?: string | null;
-          field_name?: string | null;
-          id?: string | null;
-          metadata?: Json | null;
-          new_value?: string | null;
-          old_value?: string | null;
-          record_id?: string | null;
-          schema_version?: number | null;
-          user_id?: string | null;
-        };
-        Relationships: [];
-      };
-      ai_usage: {
-        Row: {
-          created_at: string;
-          id: string;
-          month: string;
-          request_count: number;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          month: string;
-          request_count?: number;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          month?: string;
-          request_count?: number;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       auth_audit_logs: {
         Row: {
           created_at: string;
@@ -106,36 +40,6 @@ export type Database = {
           ip_address?: string | null;
           metadata?: Json | null;
           user_agent?: string | null;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-      chat_conversations: {
-        Row: {
-          created_at: string;
-          id: string;
-          message_count: number;
-          messages: Json;
-          title: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          message_count?: number;
-          messages?: Json;
-          title?: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          message_count?: number;
-          messages?: Json;
-          title?: string;
-          updated_at?: string;
           user_id?: string;
         };
         Relationships: [];
@@ -177,6 +81,7 @@ export type Database = {
           id: string;
           origin: string;
           start_time: string | null;
+          tag_id: string | null;
           title: string;
           updated_at: string | null;
           user_id: string;
@@ -192,6 +97,7 @@ export type Database = {
           id?: string;
           origin?: string;
           start_time?: string | null;
+          tag_id?: string | null;
           title: string;
           updated_at?: string | null;
           user_id: string;
@@ -207,91 +113,14 @@ export type Database = {
           id?: string;
           origin?: string;
           start_time?: string | null;
+          tag_id?: string | null;
           title?: string;
           updated_at?: string | null;
           user_id?: string;
         };
-        Relationships: [];
-      };
-      entry_activities: {
-        Row: {
-          action_type: string;
-          created_at: string;
-          entry_id: string | null;
-          field_name: string | null;
-          id: string;
-          metadata: Json | null;
-          new_value: string | null;
-          old_value: string | null;
-          schema_version: number;
-          user_id: string;
-        };
-        Insert: {
-          action_type: string;
-          created_at?: string;
-          entry_id?: string | null;
-          field_name?: string | null;
-          id?: string;
-          metadata?: Json | null;
-          new_value?: string | null;
-          old_value?: string | null;
-          schema_version?: number;
-          user_id: string;
-        };
-        Update: {
-          action_type?: string;
-          created_at?: string;
-          entry_id?: string | null;
-          field_name?: string | null;
-          id?: string;
-          metadata?: Json | null;
-          new_value?: string | null;
-          old_value?: string | null;
-          schema_version?: number;
-          user_id?: string;
-        };
         Relationships: [
           {
-            foreignKeyName: 'plan_activities_plan_id_fkey';
-            columns: ['entry_id'];
-            isOneToOne: false;
-            referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      entry_tags: {
-        Row: {
-          created_at: string | null;
-          entry_id: string;
-          id: string;
-          tag_id: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string | null;
-          entry_id: string;
-          id?: string;
-          tag_id: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string | null;
-          entry_id?: string;
-          id?: string;
-          tag_id?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'plan_tags_plan_id_fkey';
-            columns: ['entry_id'];
-            isOneToOne: true;
-            referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'plan_tags_tag_id_fkey';
+            foreignKeyName: 'entries_tag_id_fkey';
             columns: ['tag_id'];
             isOneToOne: false;
             referencedRelation: 'tags';
@@ -433,60 +262,6 @@ export type Database = {
           subscription_id?: string | null;
           subscription_status?: string;
           updated_at?: string;
-        };
-        Relationships: [];
-      };
-      reflections: {
-        Row: {
-          activities: Json;
-          completion_tokens: number | null;
-          created_at: string;
-          id: string;
-          insights: string;
-          model_used: string | null;
-          period_end: string;
-          period_start: string;
-          period_type: string;
-          prompt_tokens: number | null;
-          question: string;
-          title: string;
-          updated_at: string;
-          user_id: string;
-          user_note: string;
-        };
-        Insert: {
-          activities?: Json;
-          completion_tokens?: number | null;
-          created_at?: string;
-          id?: string;
-          insights?: string;
-          model_used?: string | null;
-          period_end: string;
-          period_start: string;
-          period_type: string;
-          prompt_tokens?: number | null;
-          question?: string;
-          title: string;
-          updated_at?: string;
-          user_id: string;
-          user_note?: string;
-        };
-        Update: {
-          activities?: Json;
-          completion_tokens?: number | null;
-          created_at?: string;
-          id?: string;
-          insights?: string;
-          model_used?: string | null;
-          period_end?: string;
-          period_start?: string;
-          period_type?: string;
-          prompt_tokens?: number | null;
-          question?: string;
-          title?: string;
-          updated_at?: string;
-          user_id?: string;
-          user_note?: string;
         };
         Relationships: [];
       };
@@ -980,14 +755,6 @@ export type Database = {
           unique_tags: number;
           week: string;
         }[];
-      };
-      get_weekly_reflection_data: {
-        Args: { p_user_id: string; p_week_start: string };
-        Returns: Json;
-      };
-      increment_ai_usage: {
-        Args: { p_month: string; p_user_id: string };
-        Returns: undefined;
       };
       increment_tag_sort_orders: {
         Args: { p_user_id: string };

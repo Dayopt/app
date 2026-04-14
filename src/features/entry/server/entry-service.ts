@@ -48,15 +48,11 @@ export class EntryService {
       offset,
     } = options;
 
-    let query = this.supabase.from('entries').select('*, entry_tags(tag_id)').eq('user_id', userId);
+    let query = this.supabase.from('entries').select('*').eq('user_id', userId);
 
     // タグフィルター
     if (tagId) {
-      const entryIds = await this.getEntryIdsByTagId(tagId);
-      if (entryIds.length === 0) {
-        return [];
-      }
-      query = query.in('id', entryIds);
+      query = query.eq('tag_id', tagId);
     }
 
     // origin フィルター
@@ -105,29 +101,17 @@ export class EntryService {
       throw new EntryServiceError('FETCH_FAILED', `Failed to fetch entries: ${error.message}`);
     }
 
-    return (data as unknown as EntryWithTags[]).map((entry) => this.formatEntryWithTags(entry));
+    return (data as unknown as EntryWithTags[]).map((entry) => ({
+      ...entry,
+      tagId: entry.tag_id ?? null,
+    }));
   }
 
   /**
    * エントリをIDで取得
    */
   async getById(options: GetEntryByIdOptions): Promise<EntryWithTags> {
-    const { userId, entryId, includeTags } = options;
-
-    if (includeTags) {
-      const { data, error } = await this.supabase
-        .from('entries')
-        .select('*, entry_tags(tag_id)')
-        .eq('id', entryId)
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        throw new EntryServiceError('NOT_FOUND', `Entry not found: ${error.message}`);
-      }
-
-      return this.formatEntryWithTags(data as unknown as EntryWithTags);
-    }
+    const { userId, entryId } = options;
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -140,7 +124,7 @@ export class EntryService {
       throw new EntryServiceError('NOT_FOUND', `Entry not found: ${error.message}`);
     }
 
-    return data as EntryWithTags;
+    return { ...data, tagId: data.tag_id ?? null } as EntryWithTags;
   }
 
   /**
@@ -365,30 +349,6 @@ export class EntryService {
    */
   private isExclusionViolation(error: { code?: string }): boolean {
     return error.code === '23P01';
-  }
-
-  private async getEntryIdsByTagId(tagId: string): Promise<string[]> {
-    const { data, error } = await this.supabase
-      .from('entry_tags')
-      .select('entry_id')
-      .eq('tag_id', tagId);
-
-    if (error) {
-      throw new EntryServiceError(
-        'TAG_FILTER_FAILED',
-        `Failed to apply tag filter: ${error.message}`,
-      );
-    }
-
-    return data.map((row) => row.entry_id);
-  }
-
-  private formatEntryWithTags(entry: EntryWithTags): EntryWithTags {
-    // PostgREST は entry_id にユニーク制約がある場合オブジェクトを返す（配列ではなく）
-    const tags = entry.entry_tags;
-    const tagId = Array.isArray(tags) ? (tags[0]?.tag_id ?? null) : (tags?.tag_id ?? null);
-    const { entry_tags: _, ...entryData } = entry;
-    return { ...entryData, tagId };
   }
 
   private normalizeDateTimeFields<T extends Record<string, unknown>>(
