@@ -21,7 +21,7 @@ CREATE TABLE public.profiles (
 -- entries: エントリ（プラン + 記録 統合テーブル）
 -- origin='planned' → 事前に計画したタイムボックス
 -- origin='unplanned' → 実行後に記録した時間
--- reviewed_at IS NOT NULL → 完了済み（旧statusカラムを置換）
+-- fulfillment_score IS NOT NULL → レビュー済み
 CREATE TABLE public.entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -29,16 +29,21 @@ CREATE TABLE public.entries (
   description TEXT,
   start_time TIMESTAMPTZ,       -- カレンダー上の開始時刻
   end_time TIMESTAMPTZ,         -- カレンダー上の終了時刻
+  actual_start_time TIMESTAMPTZ, -- 実績開始時刻
+  actual_end_time TIMESTAMPTZ,   -- 実績終了時刻
   recurrence_type TEXT NOT NULL DEFAULT 'none',  -- none/daily/weekly/monthly/yearly/weekdays
   recurrence_end_date DATE,
   recurrence_rule TEXT,          -- RFC 5545 RRULE（複雑な繰り返し用）
-  reminder_enabled BOOLEAN NOT NULL DEFAULT false, -- リマインダーON/OFF
-  reminder_at TIMESTAMPTZ,       -- 自動計算: reminder_enabled=true → start_time
-  reminder_sent BOOLEAN NOT NULL DEFAULT false,
-  reviewed_at TIMESTAMPTZ,       -- 完了マーク日時
   origin TEXT NOT NULL DEFAULT 'planned',
   fulfillment_score INTEGER,     -- 充実度 1-3（低/中/高）
-  duration_minutes INTEGER,      -- 手動入力の所要時間（start/end未設定時）
+  duration_minutes INTEGER GENERATED ALWAYS AS (
+    CASE
+      WHEN start_time IS NOT NULL AND end_time IS NOT NULL
+      THEN EXTRACT(EPOCH FROM (end_time - start_time))::INTEGER / 60
+      ELSE NULL
+    END
+  ) STORED,
+  deleted_at TIMESTAMPTZ,        -- ソフトデリート
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -99,15 +104,12 @@ CREATE TABLE public.user_settings (
   show_weekends BOOLEAN NOT NULL DEFAULT true,
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
   default_view TEXT NOT NULL DEFAULT 'week',
-  hour_height_density TEXT NOT NULL DEFAULT 'default',
-  -- クロノタイプ
-  chronotype_enabled BOOLEAN NOT NULL DEFAULT true,
-  chronotype_type TEXT NOT NULL DEFAULT 'bear',  -- bear/lion/wolf/dolphin/custom
-  chronotype_custom_zones JSONB,
-  chronotype_display_mode TEXT NOT NULL DEFAULT 'border',
-  chronotype_opacity SMALLINT NOT NULL DEFAULT 90,
+  -- クロノタイプ（jsonb統合）
+  chronotype_settings JSONB,     -- { type: 'bear'|'lion'|'wolf'|'dolphin' } or null
   -- プラン/記録モード
   plan_record_mode TEXT NOT NULL DEFAULT 'both',  -- plan/record/both
+  -- ロケール
+  preferred_locale TEXT NOT NULL DEFAULT 'en',  -- en / ja
   -- テーマ
   theme TEXT NOT NULL DEFAULT 'system',
   color_scheme TEXT NOT NULL DEFAULT 'blue',
