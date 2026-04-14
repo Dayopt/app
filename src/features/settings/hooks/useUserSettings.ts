@@ -71,7 +71,6 @@ export function useUserSettings() {
           light: dbSettings.chronotype?.gradientLight ?? null,
           dark: dbSettings.chronotype?.gradientDark ?? null,
         },
-        planRecordMode: dbSettings.planRecordMode,
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
       });
@@ -102,8 +101,6 @@ export function useUserSettings() {
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)
         dbInput.hourHeightDensity = settings.hourHeightDensity;
-      if (settings.planRecordMode !== undefined) dbInput.planRecordMode = settings.planRecordMode;
-
       if (Object.keys(dbInput).length > 0) {
         updateMutation.mutate(dbInput);
       }

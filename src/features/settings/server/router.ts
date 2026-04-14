@@ -42,28 +42,8 @@ const userSettingsSchema = z.object({
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
   hourHeightDensity: z.enum(['compact', 'default', 'spacious']).optional(),
 
-  // Plan/Record表示設定
-  planRecordMode: z.enum(['plan', 'record', 'both']).optional(),
-
   // テーマ設定
   theme: z.enum(['light', 'dark', 'system']).optional(),
-  colorScheme: z.enum(['blue', 'green', 'purple', 'orange', 'red']).optional(),
-
-  // パーソナライゼーション設定（ACT価値評定スケール: 12カテゴリ、重要度1-10）
-  personalizationValues: z
-    .record(
-      z.string(),
-      z.object({
-        text: z.string().max(500),
-        importance: z.number().min(1).max(10),
-      }),
-    )
-    .optional(),
-  aiCommunicationStyle: z.enum(['coach', 'analyst', 'friendly', 'custom']).optional(),
-  aiCustomStylePrompt: z.string().max(1000).optional(),
-
-  // 価値観キーワードランキング（トップ5）
-  rankedValues: z.array(z.string().max(50)).max(5).optional(),
 
   // メール送信言語
   preferredLocale: z.enum(['en', 'ja']).optional(),
@@ -135,22 +115,7 @@ export const userSettingsRouter = createTRPCRouter({
             | 'default'
             | 'spacious'
             | undefined,
-          planRecordMode: data.plan_record_mode as 'plan' | 'record' | 'both',
           theme: data.theme as 'light' | 'dark' | 'system',
-          colorScheme: data.color_scheme as 'blue' | 'green' | 'purple' | 'orange' | 'red',
-          personalization: {
-            values: (data.personalization_values ?? {}) as Record<
-              string,
-              { text: string; importance: number }
-            >,
-            rankedValues: (data.personalization_ranked_values ?? []) as string[],
-            aiStyle: (data.ai_communication_style ?? 'coach') as
-              | 'coach'
-              | 'analyst'
-              | 'friendly'
-              | 'custom',
-            aiCustomStylePrompt: data.ai_custom_style_prompt ?? '',
-          },
           preferredLocale:
             ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
@@ -200,17 +165,7 @@ export const userSettingsRouter = createTRPCRouter({
           (updateData as Record<string, unknown>).default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)
           (updateData as Record<string, unknown>).hour_height_density = input.hourHeightDensity;
-        if (input.planRecordMode !== undefined) updateData.plan_record_mode = input.planRecordMode;
         if (input.theme !== undefined) updateData.theme = input.theme;
-        if (input.colorScheme !== undefined) updateData.color_scheme = input.colorScheme;
-        if (input.personalizationValues !== undefined)
-          updateData.personalization_values = input.personalizationValues;
-        if (input.aiCommunicationStyle !== undefined)
-          updateData.ai_communication_style = input.aiCommunicationStyle;
-        if (input.aiCustomStylePrompt !== undefined)
-          updateData.ai_custom_style_prompt = input.aiCustomStylePrompt;
-        if (input.rankedValues !== undefined)
-          updateData.personalization_ranked_values = input.rankedValues;
         if (input.preferredLocale !== undefined)
           (updateData as Record<string, unknown>).preferred_locale = input.preferredLocale;
 

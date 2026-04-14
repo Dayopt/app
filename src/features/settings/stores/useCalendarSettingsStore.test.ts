@@ -18,7 +18,6 @@ describe('useCalendarSettingsStore', () => {
       expect(state.defaultDuration).toBe(60);
       expect(state.snapInterval).toBe(15);
       expect(state.showWeekends).toBe(true);
-      expect(state.planRecordMode).toBe('both');
     });
 
     it('クロノタイプはデフォルト無効（null）', () => {

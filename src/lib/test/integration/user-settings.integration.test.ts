@@ -223,12 +223,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
 
       await caller.update({
         theme: 'dark',
-        colorScheme: 'purple',
       });
 
       const settings = await caller.get();
       expect(settings?.theme).toBe('dark');
-      expect(settings?.colorScheme).toBe('purple');
     });
   });
 

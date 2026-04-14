@@ -106,18 +106,10 @@ CREATE TABLE public.user_settings (
   default_view TEXT NOT NULL DEFAULT 'week',
   -- クロノタイプ（jsonb統合）
   chronotype_settings JSONB,     -- { type: 'bear'|'lion'|'wolf'|'dolphin' } or null
-  -- プラン/記録モード
-  plan_record_mode TEXT NOT NULL DEFAULT 'both',  -- plan/record/both
   -- ロケール
   preferred_locale TEXT NOT NULL DEFAULT 'en',  -- en / ja
   -- テーマ
   theme TEXT NOT NULL DEFAULT 'system',
-  color_scheme TEXT NOT NULL DEFAULT 'blue',
-  -- AI設定
-  personalization_values JSONB DEFAULT '{}',
-  ai_communication_style TEXT DEFAULT 'coach',
-  ai_custom_style_prompt TEXT DEFAULT '',
-  personalization_ranked_values JSONB DEFAULT '[]',
   -- メタ
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
