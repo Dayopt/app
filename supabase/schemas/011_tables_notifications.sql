@@ -5,15 +5,16 @@
 -- notifications: アプリ内通知
 -- type で種別を分岐、data (JSONB) に種別固有のペイロード
 -- INSERT は service_role のみ（Edge Function / pg_cron 経由）
+-- read_at が NULL = 未読、非NULL = 既読
 CREATE TABLE public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   type TEXT NOT NULL,            -- reminder/overdue/ai_insight/weekly_report/burnout_warning/energy_insight
   entry_id UUID REFERENCES public.entries(id) ON DELETE SET NULL,
-  reflection_id UUID REFERENCES public.reflections(id) ON DELETE SET NULL,
-  is_read BOOLEAN NOT NULL DEFAULT false,
-  read_at TIMESTAMPTZ,
+  title TEXT NOT NULL,           -- 通知タイトル（表示用）
   data JSONB DEFAULT '{}',       -- 通知種別ごとの追加データ
+  read_at TIMESTAMPTZ,           -- NULL=未読, 非NULL=既読
+  fire_at TIMESTAMPTZ,           -- 通知発火予定日時（リマインダー等）
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

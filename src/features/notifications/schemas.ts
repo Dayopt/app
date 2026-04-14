@@ -12,12 +12,14 @@ export const notificationTypeSchema = z.enum([
 /** 通知作成リクエストのZodスキーマ */
 export const createNotificationSchema = z.object({
   type: notificationTypeSchema,
-  entry_id: z.string().uuid(),
+  title: z.string().min(1),
+  entry_id: z.string().uuid().optional(),
+  fire_at: z.string().datetime().optional(),
+  data: z.record(z.unknown()).optional(),
 });
 
 /** 通知更新（既読化など）のZodスキーマ */
 export const updateNotificationSchema = z.object({
-  is_read: z.boolean().optional(),
   read_at: z.string().datetime().nullable().optional(),
 });
 
@@ -28,7 +30,7 @@ export const notificationIdSchema = z.object({
 
 /** 通知一覧取得オプションのZodスキーマ */
 export const listNotificationsSchema = z.object({
-  is_read: z.boolean().optional(),
+  unread_only: z.boolean().optional(),
   type: notificationTypeSchema.optional(),
   limit: z.number().min(1).max(100).optional().default(50),
   offset: z.number().min(0).optional().default(0),

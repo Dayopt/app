@@ -45,7 +45,7 @@ interface KpiSummary {
 interface NotificationRow {
   user_id: string;
   type: NotificationType;
-  is_read: false;
+  title: string;
   data: Record<string, unknown>;
 }
 
@@ -63,7 +63,7 @@ function evaluateThresholds(kpi: KpiSummary): NotificationRow[] {
   if (kpi.entryRate.entryRate < THRESHOLDS.entryRate.low) {
     notifications.push({
       type: 'ai_insight',
-      is_read: false,
+      title: 'エントリ率が低い傾向があります',
       data: { rule: 'entryRate_low', value: kpi.entryRate.entryRate },
     });
   }
@@ -72,7 +72,7 @@ function evaluateThresholds(kpi: KpiSummary): NotificationRow[] {
   if (kpi.contextSwitches.avgPerDay > THRESHOLDS.contextSwitches.high) {
     notifications.push({
       type: 'ai_insight',
-      is_read: false,
+      title: 'コンテキストスイッチが多い傾向があります',
       data: { rule: 'contextSwitches_high', value: kpi.contextSwitches.avgPerDay },
     });
   }
@@ -81,7 +81,7 @@ function evaluateThresholds(kpi: KpiSummary): NotificationRow[] {
   if (kpi.blankRate.blankRate > THRESHOLDS.blankRate.high) {
     notifications.push({
       type: 'ai_insight',
-      is_read: false,
+      title: '空白時間が多い傾向があります',
       data: { rule: 'blankRate_high', value: kpi.blankRate.blankRate },
     });
   }
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
             rows.push({
               user_id: user.user_id,
               type: burnoutType,
-              is_read: false,
+              title: 'バーンアウトの兆候があります',
               data: { rule: 'burnout_consecutive' },
             });
           }

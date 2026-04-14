@@ -23,7 +23,8 @@ interface NotificationData {
   id: string;
   type: NotificationType;
   entry_id: string | null;
-  is_read: boolean;
+  title: string;
+  read_at: string | null;
   created_at: string;
   entries?: { title: string } | null;
 }
@@ -151,8 +152,8 @@ export function ActivityContent({ tab, compact = false }: ActivityContentProps) 
                   key={notification.id}
                   id={notification.id}
                   type={notification.type}
-                  entryTitle={notification.entries?.title ?? undefined}
-                  isRead={notification.is_read}
+                  entryTitle={notification.entries?.title ?? notification.title}
+                  isRead={notification.read_at !== null}
                   createdAt={notification.created_at}
                   locale={locale as 'ja' | 'en'}
                   onMarkAsRead={handleMarkAsRead}

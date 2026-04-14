@@ -18,10 +18,10 @@ import { api } from '@/lib/trpc';
  * 通知一覧取得
  *
  * @param params - フィルタパラメータ
- * @param params.is_read - 既読状態でフィルタ
+ * @param params.unread_only - 未読のみフィルタ
  * @param params.limit - 取得件数上限
  */
-export function useNotificationsList(params?: { is_read?: boolean; limit?: number }) {
+export function useNotificationsList(params?: { unread_only?: boolean; limit?: number }) {
   return api.notifications.list.useQuery(params, {
     ...cacheStrategies.notifications,
     retry: 1,
@@ -86,7 +86,7 @@ export function useNotificationMutations() {
       // 通知を既読にマーク
       utils.notifications.list.setData(undefined, (old) => {
         if (!old) return old;
-        return old.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+        return old.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
       });
 
       // 未読数を減らす
@@ -120,7 +120,7 @@ export function useNotificationMutations() {
       // 全通知を既読にマーク
       utils.notifications.list.setData(undefined, (old) => {
         if (!old) return old;
-        return old.map((n) => ({ ...n, is_read: true }));
+        return old.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() }));
       });
 
       // 未読数を0に
@@ -150,7 +150,7 @@ export function useNotificationMutations() {
 
       // 削除対象が未読かどうかを確認
       const deletedNotification = previousList?.find((n) => n.id === id);
-      const wasUnread = deletedNotification && !deletedNotification.is_read;
+      const wasUnread = deletedNotification && deletedNotification.read_at === null;
 
       // 通知をリストから削除
       utils.notifications.list.setData(undefined, (old) => {
@@ -189,7 +189,7 @@ export function useNotificationMutations() {
       // 既読の通知をリストから削除
       utils.notifications.list.setData(undefined, (old) => {
         if (!old) return old;
-        return old.filter((n) => !n.is_read);
+        return old.filter((n) => n.read_at === null);
       });
 
       return { previousList };
