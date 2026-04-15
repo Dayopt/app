@@ -293,6 +293,7 @@ export function createChainableMock(
     in: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
+    ilike: vi.fn().mockReturnThis(),
     lt: vi.fn().mockReturnThis(),
     gt: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
