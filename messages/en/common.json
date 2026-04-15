@@ -204,7 +204,8 @@
       "placeholder": "Search...",
       "noResults": "No results found",
       "tagsGroup": "Tags",
-      "blocksGroup": "Blocks"
+      "blocksGroup": "Blocks",
+      "moreResults": "{count}+ more results"
     },
     "offline": {
       "title": "You're offline",

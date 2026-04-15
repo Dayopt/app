@@ -28,6 +28,10 @@ export interface CalendarDataLayerResult {
   viewDateRange: ViewDateRange;
   filteredEvents: CalendarEvent[];
   allCalendarEvents: CalendarEvent[];
+  /** ナビゲーション方向に対応する日付範囲を事前取得する */
+  prefetchDirection: (direction: 'prev' | 'next' | 'today') => void;
+  /** ビュー切り替え先の日付範囲を即座に事前取得する */
+  prefetchForView: (newViewType: CalendarViewType) => void;
 }
 
 // =============================================================================
@@ -40,7 +44,14 @@ export function useCalendarDataLayer({
 }: CalendarDataLayerInput): CalendarDataLayerResult {
   const tError = useTranslations('calendar.error');
 
-  const { viewDateRange, filteredEvents, allCalendarEvents, entriesError } = useCalendarData({
+  const {
+    viewDateRange,
+    filteredEvents,
+    allCalendarEvents,
+    entriesError,
+    prefetchDirection,
+    prefetchForView,
+  } = useCalendarData({
     viewType,
     currentDate,
   });
@@ -58,7 +69,9 @@ export function useCalendarDataLayer({
       viewDateRange,
       filteredEvents,
       allCalendarEvents,
+      prefetchDirection,
+      prefetchForView,
     }),
-    [viewDateRange, filteredEvents, allCalendarEvents],
+    [viewDateRange, filteredEvents, allCalendarEvents, prefetchDirection, prefetchForView],
   );
 }

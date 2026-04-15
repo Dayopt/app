@@ -16,10 +16,14 @@ import {
 } from '@/lib/components/ui/command';
 import { Dialog, DialogContent, DialogTitle } from '@/lib/components/ui/dialog';
 import { formatDateShort, formatTimeRange } from '@/lib/date/format';
+import { useDebouncedCallback } from '@/lib/hooks/useDebounce';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useTranslations } from 'next-intl';
 
 import { HighlightedText } from '../lib/highlight-text';
+
+const SEARCH_LIMIT = 20;
+const DEBOUNCE_MS = 300;
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -47,9 +51,42 @@ function HighlightedTagName({ name, query }: { name: string; query: string }) {
 export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const t = useTranslations('common.search');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  // Data - only fetch when modal is open
-  const { data: entries = [] } = useEntries(undefined, { enabled: isOpen });
+  // useDebouncedCallback で debounce（useEffect 内の setState を回避）
+  const debouncedSetQuery = useDebouncedCallback((value: string) => {
+    setDebouncedQuery(value);
+  }, DEBOUNCE_MS);
+
+  // CommandInput の onChange をラップ
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (value.trim() === '') {
+        // 空文字は即座に反映（モーダル閉じ時のリセットやクリア操作）
+        setDebouncedQuery('');
+      } else {
+        debouncedSetQuery(value);
+      }
+    },
+    [debouncedSetQuery],
+  );
+
+  // サーバー側検索: debounce されたクエリがあるときだけ発火
+  const hasSearchQuery = debouncedQuery.trim().length > 0;
+  const { data: entries = [], isFetching: isSearching } = useEntries(
+    hasSearchQuery
+      ? {
+          search: debouncedQuery.trim(),
+          limit: SEARCH_LIMIT + 1,
+          sortBy: 'start_time',
+          sortOrder: 'desc',
+        }
+      : undefined,
+    { enabled: isOpen && hasSearchQuery },
+  );
+
+  // タグはキャッシュ共有（件数少ないのでクライアント側フィルタで十分）
   const { data: tags = [] } = useTags();
 
   // Actions
@@ -62,41 +99,21 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   if (prevIsOpen && !isOpen) {
     setPrevIsOpen(isOpen);
     setQuery('');
+    setDebouncedQuery('');
   } else if (prevIsOpen !== isOpen) {
     setPrevIsOpen(isOpen);
   }
 
-  // Filter tags by query
+  // Filter tags by query (client-side — tag count is small)
   const filteredTags = useMemo(() => {
     if (!query.trim()) return tags;
     const q = query.toLowerCase();
     return tags.filter((tag) => tag.name.toLowerCase().includes(q));
   }, [tags, query]);
 
-  // Filter entries by query (search description and resolved tag name)
-  const filteredEntries = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
-
-    return entries
-      .filter((entry) => {
-        // Match description
-        if (entry.description?.toLowerCase().includes(q)) return true;
-        // Match tag name
-        if (entry.tagId) {
-          const tag = tags.find((t) => t.id === entry.tagId);
-          if (tag?.name.toLowerCase().includes(q)) return true;
-        }
-        return false;
-      })
-      .sort((a, b) => {
-        // Sort by start_time descending (newest first)
-        const aTime = a.start_time ? new Date(a.start_time).getTime() : 0;
-        const bTime = b.start_time ? new Date(b.start_time).getTime() : 0;
-        return bTime - aTime;
-      })
-      .slice(0, 20);
-  }, [entries, tags, query]);
+  // エントリ結果（サーバーから返却済み、limit+1 で取得して hasMore を判定）
+  const hasMore = entries.length > SEARCH_LIMIT;
+  const displayEntries = hasMore ? entries.slice(0, SEARCH_LIMIT) : entries;
 
   // Handle tag selection → showOnlyTag + close
   const handleTagSelect = useCallback(
@@ -119,6 +136,10 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     [onClose, navigateTo, openInspector],
   );
 
+  // debounce 中かどうか（入力中だがまだクエリが発火していない）
+  const isDebouncing = query.trim() !== debouncedQuery.trim() && query.trim().length > 0;
+  const showLoading = isDebouncing || (isSearching && hasSearchQuery);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
@@ -128,7 +149,11 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
         </VisuallyHidden>
         <Command className="[&_[cmdk-group-heading]]:text-muted-foreground !rounded-none [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-normal [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2">
           <div className="relative">
-            <CommandInput placeholder={t('placeholder')} value={query} onValueChange={setQuery} />
+            <CommandInput
+              placeholder={t('placeholder')}
+              value={query}
+              onValueChange={handleQueryChange}
+            />
             <div className="absolute top-1/2 right-4 hidden -translate-y-1/2 items-center gap-1 md:flex">
               <kbd className="bg-surface-container text-muted-foreground inline-flex h-6 items-center gap-1 rounded-lg border px-2 font-mono text-xs font-normal opacity-100 select-none">
                 ESC
@@ -136,7 +161,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             </div>
           </div>
           <CommandList className="max-h-120">
-            <CommandEmpty>{t('noResults')}</CommandEmpty>
+            <CommandEmpty>{showLoading ? null : t('noResults')}</CommandEmpty>
 
             {/* Tags */}
             {filteredTags.length > 0 && (
@@ -157,10 +182,10 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
               </CommandGroup>
             )}
 
-            {/* Entries (only when searching) */}
-            {filteredEntries.length > 0 && (
+            {/* Entries (server-side search results) */}
+            {displayEntries.length > 0 && (
               <CommandGroup heading={t('blocksGroup')}>
-                {filteredEntries.map((entry) => {
+                {displayEntries.map((entry) => {
                   const tag = entry.tagId ? tags.find((t) => t.id === entry.tagId) : null;
                   const startDate = entry.start_time ? new Date(entry.start_time) : null;
                   const endDate = entry.end_time ? new Date(entry.end_time) : null;
@@ -196,6 +221,13 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                     </CommandItem>
                   );
                 })}
+
+                {/* 20件以上ある場合の通知 */}
+                {hasMore && (
+                  <div className="text-muted-foreground px-2 py-2 text-center text-xs">
+                    {t('moreResults', { count: SEARCH_LIMIT })}
+                  </div>
+                )}
               </CommandGroup>
             )}
           </CommandList>

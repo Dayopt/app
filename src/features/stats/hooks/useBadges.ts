@@ -41,13 +41,13 @@ export function useBadges() {
     },
   });
 
-  // list取得完了後にevaluateWithProgressをバックグラウンド実行
+  // マウント時に即座にevaluateWithProgressを実行（listと並列）
   useEffect(() => {
-    if (hasEvaluated.current || listQuery.isPending) return;
+    if (hasEvaluated.current) return;
     hasEvaluated.current = true;
     evaluateMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listQuery.isPending]);
+  }, []);
 
   return {
     earnedBadges: listQuery.data ?? [],

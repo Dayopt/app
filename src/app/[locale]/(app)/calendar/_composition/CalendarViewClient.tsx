@@ -109,6 +109,7 @@ export function CalendarViewClient({ translations }: CalendarViewClientProps) {
           onToggleWeekends={composition.onToggleWeekends}
           onSettingsChange={composition.onSettingsChange}
           onDateSelect={composition.onDateSelect}
+          onPrefetch={composition.prefetchDirection}
           leftSlot={sidebarToggle}
           rightSlot={<SidebarPageNav />}
         />

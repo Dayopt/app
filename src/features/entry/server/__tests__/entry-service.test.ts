@@ -283,12 +283,16 @@ describe('EntryService.delete', () => {
 describe('EntryService.list - search sanitization', () => {
   it('PostgREST 特殊文字がサニタイズされる', async () => {
     const { service, mockSupabase } = createService();
-    const mock = createChainableMock([]);
+    const entriesMock = createChainableMock([]);
+    const tagsMock = createChainableMock([]);
 
     // or() の呼び出しを追跡
-    const orSpy = vi.fn().mockReturnValue(mock);
-    mock.or = orSpy;
-    mockSupabase.from.mockReturnValue(mock);
+    const orSpy = vi.fn().mockReturnValue(entriesMock);
+    entriesMock.or = orSpy;
+
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === 'tags' ? tagsMock : entriesMock,
+    );
 
     await service.list({ userId: USER_ID, search: 'test%drop*:injection' });
 
@@ -298,12 +302,34 @@ describe('EntryService.list - search sanitization', () => {
     );
   });
 
+  it('タグ名マッチ時は or() に tag_id.in を含める', async () => {
+    const { service, mockSupabase } = createService();
+    const entriesMock = createChainableMock([]);
+    const tagsMock = createChainableMock([{ id: 'tag-1' }, { id: 'tag-2' }]);
+
+    const orSpy = vi.fn().mockReturnValue(entriesMock);
+    entriesMock.or = orSpy;
+
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === 'tags' ? tagsMock : entriesMock,
+    );
+
+    await service.list({ userId: USER_ID, search: 'work' });
+
+    expect(orSpy).toHaveBeenCalledWith(
+      'title.ilike.%work%,description.ilike.%work%,tag_id.in.(tag-1,tag-2)',
+    );
+  });
+
   it('サニタイズ後に空文字なら or() を呼ばない', async () => {
     const { service, mockSupabase } = createService();
-    const mock = createChainableMock([]);
-    const orSpy = vi.fn().mockReturnValue(mock);
-    mock.or = orSpy;
-    mockSupabase.from.mockReturnValue(mock);
+    const entriesMock = createChainableMock([]);
+    const orSpy = vi.fn().mockReturnValue(entriesMock);
+    entriesMock.or = orSpy;
+
+    mockSupabase.from.mockImplementation((table: string) =>
+      table === 'tags' ? createChainableMock([]) : entriesMock,
+    );
 
     await service.list({ userId: USER_ID, search: '%*:.,()\\' });
 

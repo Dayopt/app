@@ -20,6 +20,8 @@ import { MobileYearStrip } from './MobileYearStrip';
 interface MobileCalendarHeaderProps {
   currentDate: Date;
   onNavigate: (direction: NavigationDirection) => void;
+  /** ホバー/タッチ時にナビゲーション先のデータを事前取得する */
+  onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
   onDateSelect?: ((date: Date) => void) | undefined;
   displayRange?: { start: Date; end: Date } | undefined;
   className?: string | undefined;
@@ -34,7 +36,15 @@ interface MobileCalendarHeaderProps {
  * Google Calendar のモバイルUIを参考にした設計。
  */
 export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
-  ({ currentDate, onNavigate, onDateSelect, displayRange, className, defaultExpanded }) => {
+  ({
+    currentDate,
+    onNavigate,
+    onPrefetch,
+    onDateSelect,
+    displayRange,
+    className,
+    defaultExpanded,
+  }) => {
     const t = useTranslations('calendar');
     const tCommon = useTranslations('common');
     const locale = useLocale();
@@ -103,6 +113,8 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
               size="sm"
               className="text-muted-foreground hover:text-foreground"
               onClick={handleTodayClick}
+              onMouseEnter={() => onPrefetch?.('today')}
+              onTouchStart={() => onPrefetch?.('today')}
               aria-label={t('actions.goToToday')}
             >
               <div className="relative flex size-5 flex-col">

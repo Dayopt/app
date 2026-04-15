@@ -204,7 +204,8 @@
       "placeholder": "例: ミーティング、運動",
       "noResults": "一致する結果がありません",
       "tagsGroup": "タグ",
-      "blocksGroup": "ブロック"
+      "blocksGroup": "ブロック",
+      "moreResults": "他に{count}件以上あります"
     },
     "offline": {
       "title": "オフライン",

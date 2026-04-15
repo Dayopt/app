@@ -64,7 +64,22 @@ export class EntryService {
     if (search) {
       const sanitized = search.replace(/[.,()\\%*:]/g, '');
       if (sanitized.length > 0) {
-        query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+        // タグ名でもヒットさせるため、マッチするタグIDを先に取得
+        const { data: matchingTags } = await this.supabase
+          .from('tags')
+          .select('id')
+          .eq('user_id', userId)
+          .ilike('name', `%${sanitized}%`);
+
+        const matchingTagIds = matchingTags?.map((t) => t.id) ?? [];
+
+        if (matchingTagIds.length > 0) {
+          query = query.or(
+            `title.ilike.%${sanitized}%,description.ilike.%${sanitized}%,tag_id.in.(${matchingTagIds.join(',')})`,
+          );
+        } else {
+          query = query.or(`title.ilike.%${sanitized}%,description.ilike.%${sanitized}%`);
+        }
       }
     }
 

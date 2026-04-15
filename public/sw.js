@@ -15,7 +15,7 @@ const swLog = __SW_DEBUG__ ? console.log.bind(console) : () => {};
 const swError = console.error.bind(console); // エラーは常に出力
 
 // キャッシュバージョン: 破壊的変更時のみインクリメント
-const CACHE_VERSION = '2';
+const CACHE_VERSION = '3';
 const CACHE_NAME = `dayopt-v${CACHE_VERSION}`;
 const STATIC_CACHE_NAME = `dayopt-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `dayopt-dynamic-v${CACHE_VERSION}`;
@@ -125,33 +125,43 @@ self.addEventListener('fetch', (event) => {
 
 /**
  * ナビゲーションリクエストの処理
- * Network First with Offline Fallback
+ * Stale-While-Revalidate: キャッシュがあれば即返し、
+ * バックグラウンドでネットワークfetchしてキャッシュを更新する
  */
 async function handleNavigationRequest(request) {
-  try {
-    const networkResponse = await fetch(request);
-    // 成功したらキャッシュに保存
-    if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE_NAME);
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch (error) {
-    // オフラインの場合はキャッシュまたはオフラインページを返す
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    // オフラインフォールバックページ
-    const offlineResponse = await caches.match('/offline');
-    if (offlineResponse) {
-      return offlineResponse;
-    }
-    return new Response('オフラインです', {
-      status: 503,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    });
+  const cache = await caches.open(DYNAMIC_CACHE_NAME);
+  const cached = await cache.match(request);
+
+  // バックグラウンドでネットワークfetch → キャッシュ更新（次回用）
+  const fetchPromise = fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    // キャッシュがあれば即返す（バックグラウンドでfetch継続）
+    return cached;
   }
+
+  // キャッシュがない場合はネットワークを待つ
+  const networkResponse = await fetchPromise;
+  if (networkResponse) {
+    return networkResponse;
+  }
+
+  // どちらもない場合はオフラインフォールバック
+  const offlineResponse = await caches.match('/offline');
+  if (offlineResponse) {
+    return offlineResponse;
+  }
+  return new Response('オフラインです', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
 
 /**

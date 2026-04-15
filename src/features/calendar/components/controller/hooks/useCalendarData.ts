@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 
 import { addDays, subDays } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
@@ -18,6 +18,7 @@ import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFi
 import { calculateViewDateRange } from '../../../lib/range';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
+import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';
 
 /**
  * ローカル日付の 00:00:00 をユーザーTZのUTC ISO文字列に変換
@@ -60,6 +61,10 @@ interface UseCalendarDataResult {
   entriesError: ReturnType<typeof useEntries>['error'];
   /** エントリ取得中かどうか */
   isEntriesLoading: boolean;
+  /** ナビゲーション方向に対応する日付範囲を事前取得する */
+  prefetchDirection: (direction: 'prev' | 'next' | 'today') => void;
+  /** ビュー切り替え先の日付範囲を即座に事前取得する */
+  prefetchForView: (newViewType: CalendarViewType) => void;
 }
 
 /**
@@ -111,26 +116,79 @@ export function useCalendarData({
   // tRPC utils（プリフェッチ用）
   const utils = api.useUtils();
 
-  // 隣接期間のプリフェッチ（ナビゲーション高速化）
+  // 隣接期間のプリフェッチ（ナビゲーション高速化、viewType別に最適化）
   useEffect(() => {
-    const prefetchAdjacentPeriods = () => {
-      // 前の期間
-      const prevRange = calculateViewDateRange(viewType, subDays(currentDate, 7), weekStartsOn);
+    const prefetchRange = (date: Date, view: CalendarViewType = viewType) => {
+      const range = calculateViewDateRange(view, date, weekStartsOn);
       void utils.entries.list.prefetch({
-        startDate: toTZStartISO(prevRange.start, timezone),
-        endDate: toTZEndISO(prevRange.end, timezone),
-      });
-
-      // 次の期間
-      const nextRange = calculateViewDateRange(viewType, addDays(currentDate, 7), weekStartsOn);
-      void utils.entries.list.prefetch({
-        startDate: toTZStartISO(nextRange.start, timezone),
-        endDate: toTZEndISO(nextRange.end, timezone),
+        startDate: toTZStartISO(range.start, timezone),
+        endDate: toTZEndISO(range.end, timezone),
       });
     };
 
-    prefetchAdjacentPeriods();
+    if (viewType === 'day') {
+      // dayビュー: 前後3日を個別にprefetch（日送りでのキャッシュヒット率向上）
+      for (let i = 1; i <= 3; i++) {
+        prefetchRange(subDays(currentDate, i));
+        prefetchRange(addDays(currentDate, i));
+      }
+    } else if (isMultiDayView(viewType)) {
+      // multi-dayビュー: 前後1期間分をprefetch
+      const count = getMultiDayCount(viewType);
+      prefetchRange(subDays(currentDate, count));
+      prefetchRange(addDays(currentDate, count));
+    } else {
+      // weekビュー: 前後1週間をprefetch
+      prefetchRange(subDays(currentDate, 7));
+      prefetchRange(addDays(currentDate, 7));
+    }
   }, [currentDate, viewType, weekStartsOn, timezone, utils.entries.list]);
+
+  // 指定方向のナビゲーション先を事前取得（ホバー/タッチ時に呼ばれる）
+  const prefetchDirection = useCallback(
+    (direction: 'prev' | 'next' | 'today') => {
+      let targetDate: Date;
+
+      if (direction === 'today') {
+        targetDate = new Date();
+      } else {
+        const multiplier = direction === 'next' ? 1 : -1;
+        targetDate = new Date(currentDate);
+
+        if (isMultiDayView(viewType)) {
+          targetDate.setDate(currentDate.getDate() + getMultiDayCount(viewType) * multiplier);
+        } else {
+          switch (viewType) {
+            case 'day':
+              targetDate.setDate(currentDate.getDate() + 1 * multiplier);
+              break;
+            case 'week':
+            default:
+              targetDate.setDate(currentDate.getDate() + 7 * multiplier);
+          }
+        }
+      }
+
+      const range = calculateViewDateRange(viewType, targetDate, weekStartsOn);
+      void utils.entries.list.prefetch({
+        startDate: toTZStartISO(range.start, timezone),
+        endDate: toTZEndISO(range.end, timezone),
+      });
+    },
+    [currentDate, viewType, weekStartsOn, timezone, utils.entries.list],
+  );
+
+  // ビュー切り替え先の日付範囲を即座にprefetch（useEffect経由の1レンダー遅延を回避）
+  const prefetchForView = useCallback(
+    (newViewType: CalendarViewType) => {
+      const range = calculateViewDateRange(newViewType, currentDate, weekStartsOn);
+      void utils.entries.list.prefetch({
+        startDate: toTZStartISO(range.start, timezone),
+        endDate: toTZEndISO(range.end, timezone),
+      });
+    },
+    [currentDate, weekStartsOn, timezone, utils.entries.list],
+  );
 
   // フィルター関数と状態を取得（ストアに統一）
   const isEntryVisible = useCalendarFilterStore((state) => state.isEntryVisible);
@@ -228,5 +286,7 @@ export function useCalendarData({
     entriesData,
     entriesError,
     isEntriesLoading,
+    prefetchDirection,
+    prefetchForView,
   };
 }
