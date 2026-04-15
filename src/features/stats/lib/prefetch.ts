@@ -9,10 +9,11 @@ import { computePreviousDateRange, computeStatsDateRange } from './compute-date-
 /**
  * Stats ページ用 prefetch
  *
- * 3 クエリで全タブのデータを事前取得:
+ * 4 クエリで全タブのデータを事前取得:
  * 1. getStatsPageData: 統合クエリ（Review/Progress/Insights 全データ）
  * 2. getStreak: 連続記録日数（期間非依存のため統合不可）
  * 3. getDailyHours: 年間ヒートマップ（年パラメータが動的なため統合不可）
+ * 4. getTimePL: Time P/L データ（Review タブ、デフォルト week 粒度）
  */
 export async function prefetchStatsData() {
   const helpers = await createServerHelpers();
@@ -35,6 +36,12 @@ export async function prefetchStatsData() {
       }),
       helpers.entries.getStreak.prefetch(),
       helpers.entries.getDailyHours.prefetch({ year: now.getFullYear() }),
+      helpers.entries.getTimePL.prefetch({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        prevStart: prevDateRange.startDate,
+        prevEnd: prevDateRange.endDate,
+      }),
     ]);
   } catch {
     // 認証エラー等はスキップ（クライアント側でリトライ）
