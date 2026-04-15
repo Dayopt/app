@@ -45,7 +45,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   const mounted = useHasMounted();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const { data: tags, refetch: refetchTags } = useTags();
+  const { data: tags } = useTags();
   const mergeTagMutation = useMergeTag();
 
   const [selectedTargetId, setSelectedTargetId] = useState<string>('');
@@ -65,13 +65,6 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   } else if (open !== prevOpen) {
     setPrevOpen(open);
   }
-
-  // 最新のタグリストを取得
-  useEffect(() => {
-    if (open) {
-      void refetchTags();
-    }
-  }, [open, refetchTags]);
 
   // ESCキーでダイアログを閉じる
   useEffect(() => {
