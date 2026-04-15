@@ -54,7 +54,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
   // useDebouncedCallback で debounce（useEffect 内の setState を回避）
-  const debouncedSetQuery = useDebouncedCallback((value: string) => {
+  const [debouncedSetQuery, cancelDebouncedSetQuery] = useDebouncedCallback((value: string) => {
     setDebouncedQuery(value);
   }, DEBOUNCE_MS);
 
@@ -63,13 +63,14 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
     (value: string) => {
       setQuery(value);
       if (value.trim() === '') {
-        // 空文字は即座に反映（モーダル閉じ時のリセットやクリア操作）
+        // 空文字は即座に反映 + 保留中のdebounceタイマーをキャンセル
+        cancelDebouncedSetQuery();
         setDebouncedQuery('');
       } else {
         debouncedSetQuery(value);
       }
     },
-    [debouncedSetQuery],
+    [debouncedSetQuery, cancelDebouncedSetQuery],
   );
 
   // サーバー側検索: debounce されたクエリがあるときだけ発火

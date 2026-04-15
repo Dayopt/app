@@ -455,8 +455,8 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('stats.get_energy_map', async () =>
           supabase.rpc('get_energy_map', {
             p_user_id: userId,
-            p_start: input.startDate ?? '',
-            p_end: input.endDate ?? '',
+            p_start: input.startDate ?? '2000-01-01',
+            p_end: input.endDate ?? '2099-12-31',
           }),
         );
 

@@ -68,20 +68,20 @@ export function useEntityTagsHook(
   const queryClient = useQueryClient();
   const updateEntityTagIdsInCache = useUpdateEntityTagsInCache(entityName);
 
-  // 現在のエンティティのタグIDリストを取得するヘルパー
-  const getCurrentEntityTagIds = useCallback(
-    (entityId: string): string[] => {
+  // 現在のエンティティのタグIDを取得するヘルパー（単一タグモデル）
+  const getCurrentEntityTagId = useCallback(
+    (entityId: string): string | null => {
       // まず getById から取得を試みる
       const entityData = utils[entityName].getById.getData({ id: entityId }) as
-        | { tagIds?: string[] }
+        | { tagId?: string | null }
         | null
         | undefined;
-      if (entityData?.tagIds) {
-        return entityData.tagIds;
+      if (entityData?.tagId !== undefined) {
+        return entityData.tagId;
       }
 
       // list から取得を試みる
-      const allQueries = queryClient.getQueriesData<Array<{ id: string; tagIds?: string[] }>>({
+      const allQueries = queryClient.getQueriesData<Array<{ id: string; tagId?: string | null }>>({
         predicate: (query) => {
           const key = query.queryKey;
           return (
@@ -97,13 +97,13 @@ export function useEntityTagsHook(
       for (const [, data] of allQueries) {
         if (data) {
           const entity = data.find((e) => e.id === entityId);
-          if (entity?.tagIds) {
-            return entity.tagIds;
+          if (entity?.tagId !== undefined) {
+            return entity.tagId;
           }
         }
       }
 
-      return [];
+      return null;
     },
     [queryClient, utils, entityName],
   );
@@ -124,12 +124,21 @@ export function useEntityTagsHook(
       const previousEntityData = utils[entityName].getById.getData({ id: entityId });
       const previousTagStats = enableTagStats ? utils.entries.getTagStats.getData() : undefined;
 
-      const currentTagIds = getCurrentEntityTagIds(entityId);
-      if (!currentTagIds.includes(tagId)) {
-        updateEntityTagIdsInCache(entityId, [...currentTagIds, tagId]);
+      const currentTagId = getCurrentEntityTagId(entityId);
+      if (currentTagId !== tagId) {
+        updateEntityTagIdsInCache(entityId, [tagId]);
 
         if (enableTagStats && previousTagStats) {
           const newCounts = { ...previousTagStats.counts };
+          // 旧タグの減算
+          if (
+            currentTagId &&
+            newCounts[currentTagId] !== undefined &&
+            newCounts[currentTagId] > 0
+          ) {
+            newCounts[currentTagId] = newCounts[currentTagId] - 1;
+          }
+          // 新タグの加算
           newCounts[tagId] = (newCounts[tagId] ?? 0) + 1;
           utils.entries.getTagStats.setData(undefined, {
             ...previousTagStats,
@@ -178,9 +187,10 @@ export function useEntityTagsHook(
       const previousEntityData = utils[entityName].getById.getData({ id: entityId });
       const previousTagStats = enableTagStats ? utils.entries.getTagStats.getData() : undefined;
 
-      const currentTagIds = getCurrentEntityTagIds(entityId);
-      const newTagIds = currentTagIds.filter((id) => id !== tagId);
-      updateEntityTagIdsInCache(entityId, newTagIds);
+      const currentTagId = getCurrentEntityTagId(entityId);
+      if (currentTagId === tagId) {
+        updateEntityTagIdsInCache(entityId, []);
+      }
 
       if (enableTagStats && previousTagStats) {
         const newCounts = { ...previousTagStats.counts };
@@ -233,12 +243,12 @@ export function useEntityTagsHook(
       const previousEntityData = utils[entityName].getById.getData({ id: entityId });
       const previousTagStats = enableTagStats ? utils.entries.getTagStats.getData() : undefined;
 
-      const currentTagIds = getCurrentEntityTagIds(entityId);
+      const currentTagId = getCurrentEntityTagId(entityId);
       const newTagIds = tagId ? [tagId] : [];
       updateEntityTagIdsInCache(entityId, newTagIds);
 
       if (enableTagStats && previousTagStats) {
-        const oldTagId = currentTagIds[0] ?? null;
+        const oldTagId = currentTagId;
         const newCounts = { ...previousTagStats.counts };
         if (
           oldTagId &&

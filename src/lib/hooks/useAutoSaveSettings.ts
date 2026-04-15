@@ -31,7 +31,7 @@ export function useAutoSaveSettings<T>({
   const [isSaving, setIsSaving] = useState(false);
   const lastSavedValues = useRef<T>(initialValues);
 
-  const debouncedSave = useDebouncedCallback(async (newValues: T) => {
+  const [debouncedSave] = useDebouncedCallback(async (newValues: T) => {
     if (JSON.stringify(newValues) === JSON.stringify(lastSavedValues.current)) {
       return;
     }

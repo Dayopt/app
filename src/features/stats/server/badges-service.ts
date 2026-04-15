@@ -44,7 +44,7 @@ export class BadgesServiceError extends ServiceError {
 /** 非tieredバッジの目標値（指定なしは 1） */
 const NON_TIERED_TARGETS: Partial<Record<string, number>> = {
   'tags-5': 5,
-  'chronotype-trio': 3,
+  'chronotype-trio': 2,
   'full-week': 7,
 };
 
@@ -101,12 +101,8 @@ function resolveZones(
   return getChronotypeProfile(type).productivityZones;
 }
 
-/** early-bird 閾値: 最初の deep zone 開始時刻（なければ7時） */
-function getEarlyBirdThreshold(zones: ProductivityZone[]): number {
-  const deepZones = zones.filter((z) => z.level === 'deep');
-  if (deepZones.length === 0) return 7;
-  return Math.min(...deepZones.map((z) => z.startHour));
-}
+/** early-bird 閾値: 固定7時（バッジ定義「7時前に記録」に準拠） */
+const EARLY_BIRD_HOUR = 7;
 
 /** エントリの時間帯がカバーする3ティア数を返す（0-3） */
 function computeChronotypeZoneCount(
@@ -376,7 +372,7 @@ export class BadgesService {
     // --- Per-day aggregations ---
     const dateCount = new Map<string, number>();
     let hasEarlyBird = false;
-    const earlyBirdThreshold = getEarlyBirdThreshold(zones);
+    const earlyBirdThreshold = EARLY_BIRD_HOUR;
 
     // --- Weekly hours for self-best detection ---
     const weekMinutes = new Map<string, number>();
