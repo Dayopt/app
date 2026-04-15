@@ -78,13 +78,10 @@ export function useTimePLData() {
     const data = query.data as TimePLRpcResponse | undefined;
     if (!data || data.tags.length === 0) return null;
 
-    // TimePLGranularity は 'year' を除外
-    const plGranularity = granularity === 'year' ? 'month' : granularity;
-
     return {
       period: {
-        granularity: plGranularity,
-        label: formatPeriodLabel(currentDate, plGranularity, timezone),
+        granularity,
+        label: formatPeriodLabel(currentDate, granularity, timezone),
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       },
@@ -126,7 +123,7 @@ export function useTimePLData() {
 
 function formatPeriodLabel(
   date: Date,
-  granularity: 'day' | 'week' | 'month',
+  granularity: 'day' | 'week' | 'month' | 'year',
   timezone: string,
 ): string {
   switch (granularity) {
@@ -136,5 +133,7 @@ function formatPeriodLabel(
       return formatInTimeZone(date, timezone, 'M/d') + '〜';
     case 'month':
       return formatInTimeZone(date, timezone, 'yyyy年M月');
+    case 'year':
+      return formatInTimeZone(date, timezone, 'yyyy年');
   }
 }
