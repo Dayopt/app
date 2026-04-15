@@ -118,7 +118,7 @@ export function ValuesSettings() {
         className="border-b-0 pb-0"
         actions={
           filledCount > 0 ? (
-            <span className="bg-state-active text-state-active-foreground rounded-lg px-2 py-1 text-xs">
+            <span className="bg-muted text-muted-foreground rounded-lg px-2 py-1 text-xs">
               {t('settings.values.filledCount', {
                 count: filledCount,
                 total: PERSONALIZATION_CATEGORIES.length,
