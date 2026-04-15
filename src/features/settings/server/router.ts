@@ -181,21 +181,26 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.hourHeightDensity !== undefined)
           updateData.hour_height_density = input.hourHeightDensity;
         if (input.theme !== undefined) updateData.theme = input.theme;
-        if (input.personalizationValues !== undefined || input.rankedValues !== undefined) {
-          // 既存の personalization を取得してマージ
-          const { data: current } = await ctx.supabase
-            .from('user_settings')
-            .select('personalization')
-            .eq('user_id', userId)
-            .single();
-          const existing = (current?.personalization as Record<string, unknown>) ?? {};
-          (updateData as Record<string, unknown>).personalization = {
-            ...existing,
-            ...(input.personalizationValues !== undefined && {
-              values: input.personalizationValues,
-            }),
-            ...(input.rankedValues !== undefined && { rankedValues: input.rankedValues }),
-          };
+        // personalization は RPC で atomic に部分更新（並行保存の競合を回避）
+        if (input.personalizationValues !== undefined) {
+          await ctx.supabase.rpc(
+            'update_personalization' as never,
+            {
+              p_user_id: userId,
+              p_path: 'values',
+              p_value: input.personalizationValues,
+            } as never,
+          );
+        }
+        if (input.rankedValues !== undefined) {
+          await ctx.supabase.rpc(
+            'update_personalization' as never,
+            {
+              p_user_id: userId,
+              p_path: 'rankedValues',
+              p_value: input.rankedValues,
+            } as never,
+          );
         }
         if (input.preferredLocale !== undefined)
           updateData.preferred_locale = input.preferredLocale;
