@@ -500,6 +500,22 @@ export class TagService {
 
     const tagIds = matchingTags.map((t) => t.id);
 
+    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    if (!strategy) {
+      const { count } = await this.supabase
+        .from('entries')
+        .select('*', { count: 'exact', head: true })
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
+
+      if (count && count > 0) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Tags in this group have associated entries. Specify a strategy: "delete_entries" or "reassign"',
+        );
+      }
+    }
+
     if (strategy === 'reassign') {
       if (!targetTagId) {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
@@ -612,6 +628,22 @@ export class TagService {
 
     // 所有権チェック
     const tag = await this.getById({ userId, tagId });
+
+    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    if (!strategy) {
+      const { count } = await this.supabase
+        .from('entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('tag_id', tagId)
+        .eq('user_id', userId);
+
+      if (count && count > 0) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Tag has associated entries. Specify a strategy: "delete_entries" or "reassign"',
+        );
+      }
+    }
 
     if (strategy === 'reassign') {
       if (!targetTagId) {
