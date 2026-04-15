@@ -78,6 +78,9 @@ export interface CalendarControllerProps {
   onToggleWeekends: () => void;
   onDateSelect: (date: Date) => void;
 
+  // --- Prefetch ---
+  onPrefetch?: ((direction: 'prev' | 'next' | 'today') => void) | undefined;
+
   // --- Settings persistence ---
   onSettingsChange?: (settings: Partial<CalendarSettings>) => void;
 
@@ -110,6 +113,7 @@ export function CalendarController({
   onNavigateNext,
   onNavigateToday,
   onToggleWeekends,
+  onPrefetch,
   onSettingsChange,
   onDateSelect,
   className,
@@ -210,6 +214,7 @@ export function CalendarController({
           start: viewDateRange.start,
           end: viewDateRange.end,
         }}
+        onPrefetch={onPrefetch}
         onSettingsChange={onSettingsChange}
         leftSlot={leftSlot}
         rightSlot={rightSlot}

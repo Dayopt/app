@@ -10,6 +10,8 @@ export type NavigationDirection = 'prev' | 'next' | 'today';
 
 interface DateNavigatorProps {
   onNavigate: (direction: NavigationDirection) => void;
+  /** ホバー/タッチ時にナビゲーション先のデータを事前取得する */
+  onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
   todayLabel?: string | undefined;
   showTodayButton?: boolean | undefined;
   showArrows?: boolean | undefined;
@@ -38,6 +40,7 @@ const navButtonBase =
  */
 export const DateNavigator = ({
   onNavigate,
+  onPrefetch,
   todayLabel = 'Today',
   showTodayButton = true,
   showArrows = true,
@@ -58,6 +61,8 @@ export const DateNavigator = ({
           <button
             type="button"
             onClick={() => onNavigate('prev')}
+            onMouseEnter={() => onPrefetch?.('prev')}
+            onTouchStart={() => onPrefetch?.('prev')}
             className={cn(navButtonBase, 'text-muted-foreground w-8')}
             aria-label={t('common.previous')}
           >
@@ -75,6 +80,8 @@ export const DateNavigator = ({
           <button
             type="button"
             onClick={() => onNavigate('today')}
+            onMouseEnter={() => onPrefetch?.('today')}
+            onTouchStart={() => onPrefetch?.('today')}
             className={cn(navButtonBase, 'px-4 text-sm')}
           >
             {todayLabel}
@@ -87,6 +94,8 @@ export const DateNavigator = ({
           <button
             type="button"
             onClick={() => onNavigate('next')}
+            onMouseEnter={() => onPrefetch?.('next')}
+            onTouchStart={() => onPrefetch?.('next')}
             className={cn(navButtonBase, 'text-muted-foreground w-8')}
             aria-label={t('common.next')}
           >

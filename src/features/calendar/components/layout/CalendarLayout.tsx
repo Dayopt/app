@@ -40,6 +40,9 @@ export interface CalendarLayoutProps {
       }
     | undefined;
 
+  // Prefetch callback (hover/touch on nav buttons)
+  onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
+
   // Settings persistence callback
   onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
 
@@ -67,6 +70,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     // Date selection for mini calendar
     onDateSelect,
     displayRange,
+
+    // Prefetch
+    onPrefetch,
 
     // Settings persistence
     onSettingsChange,
@@ -124,6 +130,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
         <MobileCalendarHeader
           currentDate={currentDate}
           onNavigate={handleNavigate}
+          onPrefetch={onPrefetch}
           onDateSelect={onDateSelect}
           displayRange={displayRange}
         />
@@ -140,7 +147,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
                 clickable={false}
                 displayRange={displayRange}
               />
-              <DateNavigator onNavigate={handleNavigate} arrowSize="md" />
+              <DateNavigator onNavigate={handleNavigate} onPrefetch={onPrefetch} arrowSize="md" />
               <ViewSwitcher
                 className="ml-2"
                 currentView={viewType}

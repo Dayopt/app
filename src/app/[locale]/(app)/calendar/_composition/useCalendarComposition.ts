@@ -14,7 +14,7 @@
  * @see /docs/architecture/grand-design.md
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
 // Feature barrel imports（side-effect用）
 import type { CalendarSettings, CalendarViewType } from '@/features/calendar';
@@ -50,6 +50,7 @@ export interface CalendarCompositionResult {
   viewDateRange: ReturnType<typeof useCalendarDataLayer>['viewDateRange'];
   filteredEvents: ReturnType<typeof useCalendarDataLayer>['filteredEvents'];
   allCalendarEvents: ReturnType<typeof useCalendarDataLayer>['allCalendarEvents'];
+  prefetchDirection: ReturnType<typeof useCalendarDataLayer>['prefetchDirection'];
 
   // === Settings ===
   showWeekends: boolean;
@@ -162,6 +163,18 @@ export function useCalendarComposition({
   }, []);
 
   // =========================================================================
+  // ビュー切り替え時に即座にprefetchを発火するラッパー
+  // useEffectの依存配列更新を待たず、切り替えボタンを押した瞬間にデータを取りに行く
+  // =========================================================================
+  const onViewChangeWithPrefetch = useCallback(
+    (newView: CalendarViewType) => {
+      navHandlers.onViewChange(newView);
+      dataLayer.prefetchForView(newView);
+    },
+    [navHandlers, dataLayer],
+  );
+
+  // =========================================================================
   // Compose result from sub-hook outputs
   // =========================================================================
   return useMemo(
@@ -177,7 +190,7 @@ export function useCalendarComposition({
 
       // Navigation
       onNavigate: navHandlers.onNavigate,
-      onViewChange: navHandlers.onViewChange,
+      onViewChange: onViewChangeWithPrefetch,
       onNavigatePrev: navHandlers.onNavigatePrev,
       onNavigateNext: navHandlers.onNavigateNext,
       onNavigateToday: navHandlers.onNavigateToday,
@@ -185,6 +198,6 @@ export function useCalendarComposition({
       onDateSelect: navHandlers.onDateSelect,
       onSettingsChange: navHandlers.onSettingsChange,
     }),
-    [dataLayer, crudHandlers, navHandlers],
+    [dataLayer, crudHandlers, navHandlers, onViewChangeWithPrefetch],
   );
 }
