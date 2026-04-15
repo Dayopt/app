@@ -12,8 +12,10 @@ describe('transformers', () => {
         user_id: 'user-1',
         type: 'reminder',
         entry_id: 'plan-1',
-        is_read: false,
+        title: 'ミーティングのリマインダー',
+        data: null,
         read_at: null,
+        fire_at: null,
         created_at: '2025-01-01T00:00:00Z',
         entries: { title: 'ミーティング' },
       };
@@ -22,10 +24,12 @@ describe('transformers', () => {
 
       expect(result.id).toBe('notif-1');
       expect(result.type).toBe('reminder');
+      expect(result.title).toBe('ミーティングのリマインダー');
       expect(result.entryId).toBe('plan-1');
       expect(result.entryTitle).toBe('ミーティング');
       expect(result.isRead).toBe(false);
       expect(result.readAt).toBeUndefined();
+      expect(result.fireAt).toBeUndefined();
       expect(result.createdAt).toBeInstanceOf(Date);
     });
 
@@ -35,8 +39,10 @@ describe('transformers', () => {
         user_id: 'user-1',
         type: 'reminder',
         entry_id: null,
-        is_read: true,
+        title: 'リマインダー',
+        data: null,
         read_at: '2025-01-02T00:00:00Z',
+        fire_at: null,
         created_at: '2025-01-01T00:00:00Z',
         entries: null,
       };
@@ -45,7 +51,27 @@ describe('transformers', () => {
 
       expect(result.entryId).toBeUndefined();
       expect(result.entryTitle).toBeUndefined();
+      expect(result.isRead).toBe(true);
       expect(result.readAt).toBeInstanceOf(Date);
+    });
+
+    it('fire_atがある場合はDateに変換される', () => {
+      const entity: NotificationEntity = {
+        id: 'notif-1',
+        user_id: 'user-1',
+        type: 'reminder',
+        entry_id: 'plan-1',
+        title: 'リマインダー',
+        data: { key: 'value' },
+        read_at: null,
+        fire_at: '2025-01-01T09:00:00Z',
+        created_at: '2025-01-01T00:00:00Z',
+        entries: null,
+      };
+
+      const result = transformNotificationEntity(entity);
+
+      expect(result.fireAt).toBeInstanceOf(Date);
     });
   });
 
@@ -57,8 +83,10 @@ describe('transformers', () => {
           user_id: 'user-1',
           type: 'reminder',
           entry_id: 'plan-1',
-          is_read: false,
+          title: 'タスクAのリマインダー',
+          data: null,
           read_at: null,
+          fire_at: null,
           created_at: '2025-01-01T00:00:00Z',
           entries: { title: 'タスクA' },
         },
@@ -67,8 +95,10 @@ describe('transformers', () => {
           user_id: 'user-1',
           type: 'ai_insight',
           entry_id: 'plan-2',
-          is_read: true,
-          read_at: null,
+          title: 'インサイト',
+          data: null,
+          read_at: '2025-01-02T12:00:00Z',
+          fire_at: null,
           created_at: '2025-01-02T00:00:00Z',
           entries: { title: 'タスクB' },
         },
@@ -78,7 +108,9 @@ describe('transformers', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0]?.id).toBe('notif-1');
+      expect(result[0]?.isRead).toBe(false);
       expect(result[1]?.id).toBe('notif-2');
+      expect(result[1]?.isRead).toBe(true);
     });
 
     it('空配列を処理できる', () => {

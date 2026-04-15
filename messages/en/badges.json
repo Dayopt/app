@@ -28,10 +28,6 @@
       "name": "5 Tags Used",
       "description": "Use 5 different tags"
     },
-    "paletteFirst": {
-      "name": "Palette Registered",
-      "description": "Register your first palette item"
-    },
     "deepZone": {
       "name": "Deep Zone",
       "description": "Place a block in the Deep Zone",
@@ -40,7 +36,7 @@
     "fullDay": {
       "name": "Full Day",
       "description": "Record 8 or more blocks in a single day",
-      "hint": "Use the palette for efficient recording"
+      "hint": "Use the history for efficient recording"
     },
     "groupFirst": {
       "name": "Group Created",

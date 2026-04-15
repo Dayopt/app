@@ -79,20 +79,7 @@ function ContextMenuTrigger({
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** パレットに追加 + 削除（全アクション）。 */
-export const AllActions: Story = {
-  render: () => (
-    <ContextMenuTrigger
-      entry={sampleEntry}
-      menuProps={{
-        onAddToPalette: fn(),
-        onDelete: fn(),
-      }}
-    />
-  ),
-};
-
-/** 削除のみ（パレット登録済み）。 */
+/** 削除アクション。 */
 export const DeleteOnly: Story = {
   render: () => (
     <ContextMenuTrigger
@@ -104,7 +91,7 @@ export const DeleteOnly: Story = {
   ),
 };
 
-/** 直接表示（位置固定）。全アクション確認用。 */
+/** 直接表示（位置固定）。 */
 export const DirectDisplay: Story = {
   render: () => (
     <div className="relative" style={{ height: 300 }}>
@@ -112,7 +99,6 @@ export const DirectDisplay: Story = {
         entry={sampleEntry}
         position={{ x: 20, y: 20 }}
         onClose={fn()}
-        onAddToPalette={fn()}
         onDelete={fn()}
       />
     </div>
@@ -124,19 +110,7 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">パレットに追加 + 削除</span>
-        <div className="relative" style={{ height: 120 }}>
-          <EventContextMenu
-            entry={sampleEntry}
-            position={{ x: 0, y: 0 }}
-            onClose={fn()}
-            onAddToPalette={fn()}
-            onDelete={fn()}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">削除のみ（パレット登録済み）</span>
+        <span className="text-muted-foreground text-xs">削除</span>
         <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
             entry={sampleEntry}

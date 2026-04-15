@@ -19,9 +19,20 @@ const MOCK_USER_SETTINGS = {
   personalization: {
     values: {
       family: { text: '家族との時間を大切にし、絆を深める', importance: 9 },
-      work: { text: '自分の能力を活かして社会に貢献する', importance: 7 },
+      career: { text: '自分の能力を活かして社会に貢献する', importance: 7 },
       health: { text: '心身の健康を維持し、エネルギーを保つ', importance: 8 },
+      finance: { text: '必要なものと欲しいものを区別する', importance: 5 },
     },
+    rankedValues: [],
+    aiStyle: 'coach',
+    aiCustomStylePrompt: '',
+  },
+};
+
+const MOCK_EMPTY = {
+  ...PRESET_USER_SETTINGS.default,
+  personalization: {
+    values: {},
     rankedValues: [],
     aiStyle: 'coach',
     aiCustomStylePrompt: '',
@@ -55,10 +66,17 @@ type Story = StoryObj<typeof meta>;
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** デフォルト状態（一部の領域が記入済み） */
+/** デフォルト状態（一部の領域が記入済み、カウンターバッジ表示） */
 export const Default: Story = {
   parameters: {
     trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS },
+  },
+};
+
+/** 未記入状態（カウンターバッジ非表示） */
+export const Empty: Story = {
+  parameters: {
+    trpcMocks: { 'userSettings.get': MOCK_EMPTY },
   },
 };
 

@@ -4,14 +4,14 @@
  * バッジ判定・取得のビジネスロジック。
  * Supabaseを直接クエリし、chronotype(Layer 0)のbarrelのみimport。
  *
- * パフォーマンス: 全バッジの素材データを一括取得（7クエリ）し、
- * メモリ上で20バッジを判定する。個別クエリのN+1を回避。
+ * パフォーマンス: 全バッジの素材データを一括取得（6クエリ）し、
+ * メモリ上でバッジを判定する。個別クエリのN+1を回避。
  */
 
 import { format, startOfWeek } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-import { chronotypeCustomZonesSchema, getChronotypeProfile } from '@/features/chronotype';
+import { getChronotypeProfile } from '@/features/chronotype';
 import { logger } from '@/lib/logger';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { ChronotypeType, ProductivityLevel, ProductivityZone } from '@/lib/types/chronotype';
@@ -71,7 +71,6 @@ interface BadgeSourceData {
   streak: number;
   entryCount: number;
   distinctTagCount: number;
-  paletteExists: boolean;
   chronotypeEnabled: boolean;
   entriesWithTime: number;
   hasFullDay: boolean;
@@ -93,19 +92,13 @@ interface BadgeSourceData {
 /** user_settings からクロノタイプゾーンを解決する */
 function resolveZones(
   settings: {
-    chronotype_enabled: boolean | null;
-    chronotype_type: string | null;
-    chronotype_custom_zones: unknown;
+    chronotype_settings: unknown;
   } | null,
 ): ProductivityZone[] {
-  if (!settings?.chronotype_enabled) return [];
-  if (settings.chronotype_custom_zones) {
-    const parsed = chronotypeCustomZonesSchema.safeParse(settings.chronotype_custom_zones);
-    if (parsed.success) return parsed.data;
-  }
-  const type = settings.chronotype_type ?? 'bear';
-  if (type === 'custom') return [];
-  return getChronotypeProfile(type as ChronotypeType).productivityZones;
+  const cs = settings?.chronotype_settings as { type: string } | null;
+  if (!cs) return [];
+  const type = cs.type as ChronotypeType;
+  return getChronotypeProfile(type).productivityZones;
 }
 
 /** early-bird 閾値: 最初の deep zone 開始時刻（なければ7時） */
@@ -290,7 +283,7 @@ export class BadgesService {
   }
 
   // =========================================================================
-  // Internal: Batch data fetch (7 parallel queries)
+  // Internal: Batch data fetch (6 parallel queries)
   // =========================================================================
 
   private async fetchSourceData(userId: string): Promise<BadgeSourceData> {
@@ -300,7 +293,6 @@ export class BadgesService {
     const [
       entriesResult,
       entryTagsResult,
-      paletteResult,
       settingsResult,
       activeDatesResult,
       profileResult,
@@ -312,23 +304,17 @@ export class BadgesService {
         .select('start_time, end_time, duration_minutes')
         .eq('user_id', userId)
         .is('deleted_at', null),
-      // 2. entry_tags + entry duration（ソフト削除を除外）
+      // 2. entries with tag（ソフト削除を除外）
       this.supabase
         .from('entries')
-        .select('duration_minutes, start_time, entry_tags!inner(tag_id, created_at)')
+        .select('tag_id, duration_minutes, start_time, created_at')
         .eq('user_id', userId)
-        .is('deleted_at', null),
-      // 3. palette_items count
-      this.supabase
-        .from('palette_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId),
-      // 4. user_settings (TZ・chronotype情報を含む)
+        .is('deleted_at', null)
+        .not('tag_id', 'is', null),
+      // 3. user_settings (TZ・chronotype情報を含む)
       this.supabase
         .from('user_settings')
-        .select(
-          'chronotype_enabled, chronotype_type, chronotype_custom_zones, timezone, week_starts_on',
-        )
+        .select('chronotype_settings, timezone, week_starts_on')
         .eq('user_id', userId)
         .single(),
       // 5. active_dates RPC (p_start_date: DATE string)
@@ -435,15 +421,10 @@ export class BadgesService {
     const tagMinutes = new Map<string, number>();
 
     for (const entry of entryTagRows) {
-      const entryTags = entry.entry_tags as unknown as Array<{
-        tag_id: string;
-        created_at: string | null;
-      }>;
-      for (const tag of entryTags) {
-        tagIds.add(tag.tag_id);
-        const minutes = entry.duration_minutes ?? 0;
-        tagMinutes.set(tag.tag_id, (tagMinutes.get(tag.tag_id) ?? 0) + minutes);
-      }
+      const tagId = entry.tag_id as string;
+      tagIds.add(tagId);
+      const minutes = entry.duration_minutes ?? 0;
+      tagMinutes.set(tagId, (tagMinutes.get(tagId) ?? 0) + minutes);
     }
 
     const maxTagMinutes = Math.max(0, ...[...tagMinutes.values()]);
@@ -462,7 +443,7 @@ export class BadgesService {
       : 0;
 
     // --- Settings & Profile ---
-    const chronotypeEnabled = settings?.chronotype_enabled ?? false;
+    const chronotypeEnabled = settings?.chronotype_settings != null;
     const subscriptionStatus = profile?.subscription_status;
     const isProSubscriber =
       subscriptionStatus === 'active' ||
@@ -473,7 +454,6 @@ export class BadgesService {
       streak,
       entryCount: entries.length,
       distinctTagCount: tagIds.size,
-      paletteExists: (paletteResult.count ?? 0) > 0,
       chronotypeEnabled,
       entriesWithTime,
       hasFullDay,
@@ -503,8 +483,6 @@ export class BadgesService {
         return source.maxTagMinutes; // 段階: 3000(50h) → 6000(100h) → 12000(200h)
       case 'tags-5':
         return source.distinctTagCount;
-      case 'palette-first':
-        return source.paletteExists ? 1 : 0;
       case 'deep-zone':
         return source.hasDeepZoneEntry ? 1 : 0;
       case 'full-day':

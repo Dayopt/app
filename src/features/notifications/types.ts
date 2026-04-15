@@ -11,8 +11,10 @@ export interface NotificationEntity {
   user_id: string;
   type: NotificationType;
   entry_id: string | null;
-  is_read: boolean;
+  title: string;
+  data: Record<string, unknown> | null;
   read_at: string | null;
+  fire_at: string | null;
   created_at: string;
   entries?: { title: string } | null;
 }
@@ -21,9 +23,11 @@ export interface NotificationEntity {
 export interface Notification {
   id: string;
   type: NotificationType;
+  title: string;
   entryId?: string | undefined;
   entryTitle?: string | undefined;
   isRead: boolean;
   readAt?: Date | undefined;
+  fireAt?: Date | undefined;
   createdAt: Date;
 }

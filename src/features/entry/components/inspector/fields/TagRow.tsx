@@ -4,7 +4,7 @@
  * タグ表示行（Pure props）
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
- * 右側に「…」メニュー（パレット登録・統計・削除）を配置。
+ * 右側に「…」メニュー（統計・削除）を配置。
  *
  * タグデータの解決とタグ作成は上位（EntryInspectorForm）が担当。
  */
@@ -16,8 +16,6 @@ import {
   CalendarOff,
   ChevronDown,
   MoreHorizontal,
-  Pin,
-  PinOff,
   RotateCcw,
   Trash2,
 } from 'lucide-react';
@@ -47,12 +45,6 @@ interface TagRowProps {
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
   onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
-  /** パレットに登録するコールバック（タグ+時間が有効な場合のみ表示） */
-  onPinToPalette?: (() => void) | undefined;
-  /** パレットから解除するコールバック */
-  onUnpinFromPalette?: (() => void) | undefined;
-  /** パレット登録済みかどうか */
-  isPinnedInPalette?: boolean | undefined;
   /** 統計を見るコールバック */
   onViewStats?: (() => void) | undefined;
   /** 削除ボタンのコールバック */
@@ -74,9 +66,6 @@ export function TagRow({
   tagColor,
   onTagChange,
   onCreateAndSelect,
-  onPinToPalette,
-  onUnpinFromPalette,
-  isPinnedInPalette,
   onViewStats,
   onDelete,
   isUnplanned,
@@ -87,13 +76,7 @@ export function TagRow({
   const [selectorOpen, setSelectorOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const hasMenuItems =
-    onPinToPalette ||
-    onUnpinFromPalette ||
-    onViewStats ||
-    onDelete ||
-    onMarkUnplanned ||
-    onRestorePlanned;
+  const hasMenuItems = onViewStats || onDelete || onMarkUnplanned || onRestorePlanned;
 
   const handleSelect = useCallback(
     (selectedTagId: string) => {
@@ -144,19 +127,6 @@ export function TagRow({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {isPinnedInPalette && onUnpinFromPalette ? (
-                <DropdownMenuItem onClick={onUnpinFromPalette}>
-                  <PinOff className="mr-2 size-4" />
-                  {t('common.actions.removeFromPalette')}
-                </DropdownMenuItem>
-              ) : (
-                onPinToPalette && (
-                  <DropdownMenuItem onClick={onPinToPalette}>
-                    <Pin className="mr-2 size-4" />
-                    {t('common.actions.addToPalette')}
-                  </DropdownMenuItem>
-                )
-              )}
               {onViewStats && (
                 <DropdownMenuItem onClick={onViewStats}>
                   <BarChart3 className="mr-2 size-4" />

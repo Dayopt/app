@@ -27,7 +27,7 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 | ---------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
 | **profiles**                 | ユーザープロフィール（auth.usersと1:1） | email, username, full_name, avatar_url                                      |
 | **user_settings**            | 表示設定                                | timezone, theme, time*format, chronotype*_, snap*interval, business_hours*_ |
-| **notification_preferences** | 通知設定                                | enable_browser/email/push_notifications, default_reminder_minutes           |
+| **notification_preferences** | 通知設定                                | enable_browser/email/push_notifications, default_reminder_enabled           |
 
 ### 通知（1テーブル）
 
@@ -35,19 +35,11 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 | ----------------- | ------------ | ------------------------------------------------- |
 | **notifications** | ユーザー通知 | type, priority, title, message, is_read, entry_id |
 
-### アクティビティログ（1テーブル）
+### セキュリティ/監査（1テーブル）
 
-| テーブル             | 役割             | 主要カラム                                              |
-| -------------------- | ---------------- | ------------------------------------------------------- |
-| **entry_activities** | エントリ変更履歴 | entry_id, action_type, field_name, old_value, new_value |
-
-### セキュリティ/監査（3テーブル）
-
-| テーブル               | 役割                                 | 主要カラム                                                |
-| ---------------------- | ------------------------------------ | --------------------------------------------------------- |
-| **login_attempts**     | ログイン試行記録（IP rate limiting） | email, ip_address, is_successful, attempt_time            |
-| **auth_audit_logs**    | 認証操作の監査ログ                   | event_type, ip_address, user_agent, geo_country, geo_city |
-| **mfa_recovery_codes** | MFAリカバリーコード                  | code_hash(SHA-256), used_at                               |
+| テーブル               | 役割                | 主要カラム                  |
+| ---------------------- | ------------------- | --------------------------- |
+| **mfa_recovery_codes** | MFAリカバリーコード | code_hash(SHA-256), used_at |
 
 ---
 
@@ -98,28 +90,16 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
                    │ UNIQUE(entry,tag) │
                    └──────────────────┘
 
-        ▼
-┌──────────────────┐
-│ entry_activities  │
-│──────────────────│
-│ entry_id (FK)     │
-│ action_type       │
-│ field_name        │
-│ old_value         │
-│ new_value         │
-└──────────────────┘
-
-
 === セキュリティ/監査 ===
 
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│ login_attempts    │  │ auth_audit_logs   │  │ mfa_recovery_    │
-│──────────────────│  │──────────────────│  │ codes            │
-│ email, ip         │  │ user_id (FK)      │  │──────────────────│
-│ is_successful     │  │ event_type        │  │ user_id (FK)     │
-│ attempt_time      │  │ ip, geo_*         │  │ code_hash        │
-└──────────────────┘  └──────────────────┘  │ used_at           │
-                                             └──────────────────┘
+┌──────────────────┐
+│ mfa_recovery_    │
+│ codes            │
+│──────────────────│
+│ user_id (FK)     │
+│ code_hash        │
+│ used_at           │
+└──────────────────┘
 ```
 
 ---
@@ -168,12 +148,9 @@ EXISTS (SELECT 1 FROM entries WHERE entries.id = entry_tags.entry_id
 
 ## 定期クリーンアップ（pg_cron）
 
-| ジョブ                     | スケジュール   | 保持期間         | 対象テーブル     |
-| -------------------------- | -------------- | ---------------- | ---------------- |
-| `cleanup-login-attempts`   | 毎日 03:00 UTC | 90日             | login_attempts   |
-| `cleanup-auth-audit-logs`  | 毎日 03:10 UTC | 365日            | auth_audit_logs  |
-| `cleanup-notifications`    | 毎日 03:20 UTC | 30日（既読のみ） | notifications    |
-| `cleanup-entry-activities` | 毎日 03:30 UTC | 365日            | entry_activities |
+| ジョブ                  | スケジュール   | 保持期間         | 対象テーブル  |
+| ----------------------- | -------------- | ---------------- | ------------- |
+| `cleanup-notifications` | 毎日 03:20 UTC | 30日（既読のみ） | notifications |
 
 ---
 

@@ -37,7 +37,6 @@ interface SampleEntryTemplate {
   durationMinutes: number;
   tagKey: PresetTagKey;
   description?: string;
-  reminderMinutes?: number;
 }
 
 /** クロノタイプ別のピーク開始時間 */
@@ -61,7 +60,6 @@ const SAMPLE_TEMPLATES: SampleEntryTemplate[] = [
     offsetHours: 0,
     durationMinutes: 90,
     tagKey: 'work',
-    reminderMinutes: 5,
   },
   {
     title: 'English Lesson',
@@ -82,7 +80,6 @@ export interface GeneratedSampleEntry {
   endTime: string;
   tagKey: PresetTagKey;
   description: string | null;
-  reminderMinutes: number | null;
 }
 
 /**
@@ -113,7 +110,6 @@ export function generateSampleEntries(
       endTime: endDate.toISOString(),
       tagKey: template.tagKey,
       description: template.description ?? null,
-      reminderMinutes: template.reminderMinutes ?? null,
     };
   });
 }

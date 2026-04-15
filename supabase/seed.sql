@@ -62,15 +62,14 @@ INSERT INTO auth.identities (
   now()
 );
 
--- NOTE: profiles と notification_preferences は auth.users INSERT 時に
--- handle_new_user() と create_default_notification_preferences() トリガーで自動作成
+-- NOTE: profiles は auth.users INSERT 時に handle_new_user() トリガーで自動作成
 
 -- ============================================================
 -- ユーザー設定
 -- ============================================================
 
-INSERT INTO public.user_settings (user_id, timezone, time_format, week_starts_on, default_duration, chronotype_type)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Asia/Tokyo', '24h', 1, 60, 'bear');
+INSERT INTO public.user_settings (user_id, timezone, time_format, week_starts_on, default_duration, chronotype_settings)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Asia/Tokyo', '24h', 1, 60, '{"type": "bear"}');
 
 -- ============================================================
 -- タグ（5つの基本カテゴリ）
@@ -111,67 +110,61 @@ BEGIN
     IF v_dow NOT IN (0, 6) THEN
       -- 平日: 朝の集中タイム (9:00-11:00) → dev:api
       v_entry_id := gen_random_uuid();
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
       VALUES (v_entry_id, v_user_id, 'API開発',
         (v_date || ' 09:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
-        'planned', (ARRAY[2, 3, 3, 2, 3])[i % 5 + 1],
-        CASE WHEN i < 12 THEN (v_date || ' 11:05:00')::TIMESTAMPTZ ELSE NULL END);
+        'planned', (ARRAY[2, 3, 3, 2, 3])[i % 5 + 1]);
       INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[1]);
 
       -- 午前ミーティング (11:00-12:00)
       v_entry_id := gen_random_uuid();
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
       VALUES (v_entry_id, v_user_id, 'チームスタンドアップ',
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:30:00')::TIMESTAMPTZ,
-        'planned', (ARRAY[2, 2, 1, 2, 2])[i % 5 + 1],
-        CASE WHEN i < 12 THEN (v_date || ' 11:35:00')::TIMESTAMPTZ ELSE NULL END);
+        'planned', (ARRAY[2, 2, 1, 2, 2])[i % 5 + 1]);
       INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[3]);
 
       -- 午後のフロントエンド開発 (13:00-15:00)
       v_entry_id := gen_random_uuid();
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
       VALUES (v_entry_id, v_user_id, 'UIコンポーネント実装',
         (v_date || ' 13:00:00')::TIMESTAMPTZ,
         (v_date || ' 15:00:00')::TIMESTAMPTZ,
-        'planned', (ARRAY[3, 2, 3, 3, 2])[i % 5 + 1],
-        CASE WHEN i < 12 THEN (v_date || ' 15:10:00')::TIMESTAMPTZ ELSE NULL END);
+        'planned', (ARRAY[3, 2, 3, 3, 2])[i % 5 + 1]);
       INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[2]);
 
       -- 午後の学習 (15:30-16:30) — 隔日
       IF i % 2 = 0 THEN
         v_entry_id := gen_random_uuid();
-        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
         VALUES (v_entry_id, v_user_id, 'TypeScript勉強会',
           (v_date || ' 15:30:00')::TIMESTAMPTZ,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
-          'planned', 3,
-          CASE WHEN i < 12 THEN (v_date || ' 16:35:00')::TIMESTAMPTZ ELSE NULL END);
+          'planned', 3);
         INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[4]);
       END IF;
 
       -- 突発タスク（unplanned、一部の日のみ）
       IF i % 3 = 0 THEN
         v_entry_id := gen_random_uuid();
-        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
         VALUES (v_entry_id, v_user_id, '緊急バグ対応',
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
           (v_date || ' 17:30:00')::TIMESTAMPTZ,
-          'unplanned', 1,
-          (v_date || ' 17:35:00')::TIMESTAMPTZ);
+          'unplanned', 1);
         INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[1]);
       END IF;
 
     ELSE
       -- 週末: 個人タスク (10:00-12:00)
       v_entry_id := gen_random_uuid();
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, reviewed_at)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score)
       VALUES (v_entry_id, v_user_id, '個人プロジェクト',
         (v_date || ' 10:00:00')::TIMESTAMPTZ,
         (v_date || ' 12:00:00')::TIMESTAMPTZ,
-        'planned', 3,
-        (v_date || ' 12:05:00')::TIMESTAMPTZ);
+        'planned', 3);
       INSERT INTO public.entry_tags (user_id, entry_id, tag_id) VALUES (v_user_id, v_entry_id, v_tag_ids[5]);
     END IF;
   END LOOP;

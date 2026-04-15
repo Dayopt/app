@@ -19,7 +19,7 @@ import { useEntryMutations } from '../../../hooks/useEntryMutations';
 import { useEntryTags } from '../../../hooks/useEntryTags';
 import { useUpdateEntityTagsInCache } from '../../../hooks/useUpdateEntityTagsInCache';
 
-type SaveFields = Record<string, string | number | null | undefined>;
+type SaveFields = Record<string, string | number | boolean | null | undefined>;
 
 interface UseDebouncedSaveOptions {
   entryId: string | null;

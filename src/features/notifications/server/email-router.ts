@@ -454,8 +454,7 @@ export const emailRouter = createTRPCRouter({
   /**
    * プランリマインダーメール送信
    *
-   * notification_preferences.enable_email_notifications が有効な
-   * ユーザーに対して送信。check-reminders Edge Function から呼び出し可能。
+   * check-reminders Edge Function から呼び出し可能。
    */
   sendReminder: protectedProcedure
     .meta({ description: 'プランリマインダーメール送信' })

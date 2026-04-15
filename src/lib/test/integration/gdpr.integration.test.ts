@@ -64,7 +64,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { username: `gdpr_test_${Date.now()}` },
+      user_metadata: { full_name: `gdpr_test_${Date.now()}` },
       app_metadata: {},
       id: TEST_USER_ID,
     });
@@ -77,7 +77,6 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_ID,
       email: TEST_EMAIL,
-      username: `gdpr_test_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -163,7 +162,6 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('records');
       expect(result.data).toHaveProperty('planTags');
       expect(result.data).toHaveProperty('recordTags');
-      expect(result.data).toHaveProperty('notificationPreferences');
       expect(result.data).toHaveProperty('userSettings');
     });
 
@@ -230,7 +228,6 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       await adminSupabase.from('profiles').upsert({
         id: deleteTestUserId,
         email: deleteTestEmail,
-        username: `delete_test_${Date.now()}`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });

@@ -6,12 +6,10 @@
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
 import { TagIcon } from '@/features/tags';
-import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/lib/components/shell/sidebar';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { BlockItem, SidebarSection } from '@/lib/components/shell/sidebar';
 
 // ─────────────────────────────────────────────────────────
 // Helper Component
@@ -19,10 +17,8 @@ import { HoverTooltip } from '@/lib/components/ui/tooltip';
 
 function RecentBlocksStory({
   items,
-  onPinItem,
 }: {
   items: { tagId: string; tagName: string; tagColor: string; durationMinutes: number }[];
-  onPinItem?: (tagId: string, durationMinutes: number) => void;
 }) {
   return (
     <div className="w-64 min-w-0 overflow-hidden">
@@ -44,24 +40,6 @@ function RecentBlocksStory({
               iconSlot={<TagIcon icon={null} color={item.tagColor} size="sm" />}
               durationMinutes={item.durationMinutes}
               onClick={fn()}
-              menuSlot={
-                onPinItem ? (
-                  /* 実キー: sidebar.palette.add */
-                  <HoverTooltip content="パレットに追加">
-                    <button
-                      type="button"
-                      className={blockMenuButtonCn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPinItem(item.tagId, item.durationMinutes);
-                      }}
-                      aria-label="パレットに追加"
-                    >
-                      <Plus className="size-3.5" />
-                    </button>
-                  </HoverTooltip>
-                ) : undefined
-              }
             />
           ))
         )}
@@ -107,18 +85,6 @@ export const Empty: Story = {
   },
 };
 
-/** ピン留めボタン付き（onPinItem 注入時） */
-export const WithPinButton: Story = {
-  args: {
-    items: [
-      { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-      { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-      { tagId: 'tag-exercise', tagName: '運動', tagColor: 'amber', durationMinutes: 45 },
-    ],
-    onPinItem: fn(),
-  },
-};
-
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   args: { items: [] },
@@ -137,16 +103,6 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-2 text-xs">Empty</p>
         <RecentBlocksStory items={[]} />
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-2 text-xs">With Pin Button</p>
-        <RecentBlocksStory
-          items={[
-            { tagId: 'tag-work', tagName: '仕事', tagColor: 'blue', durationMinutes: 60 },
-            { tagId: 'tag-study', tagName: '勉強', tagColor: 'green', durationMinutes: 30 },
-          ]}
-          onPinItem={fn()}
-        />
       </div>
     </div>
   ),
@@ -170,6 +126,5 @@ export const ManyItems: Story = {
       },
       { tagId: 'tag-lunch', tagName: '昼食', tagColor: 'lime', durationMinutes: 60 },
     ],
-    onPinItem: fn(),
   },
 };

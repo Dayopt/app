@@ -45,7 +45,7 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { username: `testuser_settings_${Date.now()}` },
+      user_metadata: { full_name: `testuser_settings_${Date.now()}` },
       id: TEST_USER_ID,
     });
 
@@ -56,7 +56,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_ID,
       email: TEST_EMAIL,
-      username: `testuser_settings_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -170,23 +169,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
 
       await caller.update({
         timezone: 'Europe/London',
-        showUtcOffset: true,
       });
 
       const settings = await caller.get();
       expect(settings?.timezone).toBe('Europe/London');
-      expect(settings?.showUtcOffset).toBe(true);
-    });
-
-    it('should update date format settings', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await caller.update({
-        dateFormat: 'yyyy-MM-dd',
-      });
-
-      const settings = await caller.get();
-      expect(settings?.dateFormat).toBe('yyyy-MM-dd');
     });
 
     it('should update week settings', async () => {
@@ -217,19 +203,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       expect(settings?.snapInterval).toBe(15);
     });
 
-    it('should update business hours', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await caller.update({
-        businessHoursStart: 9,
-        businessHoursEnd: 18,
-      });
-
-      const settings = await caller.get();
-      expect(settings?.businessHours?.start).toBe(9);
-      expect(settings?.businessHours?.end).toBe(18);
-    });
-
     it('should update chronotype settings', async () => {
       const caller = createTestCaller(userSettingsRouter, ctx);
 
@@ -250,12 +223,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
 
       await caller.update({
         theme: 'dark',
-        colorScheme: 'purple',
       });
 
       const settings = await caller.get();
       expect(settings?.theme).toBe('dark');
-      expect(settings?.colorScheme).toBe('purple');
     });
   });
 
@@ -267,17 +238,6 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
         caller.update({
           // @ts-expect-error - Testing invalid input
           timeFormat: 'invalid',
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should reject invalid date format', async () => {
-      const caller = createTestCaller(userSettingsRouter, ctx);
-
-      await expect(
-        caller.update({
-          // @ts-expect-error - Testing invalid input
-          dateFormat: 'invalid-format',
         }),
       ).rejects.toThrow();
     });

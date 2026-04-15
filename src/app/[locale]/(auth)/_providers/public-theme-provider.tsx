@@ -11,13 +11,10 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
-type ColorScheme = 'blue' | 'green' | 'purple' | 'orange' | 'red';
 
 interface PublicThemeContextType {
   theme: Theme;
-  colorScheme: ColorScheme;
   setTheme: (theme: Theme) => void;
-  setColorScheme: (colorScheme: ColorScheme) => void;
   resolvedTheme: 'light' | 'dark';
   isLoading: boolean;
 }
@@ -37,34 +34,15 @@ interface PublicThemeProviderProps {
   children: ReactNode;
 }
 
-// カラースキーム適用
-function applyColorScheme(scheme: ColorScheme) {
-  const root = window.document.documentElement;
-  root.classList.remove(
-    'scheme-blue',
-    'scheme-green',
-    'scheme-purple',
-    'scheme-orange',
-    'scheme-red',
-  );
-  root.classList.add(`scheme-${scheme}`);
-}
-
 // localStorageから安全に値を取得（SSR対応）
 const getStoredTheme = (): Theme => {
   if (typeof window === 'undefined') return 'system';
   return (localStorage.getItem('theme') as Theme) || 'system';
 };
 
-const getStoredColorScheme = (): ColorScheme => {
-  if (typeof window === 'undefined') return 'blue';
-  return (localStorage.getItem('colorScheme') as ColorScheme) || 'blue';
-};
-
 /** 公開ページ用の軽量ThemeProvider（localStorageのみでテーマ管理） */
 export const PublicThemeProvider = ({ children }: PublicThemeProviderProps) => {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
-  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(getStoredColorScheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
 
   // テーマ設定（localStorageのみ）
@@ -72,14 +50,6 @@ export const PublicThemeProvider = ({ children }: PublicThemeProviderProps) => {
     setThemeState(newTheme);
     if (typeof window !== 'undefined') {
       localStorage.setItem('theme', newTheme);
-    }
-  }, []);
-
-  // カラースキーム設定（localStorageのみ）
-  const setColorScheme = useCallback((newColorScheme: ColorScheme) => {
-    setColorSchemeState(newColorScheme);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('colorScheme', newColorScheme);
     }
   }, []);
 
@@ -100,8 +70,7 @@ export const PublicThemeProvider = ({ children }: PublicThemeProviderProps) => {
     root.classList.add(newResolvedTheme);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- matchMediaによるテーマ解決はブラウザAPI依存
     setResolvedTheme(newResolvedTheme);
-    applyColorScheme(colorScheme);
-  }, [theme, colorScheme]);
+  }, [theme]);
 
   // Listen for system theme changes
   useEffect(() => {
@@ -114,20 +83,17 @@ export const PublicThemeProvider = ({ children }: PublicThemeProviderProps) => {
       setResolvedTheme(newResolvedTheme);
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(newResolvedTheme);
-      applyColorScheme(colorScheme);
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme, colorScheme]);
+  }, [theme]);
 
   return (
     <PublicThemeContext.Provider
       value={{
         theme,
-        colorScheme,
         setTheme,
-        setColorScheme,
         resolvedTheme,
         isLoading: false,
       }}

@@ -90,13 +90,11 @@ export const onboardingRouter = createTRPCRouter({
       if (input.chronotypeType || input.locale) {
         const settingsUpsert: {
           user_id: string;
-          chronotype_type?: string;
-          chronotype_enabled?: boolean;
+          chronotype_settings?: { type: string } | null;
           preferred_locale?: string;
         } = { user_id: ctx.userId };
         if (input.chronotypeType) {
-          settingsUpsert.chronotype_type = input.chronotypeType;
-          settingsUpsert.chronotype_enabled = true;
+          settingsUpsert.chronotype_settings = { type: input.chronotypeType };
         }
         if (input.locale) {
           settingsUpsert.preferred_locale = input.locale;
@@ -151,8 +149,7 @@ export const onboardingRouter = createTRPCRouter({
  * サンプルプランを作成する（オンボーディング完了時）
  *
  * 1. プリセットタグ5個を tags テーブルに挿入
- * 2. サンプルエントリ7個を entries テーブルに挿入
- * 3. entry_tags でエントリとタグを紐付け
+ * 2. サンプルエントリ7個を entries テーブルに挿入（tag_id で直接紐付け）
  *
  * feature boundary制約のため entry/tag service は使わず直接挿入する。
  * 失敗してもオンボーディング完了を妨げない（logger.error のみ）。
@@ -190,7 +187,7 @@ async function createSampleEntriesForUser(
   // tagKey → tagId マッピング（name で照合）
   const tagNameToId = new Map(insertedTags.map((t) => [t.name, t.id as string]));
 
-  // ── Step 2: サンプルエントリ作成 ──
+  // ── Step 2: サンプルエントリ作成（tag_id を直接含める） ──
   const entryRows = plans.map((plan) => ({
     user_id: userId,
     title: plan.title,
@@ -198,34 +195,12 @@ async function createSampleEntriesForUser(
     start_time: plan.startTime,
     end_time: plan.endTime,
     description: plan.description ?? '__onboarding_sample__',
-    reminder_minutes: plan.reminderMinutes,
+    tag_id: tagNameToId.get(PRESET_TAGS[plan.tagKey].name) ?? null,
   }));
 
-  const { data: insertedEntries, error: entriesError } = await supabase
-    .from('entries')
-    .insert(entryRows)
-    .select('id');
+  const { error: entriesError } = await supabase.from('entries').insert(entryRows);
 
-  if (entriesError || !insertedEntries) {
+  if (entriesError) {
     logger.error('Sample entries insert error:', entriesError);
-    return;
-  }
-
-  // ── Step 3: entry_tags 紐付け ──
-  const entryTagRows = plans
-    .map((plan, i) => {
-      const entryId = (insertedEntries[i] as { id: string }).id;
-      const tagId = tagNameToId.get(PRESET_TAGS[plan.tagKey].name);
-      if (!entryId || !tagId) return null;
-      return { user_id: userId, entry_id: entryId, tag_id: tagId };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
-
-  if (entryTagRows.length > 0) {
-    const { error: linkError } = await supabase.from('entry_tags').insert(entryTagRows);
-
-    if (linkError) {
-      logger.error('Entry-tag link insert error:', linkError);
-    }
   }
 }

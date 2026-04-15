@@ -130,7 +130,7 @@ reflections (
 
 ユーザー設定から LLM プロンプトに必要な情報を取得。
 
-→ chronotype_type, personalization_values, personalization_ranked_values, ai_communication_style, ai_custom_style_prompt, timezone
+→ chronotype_settings, timezone
 
 ---
 
@@ -160,6 +160,7 @@ ORDER BY period_start DESC LIMIT 1;
 ```
 
 **プロンプトでの指示例**:
+
 ```
 前回のインサイト:
 - findings: [前回の findings をサマリー]
@@ -203,16 +204,23 @@ interface InsightOutput {
 
   /** 2-4個の発見 */
   findings: Array<{
-    category: 'time_usage' | 'fulfillment' | 'planning' | 'balance' | 'pattern' | 'chronotype' | 'values';
-    headline: string;       // max 60 chars
-    detail: string;         // max 200 chars
+    category:
+      | 'time_usage'
+      | 'fulfillment'
+      | 'planning'
+      | 'balance'
+      | 'pattern'
+      | 'chronotype'
+      | 'values';
+    headline: string; // max 60 chars
+    detail: string; // max 200 chars
     sentiment: 'positive' | 'neutral' | 'needs_attention';
   }>;
 
   /** 1-2個のアクション提案（ユーザーの価値観と紐付け） */
   suggestions: Array<{
-    action: string;         // max 150 chars
-    rationale: string;      // max 100 chars
+    action: string; // max 150 chars
+    rationale: string; // max 100 chars
   }>;
 
   /** 振り返りの問い (max 200 chars) */
@@ -220,7 +228,7 @@ interface InsightOutput {
 
   /** 前期間比較（比較データがある場合のみ） */
   comparison?: {
-    summary: string;        // max 150 chars
+    summary: string; // max 150 chars
     direction: 'improving' | 'declining' | 'stable';
   };
 }
@@ -234,11 +242,11 @@ interface InsightOutput {
 
 **ファイル**: `src/features/stats/server/insights-router.ts`（新規）
 
-| エンドポイント | Input | 説明 |
-|-------------|-------|------|
-| `getInsight` | `{ periodType, periodStart }` | 特定期間のインサイト取得 |
+| エンドポイント | Input                              | 説明                               |
+| -------------- | ---------------------------------- | ---------------------------------- |
+| `getInsight`   | `{ periodType, periodStart }`      | 特定期間のインサイト取得           |
 | `listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧（ナビゲーション用） |
-| `updateNote` | `{ insightId, userNote }` | ユーザーメモ更新 |
+| `updateNote`   | `{ insightId, userNote }`          | ユーザーメモ更新                   |
 
 **ルーター登録**: `src/platform/trpc/root.ts` に `insights: insightsRouter` を追加
 
@@ -275,12 +283,12 @@ const showDateControls = activeTab === 'review' || activeTab === 'insights';
 
 ### 粒度と表示の対応
 
-| 粒度 | period_type | 表示 |
-|------|-------------|------|
-| `day` | — | Layer 1 KPI サマリーをインライン表示 + 「今日の記録を振り返りましょう。週次インサイトは毎週月曜に届きます」 |
-| `week` | `weekly` | `getInsight({ periodType: 'weekly', periodStart })` |
-| `month` | `monthly` | `getInsight({ periodType: 'monthly', periodStart })` |
-| `year` | `yearly` | `getInsight({ periodType: 'yearly', periodStart })` |
+| 粒度    | period_type | 表示                                                                                                        |
+| ------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `day`   | —           | Layer 1 KPI サマリーをインライン表示 + 「今日の記録を振り返りましょう。週次インサイトは毎週月曜に届きます」 |
+| `week`  | `weekly`    | `getInsight({ periodType: 'weekly', periodStart })`                                                         |
+| `month` | `monthly`   | `getInsight({ periodType: 'monthly', periodStart })`                                                        |
+| `year`  | `yearly`    | `getInsight({ periodType: 'yearly', periodStart })`                                                         |
 
 ### 状態とトーン
 
@@ -387,30 +395,30 @@ supabase/
 
 ### プロンプトに含める Layer 1 データ
 
-| メトリクス | プロンプトでの活用 |
-|-----------|-----------------|
-| Total Time | 活動量の基本コンテキスト + 前期間比較 |
-| Avg Fulfillment | 時間の質の評価 + トレンド分析 |
-| Plan Rate | 計画実行力の評価 + 改善提案 |
-| Estimation Accuracy | 見積もり精度のフィードバック |
-| Deep Utilization | chronotype活用度の分析 |
-| Context Switches | 集中力パターンの指摘 |
-| Blank Rate | 余白の意図性に関する問いかけ |
+| メトリクス          | プロンプトでの活用                    |
+| ------------------- | ------------------------------------- |
+| Total Time          | 活動量の基本コンテキスト + 前期間比較 |
+| Avg Fulfillment     | 時間の質の評価 + トレンド分析         |
+| Plan Rate           | 計画実行力の評価 + 改善提案           |
+| Estimation Accuracy | 見積もり精度のフィードバック          |
+| Deep Utilization    | chronotype活用度の分析                |
+| Context Switches    | 集中力パターンの指摘                  |
+| Blank Rate          | 余白の意図性に関する問いかけ          |
 
 ### プロンプトに含める Layer 2 データ
 
-| パターン | プロンプトでの活用 |
-|---------|-----------------|
-| 時間帯分布 | ピーク時間帯の特定と活用提案 |
-| 曜日分布 | 曜日パターンの指摘（平日/週末の違い） |
-| タグ内訳 | 時間配分と価値観の整合性チェック |
+| パターン   | プロンプトでの活用                    |
+| ---------- | ------------------------------------- |
+| 時間帯分布 | ピーク時間帯の特定と活用提案          |
+| 曜日分布   | 曜日パターンの指摘（平日/週末の違い） |
+| タグ内訳   | 時間配分と価値観の整合性チェック      |
 
 ### プロンプトに含める Chronotype データ
 
-| データ | プロンプトでの活用 |
-|--------|-----------------|
+| データ                   | プロンプトでの活用                                       |
+| ------------------------ | -------------------------------------------------------- |
 | chronotypePhaseBreakdown | 各フェーズの活用度分析（ピークに集中作業できているか等） |
-| chronotype_type | ユーザーのタイプに合わせたアドバイスのカスタマイズ |
+| chronotype_type          | ユーザーのタイプに合わせたアドバイスのカスタマイズ       |
 
 ---
 

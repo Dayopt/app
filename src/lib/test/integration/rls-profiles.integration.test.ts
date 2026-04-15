@@ -67,7 +67,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS: profiles テーブル', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_A_ID,
       email: TEST_EMAIL_A,
-      username: `testuser_a_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -86,7 +85,6 @@ describe.skipIf(SKIP_INTEGRATION)('RLS: profiles テーブル', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_B_ID,
       email: TEST_EMAIL_B,
-      username: `testuser_b_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });

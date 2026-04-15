@@ -1,13 +1,13 @@
 'use client';
 
-import { format, isSameMonth } from 'date-fns';
+import { format, getWeek, isSameMonth, isToday } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
-import { MobileCreateButton } from '@/lib/components/shell/MobileCreateButton';
 import { Button } from '@/lib/components/ui/button';
 import { useGlobalSearch } from '@/lib/hooks/use-global-search';
 import { cn } from '@/lib/utils';
@@ -54,9 +54,17 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       setPrevCurrentDate(currentDate);
     }
 
-    // ヘッダーテキスト: currentDateの月日を表示（Dayビューのみ）
-    const monthDayFormat = tCommon('dates.formats.monthDay');
-    const headerText = format(currentDate, monthDayFormat, { locale: dateFnsLocale });
+    // ヘッダー: 月部分・日番号・接尾辞を分離して今日バッジ + 週数を1行に統合
+    const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+    const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+    const monthPart = format(currentDate, locale === 'ja' ? 'M月' : 'MMM ', {
+      locale: dateFnsLocale,
+    });
+    const dayNumber = format(currentDate, 'd');
+    const daySuffix = locale === 'ja' ? '日' : '';
+    const weekdayShort = format(currentDate, 'EEE', { locale: enUS });
+    const today = isToday(currentDate);
+    const weekNumber = getWeek(currentDate, { weekStartsOn });
 
     const handleToggle = useCallback(() => {
       setIsExpanded((prev) => !prev);
@@ -89,24 +97,21 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
       <div className={cn('bg-background sticky top-0 z-20 md:hidden', className)}>
         <AppHeader
           rightSlot={
-            <>
-              <Button
-                variant="ghost"
-                icon
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={handleTodayClick}
-                aria-label={t('actions.goToToday')}
-              >
-                <div className="relative flex size-5 flex-col">
-                  <div className="h-1 w-full border-b-2 border-current" />
-                  <div className="flex flex-1 items-center justify-center">
-                    <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
-                  </div>
+            <Button
+              variant="ghost"
+              icon
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={handleTodayClick}
+              aria-label={t('actions.goToToday')}
+            >
+              <div className="relative flex size-5 flex-col">
+                <div className="h-1 w-full border-b-2 border-current" />
+                <div className="flex flex-1 items-center justify-center">
+                  <span className="text-xs leading-none font-medium">{new Date().getDate()}</span>
                 </div>
-              </Button>
-              <MobileCreateButton />
-            </>
+              </div>
+            </Button>
           }
         >
           <button
@@ -116,7 +121,27 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
             aria-expanded={isExpanded}
             aria-label={isExpanded ? t('actions.closeMiniCalendar') : t('actions.openCalendar')}
           >
-            <h2 className="text-xl">{headerText}</h2>
+            <h2 className="flex items-center gap-2 text-xl">
+              <span className="flex items-center">
+                <span>{monthPart}</span>
+                <span
+                  className={cn(
+                    'flex items-center justify-center',
+                    today &&
+                      'bg-primary text-primary-foreground size-7 rounded-full text-base font-medium',
+                  )}
+                >
+                  {dayNumber}
+                </span>
+                {daySuffix ? <span>{daySuffix}</span> : null}
+              </span>
+              <span className="text-sm font-normal">{weekdayShort}</span>
+              {showWeekNumbers ? (
+                <span className="bg-muted text-muted-foreground flex size-6 items-center justify-center rounded-full text-xs font-normal">
+                  {weekNumber}
+                </span>
+              ) : null}
+            </h2>
             <ChevronIcon className="text-muted-foreground size-5" />
           </button>
         </AppHeader>

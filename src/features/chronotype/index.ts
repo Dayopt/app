@@ -28,6 +28,6 @@ export {
   getProductivityZoneForHour,
 } from './lib/chronotype-profile';
 export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';
-export { chronotypeCustomZonesSchema, chronotypeTypeSchema } from './lib/schemas';
+export { chronotypeTypeSchema } from './lib/schemas';
 
 // ここにないものはfeature内部専用

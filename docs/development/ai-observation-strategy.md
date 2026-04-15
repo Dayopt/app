@@ -28,7 +28,7 @@ entries:
   fulfillment_score INT CHECK (fulfillment_score BETWEEN 1 AND 3)
   -- 1: 微妙, 2: 普通, 3: 良い
 
-  reminder_minutes INT
+  reminder_enabled BOOLEAN DEFAULT false
 
   reviewed_at TIMESTAMPTZ
   -- 旧completed_at。充実度入力時にセット。
@@ -56,7 +56,6 @@ function getEntryState(entry: Entry): 'upcoming' | 'active' | 'past' {
 | ----------------------- | ------------------------ | ---------------------- |
 | `plans`                 | `entries`                | —                      |
 | `plan_tags`             | `entry_tags`             | `plan_id` → `entry_id` |
-| `plan_activities`       | `entry_activities`       | `plan_id` → `entry_id` |
 | `plan_templates`        | `entry_templates`        | —                      |
 | `notifications.plan_id` | `notifications.entry_id` | FK参照先も変更         |
 
@@ -136,20 +135,8 @@ SELECT rt.user_id, m.new_plan_id, rt.tag_id
 FROM record_tags rt JOIN record_to_plan_map m ON rt.record_id = m.record_id
 ON CONFLICT DO NOTHING;
 
--- Step 4: record_activities → plan_activities
-ALTER TABLE plan_activities DROP CONSTRAINT IF EXISTS plan_activities_action_type_check;
-ALTER TABLE plan_activities ADD CONSTRAINT plan_activities_action_type_check
-  CHECK (action_type IN (
-    'created', 'updated', 'status_changed', 'title_changed',
-    'description_changed', 'time_changed',
-    'tag_added', 'tag_removed', 'deleted', 'fulfillment_changed'
-  ));
-
-INSERT INTO plan_activities (plan_id, user_id, action_type, field_name,
-                            old_value, new_value, metadata, created_at)
-SELECT m.new_plan_id, ra.user_id, ra.action_type, ra.field_name,
-       ra.old_value, ra.new_value, ra.metadata, ra.created_at
-FROM record_activities ra JOIN record_to_plan_map m ON ra.record_id = m.record_id;
+-- Step 4: (削除済み) record_activities → plan_activities → entry_activities
+-- entry_activities テーブルは未使用のため削除済み (20260414100000_drop_entry_activities.sql)
 
 -- Step 5: status廃止 + completed_at → reviewed_at
 ALTER TABLE plans DROP COLUMN status;
@@ -160,8 +147,7 @@ ALTER TABLE plans DROP COLUMN plan_number;
 ALTER TABLE plans RENAME TO entries;
 ALTER TABLE plan_tags RENAME TO entry_tags;
 ALTER TABLE plan_tags RENAME COLUMN plan_id TO entry_id;
-ALTER TABLE plan_activities RENAME TO entry_activities;
-ALTER TABLE plan_activities RENAME COLUMN plan_id TO entry_id;
+-- entry_activities は削除済み
 ALTER TABLE plan_templates RENAME TO entry_templates;
 ALTER TABLE notifications RENAME COLUMN plan_id TO entry_id;
 

@@ -15,7 +15,7 @@ export type NotificationRow = Database['public']['Tables']['notifications']['Row
 /** 通知一覧取得オプション */
 export interface ListNotificationsOptions {
   userId: string;
-  isRead?: boolean;
+  unreadOnly?: boolean;
   type?: string;
   limit?: number;
   offset?: number;
@@ -25,15 +25,16 @@ export interface ListNotificationsOptions {
 export interface CreateNotificationOptions {
   userId: string;
   type: string;
-  /** entry_id */
-  entryId: string;
+  title: string;
+  entryId?: string;
+  fireAt?: string;
+  data?: Record<string, unknown>;
 }
 
 /** 通知更新オプション */
 export interface UpdateNotificationOptions {
   userId: string;
   notificationId: string;
-  isRead?: boolean;
   readAt?: string | null;
 }
 

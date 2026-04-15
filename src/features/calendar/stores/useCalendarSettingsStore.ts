@@ -15,7 +15,6 @@ export type DateFormatType = 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-
 export interface CalendarSettings {
   // タイムゾーン設定
   timezone: string; // 例: 'Asia/Tokyo', 'America/New_York'
-  showUTCOffset: boolean; // UTC表示のON/OFF
 
   // 時間表示形式
   timeFormat: '24h' | '12h';
@@ -35,11 +34,8 @@ export interface CalendarSettings {
   showWeekends: boolean;
 
   // クロノタイプ設定
-  chronotype: ChronotypeSettingsState;
+  chronotype: ChronotypeSettingsState | null;
   chronotypeGradient: { light: string | null; dark: string | null };
-
-  // Plan/Record表示設定
-  planRecordMode: 'plan' | 'record' | 'both';
 
   // 睡眠スケジュール設定
   sleepSchedule: {
@@ -60,7 +56,6 @@ interface CalendarSettingsStore extends CalendarSettings {
 const defaultSettings: CalendarSettings = {
   timezone:
     typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC',
-  showUTCOffset: true,
   timeFormat: '24h',
   dateFormat: 'yyyy-MM-dd', // ISO 8601（国際標準）
   defaultView: 'week', // デフォルトは週表示
@@ -69,9 +64,8 @@ const defaultSettings: CalendarSettings = {
   snapInterval: 15, // デフォルトは15分間隔
   showWeekNumbers: false,
   showWeekends: true, // デフォルトは週末も表示
-  chronotype: { ...DEFAULT_CHRONOTYPE_SETTINGS },
+  chronotype: DEFAULT_CHRONOTYPE_SETTINGS,
   chronotypeGradient: { light: null, dark: null },
-  planRecordMode: 'both',
   sleepSchedule: {
     enabled: true,
     bedtime: 23,

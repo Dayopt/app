@@ -14,10 +14,9 @@ import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
-import { getDeepHours, getEaseHours, getPresetChronotypeProfile } from '../lib/chronotype-profile';
+import { getChronotypeProfile, getDeepHours, getEaseHours } from '../lib/chronotype-profile';
 import { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from '../lib/constants';
 
-import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
@@ -34,7 +33,7 @@ import type {
 type ViewState = 'idle' | 'quiz';
 
 interface ChronotypeAutoSaveSettings {
-  chronotype: ChronotypeSettingsState;
+  chronotype: ChronotypeSettingsState | null;
 }
 
 /** 活動時間帯のタイムライン（6:00–22:00、deep/ease のみ色分け） */
@@ -116,7 +115,7 @@ function TypeCard({
   onSelect: () => void;
 }) {
   const t = useTranslations();
-  const profile = getPresetChronotypeProfile(type);
+  const profile = getChronotypeProfile(type);
 
   return (
     <button
@@ -130,7 +129,7 @@ function TypeCard({
       )}
     >
       <span className="text-2xl">{CHRONOTYPE_EMOJI[type]}</span>
-      <span className="text-sm font-medium">{profile?.name}</span>
+      <span className="text-sm font-medium">{profile.name}</span>
       <span className="text-muted-foreground text-xs">
         {t(`settings.chronotype.shortDesc.${type}`)}
       </span>
@@ -157,52 +156,40 @@ export function ChronotypeSettings() {
   const dbChronotype = dbSettings?.chronotype;
   const initialValues = useMemo(
     () => ({
-      chronotype: {
-        ...DEFAULT_CHRONOTYPE_SETTINGS,
-        enabled: dbChronotype?.enabled ?? DEFAULT_CHRONOTYPE_SETTINGS.enabled,
-        type: (dbChronotype?.type as ChronotypeType) ?? DEFAULT_CHRONOTYPE_SETTINGS.type,
-      },
+      chronotype: dbChronotype ? { type: dbChronotype.type as ChronotypeType } : null,
     }),
-    [dbChronotype?.enabled, dbChronotype?.type],
+    [dbChronotype],
   );
 
   const autoSave = useAutoSaveSettings<ChronotypeAutoSaveSettings>({
     initialValues,
     onSave: async (values) => {
       await updateMutation.mutateAsync({
-        chronotypeEnabled: values.chronotype.enabled,
-        chronotypeType: values.chronotype.type,
+        chronotypeType: values.chronotype?.type ?? null,
       });
     },
     successMessage: t('settings.chronotype.settingsSaved'),
     debounceMs: 800,
   });
 
-  const isEnabled = autoSave.values.chronotype.enabled;
-  const selectedType = autoSave.values.chronotype.type;
-  const selectedProfile = getPresetChronotypeProfile(selectedType);
+  const isEnabled = autoSave.values.chronotype != null;
+  const selectedType = autoSave.values.chronotype?.type ?? 'bear';
+  const selectedProfile = getChronotypeProfile(selectedType);
 
   const [view, setView] = useState<ViewState>('idle');
 
   const handleToggle = useCallback(
     (checked: boolean) => {
-      const nextChronotype = {
-        ...autoSave.values.chronotype,
-        enabled: checked,
-      };
+      const nextChronotype = checked ? { type: selectedType } : null;
       updateStoreSettings({ chronotype: nextChronotype });
       autoSave.updateValue('chronotype', nextChronotype);
     },
-    [autoSave, updateStoreSettings],
+    [autoSave, updateStoreSettings, selectedType],
   );
 
   const handleSelectType = useCallback(
     (type: PresetChronotypeType) => {
-      const nextChronotype = {
-        ...autoSave.values.chronotype,
-        enabled: true,
-        type: type as ChronotypeType,
-      };
+      const nextChronotype = { type: type as ChronotypeType };
       updateStoreSettings({ chronotype: nextChronotype });
       autoSave.updateValue('chronotype', nextChronotype);
       setView('idle');

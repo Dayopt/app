@@ -18,7 +18,6 @@ import { useTheme } from '@/lib/hooks/useTheme';
 import { usePathname, useRouter } from '@/lib/i18n/navigation';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
-import type { DateFormatType } from '@/features/calendar';
 import { useTourStore } from '@/features/tour';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTimeZones } from '@/lib/timezone-utils';
@@ -69,13 +68,6 @@ export function DisplaySettings() {
   const handleTimeFormatChange = useCallback(
     (value: string) => {
       saveSettings({ timeFormat: value as '12h' | '24h' });
-    },
-    [saveSettings],
-  );
-
-  const handleDateFormatChange = useCallback(
-    (value: string) => {
-      saveSettings({ dateFormat: value as DateFormatType });
     },
     [saveSettings],
   );
@@ -214,19 +206,6 @@ export function DisplaySettings() {
             <SelectContent>
               <SelectItem value="24h">{t('settings.calendar.timeFormat24h')}</SelectItem>
               <SelectItem value="12h">{t('settings.calendar.timeFormat12h')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </LabeledRow>
-        <LabeledRow label={t('settings.calendar.dateFormat')}>
-          <Select value={settings.dateFormat} onValueChange={handleDateFormatChange}>
-            <SelectTrigger variant="ghost">
-              <SelectValue placeholder={t('settings.calendar.selectDateFormat')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yyyy/MM/dd">{t('settings.calendar.dateFormatJapan')}</SelectItem>
-              <SelectItem value="MM/dd/yyyy">{t('settings.calendar.dateFormatUS')}</SelectItem>
-              <SelectItem value="dd/MM/yyyy">{t('settings.calendar.dateFormatEU')}</SelectItem>
-              <SelectItem value="yyyy-MM-dd">{t('settings.calendar.dateFormatISO')}</SelectItem>
             </SelectContent>
           </Select>
         </LabeledRow>

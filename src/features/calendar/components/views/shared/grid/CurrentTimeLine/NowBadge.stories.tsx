@@ -25,13 +25,13 @@ type Story = StoryObj<typeof meta>;
 
 const enableBearChronotype = () => {
   useCalendarSettingsStore.setState({
-    chronotype: { enabled: true, type: 'bear' },
+    chronotype: { type: 'bear' },
   });
 };
 
 const disableChronotype = () => {
   useCalendarSettingsStore.setState({
-    chronotype: { enabled: false, type: 'bear' },
+    chronotype: null,
   });
 };
 

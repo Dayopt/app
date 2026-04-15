@@ -55,7 +55,8 @@ async function getEntriesForFeed(userId: string) {
       end_time,
       created_at,
       updated_at,
-      entry_tags(tags(name))
+      tag_id,
+      tags!entries_tag_id_fkey(name)
     `,
     )
     .eq('user_id', userId)
@@ -71,12 +72,10 @@ async function getEntriesForFeed(userId: string) {
     return [];
   }
 
-  // entry_tagsリレーションからタグ名を抽出
+  // tags リレーションからタグ名を抽出
   return (entries ?? []).map((entry) => {
-    const entryTags = entry.entry_tags as unknown as
-      | Array<{ tags: { name: string } | null }>
-      | undefined;
-    const tagName = entryTags?.[0]?.tags?.name ?? null;
+    const tags = entry.tags as unknown as { name: string } | null;
+    const tagName = tags?.name ?? null;
     return {
       id: entry.id,
       title: entry.title,

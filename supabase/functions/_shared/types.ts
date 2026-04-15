@@ -2,19 +2,6 @@
 // 各 Function 内のインライン型をここに集約
 
 // ============================================================
-// check-reminders
-// ============================================================
-
-export interface ReminderEntry {
-  id: string;
-  user_id: string;
-  title: string;
-  start_time: string;
-  reminder_at: string | null;
-  reminder_sent: boolean;
-}
-
-// ============================================================
 // daily-insights
 // ============================================================
 

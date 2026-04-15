@@ -8,7 +8,6 @@ import { z } from 'zod';
 
 import type { ChronotypeType } from '@/features/chronotype';
 import {
-  chronotypeCustomZonesSchema,
   chronotypeTypeSchema,
   generateChronotypeGradient,
   getChronotypeProfile,
@@ -24,13 +23,8 @@ type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'
 const userSettingsSchema = z.object({
   // タイムゾーン設定
   timezone: z.string().optional(),
-  showUtcOffset: z.boolean().optional(),
-
   // 時間表示形式
   timeFormat: z.enum(['24h', '12h']).optional(),
-
-  // 日付表示形式
-  dateFormat: z.enum(['yyyy/MM/dd', 'MM/dd/yyyy', 'dd/MM/yyyy', 'yyyy-MM-dd']).optional(),
 
   // 週の設定
   weekStartsOn: z.union([z.literal(0), z.literal(1), z.literal(6)]).optional(),
@@ -41,30 +35,17 @@ const userSettingsSchema = z.object({
   defaultDuration: z.number().min(5).max(480).optional(),
   snapInterval: z.union([z.literal(5), z.literal(10), z.literal(15), z.literal(30)]).optional(),
 
-  // 営業時間
-  businessHoursStart: z.number().min(0).max(23).optional(),
-  businessHoursEnd: z.number().min(0).max(23).optional(),
-
-  // 表示設定
-  showDeclinedEvents: z.boolean().optional(),
-
-  // クロノタイプ設定
-  chronotypeEnabled: z.boolean().optional(),
-  chronotypeType: chronotypeTypeSchema.optional(),
-  chronotypeCustomZones: chronotypeCustomZonesSchema.optional(),
+  // クロノタイプ設定（null で無効化）
+  chronotypeType: chronotypeTypeSchema.nullable().optional(),
 
   // デフォルトビュー・密度（Settings = デフォルト、Header = セッション）
   defaultView: z.enum(['day', '3day', '5day', 'week']).optional(),
   hourHeightDensity: z.enum(['compact', 'default', 'spacious']).optional(),
 
-  // Plan/Record表示設定
-  planRecordMode: z.enum(['plan', 'record', 'both']).optional(),
-
   // テーマ設定
   theme: z.enum(['light', 'dark', 'system']).optional(),
-  colorScheme: z.enum(['blue', 'green', 'purple', 'orange', 'red']).optional(),
 
-  // パーソナライゼーション設定（ACT価値評定スケール: 12カテゴリ、重要度1-10）
+  // パーソナライゼーション（JSONB 一括更新）
   personalizationValues: z
     .record(
       z.string(),
@@ -74,10 +55,6 @@ const userSettingsSchema = z.object({
       }),
     )
     .optional(),
-  aiCommunicationStyle: z.enum(['coach', 'analyst', 'friendly', 'custom']).optional(),
-  aiCustomStylePrompt: z.string().max(1000).optional(),
-
-  // 価値観キーワードランキング（トップ5）
   rankedValues: z.array(z.string().max(50)).max(5).optional(),
 
   // メール送信言語
@@ -122,55 +99,41 @@ export const userSettingsRouter = createTRPCRouter({
         // snake_case → camelCase に変換
         return {
           timezone: data.timezone,
-          showUtcOffset: data.show_utc_offset,
           timeFormat: data.time_format as '24h' | '12h',
-          dateFormat: data.date_format as 'yyyy/MM/dd' | 'MM/dd/yyyy' | 'dd/MM/yyyy' | 'yyyy-MM-dd',
           weekStartsOn: data.week_starts_on as 0 | 1 | 6,
           showWeekends: data.show_weekends,
           showWeekNumbers: data.show_week_numbers,
           defaultDuration: data.default_duration,
           snapInterval: data.snap_interval as 5 | 10 | 15 | 30,
-          businessHours: {
-            start: data.business_hours_start,
-            end: data.business_hours_end,
-          },
-          showDeclinedEvents: data.show_declined_events,
-          chronotype: {
-            enabled: data.chronotype_enabled,
-            type: data.chronotype_type as ChronotypeType,
-            customZones: data.chronotype_custom_zones,
-            gradientLight: data.chronotype_gradient_light,
-            gradientDark: data.chronotype_gradient_dark,
-          },
-          defaultView: (data as Record<string, unknown>).default_view as
-            | 'day'
-            | '3day'
-            | '5day'
-            | 'week'
-            | undefined,
-          hourHeightDensity: (data as Record<string, unknown>).hour_height_density as
+          chronotype: (() => {
+            const cs = data.chronotype_settings as { type: string } | null;
+            if (!cs) return null;
+            const type = cs.type as ChronotypeType;
+            const zones = getChronotypeProfile(type).productivityZones;
+            return {
+              type,
+              gradientLight: generateChronotypeGradient(zones, 'light'),
+              gradientDark: generateChronotypeGradient(zones, 'dark'),
+            };
+          })(),
+          defaultView: data.default_view as 'day' | '3day' | '5day' | 'week' | undefined,
+          hourHeightDensity: data.hour_height_density as
             | 'compact'
             | 'default'
             | 'spacious'
             | undefined,
-          planRecordMode: data.plan_record_mode as 'plan' | 'record' | 'both',
           theme: data.theme as 'light' | 'dark' | 'system',
-          colorScheme: data.color_scheme as 'blue' | 'green' | 'purple' | 'orange' | 'red',
-          personalization: {
-            values: (data.personalization_values ?? {}) as Record<
+          personalization: (() => {
+            const p = (data as Record<string, unknown>).personalization as Record<
               string,
-              { text: string; importance: number }
-            >,
-            rankedValues: (data.personalization_ranked_values ?? []) as string[],
-            aiStyle: (data.ai_communication_style ?? 'coach') as
-              | 'coach'
-              | 'analyst'
-              | 'friendly'
-              | 'custom',
-            aiCustomStylePrompt: data.ai_custom_style_prompt ?? '',
-          },
-          preferredLocale:
-            ((data as Record<string, unknown>).preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
+              unknown
+            > | null;
+            return {
+              values: (p?.values ?? {}) as Record<string, { text: string; importance: number }>,
+              rankedValues: (p?.rankedValues ?? []) as string[],
+            };
+          })(),
+          preferredLocale: (data.preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
         };
       } catch (error) {
         return handleServiceError(error);
@@ -200,9 +163,7 @@ export const userSettingsRouter = createTRPCRouter({
         };
 
         if (input.timezone !== undefined) updateData.timezone = input.timezone;
-        if (input.showUtcOffset !== undefined) updateData.show_utc_offset = input.showUtcOffset;
         if (input.timeFormat !== undefined) updateData.time_format = input.timeFormat;
-        if (input.dateFormat !== undefined) updateData.date_format = input.dateFormat;
         if (input.weekStartsOn !== undefined) updateData.week_starts_on = input.weekStartsOn;
         if (input.showWeekends !== undefined) updateData.show_weekends = input.showWeekends;
         if (input.showWeekNumbers !== undefined)
@@ -210,55 +171,34 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.defaultDuration !== undefined)
           updateData.default_duration = input.defaultDuration;
         if (input.snapInterval !== undefined) updateData.snap_interval = input.snapInterval;
-        if (input.businessHoursStart !== undefined)
-          updateData.business_hours_start = input.businessHoursStart;
-        if (input.businessHoursEnd !== undefined)
-          updateData.business_hours_end = input.businessHoursEnd;
-        if (input.showDeclinedEvents !== undefined)
-          updateData.show_declined_events = input.showDeclinedEvents;
-        if (input.chronotypeEnabled !== undefined)
-          updateData.chronotype_enabled = input.chronotypeEnabled;
-        if (input.chronotypeType !== undefined) updateData.chronotype_type = input.chronotypeType;
-        if (input.chronotypeCustomZones !== undefined)
-          updateData.chronotype_custom_zones = input.chronotypeCustomZones;
-
-        // Chronotype 設定変更時に gradient を再計算
-        if (
-          input.chronotypeType !== undefined ||
-          input.chronotypeCustomZones !== undefined ||
-          input.chronotypeEnabled !== undefined
-        ) {
-          const type = input.chronotypeType ?? 'bear';
-          const customZones = input.chronotypeCustomZones;
-          const profile = getChronotypeProfile(type, customZones);
-          const zones = profile.productivityZones;
-
-          if (input.chronotypeEnabled === false || zones.length === 0) {
-            updateData.chronotype_gradient_light = null;
-            updateData.chronotype_gradient_dark = null;
-          } else {
-            updateData.chronotype_gradient_light = generateChronotypeGradient(zones, 'light');
-            updateData.chronotype_gradient_dark = generateChronotypeGradient(zones, 'dark');
-          }
+        if (input.chronotypeType !== undefined) {
+          updateData.chronotype_settings = input.chronotypeType
+            ? { type: input.chronotypeType }
+            : null;
         }
 
-        if (input.defaultView !== undefined)
-          (updateData as Record<string, unknown>).default_view = input.defaultView;
+        if (input.defaultView !== undefined) updateData.default_view = input.defaultView;
         if (input.hourHeightDensity !== undefined)
-          (updateData as Record<string, unknown>).hour_height_density = input.hourHeightDensity;
-        if (input.planRecordMode !== undefined) updateData.plan_record_mode = input.planRecordMode;
+          updateData.hour_height_density = input.hourHeightDensity;
         if (input.theme !== undefined) updateData.theme = input.theme;
-        if (input.colorScheme !== undefined) updateData.color_scheme = input.colorScheme;
-        if (input.personalizationValues !== undefined)
-          updateData.personalization_values = input.personalizationValues;
-        if (input.aiCommunicationStyle !== undefined)
-          updateData.ai_communication_style = input.aiCommunicationStyle;
-        if (input.aiCustomStylePrompt !== undefined)
-          updateData.ai_custom_style_prompt = input.aiCustomStylePrompt;
-        if (input.rankedValues !== undefined)
-          updateData.personalization_ranked_values = input.rankedValues;
+        if (input.personalizationValues !== undefined || input.rankedValues !== undefined) {
+          // 既存の personalization を取得してマージ
+          const { data: current } = await ctx.supabase
+            .from('user_settings')
+            .select('personalization')
+            .eq('user_id', userId)
+            .single();
+          const existing = (current?.personalization as Record<string, unknown>) ?? {};
+          (updateData as Record<string, unknown>).personalization = {
+            ...existing,
+            ...(input.personalizationValues !== undefined && {
+              values: input.personalizationValues,
+            }),
+            ...(input.rankedValues !== undefined && { rankedValues: input.rankedValues }),
+          };
+        }
         if (input.preferredLocale !== undefined)
-          (updateData as Record<string, unknown>).preferred_locale = input.preferredLocale;
+          updateData.preferred_locale = input.preferredLocale;
 
         const { data, error } = await ctx.supabase
           .from('user_settings')

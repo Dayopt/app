@@ -10,46 +10,20 @@ import type {
 /**
  * クロノタイプ設定からプロフィールを取得する
  * @param type - クロノタイプ種別
- * @param customZones - カスタムタイプ時の生産性ゾーン配列
  */
-export function getChronotypeProfile(
-  type: ChronotypeType,
-  customZones?: ProductivityZone[],
-): ChronotypeProfile {
-  if (type === 'custom') {
-    return {
-      ...CHRONOTYPE_PRESETS.custom,
-      productivityZones: customZones ?? [],
-    };
-  }
-
+export function getChronotypeProfile(type: ChronotypeType): ChronotypeProfile {
   return CHRONOTYPE_PRESETS[type];
 }
 
 /**
  * 設定からクロノタイプが有効な場合のみプロフィールを返す
- * @returns 無効な場合は null
+ * @returns null の場合は null
  */
 export function getEnabledChronotypeProfile(
-  settings: Pick<ChronotypeSettings, 'enabled' | 'type' | 'customZones'>,
+  settings: ChronotypeSettings | null,
 ): ChronotypeProfile | null {
-  if (!settings.enabled) {
-    return null;
-  }
-
-  return getChronotypeProfile(settings.type, settings.customZones);
-}
-
-/**
- * プリセットクロノタイプのプロフィールを取得する（カスタムは非対応）
- * @returns custom タイプの場合は null
- */
-export function getPresetChronotypeProfile(type: ChronotypeType): ChronotypeProfile | null {
-  if (type === 'custom') {
-    return null;
-  }
-
-  return CHRONOTYPE_PRESETS[type];
+  if (!settings) return null;
+  return getChronotypeProfile(settings.type);
 }
 
 /**

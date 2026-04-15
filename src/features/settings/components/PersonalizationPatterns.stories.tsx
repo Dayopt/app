@@ -116,10 +116,10 @@ const MOCK_CATEGORIES = [
     text: '',
   },
   {
-    key: 'art',
-    label: '芸術',
-    desc: '創造的表現は4万年以上前から続く人類の本能',
-    importance: 3,
+    key: 'finance',
+    label: '経済・お金',
+    desc: 'お金の使い方は価値観を反映する。長期視点での資産形成が安心感の土台',
+    importance: 5,
     text: '',
   },
 ];

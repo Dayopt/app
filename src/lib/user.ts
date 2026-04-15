@@ -4,13 +4,13 @@ import type { User } from '@supabase/supabase-js';
  * ユーザーの表示名を取得する
  *
  * 優先順位:
- * 1. user_metadata.username（ユーザーが設定した表示名）
+ * 1. user_metadata.full_name（ユーザーが設定した表示名）
  * 2. メールアドレスの@前のドット区切り最初のパート（先頭大文字）
  * 3. フォールバック文字列
  */
 export function getDisplayName(user: User | null | undefined, fallback = ''): string {
-  if (user?.user_metadata?.username) {
-    return user.user_metadata.username as string;
+  if (user?.user_metadata?.full_name) {
+    return user.user_metadata.full_name as string;
   }
 
   const local = user?.email?.split('@')[0] ?? '';
@@ -22,9 +22,6 @@ export function getDisplayName(user: User | null | undefined, fallback = ''): st
   return fallback;
 }
 
-/**
- * ユーザーのアバターURLを取得する
- */
 /**
  * ユーザーのアバターURLを取得する
  */

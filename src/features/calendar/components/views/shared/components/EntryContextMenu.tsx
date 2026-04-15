@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Palette, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -12,18 +12,11 @@ interface EntryContextMenuProps {
   entry: CalendarEvent;
   position: { x: number; y: number };
   onClose: () => void;
-  onAddToPalette?: ((entry: CalendarEvent) => void) | undefined;
   onDelete?: ((entry: CalendarEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */
-export const EventContextMenu = ({
-  entry,
-  position,
-  onClose,
-  onAddToPalette,
-  onDelete,
-}: EntryContextMenuProps) => {
+export const EventContextMenu = ({ entry, position, onClose, onDelete }: EntryContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -105,12 +98,6 @@ export const EventContextMenu = ({
   };
 
   const menuItems = [
-    {
-      icon: Palette,
-      label: t('calendar.contextMenu.addToPalette'),
-      action: () => onAddToPalette?.(entry),
-      available: !!onAddToPalette,
-    },
     {
       icon: Trash2,
       label: t('calendar.contextMenu.delete'),

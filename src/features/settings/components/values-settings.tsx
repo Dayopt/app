@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, Circle, CircleCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { SectionCard } from '@/lib/components/common/SectionCard';
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 
 import type { PersonalizationCategory, PersonalizationValues } from '../types/personalization';
 import { PERSONALIZATION_CATEGORIES } from '../types/personalization';
+import { CATEGORY_ICONS, EXAMPLE_CHIP_COUNTS } from './values-category-config';
 
 interface ValuesAutoSaveSettings {
   personalizationValues: PersonalizationValues;
@@ -28,12 +29,14 @@ interface ValuesAutoSaveSettings {
 /**
  * 価値評定スケール（ACT 12領域）
  *
- * 折りたたみ形式。記入済みを上に、未記入を下にソート。
- * 各領域は問いかけ形式のプロンプトで記入を促す。
+ * 排他アコーディオン形式。カテゴリアイコン付き。
+ * 各領域は問いかけ形式のプロンプト + 例文チップで記入を促す。
  */
 export function ValuesSettings() {
   const t = useTranslations();
   const utils = api.useUtils();
+
+  const [openCategory, setOpenCategory] = useState<PersonalizationCategory | null>(null);
 
   const { data: dbSettings, isPending } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -82,20 +85,6 @@ export function ValuesSettings() {
     [autoSave],
   );
 
-  const handleImportanceChange = useCallback(
-    (category: PersonalizationCategory, importance: number) => {
-      const current = autoSave.values.personalizationValues[category];
-      autoSave.updateValue('personalizationValues', {
-        ...autoSave.values.personalizationValues,
-        [category]: {
-          text: current?.text ?? '',
-          importance,
-        },
-      });
-    },
-    [autoSave],
-  );
-
   const isFilled = useCallback(
     (category: PersonalizationCategory) => {
       const value = autoSave.values.personalizationValues[category];
@@ -104,13 +93,9 @@ export function ValuesSettings() {
     [autoSave.values.personalizationValues],
   );
 
-  const sortedCategories = useMemo(() => {
-    return [...PERSONALIZATION_CATEGORIES].sort((a, b) => {
-      const aFilled = isFilled(a) ? 0 : 1;
-      const bFilled = isFilled(b) ? 0 : 1;
-      return aFilled - bFilled;
-    });
-  }, [isFilled]);
+  const handleToggle = useCallback((category: PersonalizationCategory) => {
+    setOpenCategory((prev) => (prev === category ? null : category));
+  }, []);
 
   const filledCount = useMemo(() => PERSONALIZATION_CATEGORIES.filter(isFilled).length, [isFilled]);
 
@@ -127,47 +112,63 @@ export function ValuesSettings() {
   }
 
   return (
-    <SectionCard title={t('settings.values.title')}>
-      <p className="text-muted-foreground mb-2 text-base md:text-sm">
-        {t('settings.values.description')}
-      </p>
-      <p className="text-muted-foreground mb-4 text-xs">
-        {t('settings.values.filledCount', {
-          count: filledCount,
-          total: PERSONALIZATION_CATEGORIES.length,
-        })}
-      </p>
+    <div className="space-y-4">
+      <SectionCard
+        title={t('settings.values.title')}
+        className="border-b-0 pb-0"
+        actions={
+          filledCount > 0 ? (
+            <span className="bg-muted text-muted-foreground rounded-lg px-2 py-1 text-xs">
+              {t('settings.values.filledCount', {
+                count: filledCount,
+                total: PERSONALIZATION_CATEGORIES.length,
+              })}
+            </span>
+          ) : undefined
+        }
+      >
+        <p className="text-muted-foreground text-base md:text-sm">
+          {t('settings.values.description')}
+        </p>
+      </SectionCard>
 
-      <div className="space-y-1">
-        {sortedCategories.map((category) => {
+      <div className="border-border-subtle bg-card overflow-hidden rounded-lg border shadow-sm">
+        {PERSONALIZATION_CATEGORIES.map((category, index) => {
           const value = autoSave.values.personalizationValues[category];
+          const text = value?.text ?? '';
           const filled = isFilled(category);
+          const isLast = index === PERSONALIZATION_CATEGORIES.length - 1;
+
           return (
-            <ValueCategoryCollapsible
+            <ValueAccordionItem
               key={category}
               category={category}
-              text={value?.text ?? ''}
-              importance={value?.importance ?? 5}
+              text={text}
               filled={filled}
+              open={openCategory === category}
+              onToggle={handleToggle}
               onTextChange={handleTextChange}
-              onImportanceChange={handleImportanceChange}
+              isLast={isLast}
             />
           );
         })}
       </div>
-    </SectionCard>
+    </div>
   );
 }
 
 /**
- * 旧データ（priority: 1-5）から新データ（importance: 1-10）へのマイグレーション
+ * 旧データ（priority: 1-5、art キー）から新データへのマイグレーション
  */
 function migrateValues(
   raw: Record<string, { text: string; importance?: number; priority?: number }>,
 ): PersonalizationValues {
   const result: PersonalizationValues = {};
   for (const [key, value] of Object.entries(raw)) {
-    result[key as PersonalizationCategory] = {
+    const mappedKey = key === 'art' ? 'finance' : key;
+    if (!PERSONALIZATION_CATEGORIES.includes(mappedKey as PersonalizationCategory)) continue;
+    if (key === 'art' && result.finance?.text) continue;
+    result[mappedKey as PersonalizationCategory] = {
       text: value.text,
       importance: value.importance ?? (value.priority ? value.priority * 2 : 5),
     };
@@ -175,49 +176,78 @@ function migrateValues(
   return result;
 }
 
-interface ValueCategoryCollapsibleProps {
+interface ValueAccordionItemProps {
   category: PersonalizationCategory;
   text: string;
-  importance: number;
   filled: boolean;
+  open: boolean;
+  onToggle: (category: PersonalizationCategory) => void;
   onTextChange: (category: PersonalizationCategory, text: string) => void;
-  onImportanceChange: (category: PersonalizationCategory, importance: number) => void;
+  isLast: boolean;
 }
 
-function ValueCategoryCollapsible({
+function ValueAccordionItem({
   category,
   text,
-  importance,
   filled,
+  open,
+  onToggle,
   onTextChange,
-  onImportanceChange,
-}: ValueCategoryCollapsibleProps) {
+  isLast,
+}: ValueAccordionItemProps) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const Icon = CATEGORY_ICONS[category];
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="hover:bg-state-hover flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left transition-colors">
-        {open ? (
-          <ChevronDown className="text-muted-foreground size-4 shrink-0" />
-        ) : (
-          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+    <Collapsible open={open} onOpenChange={() => onToggle(category)}>
+      <CollapsibleTrigger
+        className={cn(
+          'hover:bg-state-hover flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left transition-colors duration-150',
+          !isLast && !open && 'border-border border-b',
         )}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center">
+          <Icon className="text-muted-foreground size-5" />
+        </div>
+
         <span className="text-foreground flex-1 text-base md:text-sm">
           {t(`settings.values.categories.${category}`)}
         </span>
-        {filled && (
-          <span className="text-success flex items-center gap-1 text-xs">
-            <Check className="size-3.5" />
-            {t('settings.values.filled')}
+
+        {filled && text && (
+          <span className="text-muted-foreground mr-2 ml-auto hidden max-w-48 truncate text-xs sm:block">
+            {text.split('\n')[0]}
           </span>
         )}
+
+        {filled ? (
+          <CircleCheck className="text-success size-4 shrink-0" />
+        ) : (
+          <Circle className="text-muted-foreground size-4 shrink-0" />
+        )}
+
+        <ChevronDown
+          className={cn(
+            'text-muted-foreground size-4 shrink-0 transition-transform duration-300',
+            open && 'rotate-180',
+          )}
+        />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="space-y-4 px-4 pt-1 pb-4 pl-8">
+        <div className={cn('space-y-4 pt-1 pr-4 pb-4 pl-14', !isLast && 'border-border border-b')}>
           <p className="text-muted-foreground text-xs">
             {t(`settings.values.categories.${category}Prompt`)}
           </p>
+
+          <ExampleChips
+            category={category}
+            currentText={text}
+            onInsert={(example) => {
+              const newText = text.trim() ? `${text}\n${example}` : example;
+              onTextChange(category, newText);
+            }}
+          />
+
           <Textarea
             value={text}
             onChange={(e) => onTextChange(category, e.target.value)}
@@ -226,44 +256,47 @@ function ValueCategoryCollapsible({
             className="min-h-15 resize-none text-base md:text-sm"
             rows={2}
           />
-          <div className="flex justify-end">
-            <ImportanceDots value={importance} onChange={(v) => onImportanceChange(category, v)} />
-          </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
-interface ImportanceDotsProps {
-  value: number;
-  onChange: (value: number) => void;
+interface ExampleChipsProps {
+  category: PersonalizationCategory;
+  currentText: string;
+  onInsert: (example: string) => void;
 }
 
-/**
- * 1-10の重要度ドットバー
- */
-function ImportanceDots({ value, onChange }: ImportanceDotsProps) {
+function ExampleChips({ category, currentText, onInsert }: ExampleChipsProps) {
   const t = useTranslations();
+  const chipCount = EXAMPLE_CHIP_COUNTS[category];
 
   return (
-    <div
-      className="flex shrink-0 items-center gap-1"
-      role="group"
-      aria-label={t('settings.values.importance')}
-    >
-      {Array.from({ length: 10 }, (_, i) => i + 1).map((dot) => (
-        <button
-          key={dot}
-          type="button"
-          className={cn(
-            '-m-1 size-3.5 rounded-full bg-clip-content p-2 transition-colors',
-            dot <= value ? 'bg-primary' : 'bg-muted',
-          )}
-          onClick={() => onChange(dot)}
-          aria-label={t('settings.values.setImportance', { value: dot })}
-        />
-      ))}
+    <div className="flex flex-wrap gap-2">
+      {Array.from({ length: chipCount }, (_, i) => {
+        const exampleText = t(`settings.values.examples.${category}.${i}`);
+        const isUsed = currentText.includes(exampleText);
+
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => {
+              if (!isUsed) onInsert(exampleText);
+            }}
+            disabled={isUsed}
+            className={cn(
+              'rounded-lg border px-2 py-1 text-xs transition-colors duration-150',
+              isUsed
+                ? 'bg-state-active text-state-active-foreground cursor-default border-transparent'
+                : 'border-border bg-background text-foreground hover:bg-state-hover cursor-pointer',
+            )}
+          >
+            {exampleText}
+          </button>
+        );
+      })}
     </div>
   );
 }

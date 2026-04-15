@@ -26,10 +26,9 @@ export type TagRow = Database['public']['Tables']['tags']['Row'];
 
 /**
  * エントリ（タグID付き）
+ * entries.tag_id が直接存在するので、tagId はエイリアス
  */
 export interface EntryWithTags extends EntryRow {
-  // PostgREST: entry_id ユニーク制約あり → オブジェクト、なし → 配列
-  entry_tags?: Array<{ tag_id: string }> | { tag_id: string } | null;
   tagId: string | null;
 }
 

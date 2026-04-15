@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useEntryInspectorStore } from '@/features/entry';
-import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 import { Toaster } from '@/lib/components/ui/toast';
 import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -83,41 +82,6 @@ export function GlobalOverlays() {
     }
   }, [settingsOpen, contactOpen, closeInspector]);
 
-  // Inspector → パレット連携（feature 間の接続は Composition Layer で行う）
-  const { pinItem, unpinItem } = usePaletteMutations();
-  const { data: paletteItems } = usePaletteItems();
-
-  const handlePinToPalette = useCallback(
-    (tagId: string, durationMinutes: number) => {
-      pinItem(tagId, durationMinutes);
-      toast.success(t('common.actions.addedToPalette'));
-    },
-    [pinItem, t],
-  );
-
-  const handleUnpinFromPalette = useCallback(
-    (tagId: string, durationMinutes: number) => {
-      if (!paletteItems) return;
-      const item = paletteItems.find(
-        (i) => i.tag_id === tagId && i.duration_minutes === durationMinutes,
-      );
-      if (!item) return;
-      unpinItem(item.id);
-      toast.success(t('common.actions.removedFromPalette'));
-    },
-    [paletteItems, unpinItem, t],
-  );
-
-  const checkIsPinned = useCallback(
-    (tagId: string, durationMinutes: number) => {
-      if (!paletteItems) return false;
-      return paletteItems.some(
-        (item) => item.tag_id === tagId && item.duration_minutes === durationMinutes,
-      );
-    },
-    [paletteItems],
-  );
-
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
@@ -136,12 +100,7 @@ export function GlobalOverlays() {
         }}
       />
       <SettingsDialog />
-      <EntryInspector
-        onPinToPalette={handlePinToPalette}
-        onUnpinFromPalette={handleUnpinFromPalette}
-        isPinnedInPalette={checkIsPinned}
-        onViewStats={handleViewStats}
-      />
+      <EntryInspector onViewStats={handleViewStats} />
       <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>

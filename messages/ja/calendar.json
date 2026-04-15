@@ -77,7 +77,6 @@
     },
     "contextMenu": {
       "title": "エントリ操作",
-      "addToPalette": "パレットに追加",
       "delete": "エントリーを削除"
     },
     "toast": {

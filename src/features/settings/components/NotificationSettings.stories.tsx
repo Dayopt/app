@@ -1,7 +1,7 @@
 /**
  * NotificationSettings Stories
  *
- * tRPC の notificationPreferences をモックして通知設定画面を再現する。
+ * 通知設定画面（メール言語設定）を再現する。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -14,18 +14,12 @@ import { NotificationSettings } from './notification-settings';
 // Mock Data
 // ─────────────────────────────────────────────────────────
 
-const MOCK_NOTIFICATION_PREFERENCES = {
-  enableBrowserNotifications: true,
-  enableEmailNotifications: false,
-  enablePushNotifications: false,
-  defaultReminderEnabled: true,
+const MOCK_USER_SETTINGS = {
+  preferredLocale: 'en',
 };
 
-const MOCK_ALL_DISABLED = {
-  enableBrowserNotifications: false,
-  enableEmailNotifications: false,
-  enablePushNotifications: false,
-  defaultReminderEnabled: false,
+const MOCK_USER_SETTINGS_JA = {
+  preferredLocale: 'ja',
 };
 
 // ─────────────────────────────────────────────────────────
@@ -37,7 +31,7 @@ const meta = {
   component: NotificationSettings,
   parameters: {
     layout: 'padded',
-    trpcMocks: { 'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES },
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS },
   },
   tags: ['autodocs'],
   decorators: [
@@ -56,18 +50,18 @@ type Story = StoryObj<typeof meta>;
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** デフォルト状態（ブラウザ通知ON・メール/プッシュOFF） */
+/** デフォルト状態（英語） */
 export const Default: Story = {
   parameters: {
     a11y: { test: 'todo' },
   },
 };
 
-/** 全通知無効状態 */
-export const AllDisabled: Story = {
+/** 日本語設定 */
+export const Japanese: Story = {
   parameters: {
     a11y: { test: 'todo' },
-    trpcMocks: { 'notificationPreferences.get': MOCK_ALL_DISABLED },
+    trpcMocks: { 'userSettings.get': MOCK_USER_SETTINGS_JA },
   },
 };
 
@@ -84,14 +78,14 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="space-y-12">
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-medium">Default</h3>
-        <StoryTRPCProvider mocks={{ 'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES }}>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Default (English)</h3>
+        <StoryTRPCProvider mocks={{ 'userSettings.get': MOCK_USER_SETTINGS }}>
           <NotificationSettings />
         </StoryTRPCProvider>
       </div>
       <div>
-        <h3 className="text-foreground mb-4 text-lg font-medium">All Disabled</h3>
-        <StoryTRPCProvider mocks={{ 'notificationPreferences.get': MOCK_ALL_DISABLED }}>
+        <h3 className="text-foreground mb-4 text-lg font-medium">Japanese</h3>
+        <StoryTRPCProvider mocks={{ 'userSettings.get': MOCK_USER_SETTINGS_JA }}>
           <NotificationSettings />
         </StoryTRPCProvider>
       </div>

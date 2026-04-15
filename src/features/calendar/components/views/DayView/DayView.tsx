@@ -101,7 +101,11 @@ export const DayView = ({
     <CalendarViewAnimation viewType="day">
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         {/* 固定日付ヘッダー */}
-        <CalendarDateHeader header={headerComponent} weekNumber={weekNumber} />
+        <CalendarDateHeader
+          header={headerComponent}
+          weekNumber={weekNumber}
+          className="hidden md:flex"
+        />
 
         {/* スクロール可能コンテンツ */}
         <ScrollableCalendarLayout displayDates={displayDates} viewMode="day">

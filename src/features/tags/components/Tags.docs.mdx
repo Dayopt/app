@@ -115,7 +115,7 @@ Parent Tag (level=0, depth=1)
 
 ```
 ソースタグ → ターゲットタグ
-  1. ソースの entry_tags をターゲットに移動
+  1. ソースの entries.tag_id をターゲットに更新
   2. ソースの子タグをターゲットの子に昇格
   3. ソースタグを削除
   ※ トランザクション内で実行
@@ -127,24 +127,18 @@ Parent Tag (level=0, depth=1)
 
 ### tags テーブル
 
-| カラム        | 型       | 説明                  |
-| ------------- | -------- | --------------------- |
-| `id`          | UUID     | PK                    |
-| `user_id`     | UUID     | FK → auth.users       |
-| `name`        | TEXT     | タグ名                |
-| `color`       | TEXT     | HEXカラー             |
-| `description` | TEXT     | 説明                  |
-| `parent_id`   | UUID     | FK → tags（自己参照） |
-| `sort_order`  | INT      | 並び順                |
-| `level`       | SMALLINT | 0=親, 1=子            |
-| `is_active`   | BOOLEAN  | アクティブ状態        |
+| カラム       | 型      | 説明               |
+| ------------ | ------- | ------------------ |
+| `id`         | UUID    | PK                 |
+| `user_id`    | UUID    | FK → auth.users    |
+| `name`       | TEXT    | タグ名             |
+| `color`      | TEXT    | プリセットカラー名 |
+| `icon`       | TEXT    | Lucideアイコン名   |
+| `sort_order` | INT     | 並び順             |
+| `is_active`  | BOOLEAN | アクティブ状態     |
 
 - **RLS**: `auth.uid() = user_id`
-- **トリガー**: `check_tag_hierarchy()`, `enforce_tag_no_children_as_child`
-
-### 関連テーブル
-
-- `entry_tags`: Entries との多対多
+- **関連**: `entries.tag_id` → `tags.id`（1エントリ1タグ）
 
 ---
 

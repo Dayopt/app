@@ -8,14 +8,10 @@ import { useCallback, useEffect } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import type {
-  ChronotypeSettings as ChronotypeSettingsState,
-  ProductivityZone,
-} from '@/features/chronotype';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import type { CalendarSettings, DateFormatType } from '@/features/calendar';
+import type { CalendarSettings } from '@/features/calendar';
 import { useCalendarSettingsStore } from '@/features/calendar';
 
 /**
@@ -61,32 +57,20 @@ export function useUserSettings() {
   // DBから取得した設定をStoreに反映（初回のみ）
   useEffect(() => {
     if (dbSettings && !isPending) {
-      const chronotypeSettings: ChronotypeSettingsState = {
-        enabled: dbSettings.chronotype.enabled,
-        type: dbSettings.chronotype.type,
-      };
-
-      if (dbSettings.chronotype.customZones) {
-        chronotypeSettings.customZones = dbSettings.chronotype
-          .customZones as never as ProductivityZone[];
-      }
-
       updateSettings({
         timezone: dbSettings.timezone,
-        showUTCOffset: dbSettings.showUtcOffset,
         timeFormat: dbSettings.timeFormat,
-        dateFormat: dbSettings.dateFormat as DateFormatType,
+        dateFormat: dbSettings.preferredLocale === 'ja' ? 'yyyy/MM/dd' : 'MM/dd/yyyy',
         weekStartsOn: dbSettings.weekStartsOn,
         showWeekends: dbSettings.showWeekends,
         showWeekNumbers: dbSettings.showWeekNumbers,
         defaultDuration: dbSettings.defaultDuration,
         snapInterval: dbSettings.snapInterval,
-        chronotype: chronotypeSettings,
+        chronotype: dbSettings.chronotype ? { type: dbSettings.chronotype.type } : null,
         chronotypeGradient: {
-          light: dbSettings.chronotype.gradientLight ?? null,
-          dark: dbSettings.chronotype.gradientDark ?? null,
+          light: dbSettings.chronotype?.gradientLight ?? null,
+          dark: dbSettings.chronotype?.gradientDark ?? null,
         },
-        planRecordMode: dbSettings.planRecordMode,
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
       });
@@ -103,9 +87,7 @@ export function useUserSettings() {
       const dbInput: Record<string, unknown> = {};
 
       if (settings.timezone !== undefined) dbInput.timezone = settings.timezone;
-      if (settings.showUTCOffset !== undefined) dbInput.showUtcOffset = settings.showUTCOffset;
       if (settings.timeFormat !== undefined) dbInput.timeFormat = settings.timeFormat;
-      if (settings.dateFormat !== undefined) dbInput.dateFormat = settings.dateFormat;
       if (settings.weekStartsOn !== undefined) dbInput.weekStartsOn = settings.weekStartsOn;
       if (settings.showWeekends !== undefined) dbInput.showWeekends = settings.showWeekends;
       if (settings.showWeekNumbers !== undefined)
@@ -114,15 +96,11 @@ export function useUserSettings() {
         dbInput.defaultDuration = settings.defaultDuration;
       if (settings.snapInterval !== undefined) dbInput.snapInterval = settings.snapInterval;
       if (settings.chronotype !== undefined) {
-        dbInput.chronotypeEnabled = settings.chronotype.enabled;
-        dbInput.chronotypeType = settings.chronotype.type;
-        dbInput.chronotypeCustomZones = settings.chronotype.customZones;
+        dbInput.chronotypeType = settings.chronotype?.type ?? null;
       }
       if (settings.defaultView !== undefined) dbInput.defaultView = settings.defaultView;
       if (settings.hourHeightDensity !== undefined)
         dbInput.hourHeightDensity = settings.hourHeightDensity;
-      if (settings.planRecordMode !== undefined) dbInput.planRecordMode = settings.planRecordMode;
-
       if (Object.keys(dbInput).length > 0) {
         updateMutation.mutate(dbInput);
       }

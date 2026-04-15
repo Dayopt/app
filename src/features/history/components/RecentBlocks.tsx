@@ -9,21 +9,15 @@
 
 import { useMemo } from 'react';
 
-import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
-import { BlockItem, blockMenuButtonCn, SidebarSection } from '@/lib/components/shell/sidebar';
-import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { BlockItem, SidebarSection } from '@/lib/components/shell/sidebar';
 import { api } from '@/lib/trpc';
 
-interface RecentBlocksProps {
-  onPinItem?: (tagId: string, durationMinutes: number) => void;
-}
-
 /** RecentBlocks — サイドバーの履歴ブロックセクション */
-export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
+export function RecentBlocks() {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const { placeBlockNow } = useBlockPlace();
@@ -61,23 +55,6 @@ export function RecentBlocks({ onPinItem }: RecentBlocksProps) {
                 durationMinutes={item.durationMinutes}
                 iconSlot={<TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />}
                 onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}
-                menuSlot={
-                  onPinItem ? (
-                    <HoverTooltip content={t('sidebar.palette.add')}>
-                      <button
-                        type="button"
-                        className={blockMenuButtonCn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPinItem(item.tagId, item.durationMinutes);
-                        }}
-                        aria-label={t('sidebar.palette.add')}
-                      >
-                        <Star className="size-3.5" />
-                      </button>
-                    </HoverTooltip>
-                  ) : undefined
-                }
               />
             ) : null,
           )

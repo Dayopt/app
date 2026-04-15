@@ -90,23 +90,20 @@ describe('generateSampleEntries', () => {
     expect(tagKeys).toContain('hobby');
   });
 
-  it('should set description and reminderMinutes correctly', () => {
+  it('should set description correctly', () => {
     const plans = generateSampleEntries('bear', testDate);
 
-    // Draft Proposal has reminderMinutes: 5
+    // Draft Proposal has no description
     const proposal = plans[1]!;
-    expect(proposal.reminderMinutes).toBe(5);
     expect(proposal.description).toBeNull();
 
     // English Lesson has description
     const lesson = plans[2]!;
     expect(lesson.description).toBe('Unit 5 — Pronunciation practice');
-    expect(lesson.reminderMinutes).toBeNull();
 
-    // Morning Run has neither
+    // Morning Run has no description
     const morningRun = plans[0]!;
     expect(morningRun.description).toBeNull();
-    expect(morningRun.reminderMinutes).toBeNull();
   });
 });
 

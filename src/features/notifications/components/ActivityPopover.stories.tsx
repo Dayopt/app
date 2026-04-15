@@ -28,7 +28,8 @@ interface MockNotification {
   id: string;
   type: NotificationType;
   entry_id: string | null;
-  is_read: boolean;
+  title: string;
+  read_at: string | null;
   created_at: string;
   entries?: { title: string } | null;
 }
@@ -38,7 +39,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-1',
     type: 'reminder',
     entry_id: 'entry-1',
-    is_read: false,
+    title: 'デザインレビュー',
+    read_at: null,
     created_at: now,
     entries: { title: 'デザインレビュー' },
   },
@@ -46,7 +48,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-2',
     type: 'reminder',
     entry_id: 'entry-2',
-    is_read: false,
+    title: '週次報告書の作成',
+    read_at: null,
     created_at: oneHourAgo,
     entries: { title: '週次報告書の作成' },
   },
@@ -54,7 +57,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-3',
     type: 'reminder',
     entry_id: 'entry-3',
-    is_read: true,
+    title: '朝のストレッチ',
+    read_at: oneDayAgo,
     created_at: oneDayAgo,
     entries: { title: '朝のストレッチ' },
   },
@@ -62,7 +66,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-4',
     type: 'ai_insight',
     entry_id: null,
-    is_read: false,
+    title: '午前中の集中力が高い傾向があります',
+    read_at: null,
     created_at: oneHourAgo,
     entries: { title: '午前中の集中力が高い傾向があります' },
   },
@@ -70,7 +75,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-5',
     type: 'weekly_report',
     entry_id: null,
-    is_read: true,
+    title: '先週の週次レポート',
+    read_at: oneDayAgo,
     created_at: oneDayAgo,
     entries: { title: '先週の週次レポート' },
   },
@@ -78,7 +84,8 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
     id: 'notif-6',
     type: 'burnout_warning',
     entry_id: null,
-    is_read: false,
+    title: '過負荷の兆候が検出されました',
+    read_at: null,
     created_at: now,
     entries: { title: '過負荷の兆候が検出されました' },
   },
@@ -123,7 +130,7 @@ function ActivityPanelPreview({ defaultTab = 'all' }: { defaultTab?: ActivityTab
 // Meta
 // ─────────────────────────────────────────────────────────
 
-const unreadCount = MOCK_NOTIFICATIONS.filter((n) => !n.is_read).length;
+const unreadCount = MOCK_NOTIFICATIONS.filter((n) => n.read_at === null).length;
 
 const meta = {
   title: 'Features/Notifications/ActivityPopover',
@@ -174,7 +181,7 @@ export const Empty: Story = {
 export const AllRead: Story = {
   parameters: {
     trpcMocks: {
-      'notifications.list': MOCK_NOTIFICATIONS.map((n) => ({ ...n, is_read: true })),
+      'notifications.list': MOCK_NOTIFICATIONS.map((n) => ({ ...n, read_at: now })),
       'notifications.unreadCount': 0,
     },
   },

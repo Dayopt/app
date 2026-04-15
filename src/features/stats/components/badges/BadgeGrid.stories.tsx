@@ -26,7 +26,6 @@ const EARNED_IDS = new Map([
   ['blocks', 'bronze'],
   ['tag-hours', 'bronze'],
   ['tags-5', null],
-  ['palette-first', null],
   ['early-bird', null],
   ['full-week', null],
   ['pro-signup', null],

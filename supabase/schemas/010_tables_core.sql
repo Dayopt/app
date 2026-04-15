@@ -3,6 +3,14 @@
 -- ============================================================
 -- Dayopt のドメインモデルの中核テーブル
 -- 実際のマイグレーションは migrations/ を参照
+--
+-- カラム順序の規則:
+--   1. id (PK)
+--   2. user_id (FK/所有者)
+--   3. 外部キー
+--   4. ビジネスカラム
+--   5. ステータス/フラグ
+--   6. メタ (created_at, updated_at, deleted_at)
 -- ============================================================
 
 -- profiles: ユーザープロフィール
@@ -11,35 +19,40 @@
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
-  username TEXT UNIQUE,          -- メール@前から自動生成、重複時はsuffix付与
-  full_name TEXT,
+  full_name TEXT,                 -- 表示名
   avatar_url TEXT,
+  stripe_customer_id TEXT,       -- Stripe顧客ID
+  subscription_id TEXT,          -- Stripeサブスクリプション ID
+  subscription_status TEXT NOT NULL DEFAULT 'free', -- free / trialing / active / canceled / past_due
+  onboarding_completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  onboarding_completed_at TIMESTAMPTZ  -- オンボーディング完了日時
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- entries: エントリ（プラン + 記録 統合テーブル）
 -- origin='planned' → 事前に計画したタイムボックス
 -- origin='unplanned' → 実行後に記録した時間
--- reviewed_at IS NOT NULL → 完了済み（旧statusカラムを置換）
+-- fulfillment_score IS NOT NULL → レビュー済み
 CREATE TABLE public.entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  tag_id UUID REFERENCES public.tags(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   description TEXT,
-  start_time TIMESTAMPTZ,       -- カレンダー上の開始時刻
-  end_time TIMESTAMPTZ,         -- カレンダー上の終了時刻
-  recurrence_type TEXT NOT NULL DEFAULT 'none',  -- none/daily/weekly/monthly/yearly/weekdays
-  recurrence_end_date DATE,
-  recurrence_rule TEXT,          -- RFC 5545 RRULE（複雑な繰り返し用）
-  reminder_minutes INTEGER,      -- リマインダー（開始N分前）
-  reminder_at TIMESTAMPTZ,       -- 自動計算: start_time - reminder_minutes
-  reminder_sent BOOLEAN NOT NULL DEFAULT false,
-  reviewed_at TIMESTAMPTZ,       -- 完了マーク日時
   origin TEXT NOT NULL DEFAULT 'planned',
-  fulfillment_score INTEGER,     -- 充実度 1-3（低/中/高）
-  duration_minutes INTEGER,      -- 手動入力の所要時間（start/end未設定時）
+  start_time TIMESTAMPTZ,         -- カレンダー上の開始時刻
+  end_time TIMESTAMPTZ,           -- カレンダー上の終了時刻
+  actual_start_time TIMESTAMPTZ,  -- 実績開始時刻
+  actual_end_time TIMESTAMPTZ,    -- 実績終了時刻
+  duration_minutes INTEGER GENERATED ALWAYS AS (
+    CASE
+      WHEN start_time IS NOT NULL AND end_time IS NOT NULL
+      THEN EXTRACT(EPOCH FROM (end_time - start_time))::INTEGER / 60
+      ELSE NULL
+    END
+  ) STORED,
+  fulfillment_score INTEGER,      -- 充実度 1-3（低/中/高）
+  deleted_at TIMESTAMPTZ,         -- ソフトデリート
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -51,92 +64,45 @@ CREATE TABLE public.tags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  color TEXT,                    -- red/orange/amber/green/teal/blue/indigo/violet/pink/gray
-  is_active BOOLEAN NOT NULL DEFAULT true,  -- false = ソフトデリート（マージ時）
+  color TEXT,                     -- red/orange/amber/green/teal/blue/indigo/violet/pink/gray
+  icon TEXT,                      -- Lucideアイコン名
   sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,  -- false = ソフトデリート（マージ時）
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (user_id, name)
 );
 
--- entry_tags: エントリとタグの関連
--- UNIQUE(entry_id) → 1エントリに1タグのみ
-CREATE TABLE public.entry_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE UNIQUE,
-  tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
+-- entry_tags: 削除済み（20260415000000_inline_entry_tag_id.sql）
+-- entries.tag_id に統合
 
--- entry_activities: エントリ操作履歴
--- 変更追跡用。entry削除時は entry_id = NULL（SET NULL）で履歴は残る
-CREATE TABLE public.entry_activities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entry_id UUID REFERENCES public.entries(id) ON DELETE SET NULL,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  action_type TEXT NOT NULL,     -- created/updated/time_changed/tag_added/... etc.
-  field_name TEXT,
-  old_value TEXT,
-  new_value TEXT,
-  metadata JSONB DEFAULT '{}',
-  schema_version SMALLINT NOT NULL DEFAULT 2,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- entry_instances: 繰り返しエントリの例外インスタンス
--- 特定日の変更（時間変更/キャンセル/移動）を管理
-CREATE TABLE public.entry_instances (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE,
-  instance_date DATE NOT NULL,
-  instance_start TIMESTAMPTZ,
-  instance_end TIMESTAMPTZ,
-  exception_type TEXT,           -- modified/cancelled/moved
-  original_date DATE,
-  title TEXT,
-  description TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (entry_id, instance_date)
-);
+-- entry_instances: 削除済み（20260319130003_cleanup_recurrence_remnants.sql）
 
 -- user_settings: ユーザー設定（1ユーザー1レコード）
 CREATE TABLE public.user_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  -- 時間設定
+  -- 時間
   timezone TEXT NOT NULL DEFAULT 'Asia/Tokyo',
-  time_format TEXT NOT NULL DEFAULT '24h',     -- 24h / 12h
-  week_starts_on SMALLINT NOT NULL DEFAULT 1,  -- 0=Sun, 1=Mon, 6=Sat
+  time_format TEXT NOT NULL DEFAULT '24h',      -- 24h / 12h
+  week_starts_on SMALLINT NOT NULL DEFAULT 1,   -- 0=Sun, 1=Mon, 6=Sat
   default_duration INTEGER NOT NULL DEFAULT 60,
-  snap_interval SMALLINT NOT NULL DEFAULT 15,  -- 5/10/15/30分
-  business_hours_start SMALLINT NOT NULL DEFAULT 9,
-  business_hours_end SMALLINT NOT NULL DEFAULT 18,
-  -- 表示設定
-  show_utc_offset BOOLEAN NOT NULL DEFAULT true,
+  snap_interval SMALLINT NOT NULL DEFAULT 15,   -- 5/10/15/30分
+  -- 表示
   show_weekends BOOLEAN NOT NULL DEFAULT true,
   show_week_numbers BOOLEAN NOT NULL DEFAULT false,
-  show_declined_events BOOLEAN NOT NULL DEFAULT false,
   default_view TEXT NOT NULL DEFAULT 'week',
-  hour_height_density TEXT NOT NULL DEFAULT 'default',
+  hour_height_density TEXT NOT NULL DEFAULT 'default', -- compact / default / comfortable
   -- クロノタイプ
-  chronotype_enabled BOOLEAN NOT NULL DEFAULT true,
-  chronotype_type TEXT NOT NULL DEFAULT 'bear',  -- bear/lion/wolf/dolphin/custom
-  chronotype_custom_zones JSONB,
-  chronotype_display_mode TEXT NOT NULL DEFAULT 'border',
-  chronotype_opacity SMALLINT NOT NULL DEFAULT 90,
-  -- プラン/記録モード
-  plan_record_mode TEXT NOT NULL DEFAULT 'both',  -- plan/record/both
+  chronotype_settings JSONB,      -- { type: 'bear'|'lion'|'wolf'|'dolphin' } or null
+  -- ロケール
+  preferred_locale TEXT NOT NULL DEFAULT 'en',   -- en / ja
   -- テーマ
   theme TEXT NOT NULL DEFAULT 'system',
-  color_scheme TEXT NOT NULL DEFAULT 'blue',
-  date_format TEXT NOT NULL DEFAULT 'yyyy/MM/dd',
-  -- AI設定
-  personalization_values JSONB DEFAULT '{}',
-  ai_communication_style TEXT DEFAULT 'coach',
-  ai_custom_style_prompt TEXT DEFAULT '',
-  personalization_ranked_values JSONB DEFAULT '[]',
+  -- パーソナライゼーション（将来のAI機能用、構造未定）
+  personalization JSONB,
+  -- iCalフィード
+  ical_feed_token UUID DEFAULT gen_random_uuid(), -- iCal連携用トークン
   -- メタ
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

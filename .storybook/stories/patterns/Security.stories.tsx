@@ -356,7 +356,7 @@ export const tagsRouter = createTRPCRouter({
                   <td className="py-2 font-medium">タグ削除</td>
                   <td className="py-2">destructive 確認 + 影響件数表示</td>
                   <td className="py-2">protectedProcedure + userId</td>
-                  <td className="py-2">entry_tags CASCADE</td>
+                  <td className="py-2">entries.tag_id SET NULL</td>
                 </tr>
                 <tr>
                   <td className="py-2 font-medium">MFA 無効化</td>

@@ -1,9 +1,10 @@
 // Chronotype 共有型定義
 // 複数feature・共有storeが参照する型をここに定義
 
-export type ChronotypeType = 'lion' | 'bear' | 'wolf' | 'dolphin' | 'custom';
+export type ChronotypeType = 'lion' | 'bear' | 'wolf' | 'dolphin';
 
-export type PresetChronotypeType = Exclude<ChronotypeType, 'custom'>;
+/** @deprecated ChronotypeType と同一。custom 廃止に伴い統合 */
+export type PresetChronotypeType = ChronotypeType;
 
 export type ProductivityLevel = 'warmup' | 'deep' | 'ease' | 'recovery' | 'winddown';
 
@@ -21,8 +22,7 @@ export interface ChronotypeProfile {
   productivityZones: ProductivityZone[];
 }
 
+/** DB の chronotype_settings jsonb に対応。null = 未設定/無効。 */
 export interface ChronotypeSettings {
-  enabled: boolean;
   type: ChronotypeType;
-  customZones?: ProductivityZone[];
 }

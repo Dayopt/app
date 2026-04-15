@@ -64,7 +64,6 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     endDate,
     status: entryState === 'past' ? 'closed' : 'open',
     color: '',
-    reminder_minutes: entry.reminder_minutes,
     tagId: entry.tagId ?? null,
     createdAt,
     updatedAt,

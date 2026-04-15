@@ -9,7 +9,6 @@ export interface CalendarEvent {
   endDate: Date | null;
   status: 'open' | 'closed';
   color: string;
-  reminder_minutes?: number | null | undefined; // 通知タイミング（開始時刻の何分前か）
   /** タグID。1エントリ1タグ。タグの詳細情報はtags.listキャッシュから取得する。 */
   tagId?: string | null | undefined;
   createdAt: Date;

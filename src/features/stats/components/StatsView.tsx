@@ -12,6 +12,7 @@ import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { useStatsPageData } from '../hooks/useStatsPageData';
+import { useTimePLData } from '../hooks/useTimePLData';
 import { calculateDeepUtilization } from '../lib/metrics';
 import { evaluateRuleInsights } from '../lib/ruleInsights';
 import type { MetricId } from '../types/metrics.types';
@@ -19,6 +20,7 @@ import type { StatsViewProps } from '../types/stats.types';
 import { StatsMetricsGrid } from './insights/StatsMetricsGrid';
 import { RuleInsightList } from './review/RuleInsightList';
 import { TagBreakdownBar } from './review/TagBreakdownBar';
+import { TimePLContainer } from './time-pl/TimePLContainer';
 
 /**
  * StatsView - 振り返りビュー（Review タブ）
@@ -39,6 +41,8 @@ export function StatsView({ className }: StatsViewProps) {
     dateRange,
     prevDateRange,
   } = useStatsPageData();
+
+  const { data: timePLData, isPending: isTimePLPending } = useTimePLData();
 
   const tagSegments = pageData?.timeByTag
     ? pageData.timeByTag.map((tag) => ({
@@ -134,6 +138,9 @@ export function StatsView({ className }: StatsViewProps) {
         <div className="flex flex-col gap-4 p-4">
           {/* タグ別時間内訳 */}
           <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
+
+          {/* 時間損益計算書 */}
+          <TimePLContainer input={timePLData} view="statement" isLoading={isTimePLPending} />
 
           {/* KPI メトリクス */}
           <StatsMetricsGrid

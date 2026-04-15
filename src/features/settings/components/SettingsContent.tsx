@@ -56,7 +56,6 @@ export function SettingsContent({ category }: SettingsContentProps) {
   // マウント時に設定データをプリフェッチ
   useEffect(() => {
     void utils.userSettings.get.prefetch(undefined, { staleTime: CACHE_5_MINUTES });
-    void utils.notificationPreferences.get.prefetch();
   }, [utils]);
 
   return (

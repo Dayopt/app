@@ -10,14 +10,13 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 概要
 
-| 項目         | 値                                                             |
-| ------------ | -------------------------------------------------------------- |
-| 時間位置     | `upcoming` / `active` / `past`（`getEntryState()` で自動判定） |
-| 起源         | `planned`（予定）/ `unplanned`（記録のみ）                     |
-| 時間指定     | `start_time` + `end_time`（ISO 8601、任意）                    |
-| タグ         | 多対多（`entry_tags` 経由）                                    |
-| リマインダー | 開始N分前（5/10/15/30）                                        |
-| 充実度       | `fulfillment_score`（1-5、全 entryState で記録可能）           |
+| 項目     | 値                                                             |
+| -------- | -------------------------------------------------------------- |
+| 時間位置 | `upcoming` / `active` / `past`（`getEntryState()` で自動判定） |
+| 起源     | `planned`（予定）/ `unplanned`（記録のみ）                     |
+| 時間指定 | `start_time` + `end_time`（ISO 8601、任意）                    |
+| タグ     | `entries.tag_id` → `tags`（1エントリ1タグ）                    |
+| 充実度   | `fulfillment_score`（1-3、全 entryState で記録可能）           |
 
 ---
 
@@ -134,7 +133,7 @@ InspectorTimeSection
 | ------------------------ | -------------------------------------- |
 | タグ名 or 「タグを追加」 | 常時（tagId 未設定時はフォールバック） |
 | 時間範囲                 | `height >= 30px` の場合                |
-| リマインダーアイコン     | `reminder_minutes` が設定済み          |
+| リマインダーアイコン     | `reminder_enabled` が `true`           |
 
 ### サイズ対応
 

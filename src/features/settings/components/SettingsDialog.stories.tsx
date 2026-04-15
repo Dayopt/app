@@ -3,7 +3,7 @@
  *
  * PC用設定ダイアログ。useShellStore で開閉・カテゴリを管理。
  * SettingsContent は各カテゴリコンポーネントを遅延読み込みするため、
- * tRPC モックで userSettings / notificationPreferences をカバー。
+ * tRPC モックで userSettings をカバー。
  *
  * 注意: SettingsContent は Suspense + lazy loading を使用する。
  * ローディング中はスケルトンが表示される。
@@ -24,12 +24,6 @@ import { SettingsDialog } from './SettingsDialog';
 // モックデータ
 // ─────────────────────────────────────────────────────────
 
-const MOCK_NOTIFICATION_PREFERENCES = {
-  emailEnabled: true,
-  pushEnabled: false,
-  reminderMinutes: 15,
-};
-
 const MOCK_PROFILE = {
   id: 'user-1',
   email: 'user@example.com',
@@ -43,7 +37,6 @@ const MOCK_PROFILE = {
 
 const DIALOG_MOCKS = {
   'userSettings.get': PRESET_USER_SETTINGS.default,
-  'notificationPreferences.get': MOCK_NOTIFICATION_PREFERENCES,
   'profile.get': MOCK_PROFILE,
   'tags.list': { data: [] },
   'entries.getTagStats': { counts: {} },

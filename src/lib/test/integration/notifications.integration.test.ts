@@ -48,7 +48,7 @@ describe.skipIf(SKIP_INTEGRATION)('Notifications Router Integration', () => {
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
       email_confirm: true,
-      user_metadata: { username: `testuser_notifications_${Date.now()}` },
+      user_metadata: { full_name: `testuser_notifications_${Date.now()}` },
       id: TEST_USER_ID,
     });
 
@@ -59,7 +59,6 @@ describe.skipIf(SKIP_INTEGRATION)('Notifications Router Integration', () => {
     await adminSupabase.from('profiles').upsert({
       id: TEST_USER_ID,
       email: TEST_EMAIL,
-      username: `testuser_notifications_${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -118,7 +117,7 @@ describe.skipIf(SKIP_INTEGRATION)('Notifications Router Integration', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('reminder');
-      expect(result.is_read).toBe(false);
+      expect(result.read_at).toBeNull();
 
       createdNotificationIds.push(result.id);
     });
@@ -198,7 +197,7 @@ describe.skipIf(SKIP_INTEGRATION)('Notifications Router Integration', () => {
 
       const result = await caller.markAsRead({ id: created.id });
 
-      expect(result.is_read).toBe(true);
+      expect(result.read_at).not.toBeNull();
     });
 
     it('should mark all notifications as read', async () => {
@@ -220,10 +219,10 @@ describe.skipIf(SKIP_INTEGRATION)('Notifications Router Integration', () => {
     it('should filter notifications by read status', async () => {
       const caller = createTestCaller(notificationsRouter, ctx);
 
-      const unreadResult = await caller.list({ is_read: false });
+      const unreadResult = await caller.list({ unread_only: true });
 
       unreadResult.forEach((n) => {
-        expect(n.is_read).toBe(false);
+        expect(n.read_at).toBeNull();
       });
     });
   });

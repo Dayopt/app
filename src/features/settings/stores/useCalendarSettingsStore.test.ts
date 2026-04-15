@@ -18,13 +18,11 @@ describe('useCalendarSettingsStore', () => {
       expect(state.defaultDuration).toBe(60);
       expect(state.snapInterval).toBe(15);
       expect(state.showWeekends).toBe(true);
-      expect(state.planRecordMode).toBe('both');
     });
 
-    it('クロノタイプはデフォルト無効', () => {
+    it('クロノタイプはデフォルト無効（null）', () => {
       const state = useCalendarSettingsStore.getState();
-      expect(state.chronotype.enabled).toBe(false);
-      expect(state.chronotype.type).toBe('bear');
+      expect(state.chronotype).toBeNull();
     });
 
     it('睡眠スケジュールのデフォルト', () => {
@@ -50,14 +48,10 @@ describe('useCalendarSettingsStore', () => {
 
     it('クロノタイプを有効化できる', () => {
       useCalendarSettingsStore.getState().updateSettings({
-        chronotype: {
-          enabled: true,
-          type: 'lion',
-        },
+        chronotype: { type: 'lion' },
       });
       const state = useCalendarSettingsStore.getState();
-      expect(state.chronotype.enabled).toBe(true);
-      expect(state.chronotype.type).toBe('lion');
+      expect(state.chronotype).toEqual({ type: 'lion' });
     });
 
     it('snapIntervalを変更できる', () => {

@@ -7,18 +7,10 @@
 -- ■ トリガー関数
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
---   create_default_notification_preferences() — auth.users INSERT → notification_preferences 自動作成
---   compute_reminder_at()                     — entries の reminder_at を start_time - reminder_minutes で自動計算
-
 -- ■ クリーンアップ関数（pg_cron で定期実行）
---   cleanup_old_login_attempts()              — 90日超のログイン試行を削除
---   cleanup_old_auth_audit_logs()             — 365日超の監査ログを削除
 --   delete_old_notifications()                — 既読30日超の通知を削除
---   cleanup_old_plan_activities()             — 365日超の操作履歴を削除
 
 -- ■ RPC 関数
---   increment_ai_usage(user_id, month)        — AI使用量をアトミックにインクリメント（UPSERT）
---   record_login_attempt(email, ip, success, ua) — ログイン試行を記録
 --   merge_tags(user_id, source, target)       — タグをマージ（entry_tags移行 + ソース非アクティブ化）
 --   use_recovery_code(user_id, code_hash)     — MFAリカバリーコードを使用済みにマーク
 --   count_unused_recovery_codes(user_id)      — 未使用リカバリーコード数
@@ -32,7 +24,6 @@
 --   get_monthly_hours(user_id, since)         — 月別記録時間
 --   get_total_time(user_id)                   — 合計時間
 --   get_tag_stats(user_id)                    — タグ別使用統計
---   get_weekly_reflection_data(user_id, week_start) — 週次振り返り集計（service_role のみ）
 --   get_fulfillment_trend(user_id, start, end)     — 充実度トレンド
 --   get_energy_map(user_id, start, end)            — エネルギーマップ（時間帯×曜日）
 --   get_timeboxing_adherence(user_id, start, end)  — タイムボクシング遵守率

@@ -48,7 +48,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            username: displayName.trim(),
+            full_name: displayName.trim(),
             updated_at: new Date().toISOString(),
           })
           .eq('id', user.id);
@@ -58,7 +58,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
         }
 
         const { error: authError } = await supabase.auth.updateUser({
-          data: { username: displayName.trim() },
+          data: { full_name: displayName.trim() },
         });
 
         if (authError) {

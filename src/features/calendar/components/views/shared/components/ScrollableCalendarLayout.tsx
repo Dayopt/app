@@ -52,6 +52,7 @@ interface CalendarDateHeaderProps {
   timeColumnWidth?: number | undefined;
   /** 週番号（表示する場合） */
   weekNumber?: number | undefined;
+  className?: string | undefined;
 }
 
 /**
@@ -63,6 +64,7 @@ export const CalendarDateHeader = ({
   showTimezone = true,
   timeColumnWidth = TIME_COLUMN_WIDTH,
   weekNumber,
+  className,
 }: CalendarDateHeaderProps) => {
   const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
 
@@ -70,7 +72,7 @@ export const CalendarDateHeader = ({
   const shouldShowWeekNumber = showWeekNumbers && weekNumber != null;
 
   return (
-    <div className="flex h-8 shrink-0 flex-col justify-end md:h-12">
+    <div className={cn('flex h-8 shrink-0 flex-col justify-end md:h-12', className)}>
       <div className="flex items-end">
         {/* 左スペーサー（時間列と揃えるため） */}
         {showTimeColumn ? (
@@ -144,8 +146,8 @@ export const ScrollableCalendarLayout = ({
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
   const chronotype = useCalendarSettingsStore((s) => s.chronotype);
   const chronotypeZones = useMemo(() => {
-    if (!chronotype.enabled) return undefined;
-    return getChronotypeProfile(chronotype.type, chronotype.customZones).productivityZones;
+    if (!chronotype) return undefined;
+    return getChronotypeProfile(chronotype.type).productivityZones;
   }, [chronotype]);
 
   // 現在時刻のフォーマット（設定に応じて 24h/12h）

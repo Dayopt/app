@@ -24,7 +24,7 @@ export const notificationsRouter = createTRPCRouter({
         const options: Parameters<typeof service.list>[0] = {
           userId: ctx.userId,
         };
-        if (input?.is_read !== undefined) options.isRead = input.is_read;
+        if (input?.unread_only !== undefined) options.unreadOnly = input.unread_only;
         if (input?.type !== undefined) options.type = input.type;
         if (input?.limit !== undefined) options.limit = input.limit;
         if (input?.offset !== undefined) options.offset = input.offset;

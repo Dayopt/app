@@ -18,7 +18,6 @@ import {
   useEntryContextActions,
   useEntryOperations,
 } from '@/features/calendar';
-import { usePaletteItems, usePaletteMutations } from '@/features/palette';
 
 // =============================================================================
 // Types
@@ -48,7 +47,6 @@ export interface CalendarCrudHandlersResult {
     updates?: { startTime: Date; endTime: Date; resetActualTime?: boolean },
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
-  getAddToPaletteHandler: (entry: CalendarEvent) => ((entry: CalendarEvent) => void) | undefined;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
 }
 
@@ -76,33 +74,6 @@ export function useCalendarCrudHandlers({
   // Context Actions（右クリックメニュー）
   // =========================================================================
   const { handleDeleteEntry: handleDeleteEntryConfirm } = useEntryContextActions();
-
-  // =========================================================================
-  // Palette Pin（コンテキストメニューから「パレットに追加」）
-  // =========================================================================
-  const { data: paletteItems } = usePaletteItems();
-  const { pinItem } = usePaletteMutations();
-
-  const handleAddToPalette = useCallback(
-    (entry: CalendarEvent) => {
-      if (!entry.tagId || !entry.duration) return;
-      pinItem(entry.tagId, entry.duration);
-    },
-    [pinItem],
-  );
-
-  /** エントリのtag+durationがパレットに登録済みかを判定し、未登録時のみコールバックを返す */
-  const getAddToPaletteHandler = useCallback(
-    (entry: CalendarEvent) => {
-      if (!entry.tagId || !entry.duration) return undefined;
-      const isPinned = paletteItems?.some(
-        (item) => item.tag_id === entry.tagId && item.duration_minutes === entry.duration,
-      );
-      if (isPinned) return undefined;
-      return handleAddToPalette;
-    },
-    [paletteItems, handleAddToPalette],
-  );
 
   // =========================================================================
   // Entry Keyboard Shortcuts
@@ -175,7 +146,6 @@ export function useCalendarCrudHandlers({
       onTimeRangeSelect: handleDateTimeRangeSelect,
       onUpdateEntry: handleEntryUpdate,
       onDeleteEntry: deleteEntry,
-      getAddToPaletteHandler,
       onDeleteEntryConfirm: handleDeleteEntryConfirm,
     }),
     [
@@ -184,7 +154,6 @@ export function useCalendarCrudHandlers({
       handleDateTimeRangeSelect,
       handleEntryUpdate,
       deleteEntry,
-      getAddToPaletteHandler,
       handleDeleteEntryConfirm,
     ],
   );

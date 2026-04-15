@@ -394,7 +394,7 @@ export class TagService {
       throw new TagServiceError('UNGROUP_CONFLICTS', conflicts.map((c) => c.suffix).join(', '));
     }
 
-    // 衝突タグをマージ（既存の merge RPC で entry_tags 移行 + ソース削除）
+    // 衝突タグをマージ（既存の merge RPC で entries.tag_id 移行 + ソース削除）
     // NOTE: 複数マージのうち途中で失敗した場合、処理済み分はロールバックされない。
     // merge() は RPC ベースのトランザクションのため個別は安全だが、全体は非トランザクション。
     let mergedCount = 0;
@@ -467,7 +467,7 @@ export class TagService {
    *
    * 例: prefix="開発" の場合
    *   "開発:api", "開発:frontend" を全削除
-   *   関連する entry_tags + entries も処理
+   *   関連する entries も処理
    *
    * @param options - userId, prefix, strategy（任意）, targetTagId（reassign時必須）
    * @returns 削除されたタグ数
@@ -500,15 +500,31 @@ export class TagService {
 
     const tagIds = matchingTags.map((t) => t.id);
 
+    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    if (!strategy) {
+      const { count } = await this.supabase
+        .from('entries')
+        .select('*', { count: 'exact', head: true })
+        .in('tag_id', tagIds)
+        .eq('user_id', userId);
+
+      if (count && count > 0) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Tags in this group have associated entries. Specify a strategy: "delete_entries" or "reassign"',
+        );
+      }
+    }
+
     if (strategy === 'reassign') {
       if (!targetTagId) {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
       }
       await this.getById({ userId, tagId: targetTagId });
 
-      // entry_tags を targetTagId に付け替え
+      // entries.tag_id を targetTagId に付け替え
       const { error: reassignError } = await this.supabase
-        .from('entry_tags')
+        .from('entries')
         .update({ tag_id: targetTagId })
         .in('tag_id', tagIds)
         .eq('user_id', userId);
@@ -516,34 +532,22 @@ export class TagService {
       if (reassignError) {
         throw new TagServiceError(
           'UPDATE_FAILED',
-          `Failed to reassign entry_tags: ${reassignError.message}`,
+          `Failed to reassign entries: ${reassignError.message}`,
         );
       }
     } else {
-      // delete_entries または strategy なし — entry_tags + entries を削除
-      const { data: entryTagRows } = await this.supabase
-        .from('entry_tags')
-        .select('entry_id')
-        .in('tag_id', tagIds)
-        .eq('user_id', userId);
-
-      const entryIds = (entryTagRows ?? []).map((r) => r.entry_id);
-
-      const { error: planTagsError } = await this.supabase
-        .from('entry_tags')
+      // delete_entries または strategy なし — 関連エントリを直接削除
+      const { error: entriesError } = await this.supabase
+        .from('entries')
         .delete()
         .in('tag_id', tagIds)
         .eq('user_id', userId);
 
-      if (planTagsError) {
+      if (entriesError) {
         throw new TagServiceError(
           'DELETE_FAILED',
-          `Failed to delete entry_tags associations: ${planTagsError.message}`,
+          `Failed to delete entries: ${entriesError.message}`,
         );
-      }
-
-      if (entryIds.length > 0) {
-        await this.supabase.from('entries').delete().in('id', entryIds);
       }
     }
 
@@ -625,6 +629,22 @@ export class TagService {
     // 所有権チェック
     const tag = await this.getById({ userId, tagId });
 
+    // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
+    if (!strategy) {
+      const { count } = await this.supabase
+        .from('entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('tag_id', tagId)
+        .eq('user_id', userId);
+
+      if (count && count > 0) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Tag has associated entries. Specify a strategy: "delete_entries" or "reassign"',
+        );
+      }
+    }
+
     if (strategy === 'reassign') {
       if (!targetTagId) {
         throw new TagServiceError('INVALID_INPUT', 'targetTagId is required for reassign strategy');
@@ -632,9 +652,9 @@ export class TagService {
       // 付け替え先の所有権チェック
       await this.getById({ userId, tagId: targetTagId });
 
-      // entry_tags を targetTagId に付け替え
+      // entries.tag_id を targetTagId に付け替え
       const { error: reassignError } = await this.supabase
-        .from('entry_tags')
+        .from('entries')
         .update({ tag_id: targetTagId })
         .eq('tag_id', tagId)
         .eq('user_id', userId);
@@ -642,27 +662,13 @@ export class TagService {
       if (reassignError) {
         throw new TagServiceError(
           'UPDATE_FAILED',
-          `Failed to reassign entry_tags: ${reassignError.message}`,
+          `Failed to reassign entries: ${reassignError.message}`,
         );
       }
     } else {
       // delete_entries または strategy なし（0件タグ）
-      // entry_tags から entry_id を取得してエントリごと削除
-      const { data: entryTagRows } = await this.supabase
-        .from('entry_tags')
-        .select('entry_id')
-        .eq('tag_id', tagId)
-        .eq('user_id', userId);
-
-      const entryIds = (entryTagRows ?? []).map((r) => r.entry_id);
-
-      // entry_tags 削除（FK制約のため先に）
-      await this.supabase.from('entry_tags').delete().eq('tag_id', tagId).eq('user_id', userId);
-
-      // 関連エントリも削除
-      if (entryIds.length > 0) {
-        await this.supabase.from('entries').delete().in('id', entryIds);
-      }
+      // 関連エントリを直接削除
+      await this.supabase.from('entries').delete().eq('tag_id', tagId).eq('user_id', userId);
     }
 
     // タグ削除

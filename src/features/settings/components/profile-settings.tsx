@@ -65,7 +65,7 @@ export function ProfileSettings() {
       {/* クロノタイプ */}
       <ChronotypeSettings />
 
-      {/* 価値観キーワード */}
+      {/* 価値観キーワードランキング */}
       <ValueRankingSettings />
 
       {/* 価値評定スケール */}
