@@ -183,7 +183,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
             )}
 
             {/* Entries (server-side search results) */}
-            {displayEntries.length > 0 && (
+            {hasSearchQuery && !isDebouncing && displayEntries.length > 0 && (
               <CommandGroup heading={t('blocksGroup')}>
                 {displayEntries.map((entry) => {
                   const tag = entry.tagId ? tags.find((t) => t.id === entry.tagId) : null;
@@ -193,7 +193,7 @@ export function GlobalSearchModal({ isOpen, onClose }: GlobalSearchModalProps) {
                   return (
                     <CommandItem
                       key={`entry-${entry.id}`}
-                      value={`${entry.id} ${tag?.name ?? ''} ${entry.description ?? ''}`}
+                      value={`${entry.id} ${entry.title ?? ''} ${tag?.name ?? ''} ${entry.description ?? ''}`}
                       onSelect={() => handleEntrySelect(entry.id, entry.start_time)}
                       className="flex items-center gap-2"
                     >
