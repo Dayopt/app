@@ -436,18 +436,23 @@
       },
       "ranking": {
         "title": "Value Keywords",
-        "description": "Select keywords that resonate with you and rank your top 5 in order of importance.",
+        "description": "Choose up to 5 values that matter most to you and rank them by priority.",
         "settingsSaved": "Ranking saved",
-        "selected": "{count} / {max} selected",
+        "selected": "{count} / {max}",
         "limit": "You can select up to {max}",
         "dragHint": "Drag to reorder",
-        "emptyState": "Select keywords above",
-        "notSelected": "No keywords selected yet. Choose the values that resonate with you and rank them.",
-        "select": "Select keywords",
-        "edit": "Edit",
-        "done": "Done",
-        "cancel": "Cancel",
-        "idleDescription": "Choose 5 values that matter most to you and rank them by priority. AI uses these as a basis when analyzing how you spend your time."
+        "top5Title": "Your Top {max}",
+        "emptyHint": "Tap keywords to select",
+        "remove": "Remove {keyword}",
+        "categories": {
+          "all": "All",
+          "character": "Character",
+          "connection": "Connection",
+          "exploration": "Exploration",
+          "freedom": "Freedom",
+          "society": "Society",
+          "stability": "Stability"
+        }
       },
       "keywords": {
         "integrity": "Integrity",

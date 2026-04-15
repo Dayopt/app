@@ -167,3 +167,24 @@ export const VALUE_KEYWORDS: ValueKeyword[] = [
 
 /** 価値観ランキングの最大選択数 */
 export const MAX_RANKED_VALUES = 5;
+
+/** 価値観キーワードのカテゴリ */
+export type ValueKeywordCategory =
+  | 'all'
+  | 'character'
+  | 'connection'
+  | 'exploration'
+  | 'freedom'
+  | 'society'
+  | 'stability';
+
+/** 価値観キーワードカテゴリの表示順序 */
+export const VALUE_KEYWORD_CATEGORIES: ValueKeywordCategory[] = [
+  'all',
+  'character',
+  'connection',
+  'exploration',
+  'freedom',
+  'society',
+  'stability',
+];

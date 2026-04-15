@@ -16,27 +16,19 @@ import {
 
 import type { PersonalizationCategory } from '../types/personalization';
 
-interface CategoryVisualConfig {
-  icon: LucideIcon;
-  /** bg-tag-*-tint クラス */
-  tintBg: string;
-  /** text-tag-* クラス */
-  iconColor: string;
-}
-
-export const CATEGORY_VISUALS: Record<PersonalizationCategory, CategoryVisualConfig> = {
-  family: { icon: Users, tintBg: 'bg-tag-red-tint', iconColor: 'text-tag-red' },
-  romance: { icon: Heart, tintBg: 'bg-tag-pink-tint', iconColor: 'text-tag-pink' },
-  parenting: { icon: Baby, tintBg: 'bg-tag-orange-tint', iconColor: 'text-tag-orange' },
-  friends: { icon: UserPlus, tintBg: 'bg-tag-amber-tint', iconColor: 'text-tag-amber' },
-  career: { icon: Briefcase, tintBg: 'bg-tag-blue-tint', iconColor: 'text-tag-blue' },
-  selfGrowth: { icon: TrendingUp, tintBg: 'bg-tag-indigo-tint', iconColor: 'text-tag-indigo' },
-  leisure: { icon: Gamepad2, tintBg: 'bg-tag-green-tint', iconColor: 'text-tag-green' },
-  spirituality: { icon: Sparkles, tintBg: 'bg-tag-violet-tint', iconColor: 'text-tag-violet' },
-  community: { icon: Building2, tintBg: 'bg-tag-teal-tint', iconColor: 'text-tag-teal' },
-  health: { icon: Activity, tintBg: 'bg-tag-green-tint', iconColor: 'text-tag-green' },
-  environment: { icon: Leaf, tintBg: 'bg-tag-teal-tint', iconColor: 'text-tag-teal' },
-  finance: { icon: Wallet, tintBg: 'bg-tag-amber-tint', iconColor: 'text-tag-amber' },
+export const CATEGORY_ICONS: Record<PersonalizationCategory, LucideIcon> = {
+  family: Users,
+  romance: Heart,
+  parenting: Baby,
+  friends: UserPlus,
+  career: Briefcase,
+  selfGrowth: TrendingUp,
+  leisure: Gamepad2,
+  spirituality: Sparkles,
+  community: Building2,
+  health: Activity,
+  environment: Leaf,
+  finance: Wallet,
 };
 
 /** 各カテゴリの例文チップ数 */
