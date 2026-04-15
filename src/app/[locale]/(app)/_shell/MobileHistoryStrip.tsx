@@ -13,7 +13,6 @@ import { useMemo } from 'react';
 import { useBlockPlace } from '@/features/entry';
 import { TagIcon, useTagsMap } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 
 export function MobileHistoryStrip() {
@@ -41,7 +40,7 @@ export function MobileHistoryStrip() {
       // bottom = h-14 (BottomTabBar)
       style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="scrollbar-hide flex items-center gap-1 overflow-x-auto overscroll-x-contain px-2 py-1">
+      <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto overscroll-x-contain px-2 py-1">
         {items.map((item) =>
           item ? (
             <button
@@ -49,9 +48,9 @@ export function MobileHistoryStrip() {
               type="button"
               onClick={() => placeBlockNow(item.tagId, item.durationMinutes, item.tag.name)}
               aria-label={item.tag.name}
-              className={`hover:bg-state-hover flex w-12 shrink-0 flex-col items-center gap-1 rounded-lg border py-1.5 transition-colors duration-150 ${getTagColorClasses(item.tag.color).border}`}
+              className="hover:bg-state-hover flex w-12 shrink-0 flex-col items-center gap-1 rounded-lg py-1.5 transition-colors duration-150"
             >
-              <TagIcon icon={item.tag.icon} color={item.tag.color} size="sm" />
+              <TagIcon icon={item.tag.icon} color={item.tag.color} size="md" />
               <ColonTagLabel
                 name={item.tag.name}
                 variant="suffix-only"

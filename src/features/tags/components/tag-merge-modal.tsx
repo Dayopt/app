@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { parseColonTag } from '../lib/tag-colon';
 import { TagIcon } from './TagIcon';
 
+import { trpc } from '@/lib/trpc/client';
 import { useMergeTag, useTags } from '../hooks';
 import type { Tag } from '../types';
 
@@ -47,6 +48,7 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
 
   const { data: tags } = useTags();
   const mergeTagMutation = useMergeTag();
+  const utils = trpc.useUtils();
 
   const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [error, setError] = useState('');
@@ -65,6 +67,13 @@ export function TagMergeModal({ open, onClose, sourceTag, onMergeSuccess }: TagM
   } else if (open !== prevOpen) {
     setPrevOpen(open);
   }
+
+  // モーダルが開いたらタグ一覧を最新化（5分キャッシュが古い場合に備える）
+  useEffect(() => {
+    if (open) {
+      void utils.tags.list.invalidate();
+    }
+  }, [open, utils]);
 
   // ESCキーでダイアログを閉じる
   useEffect(() => {

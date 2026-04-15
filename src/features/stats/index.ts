@@ -39,7 +39,7 @@ export {
 } from './lib/metrics';
 // prefetchStatsData / prefetchTagDetailData はサーバー専用（next/headers使用）。
 // 各ファイルに import 'server-only' ガード済み。
-export { prefetchStatsData } from './lib/prefetch';
+export { prefetchBadgesData, prefetchStatsData } from './lib/prefetch';
 export { prefetchTagDetailData } from './lib/prefetchTagDetail';
 
 // ここにないものはfeature内部専用
