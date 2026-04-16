@@ -24,174 +24,109 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Success: 成功トースト */
+/** 成功トーストの各パターン。 */
 export const Success: Story = {
   render: () => (
-    <div className="space-y-4">
+    <div className="flex flex-wrap gap-2 p-4">
       <Button variant="outline" onClick={() => toast.success('保存しました')}>
-        Success
+        保存
       </Button>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onClick={() =>
-            toast.success('「朝のルーティン」を作成しました', {
-              action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-            })
-          }
-        >
-          プラン作成 + Undo
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            toast.success('プランを削除しました', {
-              action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-            })
-          }
-        >
-          プラン削除 + Undo
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => toast.success('ステータスを「完了」に変更しました')}
-        >
-          ステータス変更
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('3件を一括更新しました')}>
-          一括更新
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('コピーしました')}>
-          コピー
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('「仕事」を作成しました')}>
-          タグ作成
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('設定を保存しました')}>
-          設定保存
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => toast.success('データのエクスポートが完了しました')}
-        >
-          エクスポート
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('ログアウトしました')}>
-          ログアウト
-        </Button>
-        <Button variant="outline" onClick={() => toast.success('プロフィールを更新しました')}>
-          プロフィール更新
-        </Button>
-      </div>
+      <Button variant="outline" onClick={() => toast.success('追加しました')}>
+        エントリー作成
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('更新しました')}>
+        エントリー更新
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('複製しました')}>
+        エントリー複製
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('コピーしました')}>
+        コピー
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('テンプレートを保存しました')}>
+        テンプレート保存
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('テンプレートを適用しました')}>
+        テンプレート適用
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('Proプランに変更しました')}>
+        プラン変更
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('オンラインに復帰しました')}>
+        オンライン復帰
+      </Button>
     </div>
   ),
 };
 
-/** Error: エラートースト */
+/** エラートーストの各パターン。 */
 export const Error: Story = {
   render: () => (
-    <div className="space-y-4">
-      <Button variant="outline" onClick={() => toast.error('エラーが発生しました')}>
-        Error
+    <div className="flex flex-wrap gap-2 p-4">
+      <Button
+        variant="outline"
+        onClick={() => toast.error('問題が起きました。もう一度お試しください')}
+      >
+        汎用エラー
       </Button>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onClick={() => toast.error('プランの作成に失敗しました: ネットワークエラー')}
-        >
-          プラン作成失敗
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('プランの更新に失敗しました')}>
-          プラン更新失敗
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('タグの作成に失敗しました')}>
-          タグ作成失敗
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('この名前は既に使用されています')}>
-          重複名エラー
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('この時間帯にはドロップできません')}>
-          ドロップ不可
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            toast.error('保存に失敗しました', {
-              description: 'ネットワークエラーが発生しました。もう一度お試しください。',
-            })
-          }
-        >
-          設定保存失敗 + description
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('パスワードが正しくありません')}>
-          パスワードエラー
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('ブラウザの通知が拒否されています')}>
-          通知権限拒否
-        </Button>
-        <Button variant="outline" onClick={() => toast.error('ログアウトに失敗しました')}>
-          ログアウト失敗
-        </Button>
-      </div>
+      <Button variant="outline" onClick={() => toast.error('保存できませんでした')}>
+        保存失敗
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => toast.error('追加できませんでした。もう一度お試しください')}
+      >
+        作成失敗
+      </Button>
+      <Button variant="outline" onClick={() => toast.error('この名前は既に使用されています')}>
+        重複エラー
+      </Button>
     </div>
   ),
 };
 
-/** Info: 情報トースト */
-export const Info: Story = {
+/** アクション付きトースト。 */
+export const WithAction: Story = {
   render: () => (
-    <div className="space-y-4">
-      <Button variant="outline" onClick={() => toast.info('お知らせがあります')}>
-        Info
+    <div className="flex flex-wrap gap-2 p-4">
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.success('削除しました', {
+            action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
+          })
+        }
+      >
+        削除 + Undo
       </Button>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          onClick={() =>
-            toast.info('予定を削除しました', {
-              action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-            })
-          }
-        >
-          Calendar 削除 + Undo
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() =>
-            toast.info('リマインダー', {
-              description: '「朝のルーティン」の開始時刻です',
-            })
-          }
-        >
-          リアルタイム通知 + description
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.success('エクスポート完了', {
+            action: { label: 'ダウンロード', onClick: () => toast.success('ダウンロード開始') },
+          })
+        }
+      >
+        エクスポート + ダウンロード
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.error('保存できませんでした', {
+            action: { label: 'リトライ', onClick: () => toast.success('保存しました') },
+          })
+        }
+      >
+        エラー + リトライ
+      </Button>
     </div>
   ),
 };
 
-/** Warning: 警告トースト */
-export const Warning: Story = {
-  render: () => (
-    <Button variant="outline" onClick={() => toast.warning('注意が必要です')}>
-      Warning
-    </Button>
-  ),
-};
-
-/** Default: 通常トースト（バリアント指定なし） */
-export const Default: Story = {
-  render: () => (
-    <Button variant="outline" onClick={() => toast('これはトーストメッセージです')}>
-      Default
-    </Button>
-  ),
-};
-
-/** Loading: ローディング → 成功遷移 */
+/** ローディングから成功への遷移。 */
 export const Loading: Story = {
   render: () => (
-    <div className="space-y-4">
+    <div className="flex flex-wrap gap-2 p-4">
       <Button
         variant="outline"
         onClick={() => {
@@ -206,197 +141,26 @@ export const Loading: Story = {
       <Button
         variant="outline"
         onClick={() => {
-          const id = toast.loading('予定を移動中...');
+          const id = toast.loading('エクスポート中...');
           setTimeout(() => {
-            toast.dismiss(id);
-            toast.success('予定を移動しました');
+            toast.success('エクスポート完了', {
+              id,
+              action: { label: 'ダウンロード', onClick: () => toast.success('ダウンロード開始') },
+            });
           }, 2000);
         }}
       >
-        Calendar D&D移動
+        Loading → Success + Action
       </Button>
     </div>
   ),
 };
 
-// ---------------------------------------------------------------------------
-// パターン別 Story（全バリアント横断）
-// ---------------------------------------------------------------------------
-
-/** WithDescription: 説明付きパターン */
-export const WithDescription: Story = {
-  render: () => (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        onClick={() => toast('タイトル', { description: '詳細な説明がここに表示されます。' })}
-      >
-        Default
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.success('保存しました', { description: 'すべての変更が反映されました。' })
-        }
-      >
-        Success
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.error('保存に失敗', { description: 'ネットワークエラーが発生しました。' })
-        }
-      >
-        Error
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.warning('容量が少ない', {
-            description: '残り10%です。不要なファイルを削除してください。',
-          })
-        }
-      >
-        Warning
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.info('新機能', { description: 'タイムボクシング機能が追加されました。' })
-        }
-      >
-        Info
-      </Button>
-    </div>
-  ),
-};
-
-/** WithAction: アクション付きパターン */
-export const WithAction: Story = {
-  render: () => (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast('アイテムを削除しました', {
-            action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-          })
-        }
-      >
-        Default
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.success('エクスポート完了', {
-            action: { label: 'ダウンロード', onClick: () => toast('ダウンロード開始') },
-          })
-        }
-      >
-        Success
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.error('同期に失敗', {
-            action: { label: 'リトライ', onClick: () => toast.loading('再試行中...') },
-          })
-        }
-      >
-        Error
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.warning('セッション期限切れ間近', {
-            action: { label: '延長', onClick: () => toast.success('延長しました') },
-          })
-        }
-      >
-        Warning
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.info('アップデート利用可能', {
-            action: { label: '更新', onClick: () => toast.loading('更新中...') },
-          })
-        }
-      >
-        Info
-      </Button>
-    </div>
-  ),
-};
-
-/** WithDescriptionAndAction: 説明+アクション複合パターン */
-export const WithDescriptionAndAction: Story = {
-  render: () => (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast('アイテムを削除しました', {
-            description: 'ゴミ箱に移動されました。30日後に完全削除されます。',
-            action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-          })
-        }
-      >
-        Default
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.success('エクスポート完了', {
-            description: 'CSVファイル（1,234件）が生成されました。',
-            action: { label: 'ダウンロード', onClick: () => toast('ダウンロード開始') },
-          })
-        }
-      >
-        Success
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.error('同期に失敗しました', {
-            description: 'サーバーとの接続がタイムアウトしました。',
-            action: { label: 'リトライ', onClick: () => toast.loading('再試行中...') },
-          })
-        }
-      >
-        Error
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.warning('セッション期限切れ間近', {
-            description: 'あと5分で自動ログアウトされます。',
-            action: { label: '延長', onClick: () => toast.success('延長しました') },
-          })
-        }
-      >
-        Warning
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast.info('アップデート利用可能', {
-            description: 'v2.0.0がリリースされました。新機能が追加されています。',
-            action: { label: '更新', onClick: () => toast.loading('更新中...') },
-          })
-        }
-      >
-        Info
-      </Button>
-    </div>
-  ),
-};
-
-/** Promise: Promise統合パターン */
+/** Promise統合パターン。 */
 export const PromiseIntegration: Story = {
   name: 'Promise',
   render: () => (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 p-4">
       <Button
         variant="outline"
         onClick={() => {
@@ -404,7 +168,7 @@ export const PromiseIntegration: Story = {
           toast.promise(promise, {
             loading: '保存中...',
             success: '保存しました',
-            error: 'エラーが発生しました',
+            error: '保存できませんでした',
           });
         }}
       >
@@ -417,7 +181,7 @@ export const PromiseIntegration: Story = {
           toast.promise(promise, {
             loading: '送信中...',
             success: '送信しました',
-            error: '送信に失敗しました',
+            error: '送信できませんでした',
           });
         }}
       >
@@ -427,24 +191,58 @@ export const PromiseIntegration: Story = {
   ),
 };
 
+/** トースト差し替えのデモ。 */
+export const SingleToastReplace: Story = {
+  render: () => {
+    let count = 0;
+    return (
+      <div className="flex flex-wrap gap-2 p-4">
+        <Button
+          variant="outline"
+          onClick={() => {
+            count += 1;
+            toast.success(`操作 ${count} を実行しました`);
+          }}
+        >
+          連続クリックで差し替え確認
+        </Button>
+      </div>
+    );
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
-    <div className="flex flex-col items-start gap-6">
+    <div className="flex flex-col items-start gap-4 p-4">
       <Button variant="outline" onClick={() => toast.success('保存しました')}>
         Success
       </Button>
-      <Button variant="outline" onClick={() => toast.error('エラーが発生しました')}>
+      <Button
+        variant="outline"
+        onClick={() => toast.error('問題が起きました。もう一度お試しください')}
+      >
         Error
       </Button>
-      <Button variant="outline" onClick={() => toast.info('お知らせがあります')}>
-        Info
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.success('削除しました', {
+            action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
+          })
+        }
+      >
+        WithAction (Undo)
       </Button>
-      <Button variant="outline" onClick={() => toast.warning('注意が必要です')}>
-        Warning
-      </Button>
-      <Button variant="outline" onClick={() => toast('これはトーストメッセージです')}>
-        Default
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.success('エクスポート完了', {
+            action: { label: 'ダウンロード', onClick: () => toast.success('ダウンロード開始') },
+          })
+        }
+      >
+        WithAction (Download)
       </Button>
       <Button
         variant="outline"
@@ -455,25 +253,20 @@ export const AllPatterns: Story = {
           }, 2000);
         }}
       >
-        Loading
+        Loading → Success
       </Button>
       <Button
         variant="outline"
-        onClick={() =>
-          toast.success('保存しました', { description: 'すべての変更が反映されました。' })
-        }
+        onClick={() => {
+          const promise = new Promise((resolve) => setTimeout(resolve, 2000));
+          toast.promise(promise, {
+            loading: '保存中...',
+            success: '保存しました',
+            error: '保存できませんでした',
+          });
+        }}
       >
-        WithDescription
-      </Button>
-      <Button
-        variant="outline"
-        onClick={() =>
-          toast('アイテムを削除しました', {
-            action: { label: '元に戻す', onClick: () => toast.success('復元しました') },
-          })
-        }
-      >
-        WithAction
+        Promise
       </Button>
     </div>
   ),

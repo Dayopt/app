@@ -35,6 +35,7 @@
  * Vendor Integrations
  * ============================================ */
 @import './vendor/time-input.css';
+@import './vendor/sonner.css';
 
 /* ============================================
  * Mobile & Accessibility

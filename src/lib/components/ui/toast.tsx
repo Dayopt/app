@@ -2,37 +2,29 @@
 
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Toaster as Sonner } from 'sonner';
-
-import { buttonVariants } from './button';
+import { useEffect } from 'react';
+import { Toaster as Sonner, toast as sonnerToast } from 'sonner';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-const LoadingIcon = () => <Loader2 className="size-5 animate-spin" />;
-
 /**
- * Toast通知コンポーネント
+ * Toast通知コンポーネント（v2: ミニマル1行デザイン）
  *
  * デザイン仕様:
- * - 背景: card（共通）
- * - 枠線: タイプ別カラー（success/error/warning/info）
- * - 角丸: 8px（radius-md）
- * - 影: shadow-card
- * - パディング: 16px
- * - ギャップ: 8px
- * - タイトル: 16px(mobile) / 14px(desktop)、bold、foreground
- * - 説明: 16px(mobile) / 14px(desktop)、normal、muted-foreground
- * - 閉じるボタン: 常時表示
- * - Undoボタン: 右配置
+ * - 1行構成、description なし、×ボタンなし
+ * - 背景: card、枠線: border（タイプ別カラー分けなし）
+ * - 角丸: 8px、影: shadow-card
+ * - 高さ: 48px 固定、幅: 100vw-32px(mobile) / 360px(desktop)
+ * - アクション: テキストリンク（brand color）
+ * - 消去: 自動(3s/5s) + swipe(mobile) + Esc/クリック(desktop)
+ * - 同時表示: 最大1つ、cross-fade 差し替え
  *
  * @example
  * ```tsx
  * import { toast } from '@/lib/toast';
  *
- * toast.error('エラーが発生しました');
+ * toast.success('保存しました');
  * toast.success('削除しました', {
  *   action: { label: '元に戻す', onClick: () => restoreItem() },
  * });
@@ -42,42 +34,52 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const t = useTranslations('notification');
 
+  // デスクトップ: トーストクリックで消去（アクションリンクは除外）
+  useEffect(() => {
+    if (isMobile) return;
+    const handler = (e: MouseEvent) => {
+      const toastEl = (e.target as Element).closest('[data-sonner-toast]');
+      if (!toastEl) return;
+      if ((e.target as Element).closest('[data-action]')) return;
+      sonnerToast.dismiss();
+    };
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [isMobile]);
+
+  // デスクトップ: Esc キーで消去
+  useEffect(() => {
+    if (isMobile) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') sonnerToast.dismiss();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isMobile]);
+
   return (
     <Sonner
-      position={isMobile ? 'bottom-center' : 'bottom-right'}
-      expand
-      duration={6000}
-      closeButton
+      position={isMobile ? 'top-center' : 'top-right'}
+      visibleToasts={1}
+      duration={3000}
       containerAriaLabel={t('title')}
-      icons={{ loading: <LoadingIcon /> }}
-      // Sonner内部の--width CSS変数を上書き（デフォルト356px → 420px）
       // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override for Sonner --width
-      className={isMobile ? '[--width:356px]' : '[--width:420px]'}
+      className={isMobile ? '' : '[--width:360px]'}
+      offset={isMobile ? { top: 16 } : { top: 16, right: 16 }}
+      mobileOffset={{ top: 16, left: 16, right: 16 }}
+      swipeDirections={isMobile ? ['left', 'right'] : []}
       toastOptions={{
         unstyled: true,
         classNames: {
           toast:
-            'grid grid-cols-[auto_1fr_auto] gap-4 items-start w-full p-4 rounded-lg border shadow-card bg-card text-foreground border-border-subtle',
-          icon: 'row-start-1 col-start-1 [&_svg]:size-5',
+            'flex items-center gap-2 !h-12 w-full px-4 rounded-lg border border-border shadow-card bg-card text-foreground',
+          icon: 'shrink-0 [&_svg]:size-4',
+          content: 'min-w-0 flex-1 [[data-sonner-toast]:not(:has([data-icon]))_&]:col-start-1',
+          title: 'text-base md:text-sm truncate',
+          description: 'sr-only',
+          actionButton:
+            'shrink-0 text-sm md:text-xs text-primary bg-transparent border-0 p-0 cursor-pointer',
           loader: '!static !inset-auto !transform-none',
-          content:
-            'row-start-1 col-start-2 min-w-0 flex flex-col gap-1 [[data-sonner-toast]:not(:has([data-icon]))_&]:col-start-1',
-          title: 'text-base font-bold md:text-sm',
-          description: 'text-base text-muted-foreground md:text-sm',
-          actionButton: cn(
-            'row-start-2 col-start-2 col-span-2 justify-self-end',
-            buttonVariants({ variant: 'outline', size: 'sm' }),
-          ),
-          cancelButton: buttonVariants({ variant: 'outline', size: 'sm' }),
-          closeButton:
-            'row-start-1 col-start-3 justify-self-end -mt-1 -mr-1 p-1 rounded-lg text-muted-foreground bg-transparent border-0 hover:bg-state-hover transition-colors [&_svg]:size-5',
-          success:
-            '!border-success [&_[data-icon]]:text-success [&_[data-action]]:!bg-success [&_[data-action]]:!text-success-foreground [&_[data-action]]:!border-0',
-          error:
-            '!border-destructive [&_[data-icon]]:text-destructive [&_[data-action]]:!bg-destructive [&_[data-action]]:!text-destructive-foreground [&_[data-action]]:!border-0',
-          warning:
-            '!border-warning [&_[data-icon]]:text-warning [&_[data-action]]:!bg-warning [&_[data-action]]:!text-warning-foreground [&_[data-action]]:!border-0',
-          info: '!border-info [&_[data-icon]]:text-info [&_[data-action]]:!bg-info [&_[data-action]]:!text-info-foreground [&_[data-action]]:!border-0',
         },
       }}
       {...props}
