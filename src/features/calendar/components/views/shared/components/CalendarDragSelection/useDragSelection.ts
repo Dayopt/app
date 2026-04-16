@@ -398,12 +398,13 @@ export function useDragSelection({
       if (!touch) return;
 
       // touch-pending: 長押し前に動いたらキャンセル
+      // 縦方向は閾値を低くしてスクロールに素早く譲る
       if (mode.type === 'touch-pending') {
         const dx = Math.abs(touch.clientX - mode.startPos.x);
         const dy = Math.abs(touch.clientY - mode.startPos.y);
         if (
           dx > DRAG_CONSTANTS.LONG_PRESS_MOVE_THRESHOLD ||
-          dy > DRAG_CONSTANTS.LONG_PRESS_MOVE_THRESHOLD
+          dy > DRAG_CONSTANTS.LONG_PRESS_VERTICAL_THRESHOLD
         ) {
           clearTimer();
           dispatch({ type: 'CANCEL' });

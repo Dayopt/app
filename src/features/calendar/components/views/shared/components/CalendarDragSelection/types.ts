@@ -48,8 +48,14 @@ export interface DragSelectionState {
 export const DRAG_CONSTANTS = {
   /** 長押し検出時間（Google/Apple標準: 300-500ms） */
   LONG_PRESS_DURATION: 300,
-  /** 長押し中の許容移動距離（px） */
+  /** 長押し中の許容水平移動距離（px） */
   LONG_PRESS_MOVE_THRESHOLD: 10,
+  /**
+   * 長押し中の許容垂直移動距離（px）。
+   * Why: タイムラインは縦スクロールが主動線。水平より早く譲ることで、
+   * スクロール中に長押しタイマーが先に発火して時間選択が誤って開始されるのを防ぐ。
+   */
+  LONG_PRESS_VERTICAL_THRESHOLD: 6,
   /** シングルタップの最大時間（ms） */
   SINGLE_TAP_MAX_DURATION: 200,
   /** ドラッグとみなす最小移動距離（px） */
