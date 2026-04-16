@@ -40,7 +40,7 @@ interface MobileMonthGridProps {
  * モバイル専用クロムレス月グリッド
  *
  * Google Calendar準拠: ナビゲーションUIなし、スワイプのみで月移動。
- * セル高さ40px（8pxグリッド準拠、タッチ最適化）。
+ * セル高さ44px（WCAG 2.5.5 のタッチターゲット最小サイズ準拠）。
  */
 export const MobileMonthGrid = memo<MobileMonthGridProps>(
   ({ viewMonth, selectedDate, onViewMonthChange, onDateSelect, className }) => {
@@ -132,7 +132,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className={cn('grid', gridCols)}>
               {showWeekNumbers && (
-                <div className="text-muted-foreground flex h-10 w-6 items-center justify-center text-xs">
+                <div className="text-muted-foreground flex h-11 w-6 items-center justify-center text-xs">
                   {week[0] !== undefined ? getWeek(week[0], { weekStartsOn }) : null}
                 </div>
               )}
@@ -146,7 +146,7 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
                     onClick={() => handleDateClick(date)}
                     aria-label={format(date, 'yyyy-MM-dd')}
                     className={cn(
-                      'flex h-10 items-center justify-center text-sm transition-colors',
+                      'flex h-11 items-center justify-center text-sm transition-colors',
                       !isCurrentMonth && 'text-muted-foreground',
                     )}
                   >
