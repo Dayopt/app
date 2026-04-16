@@ -412,12 +412,6 @@ export const Overview: Story = {
                     <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘⌫</kbd>
                   </td>
                 </tr>
-                <tr>
-                  <td className="py-2">検索</td>
-                  <td className="py-2">
-                    <kbd className="bg-muted rounded-lg px-2 py-1 text-xs">⌘K</kbd>
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
