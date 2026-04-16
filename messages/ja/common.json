@@ -224,9 +224,17 @@
       "continueFree": "Freeで続ける",
       "continuePro": "Proを続ける"
     },
+    "paymentError": {
+      "title": "お支払いを確認できませんでした",
+      "description": "Proプランの更新ができませんでした。お支払い情報をご確認ください。このまま解決しない場合、Freeプランに変更されます。",
+      "checkPayment": "支払い情報を確認",
+      "later": "後で確認する"
+    },
     "inlineBanner": {
       "syncError": "同期できません",
       "retry": "リトライ",
+      "paymentError": "お支払いに問題があります",
+      "checkPayment": "支払い情報を確認",
       "conflict": "他で変更がありました",
       "reload": "再読み込み",
       "offline": "オフラインです",
