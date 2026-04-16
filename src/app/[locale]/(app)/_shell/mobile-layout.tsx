@@ -5,7 +5,9 @@ import { useEffect, useMemo } from 'react';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
+import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { BottomTabBar } from './BottomTabBar';
@@ -29,6 +31,7 @@ interface MobileLayoutProps {
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
+  const banner = useInlineBanner();
 
   const pathname = usePathname();
   const { hidden, reset } = useHideOnScroll();
@@ -60,6 +63,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
             {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
           </AppHeader>
         )}
+
+        {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
+        {!hasOwnHeader && <InlineBanner {...banner} />}
 
         {/* Main Content（BottomTabBar + HistoryStrip分の余白を確保） */}
         <MainContentWrapper className="pb-24">{children}</MainContentWrapper>

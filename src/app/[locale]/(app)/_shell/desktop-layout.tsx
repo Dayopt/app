@@ -9,6 +9,8 @@ import { isCalendarViewPath } from '@/features/calendar';
 import { ActivityPopover } from '@/features/notifications';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Sidebar } from '@/lib/components/shell/sidebar';
+import { InlineBanner } from '@/lib/components/ui/inline-banner';
+import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { cn } from '@/lib/utils';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -33,6 +35,7 @@ interface DesktopLayoutProps {
 export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const pathname = usePathname();
   const sidebar = useShellStore.use.sidebar();
+  const banner = useInlineBanner();
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const title = useShellStore.use.pageTitle();
 
@@ -79,6 +82,9 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
               {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
             </AppHeader>
           )}
+
+          {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
+          {!hasOwnHeader && <InlineBanner {...banner} />}
 
           {/* Main Content + Inspector（自動的に残りのスペースを使用） */}
           <div className="min-w-0 flex-1 overflow-hidden">
