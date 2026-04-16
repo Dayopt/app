@@ -10,8 +10,7 @@
  * 2. tRPC Provider（API層）
  * 3. AuthStoreInitializer（認証層 - Zustand）
  * 4. ThemeProvider（UI層）
- * 5. GlobalSearchProvider（機能層）
- * 6. AxeAccessibilityChecker（開発ツール - 本番環境では自動除外）
+ * 5. AxeAccessibilityChecker（開発ツール - 本番環境では自動除外）
  *
  * 公開ページ（/auth/、/legal/、/error/）では、このProvidersではなく
  * 軽量なPublicProvidersを使用すること。
@@ -58,14 +57,6 @@ import { ThemeProvider } from './theme-provider';
 const SessionMonitorProvider = dynamic(
   () => import('@/features/auth').then((mod) => mod.SessionMonitorProvider),
   { ssr: false },
-);
-
-// GlobalSearchProviderを遅延ロード（初回レンダリングをブロックしない）
-const GlobalSearchProvider = dynamic(
-  () => import('@/features/search').then((mod) => mod.GlobalSearchProvider),
-  {
-    ssr: false,
-  },
 );
 
 // ServiceWorkerProviderを遅延ロード（PWAオフライン対応）
@@ -195,7 +186,7 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   // Provider階層（最適化済み）
-  // Context Provider: PersistQueryClientProvider → api.Provider → ThemeProvider → GlobalSearchProvider
+  // Context Provider: PersistQueryClientProvider → api.Provider → ThemeProvider
   // 非Context: AuthStoreInitializer（並列配置）
   return (
     <PersistQueryClientProvider
@@ -220,13 +211,11 @@ export function Providers({ children }: ProvidersProps) {
         <AuthStoreInitializer />
         <ThemeProvider>
           <SessionMonitorProvider>
-            <GlobalSearchProvider>
-              <ServiceWorkerProvider>
-                {children}
-                <GlobalTagCreateModal />
-                <GlobalTagMergeModal />
-              </ServiceWorkerProvider>
-            </GlobalSearchProvider>
+            <ServiceWorkerProvider>
+              {children}
+              <GlobalTagCreateModal />
+              <GlobalTagMergeModal />
+            </ServiceWorkerProvider>
           </SessionMonitorProvider>
         </ThemeProvider>
         {/* 開発ツール（開発環境のみ） */}
