@@ -54,7 +54,8 @@ export function useSwipeGesture(
 ): SwipeGestureResult {
   // 閾値未指定時は画面幅ベースの相対値を使用
   const defaultThreshold = typeof window !== 'undefined' ? getResponsiveThreshold() : 50;
-  const { threshold = defaultThreshold, directionRatio = 1.5, disabled = false } = options;
+  // directionRatio=1.2: |dx|/|dy| が 0.83〜1.2 の狭い帯のみ dead zone。斜めスワイプの無反応感を縮小
+  const { threshold = defaultThreshold, directionRatio = 1.2, disabled = false } = options;
 
   const ref = useRef<HTMLElement | null>(null);
   const touchStartX = useRef<number>(0);
