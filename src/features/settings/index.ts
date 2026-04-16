@@ -25,7 +25,13 @@ export { SettingsSidebar } from './components/SettingsSidebar';
 // =============================================================================
 // Hooks
 // =============================================================================
+export { useTrialEndedDialog } from './hooks/useTrialEndedDialog';
 export { useUserSettings } from './hooks/useUserSettings';
+
+// =============================================================================
+// Dialogs
+// =============================================================================
+export { TrialEndedDialog } from './components/TrialEndedDialog';
 
 // =============================================================================
 // Utils

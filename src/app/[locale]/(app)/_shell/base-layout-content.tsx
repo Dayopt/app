@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
 import { CalendarNavigationProvider } from '@/features/calendar';
+import { TrialEndedDialog, useTrialEndedDialog } from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
@@ -32,6 +33,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
   const pathname = usePathname() || '/';
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
+  const trialDialog = useTrialEndedDialog();
 
   const localeFromPath = useMemo(() => {
     return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
@@ -56,6 +58,8 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
         ) : (
           <DesktopLayout locale={localeFromPath}>{children}</DesktopLayout>
         )}
+        {/* Trial終了ダイアログ（全ページ共通、1度だけ表示） */}
+        <TrialEndedDialog open={trialDialog.open} onClose={trialDialog.close} />
       </div>
     </CalendarNavigationProvider>
   );

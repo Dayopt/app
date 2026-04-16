@@ -57,6 +57,9 @@ const userSettingsSchema = z.object({
     .optional(),
   rankedValues: z.array(z.string().max(50)).max(5).optional(),
 
+  // ダイアログ表示済みフラグ
+  dismissedTrialEndedDialog: z.literal(true).optional(),
+
   // メール送信言語
   preferredLocale: z.enum(['en', 'ja']).optional(),
 });
@@ -131,6 +134,7 @@ export const userSettingsRouter = createTRPCRouter({
             return {
               values: (p?.values ?? {}) as Record<string, { text: string; importance: number }>,
               rankedValues: (p?.rankedValues ?? []) as string[],
+              dismissedTrialEndedDialog: (p?.dismissedTrialEndedDialog ?? false) as boolean,
             };
           })(),
           preferredLocale: (data.preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
@@ -199,6 +203,16 @@ export const userSettingsRouter = createTRPCRouter({
               p_user_id: userId,
               p_path: 'rankedValues',
               p_value: input.rankedValues,
+            } as never,
+          );
+        }
+        if (input.dismissedTrialEndedDialog !== undefined) {
+          await ctx.supabase.rpc(
+            'update_personalization' as never,
+            {
+              p_user_id: userId,
+              p_path: 'dismissedTrialEndedDialog',
+              p_value: true,
             } as never,
           );
         }
