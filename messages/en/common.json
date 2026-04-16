@@ -218,6 +218,12 @@
       "later": "Later",
       "update": "Update"
     },
+    "trialEnded": {
+      "title": "Your 14-day trial has ended",
+      "description": "You can continue using the Free plan. AI suggestions, full history, and unlimited templates are Pro features.",
+      "continueFree": "Continue with Free",
+      "continuePro": "Continue with Pro"
+    },
     "inlineBanner": {
       "syncError": "Unable to sync",
       "retry": "Retry",
