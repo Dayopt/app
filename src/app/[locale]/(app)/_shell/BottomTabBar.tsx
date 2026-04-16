@@ -31,8 +31,12 @@ function getActiveTabFromPath(pathname: string): TabId {
   return 'calendar';
 }
 
+interface BottomTabBarProps {
+  hidden?: boolean;
+}
+
 /** モバイル用ボトムタブナビゲーション（Calendar / Stats / Notifications / Account） */
-export function BottomTabBar() {
+export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
@@ -137,7 +141,12 @@ export function BottomTabBar() {
 
   return (
     <nav
-      className="bg-surface-container z-bottom-tab pb-safe shadow-card fixed inset-x-0 bottom-0"
+      className="bg-surface-container z-bottom-tab pb-safe shadow-card fixed inset-x-0 bottom-0 transition-transform duration-300"
+      style={{
+        transform: hidden
+          ? 'translateY(calc(100% + 3.5rem + env(safe-area-inset-bottom, 0px)))'
+          : 'translateY(0)',
+      }}
       aria-label={t('common.aria.pageNavigation')}
     >
       <div className="flex h-14 items-center justify-around">

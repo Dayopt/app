@@ -15,7 +15,11 @@ import { TagIcon, useTagsMap } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { api } from '@/lib/trpc';
 
-export function MobileHistoryStrip() {
+interface MobileHistoryStripProps {
+  hidden?: boolean;
+}
+
+export function MobileHistoryStrip({ hidden = false }: MobileHistoryStripProps) {
   const { getTagById } = useTagsMap();
   const { placeBlockNow } = useBlockPlace();
   const { data: recentBlocks } = api.history.getRecentBlocks.useQuery();
@@ -36,9 +40,14 @@ export function MobileHistoryStrip() {
 
   return (
     <div
-      className="border-border z-bottom-strip bg-surface-container pb-safe fixed inset-x-0 border-t"
+      className="border-border z-bottom-strip bg-surface-container pb-safe fixed inset-x-0 border-t transition-transform duration-300"
       // bottom = h-14 (BottomTabBar)
-      style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
+      style={{
+        bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
+        transform: hidden
+          ? 'translateY(calc(100% + 3.5rem + env(safe-area-inset-bottom, 0px)))'
+          : 'translateY(0)',
+      }}
     >
       <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto overscroll-x-contain px-2 py-1">
         {items.map((item) =>

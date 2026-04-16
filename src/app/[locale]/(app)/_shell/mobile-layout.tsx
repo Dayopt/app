@@ -1,11 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
 import { useShellStore } from '@/lib/stores/useShellStore';
+
 import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';
@@ -29,6 +31,12 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
 
   const pathname = usePathname();
+  const { hidden, reset } = useHideOnScroll();
+
+  // ページ遷移時にボトムバーを再表示
+  useEffect(() => {
+    reset();
+  }, [pathname, reset]);
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
@@ -36,6 +44,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
     return (
       isCalendarViewPath(pathWithoutLocale) ||
       pathWithoutLocale.startsWith('/stats') ||
+      pathWithoutLocale.startsWith('/search') ||
       pathWithoutLocale.startsWith('/notifications') ||
       pathWithoutLocale === '/settings' ||
       pathWithoutLocale.startsWith('/settings/')
@@ -61,10 +70,10 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
       <MobileCreateSheet />
 
       {/* 履歴ストリップ（BottomTabBarの直上） */}
-      <MobileHistoryStrip />
+      <MobileHistoryStrip hidden={hidden} />
 
       {/* ボトムタブナビゲーション */}
-      <BottomTabBar />
+      <BottomTabBar hidden={hidden} />
     </>
   );
 }
