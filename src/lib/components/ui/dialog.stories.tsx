@@ -30,7 +30,7 @@ import { Label } from './label';
  * **原則**: スクロールが発生しうるモーダル → 閉じるボタンあり、小さい確認ダイアログ → なし
  */
 const meta = {
-  title: 'Components/UI/Dialog',
+  title: 'Components/UI/Overlays/Dialog',
   component: Dialog,
   tags: ['autodocs'],
   parameters: {

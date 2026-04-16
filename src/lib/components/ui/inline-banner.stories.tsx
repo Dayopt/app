@@ -5,7 +5,7 @@ import { Button } from './button';
 import { InlineBanner } from './inline-banner';
 
 const meta = {
-  title: 'Components/UI/InlineBanner',
+  title: 'Components/UI/Notifications/InlineBanner',
   component: InlineBanner,
   tags: ['autodocs'],
   parameters: {
