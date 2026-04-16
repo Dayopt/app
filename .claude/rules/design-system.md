@@ -201,17 +201,20 @@ paths:
 
 操作結果のフィードバックに `toast` (`@/lib/toast`) を使用。`sonner` の直接 import は禁止。
 
-| タイプ       | 呼び出し          | duration | 用途           |
-| ------------ | ----------------- | -------- | -------------- |
-| 成功         | `toast.success()` | 3秒      | Mutation 成功  |
-| エラー       | `toast.error()`   | 手動消去 | Mutation 失敗  |
-| 警告         | `toast.warning()` | 6秒      | 注意喚起       |
-| 情報         | `toast.info()`    | 6秒      | ヒント、通知   |
-| 非同期進行中 | `toast.promise()` | 自動     | エクスポート等 |
+| タイプ       | 呼び出し          | duration                | 用途           |
+| ------------ | ----------------- | ----------------------- | -------------- |
+| 成功         | `toast.success()` | 3秒（action 付き: 5秒） | Mutation 成功  |
+| エラー       | `toast.error()`   | 3秒（action 付き: 5秒） | Mutation 失敗  |
+| 非同期進行中 | `toast.promise()` | 自動                    | エクスポート等 |
 
-- 位置: mobile `bottom-center`、desktop `bottom-right`
-- closeButton: 全タイプ常時表示
+- 1行構成、description なし、close ボタンなし
+- 高さ: 48px 固定、幅: 100vw-32px(mobile) / 360px(desktop)
+- 位置: mobile `top-center`、desktop `top-right`
+- 同時表示: 最大1つ。新トーストが旧トーストを cross-fade で差し替え
+- 消去: 自動消去 + swipe(mobile) + Esc/クリック(desktop)
+- アクション: テキストリンク（brand color）。ボタン形状にしない
 - Undo 可能な操作: `action: { label: '元に戻す', onClick }` を付与
+- `toast.info()` / `toast.warning()` は非推奨。Inline Banner に移行
 - ページレベルの持続的エラーは Toast ではなく `ErrorState` / インライン通知を使用
 - **import**: `import { toast } from '@/lib/toast'`（`sonner` 直接禁止）
 
