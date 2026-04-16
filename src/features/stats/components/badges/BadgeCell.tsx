@@ -70,7 +70,7 @@ export function BadgeCell({ badge, onSelect }: BadgeCellProps) {
     <button
       type="button"
       className={cn(
-        'border-border-subtle bg-card relative flex w-40 flex-col items-center gap-2 rounded-lg border p-4 shadow-sm',
+        'border-border-subtle bg-card relative flex w-full flex-col items-center gap-2 rounded-lg border p-4 shadow-sm',
         'transition-colors duration-150',
         'hover:bg-muted focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
       )}

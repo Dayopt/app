@@ -1,6 +1,6 @@
 'use client';
 
-import { PanelLeft, Search } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
@@ -8,7 +8,6 @@ import type { ReactNode } from 'react';
 import { useAuthStore } from '@/features/auth';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { useGlobalSearch } from '@/lib/hooks/use-global-search';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getAvatarUrl, getDisplayName } from '@/lib/user';
 import { useTranslations } from 'next-intl';
@@ -28,7 +27,6 @@ interface SidebarProps {
 export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: SidebarProps) {
   const user = useAuthStore((state) => state.user);
   const closeSidebar = useShellStore.use.closeSidebar();
-  const { open: openSearch } = useGlobalSearch();
   const t = useTranslations();
 
   const userData = {
@@ -56,17 +54,6 @@ export function Sidebar({ children, footerActions, 'aria-label': ariaLabel }: Si
           <span className="text-foreground text-sm font-medium tracking-tight">Dayopt</span>
         </div>
         <div className="flex items-center">
-          <HoverTooltip content={t('navigation.sidebar.navigation.search')} side="bottom">
-            <Button
-              variant="ghost"
-              icon
-              size="sm"
-              onClick={() => openSearch()}
-              aria-label={t('navigation.sidebar.navigation.search')}
-            >
-              <Search className="size-4" />
-            </Button>
-          </HoverTooltip>
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">
             <Button
               variant="ghost"

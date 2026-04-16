@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
-import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
+import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import { createUserService, UserServiceError } from './user-service';
 
 /** ユーザー管理のtRPCルーター（アカウント削除・データ削除・エクスポート・MFA） */
@@ -99,8 +99,8 @@ export const userRouter = createTRPCRouter({
    * ユーザーデータエクスポート
    * GDPR "Right to Data Portability" 準拠
    */
-  exportData: proProcedure
-    .meta({ description: 'ユーザーデータエクスポート（GDPR対応・Pro限定）' })
+  exportData: protectedProcedure
+    .meta({ description: 'ユーザーデータエクスポート（GDPR対応）' })
     .query(async ({ ctx }) => {
       try {
         const service = createUserService(ctx.supabase);

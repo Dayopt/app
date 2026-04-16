@@ -6,6 +6,12 @@ import { cn } from '@/lib/utils';
  * モバイル・デスクトップ共通: 横並び右寄せ。
  * Dialog 内では DialogFooter、Dialog 外ではこの ActionFooter を使う。
  *
+ * レイアウト (`flex flex-row justify-end gap-2`) は DialogFooter (dialog mode) および
+ * AlertDialogFooter と同一。変更する場合は3箇所を同時に更新すること:
+ * - ActionFooter (このファイル)
+ * - DialogFooter in dialog.tsx (dialog mode のみ。drawer mode は別レイアウト)
+ * - AlertDialogFooter in alert-dialog.tsx
+ *
  * @example
  * <ActionFooter>
  *   <Button variant="outline" onClick={onCancel}>キャンセル</Button>

@@ -15,9 +15,11 @@ type TabId = 'calendar' | 'stats' | 'notifications' | 'account';
 function MockBottomTabBar({
   activeTab = 'calendar',
   unreadCount = 0,
+  hidden = false,
 }: {
   activeTab?: TabId;
   unreadCount?: number;
+  hidden?: boolean;
 }) {
   const tabs: Array<{ id: TabId; label: string; icon: typeof CalendarDays; badge?: number }> = [
     { id: 'calendar', label: 'カレンダー', icon: CalendarDays },
@@ -28,7 +30,12 @@ function MockBottomTabBar({
 
   return (
     <nav
-      className="bg-surface-container shadow-card fixed inset-x-0 bottom-0 z-50"
+      className="bg-surface-container shadow-card fixed inset-x-0 bottom-0 z-50 transition-transform duration-300"
+      style={{
+        transform: hidden
+          ? 'translateY(calc(100% + 3.5rem + env(safe-area-inset-bottom, 0px)))'
+          : 'translateY(0)',
+      }}
       aria-label="ページナビゲーション"
     >
       <div className="flex h-14 items-center justify-around">
@@ -112,6 +119,11 @@ export const AccountActive: Story = {
   args: { activeTab: 'account' },
 };
 
+/** スクロール連動で非表示状態。 */
+export const Hidden: Story = {
+  args: { activeTab: 'calendar', hidden: true },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   decorators: [
@@ -142,6 +154,10 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-2 px-4 text-xs">Account Active</p>
         <MockBottomTabBar activeTab="account" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Hidden（スクロール連動で非表示）</p>
+        <MockBottomTabBar activeTab="calendar" hidden />
       </div>
     </div>
   ),

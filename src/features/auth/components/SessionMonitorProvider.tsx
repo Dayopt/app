@@ -42,7 +42,7 @@ export function SessionMonitorProvider({ children }: SessionMonitorProviderProps
   useEffect(() => {
     if (!sessionExpired) return;
 
-    toast.warning(t('auth.session.sessionExpired'));
+    toast.error(t('auth.session.sessionExpired'));
     const timer = setTimeout(() => {
       router.push('/auth/login');
     }, 3000);

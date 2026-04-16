@@ -10,6 +10,8 @@ import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendar
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 import { DateNavigator } from '@/lib/components/common/DateNavigator';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { InlineBanner } from '@/lib/components/ui/inline-banner';
+import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
@@ -84,6 +86,7 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     const t = useTranslations('calendar');
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
     const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+    const banner = useInlineBanner();
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）
     const [slide, setSlide] = useState<{ key: number; direction: 'prev' | 'next' | null }>({
@@ -157,6 +160,9 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
             </div>
           </AppHeader>
         </div>
+
+        {/* インラインバナー（同期エラー/オフライン/更新通知） */}
+        <InlineBanner {...banner} />
 
         {/* カレンダーコンテンツ（スワイプ対応） */}
         <div

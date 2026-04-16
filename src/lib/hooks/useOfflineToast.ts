@@ -24,8 +24,7 @@ export function useOfflineToast(): void {
     prevOnlineRef.current = isOnline;
 
     if (!isOnline) {
-      toast.warning(t('offlineToast'), {
-        duration: 5000,
+      toast.error(t('offlineToast'), {
         id: 'offline-status',
       });
     } else {

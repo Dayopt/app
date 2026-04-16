@@ -63,7 +63,7 @@ export function GlobalOverlays() {
   const handleValidationFail = useCallback(
     (result: StepValidationResult) => {
       if (!result.valid && result.messageKey) {
-        toast.info(t(result.messageKey));
+        toast.error(t(result.messageKey));
       }
     },
     [t],

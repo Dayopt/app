@@ -1,11 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
+import { InlineBanner } from '@/lib/components/ui/inline-banner';
+import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
+import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useShellStore } from '@/lib/stores/useShellStore';
+
 import { BottomTabBar } from './BottomTabBar';
 
 import { MainContentWrapper } from './main-content-wrapper';
@@ -27,8 +31,15 @@ interface MobileLayoutProps {
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
+  const banner = useInlineBanner();
 
   const pathname = usePathname();
+  const { hidden, reset } = useHideOnScroll();
+
+  // ページ遷移時にボトムバーを再表示
+  useEffect(() => {
+    reset();
+  }, [pathname, reset]);
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
@@ -53,6 +64,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
           </AppHeader>
         )}
 
+        {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
+        {!hasOwnHeader && <InlineBanner {...banner} />}
+
         {/* Main Content（BottomTabBar + HistoryStrip分の余白を確保） */}
         <MainContentWrapper className="pb-24">{children}</MainContentWrapper>
       </div>
@@ -61,10 +75,10 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
       <MobileCreateSheet />
 
       {/* 履歴ストリップ（BottomTabBarの直上） */}
-      <MobileHistoryStrip />
+      <MobileHistoryStrip hidden={hidden} />
 
       {/* ボトムタブナビゲーション */}
-      <BottomTabBar />
+      <BottomTabBar hidden={hidden} />
     </>
   );
 }

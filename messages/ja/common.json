@@ -218,6 +218,15 @@
       "later": "後で",
       "update": "更新"
     },
+    "inlineBanner": {
+      "syncError": "同期できません",
+      "retry": "リトライ",
+      "conflict": "他で変更がありました",
+      "reload": "再読み込み",
+      "offline": "オフラインです",
+      "updateAvailable": "新しいバージョンがあります",
+      "update": "更新"
+    },
     "pwa": {
       "installTitle": "Dayoptをインストール",
       "installDescription": "ホーム画面に追加するとより快適に使えます",

@@ -13,7 +13,7 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 /** HTML タグを除去してプレーンテキストに変換 */
 function stripHtml(html: string): string {
@@ -53,6 +53,19 @@ export function NoteSection({
 }: NoteSectionProps) {
   const displayNote = useMemo(() => stripHtml(note), [note]);
 
+  // ローカル state でキーストロークを即座に反映（モバイル Drawer の再レンダリング耐性）
+  const [localNote, setLocalNote] = useState(displayNote);
+  const [isFocused, setIsFocused] = useState(false);
+  const [prevDisplayNote, setPrevDisplayNote] = useState(displayNote);
+
+  // サーバーからの値でローカル state を同期（フォーカス中は上書きしない）
+  if (prevDisplayNote !== displayNote) {
+    setPrevDisplayNote(displayNote);
+    if (!isFocused) {
+      setLocalNote(displayNote);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -61,12 +74,20 @@ export function NoteSection({
           <span className="text-muted-foreground text-sm">{label}</span>
         </div>
         <span className="text-muted-foreground -mr-2 px-2 text-xs tabular-nums">
-          {displayNote.length}/{maxLength}
+          {localNote.length}/{maxLength}
         </span>
       </div>
       <textarea
-        value={displayNote}
-        onChange={(e) => onNoteChange(e.target.value)}
+        value={localNote}
+        onChange={(e) => {
+          setLocalNote(e.target.value);
+          onNoteChange(e.target.value);
+        }}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => {
+          setIsFocused(false);
+          setLocalNote(displayNote);
+        }}
         placeholder={placeholder}
         disabled={disabled}
         maxLength={maxLength}

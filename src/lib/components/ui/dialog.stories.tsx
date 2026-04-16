@@ -23,14 +23,13 @@ import { Label } from './label';
  * |----------|-------------|------|
  * | フォーム・設定ダイアログ | あり（デフォルト） | コンテンツ量が多く、フッターが画面外になりうる |
  * | 確認ダイアログ（AlertDialog） | なし | ユーザーに選択を強制する（Cancel/OK で十分） |
- * | コマンドパレット | なし | ESC キーが標準操作 |
  * | フルスクリーン Sheet（モバイル） | ヘッダーに配置 | デフォルト位置ではなくヘッダーUI内に統合 |
  * | カスタムレイアウト（サイドバー付き等） | showCloseButton={false} + DialogClose でカスタム配置 | デフォルト位置がコンテンツと干渉する場合 |
  *
  * **原則**: スクロールが発生しうるモーダル → 閉じるボタンあり、小さい確認ダイアログ → なし
  */
 const meta = {
-  title: 'Components/UI/Dialog',
+  title: 'Components/UI/Overlays/Dialog',
   component: Dialog,
   tags: ['autodocs'],
   parameters: {
@@ -142,6 +141,106 @@ export const CustomWidth: Story = {
         <div className="py-4">
           <p>より多くのコンテンツを表示できます。</p>
         </div>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
+export const Sizes: Story = {
+  render: () => (
+    <div className="flex flex-col items-start gap-6">
+      {(['sm', 'md', 'lg', 'xl'] as const).map((size) => (
+        <Dialog key={size}>
+          <DialogTrigger asChild>
+            <Button variant="outline">size=&quot;{size}&quot;</Button>
+          </DialogTrigger>
+          <DialogContent size={size}>
+            <DialogHeader>
+              <DialogTitle>Size: {size}</DialogTitle>
+              <DialogDescription>
+                max-width が {size} に設定されたダイアログです。
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p>コンテンツ領域</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline">キャンセル</Button>
+              <Button>保存</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ))}
+    </div>
+  ),
+};
+
+export const ResponsiveAuto: Story = {
+  render: () => (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline">responsive=&quot;auto&quot;（デフォルト）</Button>
+      </DialogTrigger>
+      <DialogContent size="md">
+        <DialogHeader>
+          <DialogTitle>レスポンシブ自動</DialogTitle>
+          <DialogDescription>
+            PC では Dialog、モバイルでは Drawer として表示されます。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <p>ブラウザ幅を変えて確認してください。</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline">キャンセル</Button>
+          <Button>保存</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
+export const ForceDialog: Story = {
+  render: () => (
+    <Dialog responsive="dialog">
+      <DialogTrigger asChild>
+        <Button variant="outline">responsive=&quot;dialog&quot;</Button>
+      </DialogTrigger>
+      <DialogContent size="md">
+        <DialogHeader>
+          <DialogTitle>常に Dialog</DialogTitle>
+          <DialogDescription>モバイルでも Dialog として表示されます。</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <p>Settings のような PC 専用画面に使います。</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline">キャンセル</Button>
+          <Button>保存</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ),
+};
+
+export const ForceDrawer: Story = {
+  render: () => (
+    <Dialog responsive="drawer">
+      <DialogTrigger asChild>
+        <Button variant="outline">responsive=&quot;drawer&quot;</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>常に Drawer</DialogTitle>
+          <DialogDescription>PC でも Drawer として表示されます。</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <p>モバイル専用の体験に使います。</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline">キャンセル</Button>
+          <Button>保存</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   ),

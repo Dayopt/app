@@ -84,6 +84,16 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
         const { data: aalData, error: mfaError } =
           await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
+        // MFA検証画面へのリダイレクトURL構築
+        // MFAVerifyPage は searchParams.get('next') でlocale付きパスを受け取る
+        const fullRedirectPath = `/${locale}${redirectPath}`;
+        const buildMfaUrl = () => {
+          const base = `/${locale}/auth/mfa-verify`;
+          return redirectPath !== '/calendar/day'
+            ? `${base}?next=${encodeURIComponent(fullRedirectPath)}`
+            : base;
+        };
+
         // MFAが必要な場合、またはMFAチェックに失敗した場合
         // → MFA検証画面へ（エラー時にバイパスさせない）
         if (mfaError) {
@@ -91,24 +101,16 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
             '[LoginForm] MFA check failed, redirecting to MFA verify for safety:',
             mfaError,
           );
-          const mfaUrl =
-            redirectPath !== '/calendar/day'
-              ? `/${locale}/auth/mfa-verify?redirect=${encodeURIComponent(redirectPath)}`
-              : `/${locale}/auth/mfa-verify`;
-          router.push(mfaUrl);
+          router.push(buildMfaUrl());
           return;
         }
 
         if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
-          const mfaUrl =
-            redirectPath !== '/calendar/day'
-              ? `/${locale}/auth/mfa-verify?redirect=${encodeURIComponent(redirectPath)}`
-              : `/${locale}/auth/mfa-verify`;
-          router.push(mfaUrl);
+          router.push(buildMfaUrl());
           return;
         }
 
-        router.push(`/${locale}${redirectPath}`);
+        router.push(fullRedirectPath);
       }
     } catch (err) {
       logger.error('[LoginForm] Unexpected error:', err);

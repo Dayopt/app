@@ -51,3 +51,20 @@ export async function prefetchStatsData() {
 
   return { helpers, dehydratedState: dehydrate(helpers.queryClient) };
 }
+
+/**
+ * Badges ページ専用 prefetch
+ *
+ * badges.list のみ事前取得する軽量版。
+ */
+export async function prefetchBadgesData() {
+  const helpers = await createServerHelpers();
+
+  try {
+    await helpers.badges.list.prefetch();
+  } catch {
+    // 認証エラー等はスキップ（クライアント側でリトライ）
+  }
+
+  return { helpers, dehydratedState: dehydrate(helpers.queryClient) };
+}

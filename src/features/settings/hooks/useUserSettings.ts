@@ -3,7 +3,7 @@
  * TanStack Queryを使用してSupabaseと同期
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -54,13 +54,20 @@ export function useUserSettings() {
     },
   });
 
-  // DBから取得した設定をStoreに反映（初回のみ）
+  // dateFormat は初回同期時のみ preferredLocale から導出する
+  // （メール言語変更時にアプリの日付フォーマットが意図せず変わるのを防ぐ）
+  const dateFormatInitializedRef = useRef(false);
+
+  // DBから取得した設定をStoreに反映
   useEffect(() => {
     if (dbSettings && !isPending) {
       updateSettings({
         timezone: dbSettings.timezone,
         timeFormat: dbSettings.timeFormat,
-        dateFormat: dbSettings.preferredLocale === 'ja' ? 'yyyy/MM/dd' : 'MM/dd/yyyy',
+        // 初回のみ locale から導出、以降は Store の値を維持
+        ...(!dateFormatInitializedRef.current && {
+          dateFormat: dbSettings.preferredLocale === 'ja' ? 'yyyy/MM/dd' : 'MM/dd/yyyy',
+        }),
         weekStartsOn: dbSettings.weekStartsOn,
         showWeekends: dbSettings.showWeekends,
         showWeekNumbers: dbSettings.showWeekNumbers,
@@ -74,6 +81,7 @@ export function useUserSettings() {
         ...(dbSettings.defaultView && { defaultView: dbSettings.defaultView }),
         ...(dbSettings.hourHeightDensity && { hourHeightDensity: dbSettings.hourHeightDensity }),
       });
+      dateFormatInitializedRef.current = true;
     }
   }, [dbSettings, isPending, updateSettings]);
 

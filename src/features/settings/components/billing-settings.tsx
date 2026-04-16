@@ -86,7 +86,7 @@ export function BillingSettings() {
       toast.success(t('settings.subscription.checkoutSuccess'));
       router.replace('/settings/subscription', { scroll: false });
     } else if (canceled === 'true') {
-      toast.info(t('settings.subscription.checkoutCanceled'));
+      toast.success(t('settings.subscription.checkoutCanceled'));
       router.replace('/settings/subscription', { scroll: false });
     }
   }, [searchParams, router, t]);

@@ -1,0 +1,29 @@
+/* ============================================
+ * Sonner Toast アニメーションオーバーライド
+ *
+ * 仕様:
+ * - 出現: slide down + fade in, 200ms, ease-out
+ * - 退出: fade out のみ（スライドなし）, 150ms, ease-in
+ * - デスクトップ: クリック消去のヒントとして cursor: pointer
+ * ============================================ */
+
+/* Enter: slide down from top + fade in */
+[data-sonner-toast] {
+  transition:
+    transform 200ms ease-out,
+    opacity 200ms ease-out !important;
+}
+
+/* Exit: fade out only (no slide), 150ms ease-in */
+[data-sonner-toast][data-removed='true'] {
+  --y: translateY(0) !important;
+  opacity: 0 !important;
+  transition: opacity 150ms ease-in !important;
+}
+
+/* Desktop: cursor pointer for click-to-dismiss */
+@media (hover: hover) {
+  [data-sonner-toast] {
+    cursor: pointer;
+  }
+}

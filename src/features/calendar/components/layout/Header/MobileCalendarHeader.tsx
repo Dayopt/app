@@ -2,14 +2,13 @@
 
 import { format, getWeek, isSameMonth, isToday } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
-import { ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Button } from '@/lib/components/ui/button';
-import { useGlobalSearch } from '@/lib/hooks/use-global-search';
 import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
@@ -46,10 +45,8 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     defaultExpanded,
   }) => {
     const t = useTranslations('calendar');
-    const tCommon = useTranslations('common');
     const locale = useLocale();
     const dateFnsLocale = locale === 'ja' ? ja : enUS;
-    const { open: openSearch } = useGlobalSearch();
     const [isExpanded, setIsExpanded] = useState(defaultExpanded ?? false);
 
     // viewMonth: グリッドスワイプで独立して変化する表示月
@@ -167,17 +164,6 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
         >
           <div className="overflow-hidden">
             <div>
-              {/* 検索バー */}
-              <button
-                type="button"
-                onClick={openSearch}
-                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- calc expression
-                className="bg-muted text-muted-foreground mx-4 mt-1 mb-2 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg px-4 py-2 text-sm"
-              >
-                <Search className="size-4 shrink-0" />
-                <span>{tCommon('search.placeholder')}</span>
-              </button>
-
               {/* 月グリッド */}
               <MobileMonthGrid
                 viewMonth={viewMonth}

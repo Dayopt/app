@@ -34,12 +34,15 @@ export function BadgeSection() {
   if (isPending) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-end">
-          <Skeleton className="h-4 w-12" />
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-end">
+            <Skeleton className="h-4 w-12" />
+          </div>
+          <Skeleton className="h-2 w-full rounded-full" />
         </div>
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-40 rounded-lg" />
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>
       </div>
@@ -48,11 +51,19 @@ export function BadgeSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header — count only (title is in the tab) */}
-      <div className="flex items-center justify-end">
-        <span className="text-muted-foreground text-sm">
-          {earnedCount}/{BADGE_COUNT}
-        </span>
+      {/* Header — count + progress bar */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-end">
+          <span className="text-muted-foreground text-sm">
+            {earnedCount}/{BADGE_COUNT}
+          </span>
+        </div>
+        <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+          <div
+            className="bg-primary h-full rounded-full transition-all duration-300"
+            style={{ width: `${Math.round((earnedCount / BADGE_COUNT) * 100)}%` }}
+          />
+        </div>
       </div>
 
       {/* Grid */}

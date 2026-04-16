@@ -109,7 +109,7 @@ self.addEventListener('fetch', (event) => {
 
   // ナビゲーションリクエスト（HTMLページ）
   if (request.mode === 'navigate') {
-    event.respondWith(handleNavigationRequest(request));
+    event.respondWith(handleNavigationRequest(request, event));
     return;
   }
 
@@ -128,7 +128,7 @@ self.addEventListener('fetch', (event) => {
  * Stale-While-Revalidate: キャッシュがあれば即返し、
  * バックグラウンドでネットワークfetchしてキャッシュを更新する
  */
-async function handleNavigationRequest(request) {
+async function handleNavigationRequest(request, event) {
   const cache = await caches.open(DYNAMIC_CACHE_NAME);
   const cached = await cache.match(request);
 
@@ -143,7 +143,8 @@ async function handleNavigationRequest(request) {
     .catch(() => null);
 
   if (cached) {
-    // キャッシュがあれば即返す（バックグラウンドでfetch継続）
+    // バックグラウンドfetchをworkerのlifetimeに結びつける
+    event.waitUntil(fetchPromise);
     return cached;
   }
 

@@ -218,6 +218,15 @@
       "later": "Later",
       "update": "Update"
     },
+    "inlineBanner": {
+      "syncError": "Unable to sync",
+      "retry": "Retry",
+      "conflict": "Changes were made elsewhere",
+      "reload": "Reload",
+      "offline": "You are offline",
+      "updateAvailable": "A new version is available",
+      "update": "Update"
+    },
     "pwa": {
       "installTitle": "Install Dayopt",
       "installDescription": "Add to home screen for a better experience",

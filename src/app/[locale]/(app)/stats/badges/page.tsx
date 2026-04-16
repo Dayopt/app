@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { BadgeSection, prefetchStatsData } from '@/features/stats';
+import { BadgeSection, prefetchBadgesData } from '@/features/stats';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
@@ -36,7 +36,7 @@ function BadgesSkeleton() {
 }
 
 async function BadgesContent() {
-  const { dehydratedState } = await prefetchStatsData();
+  const { dehydratedState } = await prefetchBadgesData();
 
   return (
     <HydrationBoundary state={dehydratedState}>

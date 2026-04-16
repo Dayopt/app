@@ -8,7 +8,7 @@
 import type { TagColorName } from '@/lib/tag-colors';
 
 /** P/Lの表示粒度 */
-export type TimePLGranularity = 'day' | 'week' | 'month';
+export type TimePLGranularity = 'day' | 'week' | 'month' | 'year';
 
 /** 予算精度のステータス（±0が理想） */
 export type AccuracyStatus = 'excellent' | 'good' | 'fair' | 'poor';

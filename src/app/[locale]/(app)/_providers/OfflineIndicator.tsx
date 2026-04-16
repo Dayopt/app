@@ -46,9 +46,8 @@ export function OfflineIndicator() {
 
       // 復帰時にpending mutationsがあれば同期通知
       if (mutatingCount > 0) {
-        toast.info(t('pending', { count: mutatingCount }), {
+        toast.success(t('pending', { count: mutatingCount }), {
           id: 'offline-sync',
-          duration: 3000,
         });
       }
     }
