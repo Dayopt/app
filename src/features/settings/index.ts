@@ -25,12 +25,14 @@ export { SettingsSidebar } from './components/SettingsSidebar';
 // =============================================================================
 // Hooks
 // =============================================================================
+export { usePaymentErrorDialog } from './hooks/usePaymentErrorDialog';
 export { useTrialEndedDialog } from './hooks/useTrialEndedDialog';
 export { useUserSettings } from './hooks/useUserSettings';
 
 // =============================================================================
 // Dialogs
 // =============================================================================
+export { PaymentErrorDialog } from './components/PaymentErrorDialog';
 export { TrialEndedDialog } from './components/TrialEndedDialog';
 
 // =============================================================================

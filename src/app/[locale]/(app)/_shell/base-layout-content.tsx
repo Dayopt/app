@@ -6,7 +6,12 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
 import { CalendarNavigationProvider } from '@/features/calendar';
-import { TrialEndedDialog, useTrialEndedDialog } from '@/features/settings';
+import {
+  PaymentErrorDialog,
+  TrialEndedDialog,
+  usePaymentErrorDialog,
+  useTrialEndedDialog,
+} from '@/features/settings';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 
@@ -34,6 +39,7 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
   const t = useTranslations();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const trialDialog = useTrialEndedDialog();
+  const paymentDialog = usePaymentErrorDialog();
 
   const localeFromPath = useMemo(() => {
     return (pathname.split('/')[1] || 'ja') as 'ja' | 'en';
@@ -60,6 +66,8 @@ export function BaseLayoutContent({ children }: BaseLayoutContentProps) {
         )}
         {/* Trial終了ダイアログ（全ページ共通、1度だけ表示） */}
         <TrialEndedDialog open={trialDialog.open} onClose={trialDialog.close} />
+        {/* 決済エラーダイアログ（past_due 時、1日1回表示） */}
+        <PaymentErrorDialog open={paymentDialog.open} onClose={paymentDialog.close} />
       </div>
     </CalendarNavigationProvider>
   );

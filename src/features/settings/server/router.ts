@@ -59,6 +59,7 @@ const userSettingsSchema = z.object({
 
   // ダイアログ表示済みフラグ
   dismissedTrialEndedDialog: z.literal(true).optional(),
+  paymentErrorDialogLastShownAt: z.string().datetime().optional(),
 
   // メール送信言語
   preferredLocale: z.enum(['en', 'ja']).optional(),
@@ -135,6 +136,9 @@ export const userSettingsRouter = createTRPCRouter({
               values: (p?.values ?? {}) as Record<string, { text: string; importance: number }>,
               rankedValues: (p?.rankedValues ?? []) as string[],
               dismissedTrialEndedDialog: (p?.dismissedTrialEndedDialog ?? false) as boolean,
+              paymentErrorDialogLastShownAt: (p?.paymentErrorDialogLastShownAt ?? null) as
+                | string
+                | null,
             };
           })(),
           preferredLocale: (data.preferred_locale as 'en' | 'ja' | undefined) ?? 'en',
@@ -213,6 +217,16 @@ export const userSettingsRouter = createTRPCRouter({
               p_user_id: userId,
               p_path: 'dismissedTrialEndedDialog',
               p_value: true,
+            } as never,
+          );
+        }
+        if (input.paymentErrorDialogLastShownAt !== undefined) {
+          await ctx.supabase.rpc(
+            'update_personalization' as never,
+            {
+              p_user_id: userId,
+              p_path: 'paymentErrorDialogLastShownAt',
+              p_value: input.paymentErrorDialogLastShownAt,
             } as never,
           );
         }
