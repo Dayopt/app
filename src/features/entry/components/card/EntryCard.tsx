@@ -456,8 +456,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           )}
 
           {/* 下端リサイズハンドル（Draft/Past は非表示）
-             短いカード（< 40px）では height=44px・bottom=-36px でブロック外に大きく張り出し、
-             WCAG 2.5.5 準拠の 44pt ヒット領域を確保する。
+             短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に最大限張り出し、
+             ブロック内への侵入を 4px まで絞る。ここを深く取り過ぎるとブロック下部で
+             ハンドルが stopPropagation してドラッグ起動に到達しなくなるため。
              モバイル時はハンドル位置に視覚インジケータを表示して「掴める場所」を明示。*/}
           {!isDraft && !isPast && (
             <div
@@ -474,7 +475,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               onKeyDown={handleResizeKeyDown}
               style={{
                 height: safePosition.height < 40 ? '44px' : '32px',
-                bottom: safePosition.height < 40 ? '-36px' : '-12px',
+                bottom: safePosition.height < 40 ? '-40px' : '-12px',
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}
