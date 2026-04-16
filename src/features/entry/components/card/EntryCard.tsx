@@ -30,6 +30,14 @@ const DEFAULT_HOUR_HEIGHT = 72;
 /** イベントの最小高さ(px) */
 const MIN_EVENT_HEIGHT = 20;
 
+/**
+ * モバイル時のイベント最小高さ(px)。
+ * Why: 15分ブロック (HOUR_HEIGHT=72 時で 18px) が指幅より狭く、タップ／リサイズが困難。
+ * 視認性とタップ精度を優先して 28px まで底上げする。
+ * 15分連続ブロックが隙間なく並ぶと描画が 8px/個重なるが、実運用で稀なため許容。
+ */
+const MIN_EVENT_HEIGHT_MOBILE = 28;
+
 /** Z-index層 */
 const Z_INDEX = {
   EVENTS: 10,
@@ -102,6 +110,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // 計画外カードの内側オフセット（親の実線ボーダーと重ならないよう内側に配置）
   const unplannedInset = isUnplanned ? accentWidth + 2 : 0;
 
+  const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
+
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
@@ -113,7 +123,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       width: isUnplanned
         ? `calc(${safePosition.width}% - 8px - ${unplannedInset}px)`
         : `calc(${safePosition.width}% - 8px)`,
-      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
+      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), minHeight)}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
@@ -127,6 +137,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       style,
       isUnplanned,
       unplannedInset,
+      minHeight,
     ],
   );
 
@@ -445,8 +456,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           )}
 
           {/* 下端リサイズハンドル（Draft/Past は非表示）
-             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。
-             短いカード（< 40px）はハンドルを縮小してクリック領域を確保 */}
+             短いカード（< 40px）では height=44px・bottom=-36px でブロック外に大きく張り出し、
+             WCAG 2.5.5 準拠の 44pt ヒット領域を確保する。
+             モバイル時はハンドル位置に視覚インジケータを表示して「掴める場所」を明示。*/}
           {!isDraft && !isPast && (
             <div
               className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
@@ -461,12 +473,19 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               onTouchStart={handleBottomResizeTouchStart}
               onKeyDown={handleResizeKeyDown}
               style={{
-                height: safePosition.height < 40 ? '16px' : '32px',
-                bottom: safePosition.height < 40 ? '-4px' : '-12px',
+                height: safePosition.height < 40 ? '44px' : '32px',
+                bottom: safePosition.height < 40 ? '-36px' : '-12px',
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}
-            />
+            >
+              {isMobile && (
+                <span
+                  aria-hidden
+                  className="bg-border pointer-events-none absolute top-1/2 left-1/2 h-1 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                />
+              )}
+            </div>
           )}
         </div>
         {/* /カード本体 */}
