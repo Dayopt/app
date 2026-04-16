@@ -94,7 +94,6 @@ const components: ComponentEntry[] = [
     loading: false,
     className: false,
   },
-  { name: 'Command', variant: null, size: null, disabled: false, loading: false, className: true },
   {
     name: 'ConfirmDialog',
     variant: 'destructive / warning / default',
