@@ -21,6 +21,19 @@ function DrawerClose({ ...props }: React.ComponentProps<typeof DrawerPrimitive.C
   return <DrawerPrimitive.Close data-slot="drawer-close" {...props} />;
 }
 
+function DrawerHandle({
+  className,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Handle>) {
+  return (
+    <DrawerPrimitive.Handle
+      data-slot="drawer-handle"
+      className={cn('shrink-0', className)}
+      {...props}
+    />
+  );
+}
+
 function DrawerOverlay({
   className,
   ...props
@@ -60,13 +73,8 @@ function DrawerContent({
         )}
         {...props}
       >
-        {/* ドラッグハンドル */}
-        <div
-          className="hidden h-6 w-full shrink-0 items-center justify-center group-data-[vaul-drawer-direction=bottom]/drawer-content:flex"
-          aria-hidden="true"
-        >
-          <div className="bg-border h-1 w-10 rounded-full" />
-        </div>
+        {/* ドラッグハンドル（vaul Handle: handleOnly 時にスワイプ閉じを有効化） */}
+        <DrawerHandle className="hidden group-data-[vaul-drawer-direction=bottom]/drawer-content:flex" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
@@ -122,6 +130,7 @@ export {
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
+  DrawerHandle,
   DrawerHeader,
   DrawerOverlay,
   DrawerPortal,
