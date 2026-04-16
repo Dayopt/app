@@ -361,7 +361,9 @@
         "planRate": "Plan rate",
         "fulfillment": "Fulfillment",
         "whenSection": "When",
-        "qualitySection": "Quality"
+        "qualitySection": "Quality",
+        "loadMore": "Load more",
+        "untitled": "Untitled"
       }
     },
     "nowBadge": {
