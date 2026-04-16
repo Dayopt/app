@@ -1,15 +1,18 @@
 'use client';
 
-import { type ReactNode, useCallback, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { type ReactNode, useCallback, useState } from 'react';
 
-import { ActionFooter } from '@/lib/components/ui/action-footer';
-import { Button } from '@/lib/components/ui/button';
-import { useDialogKeyboard } from '@/lib/hooks/useDialogKeyboard';
-import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
-import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from '@/lib/components/ui/alert-dialog';
+import { Button } from '@/lib/components/ui/button';
 
 type ConfirmDialogVariant = 'destructive' | 'warning' | 'default';
 
@@ -36,8 +39,6 @@ interface ConfirmDialogProps {
   icon?: LucideIcon;
   /** ローディング中のラベル */
   loadingLabel?: string;
-  /** ダイアログの最大幅（px単位、省略時は448px） */
-  maxWidth?: number;
   /** 確認ボタンを無効化（外部の条件が満たされていない場合） */
   confirmDisabled?: boolean;
 }
@@ -45,38 +46,13 @@ interface ConfirmDialogProps {
 /**
  * 汎用確認ダイアログ
  *
- * Figma的な運用: このコンポーネントを大元として、オプション（variant, icon等）で
- * 削除確認、警告確認などの用途に対応する。
+ * AlertDialog をベースに、定型の確認UI（アイコン + title + description + 2ボタン）を提供。
+ * ESC / overlay クリックでは閉じない（AlertDialog のセマンティクス）。
  *
- * スタイルガイド準拠:
- * - 8pxグリッドシステム（p-6, gap-4, mb-6等）
- * - 角丸: rounded-2xl（16px）for ダイアログ
- * - Card: bg-card（カード、ダイアログ用）
- * - セマンティックカラー: destructive系トークン使用
- *
- * @example
- * ```tsx
- * // 削除確認
- * <ConfirmDialog
- *   open={isOpen}
- *   onClose={handleClose}
- *   onConfirm={handleDelete}
- *   title="Delete item?"
- *   description="This action cannot be undone."
- *   variant="destructive"
- * />
- *
- * // カスタムアイコン
- * <ConfirmDialog
- *   open={isOpen}
- *   onClose={handleClose}
- *   onConfirm={handleConfirm}
- *   title="Archive item?"
- *   description="Item will be moved to archive."
- *   variant="warning"
- *   icon={Archive}
- * />
- * ```
+ * 階層構造:
+ * - Dialog → 箱。中身は呼び出し側が自由に決める
+ * - AlertDialog → 箱 + 「閉じにくい」という振る舞い
+ * - ConfirmDialog → AlertDialog + 定型の中身（本コンポーネント）
  */
 export function ConfirmDialog({
   open,
@@ -90,19 +66,10 @@ export function ConfirmDialog({
   variant = 'default',
   icon: Icon = AlertTriangle,
   loadingLabel,
-  maxWidth = 448,
   confirmDisabled = false,
 }: ConfirmDialogProps) {
   const t = useTranslations();
   const [isLoading, setIsLoading] = useState(false);
-  const mounted = useHasMounted();
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // ESCキーでダイアログを閉じる
-  useDialogKeyboard(open, isLoading, onClose);
-
-  // フォーカストラップ・初期フォーカス・フォーカス復元
-  useFocusTrap(panelRef, open);
 
   const handleConfirm = useCallback(async () => {
     setIsLoading(true);
@@ -113,18 +80,11 @@ export function ConfirmDialog({
     }
   }, [onConfirm]);
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget && !isLoading) {
-        onClose();
-      }
-    },
-    [isLoading, onClose],
-  );
+  const handleCancel = useCallback(() => {
+    if (!isLoading) onClose();
+  }, [isLoading, onClose]);
 
-  if (!mounted || !open) return null;
-
-  // バリアントに応じたスタイル（アウトラインパターン）
+  // バリアントに応じたスタイル
   const iconContainerClass =
     variant === 'destructive'
       ? 'border border-destructive'
@@ -141,11 +101,7 @@ export function ConfirmDialog({
 
   const confirmButtonVariant = variant === 'destructive' ? 'destructive' : 'primary';
   const confirmButtonClass =
-    variant === 'destructive'
-      ? 'hover:bg-destructive-hover'
-      : variant === 'warning'
-        ? 'bg-warning text-warning-foreground hover:bg-warning-hover'
-        : undefined;
+    variant === 'warning' ? 'bg-warning text-warning-foreground hover:bg-warning-hover' : undefined;
 
   // ラベルの決定
   const resolvedConfirmLabel =
@@ -156,40 +112,21 @@ export function ConfirmDialog({
     loadingLabel ??
     (variant === 'destructive' ? t('common.actions.deleting') : t('common.loading'));
 
-  const dialog = (
-    <div
-      className="animate-in fade-in bg-overlay z-overlay-confirm fixed inset-0 flex items-center justify-center backdrop-blur-md duration-150"
-      onClick={handleBackdropClick}
-    >
-      {/* ダイアログコンテンツ: bg-card, rounded-2xl, p-6 */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-description"
-        tabIndex={-1}
-        className="animate-in zoom-in-95 fade-in bg-card text-foreground border-border-subtle shadow-card rounded-2xl border p-6 duration-150"
-        style={{ width: `min(calc(100vw - 32px), ${maxWidth}px)` }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header: gap-4準拠 */}
+  return (
+    <AlertDialog open={open}>
+      <AlertDialogContent className="sm:max-w-md">
+        {/* Header: アイコン + タイトル + 説明 */}
         <div className={children ? 'mb-6' : ''}>
           <div className="flex items-start gap-4">
-            {/* アイコン */}
             <div
               className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconContainerClass}`}
             >
               <Icon className={`size-5 ${iconClass}`} />
             </div>
             <div className="flex-1">
-              <h2 id="confirm-dialog-title" className="text-lg leading-tight font-medium">
-                {title}
-              </h2>
+              <AlertDialogTitle className="leading-tight">{title}</AlertDialogTitle>
               {description && (
-                <p id="confirm-dialog-description" className="text-muted-foreground mt-2 text-sm">
-                  {description}
-                </p>
+                <AlertDialogDescription className="mt-2">{description}</AlertDialogDescription>
               )}
             </div>
           </div>
@@ -199,10 +136,10 @@ export function ConfirmDialog({
         {children && <div className="mt-6">{children}</div>}
 
         {/* Footer */}
-        <ActionFooter className="mt-6">
+        <AlertDialogFooter className="mt-6">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={handleCancel}
             disabled={isLoading}
             className="hover:bg-state-hover"
           >
@@ -216,10 +153,8 @@ export function ConfirmDialog({
           >
             {isLoading ? resolvedLoadingLabel : resolvedConfirmLabel}
           </Button>
-        </ActionFooter>
-      </div>
-    </div>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
-
-  return createPortal(dialog, document.body);
 }
