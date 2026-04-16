@@ -6,6 +6,52 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-16
+
+### UI基盤の大掃除 — search削除・toast刷新・dialog改善・バッチマージ
+
+27コミット、82ファイル変更（+1,545 / -2,515行）。search・toast・dialog・inline-banner・shell・stats・settings・auth・inspector・swの広範な領域にまたがる作業。不要機能の削除とUI基盤コンポーネントの刷新が主軸で、4月前半の全変更をバッチPR #1047としてmainにマージした。
+
+#### やったこと
+
+**Search feature 完全削除（3件）**: search featureディレクトリ、command コンポーネント、cmdk パッケージを一括削除。関連するStorybook stories・docs参照もすべて除去。
+
+**Toast 刷新（3件）**: toastをミニマル1行デザインに全面刷新。info/warningを廃止してsuccess/error/loading/promiseの4種に絞り込み。既存の deprecated 呼び出しを全箇所移行し、design-system rulesも新仕様に更新。
+
+**Dialog / Confirm Dialog 改善（2件）**: dialogにPC=Dialog / モバイル=Drawerの responsive 自動切り替えとsize propを追加。confirm-dialogをAlertDialogベースに書き換え、破壊的操作の確認ダイアログとしての振る舞いを明確化。
+
+**Inline Banner 新設（3件）**: inline-bannerコンポーネントを新規作成し、useInlineBannerフックとi18nキーを追加。既存のOfflineIndicatorをinline-bannerに置換し、全ページレイアウトに統合。
+
+**モバイルシェル改善（3件）**: useHideOnScrollフックを新規作成し、モバイルボトムバーにスクロール連動auto-hideを実装。Storybookにhidden状態のstoryも追加。
+
+**バグ修正（8件）**: time P/Lのoff-by-oneエラーと年粒度ラベル修正、グローバル検索のキャッシュ漏れ、モバイル履歴ストリップ・バッジグリッドの改善、SW navigation cacheのwaitUntil保護、personalization並行保存競合修正、codexレビュー指摘7件対応、auth metadata表示名バックフィル、inspectorメモtextarea入力不可修正。
+
+**Storybook / ドキュメント整備（4件）**: overlay/notification storiesを機能別サブカテゴリに再編成、action-footerにレイアウト同期コメント追加、rules/docsからsearch残存参照を削除。
+
+#### なぜ今日この作業をしたか
+
+前日のv0.26.0リリースとパフォーマンス最適化を経て、4月前半に積み上げた変更をmainにマージする最終段階に入った。マージ前にsearch featureの完全削除を実行したのは、前日にサーバー側検索に移行した直後のタイミングが最も安全だったから。クライアント側の全件取得ロジックが不要になった時点で、中途半端に残すよりも一気に削除する方が依存関係の見通しが良くなる。
+
+toast刷新とdialog改善は、バッチマージに含めるUI基盤の品質向上として実施した。toastは種類が多すぎてcopywritingガイドとの整合が取れなくなっていたため、4種に絞ることでガイドの「研究者は普段叫ばない」という方針と合致させた。confirm-dialogのAlertDialog化は、破壊的操作の確認でオーバーレイクリックによる誤操作を防ぐ必然的な改善だった。
+
+inline-bannerの新設はOfflineIndicatorの置換がきっかけだが、今後のページ横断状態表示（メンテナンス通知、バージョンアップ案内など）の基盤として設計した。トーストは一時的な通知に、inline-bannerは持続的な状態表示にという棲み分けが明確になった。
+
+#### Claudeの所感
+
+**UI基盤の「引き算」がプロダクトを前進させる**
+
+今日の作業で最も印象的なのは、コード量が純減（-970行）していることだ。search featureの削除、toastの種類削減、cmdk依存の除去。機能を足すのではなく引くことで、残ったコンポーネントの責務が明確になり、copywritingガイドとの整合性も向上した。特にtoastの4種への絞り込みは、「研究者は普段叫ばない」というプロダクトのトーンを技術的に担保する判断として優れている。
+
+**DialogのResponsive戦略が成熟してきた**
+
+PC=Dialog / モバイル=Drawerの自動切り替えは、設定画面の「PCはモーダル、モバイルは実ページ」という方針と同じ思想の延長線上にある。デバイスごとに最適なインタラクションパターンを選ぶという設計判断が、個別コンポーネントレベルまで浸透してきた。confirm-dialogのAlertDialog化も含め、「何をどう見せるか」のレイヤーが整理されつつある。
+
+**バッチPRという運用判断**
+
+27コミットを1つのPR #1047にまとめてマージしたのは、個別PRのレビューコストとリリースの確実性のトレードオフの結果だろう。4月前半の変更が互いに依存し合っている（search削除→toast刷新→dialog改善）状況では、バッチの方がコンフリクトリスクが低い。ただし、この規模のバッチが常態化しないよう、次の2週間は小粒なPRで回すリズムを意識したい。
+
+---
+
 ## 2026-04-15
 
 ### v0.26.0リリース + パフォーマンス全面最適化 + 価値観UI刷新
