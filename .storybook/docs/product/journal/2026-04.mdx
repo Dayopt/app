@@ -6,6 +6,40 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-17
+
+### モバイル UX 仕上げと Opus 4.7 移行の周辺整備
+
+31コミット、70ファイル変更（+2,567 / -981行）。billing ダイアログ・モバイルカレンダー・タグ UI の実機能変更と、Opus 4.7 migration 後の周辺ドキュメント・ルール整備が並走した1日。午前中にプロダクト機能を一気に仕上げ、午後は AI 協業まわりの規範体系を組み直した。
+
+#### やったこと
+
+**Billing ダイアログ一式（5件）**: トライアル終了と決済エラーの2系統で、ダイアログ本体 → フック (`useTrialEndedDialog` / `usePaymentErrorDialog`) → base-layout-content への統合の順に積み上げ。決済エラーはさらに `useAppInlineBanner` 経由でバナー表示系も整備し、stage 1 として実装を固めた。
+
+**モバイルカレンダー操作体系の再設計（9件）**: 月グリッドのセル高さを 44px に引き上げ、swipe の directionRatio を 1.2 に下げて斜めスワイプ無反応域を縮小。ブロック操作は tap=Inspector / longpress=ドラッグ に統一してリサイズハンドルを廃止。短ブロックのリサイズ侵入幅やゴースト最小高さも含めて、触感を整えた。Inspector の TimeRow もモバイルで縦積みに変更。
+
+**タグ UI の badge 化（8件）**: タグ選択 UI を badge 形式に刷新し、`TagBadgeList` に共通化。破壊的フォームダイアログを `DestructiveFormDialog` に集約、タグフィルタのグループ変更メニュー整理、アイコン選択時のメニュー自動閉鎖、グループ配下タグ作成時の親色継承まで含めて、タグ関連の触り心地を揃えた。
+
+**Stats タグ詳細の刷新（1件）**: タグ詳細のエントリ一覧をリッチリスト + ページネーションに全面刷新。
+
+**Opus 4.7 migration の周辺整備（7件）**: 12 project skill に When to Use / When NOT to Use セクションを追加し発動条件を明文化、skill 設計ルールを `.claude/rules/skill-design.md` に常駐化、migration note を `docs/development/opus-4-7-skill-triggers.md` に記録。続いて CLAUDE.md のコーディング規範セクションを「絶対禁止」からポジティブ例示化して [ADR-007](../../dev/adr/ADR-007-positive-framing-coding-norms) に記録、MCP サーバー利用基準を `.claude/rules/mcp-usage.md` に分離、auto mode 使用ガイドラインを `.claude/rules/ai-behavior.md` に追加、Stop hook での完了音通知を settings.local.json に設定。
+
+#### なぜ今日この作業をしたか
+
+午前中はモバイル体験の仕上げフェーズ。4月前半のバッチマージで UI 基盤が安定したので、その上に「まだ触り心地が悪い」残タスクを潰す作業が続いた。billing のエラー系ダイアログは trial / payment の2系統で構造が揃うので、コンポーネント → フック → 統合の3層で順に積むほうが認知負荷が低い。モバイルカレンダーは 44px ヒット領域、tap/longpress の使い分け、リサイズハンドル廃止といった「短ブロックでも誤操作しない」ための調整を一気にかけた。タグ UI の badge 化は、chip / icon + text 併記などの既存パターンから「バッジ1種類で統一」へ集約する決断で、TagBadgeList に寄せれば今後の追加も含めて変更面が小さくなる。
+
+午後に Opus 4.7 migration の周辺整備に転じた。朝時点で skill description のリライトと skill-design.md の常駐化までは完了していたが、CLAUDE.md の禁止リストがネガティブ形のままだった。Opus 4.7 はポジティブ例示への遵守率が高いという性質に合わせて、意味をゼロ差分にしたまま表現だけ書き換える月次 distillation を実施。あわせて MCP 利用基準 (mcp-usage.md) と auto mode ガイドライン (ai-behavior.md) を分離・追加し、「どのモードで何に委ねるか」の運用軸を整えた。Stop hook の完了音は、長時間タスク中に子供の対応をしつつ戻ってこれるようにするための実務的な仕掛けで、設定は 5 分で完了する ROI の高い作業だった。
+
+全体として「実機能の触感を仕上げる午前」と「AI 協業の規範を整える午後」が綺麗に分かれた1日。commit 分割時に commitlint の subject-case ルールが日本語サブジェクト先頭の英大文字略語を拒否することに気付き、メッセージを言い換える必要があったのは次回以降の運用 tips として小さいが有効な発見だった。
+
+#### Claudeの所感
+
+**ポジティブ例示化は「意味を変えないリライト」として理想的な月次タスク**: ADR-007 の変換対応表を見ると、11項目中 10項目が「禁止 → 代替」から「望ましい挙動 + 具体例」に機械的に書き換えられた。残り 1項目（features/ 新規トップレベル相談）はプロセス要件なのでネガティブ形維持が適切、という判断基準も自然に働いた。Opus 4.7 の解釈性向上という目的変数に対して、差分レビューが容易（意味ゼロ差分）、行数増加も +3%（104 → 107）に収まる、という副作用の小ささが実行のしやすさを保証している。同種の distillation を今後も月次で回せると、CLAUDE.md の「AI 向けドキュメントとしての質」が時間とともに上がる構造になる。
+
+**運用モード軸で `.claude/rules/` を整理する構造が見えてきた**: `ai-behavior.md` に auto mode ガイドラインを追加したことで、extended thinking（thought budget 軸）・subagent model selection（モデル軸）・auto mode（介入頻度軸）が同じファイルに並ぶ形になった。これは偶然ではなく、どれも「タスクに対して AI をどう稼働させるか」という運用意思決定の軸で、設計判断の根拠も共通している（タスクの既知度、影響範囲、意思決定点の有無）。次に effort level の skill 単位切り替えを入れるときも、同じ軸に沿って整理すれば自然に収まる。
+
+**Stop hook の完了音は小さい投資で実務的価値が大きい**: solo dev + 子育て中という実利用文脈では、長時間タスクを回している間に離席してよいかの判断が意思決定コストになる。afplay を async hook で 1 行鳴らすだけの設定は、数分で終わる変更だが毎日使う性質の ROI が高い。同種の「AI 協業の体感を上げる軽量な仕組み」は、記事で紹介される公式機能（hook / auto mode / effort level）に Dayopt 固有の運用判断を載せることで今後も積み上げられる領域で、未着手の effort level 動的切替も同じ文脈に位置付けられる。
+
 ## 2026-04-16
 
 ### UI基盤の大掃除 — search削除・toast刷新・dialog改善・バッチマージ
