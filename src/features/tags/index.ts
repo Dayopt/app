@@ -12,7 +12,7 @@ export {
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';
-export { IconPicker } from './components/IconPicker';
+export { IconPicker, IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
 export type { HoveredTagInfo } from './components/TagQuickSelector';

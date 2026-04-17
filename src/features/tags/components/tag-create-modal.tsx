@@ -298,7 +298,7 @@ export function TagCreateModal({
           {!inheritedColor && (
             <Field>
               <FieldLabel>{t('tags.labels.selectIcon')}</FieldLabel>
-              <IconPicker value={icon} onChange={setIcon} color={effectiveColor} />
+              <IconPicker value={icon} onChange={setIcon} />
             </Field>
           )}
 

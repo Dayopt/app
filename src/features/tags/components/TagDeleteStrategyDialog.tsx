@@ -1,19 +1,15 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
-import { Input } from '@/lib/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
-import { cn } from '@/lib/utils';
 
 import { TAG_SEARCH_VISIBILITY_THRESHOLD } from '../constants';
 import type { Tag, TagDeleteStrategy } from '../types';
-import { TagIcon } from './TagIcon';
+import { TagBadgeList } from './TagBadgeList';
 
 interface TagDeleteStrategyDialogProps {
   open: boolean;
@@ -41,7 +37,6 @@ export function TagDeleteStrategyDialog({
 
   const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_entries');
   const [targetTagId, setTargetTagId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -49,18 +44,8 @@ export function TagDeleteStrategyDialog({
     if (open) {
       setStrategy('delete_entries');
       setTargetTagId(null);
-      setSearchQuery('');
     }
   }
-
-  const filteredTags = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return availableTags;
-    }
-
-    const query = searchQuery.toLowerCase();
-    return availableTags.filter((tag) => tag.name.toLowerCase().includes(query));
-  }, [availableTags, searchQuery]);
 
   const handleConfirm = useCallback(async () => {
     await onConfirm(strategy, targetTagId ?? undefined);
@@ -97,53 +82,17 @@ export function TagDeleteStrategyDialog({
 
         {strategy === 'reassign' ? (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-xs">{t('deleteStrategy.selectTarget')}</p>
-
-            {showSearch ? (
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('deleteStrategy.searchTags')}
-                  aria-label={t('deleteStrategy.searchTags')}
-                  className="pl-8"
-                />
-              </div>
-            ) : null}
-
-            <div
-              role="radiogroup"
-              aria-label={t('deleteStrategy.selectTarget')}
-              className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-1"
-            >
-              {filteredTags.map((tag) => {
-                const isSelected = targetTagId === tag.id;
-
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={isSelected}
-                    onClick={() => setTargetTagId(tag.id)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors',
-                      isSelected
-                        ? 'bg-state-selected text-foreground'
-                        : 'hover:bg-state-hover text-foreground',
-                    )}
-                  >
-                    <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
-                    <ColonTagLabel name={tag.name} />
-                  </button>
-                );
-              })}
-              {filteredTags.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-2 text-center text-xs">
-                  {t('page.noTags')}
-                </p>
-              ) : null}
+            <p className="text-muted-foreground px-4 text-xs">{t('deleteStrategy.selectTarget')}</p>
+            <div className="max-h-48 overflow-y-auto rounded-lg border">
+              <TagBadgeList
+                tags={availableTags}
+                selectedId={targetTagId}
+                onSelect={(id) => setTargetTagId(id)}
+                searchable={showSearch}
+                supportDrilldown={false}
+                asRadioGroup
+                ariaLabel={t('deleteStrategy.selectTarget')}
+              />
             </div>
           </div>
         ) : null}

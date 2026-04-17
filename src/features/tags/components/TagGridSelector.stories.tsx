@@ -214,7 +214,7 @@ function CreateTagForm({ parentTags, onBack, onCreateAndSelect }: CreateTagFormP
         {/* アイコン（任意） */}
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-sm">アイコン</span>
-          <IconPicker value={selectedIcon} onChange={setSelectedIcon} color={selectedColor} />
+          <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
         </div>
 
         {/* グループ（任意） */}
