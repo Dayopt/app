@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { Check, ChevronLeft, Plus, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ActionFooter } from '@/lib/components/ui/action-footer';
@@ -219,10 +219,10 @@ function CreateTagFormView({
 }
 
 // ─────────────────────────────────────────────────────────
-// Grid Tag Cell
+// Tag Badge Cell
 // ─────────────────────────────────────────────────────────
 
-function TagGridCell({
+function TagBadgeCell({
   tag,
   isSelected = false,
   hasChildren = false,
@@ -240,6 +240,13 @@ function TagGridCell({
   const colorClasses = getTagColorClasses(tag.color);
   const displayName = parseColonTag(tag.name).suffix ?? tag.name;
 
+  const selectedStyle = isSelected
+    ? {
+        borderColor: colorClasses.cssVar,
+        backgroundColor: colorClasses.cssVarTint,
+      }
+    : undefined;
+
   return (
     <button
       type="button"
@@ -249,22 +256,17 @@ function TagGridCell({
       }
       onMouseLeave={onHoverEnd}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
+        'flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-sm transition-colors',
         'active:scale-95 active:transition-transform',
-        isSelected ? 'ring-primary ring-2' : 'hover:bg-state-hover',
-        colorClasses.tint,
+        isSelected ? 'text-foreground' : 'border-border text-foreground hover:bg-state-hover',
       )}
+      style={selectedStyle}
     >
-      <div className="relative flex size-8 items-center justify-center">
-        <TagIcon icon={tag.icon} color={tag.color} size="lg" />
-        {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
-      </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
-        <span className="truncate">{displayName}</span>
-        {hasChildren && (
-          <ChevronLeft className="text-muted-foreground size-4 shrink-0 rotate-180" />
-        )}
-      </span>
+      <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+      <span className="truncate">{displayName}</span>
+      {hasChildren && (
+        <ChevronRight className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+      )}
     </button>
   );
 }
@@ -368,10 +370,10 @@ function TagQuickSelectorContent({
           </span>
         </button>
 
-        {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-2">
+        {/* 親タグ自体 + 子タグbadge */}
+        <div className="flex flex-wrap gap-2 px-4 py-2">
           {parentTag && (
-            <TagGridCell
+            <TagBadgeCell
               tag={parentTag}
               isSelected={selectedId === parentTag.id}
               onSelect={() => handleSelect(parentTag.id, parentTag.name)}
@@ -380,7 +382,7 @@ function TagQuickSelectorContent({
             />
           )}
           {children.map((child) => (
-            <TagGridCell
+            <TagBadgeCell
               key={child.id}
               tag={child}
               isSelected={selectedId === child.id}
@@ -425,13 +427,13 @@ function TagQuickSelectorContent({
         </div>
       )}
 
-      {/* タググリッド */}
+      {/* タグbadge一覧 */}
       {!isTagZero && (
-        <div className="grid grid-cols-4 gap-2 px-4 py-2">
+        <div className="flex flex-wrap gap-2 px-4 py-2">
           {parentTags.map((tag) => {
             const hasChildren = childrenByPrefix.has(tag.name);
             return (
-              <TagGridCell
+              <TagBadgeCell
                 key={tag.id}
                 tag={tag}
                 isSelected={selectedId === tag.id}
@@ -448,19 +450,17 @@ function TagQuickSelectorContent({
               />
             );
           })}
-          {/* + 新規作成セル */}
+          {/* + 新規作成badge */}
           <button
             type="button"
             onClick={() => setView({ type: 'create' })}
             className={cn(
-              'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
+              'border-border hover:bg-state-hover text-muted-foreground flex min-h-11 items-center gap-1 rounded-full border border-dashed px-3 py-2 text-sm transition-colors',
               'active:scale-95 active:transition-transform',
             )}
           >
-            <span className="bg-muted flex size-8 items-center justify-center rounded-full">
-              <Plus className="text-muted-foreground size-5" />
-            </span>
-            <span className="text-muted-foreground text-sm">{t('tagSelector.new')}</span>
+            <Plus className="size-4" aria-hidden="true" />
+            <span>{t('tagSelector.new')}</span>
           </button>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { Check, ChevronDown, ChevronLeft, Plus } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { fn } from 'storybook/test';
 
 import { Button } from '@/lib/components/ui/button';
@@ -63,7 +63,7 @@ const MANY_TAGS: MockTag[] = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// Grid Tag Cell
+// Tag Badge Cell
 // ─────────────────────────────────────────────────────────
 
 interface TagGridCellProps {
@@ -76,31 +76,35 @@ interface TagGridCellProps {
 function TagGridCell({ tag, isSelected = false, hasChildren = false, onSelect }: TagGridCellProps) {
   const colorClasses = getTagColorClasses(tag.color);
 
+  const selectedStyle = isSelected
+    ? {
+        borderColor: colorClasses.cssVar,
+        backgroundColor: colorClasses.cssVarTint,
+      }
+    : undefined;
+
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
+        'flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-sm transition-colors',
         'active:scale-95 active:transition-transform',
-        isSelected ? 'ring-primary ring-2' : 'hover:brightness-95',
+        isSelected ? 'text-foreground' : 'border-border text-foreground hover:bg-state-hover',
       )}
-      style={{ backgroundColor: colorClasses.cssVarTint }}
+      style={selectedStyle}
     >
-      <div className="relative flex size-8 items-center justify-center">
-        <TagIcon icon={tag.icon} color={tag.color} size="lg" />
-        {isSelected && <Check className="absolute inset-0 m-auto size-4 text-white" />}
-      </div>
-      <span className="text-foreground flex w-full items-center justify-center gap-1 text-sm">
-        <span className="truncate">{tag.name}</span>
-        {hasChildren && <span className="text-muted-foreground shrink-0 text-xs">›</span>}
-      </span>
+      <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+      <span className="truncate">{tag.name}</span>
+      {hasChildren && (
+        <ChevronRight className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+      )}
     </button>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-// Create New Cell (+) — グリッド末尾のボタン
+// Create New Badge (+) — 末尾のボタン
 // ─────────────────────────────────────────────────────────
 
 function CreateCell({ onClick }: { onClick: () => void }) {
@@ -109,14 +113,12 @@ function CreateCell({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        'bg-muted hover:bg-state-hover flex flex-col items-center justify-center gap-2 rounded-2xl p-2 transition-colors',
+        'border-border hover:bg-state-hover text-muted-foreground flex min-h-11 items-center gap-1 rounded-full border border-dashed px-3 py-2 text-sm transition-colors',
         'active:scale-95 active:transition-transform',
       )}
     >
-      <span className="bg-muted flex size-8 items-center justify-center rounded-full">
-        <Plus className="text-muted-foreground size-5" />
-      </span>
-      <span className="text-muted-foreground text-sm">新規</span>
+      <Plus className="size-4" aria-hidden="true" />
+      <span>新規</span>
     </button>
   );
 }
@@ -370,8 +372,8 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
           <span className="text-foreground font-medium">{view.prefix}</span>
         </button>
 
-        {/* 親タグ自体 + 子タググリッド */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-2">
+        {/* 親タグ自体 + 子タグbadge */}
+        <div className="flex flex-wrap gap-2 px-4 py-2">
           {parentTag && (
             <TagGridCell
               tag={parentTag}
@@ -395,9 +397,9 @@ function TagGridSelector({ tags, selectedId, onSelect, onCreateAndSelect }: TagG
     );
   }
 
-  // メイン画面: 親タググリッド
+  // メイン画面: 親タグbadge
   return (
-    <div className="grid grid-cols-4 gap-2 px-4 py-2">
+    <div className="flex flex-wrap gap-2 px-4 py-2">
       {parentTags.map((tag) => {
         const hasChildren = childrenByPrefix.has(tag.name);
         return (
@@ -505,8 +507,8 @@ export const GridWithChildren: Story = {
             <span className="text-foreground font-medium">仕事</span>
           </div>
 
-          {/* 親タグ自体 + 子タグ grid */}
-          <div className="grid grid-cols-4 gap-2 px-4 py-2">
+          {/* 親タグ自体 + 子タグbadge */}
+          <div className="flex flex-wrap gap-2 px-4 py-2">
             <TagGridCell
               tag={{ id: '1', name: '仕事', color: 'blue', icon: 'briefcase' }}
               isSelected={selected === '1'}
@@ -661,7 +663,7 @@ export const AllPatterns: Story = {
                 <TagIcon icon="briefcase" color="blue" size="sm" />
                 <span className="text-foreground font-medium">仕事</span>
               </div>
-              <div className="grid grid-cols-4 gap-2 px-4 py-2">
+              <div className="flex flex-wrap gap-2 px-4 py-2">
                 <TagGridCell
                   tag={{ id: 'p-0', name: '仕事', color: 'blue', icon: 'briefcase' }}
                   onSelect={fn()}
