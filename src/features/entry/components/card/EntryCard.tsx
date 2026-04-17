@@ -455,12 +455,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             </div>
           )}
 
-          {/* 下端リサイズハンドル（Draft/Past は非表示）
-             短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に最大限張り出し、
-             ブロック内への侵入を 4px まで絞る。ここを深く取り過ぎるとブロック下部で
-             ハンドルが stopPropagation してドラッグ起動に到達しなくなるため。
-             モバイル時はハンドル位置に視覚インジケータを表示して「掴める場所」を明示。*/}
-          {!isDraft && !isPast && (
+          {/* 下端リサイズハンドル（PC専用、Draft/Past は非表示）
+             モバイルは「tap=Inspector / longpress=ドラッグ」の二耳モデルに統一するため
+             ハンドル自体を出さない。リサイズは Inspector の時間編集 UI から行う。
+             PC では短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に
+             最大限張り出し、ブロック内侵入を 4px に絞る。深く取り過ぎるとブロック下部で
+             ハンドルが stopPropagation してドラッグ起動に到達しなくなるため。*/}
+          {!isDraft && !isPast && !isMobile && (
             <div
               className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
               role="slider"
@@ -479,14 +480,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}
-            >
-              {isMobile && (
-                <span
-                  aria-hidden
-                  className="bg-border pointer-events-none absolute top-1/2 left-1/2 h-1 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                />
-              )}
-            </div>
+            />
           )}
         </div>
         {/* /カード本体 */}
