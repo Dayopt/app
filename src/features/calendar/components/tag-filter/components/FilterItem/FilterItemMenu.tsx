@@ -3,7 +3,7 @@
 import { BarChart3, Eye, FolderUp, Merge, Palette, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { IconPicker, TagIcon } from '@/features/tags';
+import { IconPickerDropdownItems, TagIcon } from '@/features/tags';
 import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
 import {
   DropdownMenuContent,
@@ -115,11 +115,8 @@ export function FilterItemMenu({
             <Smile className="mr-2 size-4" />
             {t('calendar.filter.changeIcon')}
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent
-            className="max-h-80 w-72 overflow-y-auto p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <IconPicker value={currentIcon ?? null} onChange={onIconChange} color={displayColor} />
+          <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
+            <IconPickerDropdownItems value={currentIcon ?? null} onChange={onIconChange} />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       )}
