@@ -40,7 +40,7 @@ export function TimeRow({
   isPrimary = false,
 }: TimeRowProps) {
   return (
-    <div className="flex min-h-11 items-center justify-between">
+    <div className="flex min-h-11 flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-0">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span
@@ -88,7 +88,7 @@ export function TimeRowPlaceholder({
   muted = false,
 }: TimeRowPlaceholderProps) {
   return (
-    <div className="flex min-h-11 items-center justify-between">
+    <div className="flex min-h-11 flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-0">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span className="text-muted-foreground text-sm">{label}</span>
