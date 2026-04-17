@@ -85,18 +85,18 @@ function CreateTagFormView({
 
   const canSubmit = name.trim().length > 0;
 
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) return;
-    const fullName = selectedGroup ? `${selectedGroup}:${name.trim()}` : name.trim();
-    onCreateAndSelect(fullName, selectedColor, selectedIcon);
-  }, [canSubmit, selectedGroup, name, selectedColor, selectedIcon, onCreateAndSelect]);
-
-  // グループ選択で色を自動継承
+  // グループ選択で色を自動継承（親の色が最終的に採用される）
   const effectiveColor = useMemo(() => {
     if (!selectedGroup) return selectedColor;
     const group = parentTags.find((t) => t.name === selectedGroup);
     return (group?.color as TagColorName) ?? selectedColor;
   }, [selectedGroup, parentTags, selectedColor]);
+
+  const handleSubmit = useCallback(() => {
+    if (!canSubmit) return;
+    const fullName = selectedGroup ? `${selectedGroup}:${name.trim()}` : name.trim();
+    onCreateAndSelect(fullName, effectiveColor, selectedIcon);
+  }, [canSubmit, selectedGroup, name, effectiveColor, selectedIcon, onCreateAndSelect]);
 
   return (
     <div className="flex flex-col overflow-y-auto" style={{ maxHeight: '60vh' }}>
