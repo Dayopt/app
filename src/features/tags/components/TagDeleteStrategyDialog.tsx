@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
 import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
 
-import { TAG_SEARCH_VISIBILITY_THRESHOLD } from '../constants';
 import type { Tag, TagDeleteStrategy } from '../types';
 import { TagBadgeList } from './TagBadgeList';
 
@@ -53,8 +52,6 @@ export function TagDeleteStrategyDialog({
 
   const isConfirmDisabled = strategy === 'reassign' && !targetTagId;
 
-  const showSearch = availableTags.length > TAG_SEARCH_VISIBILITY_THRESHOLD;
-
   return (
     <DestructiveFormDialog
       open={open}
@@ -83,12 +80,11 @@ export function TagDeleteStrategyDialog({
         {strategy === 'reassign' ? (
           <div className="space-y-2">
             <p className="text-muted-foreground px-4 text-xs">{t('deleteStrategy.selectTarget')}</p>
-            <div className="max-h-48 overflow-y-auto rounded-lg border">
+            <div className="max-h-48 overflow-y-auto">
               <TagBadgeList
                 tags={availableTags}
                 selectedId={targetTagId}
                 onSelect={(id) => setTargetTagId(id)}
-                searchable={showSearch}
                 supportDrilldown={false}
                 asRadioGroup
                 ariaLabel={t('deleteStrategy.selectTarget')}

@@ -114,20 +114,13 @@ export function TagFlatList({
     });
   }, []);
 
-  // グループ候補を算出（FilterItemMenu のグループ変更メニュー用）
+  // グループ候補: ルート直下のフラットタグのみ（子タグは出さない）。並びはサイドバーと同じ sort_order
   const groupOptions = useMemo<GroupOption[]>(() => {
-    const prefixes = new Map<string, string | null>();
-    for (const tag of tags) {
-      const { prefix, suffix } = parseColonTag(tag.name);
-      if (suffix !== null) {
-        if (!prefixes.has(prefix)) prefixes.set(prefix, tag.color);
-      } else {
-        if (!prefixes.has(tag.name)) prefixes.set(tag.name, tag.color);
-      }
-    }
-    return Array.from(prefixes.entries())
-      .map(([name, color]) => ({ name, color }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return tags
+      .filter((tag) => parseColonTag(tag.name).suffix === null && tag.is_active !== false)
+      .slice()
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .map((tag) => ({ name: tag.name, color: tag.color, icon: tag.icon }));
   }, [tags]);
 
   // プレフィックスでグルーピング（sort_order は触らず、UI表示時にまとめる）
@@ -687,6 +680,7 @@ function SortableTagItem({
                 displayColor={displayColor}
                 currentIcon={tag.icon}
                 currentGroup={suffix !== null ? currentGroup : null}
+                currentTagName={tag.name}
                 groupOptions={groupOptions}
                 isGrouped={isGrouped}
                 isMobile={isMobile ?? false}
