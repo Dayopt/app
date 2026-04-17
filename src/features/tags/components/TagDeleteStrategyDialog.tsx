@@ -6,10 +6,12 @@ import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
+import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
 import { Input } from '@/lib/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+
+import { TAG_SEARCH_VISIBILITY_THRESHOLD } from '../constants';
 import type { Tag, TagDeleteStrategy } from '../types';
 import { TagIcon } from './TagIcon';
 
@@ -25,7 +27,7 @@ interface TagDeleteStrategyDialogProps {
 /**
  * タグ削除戦略選択ダイアログ
  *
- * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる
+ * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる。
  */
 export function TagDeleteStrategyDialog({
   open,
@@ -66,20 +68,18 @@ export function TagDeleteStrategyDialog({
 
   const isConfirmDisabled = strategy === 'reassign' && !targetTagId;
 
+  const showSearch = availableTags.length > TAG_SEARCH_VISIBILITY_THRESHOLD;
+
   return (
-    <ConfirmDialog
+    <DestructiveFormDialog
       open={open}
       onClose={onClose}
       onConfirm={handleConfirm}
       title={t('delete.confirmTitleWithName', { name: tagName })}
-      variant="destructive"
+      description={t('deleteStrategy.usedByEntries', { count: entryCount })}
       confirmDisabled={isConfirmDisabled}
     >
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          {t('deleteStrategy.usedByEntries', { count: entryCount })}
-        </p>
-
         <RadioGroup
           value={strategy}
           onValueChange={(value) => setStrategy(value as TagDeleteStrategy)}
@@ -99,7 +99,7 @@ export function TagDeleteStrategyDialog({
           <div className="space-y-2">
             <p className="text-muted-foreground text-xs">{t('deleteStrategy.selectTarget')}</p>
 
-            {availableTags.length > 5 ? (
+            {showSearch ? (
               <div className="relative">
                 <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
                 <Input
@@ -112,7 +112,11 @@ export function TagDeleteStrategyDialog({
               </div>
             ) : null}
 
-            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-1">
+            <div
+              role="radiogroup"
+              aria-label={t('deleteStrategy.selectTarget')}
+              className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-1"
+            >
               {filteredTags.map((tag) => {
                 const isSelected = targetTagId === tag.id;
 
@@ -120,6 +124,8 @@ export function TagDeleteStrategyDialog({
                   <button
                     key={tag.id}
                     type="button"
+                    role="radio"
+                    aria-checked={isSelected}
                     onClick={() => setTargetTagId(tag.id)}
                     className={cn(
                       'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors',
@@ -142,6 +148,6 @@ export function TagDeleteStrategyDialog({
           </div>
         ) : null}
       </div>
-    </ConfirmDialog>
+    </DestructiveFormDialog>
   );
 }
