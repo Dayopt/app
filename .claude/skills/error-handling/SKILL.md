@@ -1,6 +1,6 @@
 ---
 name: error-handling
-description: エラーハンドリングスキル。エラー処理、Sentry連携、ユーザー通知の実装時に自動発動。ErrorBoundary配置とAppErrorパターンを支援。
+description: try/catch を新規に書く時、tRPC mutation/query の `onError` 実装時、ErrorBoundary の配置・粒度変更時、Sentry 連携コード（`captureException` / scope 設定）編集時、AppError 正規化が漏れている実装を検出した時、ユーザー向けエラー通知が未実装の async 処理を見つけた時に発動。AppError 正規化 → ログ出力 → ユーザー通知 → 自動復旧の4段パターンを適用する。型定義のみ・UI 文言のみの変更では発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -9,12 +9,22 @@ maxTurns: 10
 
 Dayoptでの統一エラー処理パターンを支援するスキル。
 
-## When to Use（自動発動条件）
+## When to Use
 
-- エラー処理を実装する時
-- ErrorBoundaryを配置する時
-- ユーザー向けエラーメッセージを設計する時
-- 「エラー」「error」「Sentry」キーワード
+以下の状況で発動:
+
+- try/catch を新規に書く時（外部依存呼び出し、async 境界、最上位 async ハンドラ）
+- tRPC mutation/query に `onError` handler を追加する時
+- 新規 ErrorBoundary を配置する時、または既存 ErrorBoundary の粒度を変える時
+- Sentry 連携コード（`captureException` / scope / context 設定）を編集する時
+- try/catch で `console.error` や生の `throw` のみで AppError 正規化が漏れている実装を検出した時
+- ユーザー向けエラー通知（toast / modal / inline alert）が未実装の mutation / async 処理を見つけた時
+
+## When NOT to Use
+
+- 型定義のみの変更（エラーフロー未変更、`AppError` 型の export 追加など）
+- テストの正常系 assertion 追加のみ（エラーパスを触らない）
+- UI 文言のみの error message 修正（`CLAUDE.md` の copywriting ルールに従う、ロジック変更なし）
 
 ## エラー処理の全体像
 

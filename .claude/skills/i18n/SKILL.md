@@ -1,6 +1,6 @@
 ---
 name: i18n
-description: 国際化スキル。UIテキストを含むコンポーネント作成時、ハードコードされた文字列検出時に自動発動。next-intlパターンに沿った翻訳キー追加を支援。
+description: UI テキストを含む component の新規実装・編集時、ハードコードされた日本語/英語の文字列リテラルを検出した時、`messages/en/*.json` / `messages/ja/*.json` 翻訳ファイルを編集する時、新規 locale namespace を `src/lib/i18n/request.ts` に追加する時に発動。next-intl v4 の `useTranslations` / `getTranslations` パターンを適用する。内部ログやエラーコードなど非 UI 文字列には発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -9,14 +9,21 @@ maxTurns: 10
 
 Dayoptの国際化対応を支援するスキル。next-intl v4を使用。
 
-## When to Use（自動発動条件）
+## When to Use
 
-以下の状況で自動発動：
+以下の状況で発動:
 
-- UIテキストを含むコンポーネント作成・編集時
-- ハードコードされた日本語/英語文字列を検出した時
-- 翻訳ファイルの編集が必要な時
-- 「翻訳」「i18n」「多言語」等のキーワード
+- 新規 component で UI テキスト（ボタン文言、ラベル、placeholder、aria-label）を書く時
+- `messages/en/*.json` / `messages/ja/*.json` に新規キーを追加する時
+- 新規 namespace を `src/lib/i18n/request.ts` の `NAMESPACES` 配列に登録する時
+- 既存 component で日本語/英語のハードコード文字列リテラル（`"記録"` / `"Save"` など）を検出した時
+- en / ja のキー不整合（片方にしか存在しないキー、`lint:i18n` で検出される類）が発生した時
+
+## When NOT to Use
+
+- 内部ログ・logger 出力用の英語文字列（`logger.info('...')`、ユーザーに表示されない）
+- ErrorBoundary のフォールバックメッセージなど開発者向け文言（`error-handling` skill の領域）
+- Storybook の test fixture / story args の表示確認用文字列（実運用 UI ではない）
 
 ## 技術スタック
 

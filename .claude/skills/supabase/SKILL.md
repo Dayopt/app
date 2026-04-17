@@ -1,6 +1,6 @@
 ---
 name: supabase
-description: Supabaseスキル。RLS設計、マイグレーション作成、Realtime購読の実装時に自動発動。3環境分離での安全な運用を支援。
+description: 新規 Supabase migration ファイル（`supabase/migrations/*.sql`）を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読（`postgres_changes`）を新規実装する時、Edge Functions（`supabase/functions/`）を追加・デプロイする時、Staging / Production の 3 環境分離運用で DB 変更を適用する時に発動。3 環境構成の安全な運用パターンを適用する。アプリケーション層のみの変更では発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -9,13 +9,28 @@ maxTurns: 25
 
 Dayoptでの Supabase 運用パターンを支援するスキル。
 
-## When to Use（自動発動条件）
+## When to Use
 
-- 新しいテーブル/カラムを追加する時
-- RLSポリシーを設計する時
-- Realtime購読を実装する時
-- マイグレーションを作成する時
-- 「supabase」「RLS」「migration」キーワード
+以下の状況で発動:
+
+- `supabase/migrations/*.sql` に新規 migration ファイルを追加する時
+- 既存テーブルに RLS ポリシーを新規定義、または `USING` / `WITH CHECK` を変更する時
+- Storage バケットポリシー（`storage.objects` の RLS）を編集する時
+- Realtime 購読（`postgres_changes` subscription）を新規実装・変更する時
+- `supabase/functions/` 配下に Edge Function を追加・デプロイする時
+- DB 変更が Staging のみに適用され、Production 適用が未完了の状態を検出した時
+
+## When NOT to Use
+
+- アプリケーション層のみの変更（tRPC router 内部ロジック、`trpc-router-creating` skill の領域、DB 未変更）
+- 認証フローのみの変更で DB schema が変わらない時（`security` skill の領域）
+- 型生成結果（`src/lib/supabase/types.ts`）のみの更新（`types:generate` 後の自動反映）
+
+## 絶対ルール
+
+- Edge Functions デプロイは `supabase functions deploy {name} --use-api` を必須とする（この環境に Docker がないため、デフォルトの Docker ビルドは失敗する）
+- `db push` は `--project-ref` を受け付けない。リンク済みプロジェクト（`supabase link`）に対して実行される前提で操作する
+- Staging と Production を**同時にデプロイしない**。Staging → 開発者確認 → 指示後に Production の順序を厳守する
 
 ## 3環境構成
 

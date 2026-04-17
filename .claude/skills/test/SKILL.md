@@ -1,6 +1,6 @@
 ---
 name: test
-description: テスト作成スキル。新機能実装後、バグ修正後に自動発動。Vitest + Testing Libraryでのテストパターンを支援。
+description: 新機能実装の完了時（tRPC procedure / React hook / pure function / component の新規作成後）、バグ修正の完了時（回帰防止用）、既存テストの assertion 追加が必要になる実装変更時に発動。Vitest + Testing Library の配置規約（`__tests__/*.test.ts`）に従う。型定義のみ・UI 文言のみ・既存テストのリファクタリングのみの変更時は発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -9,13 +9,21 @@ maxTurns: 15
 
 Dayoptのテスト作成を支援するスキル。Vitest + Testing Libraryを使用。
 
-## When to Use（自動発動条件）
+## When to Use
 
-以下の状況で自動発動：
+以下の状況で発動:
 
-- 新機能の実装が完了した時
-- バグを修正した時
-- 「テスト」「test」「テストを書いて」キーワード
+- 新規 tRPC procedure / service 関数 / React hook / pure function を実装完了した時
+- 複雑な状態遷移を持つ component を新規追加した時
+- Zod schema の制約を追加・変更した時（入力境界の test case 追加）
+- 既存の実装変更で分岐や境界条件が増えた時（未カバーの path が生まれる）
+- バグを修正した直後（同じ回帰を検知するテストを追加する）
+
+## When NOT to Use
+
+- 型定義のみの変更（挙動が変わらず、テスト対象の実装が存在しない）
+- UI 文言・レイアウトのみの変更（`storybook` skill の視覚検証領域、test 対象外）
+- 既存テストのリファクタリング（構造変更のみ、カバレッジは変わらない）
 
 ## 技術スタック
 

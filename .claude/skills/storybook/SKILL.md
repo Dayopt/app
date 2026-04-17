@@ -1,11 +1,26 @@
 ---
 name: storybook
-description: Storybook Story作成スキル。UIコンポーネントのStory追加・更新時に自動発動。公式ベストプラクティスに基づいたStory作成を支援。
+description: Storybook Story の新規作成・既存更新時に発動。`*.stories.tsx` 追加時、UI component の props / variant / state 追加時、Figma 由来のデザイン変更反映時。セマンティックトークンを徹底し AllPatterns Story を必須とする。既存 Story の文言・コメントのみ修正する時や component の internal logic のみ変更時は発動しない。
 effort: medium
 maxTurns: 15
 ---
 
 # Storybook Story作成スキル
+
+## When to Use
+
+以下の状況で発動:
+
+- `*.stories.tsx` ファイルを新規作成する時
+- 既存 component に props / variant / state を追加した後、Story 側に反映する時
+- Figma デザイン変更を component に反映した後、AllPatterns Story を更新する時
+- 新しい Foundation / Pattern（トークン、レイアウト規則）を定義して Storybook で可視化する時
+- `src/components/` 配下の UI component を新規追加する時
+
+## When NOT to Use
+
+- 既存 Story の文言・コメント・説明テキストのみを修正する時（regression リスクなし）
+- Component の internal logic のみ変更し、表示 props / variant / state が変わらない時（Story 再生成不要）
 
 ## 絶対ルール
 

@@ -1,6 +1,6 @@
 ---
 name: eagle-dayopt
-description: Eagleデザインアセットパイプライン。Storybookスナップショット同期・検索・レビュー・Archive整理を支援。
+description: Eagle デザインアセット管理の運用時に発動。Storybook snapshot の撮影・同期（`scripts/eagle-capture.ts` / `scripts/eagle-sync.ts`）指示時、タグ単位での snapshot 更新タイミング、Eagle に登録された component のレビュー状態確認時、参考 UI と実装の並び比較指示時、Archive 整理（`scripts/eagle-cleanup.ts`）指示時に発動。Eagle App（localhost:41596）起動を前提とする。通常の component 実装や `*.stories.tsx` 追加それ自体では発動しない。
 effort: high
 maxTurns: 20
 ---
@@ -10,16 +10,26 @@ maxTurns: 20
 Dayoptのデザインアセット管理パイプラインを操作するためのスキル。
 Storybookスナップショットの撮影・同期、Eagle検索、レビュー、Archive整理を支援する。
 
-## このスキルを使用するタイミング
+## When to Use
 
-以下のキーワードが含まれる場合に自動的に起動：
+**ライフサイクル型** — Eagle デザインアセットパイプラインの運用イベントで発動。通常 skill のように「コード変化」起点ではなく、パイプラインの各ステージ（撮影 → 同期 → レビュー → 整理）が契機となる。
 
-- 「eagle」「Eagle」
-- 「スナップショット更新」「スナップショット同期」「スクショ」
-- 「デザインアセット」「design asset」
-- 「Archive整理」「アーカイブ整理」
-- 「コンポーネントのデザイン」「デザイン見せて」
-- 「未レビュー」「要レビュー」
+**パイプラインステージ起点:**
+
+- Storybook snapshot の撮影・Eagle 同期（「スナップショット更新」「スクショ撮って」「Button だけ撮影」等）指示時
+- タグ（feature / release）確定後、対応する snapshot を Eagle に反映する運用タイミング
+- Archive 整理や Eagle フォルダ構造セットアップ（「Archive 整理」「フォルダ構造セットアップ」）指示時
+
+**診断・参照起点:**
+
+- Eagle 登録済み component のレビュー状態確認（「未レビュー一覧」「要レビュー」等）時
+- 参考 UI と実装の並び比較（「BottomSheet のデザイン見せて」「参考 UI と実装を並べて」）指示時
+
+## When NOT to Use
+
+- 通常の component 実装や `*.stories.tsx` 追加それ自体（`storybook` skill の領域、Eagle 同期は別イベント）
+- 各 commit / push 単位での snapshot 撮影（Dayopt はタグ単位での撮影運用、commit 単位では発動しない）
+- 単発の画像アセット追加のみで Storybook snapshot 更新を伴わない時（Eagle への手動登録は別作業）
 
 ## 前提条件
 
