@@ -12,8 +12,6 @@ import { BottomTabBar } from './BottomTabBar';
 import { useAppInlineBanner } from './useAppInlineBanner';
 
 import { MainContentWrapper } from './main-content-wrapper';
-import { MobileCreateSheet } from './MobileCreateSheet';
-import { MobileHistoryStrip } from './MobileHistoryStrip';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -60,15 +58,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
 
-        {/* Main Content（BottomTabBar + HistoryStrip分の余白を確保） */}
-        <MainContentWrapper className="pb-24">{children}</MainContentWrapper>
+        {/* Main Content（BottomTabBar分の余白を確保） */}
+        <MainContentWrapper className="pb-16">{children}</MainContentWrapper>
       </div>
-
-      {/* 作成ボトムシート（RecentBlocks） */}
-      <MobileCreateSheet />
-
-      {/* 履歴ストリップ（BottomTabBarの直上） */}
-      <MobileHistoryStrip />
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />

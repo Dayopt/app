@@ -3,7 +3,7 @@
 import { SyncStatusIndicator } from '@/lib/components/shell/SyncStatusIndicator';
 
 interface AppHeaderProps {
-  /** 左スロット: 戻るボタン、MobileCreateButton等 */
+  /** 左スロット: 戻るボタン等 */
   leftSlot?: React.ReactNode;
   /** 中央コンテンツ: タイトル、日付表示等 */
   children: React.ReactNode;

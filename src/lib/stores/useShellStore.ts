@@ -10,10 +10,7 @@ import { platformStorage } from '@/lib/zustand/storage';
 // ── Sheet Types ──
 
 /** シェルレベルのシート/ダイアログ（排他: 1つしか開かない） */
-export type SheetType =
-  | { type: 'mobileCreate' }
-  | { type: 'contact' }
-  | { type: 'settings'; category: SettingsCategory };
+export type SheetType = { type: 'contact' } | { type: 'settings'; category: SettingsCategory };
 
 // ── State ──
 
@@ -125,7 +122,7 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
 /**
  * シェルUI状態を統合管理するZustandストア
  *
- * 統合対象: useLayoutStore + usePageTitleStore + useMobileCreateSheetStore + useContactStore + useSettingsStore
+ * 統合対象: useLayoutStore + usePageTitleStore + useContactStore + useSettingsStore
  *
  * @example
  * ```tsx
