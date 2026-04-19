@@ -6,15 +6,6 @@
     },
     "calendar": {
       "title": "Calendar"
-    },
-    "history": {
-      "placed": "Added {name} at {time}",
-      "overlapError": "{time} overlaps with an existing block"
-    },
-    "recentBlocks": {
-      "title": "Recent",
-      "empty": "No recent blocks",
-      "emptyHint": "Will appear automatically when you add blocks to the calendar"
     }
   }
 }

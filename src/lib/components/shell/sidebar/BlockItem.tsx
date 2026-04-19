@@ -1,11 +1,10 @@
 'use client';
 
 /**
- * BlockItem — ブロックアイテム（共通コンポーネント）
+ * BlockItem — ブロックアイテム
  *
  * タグアイコン + タグ名 + duration + ホバー時メニュー
  * クリックで現在時刻にエントリを配置。
- * Palette・RecentBlocks の両方で使用。
  */
 
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';

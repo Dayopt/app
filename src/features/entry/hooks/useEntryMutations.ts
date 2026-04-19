@@ -173,7 +173,6 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     },
     onSettled: () => {
       void utils.entries.list.invalidate();
-      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -336,7 +335,6 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     },
     onSettled: async () => {
       void utils.entries.list.invalidate();
-      void utils.history.getRecentBlocks.invalidate();
     },
   });
 
@@ -397,7 +395,6 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       logger.debug('[mutation:delete] onSuccess', { id });
       void utils.entries.list.invalidate(undefined, { refetchType: 'all' });
       void utils.entries.getById.invalidate({ id }, { refetchType: 'all' });
-      void utils.history.getRecentBlocks.invalidate();
     },
     onError: (error, { id }, context) => {
       logger.error('[mutation:delete] onError', error);

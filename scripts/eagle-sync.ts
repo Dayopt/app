@@ -249,7 +249,6 @@ async function setupTagGroups(): Promise<void> {
         'onboarding',
         'chronotype',
         'notifications',
-        'history',
         'palette',
         'search',
         'contact',

@@ -155,7 +155,6 @@ export function parseScreenshotFilename(filename: string): ParsedScreenshot {
     'onboarding',
     'chronotype',
     'notifications',
-    'history',
     'palette',
     'search',
     'contact',
