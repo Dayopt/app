@@ -135,7 +135,7 @@ export function useBlockPlace() {
       if (hasOverlapInCache(queryClient, params.startTime, end)) {
         const displayStart = convertToTimezone(params.startTime, timezone);
         const timeStr = formatHHmm(displayStart);
-        toast.error(t('sidebar.history.overlapError', { time: timeStr }));
+        toast.error(t('entry.toast.overlapError', { time: timeStr }));
         return;
       }
 
@@ -151,7 +151,7 @@ export function useBlockPlace() {
             // Undo 付きトースト
             const displayStart = convertToTimezone(params.startTime, timezone);
             const timeStr = formatHHmm(displayStart);
-            toast.success(t('sidebar.history.placed', { name: params.tagName, time: timeStr }), {
+            toast.success(t('entry.toast.placed', { name: params.tagName, time: timeStr }), {
               duration: 5000,
               action: {
                 label: t('common.undo'),
