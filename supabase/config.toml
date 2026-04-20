@@ -4,10 +4,15 @@
 # 各設定値には「なぜそうしたか」を記載。
 # 公式リファレンス: https://supabase.com/docs/guides/local-development/cli/config
 #
-# 環境構成:
-#   - ローカル: supabase start（この config.toml を使用）
-#   - Staging:  dayopt-staging プロジェクト（Supabase Dashboard で管理）
-#   - Production: dayopt-app プロジェクト（Supabase Dashboard で管理）
+# 運用モデル: 1 project + branches（詳細: .claude/skills/supabase/SKILL.md）
+#   - Local:      supabase start（この config.toml を使用）
+#   - Preview:    PR 毎に ephemeral な Supabase preview branch を自動生成
+#   - Staging:    persistent branch `staging`（hotfix / Stripe 検証専用）
+#   - Production: main project（Supabase Dashboard で管理）
+#
+# 過渡状態: Pro plan 契約 + GitHub integration 有効化が完了するまでは
+# 従来の 2 project 運用（Staging project + Production project）が継続する。
+# 詳細: docs/development/migration-checklist.md「暫定フロー」節
 # ============================================================
 
 project_id = "dayopt"

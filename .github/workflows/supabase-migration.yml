@@ -1,3 +1,22 @@
+# ============================================================
+# Supabase Migration Workflow
+# ============================================================
+# 運用モデル: 1 project + branches（target state）
+#   - 新モデルでは Supabase GitHub integration が migration を自動適用するため、
+#     この workflow 自体が不要になる（preview branch / main merge いずれも integration 側が処理）。
+#
+# 現状（transitional）: 2 project 運用が継続している間は、この workflow が main merge 時に
+# Staging project → Production project の順で db push する。
+#
+# 移行計画:
+#   1. Production を Pro plan へアップグレード
+#   2. GitHub integration を Production project に接続
+#   3. persistent `staging` branch を作成
+#   4. この workflow を削除（integration が代替）
+#
+# 詳細: docs/development/migration-checklist.md / .claude/skills/supabase/SKILL.md
+# ============================================================
+
 name: 🗃️ Supabase Migration
 
 on:
