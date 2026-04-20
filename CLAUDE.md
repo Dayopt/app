@@ -14,7 +14,9 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 
 ```bash
 # 開発（AIは実行しない）
-npm run dev              # 開発サーバー
+npm run dev              # 開発サーバー（.env.local を参照）
+npm run dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
+npm run env:check        # op references の解決確認
 npm run storybook        # Storybook
 
 # 検証（AI必須：コード変更後）
