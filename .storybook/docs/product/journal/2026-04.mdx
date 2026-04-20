@@ -6,6 +6,38 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-20
+
+### 履歴機能の撤去と Supabase 運用モデルの現実路線化
+
+10コミット、app 側の実機能変更3件 + インフラ / 運用整備5件 + Dependabot 2件。午前〜夜にかけて「履歴機能を丸ごと撤去」「Supabase 単一 project 運用への収束」「1Password 3 vault 運用の立ち上げ」という3つの独立したテーマが並走した1日。午前中に UI 側の撤去作業を一気に終わらせ、午後から夜にかけてインフラ・シークレット管理の再設計に取り組んだ。
+
+#### やったこと
+
+**Sidebar 履歴機能の完全撤去（3件）**: toast キーのリネーム (sidebar.history.\* → entry.toast.\*) を入口に、MobileCreateSheet / MobileHistoryStrip / MobileCreateButton の削除、features/history の barrel 撤去、tRPC history router の除去、Feature Boundary Layer 2 登録の削除、messages/\*/sidebar.json の該当キー除去、Sidebar.docs.mdx の dotVariant 節整理、Eagle 自動タグ付与の参照削除まで一気通貫で実施。
+
+**Supabase 運用モデルの 2 段階方針転換（4件）**: 午前中にまず 1 project + persistent staging branch + ephemeral preview branches の運用方針で SKILL.md / architecture.md / migration-checklist.md / Environments.mdx / CLAUDE.md を全面書き換え。その後 CLAUDE.md に 1Password op-run Phase 1 コマンドを追記、repo 側の forward-compatible な config 更新（supabase/config.toml / migration-checklist.md / workflow 注記）を完了。午前の途中で「旧 Production project が実質空で Staging project 側が実運用だった」ことに気付き、午前の終わりに単一 project 運用へと方針を戻す refactor commit を入れた。types:generate:staging の削除、migration workflow の migrate-staging job 撤去、next.config.mjs の images hostname 変更まで含む。
+
+**1Password 3 vault 運用の立ち上げ（1件）**: .storybook/docs/operations/secrets.mdx に Dayopt-Staging / Dayopt-Production / Dayopt-Shared の 3 vault 構成、op:// reference pattern、NOTES テンプレートを常駐化。scripts/setup-1password.sh に 3 vault + 22 item 骨組みを CLI で作成する初回専用 script（dry-run default、--execute で実行）を追加。.gitignore に .op-env.local を exclude。
+
+**Dependabot（2件）**: production group 14 updates、development group 39 updates。web 側でも major group 7 updates が自動マージ。
+
+#### なぜ今日この作業をしたか
+
+サイドバー履歴は 4 月前半のバッチマージ後も「実質 RecentBlocks だけを表示する装飾」として残っていた。モバイルの MobileCreateSheet / MobileHistoryStrip は中身が RecentBlocks しかなく、独立した存在意義がない。4-17 までのモバイル UX 仕上げで tap=Inspector / longpress=ドラッグ の操作体系が固まった今、履歴という「別の入口」は逆に操作体系の純度を下げる要因になっていた。撤去は toast キーのリネーム → 使っていた UI コンポーネントの削除 → 機能本体の削除、の3 commit に分けることで、各段階での型エラー・参照漏れを段階的に潰せる構造にした。
+
+Supabase 運用の方針転換は朝の時点で「1 project + branches」モデルでドキュメント整備を進めていた途中で、Pro plan 未契約の現状では branches が作れないこと、そして旧 Production project が空で Staging 側が本来の開発環境だったことが発覚した。選択肢は「Pro を今すぐ契約して target state に合わせる」「単一 project 運用を暫定として明文化する」の2つで、ローンチ前の simplicity を優先して後者を選んだ。forward-compatible な docs 更新を先に commit した上で、現状に即した refactor を重ねる順序にしたため、target state の記述は target state として残り、実運用ドキュメントだけが単一 project 運用に書き換わる綺麗な2段階構造になった。
+
+1Password 3 vault 運用は、op-run 経由の secrets 注入で「生キーを Claude のコンテキストに乗せない」運用を成立させるための前準備。dev:op / env:check コマンドを Phase 1 として CLAUDE.md に追記し、setup-1password.sh は初回専用 script として冪等性より「一発で骨組みを作れる」ことを優先した。
+
+#### Claudeの所感
+
+**「撤去系タスクは toast key → UI component → 機能本体の順で分ける」は型チェックと review がしやすい構造**: 今回の履歴撤去は3 commit で進んだが、先に toast key を移動させておくと「この key の移動先が正しいか」の review が独立した小さい単位で完結する。続く UI component 撤去では useShellStore の sheet type を外し、最後の features/history 削除で tRPC / Feature Boundary / Eagle scripts まで追う。commit 境界を「何を壊しうるか」で切ると、各段階で型エラーの情報密度が高く保たれる。同じパターンは今後の feature 撤去でも再利用できそう。
+
+**2 段階 commit で方針転換を構造化する手法が機能した**: Supabase 運用モデルの変更は、理想状態の docs 書き換え → 現状の refactor という順序にしたことで、target state の記述を捨てずに現状運用に収束できた。逆順（現状 refactor から始めて target state を後で書く）だと「なぜこう書き換えるのか」の根拠が commit に残らず、後日の再移行時に意図を辿りにくくなる。Pro plan 契約後に再度 branching 構成へ移行する際、今日の docs commit が出発点として機能するはず。
+
+**secrets 運用の前準備は ROI が見えにくいが、Claude との協業文脈では投資価値が高い**: 1Password 3 vault 構成 + op:// reference pattern を常駐化しただけでは実運用の価値は可視化されない。しかし Phase 2 以降で CI / preview env にも op-run を拡張するとき、今日の vault 構造と reference pattern が出発点になる。また、Claude に .env.local を直接触らせない運用（.proposed file 経由で人間が merge）が前提にある以上、生キーを含む file が増えるほど Claude のコンテキスト汚染リスクも上がる。vault 構造で secrets を「名前」として扱える状態にすることは、AI 協業前提のプロジェクトでは基礎体力そのものになる。
+
 ## 2026-04-17
 
 ### モバイル UX 仕上げと Opus 4.7 移行の周辺整備
