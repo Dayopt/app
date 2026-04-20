@@ -50,15 +50,19 @@ src/features/{feature}/server/
 
 機能単位で設置。アプリ全体を1つでラップしない。
 
-## 環境構成（2環境構成）
+## 環境構成（1 project + branches 構成）
 
-| 環境           | Supabase                   | Vercel                    |
-| -------------- | -------------------------- | ------------------------- |
-| **Preview**    | dayopt-staging（Tokyo）    | npm run dev / Preview URL |
-| **Production** | t3-nico's Project（Tokyo） | mainマージで自動デプロイ  |
+1 Supabase project + persistent staging branch + ephemeral preview branches で運用する。git と同じ世界観（`main` = production / `staging` = persistent / `feat/*` = preview）。
 
-- ローカル開発は Preview Supabase に直接接続（`vercel env pull` で自動同期）
-- オフライン開発が必要な場合は `USE_LOCAL_DB=true` でローカルDB（127.0.0.1:54321）にフォールバック
-- マイグレーションは mainマージ時に Staging へ自動適用、Production は手動 `db push`
+| 環境           | 実体                        | ライフサイクル              | 用途                                                 |
+| -------------- | --------------------------- | --------------------------- | ---------------------------------------------------- |
+| **Preview**    | Supabase preview branch     | PR open〜close（ephemeral） | 日常の開発・PR検証                                   |
+| **Staging**    | persistent branch `staging` | 長命・固定URL               | Stripe webhook検証、hotfix検証、closed beta          |
+| **Production** | main project                | 永続                        | 実ユーザー                                           |
+| **Local**      | `supabase start`            | 任意                        | 緊急避難用（オフライン時等、デフォルトでは使わない） |
+
+- ローカル開発は preview branch に `vercel env pull` で接続（自動同期）
+- オフライン開発が必要な場合のみ `USE_LOCAL_DB=true` でローカル Supabase（127.0.0.1:54321）にフォールバック
+- マイグレーションは PR で preview branch に自動適用、main merge で production に自動適用。staging branch 経由は Stripe 検証・hotfix・closed beta 用の特殊ケースのみ
 - 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
-- 詳細: `docs/development/migration-checklist.md`
+- 詳細: `.claude/skills/supabase/SKILL.md` / `docs/development/migration-checklist.md`

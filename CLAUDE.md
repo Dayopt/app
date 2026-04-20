@@ -102,6 +102,6 @@ error-handling / storybook / test / security / store-creating / docs-writing / t
 
 ## デプロイ
 
-- **IMPORTANT**: StagingとProductionを同時にデプロイしない
-- Staging → 開発者が確認 → 指示後にProductionへ
+- **IMPORTANT**: Staging branch と Production を同時に触らない
+- Staging branch → 開発者が確認 → 指示後に Production へ
 - `supabase functions deploy --use-api`（Docker不要）

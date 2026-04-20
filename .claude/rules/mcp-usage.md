@@ -20,7 +20,7 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - schema / RLS / migration を編集する前に、現在のスキーマ状態を取得して差分を確認する
   - `supabase/migrations/` に新 SQL を追加する前にローカル DB の既存テーブル・ポリシーを inspect する
   - Realtime 購読や RLS 挙動のデバッグ時に実データで挙動を確認する
-- **境界ケース**: `npm run types:generate:staging` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。
+- **境界ケース**: `npm run types:generate:staging` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。※ 新運用モデル（1 project + branches）では日常 types 生成の対象は preview branch。script 名が `staging` のままなのは package.json 再設計までの過渡状態なので、コマンド実行時は preview branch 向けに読み替える（follow-up issue）。
 
 ### Context7 (`mcp__context7__*`)
 
