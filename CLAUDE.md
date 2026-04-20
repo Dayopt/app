@@ -32,7 +32,7 @@ npm run test:integration # 統合テスト
 npm run test:e2e:smoke   # E2Eスモークテスト
 
 # 型生成・DB
-npm run types:generate:staging  # Supabase型生成（staging）
+npm run types:generate          # Supabase型生成（Production project）
 npm run migration:create        # マイグレーション作成
 npm run db:fresh                # ローカルDB初期化+シード
 

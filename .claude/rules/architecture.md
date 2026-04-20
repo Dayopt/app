@@ -50,19 +50,19 @@ src/features/{feature}/server/
 
 機能単位で設置。アプリ全体を1つでラップしない。
 
-## 環境構成（1 project + branches 構成）
+## 環境構成（単一 project 運用）
 
-1 Supabase project + persistent staging branch + ephemeral preview branches で運用する。git と同じ世界観（`main` = production / `staging` = persistent / `feat/*` = preview）。
+ローンチ前の簡易構成。単一 Supabase project (`yvglwblxrnrenfifsnje`) で dev / preview / production をすべて賄う。
 
-| 環境           | 実体                        | ライフサイクル              | 用途                                                 |
-| -------------- | --------------------------- | --------------------------- | ---------------------------------------------------- |
-| **Preview**    | Supabase preview branch     | PR open〜close（ephemeral） | 日常の開発・PR検証                                   |
-| **Staging**    | persistent branch `staging` | 長命・固定URL               | Stripe webhook検証、hotfix検証、closed beta          |
-| **Production** | main project                | 永続                        | 実ユーザー                                           |
-| **Local**      | `supabase start`            | 任意                        | 緊急避難用（オフライン時等、デフォルトでは使わない） |
+| 環境           | 実体                   | 用途                                      |
+| -------------- | ---------------------- | ----------------------------------------- |
+| **Local**      | `supabase start`       | オフライン開発（デフォルトでは使わない）  |
+| **Production** | `yvglwblxrnrenfifsnje` | dev / preview / production 全てここを向く |
 
-- ローカル開発は preview branch に `vercel env pull` で接続（自動同期）
+- ローカル開発は Vercel env を `vercel env pull` で取得し、Production project に接続
 - オフライン開発が必要な場合のみ `USE_LOCAL_DB=true` でローカル Supabase（127.0.0.1:54321）にフォールバック
-- マイグレーションは PR で preview branch に自動適用、main merge で production に自動適用。staging branch 経由は Stripe 検証・hotfix・closed beta 用の特殊ケースのみ
+- マイグレーションは main merge で GitHub Actions が Production に適用
 - 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
+- **破壊的操作の制限**: preview / dev が production DB を直接触るため、`db reset` 等は厳禁。RLS 信頼前提
+- **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）
 - 詳細: `.claude/skills/supabase/SKILL.md` / `docs/development/migration-checklist.md`

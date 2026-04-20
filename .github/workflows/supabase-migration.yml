@@ -1,12 +1,13 @@
 # ============================================================
 # Supabase Migration Workflow
 # ============================================================
-# 運用モデル: 1 project + branches（target state）
-#   - 新モデルでは Supabase GitHub integration が migration を自動適用するため、
-#     この workflow 自体が不要になる（preview branch / main merge いずれも integration 側が処理）。
+# 運用モデル: 単一 project 運用（ローンチ前の簡易構成）
 #
-# 現状（transitional）: 2 project 運用が継続している間は、この workflow が main merge 時に
-# Staging project → Production project の順で db push する。
+# プロジェクト: yvglwblxrnrenfifsnje（旧 Staging を Production として使用）
+#
+# 将来: Pro plan へ移行して GitHub integration を有効化すると、
+#   この workflow 自体が不要になる（integration が preview branch / main merge
+#   両方で migration を自動適用する）。
 #
 # 移行計画:
 #   1. Production を Pro plan へアップグレード
@@ -25,46 +26,13 @@ on:
     paths:
       - 'supabase/migrations/**'
   workflow_dispatch:
-    inputs:
-      skip_production:
-        description: 'Production デプロイをスキップ'
-        required: false
-        default: 'false'
-        type: boolean
 
 permissions:
   contents: read
 
 jobs:
-  migrate-staging:
-    name: 🗃️ Push Migrations to Staging
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: 🏗️ Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: 🔗 Link to Staging
-        run: supabase link --project-ref yvglwblxrnrenfifsnje
-
-      - name: 🧪 Dry Run
-        run: supabase db push --dry-run
-
-      - name: 🚀 Push Migrations
-        run: supabase db push
-
   migrate-production:
     name: 🗃️ Push Migrations to Production
-    needs: migrate-staging
-    if: ${{ github.event.inputs.skip_production != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
@@ -81,7 +49,7 @@ jobs:
           version: latest
 
       - name: 🔗 Link to Production
-        run: supabase link --project-ref qloztwfbrbqtjijxicnd
+        run: supabase link --project-ref yvglwblxrnrenfifsnje
 
       - name: 🧪 Dry Run
         run: supabase db push --dry-run

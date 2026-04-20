@@ -4,25 +4,27 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 # 環境構成
 
-Dayoptは2環境構成（Preview / Production）で運用。
+Dayopt は**単一 Supabase project 運用**（ローンチ前の簡易構成）。dev / preview / production すべて同じ DB を参照する。
 
 ---
 
 ## 環境一覧
 
-| 環境           | Supabase                   | Vercel                    | URL                            |
-| -------------- | -------------------------- | ------------------------- | ------------------------------ |
-| **Preview**    | dayopt-staging（Tokyo）    | npm run dev / Preview URL | localhost:3000 / \*.vercel.app |
-| **Production** | t3-nico's Project（Tokyo） | mainマージで自動デプロイ  | 本番ドメイン                   |
+| 環境           | Supabase           | Vercel                    | URL              |
+| -------------- | ------------------ | ------------------------- | ---------------- |
+| **Local**      | `supabase start`   | `npm run dev`             | localhost:3000   |
+| **Preview**    | Production project | Vercel Preview URL        | `*.vercel.app`   |
+| **Production** | Production project | main マージで自動デプロイ | `app.dayopt.app` |
 
-> ローカル開発は Preview Supabase に直接接続。`npm run dev` で `vercel env pull` が自動実行され、環境変数が同期される。
+> ローカル開発は Production DB に直接接続する。`npm run dev` で `vercel env pull` が自動実行され、環境変数が同期される。
 
 ## Supabase プロジェクト
 
-| プロジェクト      | Reference ID           | リージョン | 用途                    |
-| ----------------- | ---------------------- | ---------- | ----------------------- |
-| dayopt-staging    | `yvglwblxrnrenfifsnje` | Tokyo      | Preview（ローカル含む） |
-| t3-nico's Project | `qloztwfbrbqtjijxicnd` | Tokyo      | 本番                    |
+| プロジェクト | Reference ID           | リージョン | 用途                              |
+| ------------ | ---------------------- | ---------- | --------------------------------- |
+| Production   | `yvglwblxrnrenfifsnje` | Tokyo      | dev / preview / production すべて |
+
+> **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）。
 
 ---
 
@@ -58,26 +60,18 @@ const supabase = createServerClient(
 
 ---
 
-## 分離仕様
+## 単一 project 運用のリスク
 
-### DB の分離
-
-- Preview と Production のデータベースは**完全に独立**
-- 本番データは Preview に存在しない
-- テストデータは自由に作成・削除可能
-
-### Auth の分離
-
-- 各環境のユーザーアカウントは**共有されない**
-- Preview でサインアップ → Preview のみログイン可能
-- 本番アカウントで Preview にはログインできない
+- preview / dev が production DB を直接触るため、**破壊的操作（`db reset`、大量 delete）は厳禁**
+- RLS を信頼してユーザー分離する前提
+- テストユーザーと実ユーザーが同じ DB に共存する
 
 ### Vercel 環境変数
 
 ```
-Production     → 本番 Supabase
-Preview        → ステージング Supabase（全 Preview ブランチ共通）
-Development    → ステージング Supabase（vercel env pull で同期）
+Production     → Production Supabase
+Preview        → Production Supabase（全 Preview ブランチ共通）
+Development    → Production Supabase（vercel env pull で同期）
 ```
 
 ---
@@ -94,31 +88,24 @@ supabase start
 USE_LOCAL_DB=true npm run dev
 ```
 
-> 通常の開発ではDocker不要。オフライン時のみ使用。
+> 通常の開発では Docker 不要。オフライン時のみ使用。
 
 ---
 
 ## マイグレーション
 
-マイグレーションは各環境に**個別に適用**が必要。
 詳細な手順は `docs/development/migration-checklist.md` を参照。
 
-### Preview（自動）
+### 自動適用
 
 `main` ブランチに `supabase/migrations/**` の変更がpushされると、
-GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で Preview Supabase に適用。
+GitHub Actions（`.github/workflows/supabase-migration.yml`）が自動で Production Supabase に適用。
 
-### Production（手動）
+### 手動適用（緊急時）
 
 ```bash
-supabase link --project-ref qloztwfbrbqtjijxicnd
+supabase link --project-ref yvglwblxrnrenfifsnje
 supabase db push
-```
-
-### Preview Supabase のリセット
-
-```bash
-npm run db:reset-preview
 ```
 
 ### リンク状態の確認
@@ -137,8 +124,7 @@ CI/CD ワークフローで使用するシークレット一覧。GitHub の Set
 | シークレット名                  | 用途                          | 使用ワークフロー       |
 | ------------------------------- | ----------------------------- | ---------------------- |
 | `SUPABASE_ACCESS_TOKEN`         | Supabase CLI 認証             | migration, integration |
-| `STAGING_DB_PASSWORD`           | Staging DB パスワード         | migration (staging)    |
-| `PRODUCTION_DB_PASSWORD`        | Production DB パスワード      | migration (production) |
+| `PRODUCTION_DB_PASSWORD`        | Production DB パスワード      | migration              |
 | `NEXT_PUBLIC_SUPABASE_URL`      | Supabase URL（ビルド時）      | ci, e2e                |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名キー（ビルド時） | ci, e2e                |
 | `NEXT_PUBLIC_APP_URL`           | アプリ URL（ビルド時）        | ci, e2e                |
@@ -161,7 +147,7 @@ feature branch → push → Vercel Preview URL 自動生成
                   ↓
               PR → main マージ
                   ├── Vercel: 自動 Production デプロイ
-                  └── GitHub Actions: Preview Supabase にマイグレーション自動適用
+                  └── GitHub Actions: Production Supabase にマイグレーション自動適用
 
 バージョン記録（任意）:
   git tag v0.X.0 → GitHub Actions → GitHub Release 作成
@@ -181,19 +167,17 @@ feature branch → push → Vercel Preview URL 自動生成
 2. Vercel が自動で Preview デプロイ
 
 3. Preview URL にモバイルでアクセス
-   - 固定URL: `dayopt-git-{branch}-t3-nicos-projects.vercel.app`
+   - 固定URL: `app-git-{branch}-dayopt.vercel.app`
 
-4. Preview でサインアップしてテスト
+4. Preview でテスト（本番と同じ DB）
 
 ---
 
 ## トラブルシューティング
 
-| 症状                           | 対処                                                                                 |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| Preview にログインできない     | Preview 環境で新規サインアップが必要（本番アカウントは使えない）                     |
-| マイグレーションが反映されない | 対象環境にリンクしてから `supabase db push` を実行                                   |
-| Preview デプロイがエラー       | Vercel ダッシュボードでビルドログを確認                                              |
-| Production が paused           | Supabase ダッシュボード → Settings → General → Resume                                |
-| 環境変数エラーで起動しない     | `vercel env pull .env.local` を実行、または `.env.example` を参照                    |
-| ローカルとPreviewで動作が違う  | 同じDBを使うため通常は発生しない。`.env.local` が古い場合は `npm run dev` で自動更新 |
+| 症状                           | 対処                                                              |
+| ------------------------------ | ----------------------------------------------------------------- |
+| マイグレーションが反映されない | Production にリンクしてから `supabase db push` を実行             |
+| Preview デプロイがエラー       | Vercel ダッシュボードでビルドログを確認                           |
+| Production が paused           | Supabase ダッシュボード → Settings → General → Resume             |
+| 環境変数エラーで起動しない     | `vercel env pull .env.local` を実行、または `.env.example` を参照 |

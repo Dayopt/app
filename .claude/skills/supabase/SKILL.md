@@ -1,13 +1,27 @@
 ---
 name: supabase
-description: 新規 Supabase migration ファイル(`supabase/migrations/*.sql`)を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読(`postgres_changes`)を新規実装する時、Edge Functions(`supabase/functions/`)を追加・デプロイする時、Preview / Staging / Production の branch 構成で DB 変更を適用する時に発動。1 project + persistent staging branch 構成の安全な運用パターンを適用する。アプリケーション層のみの変更では発動しない。
+description: 新規 Supabase migration ファイル(`supabase/migrations/*.sql`)を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読(`postgres_changes`)を新規実装する時、Edge Functions(`supabase/functions/`)を追加・デプロイする時、Production project への DB 変更を適用する時に発動。単一 project 運用(ローンチ前)の安全パターンを適用する。アプリケーション層のみの変更では発動しない。
 effort: high
 maxTurns: 25
 ---
 
 # Supabaseスキル
 
-Dayoptでの Supabase 運用パターンを支援するスキル。**1 project + persistent staging branch + ephemeral preview branches** 構成を前提とする。
+Dayoptでの Supabase 運用パターンを支援するスキル。
+
+> ## ⚠️ 現状: 単一 project 運用（ローンチ前）
+>
+> 現在は **単一 Supabase project (`yvglwblxrnrenfifsnje`)** のみで運用している（dev / preview / production すべて同じ DB を参照）。以下の branching に関する記述は**ローンチ後の target state** であり、現時点では該当しない。
+>
+> **現状で守ること**:
+>
+> - migration は main merge で GitHub Actions が Production に自動適用
+> - 手動 `db push` は緊急時のみ（整合性のため極力避ける）
+> - preview / dev が production DB を直接触るため `db reset` 厳禁
+> - Edge Functions は Production project にデプロイ（`--use-api` 必須）
+> - RLS を信頼して分離する前提
+>
+> **target state**（Pro plan + GitHub integration 後）: 以下の branch 運用に移行する。
 
 ## When to Use
 
