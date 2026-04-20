@@ -159,4 +159,5 @@ temp/
 # Lighthouse CI
 .lighthouseci/
 .env*.local
+.op-env.local
 AGENTS.md
