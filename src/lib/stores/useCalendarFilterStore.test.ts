@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from './useCalendarFilterStore';
 
 describe('useCalendarFilterStore', () => {
   beforeEach(() => {

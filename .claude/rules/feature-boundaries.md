@@ -57,6 +57,22 @@ feature は `@/lib/stores/*` から直接 import する。calendar feature も�
 | Provider Composition   | `src/shell/providers/`                     |
 | Shell State / Contexts | `src/shell/stores/`, `src/shell/contexts/` |
 
+## Composition Hub
+
+一部の feature は「機能単位」ではなく「ページ全体を合成する hub」として機能する。これらは Composition Layer（`src/app/*/page.tsx` / `src/app/*/_composition/`）からのみ import され、**他 feature からは import しない**。
+
+現在該当する hub:
+
+- `features/calendar` — calendar page 全体の合成（views / tag-filter / navigation / interaction を同居）。191 ファイル、6 サブディレクトリ
+
+hub の barrel は「ページから見た public API」のみを export する。hub 内部の sub-component / helper / lib は barrel に出さない（Composition Layer 以外からは触らない）。
+
+なぜ hub 扱いなのか:
+
+- 歴史的に 1 feature 内に view / filter / navigation / interaction が同居し、相互依存が密で切り分けが困難
+- pre-launch 時点では解体リスクが大きいため、「blast radius は hub 内部に閉じる」という形で境界を運用で担保する
+- launch 後に子 feature（`calendar-view` / `calendar-filter` / `calendar-interaction` 等）へ段階的に剥がす予定（`~/.claude/plans/p1-5-calendar-decomposition.md` 参照）
+
 ## Feature標準ディレクトリ構造
 
 ```

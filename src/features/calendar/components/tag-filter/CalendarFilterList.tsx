@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 
 import { useIsFetching } from '@tanstack/react-query';
 
