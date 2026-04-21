@@ -163,7 +163,7 @@ const LOYALTY_BADGES: BadgeDefinition[] = [
     category: 'loyalty',
     nameKey: 'badges.oneYear.name',
     descriptionKey: 'badges.oneYear.description',
-    icon: 'Crown',
+    icon: 'Medal',
     isTiered: false,
   },
 ];

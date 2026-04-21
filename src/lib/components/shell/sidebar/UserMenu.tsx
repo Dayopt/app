@@ -4,6 +4,7 @@ import {
   Book,
   Building,
   ChevronDown,
+  Crown,
   ExternalLink,
   FileText,
   HelpCircle,
@@ -13,7 +14,6 @@ import {
   Palette,
   Settings,
   Shield,
-  Sparkles,
   UserCircle,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -115,7 +115,7 @@ export function UserMenu({
             {t('navigation.navUser.account')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenSettings('billing')}>
-            <Sparkles />
+            <Crown />
             {t('navigation.navUser.upgradePlan')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleOpenSettings('display')}>
