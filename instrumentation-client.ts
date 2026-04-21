@@ -10,6 +10,8 @@
 import * as Sentry from '@sentry/nextjs';
 import { createBrowserClient } from '@supabase/ssr';
 
+import { withPIIScrub } from '@/lib/sentry/scrub-pii';
+
 // ナビゲーション計測用フック（Sentry SDK が要求）
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
@@ -68,8 +70,10 @@ function initSentry(dsn: string) {
     // 本番・プレビュー環境のみ有効
     enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
 
-    // エラーフィルタリング
-    beforeSend(event) {
+    // エラーフィルタリング + PII スクラビング
+    // withPIIScrub は exception message / URL / breadcrumbs / contexts など
+    // 全フィールドを walk して PII を redact する
+    beforeSend: withPIIScrub((event) => {
       const errorMessage = event.exception?.values?.[0]?.value || '';
 
       // ブラウザ拡張機能・サードパーティスクリプト・ネットワーク系のノイズを除外
@@ -96,7 +100,7 @@ function initSentry(dsn: string) {
       }
 
       return event;
-    },
+    }),
 
     // クライアントサイド用インテグレーション
     integrations: [
