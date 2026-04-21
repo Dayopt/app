@@ -6,6 +6,42 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-21
+
+### Codex レビュー P0→P1→P2 を 1 日で処理し、calendar stores を lib/stores に集約した日
+
+15 コミット、221 ファイル変更 / +6564 / -4892。午前から夜までほぼすべて「Codex の PR レビュー対応」に費やした特異な 1 日。指摘を P0（機能バグ / セキュリティ）/ P1（UX / 回帰リスク）/ P2（コード品質）の 3 段階に分け、P0 は個別 PR + merge、P1/P2 は同一 branch で積み上げるというハイブリッド運用で完走した。副産物として calendar 系の store を lib/stores に hub 化する構造変更、Turnstile への本番移行、Sentry PII scrubbing の全フィールド化、hydration gate の 3 段階リファインが入った。
+
+#### やったこと
+
+**P0: 機能 / セキュリティ系（6件）**: timezone 変更時の entry router tz cache 即時 invalidate、silent な notification mutation 失敗を toast + Sentry capture に変更、calendar 系 global store の lib/stores 抽出（settings / navigation）、calendar settings store の persist 削除 + server sync 一本化、モバイル閲覧専用モード（Option B）の明示化 + tag reorder 無効化、タグ UI のモーダルからインラインへの置換。
+
+**P1: UX / 回帰リスク系（3件）**: Sentry beforeSend の PII scrubbing を特定キー limited から全フィールド走査に拡張、notification-settings の preferredLocale に optimistic update を適用、badges-service と tag reorder のユニットテスト追加。
+
+**P2: コード品質 / 周辺系（6件）**: useModalStore を useShellStore に統合、rate limit in-memory fallback を entry feature から lib/rate-limit に切り出し、nowBadge に role=status / aria-live 付与、空状態英訳を Pre-suasion 調に揃える、未使用 prod deps 4 件削除、knip 検出の unused files 掃除 + i18n script path 修正、useCalendarFilterStore を lib/stores に抽出。
+
+**Hydration gate の 3 段階リファイン**: calendar settings store の persist を外したことで hydration gate の判定基準が課題化。最初「fetch 完了」で判定 → apply までの窓で古い値が出る → 「apply 完了」に変更 → offline / paused state で永続ブロック → error 時は gate を開けて loading フォールバック、の 3 fix で収束。
+
+**Turnstile 本番移行 + Upstash rate-limit（web 側 3件）**: reCAPTCHA から Cloudflare Turnstile への移行完了（app 側）、web 側では contact form も Turnstile 化、Upstash 未設定時の本番 reject + 警告ログ、op:// reference での secrets 管理を env:check に統合。
+
+#### なぜ今日この作業をしたか
+
+Codex の PR レビューが溜まっていた。指摘は内容の粒度がバラバラで、機能バグから naming convention まで混在しているため、そのまま順番に潰すと「優先度の錯誤」が起きる。P0 / P1 / P2 に分類してから処理することで、P0 は個別 PR で merge 後のロールバック可能性を担保し、P1/P2 は同一 branch で積み上げて review コストを抑える、というハイブリッド運用が成立した。特に calendar 系の store 抽出は P0 に位置付け（features 間依存の解消）、先に片付けることで後続の P1/P2 が clean な base で進められた。
+
+hydration gate の設計は今日の最大の学び。persist middleware を外して server sync に統一する方針は筋が良いが、「いつ UI を表示するか」の判定を誤ると UX 劣化が出る。当初 fetch 完了で判定したが、TanStack Query の cache から apply して Zustand store に反映するまで 1 tick 遅れる窓で古い値が一瞬出る。apply 完了で判定したら今度は offline / paused 時に gate が閉じっぱなしで永続ブロックする。3 fix commit で収束したが、この apply vs fetch vs paused の 3 軸は今後の server-sync store すべてで意識する必要がある。
+
+Sentry PII scrubbing の拡張は「allow-list 方式だと breadcrumbs.data に入る平文 email を拾えない」ことに気付いたのが契機。ログの完全性より privacy を優先して drop-by-default に切り替えた。LP / ローンチ前の今のうちにこの変更を入れておく方が後戻りコストが小さい。
+
+#### Claudeの所感
+
+**分類してから処理するレビュー運用は、混在する指摘の「優先度錯誤」を防ぐ強力な構造**: Codex のレビューを P0 / P1 / P2 に分けてから処理する運用は、今日の 15 コミットを 1 日で完走させた最大の構造的要因だった。レビューを順番に潰すと、naming convention の議論に 30 分かけた直後に機能バグが見つかる、といった時間配分の狂いが出る。分類フェーズを独立させるだけで、branch 戦略（P0 は個別 PR、P1/P2 は積み上げ）も自然に決まる。この運用は Codex レビューだけでなく、issue tracker のバックログ消化にも転用できそう。
+
+**persist middleware を server sync に置き換える構造変更は「いつ UI を表示するか」の設計が肝**: localStorage に persist する設計はオフライン耐性の一方で、server との整合性が暗黙的になる欠点がある。server sync 一本化に切り替える判断は筋が良いが、hydration gate の 3 段階 fix が示すとおり「UI を見せ始めるタイミング」が新しい論点になる。fetch 完了 / apply 完了 / paused state の 3 軸を意識した default helper を lib/stores に切り出す価値があるかもしれない。calendar filter / navigation / settings の 3 店で同じパターンを繰り返した以上、抽象化の十分条件は満たしている。
+
+**「hub 宣言」は feature 境界を守るための積極的な凝集化パターン**: calendar 系の store を lib/stores に抽出して「hub 宣言」と呼んだのは、features/calendar からの re-export を禁じて直接 lib/stores から import させる方針のこと。これは「features/ → lib/ 一方向」という既存ルールの単なる適用ではなく、feature-agnostic な client state を feature barrel から独立させる積極的な凝集化。同じ判断は shell store / modal store の統合にも適用でき（useModalStore → useShellStore）、今日は calendar 3 store + shell/modal 統合で合計 4 件の hub 化が走った。この判断基準を .claude/rules/architecture.md の store 設計節に昇格させる時期が来ている。
+
+---
+
 ## 2026-04-20
 
 ### 履歴機能の撤去と Supabase 運用モデルの現実路線化
