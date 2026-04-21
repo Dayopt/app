@@ -17,7 +17,8 @@
   },
   "editor.rulers": [80, 120],
   "files.associations": {
-    "*.css": "tailwindcss"
+    "*.css": "tailwindcss",
+    ".op-env*": "shellscript"
   },
   "tailwindCSS.includeLanguages": {
     "typescript": "typescript",
