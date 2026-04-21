@@ -109,7 +109,9 @@ export function useTagRecentEntries(tagId: string) {
     [result.data],
   );
 
-  const hasMore = (result.data?.length ?? 0) >= limit;
+  // hasMore は「可視行が limit に達したか」で判定。raw length で判定すると
+  // null 時刻行で埋まった page でも Load more が出続けて UI が更新されない問題になる
+  const hasMore = (timedEntries?.length ?? 0) >= limit;
 
   const loadMore = useCallback(() => {
     setLimit((prev) => prev + TAG_ENTRIES_PAGE_SIZE);
