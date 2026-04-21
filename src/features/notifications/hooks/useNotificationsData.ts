@@ -11,6 +11,9 @@
  * ```
  */
 
+import { useTranslations } from 'next-intl';
+
+import { handleMutationError } from '@/lib/errors';
 import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
 import { api } from '@/lib/trpc';
 
@@ -65,6 +68,7 @@ export function useNotification(id: string) {
  */
 export function useNotificationMutations() {
   const utils = api.useUtils();
+  const t = useTranslations('notification.errors');
 
   /**
    * キャッシュ無効化（通知関連の全クエリ）
@@ -97,13 +101,17 @@ export function useNotificationMutations() {
 
       return { previousList, previousCount };
     },
-    onError: (_err, _input, context) => {
+    onError: (err, _input, context) => {
       if (context?.previousList) {
         utils.notifications.list.setData(undefined, context.previousList);
       }
       if (context?.previousCount !== undefined) {
         utils.notifications.unreadCount.setData(undefined, context.previousCount);
       }
+      handleMutationError(err, {
+        fallback: t('markAsReadFailed'),
+        scope: 'notification.markAsRead',
+      });
     },
     onSettled: invalidateNotifications,
   });
@@ -128,13 +136,17 @@ export function useNotificationMutations() {
 
       return { previousList, previousCount };
     },
-    onError: (_err, _input, context) => {
+    onError: (err, _input, context) => {
       if (context?.previousList) {
         utils.notifications.list.setData(undefined, context.previousList);
       }
       if (context?.previousCount !== undefined) {
         utils.notifications.unreadCount.setData(undefined, context.previousCount);
       }
+      handleMutationError(err, {
+        fallback: t('markAllAsReadFailed'),
+        scope: 'notification.markAllAsRead',
+      });
     },
     onSettled: invalidateNotifications,
   });
@@ -168,13 +180,14 @@ export function useNotificationMutations() {
 
       return { previousList, previousCount };
     },
-    onError: (_err, _input, context) => {
+    onError: (err, _input, context) => {
       if (context?.previousList) {
         utils.notifications.list.setData(undefined, context.previousList);
       }
       if (context?.previousCount !== undefined) {
         utils.notifications.unreadCount.setData(undefined, context.previousCount);
       }
+      handleMutationError(err, { fallback: t('deleteFailed'), scope: 'notification.delete' });
     },
     onSettled: invalidateNotifications,
   });
@@ -194,10 +207,14 @@ export function useNotificationMutations() {
 
       return { previousList };
     },
-    onError: (_err, _input, context) => {
+    onError: (err, _input, context) => {
       if (context?.previousList) {
         utils.notifications.list.setData(undefined, context.previousList);
       }
+      handleMutationError(err, {
+        fallback: t('deleteAllReadFailed'),
+        scope: 'notification.deleteAllRead',
+      });
     },
     onSettled: invalidateNotifications,
   });

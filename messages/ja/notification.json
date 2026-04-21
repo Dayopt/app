@@ -31,7 +31,11 @@
     "errors": {
       "notSupported": "このブラウザは通知をサポートしていません",
       "permissionFailed": "通知許可を取得できませんでした",
-      "displayFailed": "ブラウザ通知を表示できませんでした"
+      "displayFailed": "ブラウザ通知を表示できませんでした",
+      "markAsReadFailed": "既読にできませんでした。もう一度お試しください",
+      "markAllAsReadFailed": "すべて既読にできませんでした。もう一度お試しください",
+      "deleteFailed": "通知を削除できませんでした。もう一度お試しください",
+      "deleteAllReadFailed": "既読の通知を削除できませんでした。もう一度お試しください"
     },
     "types": {
       "all": "すべて",

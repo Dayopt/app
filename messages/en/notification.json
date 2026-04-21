@@ -31,7 +31,11 @@
     "errors": {
       "notSupported": "This browser does not support notifications",
       "permissionFailed": "Failed to obtain notification permission",
-      "displayFailed": "Failed to display browser notification"
+      "displayFailed": "Failed to display browser notification",
+      "markAsReadFailed": "Could not mark as read. Please try again",
+      "markAllAsReadFailed": "Could not mark all as read. Please try again",
+      "deleteFailed": "Could not delete the notification. Please try again",
+      "deleteAllReadFailed": "Could not delete read notifications. Please try again"
     },
     "types": {
       "all": "All",
