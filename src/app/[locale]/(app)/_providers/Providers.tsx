@@ -201,12 +201,13 @@ export function Providers({ children }: ProvidersProps) {
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {/* 認証ストア初期化（Contextを提供しないので並列配置可能） */}
         <AuthStoreInitializer />
-        {/* UserSettings を Zustand に hydrate（全ページで常に最新設定が反映されるよう app-level で sync） */}
-        <UserSettingsInitializer />
         <ThemeProvider>
           <SessionMonitorProvider>
             <ServiceWorkerProvider>
-              {children}
+              {/* UserSettings の hydration が完了するまで children を render しない。
+                  timezone 等が defaults のまま timezone-dependent mutation が実行
+                  されるのを防ぐ。TanStack Query の永続 cache が効けば体感遅延は極小。 */}
+              <UserSettingsInitializer>{children}</UserSettingsInitializer>
               <GlobalTagMergeModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>
