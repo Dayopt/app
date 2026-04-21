@@ -14,6 +14,7 @@ import {
 } from '@/features/chronotype';
 import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
+import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
@@ -201,6 +202,12 @@ export const userSettingsRouter = createTRPCRouter({
           })
           .select()
           .single();
+
+        // timezone を更新した場合は entry router 側の tz cache を即時 invalidate。
+        // 30 秒 TTL を待たずに新しい timezone で entry が作成されるようにする。
+        if (!error && input.timezone !== undefined) {
+          invalidateUserTimezoneCache(userId);
+        }
 
         // personalization は RPC で atomic に部分更新（並行保存の競合を回避）
         if (input.personalizationValues !== undefined) {
