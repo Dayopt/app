@@ -101,11 +101,19 @@ export function useTagRecentEntries(tagId: string) {
     },
   );
 
+  // entries.list は start_time / end_time が null の未スケジュール行も返す。
+  // TagRecentBlocks は timed entry 前提で日時を表示するため、null 時刻を除外して
+  // 未スケジュール行が timeline を圧迫しないようにする。
+  const timedEntries = useMemo(
+    () => result.data?.filter((e) => e.start_time != null && e.end_time != null),
+    [result.data],
+  );
+
   const hasMore = (result.data?.length ?? 0) >= limit;
 
   const loadMore = useCallback(() => {
     setLimit((prev) => prev + TAG_ENTRIES_PAGE_SIZE);
   }, []);
 
-  return { ...result, hasMore, loadMore };
+  return { ...result, data: timedEntries, hasMore, loadMore };
 }

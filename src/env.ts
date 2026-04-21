@@ -74,6 +74,18 @@ const serverSchema = z
       message: 'STRIPE_SECRET_KEY と STRIPE_WEBHOOK_SECRET はペアで設定してください',
       path: ['STRIPE_WEBHOOK_SECRET'],
     },
+  )
+  .refine(
+    (data) =>
+      !(
+        data.NODE_ENV === 'production' &&
+        (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
+      ),
+    {
+      message:
+        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN は本番環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
+      path: ['UPSTASH_REDIS_REST_URL'],
+    },
   );
 
 export type ServerEnv = z.infer<typeof serverSchema>;
