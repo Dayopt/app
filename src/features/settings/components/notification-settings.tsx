@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/lib/components/ui/select';
 import { Skeleton } from '@/lib/components/ui/skeleton';
-import { toast } from '@/lib/toast';
+import { handleMutationError } from '@/lib/errors/handle-mutation-error';
 import { api } from '@/lib/trpc';
 
 /** 通知設定コンポーネント。メール言語設定を管理する */
@@ -23,11 +23,30 @@ export function NotificationSettings() {
 
   const utils = api.useUtils();
   const updateUserSettings = api.userSettings.update.useMutation({
-    onSuccess: () => {
-      utils.userSettings.get.invalidate();
+    // 楽観的更新: Select の値は query cache から読むため、onMutate で即時反映しないと
+    // server 往復分（数百 ms）UI が旧値を出し続ける。失敗時は rollback。
+    onMutate: async (variables) => {
+      await utils.userSettings.get.cancel();
+      const previous = utils.userSettings.get.getData();
+      if (previous && variables.preferredLocale !== undefined) {
+        utils.userSettings.get.setData(undefined, {
+          ...previous,
+          preferredLocale: variables.preferredLocale,
+        });
+      }
+      return { previous };
     },
-    onError: (error) => {
-      toast.error(t('notification.settings.saveError', { message: error.message }));
+    onError: (error, _variables, context) => {
+      if (context?.previous) {
+        utils.userSettings.get.setData(undefined, context.previous);
+      }
+      handleMutationError(error, {
+        fallback: t('notification.settings.saveError', { message: '' }),
+        scope: 'settings.notification.update',
+      });
+    },
+    onSettled: () => {
+      utils.userSettings.get.invalidate();
     },
   });
 
@@ -55,7 +74,6 @@ export function NotificationSettings() {
             onValueChange={(value: 'en' | 'ja') => {
               updateUserSettings.mutate({ preferredLocale: value });
             }}
-            disabled={updateUserSettings.isPending}
           >
             <SelectTrigger className="w-36">
               <SelectValue />
