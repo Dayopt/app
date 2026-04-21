@@ -17,11 +17,11 @@ import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar storesをlib層に抽出
-import { useCalendarNavigationStore, useCalendarSettingsStore } from '@/features/calendar';
 import type { CalendarViewType } from '@/lib/calendar-constants';
 import { getMultiDayCount, isMultiDayView } from '@/lib/calendar-constants';
 import { convertToTimezone } from '@/lib/date/timezone';
+import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { snapToNextInterval } from '@/lib/time-utils';
 
 import { createListQueryPredicate } from './mutations/mutationUtils';

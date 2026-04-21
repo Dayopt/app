@@ -9,13 +9,11 @@
 
 import { useCallback, useMemo } from 'react';
 
-import type { CalendarSettings, CalendarViewType } from '@/features/calendar';
-import {
-  useCalendarNavigationHandlers,
-  useCalendarSettingsStore,
-  useWeekendToggleShortcut,
-} from '@/features/calendar';
+import type { CalendarViewType } from '@/features/calendar';
+import { useCalendarNavigationHandlers, useWeekendToggleShortcut } from '@/features/calendar';
 import { useUserSettings } from '@/features/settings';
+import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 // =============================================================================
 // Types

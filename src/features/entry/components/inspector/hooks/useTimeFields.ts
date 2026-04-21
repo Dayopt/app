@@ -11,9 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
-import { useCalendarSettingsStore } from '@/features/calendar';
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { api } from '@/lib/trpc';
 import type { EntryWithTags } from '../../../types/entry';
 

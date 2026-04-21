@@ -16,8 +16,8 @@ import {
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useMemo } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cn } from '@/lib/utils';
 
 import { useSwipeGesture } from '../../../hooks/useSwipeGesture';

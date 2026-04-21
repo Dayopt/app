@@ -6,7 +6,7 @@ import { getWeek } from 'date-fns';
 
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import { CalendarDateHeader, DateDisplay, ScrollableCalendarLayout } from '../shared';

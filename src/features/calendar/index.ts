@@ -45,10 +45,10 @@ export {
 // Stores: Cross-feature (used by composition layer in app/)
 export { useCalendarFilterStore } from './stores/useCalendarFilterStore';
 export type { CalendarFilterActions, CalendarFilterState } from './stores/useCalendarFilterStore';
-export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
-export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
-export type { CalendarSettings, DateFormatType } from './stores/useCalendarSettingsStore';
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
+
+// Note: useCalendarSettingsStore / useCalendarNavigationStore / 型 CalendarSettings, DateFormatType は
+// cross-cutting UI state として @/lib/stores/ に移動済み。直接 `@/lib/stores/useCalendar...Store` から import すること。
 
 // Hooks: Cross-feature (used by composition layer in app/)
 export { useCalendarData } from './components/controller/hooks/useCalendarData';

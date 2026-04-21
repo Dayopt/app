@@ -23,8 +23,6 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
-import { useCalendarSettingsStore } from '@/features/calendar';
 import { Button } from '@/lib/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
 import {
@@ -34,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/lib/components/ui/select';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cn } from '@/lib/utils';
 
 export interface MiniCalendarProps {
