@@ -8,13 +8,13 @@ import 'server-only';
 import { userRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { entriesRouter } from '@/features/entry/server/router-index';
-import { emailRouter } from '@/features/notifications/server/email-router';
 import { notificationsRouter } from '@/features/notifications/server/router';
 import { onboardingRouter } from '@/features/onboarding/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
 import { badgesRouter } from '@/features/stats/server/badges-router';
 import { tagsRouter } from '@/features/tags/server/router';
+import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/procedures';
 
 /**

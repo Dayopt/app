@@ -5,12 +5,6 @@ import 'server-only';
  *
  * メール送信のtRPCエンドポイント
  * Resend + React Emailを使用
- *
- * エンドポイント:
- * - email.sendWelcome: ウェルカムメール送信
- * - email.sendReminder: プランリマインダーメール送信
- * - email.sendAccountDeletion: アカウント削除確認メール送信
- * - email.sendTest: テストメール送信（開発用）
  */
 
 import { TRPCError } from '@trpc/server';
@@ -26,7 +20,6 @@ import { PasswordChangedEmail } from '@/emails/PasswordChangedEmail';
 import { PaymentFailedEmail } from '@/emails/PaymentFailedEmail';
 import { PaymentRecoveredEmail } from '@/emails/PaymentRecoveredEmail';
 import { ProStartEmail } from '@/emails/ProStartEmail';
-import { ReminderEmail } from '@/emails/ReminderEmail';
 import { TrialExpiredEmail } from '@/emails/TrialExpiredEmail';
 import { TrialExpiringEmail } from '@/emails/TrialExpiringEmail';
 import { TrialStartEmail } from '@/emails/TrialStartEmail';
@@ -39,12 +32,10 @@ import { handleServiceError } from '@/lib/trpc/errors';
 import type { Context } from '@/lib/trpc/procedures';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 
-// 遅延初期化: ビルド時にAPI_KEYが未設定でもクラッシュしないようにする
 function getResend() {
   return new Resend(env.RESEND_API_KEY);
 }
 
-// 送信元メールアドレス
 const FROM_EMAIL = env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const APP_URL = getAppUrl();
 
@@ -94,7 +85,6 @@ async function isEmailSuppressed(email: string): Promise<boolean> {
 
   if (error) {
     logger.error('Failed to check email suppression', { error });
-    // チェック失敗時は送信を許可（可用性優先）
     return false;
   }
 
@@ -117,7 +107,6 @@ async function sendEmail({
   react: React.ReactElement;
   context: string;
 }) {
-  // サプレッションチェック
   if (await isEmailSuppressed(to)) {
     logger.warn(`${context} skipped: email suppressed`);
     return { success: true as const, emailId: undefined, suppressed: true as const };
@@ -139,11 +128,8 @@ async function sendEmail({
   return { success: true as const, emailId: data?.id };
 }
 
-/** メール送信（ウェルカム / Trial / Pro / 課金 / リマインダー / 期限超過 / アカウント削除）を提供する tRPC ルーター */
+/** トランザクショナルメール送信（ウェルカム / Trial / Pro / 課金 / アカウント削除）を提供する tRPC ルーター */
 export const emailRouter = createTRPCRouter({
-  /**
-   * ウェルカムメール送信
-   */
   sendWelcome: protectedProcedure
     .meta({ description: 'ウェルカムメール送信' })
     .input(
@@ -171,9 +157,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * トライアル開始メール送信
-   */
   sendTrialStart: protectedProcedure
     .meta({ description: 'トライアル開始メール送信' })
     .input(
@@ -207,9 +190,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * トライアル残3日メール送信
-   */
   sendTrialExpiring: protectedProcedure
     .meta({ description: 'トライアル残3日メール送信' })
     .input(
@@ -243,9 +223,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * トライアル期限切れメール送信
-   */
   sendTrialExpired: protectedProcedure
     .meta({ description: 'トライアル期限切れメール送信' })
     .input(
@@ -277,9 +254,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * Pro開始メール送信
-   */
   sendProStart: protectedProcedure
     .meta({ description: 'Pro開始メール送信' })
     .input(
@@ -311,9 +285,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * 支払い失敗メール送信
-   */
   sendPaymentFailed: protectedProcedure
     .meta({ description: '支払い失敗メール送信' })
     .input(
@@ -347,9 +318,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * 支払い復旧メール送信
-   */
   sendPaymentRecovered: protectedProcedure
     .meta({ description: '支払い復旧メール送信' })
     .input(
@@ -381,9 +349,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * パスワード変更通知メール送信
-   */
   sendPasswordChanged: protectedProcedure
     .meta({ description: 'パスワード変更通知メール送信' })
     .input(
@@ -415,9 +380,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * Pro解約確認メール送信
-   */
   sendCancellationConfirm: protectedProcedure
     .meta({ description: 'Pro解約確認メール送信' })
     .input(
@@ -451,49 +413,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * プランリマインダーメール送信
-   *
-   * check-reminders Edge Function から呼び出し可能。
-   */
-  sendReminder: protectedProcedure
-    .meta({ description: 'プランリマインダーメール送信' })
-    .input(
-      z.object({
-        email: z.string().email(),
-        userName: z.string().min(1),
-        entryTitle: z.string().min(1),
-        startTime: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        await verifyEmailOwnership(ctx, input.email);
-        logger.info('Sending reminder email', { entryTitle: input.entryTitle, userId: ctx.userId });
-
-        const locale = await getUserLocale(ctx.supabase, ctx.userId);
-        const t = createEmailTranslator(locale);
-
-        return sendEmail({
-          to: input.email,
-          subject: t('reminder.subject', { entryTitle: input.entryTitle }),
-          react: ReminderEmail({
-            userName: input.userName,
-            entryTitle: input.entryTitle,
-            startTime: input.startTime,
-            locale,
-            appUrl: APP_URL,
-          }),
-          context: 'Reminder email',
-        });
-      } catch (error) {
-        return handleServiceError(error);
-      }
-    }),
-
-  /**
-   * アカウント削除確認メール送信 (GDPR対応)
-   */
   sendAccountDeletion: protectedProcedure
     .meta({ description: 'アカウント削除確認メール送信（GDPR対応）' })
     .input(
@@ -532,9 +451,6 @@ export const emailRouter = createTRPCRouter({
       }
     }),
 
-  /**
-   * テストメール送信（開発用）
-   */
   sendTest: protectedProcedure
     .meta({ description: 'テストメール送信（開発環境のみ）', deprecated: true })
     .input(
@@ -545,7 +461,6 @@ export const emailRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // 本番・staging 環境では無効化（ローカル開発のみ許可）
         if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
           throw new TRPCError({
             code: 'FORBIDDEN',
@@ -553,7 +468,6 @@ export const emailRouter = createTRPCRouter({
           });
         }
 
-        // 自分のメールアドレスのみ許可
         const userId = ctx.userId;
         if (userId) {
           const { data: userData } = await ctx.supabase.auth.getUser();
