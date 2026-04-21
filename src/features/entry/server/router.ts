@@ -13,6 +13,7 @@ import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
 import { captureBusinessEvent } from '@/lib/sentry';
+import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
 import {
@@ -66,56 +67,12 @@ async function isEntryCreateLimited(userId: string): Promise<boolean> {
 }
 
 // =============================================================================
-// ユーザータイムゾーン取得ヘルパー（短寿命キャッシュ）
+// ユーザータイムゾーン取得ヘルパー（lib/server の共有 cache を利用）
 // =============================================================================
 
-/** TTL付きキャッシュエントリ */
-interface TzCacheEntry {
-  timezone: string;
-  expiresAt: number;
-}
-
-/**
- * ユーザーID → タイムゾーンの短寿命キャッシュ（30秒TTL）
- *
- * デバウンス保存（500ms間隔）で高頻度に呼ばれる getUserTimezone の
- * DBラウンドトリップを削減する。TTLが短いため、ユーザーがタイムゾーンを
- * 変更しても30秒以内に反映される。
- */
-const tzCache = new Map<string, TzCacheEntry>();
-const TZ_CACHE_TTL_MS = 30_000;
-
-/**
- * user_settings からタイムゾーンを取得（失敗時は 'UTC' にフォールバック）
- */
-async function getUserTimezone(
-  supabase: Parameters<typeof createEntryService>[0],
-  userId: string,
-): Promise<string> {
-  const now = Date.now();
-  const cached = tzCache.get(userId);
-  if (cached && cached.expiresAt > now) {
-    return cached.timezone;
-  }
-
-  const { data } = await supabase
-    .from('user_settings')
-    .select('timezone')
-    .eq('user_id', userId)
-    .single();
-  const timezone = (data?.timezone as string | null | undefined) ?? 'UTC';
-
-  tzCache.set(userId, { timezone, expiresAt: now + TZ_CACHE_TTL_MS });
-
-  // キャッシュ肥大化防止（サーバーレス環境では通常不要だが安全策）
-  if (tzCache.size > 1000) {
-    for (const [key, entry] of tzCache) {
-      if (entry.expiresAt <= now) tzCache.delete(key);
-    }
-  }
-
-  return timezone;
-}
+// getUserTimezone / invalidateUserTimezoneCache は `@/lib/server/user-timezone-cache`
+// 側で module-level singleton として管理する。settings 更新時は settings router から
+// invalidateUserTimezoneCache を呼ぶことで即時反映される。
 
 // =============================================================================
 // Inline Schemas
