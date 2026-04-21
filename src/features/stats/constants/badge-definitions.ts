@@ -101,7 +101,7 @@ const EXPLORATION_BADGES: BadgeDefinition[] = [
     nameKey: 'badges.chronotypeTrio.name',
     descriptionKey: 'badges.chronotypeTrio.description',
     hintKey: 'badges.chronotypeTrio.hint',
-    icon: 'Sparkles',
+    icon: 'SunMoon',
     isTiered: false,
   },
 ];
