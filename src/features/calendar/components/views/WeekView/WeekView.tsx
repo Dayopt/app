@@ -2,7 +2,7 @@
 
 import { isWeekend } from 'date-fns';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 

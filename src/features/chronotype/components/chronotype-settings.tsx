@@ -5,12 +5,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
-import { useCalendarSettingsStore } from '@/features/calendar';
 import { Button } from '@/lib/components/ui/button';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { Switch } from '@/lib/components/ui/switch';
 import { CACHE_5_MINUTES } from '@/lib/date';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 

@@ -9,8 +9,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
-import { useCalendarSettingsStore } from '@/features/calendar';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
 import { api } from '@/lib/trpc';
 
