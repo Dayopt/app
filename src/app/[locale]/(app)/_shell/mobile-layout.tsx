@@ -3,6 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
+import { useTranslations } from 'next-intl';
+
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
@@ -28,6 +30,7 @@ interface MobileLayoutProps {
  * - BottomTabBar（固定ボトムタブ、スクロール連動 auto-hide）
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
+  const t = useTranslations('common.inlineBanner');
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
 
@@ -39,17 +42,29 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
     reset();
   }, [pathname, reset]);
 
+  const pathWithoutLocale = useMemo(
+    () => pathname?.replace(new RegExp(`^/${locale}`), '') ?? '',
+    [pathname, locale],
+  );
+
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
-  const hasOwnHeader = useMemo(() => {
-    const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
-    return (
+  const hasOwnHeader = useMemo(
+    () =>
       isCalendarViewPath(pathWithoutLocale) ||
       pathWithoutLocale.startsWith('/stats') ||
       pathWithoutLocale.startsWith('/notifications') ||
       pathWithoutLocale === '/settings' ||
-      pathWithoutLocale.startsWith('/settings/')
-    );
-  }, [pathname, locale]);
+      pathWithoutLocale.startsWith('/settings/'),
+    [pathWithoutLocale],
+  );
+
+  // calendar / stats 系はモバイルでは編集機能が制限される (P0-6 Option B)
+  // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
+  // 詳細操作は PC 限定のため、情報として明示する
+  const isDesktopOnlyEditPage = useMemo(
+    () => isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/stats'),
+    [pathWithoutLocale],
+  );
 
   return (
     <>
@@ -64,6 +79,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
 
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
+
+        {/* モバイル閲覧専用の告知（calendar / stats） */}
+        {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
         {/* Main Content（BottomTabBar分の余白を確保） */}
         <MainContentWrapper className="pb-16">{children}</MainContentWrapper>

@@ -239,7 +239,8 @@
       "reload": "再読み込み",
       "offline": "オフラインです",
       "updateAvailable": "新しいバージョンがあります",
-      "update": "更新"
+      "update": "更新",
+      "mobileReadOnly": "編集機能は PC 版でお使いいただけます"
     },
     "pwa": {
       "installTitle": "Dayoptをインストール",

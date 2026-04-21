@@ -239,7 +239,8 @@
       "reload": "Reload",
       "offline": "You are offline",
       "updateAvailable": "A new version is available",
-      "update": "Update"
+      "update": "Update",
+      "mobileReadOnly": "Editing is available on desktop"
     },
     "pwa": {
       "installTitle": "Install Dayopt",
