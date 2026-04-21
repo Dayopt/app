@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
-import { entryCreateRateLimit } from '@/lib/rate-limit/upstash';
+import { isEntryCreateLimited } from '@/lib/rate-limit/entry-create-limit';
 import { captureBusinessEvent } from '@/lib/sentry';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
@@ -30,49 +30,13 @@ import { createEntryService } from './service-index';
 import { removeUndefinedFields } from '../lib/entry-normalization';
 
 // =============================================================================
-// エントリ作成 日次レート制限（インメモリフォールバック）
+// ユーザータイムゾーン取得 / レート制限の実装は lib に分離済み（P0-4 / P2-3）
 // =============================================================================
 
-const ENTRY_CREATE_DAILY_LIMIT = 500;
-const ENTRY_CREATE_WINDOW_MS = 24 * 60 * 60 * 1000;
-const entryCreateLog = new Map<string, number[]>();
-
-async function isEntryCreateLimited(userId: string): Promise<boolean> {
-  // Upstash が有効な場合はそちらを使用
-  if (entryCreateRateLimit) {
-    try {
-      const { success } = await entryCreateRateLimit.limit(userId);
-      return !success;
-    } catch {
-      // Redis エラー時はインメモリにフォールバック
-    }
-  }
-
-  // インメモリフォールバック
-  const now = Date.now();
-  const timestamps = entryCreateLog.get(userId) ?? [];
-  const recent = timestamps.filter((t) => now - t < ENTRY_CREATE_WINDOW_MS);
-  recent.push(now);
-  entryCreateLog.set(userId, recent);
-
-  if (entryCreateLog.size > 5000) {
-    for (const [key, ts] of entryCreateLog) {
-      if (ts.every((t) => now - t > ENTRY_CREATE_WINDOW_MS)) {
-        entryCreateLog.delete(key);
-      }
-    }
-  }
-
-  return recent.length > ENTRY_CREATE_DAILY_LIMIT;
-}
-
-// =============================================================================
-// ユーザータイムゾーン取得ヘルパー（lib/server の共有 cache を利用）
-// =============================================================================
-
-// getUserTimezone / invalidateUserTimezoneCache は `@/lib/server/user-timezone-cache`
-// 側で module-level singleton として管理する。settings 更新時は settings router から
-// invalidateUserTimezoneCache を呼ぶことで即時反映される。
+// - getUserTimezone は `@/lib/server/user-timezone-cache`（settings 更新時に
+//   同 module の invalidateUserTimezoneCache が呼ばれて即時無効化）
+// - isEntryCreateLimited は `@/lib/rate-limit/entry-create-limit`（Upstash
+//   優先、未設定時は in-memory fallback）
 
 // =============================================================================
 // Inline Schemas
