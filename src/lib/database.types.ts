@@ -145,50 +145,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      notifications: {
-        Row: {
-          created_at: string;
-          data: Json | null;
-          entry_id: string | null;
-          fire_at: string | null;
-          id: string;
-          read_at: string | null;
-          title: string;
-          type: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          data?: Json | null;
-          entry_id?: string | null;
-          fire_at?: string | null;
-          id?: string;
-          read_at?: string | null;
-          title: string;
-          type: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          data?: Json | null;
-          entry_id?: string | null;
-          fire_at?: string | null;
-          id?: string;
-          read_at?: string | null;
-          title?: string;
-          type?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'notifications_related_plan_id_fkey';
-            columns: ['entry_id'];
-            isOneToOne: false;
-            referencedRelation: 'entries';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
       profiles: {
         Row: {
           avatar_url: string | null;
@@ -462,17 +418,9 @@ export type Database = {
         Returns: number;
       };
       custom_access_token_hook: { Args: { event: Json }; Returns: Json };
-      delete_old_notifications: { Args: never; Returns: undefined };
       get_active_dates: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string };
         Returns: string[];
-      };
-      get_active_users_for_daily_insights: {
-        Args: { p_date?: string; p_limit?: number };
-        Returns: {
-          entry_count: number;
-          user_id: string;
-        }[];
       };
       get_active_users_for_reflection: {
         Args: {
@@ -526,14 +474,6 @@ export type Database = {
         Returns: {
           day: string;
           hours: number;
-        }[];
-      };
-      get_daily_snapshots: {
-        Args: { p_days?: number; p_user_id: string };
-        Returns: {
-          avg_fulfillment: number;
-          day: string;
-          total_minutes: number;
         }[];
       };
       get_dow_distribution: {
