@@ -4,7 +4,7 @@
  * TagQuickSelector
  *
  * タグ選択用フローティングパネル。
- * ラジオボタン型の単一選択 + 新規作成。
+ * ラジオボタン型の単一選択 + 新規作成（inline）。
  * overlayなし — 背景コンテンツが見える状態を維持。
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
  */
@@ -12,27 +12,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-import { Check, ChevronLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ActionFooter } from '@/lib/components/ui/action-footer';
-import { Button } from '@/lib/components/ui/button';
-import { getColorDisplayName } from '@/lib/components/ui/color-palette-picker';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
 import { DEFAULT_TAG_ICON } from '../lib/curated-icons';
-import { parseColonTag } from '../lib/tag-colon';
-import { IconPicker } from './IconPicker';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';
 
 import type { TagColorName } from '@/lib/tag-colors';
-
-import type { Tag } from '../types';
 
 /** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
 const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName; icon: string }> = [
@@ -63,166 +55,10 @@ interface TagQuickSelectorProps {
   timeLabel?: string | undefined;
 }
 
-// ─────────────────────────────────────────────────────────
-// Create Tag Form (2ページ目)
-// ─────────────────────────────────────────────────────────
-
-function CreateTagFormView({
-  parentTags,
-  onBack,
-  onCreateAndSelect,
-}: {
-  parentTags: Tag[];
-  onBack: () => void;
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
-}) {
-  const t = useTranslations('calendar');
-  const tCommon = useTranslations('common');
-  const [name, setName] = useState('');
-  const [selectedColor, setSelectedColor] = useState<TagColorName>('blue');
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(DEFAULT_TAG_ICON);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-
-  const canSubmit = name.trim().length > 0;
-
-  // グループ選択で色を自動継承（親の色が最終的に採用される）
-  const effectiveColor = useMemo(() => {
-    if (!selectedGroup) return selectedColor;
-    const group = parentTags.find((t) => t.name === selectedGroup);
-    return (group?.color as TagColorName) ?? selectedColor;
-  }, [selectedGroup, parentTags, selectedColor]);
-
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit) return;
-    const fullName = selectedGroup ? `${selectedGroup}:${name.trim()}` : name.trim();
-    onCreateAndSelect(fullName, effectiveColor, selectedIcon);
-  }, [canSubmit, selectedGroup, name, effectiveColor, selectedIcon, onCreateAndSelect]);
-
-  return (
-    <div className="flex flex-col overflow-y-auto" style={{ maxHeight: '60vh' }}>
-      {/* ← 戻るヘッダー */}
-      <button type="button" onClick={onBack} className="group flex min-h-11 items-center px-4 py-2">
-        <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
-          <ChevronLeft className="text-muted-foreground size-5" />
-          <span className="text-foreground font-medium">{t('tagSelector.new')}</span>
-        </span>
-      </button>
-
-      <div className="flex flex-col gap-4 px-4 py-2">
-        {/* 名前 */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="create-tag-name" className="text-muted-foreground text-sm">
-            {t('tagSelector.createPlaceholder')}
-          </label>
-          <input
-            id="create-tag-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            className="border-border bg-container focus:ring-primary min-h-11 w-full rounded-lg border px-4 text-sm outline-none focus:ring-2"
-            autoFocus
-          />
-        </div>
-
-        {/* 色 */}
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-sm">{t('tagSelector.color')}</span>
-          <div className="grid grid-cols-5 gap-2">
-            {TAG_COLOR_NAMES.map((color) => {
-              const classes = getTagColorClasses(color);
-              const isActive = effectiveColor === color;
-              const displayName = getColorDisplayName(color, tCommon);
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className="flex flex-col items-center gap-1"
-                  aria-label={displayName}
-                  aria-pressed={isActive}
-                >
-                  <span
-                    className={cn(
-                      'flex size-9 items-center justify-center rounded-full transition-all',
-                      isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110',
-                      classes.dot,
-                    )}
-                  >
-                    {isActive && <Check className="size-4 text-white" />}
-                  </span>
-                  <span className="text-muted-foreground text-xs">{displayName}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* アイコン */}
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-sm">{t('tagSelector.icon')}</span>
-          <IconPicker value={selectedIcon} onChange={setSelectedIcon} />
-        </div>
-
-        {/* グループ（任意） */}
-        {parentTags.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <span className="text-muted-foreground text-sm">{t('tagSelector.group')}</span>
-            <div className="flex flex-wrap gap-1">
-              <button
-                type="button"
-                onClick={() => setSelectedGroup(null)}
-                className={cn(
-                  'rounded-full border px-2 py-1 text-sm transition-colors',
-                  !selectedGroup
-                    ? 'border-primary bg-primary-state-selected text-foreground'
-                    : 'border-border hover:bg-state-hover text-muted-foreground',
-                )}
-              >
-                {t('tagSelector.noGroup')}
-              </button>
-              {parentTags.map((tag) => (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => setSelectedGroup(tag.name)}
-                  className={cn(
-                    'flex items-center gap-1 rounded-full border px-2 py-1 text-sm transition-colors',
-                    selectedGroup === tag.name
-                      ? 'border-primary bg-primary-state-selected text-foreground'
-                      : 'border-border hover:bg-state-hover text-muted-foreground',
-                  )}
-                >
-                  <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-                  {tag.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* フッター */}
-        <ActionFooter>
-          <Button variant="outline" onClick={onBack}>
-            {tCommon('actions.cancel')}
-          </Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit}>
-            {tCommon('actions.create')}
-          </Button>
-        </ActionFooter>
-      </div>
-    </div>
-  );
-}
-
 /**
  * タグ選択コンテンツ
  *
- * 通常はタグ一覧（TagBadgeList）を表示。新規作成押下で CreateTagFormView に遷移。
+ * 通常はタグ一覧（TagBadgeList）を表示。末尾の「+」押下で inline 作成フォームが展開する。
  */
 function TagQuickSelectorContent({
   onSelect,
@@ -236,19 +72,12 @@ function TagQuickSelectorContent({
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
 
   // アクティブなタグのみ、ソート済み
   const sortedTags = useMemo(() => {
     const active = (tags ?? []).filter((tag) => tag.is_active !== false);
     return [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }, [tags]);
-
-  // 作成フォームでグループ選択に使う親タグ（コロン記法の prefix を持たないフラットタグ）
-  const parentTags = useMemo(
-    () => sortedTags.filter((tag) => parseColonTag(tag.name).suffix === null),
-    [sortedTags],
-  );
 
   const handleSelect = useCallback(
     (tagId: string, tagName: string) => {
@@ -258,23 +87,16 @@ function TagQuickSelectorContent({
     [onSelect],
   );
 
+  const handleInlineSubmit = useCallback(
+    (name: string, color: TagColorName) => {
+      onCreateAndSelect(name, color, DEFAULT_TAG_ICON);
+    },
+    [onCreateAndSelect],
+  );
+
   const isTagZero = sortedTags.length === 0;
 
-  // 作成フォーム画面
-  if (isCreating) {
-    return (
-      <CreateTagFormView
-        parentTags={parentTags}
-        onBack={() => setIsCreating(false)}
-        onCreateAndSelect={(name, color, icon) => {
-          onCreateAndSelect(name, color, icon);
-          setIsCreating(false);
-        }}
-      />
-    );
-  }
-
-  // タグゼロ時: サンプルタグ候補チップ
+  // タグゼロ時: サンプルタグ候補チップ + inline 作成
   if (isTagZero) {
     return (
       <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
@@ -302,18 +124,25 @@ function TagQuickSelectorContent({
             })}
           </div>
         </div>
+        <TagBadgeList
+          tags={sortedTags}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          inlineCreate={{ onSubmit: handleInlineSubmit, existingTags: sortedTags }}
+          onTagHover={onTagHover}
+        />
       </div>
     );
   }
 
-  // メイン: タグ badge 一覧
+  // メイン: タグ badge 一覧 + inline 作成
   return (
     <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
       <TagBadgeList
         tags={sortedTags}
         selectedId={selectedId}
         onSelect={handleSelect}
-        onCreate={() => setIsCreating(true)}
+        inlineCreate={{ onSubmit: handleInlineSubmit, existingTags: sortedTags }}
         onTagHover={onTagHover}
       />
     </div>

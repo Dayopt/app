@@ -7,8 +7,9 @@
 
 // Components
 export {
-  GlobalTagCreateModal,
-  TagCreateModal,
+  // Inline forms
+  InlineTagCreateRow,
+  InlineTagNameEdit,
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';

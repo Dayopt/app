@@ -7,11 +7,12 @@
  * - pill 型 badge の flex-wrap レイアウト
  * - コロン記法のドリルダウン（親 → 子タグ）
  * - 任意で検索ボックス、新規作成 badge を末尾に表示
+ * - inlineCreate を渡すと新規作成 badge 押下で InlineTagCreateRow を末尾に inline 展開
  *
  * 外枠（Drawer / Popover / Dialog）は呼び出し側が用意し、中身として差し込む。
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -21,14 +22,21 @@ import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { parseColonTag } from '../lib/tag-colon';
+import { InlineTagCreateRow } from './InlineTagCreateRow';
 import { TagIcon } from './TagIcon';
 
+import type { TagColorName } from '@/lib/tag-colors';
 import type { Tag } from '../types';
 
 export interface TagBadgeListHoverInfo {
   id: string;
   name: string;
   color: string | null;
+}
+
+export interface TagBadgeListInlineCreateConfig {
+  existingTags: Tag[];
+  onSubmit: (name: string, color: TagColorName) => void | Promise<void>;
 }
 
 export interface TagBadgeListProps {
@@ -43,6 +51,8 @@ export interface TagBadgeListProps {
   supportDrilldown?: boolean;
   /** 設定すると末尾に破線 badge で新規作成ボタンを表示 */
   onCreate?: (() => void) | undefined;
+  /** 末尾の「+」押下で inline 作成フォームを展開。渡さないときは onCreate にフォールバック */
+  inlineCreate?: TagBadgeListInlineCreateConfig | undefined;
   /** ホバー時のコールバック（プレビュー用途） */
   onTagHover?: ((info: TagBadgeListHoverInfo | null) => void) | undefined;
   /** role="radiogroup" を付ける（dialog内フォーム用途） */
@@ -151,6 +161,7 @@ export function TagBadgeList({
   searchable = false,
   supportDrilldown = true,
   onCreate,
+  inlineCreate,
   onTagHover,
   asRadioGroup = false,
   ariaLabel,
@@ -161,6 +172,7 @@ export function TagBadgeList({
     type: 'grid',
   });
   const [query, setQuery] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const excludeSet = useMemo(() => new Set(excludeIds ?? []), [excludeIds]);
 
@@ -180,6 +192,29 @@ export function TagBadgeList({
 
   const handleHover = onTagHover ? (info: TagBadgeListHoverInfo) => onTagHover(info) : undefined;
   const handleHoverEnd = onTagHover ? () => onTagHover(null) : undefined;
+
+  const handleCreateBadgeClick = useCallback(() => {
+    if (inlineCreate) {
+      setIsCreating(true);
+    } else if (onCreate) {
+      onCreate();
+    }
+  }, [inlineCreate, onCreate]);
+
+  const handleInlineSubmit = useCallback(
+    async (name: string, color: TagColorName) => {
+      if (!inlineCreate) return;
+      await inlineCreate.onSubmit(name, color);
+      setIsCreating(false);
+    },
+    [inlineCreate],
+  );
+
+  const handleInlineCancel = useCallback(() => {
+    setIsCreating(false);
+  }, []);
+
+  const showCreateButton = Boolean(onCreate || inlineCreate);
 
   // ドリルダウン画面
   if (view.type === 'drill') {
@@ -261,7 +296,18 @@ export function TagBadgeList({
         role={asRadioGroup ? 'radiogroup' : undefined}
         aria-label={asRadioGroup ? ariaLabel : undefined}
       >
-        {!hasAnyResult && (
+        {isCreating && inlineCreate && (
+          <div className="w-full max-w-xs">
+            <InlineTagCreateRow
+              variant="badge"
+              existingTags={inlineCreate.existingTags}
+              onSubmit={handleInlineSubmit}
+              onCancel={handleInlineCancel}
+            />
+          </div>
+        )}
+
+        {!hasAnyResult && !isCreating && (
           <p className="text-muted-foreground w-full py-6 text-center text-sm">
             {t('tagSelector.noResults')}
           </p>
@@ -293,7 +339,9 @@ export function TagBadgeList({
           );
         })}
 
-        {onCreate && <CreateBadge label={t('tagSelector.new')} onClick={onCreate} />}
+        {!isCreating && showCreateButton && (
+          <CreateBadge label={t('tagSelector.new')} onClick={handleCreateBadgeClick} />
+        )}
       </div>
     </div>
   );

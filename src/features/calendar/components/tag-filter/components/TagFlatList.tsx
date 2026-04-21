@@ -27,11 +27,14 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import type { Tag } from '@/features/tags';
 import {
+  InlineTagCreateRow,
+  InlineTagNameEdit,
   TagDeleteStrategyDialog,
   TagIcon,
   buildColonTagName,
   getTagDisplayLabel,
   parseColonTag,
+  useCreateTag,
   useDeleteGroup,
   useMergeTag,
   useRenameGroup,
@@ -47,7 +50,6 @@ import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
-import { TagRenameDialog } from '../TagRenameDialog';
 
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
@@ -415,12 +417,13 @@ function SortableTagItem({
     id: tag.id,
   });
   const updateTagMutation = useUpdateTag();
+  const createTagMutation = useCreateTag();
   const mergeTagMutation = useMergeTag();
   const renameGroupMutation = useRenameGroup();
   const ungroupTagsMutation = useUngroupTags();
   const deleteGroupMutation = useDeleteGroup();
   const { showOnlyTag } = useCalendarFilterStore();
-  const { openTagMergeModal, openTagCreateModal } = useTagModalNavigation();
+  const { openTagMergeModal } = useTagModalNavigation();
   const router = useRouter();
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
@@ -437,8 +440,9 @@ function SortableTagItem({
   });
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showRenameDialog, setShowRenameDialog] = useState(false);
-  const [showGroupRenameDialog, setShowGroupRenameDialog] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingGroupName, setIsEditingGroupName] = useState(false);
+  const [isCreatingInGroup, setIsCreatingInGroup] = useState(false);
   const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
   const [ungroupConflicts, setUngroupConflicts] = useState<string[] | null>(null);
   const [groupChangeConflict, setGroupChangeConflict] = useState<{
@@ -448,6 +452,36 @@ function SortableTagItem({
 
   // コロン記法のプレフィックス（グループ名）
   const { prefix: currentGroup, suffix } = useMemo(() => parseColonTag(tag.name), [tag.name]);
+
+  // インライン編集用: 重複チェック対象の既存名一覧
+  const tagRenameExistingNames = useMemo(() => {
+    if (isGrouped) {
+      // 同グループ内の他タグの suffix 部分
+      const prefixPattern = `${currentGroup}:`;
+      return allTags
+        .filter((t) => t.id !== tag.id && t.name.startsWith(prefixPattern))
+        .map((t) => t.name.slice(prefixPattern.length));
+    }
+    // ルート直下の他タグ名
+    return allTags
+      .filter((t) => t.id !== tag.id && parseColonTag(t.name).suffix === null)
+      .map((t) => t.name);
+  }, [allTags, tag.id, isGrouped, currentGroup]);
+
+  // グループ名 rename 用の重複チェック対象（他のグループ prefix + ルート直下のタグ名）
+  const groupRenameExistingNames = useMemo(() => {
+    const otherGroupPrefixes = new Set<string>();
+    const rootNames = new Set<string>();
+    for (const t of allTags) {
+      const { prefix: p, suffix: s } = parseColonTag(t.name);
+      if (s !== null) {
+        if (p !== currentGroup) otherGroupPrefixes.add(p);
+      } else {
+        rootNames.add(t.name);
+      }
+    }
+    return [...otherGroupPrefixes, ...rootNames];
+  }, [allTags, currentGroup]);
 
   const handleSaveRename = useCallback(
     async (newName: string) => {
@@ -608,12 +642,33 @@ function SortableTagItem({
             onColorChange={handleGroupColorChange}
             onIconChange={parentTag ? handleParentIconChange : undefined}
             currentIcon={parentTag?.icon ?? tag.icon}
-            onAddTagToGroup={() => openTagCreateModal(currentGroup)}
-            onRenameGroup={() => setShowGroupRenameDialog(true)}
+            onAddTagToGroup={() => setIsCreatingInGroup(true)}
+            onRenameGroup={() => setIsEditingGroupName(true)}
             onUngroupTags={handleUngroupTags}
             onViewStats={() => navigateToTagStats(parentTag?.id ?? tag.id)}
             onDeleteGroup={handleDeleteGroup}
+            renameEditing={isEditingGroupName}
+            onSaveRename={handleSaveGroupRename}
+            onDoneRenameEditing={() => setIsEditingGroupName(false)}
+            renameExistingNames={groupRenameExistingNames}
           />
+        )}
+
+        {/* グループ内へのインライン作成フォーム */}
+        {isFirstInGroup && isCreatingInGroup && (
+          <div className="pr-2 pl-4">
+            <InlineTagCreateRow
+              variant="row"
+              defaultGroup={currentGroup}
+              inheritedColor={resolveTagColor(displayColor)}
+              existingTags={allTags}
+              onSubmit={(name, color) => {
+                createTagMutation.mutate({ name, color });
+                setIsCreatingInGroup(false);
+              }}
+              onCancel={() => setIsCreatingInGroup(false)}
+            />
+          </div>
         )}
 
         {/* タグ行: collapsed かつ先頭の場合も非表示 */}
@@ -633,14 +688,27 @@ function SortableTagItem({
               <TagIcon icon={tag.icon} color={displayColor} size="sm" />
             </span>
 
-            <HoverTooltip
-              content={tag.name}
-              side="top"
-              disabled={menuOpen}
-              wrapperClassName="ml-2 min-w-0 flex-1"
-            >
-              <span className="min-w-0 truncate">{displayLabel}</span>
-            </HoverTooltip>
+            {isEditingName ? (
+              <span className="ml-2 min-w-0 flex-1">
+                <InlineTagNameEdit
+                  value={displayLabel}
+                  onSave={handleSaveRename}
+                  existingNames={tagRenameExistingNames}
+                  editing={isEditingName}
+                  onDoneEditing={() => setIsEditingName(false)}
+                  ariaLabel={displayLabel}
+                />
+              </span>
+            ) : (
+              <HoverTooltip
+                content={tag.name}
+                side="top"
+                disabled={menuOpen}
+                wrapperClassName="ml-2 min-w-0 flex-1"
+              >
+                <span className="min-w-0 truncate">{displayLabel}</span>
+              </HoverTooltip>
+            )}
 
             {/* 👁 フィルタートグル */}
             <button
@@ -684,7 +752,7 @@ function SortableTagItem({
                 groupOptions={groupOptions}
                 isGrouped={isGrouped}
                 isMobile={isMobile ?? false}
-                onOpenRenameDialog={() => setShowRenameDialog(true)}
+                onOpenRenameDialog={() => setIsEditingName(true)}
                 onColorChange={handleColorChange}
                 onIconChange={handleIconChange}
                 onChangeGroup={handleChangeGroup}
@@ -699,25 +767,6 @@ function SortableTagItem({
           </div>
         )}
       </div>
-
-      <TagRenameDialog
-        isOpen={showRenameDialog}
-        onClose={() => setShowRenameDialog(false)}
-        onSave={handleSaveRename}
-        currentName={isGrouped && suffix ? suffix : tag.name}
-        tagId={tag.id}
-      />
-
-      {/* グループリネームダイアログ */}
-      {isFirstInGroup && (
-        <TagRenameDialog
-          isOpen={showGroupRenameDialog}
-          onClose={() => setShowGroupRenameDialog(false)}
-          onSave={handleSaveGroupRename}
-          currentName={currentGroup}
-          tagId={`group-${currentGroup}`}
-        />
-      )}
 
       {/* グループ削除ストラテジーダイアログ */}
       {isFirstInGroup && (
