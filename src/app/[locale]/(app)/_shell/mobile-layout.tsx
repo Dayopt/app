@@ -55,7 +55,6 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
     () =>
       isCalendarViewPath(pathWithoutLocale) ||
       pathWithoutLocale.startsWith('/stats') ||
-      pathWithoutLocale.startsWith('/notifications') ||
       pathWithoutLocale === '/settings' ||
       pathWithoutLocale.startsWith('/settings/'),
     [pathWithoutLocale],

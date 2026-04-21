@@ -5,8 +5,6 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useNotificationBadge } from '@/features/notifications';
-
 import { InstallBanner } from '@/lib/components/shell/InstallBanner';
 import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
@@ -31,9 +29,6 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
 
   // 同期プロセッサー初期化（tRPC vanillaクライアント経由でオフラインmutationを再送）
   useSyncProcessor();
-
-  // 通知未読数をPWA App Badgeに反映
-  useNotificationBadge();
 
   // オフライン/オンライン切り替え時のtoast通知
   useOfflineToast();

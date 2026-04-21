@@ -20,7 +20,6 @@ const protectedPaths = [
   '/table',
   '/board',
   '/review',
-  '/notifications',
   '/add',
   '/tags',
 ];

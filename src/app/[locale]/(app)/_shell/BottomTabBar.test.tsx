@@ -29,10 +29,6 @@ vi.mock('@/features/calendar', async () => {
   };
 });
 
-vi.mock('@/features/notifications', () => ({
-  useUnreadCount: () => ({ data: 3 }),
-}));
-
 vi.mock('@/lib/stores/useClientRouterStore', () => ({
   useClientRouterStore: (
     selector: (state: {
@@ -92,13 +88,14 @@ describe('BottomTabBar', () => {
   });
 
   it('marks the route derived from pathname as current', () => {
-    mockPathname = '/ja/notifications';
+    mockPathname = '/ja/stats/review';
 
     render(<BottomTabBar />);
 
-    expect(
-      screen.getByRole('button', { name: /navigation\.bottomTab\.notifications/ }),
-    ).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /navigation\.bottomTab\.stats/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(
       screen.getByRole('button', { name: /navigation\.bottomTab\.calendar/ }),
     ).not.toHaveAttribute('aria-current');
