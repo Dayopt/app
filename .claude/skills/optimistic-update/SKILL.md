@@ -1,6 +1,6 @@
 ---
 name: optimistic-update
-description: tRPC mutationの楽観的更新スキル。キャッシュ操作、ロールバック、Realtime競合対策を支援。
+description: tRPC mutation を新規実装する時、ユーザー操作に直接対応する mutation で即座の UI フィードバックが必要な時、既存 mutation に Realtime 購読との競合対策を追加する時、`onMutate` / `onError` / `onSettled` の実装漏れを検出した時に発動。キャッシュ操作とロールバック、Realtime 競合対策を指導する。read-only query の実装時や server-side mutation のみの時は発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -9,13 +9,21 @@ maxTurns: 15
 
 tRPC + TanStack Queryを使用した楽観的更新（Optimistic Updates）の実装を支援するスキル。
 
-## When to Use（自動発動条件）
+## When to Use
 
-以下の状況で自動発動：
+以下の状況で発動:
 
-- 新しいmutationを実装する時
-- 「楽観的更新」「optimistic」「キャッシュ更新」キーワード
-- UIの応答性改善を求められた時
+- 新規 tRPC mutation を実装する時（ユーザー操作起点のもの）
+- 同じ resource を Realtime 購読と mutation の両方で扱う実装を追加する時
+- TanStack Query のキャッシュ操作（`utils.xxx.setData` / `utils.xxx.invalidate`）を直接書く時
+- 既存 mutation に `onMutate` / `onError` / `onSettled` が欠けていると気付いた時
+- UI 応答性の改善依頼（「操作後のレスポンスが遅い」「即座に反映したい」）が出た時
+
+## When NOT to Use
+
+- read-only な query の実装時（mutation を伴わないため対象外）
+- server-side 完結する mutation（バックグラウンドジョブなど、UI 即時反映不要）
+- `onSuccess` で invalidate するだけの単純なケース（楽観更新の複雑さを入れる価値がない）
 
 ## 基本方針
 

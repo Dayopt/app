@@ -1,6 +1,6 @@
 ---
 name: store-creating
-description: DayoptのZustand storeを作成。devtools, persist, 型安全なパターンを適用。
+description: Dayopt に新規 Zustand store を追加する時、UI の client-side 状態（モーダル開閉、選択状態、一時フォーム値など）が複数コンポーネントで共有される時、persist middleware での永続化が必要な state を追加する時、useState の prop drilling が深く store 化の判断をする時に発動。devtools / persist / 型安全パターンを適用する。server state の管理時や、単一 component 内の local state のみの時は発動しない。
 effort: low
 maxTurns: 10
 ---
@@ -9,14 +9,21 @@ maxTurns: 10
 
 DayoptプロジェクトのZustand storeを規約に沿って作成するスキルです。
 
-## このスキルを使用するタイミング
+## When to Use
 
-以下のキーワードが含まれる場合に自動的に起動：
+以下の状況で発動:
 
-- 「ストアを作成」「store作成」
-- 「状態管理を追加」
-- 「Zustandストア」
-- 「useXxxStore を作って」
+- `src/stores/` 配下に新規 Zustand store を追加する時
+- 新規 feature に UI の client-side 共有状態（モーダル開閉、選択状態、ウィザード state）が必要になった時
+- persist middleware で localStorage に永続化したい state を定義する時
+- devtools / persist middleware を既存 store に追加・変更する時
+- useState の prop drilling が 3 階層以上深くなり、store 化の判断をする時
+
+## When NOT to Use
+
+- サーバー状態の管理（`trpc-router-creating` + TanStack Query の領域、Zustand は使わない）
+- 単一 component 内で完結する local state（`useState` で十分、store は過剰）
+- URL state（クエリパラメータ・ルーティング state は `searchParams` / `useRouter` の領域）
 
 ## ストアのパターン
 

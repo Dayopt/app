@@ -23,7 +23,9 @@
       "deletedCount": "{count, plural, one {1 item} other {# items}} deleted",
       "restored": "Restored",
       "restoreFailed": "Failed to restore",
-      "conflict": "This entry was modified elsewhere. Reload to see the latest version."
+      "conflict": "This entry was modified elsewhere. Reload to see the latest version.",
+      "placed": "Added {name} at {time}",
+      "overlapError": "{time} overlaps with an existing block"
     },
     "sidebar": {
       "tabs": {

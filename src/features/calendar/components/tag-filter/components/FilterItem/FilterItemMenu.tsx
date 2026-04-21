@@ -1,9 +1,20 @@
 'use client';
 
-import { BarChart3, Eye, FolderUp, Merge, Palette, Pencil, Smile, Trash2 } from 'lucide-react';
+import {
+  BarChart3,
+  Check,
+  Eye,
+  FolderUp,
+  Merge,
+  Palette,
+  Pencil,
+  Smile,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { IconPicker, TagIcon } from '@/features/tags';
+import { IconPickerDropdownItems, TagIcon } from '@/features/tags';
 import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
 import {
   DropdownMenuContent,
@@ -29,6 +40,8 @@ interface FilterItemMenuProps {
   currentIcon?: string | null | undefined;
   /** 現在のグループ名（null = 独立タグ） */
   currentGroup?: string | null | undefined;
+  /** 対象タグ自身の名前。親候補リストから自身を除外するために使う */
+  currentTagName?: string | undefined;
   /** グループ候補一覧 */
   groupOptions?: GroupOption[] | undefined;
   /** グループに属するタグか（色変更はグループ単位のため個別無効） */
@@ -52,6 +65,7 @@ export function FilterItemMenu({
   displayColor,
   currentIcon,
   currentGroup,
+  currentTagName,
   groupOptions,
   isGrouped,
   isMobile,
@@ -65,6 +79,9 @@ export function FilterItemMenu({
   onDeleteTag,
 }: FilterItemMenuProps) {
   const t = useTranslations();
+
+  // 自分自身を親候補から除外
+  const parentOptions = (groupOptions ?? []).filter((group) => group.name !== currentTagName);
 
   // モバイル: 「このタグだけ表示」+「削除」のみ。管理系は設定画面へ委譲
   if (isMobile) {
@@ -115,44 +132,54 @@ export function FilterItemMenu({
             <Smile className="mr-2 size-4" />
             {t('calendar.filter.changeIcon')}
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent
-            className="max-h-80 w-72 overflow-y-auto p-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <IconPicker value={currentIcon ?? null} onChange={onIconChange} color={displayColor} />
+          <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
+            <IconPickerDropdownItems value={currentIcon ?? null} onChange={onIconChange} />
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       )}
 
       {/* グループを変更 */}
-      {groupOptions && groupOptions.length > 0 && onChangeGroup && (
+      {groupOptions && onChangeGroup && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <FolderUp className="mr-2 size-4" />
             {t('calendar.filter.changeGroup')}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
+            {/* グループなし */}
             <DropdownMenuItem
               onClick={() => onChangeGroup(null)}
               className={!currentGroup ? 'bg-state-selected' : undefined}
             >
-              {t('calendar.filter.noGroup')}
+              <X className="text-muted-foreground mr-2 size-4" />
+              <span className="flex-1">{t('calendar.filter.noGroup')}</span>
+              {!currentGroup && <Check className="text-muted-foreground ml-2 size-4" />}
             </DropdownMenuItem>
-            {groupOptions.map((group) => (
-              <DropdownMenuItem
-                key={group.name}
-                onClick={() => onChangeGroup(group.name)}
-                className={cn(currentGroup === group.name ? 'bg-state-selected' : undefined)}
-              >
-                <TagIcon
-                  icon={group.icon}
-                  color={group.color}
-                  size="sm"
-                  className="mr-1 shrink-0"
-                />
-                {group.name}
-              </DropdownMenuItem>
-            ))}
+
+            {parentOptions.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                {parentOptions.map((group) => {
+                  const isCurrent = currentGroup === group.name;
+                  return (
+                    <DropdownMenuItem
+                      key={group.name}
+                      onClick={() => onChangeGroup(group.name)}
+                      className={cn(isCurrent ? 'bg-state-selected' : undefined)}
+                    >
+                      <TagIcon
+                        icon={group.icon}
+                        color={group.color}
+                        size="sm"
+                        className="mr-2 shrink-0"
+                      />
+                      <span className="flex-1">{group.name}</span>
+                      {isCurrent && <Check className="text-muted-foreground ml-2 size-4" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </>
+            )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       )}

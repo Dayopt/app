@@ -30,6 +30,14 @@ const DEFAULT_HOUR_HEIGHT = 72;
 /** イベントの最小高さ(px) */
 const MIN_EVENT_HEIGHT = 20;
 
+/**
+ * モバイル時のイベント最小高さ(px)。
+ * Why: 15分ブロック (HOUR_HEIGHT=72 時で 18px) が指幅より狭く、タップ／リサイズが困難。
+ * 視認性とタップ精度を優先して 28px まで底上げする。
+ * 15分連続ブロックが隙間なく並ぶと描画が 8px/個重なるが、実運用で稀なため許容。
+ */
+const MIN_EVENT_HEIGHT_MOBILE = 28;
+
 /** Z-index層 */
 const Z_INDEX = {
   EVENTS: 10,
@@ -102,6 +110,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // 計画外カードの内側オフセット（親の実線ボーダーと重ならないよう内側に配置）
   const unplannedInset = isUnplanned ? accentWidth + 2 : 0;
 
+  const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
+
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
@@ -113,7 +123,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       width: isUnplanned
         ? `calc(${safePosition.width}% - 8px - ${unplannedInset}px)`
         : `calc(${safePosition.width}% - 8px)`,
-      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), MIN_EVENT_HEIGHT)}px`,
+      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), minHeight)}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
@@ -127,6 +137,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       style,
       isUnplanned,
       unplannedInset,
+      minHeight,
     ],
   );
 
@@ -444,10 +455,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             </div>
           )}
 
-          {/* 下端リサイズハンドル（Draft/Past は非表示）
-             視覚的には8pxだが、タッチ領域は上下に拡大して44pt相当を確保。
-             短いカード（< 40px）はハンドルを縮小してクリック領域を確保 */}
-          {!isDraft && !isPast && (
+          {/* 下端リサイズハンドル（PC専用、Draft/Past は非表示）
+             モバイルは「tap=Inspector / longpress=ドラッグ」の二耳モデルに統一するため
+             ハンドル自体を出さない。リサイズは Inspector の時間編集 UI から行う。
+             PC では短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に
+             最大限張り出し、ブロック内侵入を 4px に絞る。深く取り過ぎるとブロック下部で
+             ハンドルが stopPropagation してドラッグ起動に到達しなくなるため。*/}
+          {!isDraft && !isPast && !isMobile && (
             <div
               className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
               role="slider"
@@ -461,8 +475,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               onTouchStart={handleBottomResizeTouchStart}
               onKeyDown={handleResizeKeyDown}
               style={{
-                height: safePosition.height < 40 ? '16px' : '32px',
-                bottom: safePosition.height < 40 ? '-4px' : '-12px',
+                height: safePosition.height < 40 ? '44px' : '32px',
+                bottom: safePosition.height < 40 ? '-40px' : '-12px',
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}

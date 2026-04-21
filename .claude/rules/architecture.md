@@ -50,15 +50,19 @@ src/features/{feature}/server/
 
 機能単位で設置。アプリ全体を1つでラップしない。
 
-## 環境構成（2環境構成）
+## 環境構成（単一 project 運用）
 
-| 環境           | Supabase                   | Vercel                    |
-| -------------- | -------------------------- | ------------------------- |
-| **Preview**    | dayopt-staging（Tokyo）    | npm run dev / Preview URL |
-| **Production** | t3-nico's Project（Tokyo） | mainマージで自動デプロイ  |
+ローンチ前の簡易構成。単一 Supabase project (`yvglwblxrnrenfifsnje`) で dev / preview / production をすべて賄う。
 
-- ローカル開発は Preview Supabase に直接接続（`vercel env pull` で自動同期）
-- オフライン開発が必要な場合は `USE_LOCAL_DB=true` でローカルDB（127.0.0.1:54321）にフォールバック
-- マイグレーションは mainマージ時に Staging へ自動適用、Production は手動 `db push`
+| 環境           | 実体                   | 用途                                      |
+| -------------- | ---------------------- | ----------------------------------------- |
+| **Local**      | `supabase start`       | オフライン開発（デフォルトでは使わない）  |
+| **Production** | `yvglwblxrnrenfifsnje` | dev / preview / production 全てここを向く |
+
+- ローカル開発は Vercel env を `vercel env pull` で取得し、Production project に接続
+- オフライン開発が必要な場合のみ `USE_LOCAL_DB=true` でローカル Supabase（127.0.0.1:54321）にフォールバック
+- マイグレーションは main merge で GitHub Actions が Production に適用
 - 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
-- 詳細: `docs/development/migration-checklist.md`
+- **破壊的操作の制限**: preview / dev が production DB を直接触るため、`db reset` 等は厳禁。RLS 信頼前提
+- **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）
+- 詳細: `.claude/skills/supabase/SKILL.md` / `docs/development/migration-checklist.md`

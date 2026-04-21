@@ -260,9 +260,7 @@ const DialogHeader = ({ className, ...props }: React.ComponentProps<'div'>) => {
     <div
       data-slot="dialog-header"
       className={cn(
-        mode === 'drawer'
-          ? 'flex flex-col gap-1 px-4 pb-4'
-          : 'flex flex-col gap-2 text-center sm:text-left',
+        mode === 'drawer' ? 'flex flex-col gap-1 px-4 pb-4' : 'flex flex-col gap-2 text-left',
         className,
       )}
       {...props}

@@ -7,15 +7,18 @@
  * 2本のtRPC呼び出しに統合し、tRPCラウンドトリップを削減する。
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 // eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
 import { useCalendarSettingsStore } from '@/features/calendar';
+import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
 import { api } from '@/lib/trpc';
 
 import { computeStatsDateRange } from '../lib/compute-date-range';
 import type { StatsGranularity } from '../stores/useStatsFilterStore';
 import { useStatsFilterStore } from '../stores/useStatsFilterStore';
+
+const TAG_ENTRIES_PAGE_SIZE = 10;
 
 function granularityToBucket(g: StatsGranularity): 'week' | 'month' | 'day' {
   switch (g) {
@@ -74,4 +77,45 @@ export function useTagTimelineData(tagId: string) {
     recentLimit: 8,
     ...dateRange,
   });
+}
+
+/**
+ * タグに紐づくエントリ一覧を取得するフック（ページネーション付き）。
+ *
+ * entries.list エンドポイントを tagId フィルタ付きで使用し、
+ * 「もっと見る」ボタンで limit を増やしていく方式。
+ */
+export function useTagRecentEntries(tagId: string) {
+  const [limit, setLimit] = useState(TAG_ENTRIES_PAGE_SIZE);
+
+  const result = api.entries.list.useQuery(
+    {
+      tagId,
+      sortBy: 'start_time',
+      sortOrder: 'desc',
+      limit,
+    },
+    {
+      ...cacheStrategies.entries,
+      retry: 1,
+    },
+  );
+
+  // entries.list は start_time / end_time が null の未スケジュール行も返す。
+  // TagRecentBlocks は timed entry 前提で日時を表示するため、null 時刻を除外して
+  // 未スケジュール行が timeline を圧迫しないようにする。
+  const timedEntries = useMemo(
+    () => result.data?.filter((e) => e.start_time != null && e.end_time != null),
+    [result.data],
+  );
+
+  // hasMore は「可視行が limit に達したか」で判定。raw length で判定すると
+  // null 時刻行で埋まった page でも Load more が出続けて UI が更新されない問題になる
+  const hasMore = (timedEntries?.length ?? 0) >= limit;
+
+  const loadMore = useCallback(() => {
+    setLimit((prev) => prev + TAG_ENTRIES_PAGE_SIZE);
+  }, []);
+
+  return { ...result, data: timedEntries, hasMore, loadMore };
 }

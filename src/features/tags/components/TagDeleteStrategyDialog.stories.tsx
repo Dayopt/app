@@ -131,8 +131,7 @@ export const FewEntries: Story = {
 };
 
 /**
- * タグが多い場合（検索バー表示）。
- * availableTags が6件以上で検索UIが出現する。
+ * タグが多い場合。付け替え先候補が6件並ぶ。
  */
 export const ManyTags: Story = {
   render: () => {
@@ -163,8 +162,7 @@ export const ManyTags: Story = {
 };
 
 /**
- * 付け替え先タグが1件のみ。
- * 検索バーは非表示、選択肢が限られる状態。
+ * 付け替え先タグが1件のみ。選択肢が限られる状態。
  */
 export const SingleReassignTarget: Story = {
   render: () => {
@@ -210,9 +208,7 @@ export const AllPatterns: Story = {
         />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs">
-          タグが多い場合（検索バー表示、開いた状態）
-        </p>
+        <p className="text-muted-foreground mb-2 text-xs">タグが多い場合（開いた状態）</p>
         <TagDeleteStrategyDialog
           open
           onClose={() => {}}

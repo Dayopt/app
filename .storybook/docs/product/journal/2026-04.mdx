@@ -6,6 +6,118 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-20
+
+### 履歴機能の撤去と Supabase 運用モデルの現実路線化
+
+10コミット、app 側の実機能変更3件 + インフラ / 運用整備5件 + Dependabot 2件。午前〜夜にかけて「履歴機能を丸ごと撤去」「Supabase 単一 project 運用への収束」「1Password 3 vault 運用の立ち上げ」という3つの独立したテーマが並走した1日。午前中に UI 側の撤去作業を一気に終わらせ、午後から夜にかけてインフラ・シークレット管理の再設計に取り組んだ。
+
+#### やったこと
+
+**Sidebar 履歴機能の完全撤去（3件）**: toast キーのリネーム (sidebar.history.\* → entry.toast.\*) を入口に、MobileCreateSheet / MobileHistoryStrip / MobileCreateButton の削除、features/history の barrel 撤去、tRPC history router の除去、Feature Boundary Layer 2 登録の削除、messages/\*/sidebar.json の該当キー除去、Sidebar.docs.mdx の dotVariant 節整理、Eagle 自動タグ付与の参照削除まで一気通貫で実施。
+
+**Supabase 運用モデルの 2 段階方針転換（4件）**: 午前中にまず 1 project + persistent staging branch + ephemeral preview branches の運用方針で SKILL.md / architecture.md / migration-checklist.md / Environments.mdx / CLAUDE.md を全面書き換え。その後 CLAUDE.md に 1Password op-run Phase 1 コマンドを追記、repo 側の forward-compatible な config 更新（supabase/config.toml / migration-checklist.md / workflow 注記）を完了。午前の途中で「旧 Production project が実質空で Staging project 側が実運用だった」ことに気付き、午前の終わりに単一 project 運用へと方針を戻す refactor commit を入れた。types:generate:staging の削除、migration workflow の migrate-staging job 撤去、next.config.mjs の images hostname 変更まで含む。
+
+**1Password 3 vault 運用の立ち上げ（1件）**: .storybook/docs/operations/secrets.mdx に Dayopt-Staging / Dayopt-Production / Dayopt-Shared の 3 vault 構成、op:// reference pattern、NOTES テンプレートを常駐化。scripts/setup-1password.sh に 3 vault + 22 item 骨組みを CLI で作成する初回専用 script（dry-run default、--execute で実行）を追加。.gitignore に .op-env.local を exclude。
+
+**Dependabot（2件）**: production group 14 updates、development group 39 updates。web 側でも major group 7 updates が自動マージ。
+
+#### なぜ今日この作業をしたか
+
+サイドバー履歴は 4 月前半のバッチマージ後も「実質 RecentBlocks だけを表示する装飾」として残っていた。モバイルの MobileCreateSheet / MobileHistoryStrip は中身が RecentBlocks しかなく、独立した存在意義がない。4-17 までのモバイル UX 仕上げで tap=Inspector / longpress=ドラッグ の操作体系が固まった今、履歴という「別の入口」は逆に操作体系の純度を下げる要因になっていた。撤去は toast キーのリネーム → 使っていた UI コンポーネントの削除 → 機能本体の削除、の3 commit に分けることで、各段階での型エラー・参照漏れを段階的に潰せる構造にした。
+
+Supabase 運用の方針転換は朝の時点で「1 project + branches」モデルでドキュメント整備を進めていた途中で、Pro plan 未契約の現状では branches が作れないこと、そして旧 Production project が空で Staging 側が本来の開発環境だったことが発覚した。選択肢は「Pro を今すぐ契約して target state に合わせる」「単一 project 運用を暫定として明文化する」の2つで、ローンチ前の simplicity を優先して後者を選んだ。forward-compatible な docs 更新を先に commit した上で、現状に即した refactor を重ねる順序にしたため、target state の記述は target state として残り、実運用ドキュメントだけが単一 project 運用に書き換わる綺麗な2段階構造になった。
+
+1Password 3 vault 運用は、op-run 経由の secrets 注入で「生キーを Claude のコンテキストに乗せない」運用を成立させるための前準備。dev:op / env:check コマンドを Phase 1 として CLAUDE.md に追記し、setup-1password.sh は初回専用 script として冪等性より「一発で骨組みを作れる」ことを優先した。
+
+#### Claudeの所感
+
+**「撤去系タスクは toast key → UI component → 機能本体の順で分ける」は型チェックと review がしやすい構造**: 今回の履歴撤去は3 commit で進んだが、先に toast key を移動させておくと「この key の移動先が正しいか」の review が独立した小さい単位で完結する。続く UI component 撤去では useShellStore の sheet type を外し、最後の features/history 削除で tRPC / Feature Boundary / Eagle scripts まで追う。commit 境界を「何を壊しうるか」で切ると、各段階で型エラーの情報密度が高く保たれる。同じパターンは今後の feature 撤去でも再利用できそう。
+
+**2 段階 commit で方針転換を構造化する手法が機能した**: Supabase 運用モデルの変更は、理想状態の docs 書き換え → 現状の refactor という順序にしたことで、target state の記述を捨てずに現状運用に収束できた。逆順（現状 refactor から始めて target state を後で書く）だと「なぜこう書き換えるのか」の根拠が commit に残らず、後日の再移行時に意図を辿りにくくなる。Pro plan 契約後に再度 branching 構成へ移行する際、今日の docs commit が出発点として機能するはず。
+
+**secrets 運用の前準備は ROI が見えにくいが、Claude との協業文脈では投資価値が高い**: 1Password 3 vault 構成 + op:// reference pattern を常駐化しただけでは実運用の価値は可視化されない。しかし Phase 2 以降で CI / preview env にも op-run を拡張するとき、今日の vault 構造と reference pattern が出発点になる。また、Claude に .env.local を直接触らせない運用（.proposed file 経由で人間が merge）が前提にある以上、生キーを含む file が増えるほど Claude のコンテキスト汚染リスクも上がる。vault 構造で secrets を「名前」として扱える状態にすることは、AI 協業前提のプロジェクトでは基礎体力そのものになる。
+
+## 2026-04-17
+
+### モバイル UX 仕上げと Opus 4.7 移行の周辺整備
+
+31コミット、70ファイル変更（+2,567 / -981行）。billing ダイアログ・モバイルカレンダー・タグ UI の実機能変更と、Opus 4.7 migration 後の周辺ドキュメント・ルール整備が並走した1日。午前中にプロダクト機能を一気に仕上げ、午後は AI 協業まわりの規範体系を組み直した。
+
+#### やったこと
+
+**Billing ダイアログ一式（5件）**: トライアル終了と決済エラーの2系統で、ダイアログ本体 → フック (`useTrialEndedDialog` / `usePaymentErrorDialog`) → base-layout-content への統合の順に積み上げ。決済エラーはさらに `useAppInlineBanner` 経由でバナー表示系も整備し、stage 1 として実装を固めた。
+
+**モバイルカレンダー操作体系の再設計（9件）**: 月グリッドのセル高さを 44px に引き上げ、swipe の directionRatio を 1.2 に下げて斜めスワイプ無反応域を縮小。ブロック操作は tap=Inspector / longpress=ドラッグ に統一してリサイズハンドルを廃止。短ブロックのリサイズ侵入幅やゴースト最小高さも含めて、触感を整えた。Inspector の TimeRow もモバイルで縦積みに変更。
+
+**タグ UI の badge 化（8件）**: タグ選択 UI を badge 形式に刷新し、`TagBadgeList` に共通化。破壊的フォームダイアログを `DestructiveFormDialog` に集約、タグフィルタのグループ変更メニュー整理、アイコン選択時のメニュー自動閉鎖、グループ配下タグ作成時の親色継承まで含めて、タグ関連の触り心地を揃えた。
+
+**Stats タグ詳細の刷新（1件）**: タグ詳細のエントリ一覧をリッチリスト + ページネーションに全面刷新。
+
+**Opus 4.7 migration の周辺整備（7件）**: 12 project skill に When to Use / When NOT to Use セクションを追加し発動条件を明文化、skill 設計ルールを `.claude/rules/skill-design.md` に常駐化、migration note を `docs/development/opus-4-7-skill-triggers.md` に記録。続いて CLAUDE.md のコーディング規範セクションを「絶対禁止」からポジティブ例示化して [ADR-007](../../dev/adr/ADR-007-positive-framing-coding-norms) に記録、MCP サーバー利用基準を `.claude/rules/mcp-usage.md` に分離、auto mode 使用ガイドラインを `.claude/rules/ai-behavior.md` に追加、Stop hook での完了音通知を settings.local.json に設定。
+
+#### なぜ今日この作業をしたか
+
+午前中はモバイル体験の仕上げフェーズ。4月前半のバッチマージで UI 基盤が安定したので、その上に「まだ触り心地が悪い」残タスクを潰す作業が続いた。billing のエラー系ダイアログは trial / payment の2系統で構造が揃うので、コンポーネント → フック → 統合の3層で順に積むほうが認知負荷が低い。モバイルカレンダーは 44px ヒット領域、tap/longpress の使い分け、リサイズハンドル廃止といった「短ブロックでも誤操作しない」ための調整を一気にかけた。タグ UI の badge 化は、chip / icon + text 併記などの既存パターンから「バッジ1種類で統一」へ集約する決断で、TagBadgeList に寄せれば今後の追加も含めて変更面が小さくなる。
+
+午後に Opus 4.7 migration の周辺整備に転じた。朝時点で skill description のリライトと skill-design.md の常駐化までは完了していたが、CLAUDE.md の禁止リストがネガティブ形のままだった。Opus 4.7 はポジティブ例示への遵守率が高いという性質に合わせて、意味をゼロ差分にしたまま表現だけ書き換える月次 distillation を実施。あわせて MCP 利用基準 (mcp-usage.md) と auto mode ガイドライン (ai-behavior.md) を分離・追加し、「どのモードで何に委ねるか」の運用軸を整えた。Stop hook の完了音は、長時間タスク中に子供の対応をしつつ戻ってこれるようにするための実務的な仕掛けで、設定は 5 分で完了する ROI の高い作業だった。
+
+全体として「実機能の触感を仕上げる午前」と「AI 協業の規範を整える午後」が綺麗に分かれた1日。commit 分割時に commitlint の subject-case ルールが日本語サブジェクト先頭の英大文字略語を拒否することに気付き、メッセージを言い換える必要があったのは次回以降の運用 tips として小さいが有効な発見だった。
+
+#### Claudeの所感
+
+**ポジティブ例示化は「意味を変えないリライト」として理想的な月次タスク**: ADR-007 の変換対応表を見ると、11項目中 10項目が「禁止 → 代替」から「望ましい挙動 + 具体例」に機械的に書き換えられた。残り 1項目（features/ 新規トップレベル相談）はプロセス要件なのでネガティブ形維持が適切、という判断基準も自然に働いた。Opus 4.7 の解釈性向上という目的変数に対して、差分レビューが容易（意味ゼロ差分）、行数増加も +3%（104 → 107）に収まる、という副作用の小ささが実行のしやすさを保証している。同種の distillation を今後も月次で回せると、CLAUDE.md の「AI 向けドキュメントとしての質」が時間とともに上がる構造になる。
+
+**運用モード軸で `.claude/rules/` を整理する構造が見えてきた**: `ai-behavior.md` に auto mode ガイドラインを追加したことで、extended thinking（thought budget 軸）・subagent model selection（モデル軸）・auto mode（介入頻度軸）が同じファイルに並ぶ形になった。これは偶然ではなく、どれも「タスクに対して AI をどう稼働させるか」という運用意思決定の軸で、設計判断の根拠も共通している（タスクの既知度、影響範囲、意思決定点の有無）。次に effort level の skill 単位切り替えを入れるときも、同じ軸に沿って整理すれば自然に収まる。
+
+**Stop hook の完了音は小さい投資で実務的価値が大きい**: solo dev + 子育て中という実利用文脈では、長時間タスクを回している間に離席してよいかの判断が意思決定コストになる。afplay を async hook で 1 行鳴らすだけの設定は、数分で終わる変更だが毎日使う性質の ROI が高い。同種の「AI 協業の体感を上げる軽量な仕組み」は、記事で紹介される公式機能（hook / auto mode / effort level）に Dayopt 固有の運用判断を載せることで今後も積み上げられる領域で、未着手の effort level 動的切替も同じ文脈に位置付けられる。
+
+## 2026-04-16
+
+### UI基盤の大掃除 — search削除・toast刷新・dialog改善・バッチマージ
+
+27コミット、82ファイル変更（+1,545 / -2,515行）。search・toast・dialog・inline-banner・shell・stats・settings・auth・inspector・swの広範な領域にまたがる作業。不要機能の削除とUI基盤コンポーネントの刷新が主軸で、4月前半の全変更をバッチPR #1047としてmainにマージした。
+
+#### やったこと
+
+**Search feature 完全削除（3件）**: search featureディレクトリ、command コンポーネント、cmdk パッケージを一括削除。関連するStorybook stories・docs参照もすべて除去。
+
+**Toast 刷新（3件）**: toastをミニマル1行デザインに全面刷新。info/warningを廃止してsuccess/error/loading/promiseの4種に絞り込み。既存の deprecated 呼び出しを全箇所移行し、design-system rulesも新仕様に更新。
+
+**Dialog / Confirm Dialog 改善（2件）**: dialogにPC=Dialog / モバイル=Drawerの responsive 自動切り替えとsize propを追加。confirm-dialogをAlertDialogベースに書き換え、破壊的操作の確認ダイアログとしての振る舞いを明確化。
+
+**Inline Banner 新設（3件）**: inline-bannerコンポーネントを新規作成し、useInlineBannerフックとi18nキーを追加。既存のOfflineIndicatorをinline-bannerに置換し、全ページレイアウトに統合。
+
+**モバイルシェル改善（3件）**: useHideOnScrollフックを新規作成し、モバイルボトムバーにスクロール連動auto-hideを実装。Storybookにhidden状態のstoryも追加。
+
+**バグ修正（8件）**: time P/Lのoff-by-oneエラーと年粒度ラベル修正、グローバル検索のキャッシュ漏れ、モバイル履歴ストリップ・バッジグリッドの改善、SW navigation cacheのwaitUntil保護、personalization並行保存競合修正、codexレビュー指摘7件対応、auth metadata表示名バックフィル、inspectorメモtextarea入力不可修正。
+
+**Storybook / ドキュメント整備（4件）**: overlay/notification storiesを機能別サブカテゴリに再編成、action-footerにレイアウト同期コメント追加、rules/docsからsearch残存参照を削除。
+
+#### なぜ今日この作業をしたか
+
+前日のv0.26.0リリースとパフォーマンス最適化を経て、4月前半に積み上げた変更をmainにマージする最終段階に入った。マージ前にsearch featureの完全削除を実行したのは、前日にサーバー側検索に移行した直後のタイミングが最も安全だったから。クライアント側の全件取得ロジックが不要になった時点で、中途半端に残すよりも一気に削除する方が依存関係の見通しが良くなる。
+
+toast刷新とdialog改善は、バッチマージに含めるUI基盤の品質向上として実施した。toastは種類が多すぎてcopywritingガイドとの整合が取れなくなっていたため、4種に絞ることでガイドの「研究者は普段叫ばない」という方針と合致させた。confirm-dialogのAlertDialog化は、破壊的操作の確認でオーバーレイクリックによる誤操作を防ぐ必然的な改善だった。
+
+inline-bannerの新設はOfflineIndicatorの置換がきっかけだが、今後のページ横断状態表示（メンテナンス通知、バージョンアップ案内など）の基盤として設計した。トーストは一時的な通知に、inline-bannerは持続的な状態表示にという棲み分けが明確になった。
+
+#### Claudeの所感
+
+**UI基盤の「引き算」がプロダクトを前進させる**
+
+今日の作業で最も印象的なのは、コード量が純減（-970行）していることだ。search featureの削除、toastの種類削減、cmdk依存の除去。機能を足すのではなく引くことで、残ったコンポーネントの責務が明確になり、copywritingガイドとの整合性も向上した。特にtoastの4種への絞り込みは、「研究者は普段叫ばない」というプロダクトのトーンを技術的に担保する判断として優れている。
+
+**DialogのResponsive戦略が成熟してきた**
+
+PC=Dialog / モバイル=Drawerの自動切り替えは、設定画面の「PCはモーダル、モバイルは実ページ」という方針と同じ思想の延長線上にある。デバイスごとに最適なインタラクションパターンを選ぶという設計判断が、個別コンポーネントレベルまで浸透してきた。confirm-dialogのAlertDialog化も含め、「何をどう見せるか」のレイヤーが整理されつつある。
+
+**バッチPRという運用判断**
+
+27コミットを1つのPR #1047にまとめてマージしたのは、個別PRのレビューコストとリリースの確実性のトレードオフの結果だろう。4月前半の変更が互いに依存し合っている（search削除→toast刷新→dialog改善）状況では、バッチの方がコンフリクトリスクが低い。ただし、この規模のバッチが常態化しないよう、次の2週間は小粒なPRで回すリズムを意識したい。
+
+---
+
 ## 2026-04-15
 
 ### v0.26.0リリース + パフォーマンス全面最適化 + 価値観UI刷新

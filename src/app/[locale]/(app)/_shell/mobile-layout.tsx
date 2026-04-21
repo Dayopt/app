@@ -7,14 +7,12 @@ import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
-import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { BottomTabBar } from './BottomTabBar';
+import { useAppInlineBanner } from './useAppInlineBanner';
 
 import { MainContentWrapper } from './main-content-wrapper';
-import { MobileCreateSheet } from './MobileCreateSheet';
-import { MobileHistoryStrip } from './MobileHistoryStrip';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -27,11 +25,11 @@ interface MobileLayoutProps {
  * **構成**:
  * - AppHeader（ナビゲーション）
  * - MainContent（pb-16でBottomTabBar分の余白確保）
- * - BottomTabBar（固定ボトムタブ）
+ * - BottomTabBar（固定ボトムタブ、スクロール連動 auto-hide）
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
-  const banner = useInlineBanner();
+  const banner = useAppInlineBanner();
 
   const pathname = usePathname();
   const { hidden, reset } = useHideOnScroll();
@@ -67,15 +65,9 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
 
-        {/* Main Content（BottomTabBar + HistoryStrip分の余白を確保） */}
-        <MainContentWrapper className="pb-24">{children}</MainContentWrapper>
+        {/* Main Content（BottomTabBar分の余白を確保） */}
+        <MainContentWrapper className="pb-16">{children}</MainContentWrapper>
       </div>
-
-      {/* 作成ボトムシート（RecentBlocks） */}
-      <MobileCreateSheet />
-
-      {/* 履歴ストリップ（BottomTabBarの直上） */}
-      <MobileHistoryStrip hidden={hidden} />
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar hidden={hidden} />

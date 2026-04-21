@@ -1,6 +1,6 @@
 ---
 name: supabase
-description: Supabaseスキル。RLS設計、マイグレーション作成、Realtime購読の実装時に自動発動。3環境分離での安全な運用を支援。
+description: 新規 Supabase migration ファイル(`supabase/migrations/*.sql`)を追加する時、既存 schema に RLS ポリシーを設計・変更する時、Storage バケットポリシーを編集する時、Realtime 購読(`postgres_changes`)を新規実装する時、Edge Functions(`supabase/functions/`)を追加・デプロイする時、Production project への DB 変更を適用する時に発動。単一 project 運用(ローンチ前)の安全パターンを適用する。アプリケーション層のみの変更では発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -9,53 +9,128 @@ maxTurns: 25
 
 Dayoptでの Supabase 運用パターンを支援するスキル。
 
-## When to Use（自動発動条件）
+> ## ⚠️ 現状: 単一 project 運用（ローンチ前）
+>
+> 現在は **単一 Supabase project (`yvglwblxrnrenfifsnje`)** のみで運用している（dev / preview / production すべて同じ DB を参照）。以下の branching に関する記述は**ローンチ後の target state** であり、現時点では該当しない。
+>
+> **現状で守ること**:
+>
+> - migration は main merge で GitHub Actions が Production に自動適用
+> - 手動 `db push` は緊急時のみ（整合性のため極力避ける）
+> - preview / dev が production DB を直接触るため `db reset` 厳禁
+> - Edge Functions は Production project にデプロイ（`--use-api` 必須）
+> - RLS を信頼して分離する前提
+>
+> **target state**（Pro plan + GitHub integration 後）: 以下の branch 運用に移行する。
 
-- 新しいテーブル/カラムを追加する時
-- RLSポリシーを設計する時
-- Realtime購読を実装する時
-- マイグレーションを作成する時
-- 「supabase」「RLS」「migration」キーワード
+## When to Use
 
-## 3環境構成
+以下の状況で発動:
 
-| 環境           | Supabase                   | 用途           |
-| -------------- | -------------------------- | -------------- |
-| **Local**      | 127.0.0.1:54321            | 開発・デバッグ |
-| **Staging**    | dayopt-staging（Tokyo）    | PRレビュー     |
-| **Production** | t3-nico's Project（Tokyo） | 実ユーザー     |
+- `supabase/migrations/*.sql` に新規 migration ファイルを追加する時
+- 既存テーブルに RLS ポリシーを新規定義、または `USING` / `WITH CHECK` を変更する時
+- Storage バケットポリシー(`storage.objects` の RLS)を編集する時
+- Realtime 購読(`postgres_changes` subscription)を新規実装・変更する時
+- `supabase/functions/` 配下の Edge Function を追加・変更・デプロイする時
+- Supabase secrets の追加・変更を行う時
 
-**重要**: 各環境のDBとAuthは完全に独立。アカウント共有不可。
+## When NOT to Use
 
-## マイグレーション作成
+- アプリケーション層のみの変更(tRPC router 内部ロジック、`trpc-router-creating` skill の領域、DB 未変更)
+- 認証フローのみの変更で DB schema が変わらない時(`security` skill の領域)
+- 型生成結果(`src/lib/supabase/types.ts`)のみの更新(`types:generate` 後の自動反映)
+
+## 環境構成
+
+### 原則
+
+**1 Supabase project + persistent staging branch + ephemeral preview branches**
+
+git の世界観と揃える:
+
+- `main` = production
+- `staging` = persistent staging branch
+- `feat/*` = preview branch(PR単位、自動生成・自動破棄)
+
+### 環境マップ
+
+| 環境           | 実体                        | ライフサイクル            | 用途                                               |
+| -------------- | --------------------------- | ------------------------- | -------------------------------------------------- |
+| **Preview**    | Supabase preview branch     | PR open〜close(ephemeral) | 日常の開発・PR検証                                 |
+| **Staging**    | persistent branch `staging` | 長命・固定URL             | Stripe webhook検証、hotfix検証、closed beta        |
+| **Production** | main project                | 永続                      | 実ユーザー                                         |
+| **Local**      | `supabase start`            | 任意                      | 緊急避難用(オフライン時等、デフォルトでは使わない) |
+
+### 守るもの・捨てるもの
+
+**守る:**
+
+- 本番データ・認証ユーザー・APIキーは Supabase branch 機構で完全隔離
+- 開発作業は staging/production の DB を直接汚さない
+- migration は git history に残り、CI で検証されたものだけが production に到達
+
+**捨てる(=意図的に採用しない):**
+
+- Supabase プロジェクトの物理分離(1 organization で完結)
+- ローカル開発からの staging / production 直結
+- Dashboard SQL Editor での手動 production migration
+
+## Migration 運用
+
+### 作成フロー
+
+```bash
+# 1. ブランチ作成
+git checkout -b feat/add-xxx
+
+# 2. migration ファイル作成
+npx supabase migration new add_xxx
+
+# 3. SQL編集
+# supabase/migrations/YYYYMMDDHHMMSS_add_xxx.sql
+
+# 4. push → PR
+git push -u origin feat/add-xxx
+gh pr create
+
+# 5. 自動実行
+# - Supabase preview branch 自動生成
+# - migration が preview branch で実行
+# - CI で status check 実行
+# - Vercel Preview が preview branch に接続
+
+# 6. PR レビュー・動作確認
+
+# 7. main merge
+# - production に migration 自動適用
+# - Vercel production 自動デプロイ
+```
+
+### Staging branch への適用
+
+通常の PR フローは preview → production 直行。staging を経由するのは**以下の場合のみ**:
+
+- Stripe 本番 webhook との結合検証が必要な migration
+- launch 後の hotfix で、本番相当の検証が必要な時
+- closed beta 用のデータモデル変更
+
+その場合の手順:
+
+```bash
+# staging branch に cherry-pick or merge
+git checkout staging
+git merge feat/add-xxx
+git push
+# → staging Supabase branch に自動適用
+```
 
 ### 命名規則
 
 ```
-supabase/migrations/
-├── YYYYMMDDHHMMSS_description.sql
+supabase/migrations/YYYYMMDDHHMMSS_description.sql
 ```
 
-例: `20241027000000_create_tickets_sessions_tags.sql`
-
-### 作成手順
-
-```bash
-# 1. ローカルで作成
-supabase migration new add_new_column
-
-# 2. SQLを編集
-# supabase/migrations/YYYYMMDDHHMMSS_add_new_column.sql
-
-# 3. ローカルで適用・テスト
-supabase db reset
-
-# 4. Stagingに適用
-supabase db push --linked
-
-# 5. Productionに適用（慎重に）
-# Supabase Dashboard > SQL Editor で実行
-```
+例: `20260420000000_add_streak_column.sql`
 
 ### マイグレーションテンプレート
 
@@ -99,20 +174,49 @@ CREATE TRIGGER set_updated_at
 CREATE INDEX idx_new_table_user_id ON public.new_table(user_id);
 ```
 
-## RLS設計パターン
+### マイグレーション作成時チェックリスト
+
+- [ ] RLS を有効化したか
+- [ ] 適切な RLS ポリシーを設定したか
+- [ ] `user_id` カラムがあるか(ユーザーデータの場合)
+- [ ] `ON DELETE CASCADE` を設定したか
+- [ ] インデックスを追加したか
+- [ ] preview branch で適用確認したか
+
+## Seed 戦略
+
+### 方針: 最小限
+
+`supabase/seed.sql` には**最小限のtagデータ(10件程度)のみ**を記述。
+
+理由:
+
+- preview branch はエフェメラルで、毎回 seed 実行のコストを小さくしたい
+- アプリ側の UI 動作確認はテストユーザーが手動でデータを作成して行う
+- ペルソナベースのシナリオデータは現段階では YAGNI
+
+```sql
+-- supabase/seed.sql
+INSERT INTO public.tags (id, name, color, user_id) VALUES
+  -- system tags(全ユーザー共通のデフォルト)
+  (...)
+;
+```
+
+## RLS 設計パターン
 
 ### 基本ルール
 
 ```
-1. 全テーブルでRLSを有効化
+1. 全テーブルで RLS を有効化
 2. auth.uid() = user_id でフィルタ
-3. tRPC側でも ctx.userId でフィルタ（二重チェック）
+3. tRPC側でも ctx.userId でフィルタ(二重チェック)
 ```
 
 ### パターン別ポリシー
 
 ```sql
--- 読み取り専用（公開データ）
+-- 読み取り専用(公開データ)
 CREATE POLICY "Public read access"
   ON public.public_table FOR SELECT
   USING (true);
@@ -122,19 +226,19 @@ CREATE POLICY "Own data only"
   ON public.user_data FOR ALL
   USING (auth.uid() = user_id);
 
--- 親子関係（例: タグ → プラン）
+-- 親子関係(例: タグ → エントリ)
 CREATE POLICY "Access via parent"
-  ON public.plan_tags FOR SELECT
+  ON public.entry_tags FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM public.plans
-      WHERE plans.id = plan_tags.plan_id
-      AND plans.user_id = auth.uid()
+      SELECT 1 FROM public.entries
+      WHERE entries.id = entry_tags.entry_id
+      AND entries.user_id = auth.uid()
     )
   );
 ```
 
-### RLSデバッグ
+### RLS デバッグ
 
 ```sql
 -- 現在のユーザーIDを確認
@@ -142,14 +246,9 @@ SELECT auth.uid();
 
 -- ポリシーを確認
 SELECT * FROM pg_policies WHERE tablename = 'your_table';
-
--- RLSを一時的に無効化（開発時のみ）
-SET session_replication_role = replica;
--- テスト後、必ず戻す
-SET session_replication_role = DEFAULT;
 ```
 
-## Realtime購読
+## Realtime 購読
 
 ### 基本パターン
 
@@ -172,7 +271,6 @@ export function useEntityRealtime(onUpdate: () => void) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('Change received:', payload);
           onUpdate();
         },
       )
@@ -187,94 +285,110 @@ export function useEntityRealtime(onUpdate: () => void) {
 
 ### 楽観的更新との競合防止
 
-```typescript
-// stores/useEntityCacheStore.ts
-export const useEntityCacheStore = create<{
-  isMutating: boolean;
-  setMutating: (value: boolean) => void;
-}>((set) => ({
-  isMutating: false,
-  setMutating: (value) => set({ isMutating: value }),
-}));
+詳細は `/optimistic-update` skill を参照。
 
-// hooks/useEntityRealtime.ts
-export function useEntityRealtime() {
-  const isMutating = useEntityCacheStore((s) => s.isMutating);
+## Edge Functions
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('entities')
-      .on('postgres_changes', { ... }, () => {
-        // mutation中はスキップ
-        if (!isMutating) {
-          void utils.entity.list.invalidate();
-        }
-      })
-      .subscribe();
-    // ...
-  }, [isMutating]);
-}
+### 構成
+
+| Function          | 用途                                 | Preview | Staging | Production |
+| ----------------- | ------------------------------------ | ------- | ------- | ---------- |
+| `send-auth-email` | Supabase Auth メール送信(Resend経由) | ✅      | ✅      | ✅         |
+| `check-reminders` | リマインダー通知(cron)               | ❌      | ✅      | ✅         |
+| `daily-insights`  | 日次AI洞察(cron)                     | ❌      | ✅      | ✅         |
+
+**方針**: preview branch には「PR検証に必要な function のみ」デプロイする。cron は preview で動いても意味がなく、Anthropic API 等のコスト要因になるため除外。
+
+### デプロイコマンド
+
+**必須: `--use-api` フラグ**(この環境に Docker がないため、デフォルトの Docker ビルドは失敗する)
+
+```bash
+# preview branch
+npx supabase functions deploy send-auth-email --use-api --project-ref=<PREVIEW_REF>
+
+# staging
+for fn in send-auth-email check-reminders daily-insights; do
+  npx supabase functions deploy $fn --use-api --project-ref=<STAGING_REF>
+done
+
+# production
+for fn in send-auth-email check-reminders daily-insights; do
+  npx supabase functions deploy $fn --use-api --project-ref=<PROD_REF>
+done
 ```
 
-## クライアント設定
+通常は GitHub Actions で自動実行される。手動デプロイは緊急時のみ。
 
-```typescript
-// src/lib/supabase/client.ts
-import { createBrowserClient } from '@supabase/ssr';
+### Secrets 管理
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
+#### マトリクス
+
+| Secret                   | Preview           | Staging               | Production               | 備考                            |
+| ------------------------ | ----------------- | --------------------- | ------------------------ | ------------------------------- |
+| `RESEND_API_KEY`         | test key          | test key              | **live key**             | Resend は test/live の2分割     |
+| `RESEND_FROM_EMAIL`      | `noreply-dev@...` | `noreply-staging@...` | `noreply@dayopt.app`     | 環境別                          |
+| `NEXT_PUBLIC_APP_URL`    | preview URL       | staging URL           | `https://app.dayopt.app` | 環境別                          |
+| `CRON_SECRET`            | (不要)            | UUID-staging          | UUID-production          | `openssl rand -hex 32`          |
+| `SEND_EMAIL_HOOK_SECRET` | test値            | staging値             | production値             | Supabase Auth hook 設定時に発行 |
+
+**Supabase platform 自動注入(触らない):**
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+#### 設定方法
+
+```bash
+# CLI経由
+npx supabase secrets set KEY=value --project-ref=<REF>
+
+# 一括投入
+npx supabase secrets set --env-file .env.edge.<env> --project-ref=<REF>
 ```
 
-```typescript
-// src/lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+`.env.edge.production` / `.env.edge.staging` / `.env.edge.preview` は **`.gitignore` 必須**。
 
-export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookies) => cookies.forEach((c) => cookieStore.set(c)),
-      },
-    },
-  );
-}
-```
+#### Resend key の切り分け
 
-## チェックリスト
+- **test key**: preview / staging で共用。Resend test mode なので実メール送信されない
+- **live key**: production 専用。実ユーザーにメール送信する
 
-マイグレーション作成時：
+## 絶対ルール
 
-- [ ] RLSを有効化したか
-- [ ] 適切なRLSポリシーを設定したか
-- [ ] `user_id` カラムがあるか（ユーザーデータの場合）
-- [ ] `ON DELETE CASCADE` を設定したか
-- [ ] インデックスを追加したか
-- [ ] ローカルでテストしたか
+### Migration
 
-Realtime実装時：
+- production への手動 `db push` 禁止(自動適用フローに一本化)
+- production Dashboard SQL Editor での直接クエリ禁止(git 履歴と DB 実態の乖離を防ぐ)
+- migration ファイル作成後、そのSQLを git 外の経路で実行することを禁止
 
-- [ ] `filter` でユーザーIDを指定したか
-- [ ] クリーンアップ（removeChannel）を実装したか
-- [ ] 楽観的更新との競合を考慮したか
+### Edge Functions
+
+- デプロイは必ず `--use-api` フラグ付きで実行
+- production の secrets を preview / staging にコピーしない
+- `RESEND_API_KEY` の live key は production のみ
+- cron function(`check-reminders` / `daily-insights`)は preview にデプロイしない
+
+### Secrets
+
+- `SUPABASE_SERVICE_ROLE_KEY` / `RESEND_API_KEY` 等の秘匿値を**ログ出力・commit しない**
+- `.env.edge.*` は `.gitignore` 対象
+- secrets の値を `console.log` / `logger` に含めない
+
+### 環境操作
+
+- Staging と Production を**同時にデプロイしない**
+- production への変更は必ず preview branch での検証を経る
+- staging は「Stripe検証 / hotfix / closed beta」以外の目的では触らない
 
 ## 関連エージェント
 
 - **database-architect** — スキーマ設計評価、インデックス戦略、N+1検出、マイグレーション安全性分析
 
-> このスキルは「マイグレーション・RLS・Realtimeの実装手順書」、エージェントは「DB設計の品質評価・最適化提案」。
+> このスキルは「migration・RLS・Realtime・Edge Functions の実装手順書」、エージェントは「DB 設計の品質評価・最適化提案」。
 
 ## 関連スキル
 
-- `/optimistic-update` - Realtime競合対策
+- `/optimistic-update` - Realtime 競合対策
 - `/security` - 認証/認可パターン
-- `/trpc-router-creating` - Service層でのSupabase使用
+- `/trpc-router-creating` - Service 層での Supabase 使用

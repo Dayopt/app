@@ -4,10 +4,13 @@
 # 各設定値には「なぜそうしたか」を記載。
 # 公式リファレンス: https://supabase.com/docs/guides/local-development/cli/config
 #
-# 環境構成:
-#   - ローカル: supabase start（この config.toml を使用）
-#   - Staging:  dayopt-staging プロジェクト（Supabase Dashboard で管理）
-#   - Production: dayopt-app プロジェクト（Supabase Dashboard で管理）
+# 運用モデル: 単一 project 運用（ローンチ前の簡易構成）
+#   - Local:      supabase start（この config.toml を使用）
+#   - Production: yvglwblxrnrenfifsnje（dev / preview / production 全てここを向く）
+#
+# 将来計画: Pro plan + GitHub integration + persistent staging branch +
+#   ephemeral preview branches への移行（ローンチ後）。
+# 詳細: docs/development/migration-checklist.md / .claude/skills/supabase/SKILL.md
 # ============================================================
 
 project_id = "dayopt"

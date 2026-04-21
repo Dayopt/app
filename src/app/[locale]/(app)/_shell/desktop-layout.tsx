@@ -10,7 +10,6 @@ import { ActivityPopover } from '@/features/notifications';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Sidebar } from '@/lib/components/shell/sidebar';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
-import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
 import { cn } from '@/lib/utils';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -18,6 +17,7 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { MainContentWrapper } from './main-content-wrapper';
 import { SidebarContent } from './SidebarContent';
 import { SidebarPageNav } from './SidebarPageNav';
+import { useAppInlineBanner } from './useAppInlineBanner';
 
 interface DesktopLayoutProps {
   children: React.ReactNode;
@@ -35,7 +35,7 @@ interface DesktopLayoutProps {
 export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const pathname = usePathname();
   const sidebar = useShellStore.use.sidebar();
-  const banner = useInlineBanner();
+  const banner = useAppInlineBanner();
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const title = useShellStore.use.pageTitle();
 

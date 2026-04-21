@@ -1,6 +1,6 @@
 ---
 name: trpc-router-creating
-description: DayoptのtRPC v11ルーターを作成。サービス層分離、Zodバリデーション、エラーハンドリングを適用。
+description: 新規 feature の `src/features/{feature}/server/router.ts` と service を作成する時、既存 router に procedure を追加する時、ビジネスロジックが router に混在していて service 層への分離が必要と判断した時に発動。feature-colocated 構造、Zod 入力検証、サービス層分離、エラーハンドリングを適用する。型定義のみの変更時や、auth 境界のみの変更時（`security` skill の領域）は発動しない。
 effort: medium
 maxTurns: 15
 ---
@@ -9,14 +9,21 @@ maxTurns: 15
 
 DayoptプロジェクトのtRPC v11ルーターを規約に沿って作成するスキルです。
 
-## このスキルを使用するタイミング
+## When to Use
 
-以下のキーワードが含まれる場合に自動的に起動：
+以下の状況で発動:
 
-- 「APIを作成」「エンドポイント追加」
-- 「tRPCルーター」「router作成」
-- 「バックエンド実装」
-- 「CRUD API」
+- 新規 feature に `src/features/{feature}/server/router.ts` と `{feature}-service.ts` を追加する時
+- 既存 router に新規 procedure（query / mutation）を追加する時
+- 大規模 feature で `router-index.ts` / `service-index.ts` によるマージ構造が必要になった時
+- 新規 procedure 作成時に Zod schema の input validation 設計が必要になった時
+- 既存 router にビジネスロジックが直接書かれており、service 層への分離が必要と判断した時
+
+## When NOT to Use
+
+- `types.ts` のみの型定義変更で、procedure 構造が変わらない時
+- 既存 procedure の auth 境界変更のみ（`security` skill の領域、router 構造は変えない）
+- Frontend 側の mutation 呼び出し方の変更のみ（`optimistic-update` skill の領域）
 
 ## ルーター構造（feature-colocated）
 

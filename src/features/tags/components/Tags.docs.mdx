@@ -27,11 +27,10 @@ TagSortableTree                 dnd-kit ドラッグ並べ替えツリー
 ├── SortableTagTreeItem         ソート可能ツリーアイテム
 └── TagTreeItem                 アイテム描画
 
-TagCreateModal                  新規タグ作成（親選択対応）
+InlineTagCreateRow              タグ新規作成（インライン）
+InlineTagNameEdit               タグ名 in-place 編集
 TagMergeModal                   タグマージ（関連移動+削除）
-TagRenameDialog                 リネーム
 TagNoteDialog                   説明編集
-GlobalTagCreateModal            グローバルモーダルラッパー
 GlobalTagMergeModal             グローバルモーダルラッパー
 ```
 
@@ -41,11 +40,10 @@ GlobalTagMergeModal             グローバルモーダルラッパー
 
 ### Zustand Stores
 
-| Store                    | 用途                           | persist |
-| ------------------------ | ------------------------------ | ------- |
-| `useTagCreateModalStore` | 作成モーダル状態               | No      |
-| `useTagMergeModalStore`  | マージモーダル状態             | No      |
-| `useTagCacheStore`       | mutation参照カウント、競合防止 | No      |
+| Store              | 用途                           | persist |
+| ------------------ | ------------------------------ | ------- |
+| `useModalStore`    | マージモーダル状態             | No      |
+| `useTagCacheStore` | mutation参照カウント、競合防止 | No      |
 
 ---
 

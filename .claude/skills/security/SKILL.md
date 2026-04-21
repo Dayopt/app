@@ -1,6 +1,6 @@
 ---
 name: security
-description: セキュリティ監査スキル。認証/認可、APIエンドポイント、ユーザー入力処理、外部データ取得の実装時に自動発動。OWASP Top 10観点でのチェックを実施。
+description: 認証/認可フロー変更時、tRPC の `protectedProcedure` 追加・変更時、Storage/RLS ポリシー編集時、Supabase Auth 設定変更時、ユーザー入力を受ける新規フォーム実装時、外部 API/Webhook からのデータ取り込み実装時に発動。OWASP Top 10 の観点でレビューする。型定義のみ・UI 文言のみの変更では発動しない。
 effort: high
 maxTurns: 25
 disallowedTools: Write
@@ -10,18 +10,20 @@ disallowedTools: Write
 
 ## When to Use
 
-以下の状況で自動発動：
+以下の状況で発動:
 
-- 認証・認可に関するコード変更時
-- tRPCエンドポイント作成・修正時
-- ユーザー入力を扱うフォーム実装時
-- 外部データ取得処理の実装時
+- tRPC router に新規 procedure を追加する時、または既存 procedure の auth 境界を変更する時
+- `protectedProcedure` / `publicProcedure` の区分を変える時、`ctx.userId` フィルタを追加・削除する時
+- Supabase の RLS ポリシー / Storage ポリシー / Auth 設定を編集する時
+- ユーザー入力を受け付ける新規フォームや API endpoint を実装する時
+- 外部サービス（Webhook、OAuth callback、外部 API response）からのデータを DB に書き込む処理を実装する時
+- `.env` / secrets の取り扱いに関わるコード変更時
 
 ## When NOT to Use
 
-- UIのみの変更
-- 型定義のみの変更
-- テストコードの作成
+- 型定義のみの変更（auth 境界が変わらない型エイリアス追加など）
+- UI 文言・レイアウトのみの変更で、データフローに触れない時
+- 既存テストのアサーション追加のみの時（新しい入力経路が増えない）
 
 ## チェックリスト（重要度順）
 

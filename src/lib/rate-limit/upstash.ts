@@ -31,6 +31,11 @@ if (isUpstashEnabled) {
     url: UPSTASH_REDIS_REST_URL!,
     token: UPSTASH_REDIS_REST_TOKEN!,
   });
+} else {
+  // production では src/env.ts の .refine が起動時に throw するため、ここに到達するのは dev/test のみ
+  logger.warn(
+    '[RateLimit] Upstash is not configured. Falling back to in-memory rate limiting — single-instance only, breaks on multi-replica deployments.',
+  );
 }
 
 /**

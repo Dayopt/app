@@ -6,15 +6,6 @@
     },
     "calendar": {
       "title": "カレンダー"
-    },
-    "history": {
-      "placed": "{name} を {time} に追加しました",
-      "overlapError": "{time} は既存のブロックと重複しています"
-    },
-    "recentBlocks": {
-      "title": "履歴",
-      "empty": "まだ履歴がありません",
-      "emptyHint": "カレンダーにブロックを追加すると自動で表示されます"
     }
   }
 }

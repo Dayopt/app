@@ -14,7 +14,9 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 
 ```bash
 # 開発（AIは実行しない）
-npm run dev              # 開発サーバー
+npm run dev              # 開発サーバー（.env.local を参照）
+npm run dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
+npm run env:check        # op references の解決確認
 npm run storybook        # Storybook
 
 # 検証（AI必須：コード変更後）
@@ -30,7 +32,7 @@ npm run test:integration # 統合テスト
 npm run test:e2e:smoke   # E2Eスモークテスト
 
 # 型生成・DB
-npm run types:generate:staging  # Supabase型生成（staging）
+npm run types:generate          # Supabase型生成（Production project）
 npm run migration:create        # マイグレーション作成
 npm run db:fresh                # ローカルDB初期化+シード
 
@@ -38,19 +40,21 @@ npm run db:fresh                # ローカルDB初期化+シード
 npm run quality:deadcode # 未使用コード検出（knip）
 ```
 
-## 絶対禁止
+## コーディング規範（必須パターン）
 
-- `any` / `unknown` / `Function` / `as any` → 具体的な型、`as never`
-- `console.log` → `@/lib/logger`
-- `useEffect`でのfetch → tRPC / TanStack Query
-- `style`属性 / 直接カラー(`text-blue-500`) → セマンティックトークン
-- `export default`（App Router特殊ファイル例外） → named export
-- `React.FC` → `export function ComponentName() {}`
-- `@/features/X` を他featureから直接import → Composition Layer経由
-- `features/` 内に新しいトップレベルfeatureを勝手に作らない → 相談すること
-- `lib/` から `features/` をimportしない → 依存方向は features → lib のみ
-- barrel（`index.ts`）以外のdeep importをしない → `@/features/X` 経由のみ
-- `utils.ts` / `helpers.ts` という名前のファイルを作らない → 責務を表す具体名にする
+型・ログ・通信・スタイル・構造の各レイヤで、この形に従うこと。詳細は [`.claude/rules/`](.claude/rules/) に委ねる。
+
+- **型**: 具体的な型を書く。union variance の逃げは `as never`。例: `type Status = 'idle' | 'loading'` / `value as never`
+- **ログ**: `@/lib/logger` で構造化ログを出す。例: `logger.info({ userId }, 'entry saved')`
+- **通信**: tRPC / TanStack Query でサーバーデータを取得。例: `const { data } = api.entries.list.useQuery({ date })`
+- **スタイル**: Tailwind のセマンティックトークンで書く。例: `<div className="bg-card text-foreground p-4" />`
+- **export**: named export を使う（App Router 特殊ファイルのみ `export default` 例外）。例: `export function EntryCard() {}`
+- **Component**: 関数宣言で props 型を直接注釈する。例: `export function Foo({ id }: { id: string }) {}`
+- **Feature 間参照**: 他 feature の結合は Composition Layer（ページ/ルート）で行う。例: `src/app/(app)/calendar/page.tsx` で合成
+- **依存方向**: `features/ → lib/` の一方向。`lib/` は feature 非依存の再利用コードだけを置く
+- **Import 経路**: feature barrel（`index.ts`）から import する。例: `import { EntryCard } from '@/features/entries'`
+- **ファイル命名**: 責務を表す具体名で切る。例: `formatDuration.ts` / `dateRangeFilter.ts`（`utils.ts` / `helpers.ts` は不可）
+- **新規トップレベル feature 追加**: `features/` 直下に新 feature を作る前に相談する（プロセス要件のためネガティブ形のまま維持）
 
 ## ワークフロー
 
@@ -80,15 +84,17 @@ npm run quality:deadcode # 未使用コード検出（knip）
 
 詳細ルールは `.claude/rules/` に分離。CLAUDE.md は概要のみ記載。
 
-| ファイル                  | 内容                                         |
-| ------------------------- | -------------------------------------------- |
-| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応 |
-| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成         |
-| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準       |
-| `design-system.md`        | セマンティックトークン、elevation、spacing   |
-| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer         |
-| `quality.md`              | テスト優先度、A11y、パフォーマンス基準       |
-| `temporal-constraints.md` | 過去ブロックの編集制約                       |
+| ファイル                  | 内容                                                            |
+| ------------------------- | --------------------------------------------------------------- |
+| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                    |
+| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                            |
+| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                          |
+| `design-system.md`        | セマンティックトークン、elevation、spacing                      |
+| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                            |
+| `quality.md`              | テスト優先度、A11y、パフォーマンス基準                          |
+| `temporal-constraints.md` | 過去ブロックの編集制約                                          |
+| `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他） |
+| `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                        |
 
 ## スキル
 
@@ -98,6 +104,6 @@ error-handling / storybook / test / security / store-creating / docs-writing / t
 
 ## デプロイ
 
-- **IMPORTANT**: StagingとProductionを同時にデプロイしない
-- Staging → 開発者が確認 → 指示後にProductionへ
+- **IMPORTANT**: Staging branch と Production を同時に触らない
+- Staging branch → 開発者が確認 → 指示後に Production へ
 - `supabase functions deploy --use-api`（Docker不要）

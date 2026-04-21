@@ -1,6 +1,6 @@
 ---
 name: releasing
-description: Dayoptのリリース作業をエンドツーエンドで実行。状態を自動判定し、version bump→タグ→デプロイ→リリースノートの全プロセスを支援。
+description: Dayopt の release 作業を end-to-end で実行する時に発動。明示的な release 意図（「v0.X.0 をリリース」「リリースしたい」「タグを切る」）を契機に、現在の git state（feature branch / main / tag 状態）を自動判定し、適切な Phase（version bump → 品質チェック → PR merge → tag → GitHub Release → リリースノート）から開始する。明示的な release 意図がない限り他のトリガーでは発動しない。
 effort: high
 maxTurns: 25
 ---
@@ -9,14 +9,22 @@ maxTurns: 25
 
 Dayoptプロジェクトのリリース作業を安全かつ確実に実行するためのスキルです。
 
-## このスキルを使用するタイミング
+## When to Use
 
-以下のキーワードが含まれる場合に自動的に起動：
+**明示発動型** — この skill はユーザーの explicit な release 意図のみを契機に発動する（コード変化や他 skill からの handoff では発動しない）。
 
-- 「リリース」「release」
-- 「バージョンアップ」「version」
-- 「タグを作成」「タグ付け」
-- 「v0.X.0をリリース」
+- 「v{n}.{n}.{n} をリリースしたい」「リリース作業を進める」等、明確な release 意図が発話された時
+- tag 作成（`git tag v...`）や GitHub Release 作成を明示的に指示された時
+- `package.json` の `version` フィールドを bump する作業を指示された時
+- 既存タグに対応する GitHub Release / リリースノートを更新・作成する指示時
+
+## When NOT to Use
+
+この skill は **explicit release 意図のみを契機とする**。暗黙的な invocation ケースは該当なし（型の穴埋めとして明記）。参考として近接するが発動しないケース:
+
+- 単なる `main` への merge（tag / release を伴わない）→ 通常の git 操作
+- commit 作成のみで version bump を含まない時 → 通常の development flow
+- Breaking change を含む変更が release 作業と分離されている時 → `docs-writing` skill で ADR / 技術ドキュメント更新を先行
 
 ## 状態自動判定
 

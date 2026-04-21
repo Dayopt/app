@@ -32,9 +32,8 @@ const serverSchema = z
     GITHUB_TOKEN: z.string().optional(),
     GITHUB_CONTACT_REPO: z.string().optional(),
 
-    // reCAPTCHA (server)
-    RECAPTCHA_SECRET_KEY_V3: z.string().optional(),
-    RECAPTCHA_SECRET_KEY_V2: z.string().optional(),
+    // Cloudflare Turnstile (client-side site key only; secret is stored in Supabase Auth Bot Protection)
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 
     // Auth
     RECOVERY_CODE_PEPPER: z.string().optional(),
@@ -74,6 +73,18 @@ const serverSchema = z
     {
       message: 'STRIPE_SECRET_KEY と STRIPE_WEBHOOK_SECRET はペアで設定してください',
       path: ['STRIPE_WEBHOOK_SECRET'],
+    },
+  )
+  .refine(
+    (data) =>
+      !(
+        data.NODE_ENV === 'production' &&
+        (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
+      ),
+    {
+      message:
+        'UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN は本番環境では必須です（インメモリfallbackはmulti-replicaで歯抜けになる）',
+      path: ['UPSTASH_REDIS_REST_URL'],
     },
   );
 

@@ -1,102 +1,115 @@
 # マイグレーション & リリース チェックリスト
 
+## 運用モデル
+
+Dayopt は単一 Supabase project で運用する（ローンチ前の簡易構成）。
+
+- **プロジェクト ref**: `yvglwblxrnrenfifsnje`（Supabase Dashboard 上の表示名: `Production`）
+- **dev / preview / production** すべて同じ project を参照する
+- **ローカル**のみ `supabase start` で独立した環境
+
+| 環境           | 実体                   | 用途                                        |
+| -------------- | ---------------------- | ------------------------------------------- |
+| **Local**      | `supabase start`       | オフライン開発（デフォルトでは使わない）    |
+| **Production** | `yvglwblxrnrenfifsnje` | dev / preview / production すべてここを向く |
+
+> **将来計画**: Pro plan に移行して GitHub integration + branching を有効化すると、preview branch（PR 毎に ephemeral）と staging branch（persistent）が追加される。詳細は `.claude/skills/supabase/SKILL.md` の target state 節。
+
 ## リリースフロー全体像
 
 ```
-feature branch → PR → main マージ
-                         ├── Vercel: 自動 Production デプロイ
-                         └── GitHub Actions: Staging Supabase にマイグレーション自動適用
+feature branch → PR open
+                  └── Vercel: preview deploy（Production DB を参照）
 
-バージョン記録（任意）:
-  git tag v0.X.0 → GitHub Actions → GitHub Release 作成
-  ※ タグはデプロイトリガーではない（バージョン記録のみ）
+feature branch → main merge
+                  ├── Vercel: 本番デプロイ
+                  └── GitHub Actions: Production に migration を自動適用
 ```
 
-## Supabase マイグレーション手順
+> ⚠️ **単一 project 運用のリスク**: preview / dev が production DB を直接触るため、破壊的操作（`db reset`, 大量 delete）は厳禁。
+> RLS を信頼して分離する前提。
 
-### 1. マイグレーション作成
+## マイグレーション手順
+
+### 1. 作成
 
 ```bash
-# 差分を確認
+# 差分確認
 supabase db diff
 
-# マイグレーションファイル作成
-supabase migration new <migration_name>
+# ファイル生成
+npm run migration:create <migration_name>
 
-# ファイルを編集
-# supabase/migrations/YYYYMMDDHHMMSS_<migration_name>.sql
+# supabase/migrations/YYYYMMDDHHMMSS_<migration_name>.sql を編集
 ```
 
-### 2. ローカルで検証
+### 2. ローカル検証
 
 ```bash
-# ローカルDBにマイグレーション適用
-supabase db reset --local
+# ローカル DB に適用
+npm run db:reset
+
+# seed 投入
+npm run db:seed   # db:fresh = reset + seed のショートカット
 
 # アプリで動作確認
 npm run dev
 ```
 
-### 3. Staging 適用
+### 3. Production 適用
+
+main merge で GitHub Actions (`.github/workflows/supabase-migration.yml`) が自動で `supabase db push` を実行する。
+
+手動で先行適用したい場合:
 
 ```bash
-# Staging プロジェクトにリンク
 supabase link --project-ref yvglwblxrnrenfifsnje
-
-# マイグレーション適用
 supabase db push
-
-# Staging環境で動作確認
 ```
 
-> **注意**: `db push` は `--project-ref` 非対応。リンク済みプロジェクトに対して実行される。
-
-### 4. Production 適用
-
-```bash
-# Production プロジェクトにリンク
-supabase link --project-ref qloztwfbrbqtjijxicnd
-
-# マイグレーション適用
-supabase db push
-
-# Production環境で動作確認
-```
+> **注意**: `db push` は `--project-ref` 非対応。リンク済み project に対して実行される。
 
 ## マイグレーション統合時の注意
 
-マイグレーションファイルを統合（リナンバー）する場合:
+マイグレーションファイルをリナンバー / 統合する場合:
 
-- [ ] 全マイグレーションの内容が統合後も保持されているか確認
-- [ ] `IF NOT EXISTS` / `IF EXISTS` を使って冪等にする
-- [ ] Staging と Production の両方に適用して検証
-- [ ] 統合前後で `supabase db diff` の結果が空になることを確認
+- [ ] 全マイグレーションの意味が統合後も保持されているか確認
+- [ ] `IF NOT EXISTS` / `IF EXISTS` で冪等化
+- [ ] ローカルで `db:reset` → 既存機能の動作確認
+- [ ] 統合前後で `supabase db diff` が空になることを確認
 
 ## リリース手順
 
 ### 通常リリース
 
-1. feature branch で開発・テスト
-2. PR を作成、レビュー
-3. main にマージ → Vercel が自動デプロイ
+1. feature branch で開発
+2. PR を作成 → Vercel preview で検証
+3. レビュー通過後 main merge → Vercel 本番デプロイ + migration 自動適用
 4. Production で動作確認
 
 ### バージョンタグ（任意）
 
 ```bash
-# バージョンを記録したい場合のみ
+# 記録目的のみ
 git tag v0.X.0
 git push origin v0.X.0
 # → GitHub Actions が GitHub Release を自動作成
 ```
 
-タグは**デプロイトリガーではない**。main マージが Production デプロイのトリガー。
+タグは**デプロイトリガーではない**。main merge がデプロイトリガー。
 
-### Supabase マイグレーションを含むリリース
+### スキーマ変更を含むリリースの順序
 
-1. マイグレーションを先に Staging に適用して検証
-2. PR を main にマージ（アプリデプロイ）
-3. **直後に** Production Supabase にマイグレーション適用
-4. アプリの動作確認
+| 変更種別         | 順序の原則                                   |
+| ---------------- | -------------------------------------------- |
+| 新カラム追加     | **先に DB**、後にアプリ（デフォルト値必須）  |
+| カラム削除       | **先にアプリ**（参照除去）、後に DB          |
+| 型変更           | 2 段階（新カラム追加 → backfill → 旧削除）   |
+| NOT NULL 追加    | 先に backfill で全行埋める → 制約追加        |
+| RLS ポリシー変更 | 新ポリシー追加 → アプリ更新 → 旧ポリシー削除 |
 
-> DB変更とアプリデプロイの順序に注意。新カラムの追加は先にDB、カラム削除は先にアプリ。
+## 関連
+
+- skill: `.claude/skills/supabase/SKILL.md`
+- rule: `.claude/rules/architecture.md` の「環境構成」節
+- workflow: `.github/workflows/supabase-migration.yml`

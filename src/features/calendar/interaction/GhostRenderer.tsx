@@ -15,6 +15,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
 import type { InteractionState, TimeRange } from './types';
@@ -50,12 +51,22 @@ interface SnapBackInfo {
 
 const SNAP_BACK_DURATION = 200;
 
+/**
+ * モバイル時のゴースト最小高さ(px)。
+ * Why: 15〜20分ブロック (18〜20px) をドラッグすると sky blue の細い横帯が
+ * 指と離れた位置に浮いて見え「ノイズっぽい」印象になる。
+ * 最小 40px に底上げすることで「掴めるチップ」として視認できる。
+ */
+const MIN_GHOST_HEIGHT_MOBILE = 40;
+
 // ========================================
 // Component
 // ========================================
 
 /** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
 export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
+  const isMobile = useIsMobile();
+  const minGhostHeight = isMobile ? MIN_GHOST_HEIGHT_MOBILE : 0;
   const prevStateRef = useRef(state);
   const [snapBack, setSnapBack] = useState<SnapBackInfo | null>(null);
 
@@ -109,7 +120,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
       top: 0,
       left: 0,
       width: snapBack.width,
-      height: snapBack.height,
+      height: Math.max(snapBack.height, minGhostHeight),
       zIndex: 9999,
       transform: `translate(${snapBack.originalLeft}px, ${snapBack.originalTop}px)`,
       transition: `transform ${SNAP_BACK_DURATION}ms ease-out, opacity ${SNAP_BACK_DURATION}ms ease-out`,
@@ -151,7 +162,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     top: 0,
     left: 0,
     width: columnRect.width,
-    height: state.originalPosition.height,
+    height: Math.max(state.originalPosition.height, minGhostHeight),
     zIndex: 9999,
     transform: `translate(${columnRect.left}px, ${viewportTop}px)`,
     transition: 'transform 50ms ease-out',

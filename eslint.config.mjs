@@ -72,7 +72,7 @@ const eslintConfig = defineConfig([
   //
   // Layer 0 (Domain/基盤): tags, chronotype       — 他featureに依存しない
   // Layer 1 (Domain/中核): entry                  — L0 barrel のみ
-  // Layer 2 (Feature/体験): calendar, stats, ai, history — L0+L1 barrel のみ
+  // Layer 2 (Feature/体験): calendar, stats, ai — L0+L1 barrel のみ
   // Independent:      auth, contact, notifications, onboarding, tour — 他featureに依存しない
   //
   // settings: featureから除外（app層compositionに移動済み）
@@ -139,8 +139,6 @@ const eslintConfig = defineConfig([
           // L2 禁止
           { group: ['@/features/calendar', '@/features/calendar/**'], message: '上位層featureのimport禁止。' },
           { group: ['@/features/stats', '@/features/stats/**'], message: '上位層featureのimport禁止。' },
-
-          { group: ['@/features/history', '@/features/history/**'], message: '上位層featureのimport禁止。' },
           // Independent 禁止
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
@@ -163,8 +161,6 @@ const eslintConfig = defineConfig([
         patterns: [
           // 同層間禁止（自分自身は含めない）
           { group: ['@/features/stats', '@/features/stats/**'], message: '同層featureのimport禁止。' },
-
-          { group: ['@/features/history', '@/features/history/**'], message: '同層featureのimport禁止。' },
           // Independent 禁止
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
@@ -187,30 +183,6 @@ const eslintConfig = defineConfig([
       'no-restricted-imports': ['error', {
         patterns: [
           { group: ['@/features/calendar', '@/features/calendar/**'], message: '同層featureのimport禁止。' },
-
-          { group: ['@/features/history', '@/features/history/**'], message: '同層featureのimport禁止。' },
-          { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/notifications', '@/features/notifications/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tags/**'], message: 'barrel import（@/features/tags）のみ使用。' },
-          { group: ['@/features/chronotype/**'], message: 'barrel import（@/features/chronotype）のみ使用。' },
-          { group: ['@/features/entry/**'], message: 'barrel import（@/features/entry）のみ使用。' },
-        ],
-      }],
-    },
-  },
-
-  // Layer 2 (history): L0+L1 barrel のみ許可
-  {
-    files: ['src/features/history/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          { group: ['@/features/calendar', '@/features/calendar/**'], message: '同層featureのimport禁止。' },
-          { group: ['@/features/stats', '@/features/stats/**'], message: '同層featureのimport禁止。' },
-
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/notifications', '@/features/notifications/**'], message: '独立featureのimport禁止。' },

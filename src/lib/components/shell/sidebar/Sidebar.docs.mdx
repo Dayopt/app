@@ -24,9 +24,6 @@ Sidebar (Container)
 │   ├── Palette
 │   │   └── SidebarSection "パレット"
 │   │       └── BlockItem × N  ● 塗りドット + duration
-│   ├── RecentBlocks
-│   │   └── SidebarSection "履歴"
-│   │       └── BlockItem × N  ○ 中抜きドット + duration
 │   └── SidebarUtilities       テーマ切替
 └── Footer           UserMenu + アクション
 ```
@@ -40,7 +37,7 @@ Sidebar (Container)
 | `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + PageNav + スクロール領域 + フッター |
 | `PageNav.tsx`        | Calendar / Stats セグメントコントロール（pushState + Zustand）       |
 | `SidebarSection.tsx` | 折りたたみセクション（Collapsible + title + action スロット）        |
-| `BlockItem.tsx`      | パレット/履歴共通のブロックアイテム（ドット + タグ名 + duration）    |
+| `BlockItem.tsx`      | パレットのブロックアイテム（アイコン + タグ名 + duration）           |
 | `UserMenu.tsx`       | フッターのユーザーアバター/名前                                      |
 | `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て                  |
 
@@ -61,23 +58,10 @@ Sidebar (Container)
 | ------------------------------ | --------------------------------------------------------- |
 | チェックボックス (TagFlatList) | `style={{ borderColor, backgroundColor }}` で inline 適用 |
 | パレットドット (BlockItem)     | `style={{ backgroundColor }}` で inline 適用              |
-| 履歴ドット (BlockItem)         | `style={{ borderColor }}` + `dotVariant="outline"`        |
 | カラーパレットピッカー         | `TAG_COLOR_MAP[name].dot` Tailwind クラス                 |
 
 `@theme inline` で登録された `bg-tag-blue` 等の Tailwind クラスも利用可能だが、
 動的な色名を扱うコンポーネントでは `cssVar` による inline style を使用する。
-
----
-
-## BlockItem の dotVariant
-
-| variant               | 見た目         | 用途                     |
-| --------------------- | -------------- | ------------------------ |
-| `solid`（デフォルト） | ● 塗りドット   | パレット（ピン留め済み） |
-| `outline`             | ○ 中抜きドット | 履歴（自動集計の候補）   |
-
-「塗り = 確定・所有」「中抜き = 候補・仮」の視覚文法。
-履歴からパレットに追加すると ○→● に変わる。
 
 ---
 
@@ -89,7 +73,6 @@ feature 間の直接 import は禁止（`@/features/X` を他 feature から imp
 ```tsx
 // SidebarContent.tsx（Composition Layer）
 import { CalendarFilterList } from '@/features/calendar';
-import { RecentBlocks } from '@/features/history';
 import { Palette } from '@/features/palette';
 import { SidebarSection } from '@/lib/components/shell/sidebar';
 ```

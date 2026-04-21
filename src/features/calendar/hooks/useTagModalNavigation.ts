@@ -3,34 +3,19 @@
 /**
  * タグモーダルナビゲーション Hook
  *
- * Zustandストアベースのタグモーダルを開くためのユーティリティ
+ * Zustandストアベースのタグマージモーダルを開くためのユーティリティ。
+ * タグ作成はインライン化されたため、この hook が管理するのは merge のみ。
  *
  * @example
- * const { openTagCreateModal, openTagMergeModal } = useTagModalNavigation();
- *
- * // タグ作成モーダルを開く
- * openTagCreateModal();
- *
- * // タグマージモーダルを開く
+ * const { openTagMergeModal } = useTagModalNavigation();
  * openTagMergeModal({ id: 'tag-id', name: 'Tag Name', color: 'blue' });
  */
 
 import { useCallback } from 'react';
 
-import {
-  openTagCreateModal as openTagCreate,
-  openTagMergeModal as openTagMerge,
-} from '@/lib/hooks/useModalStore';
+import { openTagMergeModal as openTagMerge } from '@/lib/hooks/useModalStore';
 
 export function useTagModalNavigation() {
-  /**
-   * タグ作成モーダルを開く
-   * @param defaultGroup - デフォルトのグループ名（コロン記法のプレフィックス）
-   */
-  const openTagCreateModal = useCallback((defaultGroup?: string) => {
-    openTagCreate(defaultGroup);
-  }, []);
-
   /**
    * タグマージモーダルを開く
    *
@@ -43,8 +28,5 @@ export function useTagModalNavigation() {
     [],
   );
 
-  return {
-    openTagCreateModal,
-    openTagMergeModal,
-  };
+  return { openTagMergeModal };
 }

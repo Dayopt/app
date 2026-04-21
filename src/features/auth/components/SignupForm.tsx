@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail } from 'lucide-react';
@@ -25,6 +25,7 @@ import {
 import { Input } from '@/lib/components/ui/input';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
+import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
 
@@ -65,6 +66,11 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
   const [serverError, setServerError] = useState<string | null>(null);
   const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const turnstileEnabled = isTurnstileEnabled();
+  const turnstileLocale: 'ja' | 'en' | 'auto' =
+    locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'auto';
 
   const {
     register,
@@ -90,10 +96,16 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const result = await signUp(data.email, data.password);
+      const result = turnstileToken
+        ? await signUp(data.email, data.password, { captchaToken: turnstileToken })
+        : await signUp(data.email, data.password);
       if (result.error) {
         const errorKey = getAuthErrorKey(result.error.message, 'signup');
         setServerError(t(errorKey));
+        // Turnstile token は single-use / short-lived。失敗時は widget を reset して次の retry で
+        // 新しい challenge token を取得させる（captcha 使い回しによる連続失敗を防ぐ）
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       } else if (result.data.session) {
         // メール確認不要 — そのままアプリへ
         router.push(`/${locale}/calendar/day`);
@@ -105,6 +117,8 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     } catch (err) {
       logger.error('[SignupForm] Signup error:', err);
       setServerError(t('auth.errors.unexpectedError'));
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -133,6 +147,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
+          {/* onSubmit は event handler として submit 時にのみ turnstileRef.current を読む。
+              react-hooks/refs が handleSubmit(onSubmit) の closure 解析で誤検知するため disable */}
+          {/* eslint-disable-next-line react-hooks/refs */}
           <form className="p-6 md:p-8" onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup>
               <div className="flex flex-col items-center text-center">
@@ -256,8 +273,27 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 )}
               </Field>
 
+              {turnstileEnabled && (
+                <Field>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onError={() => setTurnstileToken(null)}
+                      onExpire={() => setTurnstileToken(null)}
+                      locale={turnstileLocale}
+                    />
+                  </div>
+                </Field>
+              )}
+
               <Field>
-                <Button type="submit" loading={isSubmitting} className="w-full">
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={turnstileEnabled && !turnstileToken}
+                  className="w-full"
+                >
                   {t('auth.signupForm.createAccountButton')}
                 </Button>
                 <p className="text-muted-foreground text-center text-xs leading-relaxed">

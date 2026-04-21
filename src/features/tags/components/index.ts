@@ -2,7 +2,7 @@
  * Tags Components - Public API
  */
 
+export { InlineTagCreateRow } from './InlineTagCreateRow';
+export { InlineTagNameEdit } from './InlineTagNameEdit';
 // Modals & Dialogs
-export { GlobalTagCreateModal } from './GlobalTagCreateModal';
-export { TagCreateModal } from './tag-create-modal';
 export { TagDeleteStrategyDialog } from './TagDeleteStrategyDialog';

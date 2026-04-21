@@ -38,6 +38,12 @@ export async function prefetchTagDetailData(
         recentLimit: 8,
         ...dateRange,
       }),
+      helpers.entries.list.prefetch({
+        tagId,
+        sortBy: 'start_time',
+        sortOrder: 'desc',
+        limit: 10,
+      }),
     ]);
   } catch {
     // 認証エラー等はスキップ（クライアント側で処理）

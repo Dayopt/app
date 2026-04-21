@@ -8,7 +8,6 @@ import 'server-only';
 import { userRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { entriesRouter } from '@/features/entry/server/router-index';
-import { historyRouter } from '@/features/history/server/router';
 import { emailRouter } from '@/features/notifications/server/email-router';
 import { notificationsRouter } from '@/features/notifications/server/router';
 import { onboardingRouter } from '@/features/onboarding/server/router';
@@ -27,7 +26,6 @@ export const appRouter = createTRPCRouter({
   contact: contactRouter,
   email: emailRouter,
   entries: entriesRouter,
-  history: historyRouter,
   tags: tagsRouter,
   user: userRouter,
   notifications: notificationsRouter,

@@ -10,11 +10,12 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 
 ## コマンド
 
-| コマンド                         | ソース        | 用途                                      |
-| -------------------------------- | ------------- | ----------------------------------------- |
-| `npm run types:generate`         | Production DB | 本番スキーマから生成（推奨）              |
-| `npm run types:generate:staging` | Staging DB    | ステージングスキーマから生成              |
-| `npm run types:generate:local`   | Local DB      | ローカルから生成（`supabase start` 必要） |
+| コマンド                       | ソース        | 用途                                      |
+| ------------------------------ | ------------- | ----------------------------------------- |
+| `npm run types:generate`       | Production DB | リモート DB から生成（推奨）              |
+| `npm run types:generate:local` | Local DB      | ローカルから生成（`supabase start` 必要） |
+
+> 現在は単一 Supabase project 運用のため、リモート生成は Production project 1 つのみ。
 
 全コマンドとも `src/types/supabase.ts` に出力。
 

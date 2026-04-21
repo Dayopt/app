@@ -1,7 +1,7 @@
 /**
  * BlockItem Stories
  *
- * ブロックアイテム（Palette・RecentBlocks 共通）。
+ * ブロックアイテム（Palette）。
  * タグアイコン + タグ名 + duration。menuSlot でホバー時メニューを注入可能。
  */
 

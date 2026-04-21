@@ -361,7 +361,9 @@
         "planRate": "計画率",
         "fulfillment": "充実度",
         "whenSection": "いつやっているか",
-        "qualitySection": "どれだけうまくいっているか"
+        "qualitySection": "どれだけうまくいっているか",
+        "loadMore": "もっと見る",
+        "untitled": "無題"
       }
     },
     "nowBadge": {

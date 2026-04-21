@@ -74,39 +74,3 @@ export const AllColorsDot: Story = {
     </div>
   ),
 };
-
-/** 様々なアイコン: キュレートリストの一部 */
-export const VariousIcons: Story = {
-  render: () => {
-    const examples = [
-      { icon: 'briefcase', color: 'blue', label: '仕事' },
-      { icon: 'book-open', color: 'green', label: '勉強' },
-      { icon: 'dumbbell', color: 'teal', label: '運動' },
-      { icon: 'coffee', color: 'amber', label: '休憩' },
-      { icon: 'utensils', color: 'orange', label: '食事' },
-      { icon: 'home', color: 'pink', label: 'Life' },
-      { icon: 'code', color: 'indigo', label: '開発' },
-      { icon: 'music', color: 'violet', label: '音楽' },
-      { icon: 'users', color: 'red', label: 'MTG' },
-      { icon: null, color: 'gray', label: 'なし' },
-    ] as const;
-
-    return (
-      <div className="flex flex-wrap items-start gap-4">
-        {examples.map(({ icon, color, label }) => (
-          <div key={label} className="flex flex-col items-center gap-1">
-            <div
-              className="flex size-12 items-center justify-center rounded-2xl"
-              style={{
-                backgroundColor: `var(--tag-${color}-tint)`,
-              }}
-            >
-              <TagIcon icon={icon} color={color} size="lg" />
-            </div>
-            <span className="text-foreground text-xs">{label}</span>
-          </div>
-        ))}
-      </div>
-    );
-  },
-};

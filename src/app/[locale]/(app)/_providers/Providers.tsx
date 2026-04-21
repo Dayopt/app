@@ -65,15 +65,6 @@ const ServiceWorkerProvider = dynamic(
   { ssr: false },
 );
 
-// GlobalTagCreateModalを遅延ロード
-const GlobalTagCreateModal = dynamic(
-  () =>
-    import('@/features/tags/components/GlobalTagCreateModal').then(
-      (mod) => mod.GlobalTagCreateModal,
-    ),
-  { ssr: false },
-);
-
 // GlobalTagMergeModalを遅延ロード
 const GlobalTagMergeModal = dynamic(
   () =>
@@ -213,7 +204,6 @@ export function Providers({ children }: ProvidersProps) {
           <SessionMonitorProvider>
             <ServiceWorkerProvider>
               {children}
-              <GlobalTagCreateModal />
               <GlobalTagMergeModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>

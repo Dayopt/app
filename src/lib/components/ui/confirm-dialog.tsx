@@ -49,10 +49,14 @@ interface ConfirmDialogProps {
  * AlertDialog をベースに、定型の確認UI（アイコン + title + description + 2ボタン）を提供。
  * ESC / overlay クリックでは閉じない（AlertDialog のセマンティクス）。
  *
+ * children には補助的な短い説明のみ入れる。RadioGroup / 検索 / スクロールリストなど
+ * 選択肢を提示するフォーム型の確認は `DestructiveFormDialog` を使う。
+ *
  * 階層構造:
  * - Dialog → 箱。中身は呼び出し側が自由に決める
  * - AlertDialog → 箱 + 「閉じにくい」という振る舞い
- * - ConfirmDialog → AlertDialog + 定型の中身（本コンポーネント）
+ * - ConfirmDialog → AlertDialog + 定型の確認UI（本コンポーネント）
+ * - DestructiveFormDialog → AlertDialog + 任意フォーム + destructive フッター
  */
 export function ConfirmDialog({
   open,

@@ -6,15 +6,21 @@ import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
-import { Skeleton } from '@/lib/components/ui/skeleton';
-
 import { useIsFetching } from '@tanstack/react-query';
 
-import { TagDeleteStrategyDialog, tagKeys, useDeleteTag, useTags } from '@/features/tags';
+import {
+  InlineTagCreateRow,
+  TagDeleteStrategyDialog,
+  tagKeys,
+  useCreateTag,
+  useDeleteTag,
+  useTags,
+} from '@/features/tags';
 import { SidebarSection } from '@/lib/components/shell/sidebar';
+import { Skeleton } from '@/lib/components/ui/skeleton';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import type { TagColorName } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
-import { useTagModalNavigation } from '../../hooks/useTagModalNavigation';
 
 import { CreateTagButton } from './components/CreateTagButton';
 import { TagFlatList } from './components/TagFlatList';
@@ -25,6 +31,7 @@ import { TagFlatList } from './components/TagFlatList';
  * Googleカレンダーの「マイカレンダー」のようなUI
  * - タグ: コロン記法プレフィックスでグルーピング表示
  * - チェックボックスで表示/非表示を切替
+ * - `+` 押下でリスト末尾に inline 作成フォームを展開
  */
 export function CalendarFilterList() {
   const t = useTranslations();
@@ -38,6 +45,7 @@ export function CalendarFilterList() {
     [tagStats?.counts, isTagStatsError],
   );
 
+  const createTagMutation = useCreateTag();
   const deleteTagMutation = useDeleteTag();
 
   // セレクタで必要な状態のみ購読
@@ -63,8 +71,16 @@ export function CalendarFilterList() {
 
   const isLoading = tagsLoading;
 
-  // タグモーダルナビゲーション
-  const { openTagCreateModal: _openTagCreateModal } = useTagModalNavigation();
+  // ルート直下への inline 作成フォーム表示状態
+  const [isCreatingAtRoot, setIsCreatingAtRoot] = useState(false);
+
+  const handleInlineCreate = useCallback(
+    (name: string, color: TagColorName) => {
+      createTagMutation.mutate({ name, color });
+      setIsCreatingAtRoot(false);
+    },
+    [createTagMutation],
+  );
 
   // 削除確認ダイアログの状態
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -117,8 +133,21 @@ export function CalendarFilterList() {
           title={t('calendar.filter.tags')}
           defaultOpen
           className="py-1"
-          action={<CreateTagButton />}
+          action={
+            <CreateTagButton onStart={() => setIsCreatingAtRoot(true)} active={isCreatingAtRoot} />
+          }
         >
+          {isCreatingAtRoot && (
+            <div className="px-2 py-1">
+              <InlineTagCreateRow
+                variant="row"
+                existingTags={tags ?? []}
+                onSubmit={handleInlineCreate}
+                onCancel={() => setIsCreatingAtRoot(false)}
+              />
+            </div>
+          )}
+
           {isLoading ? (
             <div className="space-y-1 py-1">
               <Skeleton className="h-6 w-full" />
@@ -139,9 +168,11 @@ export function CalendarFilterList() {
               isMobile={isMobile}
             />
           ) : (
-            <div className="text-muted-foreground px-2 py-2 text-xs">
-              {t('calendar.filter.noTags')}
-            </div>
+            !isCreatingAtRoot && (
+              <div className="text-muted-foreground px-2 py-2 text-xs">
+                {t('calendar.filter.noTags')}
+              </div>
+            )
           )}
         </SidebarSection>
       </div>

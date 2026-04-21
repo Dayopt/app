@@ -1,17 +1,14 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
-import { Input } from '@/lib/components/ui/input';
+import { DestructiveFormDialog } from '@/lib/components/ui/destructive-form-dialog';
 import { RadioGroup, RadioGroupItem } from '@/lib/components/ui/radio-group';
-import { cn } from '@/lib/utils';
+
 import type { Tag, TagDeleteStrategy } from '../types';
-import { TagIcon } from './TagIcon';
+import { TagBadgeList } from './TagBadgeList';
 
 interface TagDeleteStrategyDialogProps {
   open: boolean;
@@ -25,7 +22,7 @@ interface TagDeleteStrategyDialogProps {
 /**
  * タグ削除戦略選択ダイアログ
  *
- * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる
+ * 関連エントリがあるタグを削除する際に、エントリごと削除するか別タグに再割当てするかを選ばせる。
  */
 export function TagDeleteStrategyDialog({
   open,
@@ -39,7 +36,6 @@ export function TagDeleteStrategyDialog({
 
   const [strategy, setStrategy] = useState<TagDeleteStrategy>('delete_entries');
   const [targetTagId, setTargetTagId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -47,18 +43,8 @@ export function TagDeleteStrategyDialog({
     if (open) {
       setStrategy('delete_entries');
       setTargetTagId(null);
-      setSearchQuery('');
     }
   }
-
-  const filteredTags = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return availableTags;
-    }
-
-    const query = searchQuery.toLowerCase();
-    return availableTags.filter((tag) => tag.name.toLowerCase().includes(query));
-  }, [availableTags, searchQuery]);
 
   const handleConfirm = useCallback(async () => {
     await onConfirm(strategy, targetTagId ?? undefined);
@@ -67,19 +53,15 @@ export function TagDeleteStrategyDialog({
   const isConfirmDisabled = strategy === 'reassign' && !targetTagId;
 
   return (
-    <ConfirmDialog
+    <DestructiveFormDialog
       open={open}
       onClose={onClose}
       onConfirm={handleConfirm}
       title={t('delete.confirmTitleWithName', { name: tagName })}
-      variant="destructive"
+      description={t('deleteStrategy.usedByEntries', { count: entryCount })}
       confirmDisabled={isConfirmDisabled}
     >
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
-          {t('deleteStrategy.usedByEntries', { count: entryCount })}
-        </p>
-
         <RadioGroup
           value={strategy}
           onValueChange={(value) => setStrategy(value as TagDeleteStrategy)}
@@ -97,51 +79,20 @@ export function TagDeleteStrategyDialog({
 
         {strategy === 'reassign' ? (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-xs">{t('deleteStrategy.selectTarget')}</p>
-
-            {availableTags.length > 5 ? (
-              <div className="relative">
-                <Search className="text-muted-foreground absolute top-1/2 left-4 size-4 -translate-y-1/2" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('deleteStrategy.searchTags')}
-                  aria-label={t('deleteStrategy.searchTags')}
-                  className="pl-8"
-                />
-              </div>
-            ) : null}
-
-            <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border p-1">
-              {filteredTags.map((tag) => {
-                const isSelected = targetTagId === tag.id;
-
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => setTargetTagId(tag.id)}
-                    className={cn(
-                      'flex w-full items-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors',
-                      isSelected
-                        ? 'bg-state-selected text-foreground'
-                        : 'hover:bg-state-hover text-foreground',
-                    )}
-                  >
-                    <TagIcon icon={tag.icon} color={tag.color} size="sm" className="shrink-0" />
-                    <ColonTagLabel name={tag.name} />
-                  </button>
-                );
-              })}
-              {filteredTags.length === 0 ? (
-                <p className="text-muted-foreground px-4 py-2 text-center text-xs">
-                  {t('page.noTags')}
-                </p>
-              ) : null}
+            <p className="text-muted-foreground px-4 text-xs">{t('deleteStrategy.selectTarget')}</p>
+            <div className="max-h-48 overflow-y-auto">
+              <TagBadgeList
+                tags={availableTags}
+                selectedId={targetTagId}
+                onSelect={(id) => setTargetTagId(id)}
+                supportDrilldown={false}
+                asRadioGroup
+                ariaLabel={t('deleteStrategy.selectTarget')}
+              />
             </div>
           </div>
         ) : null}
       </div>
-    </ConfirmDialog>
+    </DestructiveFormDialog>
   );
 }
