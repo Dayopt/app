@@ -1,11 +1,12 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
+import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { BottomTabBar } from './BottomTabBar';
@@ -24,13 +25,19 @@ interface MobileLayoutProps {
  * **構成**:
  * - AppHeader（ナビゲーション）
  * - MainContent（pb-16でBottomTabBar分の余白確保）
- * - BottomTabBar（固定ボトムタブ）
+ * - BottomTabBar（固定ボトムタブ、スクロール連動 auto-hide）
  */
 export function MobileLayout({ children, locale }: MobileLayoutProps) {
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
 
   const pathname = usePathname();
+  const { hidden, reset } = useHideOnScroll();
+
+  // ページ遷移時にボトムバーを再表示
+  useEffect(() => {
+    reset();
+  }, [pathname, reset]);
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
@@ -63,7 +70,7 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
       </div>
 
       {/* ボトムタブナビゲーション */}
-      <BottomTabBar />
+      <BottomTabBar hidden={hidden} />
     </>
   );
 }

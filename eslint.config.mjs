@@ -72,7 +72,7 @@ const eslintConfig = defineConfig([
   //
   // Layer 0 (Domain/基盤): tags, chronotype       — 他featureに依存しない
   // Layer 1 (Domain/中核): entry                  — L0 barrel のみ
-  // Layer 2 (Feature/体験): calendar, stats, ai, history — L0+L1 barrel のみ
+  // Layer 2 (Feature/体験): calendar, stats, ai — L0+L1 barrel のみ
   // Independent:      auth, contact, notifications, onboarding, tour — 他featureに依存しない
   //
   // settings: featureから除外（app層compositionに移動済み）

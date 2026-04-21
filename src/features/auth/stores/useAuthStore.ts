@@ -30,7 +30,11 @@ interface AuthState {
 
   // Actions
   initialize: () => Promise<void>;
-  signUp: (email: string, password: string, metadata?: UserMetadata) => Promise<AuthResponse>;
+  signUp: (
+    email: string,
+    password: string,
+    options?: { captchaToken?: string; metadata?: UserMetadata },
+  ) => Promise<AuthResponse>;
   signIn: (email: string, password: string) => Promise<AuthResponse>;
   signInWithOAuth: (provider: 'google' | 'apple' | 'github') => Promise<OAuthResponse>;
   signOut: () => Promise<{ error: AuthError | null }>;
@@ -140,15 +144,22 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Sign up with email and password
-      signUp: async (email, password, metadata) => {
+      signUp: async (email, password, options) => {
         set({ loading: true, error: null });
 
         try {
           const supabase = createClient();
+          const supabaseOptions =
+            options?.captchaToken || options?.metadata
+              ? {
+                  ...(options?.captchaToken && { captchaToken: options.captchaToken }),
+                  ...(options?.metadata && { data: options.metadata }),
+                }
+              : undefined;
           const result = await supabase.auth.signUp({
             email,
             password,
-            ...(metadata && { options: { data: metadata } }),
+            ...(supabaseOptions && { options: supabaseOptions }),
           });
 
           if (result.error) {

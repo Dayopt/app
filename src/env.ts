@@ -32,9 +32,8 @@ const serverSchema = z
     GITHUB_TOKEN: z.string().optional(),
     GITHUB_CONTACT_REPO: z.string().optional(),
 
-    // reCAPTCHA (server)
-    RECAPTCHA_SECRET_KEY_V3: z.string().optional(),
-    RECAPTCHA_SECRET_KEY_V2: z.string().optional(),
+    // Cloudflare Turnstile (client-side site key only; secret is stored in Supabase Auth Bot Protection)
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 
     // Auth
     RECOVERY_CODE_PEPPER: z.string().optional(),

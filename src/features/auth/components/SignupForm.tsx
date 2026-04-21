@@ -25,6 +25,7 @@ import {
 import { Input } from '@/lib/components/ui/input';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
+import { Turnstile, isTurnstileEnabled } from '@/lib/turnstile';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
 
@@ -65,6 +66,10 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
   const [serverError, setServerError] = useState<string | null>(null);
   const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileEnabled = isTurnstileEnabled();
+  const turnstileLocale: 'ja' | 'en' | 'auto' =
+    locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'auto';
 
   const {
     register,
@@ -90,7 +95,11 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const result = await signUp(data.email, data.password);
+      const result = await signUp(
+        data.email,
+        data.password,
+        turnstileToken ? { captchaToken: turnstileToken } : undefined,
+      );
       if (result.error) {
         const errorKey = getAuthErrorKey(result.error.message, 'signup');
         setServerError(t(errorKey));
@@ -256,8 +265,26 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 )}
               </Field>
 
+              {turnstileEnabled && (
+                <Field>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onError={() => setTurnstileToken(null)}
+                      onExpire={() => setTurnstileToken(null)}
+                      locale={turnstileLocale}
+                    />
+                  </div>
+                </Field>
+              )}
+
               <Field>
-                <Button type="submit" loading={isSubmitting} className="w-full">
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={turnstileEnabled && !turnstileToken}
+                  className="w-full"
+                >
                   {t('auth.signupForm.createAccountButton')}
                 </Button>
                 <p className="text-muted-foreground text-center text-xs leading-relaxed">
