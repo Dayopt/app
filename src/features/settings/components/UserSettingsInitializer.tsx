@@ -21,12 +21,15 @@ interface UserSettingsInitializerProps {
  * ・そのため DB fetch が完了するまで children を render しない。TanStack Query の
  *   永続キャッシュ (IndexedDB) が効いていれば cold load でもほぼ即時に通過する
  * ・fetch 失敗時 (error) は server row なしとみなし defaults で通過する
+ * ・オフライン時 (fetchStatus === 'paused') はネットワーク復帰まで解消しない
+ *   ため、defaults で通過させて UI を blocking にしない
  */
 export function UserSettingsInitializer({ children }: UserSettingsInitializerProps) {
-  const { isPending, error } = useUserSettings();
+  const { isPending, isPaused, error } = useUserSettings();
 
-  // fetch 完了前 (かつエラーでもない) は render しない。エラー時は defaults で通過
-  if (isPending && !error) {
+  // 通常の cold load 中は render をブロックする。ただし paused (offline) / error は
+  // 永続ブロックの原因になるため defaults で通過させる
+  if (isPending && !error && !isPaused) {
     return null;
   }
 

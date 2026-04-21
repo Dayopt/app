@@ -29,6 +29,7 @@ export function useUserSettings() {
   const {
     data: dbSettings,
     isPending,
+    fetchStatus,
     error,
   } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -36,6 +37,11 @@ export function useUserSettings() {
     refetchOnMount: false,
     refetchOnReconnect: false,
   });
+
+  // networkMode: 'offlineFirst' でオフライン時は fetchStatus === 'paused' になる。
+  // paused はネットワーク復帰まで解消しないため、hydration gate で永続ブロック
+  // の原因になる。UserSettingsInitializer はこの値を使って unblock する
+  const isPaused = fetchStatus === 'paused';
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
@@ -123,6 +129,7 @@ export function useUserSettings() {
     settings,
     saveSettings,
     isPending,
+    isPaused,
     isSaving: updateMutation.isPending,
     error,
   };
