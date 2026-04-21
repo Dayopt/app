@@ -29,7 +29,7 @@ interface MobileLayoutProps {
  * - MainContent（pb-16でBottomTabBar分の余白確保）
  * - BottomTabBar（固定ボトムタブ、スクロール連動 auto-hide）
  */
-export function MobileLayout({ children, locale }: MobileLayoutProps) {
+export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const t = useTranslations('common.inlineBanner');
   const title = useShellStore.use.pageTitle();
   const banner = useAppInlineBanner();
@@ -42,9 +42,12 @@ export function MobileLayout({ children, locale }: MobileLayoutProps) {
     reset();
   }, [pathname, reset]);
 
+  // localePrefix: 'as-needed' により default locale の URL は prefix なし
+  // (例: /calendar/day) の場合もあるため、prop の locale ではなく実際の
+  // URL セグメントから /en/ /ja/ のみを剥がす。未知の先頭セグメントは維持する。
   const pathWithoutLocale = useMemo(
-    () => pathname?.replace(new RegExp(`^/${locale}`), '') ?? '',
-    [pathname, locale],
+    () => (pathname ?? '').replace(/^\/(en|ja)(?=\/|$)/, ''),
+    [pathname],
   );
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
