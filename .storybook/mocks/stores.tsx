@@ -25,7 +25,7 @@ import {
   useCalendarNavigationStore,
   useCalendarSettingsStore,
 } from '@/features/calendar';
-import { useModalStore } from '@/lib/hooks/useModalStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 // ─────────────────────────────────────────────────────────
 // Registry
@@ -44,7 +44,7 @@ const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
   useCalendarSettingsStore: useCalendarSettingsStore as unknown as StoreApi<
     Record<string, unknown>
   >,
-  useModalStore: useModalStore as unknown as StoreApi<Record<string, unknown>>,
+  useShellStore: useShellStore as unknown as StoreApi<Record<string, unknown>>,
 };
 
 /** parameters.storeMocks の型 */
