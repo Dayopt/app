@@ -41,19 +41,19 @@ export function usePaymentErrorDialog(): UsePaymentErrorDialogResult {
   const utils = api.useUtils();
 
   // データ取得完了後に表示判定（effect 内なので Date.now() が使える）
+  // past_due から active 等へ遷移した場合は dialog を閉じ、stale な表示を残さない
   useEffect(() => {
     const billing = billingQuery.data?.billingInfo;
     const settings = settingsQuery.data;
 
     if (!billing || settings === undefined) return;
 
-    if (
+    const shouldOpen =
       billing.subscriptionStatus === 'past_due' &&
-      isOverdue(settings?.personalization.paymentErrorDialogLastShownAt ?? null, Date.now())
-    ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- データ取得完了後の1回限りの判定
-      setOpen(true);
-    }
+      isOverdue(settings?.personalization.paymentErrorDialogLastShownAt ?? null, Date.now());
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- データ取得完了後の1回限りの判定
+    setOpen(shouldOpen);
   }, [billingQuery.data, settingsQuery.data]);
 
   const close = useCallback(() => {
