@@ -189,6 +189,19 @@ export const userSettingsRouter = createTRPCRouter({
         if (input.hourHeightDensity !== undefined)
           updateData.hour_height_density = input.hourHeightDensity;
         if (input.theme !== undefined) updateData.theme = input.theme;
+        if (input.preferredLocale !== undefined)
+          updateData.preferred_locale = input.preferredLocale;
+
+        // base columns を先に upsert。personalization RPC は UPDATE ... WHERE user_id なので
+        // 初回ユーザーでは row が無いと no-op になり、dismissedTrialEndedDialog 等が永続化されない
+        const { data, error } = await ctx.supabase
+          .from('user_settings')
+          .upsert(updateData, {
+            onConflict: 'user_id',
+          })
+          .select()
+          .single();
+
         // personalization は RPC で atomic に部分更新（並行保存の競合を回避）
         if (input.personalizationValues !== undefined) {
           await ctx.supabase.rpc(
@@ -230,16 +243,6 @@ export const userSettingsRouter = createTRPCRouter({
             } as never,
           );
         }
-        if (input.preferredLocale !== undefined)
-          updateData.preferred_locale = input.preferredLocale;
-
-        const { data, error } = await ctx.supabase
-          .from('user_settings')
-          .upsert(updateData, {
-            onConflict: 'user_id',
-          })
-          .select()
-          .single();
 
         if (error) {
           logger.error('UserSettings update error', { error });
