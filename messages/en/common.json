@@ -375,6 +375,7 @@
     },
     "errors": {
       "generic": "An error occurred",
+      "loadFailedDescription": "Could not load your settings. Please try again.",
       "storage": {
         "imageOnly": "Only image files can be uploaded",
         "fileTooLarge": "File size must be 5MB or less",

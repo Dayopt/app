@@ -38,10 +38,16 @@ export function useUserSettings() {
     refetchOnReconnect: false,
   });
 
-  // networkMode: 'offlineFirst' でオフライン時は fetchStatus === 'paused' になる。
-  // paused はネットワーク復帰まで解消しないため、hydration gate で永続ブロック
-  // の原因になる。UserSettingsInitializer はこの値を使って unblock する
+  // networkMode: 'offlineFirst' でオフライン時は fetchStatus === 'paused' になる
   const isPaused = fetchStatus === 'paused';
+
+  // hydration 判定:
+  // - dbSettings === undefined: response 未取得（未解決）
+  // - dbSettings === null: row なし（server は new user に null を返す）
+  // - dbSettings === object: 既存 settings 取得済み
+  // null も「settings row が無い」という confirmed な情報として扱い、defaults で
+  // 通過させる。hydrated = データに触れた（undefined ではない）かどうか
+  const hydrated = dbSettings !== undefined;
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
@@ -130,6 +136,7 @@ export function useUserSettings() {
     saveSettings,
     isPending,
     isPaused,
+    hydrated,
     isSaving: updateMutation.isPending,
     error,
   };

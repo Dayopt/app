@@ -375,6 +375,7 @@
     },
     "errors": {
       "generic": "問題が起きました。もう一度お試しください",
+      "loadFailedDescription": "設定を読み込めませんでした。もう一度お試しください",
       "storage": {
         "imageOnly": "画像ファイルのみアップロード可能です",
         "fileTooLarge": "ファイルサイズは5MB以下です",
