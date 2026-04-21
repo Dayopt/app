@@ -20,11 +20,9 @@ import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 
 import { useAuthStore } from '@/features/auth';
-import {
-  useCalendarFilterStore,
-  useCalendarNavigationStore,
-  useCalendarSettingsStore,
-} from '@/features/calendar';
+import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
+import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 // ─────────────────────────────────────────────────────────
