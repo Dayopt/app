@@ -21,6 +21,7 @@ export { SETTINGS_CATEGORIES } from './constants';
 export { SettingsContent, isValidCategory } from './components/SettingsContent';
 export { SettingsDialog } from './components/SettingsDialog';
 export { SettingsSidebar } from './components/SettingsSidebar';
+export { UserSettingsInitializer } from './components/UserSettingsInitializer';
 
 // =============================================================================
 // Hooks

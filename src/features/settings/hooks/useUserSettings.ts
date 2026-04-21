@@ -3,7 +3,7 @@
  * TanStack Queryを使用してSupabaseと同期
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -29,6 +29,7 @@ export function useUserSettings() {
   const {
     data: dbSettings,
     isPending,
+    fetchStatus,
     error,
   } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -36,6 +37,14 @@ export function useUserSettings() {
     refetchOnMount: false,
     refetchOnReconnect: false,
   });
+
+  // networkMode: 'offlineFirst' でオフライン時は fetchStatus === 'paused' になる
+  const isPaused = fetchStatus === 'paused';
+
+  // hydration 判定: データ応答を受け取り、Zustand store への apply が完了したか
+  // dbSettings !== undefined だけでは apply useEffect がまだ走っていない commit
+  // が存在しうるため、Zustand への反映完了を別 state として持つ
+  const [storeHydrated, setStoreHydrated] = useState(false);
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
@@ -58,9 +67,10 @@ export function useUserSettings() {
   // （メール言語変更時にアプリの日付フォーマットが意図せず変わるのを防ぐ）
   const dateFormatInitializedRef = useRef(false);
 
-  // DBから取得した設定をStoreに反映
+  // DBから取得した設定をStoreに反映。null (row なし) は new user として通過する
   useEffect(() => {
-    if (dbSettings && !isPending) {
+    if (isPending) return;
+    if (dbSettings) {
       updateSettings({
         timezone: dbSettings.timezone,
         timeFormat: dbSettings.timeFormat,
@@ -83,6 +93,9 @@ export function useUserSettings() {
       });
       dateFormatInitializedRef.current = true;
     }
+    // dbSettings が object でも null でも apply は完了扱い
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- query 解決後の 1 回限りの hydration flag
+    setStoreHydrated(true);
   }, [dbSettings, isPending, updateSettings]);
 
   // 設定をDBに保存する関数
@@ -123,6 +136,8 @@ export function useUserSettings() {
     settings,
     saveSettings,
     isPending,
+    isPaused,
+    hydrated: storeHydrated,
     isSaving: updateMutation.isPending,
     error,
   };

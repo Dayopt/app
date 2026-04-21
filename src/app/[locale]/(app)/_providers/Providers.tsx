@@ -50,6 +50,7 @@ const AxeAccessibilityChecker =
     : () => null;
 
 import { AuthStoreInitializer } from '@/features/auth';
+import { UserSettingsInitializer } from '@/features/settings';
 import { api, getBaseUrl } from '@/lib/trpc';
 import { ThemeProvider } from './theme-provider';
 
@@ -203,7 +204,10 @@ export function Providers({ children }: ProvidersProps) {
         <ThemeProvider>
           <SessionMonitorProvider>
             <ServiceWorkerProvider>
-              {children}
+              {/* UserSettings の hydration が完了するまで children を render しない。
+                  timezone 等が defaults のまま timezone-dependent mutation が実行
+                  されるのを防ぐ。TanStack Query の永続 cache が効けば体感遅延は極小。 */}
+              <UserSettingsInitializer>{children}</UserSettingsInitializer>
               <GlobalTagMergeModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>
