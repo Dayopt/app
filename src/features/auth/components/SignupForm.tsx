@@ -95,11 +95,9 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     }
 
     try {
-      const result = await signUp(
-        data.email,
-        data.password,
-        turnstileToken ? { captchaToken: turnstileToken } : undefined,
-      );
+      const result = turnstileToken
+        ? await signUp(data.email, data.password, { captchaToken: turnstileToken })
+        : await signUp(data.email, data.password);
       if (result.error) {
         const errorKey = getAuthErrorKey(result.error.message, 'signup');
         setServerError(t(errorKey));
