@@ -548,8 +548,6 @@
         "calendarDesc": "デフォルトビュー、スナップ間隔、表示設定",
         "personalization": "パーソナライズ",
         "personalizationDesc": "価値観、クロノタイプ、AIスタイル",
-        "notifications": "通知",
-        "notificationsDesc": "通知とリマインダーの設定",
         "dataControls": "データ管理",
         "dataControlsDesc": "エクスポート、インポート、バックアップ設定",
         "integrations": "連携",

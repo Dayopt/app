@@ -71,7 +71,6 @@ export const cacheStrategies = {
   records: activeCache, // レコードもカレンダー表示で重要
   entries: activeCache, // エントリ（plans+records統合）もカレンダー表示で重要
   sessions: activeCache,
-  notifications: shortTermCache, // 通知は短期キャッシュで十分
   profile: staticCache, // プロフィールはめったに変更されない
 } as const;
 
