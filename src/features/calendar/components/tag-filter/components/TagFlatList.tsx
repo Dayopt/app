@@ -220,10 +220,13 @@ export function TagFlatList({
 
   const reorderMutation = useReorderTags();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
+  // sensors は常に条件なしで呼び出す (React hooks rules)。モバイルでは activationConstraint を
+  // 実質無効化 (Infinity) して drag-to-reorder を発火させない (P0-6 Option B)
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: isMobile ? Number.POSITIVE_INFINITY : 8 },
+  });
+  const keyboardSensor = useSensor(KeyboardSensor);
+  const sensors = useSensors(...(isMobile ? [] : [pointerSensor, keyboardSensor]));
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
