@@ -4,8 +4,7 @@ import { useMemo } from 'react';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar settingsをlib層に抽出
-import { useCalendarSettingsStore } from '@/features/calendar';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 

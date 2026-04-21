@@ -11,8 +11,8 @@ import { useTranslations } from 'next-intl';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import type { CalendarSettings } from '@/features/calendar';
-import { useCalendarSettingsStore } from '@/features/calendar';
+import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 /**
  * ユーザー設定をDBと同期するhook

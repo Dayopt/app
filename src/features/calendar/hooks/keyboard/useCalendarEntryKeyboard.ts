@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useEntryInspectorStore, useEntryMutations } from '@/features/entry';
 import { localTimeToUTCISO } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 import { useEntryClipboardStore } from '../../stores/useEntryClipboardStore';

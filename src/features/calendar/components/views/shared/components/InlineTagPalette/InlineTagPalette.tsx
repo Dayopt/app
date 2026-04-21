@@ -15,13 +15,13 @@ import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { formatTimeString } from '../../../../../interaction/time-math';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';

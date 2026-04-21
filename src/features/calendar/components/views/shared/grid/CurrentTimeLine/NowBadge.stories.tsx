@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 import { NowBadge } from './NowBadge';
 

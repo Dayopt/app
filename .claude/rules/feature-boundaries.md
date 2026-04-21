@@ -36,6 +36,18 @@ Independent:       auth, notifications,         ← 他featureに依存しない
 feature固有のモジュール（hooks, stores, schemas）は feature内に配置。
 複数featureで使う型のみ `src/types/` に残す。
 
+## Cross-cutting UI state
+
+複数 feature から参照される global UI state（例: date/timezone settings, calendar navigation state）は `src/lib/stores/` に置く。feature 内の store を他 feature から直接 import するのは禁止（feature の内部 state 形に依存してしまい、refactor blast radius が読めなくなる）。
+
+例:
+
+- `@/lib/stores/useCalendarSettingsStore` ← timezone / view / week 設定
+- `@/lib/stores/useCalendarNavigationStore` ← 現在表示中の日付 / view type
+- `@/lib/stores/useShellStore` ← sidebar width / bottom sheet 等 UI shell state
+
+feature は `@/lib/stores/*` から直接 import する。calendar feature も自身の barrel を経由せず直接参照する。
+
 ## Composition Layer
 
 | 層                     | パス                                       |

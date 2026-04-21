@@ -5,13 +5,13 @@ import { memo, useCallback, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import type { CalendarSettings } from '@/features/calendar/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 import { DateNavigator } from '@/lib/components/common/DateNavigator';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
+import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 

@@ -6,9 +6,9 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { memo, useCallback, useState } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Button } from '@/lib/components/ui/button';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';

@@ -5,10 +5,10 @@ import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import { addDays, subDays } from 'date-fns';
 import { fromZonedTime } from 'date-fns-tz';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import type { EntryWithTags } from '@/features/entry';
 import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { api } from '@/lib/trpc';
 import * as Sentry from '@sentry/nextjs';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
