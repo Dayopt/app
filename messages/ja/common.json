@@ -115,6 +115,7 @@
       }
     },
     "aria": {
+      "toastContainer": "通知",
       "clearSelection": "選択を解除",
       "openMenu": "メニューを開く",
       "closeSidebar": "サイドバーを閉じる",

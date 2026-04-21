@@ -115,6 +115,7 @@
       }
     },
     "aria": {
+      "toastContainer": "Notifications",
       "clearSelection": "Clear selection",
       "openMenu": "Open menu",
       "closeSidebar": "Close sidebar",

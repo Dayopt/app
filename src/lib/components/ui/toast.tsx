@@ -32,7 +32,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
-  const t = useTranslations('notification');
+  const t = useTranslations('common.aria');
 
   // デスクトップ: トーストクリックで消去（アクションリンクは除外）
   useEffect(() => {
@@ -62,7 +62,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position={isMobile ? 'top-center' : 'top-right'}
       visibleToasts={1}
       duration={3000}
-      containerAriaLabel={t('title')}
+      containerAriaLabel={t('toastContainer')}
       // eslint-disable-next-line tailwindcss/no-arbitrary-value -- CSS custom property override for Sonner --width
       className={isMobile ? '' : '[--width:360px]'}
       offset={isMobile ? { top: 16 } : { top: 16, right: 16 }}
