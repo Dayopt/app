@@ -3,7 +3,7 @@
  * TanStack Queryを使用してSupabaseと同期
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -41,13 +41,10 @@ export function useUserSettings() {
   // networkMode: 'offlineFirst' でオフライン時は fetchStatus === 'paused' になる
   const isPaused = fetchStatus === 'paused';
 
-  // hydration 判定:
-  // - dbSettings === undefined: response 未取得（未解決）
-  // - dbSettings === null: row なし（server は new user に null を返す）
-  // - dbSettings === object: 既存 settings 取得済み
-  // null も「settings row が無い」という confirmed な情報として扱い、defaults で
-  // 通過させる。hydrated = データに触れた（undefined ではない）かどうか
-  const hydrated = dbSettings !== undefined;
+  // hydration 判定: データ応答を受け取り、Zustand store への apply が完了したか
+  // dbSettings !== undefined だけでは apply useEffect がまだ走っていない commit
+  // が存在しうるため、Zustand への反映完了を別 state として持つ
+  const [storeHydrated, setStoreHydrated] = useState(false);
 
   // DB更新用mutation
   const updateMutation = api.userSettings.update.useMutation({
@@ -70,9 +67,10 @@ export function useUserSettings() {
   // （メール言語変更時にアプリの日付フォーマットが意図せず変わるのを防ぐ）
   const dateFormatInitializedRef = useRef(false);
 
-  // DBから取得した設定をStoreに反映
+  // DBから取得した設定をStoreに反映。null (row なし) は new user として通過する
   useEffect(() => {
-    if (dbSettings && !isPending) {
+    if (isPending) return;
+    if (dbSettings) {
       updateSettings({
         timezone: dbSettings.timezone,
         timeFormat: dbSettings.timeFormat,
@@ -95,6 +93,9 @@ export function useUserSettings() {
       });
       dateFormatInitializedRef.current = true;
     }
+    // dbSettings が object でも null でも apply は完了扱い
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- query 解決後の 1 回限りの hydration flag
+    setStoreHydrated(true);
   }, [dbSettings, isPending, updateSettings]);
 
   // 設定をDBに保存する関数
@@ -136,7 +137,7 @@ export function useUserSettings() {
     saveSettings,
     isPending,
     isPaused,
-    hydrated,
+    hydrated: storeHydrated,
     isSaving: updateMutation.isPending,
     error,
   };
