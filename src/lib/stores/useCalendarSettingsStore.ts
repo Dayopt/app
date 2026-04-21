@@ -1,10 +1,9 @@
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools } from 'zustand/middleware';
 
 import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
-import { platformStorage } from '@/lib/zustand/storage';
 
 export type { CalendarViewType } from '@/lib/calendar-constants';
 
@@ -74,32 +73,27 @@ const defaultSettings: CalendarSettings = {
   hourHeightDensity: 'default',
 };
 
-/** カレンダー設定を管理するZustandストア（localStorageに永続化） */
+/**
+ * カレンダー設定を管理する Zustand ストア
+ *
+ * persist せず、`UserSettingsInitializer` (Providers 直下) が server (user_settings)
+ * から取得した値を hydrate する。multi-tab 間の staleness を避けるため、localStorage
+ * に独自コピーを保持しない。cold load 時は defaultSettings → TanStack Query の
+ * 永続 cache から hydrate される流れでほぼ即時に正しい値になる。
+ */
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(
-    persist(
-      (set) => {
-        return {
-          ...defaultSettings,
+    (set) => ({
+      ...defaultSettings,
 
-          updateSettings: (newSettings) =>
-            set((state) => ({
-              ...state,
-              ...newSettings,
-            })),
+      updateSettings: (newSettings) =>
+        set((state) => ({
+          ...state,
+          ...newSettings,
+        })),
 
-          resetSettings: () => set({ ...defaultSettings }),
-        };
-      },
-      {
-        name: 'calendar-settings',
-        storage: platformStorage(),
-        partialize: (state) => {
-          const { updateSettings: _u, resetSettings: _r, ...persisted } = state;
-          return persisted;
-        },
-      },
-    ),
+      resetSettings: () => set({ ...defaultSettings }),
+    }),
     {
       name: 'calendar-settings-store',
       enabled: process.env.NODE_ENV !== 'production',

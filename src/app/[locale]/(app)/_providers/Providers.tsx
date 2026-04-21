@@ -50,6 +50,7 @@ const AxeAccessibilityChecker =
     : () => null;
 
 import { AuthStoreInitializer } from '@/features/auth';
+import { UserSettingsInitializer } from '@/features/settings';
 import { api, getBaseUrl } from '@/lib/trpc';
 import { ThemeProvider } from './theme-provider';
 
@@ -200,6 +201,8 @@ export function Providers({ children }: ProvidersProps) {
       <api.Provider client={trpcClient} queryClient={queryClient}>
         {/* 認証ストア初期化（Contextを提供しないので並列配置可能） */}
         <AuthStoreInitializer />
+        {/* UserSettings を Zustand に hydrate（全ページで常に最新設定が反映されるよう app-level で sync） */}
+        <UserSettingsInitializer />
         <ThemeProvider>
           <SessionMonitorProvider>
             <ServiceWorkerProvider>
