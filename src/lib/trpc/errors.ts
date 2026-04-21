@@ -96,8 +96,7 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== User関連 =====
   EXPORT_FAILED: 'INTERNAL_SERVER_ERROR',
 
-  // ===== Notification関連 =====
-  NOTIFICATION_SEND_FAILED: 'INTERNAL_SERVER_ERROR',
+  // ===== User関連 (続き) =====
   PROFILE_UPDATE_FAILED: 'INTERNAL_SERVER_ERROR',
 
   // ===== Reflection関連 =====

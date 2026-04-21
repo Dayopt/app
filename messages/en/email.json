@@ -54,7 +54,6 @@
     "dataRemovedIntro": "The following data has been permanently removed:",
     "dataPlans": "All entries and time records",
     "dataTags": "Tags and categories",
-    "dataNotifications": "Notification preferences",
     "dataProfile": "Profile information",
     "mistakeLine": "If you didn't request this deletion or believe this was a mistake, please contact us immediately at {supportEmail}.",
     "recreateLine": "You're welcome to create a new account at any time at {appLink}.",

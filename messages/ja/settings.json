@@ -72,7 +72,7 @@
       "twoFactorPrompt": "サインイン時に認証コードを要求",
       "twoFactorActive": "2要素認証が有効",
       "twoFactorProtection": "アカウントは追加のセキュリティ層で保護されています。",
-      "emailUsedFor": "ログインや通知に使用",
+      "emailUsedFor": "ログインやアカウントメールに使用",
       "emailVerified": "認証済み",
       "mfa": {
         "title": "2要素認証 (MFA)",
@@ -136,8 +136,6 @@
       "publicProfileDesc": "他のユーザーがプロフィールを閲覧できます",
       "showEmail": "メールアドレスを表示",
       "showEmailDesc": "プロフィールにメールアドレスを表示",
-      "allowNotifications": "通知を許可",
-      "allowNotificationsDesc": "システムからの通知を受け取る",
       "debugInfo": "デバッグ情報",
       "debugInfoDesc": "現在の設定値（開発用）",
       "publicInfo": "公開される基本情報",
@@ -522,13 +520,7 @@
       "selectStartupScreen": "起動画面を選択",
       "startupLast": "前回の画面を表示",
       "startupPlan": "エントリー",
-      "startupCalendar": "カレンダー",
-      "userExperience": "ユーザーエクスペリエンス",
-      "userExperienceDesc": "アニメーションやサウンドの設定",
-      "animations": "アニメーション",
-      "animationsDesc": "画面遷移やボタンのアニメーション効果を有効にする",
-      "soundEffects": "サウンド効果",
-      "soundEffectsDesc": "通知音やクリック音を再生する"
+      "startupCalendar": "カレンダー"
     },
     "common": {
       "saved": "設定を保存しました",
@@ -592,7 +584,6 @@
         "tasksEvents": "エントリー",
         "tagSettings": "タグ設定",
         "calendarSettings": "カレンダー設定",
-        "notificationSettings": "通知設定",
         "otherSettings": "その他の設定"
       },
       "import": {
@@ -668,7 +659,7 @@
       "services": {
         "title": "連携サービス",
         "googleCalendarDesc": "Googleカレンダーと予定を同期",
-        "slackDesc": "Slackにリマインダーや通知を送信",
+        "slackDesc": "Slackにメッセージを送信",
         "connected": "接続済み",
         "disconnect": "解除",
         "connect": "接続"
