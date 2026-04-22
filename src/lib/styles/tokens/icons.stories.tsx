@@ -510,7 +510,7 @@ function IconGrid({ items }: { items: IconEntry[] }) {
   );
 }
 
-/** docs/icon-conventions.md の意味論ルールに対応した一覧。新規 icon 追加時はここに反映する。 */
+/** Foundations/Icons/Docs (IconConventions.mdx) の意味論ルールに対応した一覧。新規 icon 追加時はここに反映する。 */
 export const ByConvention: Story = {
   render: () => (
     <div className="space-y-10 p-6">
@@ -518,7 +518,7 @@ export const ByConvention: Story = {
         <h1 className="mb-2 text-2xl font-medium">意味論ルール別アイコン</h1>
         <p className="text-muted-foreground text-sm">
           <code className="bg-container mx-1 rounded-lg px-2 py-1 text-xs">
-            docs/icon-conventions.md
+            Foundations/Icons/Docs
           </code>
           に対応した視覚参照。新規 icon 追加時はここにも追記する。
         </p>
