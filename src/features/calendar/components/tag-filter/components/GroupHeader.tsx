@@ -51,6 +51,13 @@ interface GroupHeaderProps {
   onUngroupTags?: (() => void) | undefined;
   onViewStats?: (() => void) | undefined;
   onDeleteGroup?: (() => void) | undefined;
+  /**
+   * 行（名前部分）クリック時のハンドラ。指定なしは `onToggleCollapse` にフォールバック。
+   * chevron クリックは常に `onToggleCollapse` のみ発火し、行クリックには波及しない。
+   */
+  onRowClick?: (() => void) | undefined;
+  /** 行に選択中表現（bg-state-selected）を付ける。ポップアップが開いているときに true */
+  highlighted?: boolean;
   /** インラインリネーム: 編集モードの制御 */
   renameEditing?: boolean;
   onSaveRename?: ((next: string) => void | Promise<void>) | undefined;
@@ -81,6 +88,8 @@ export function GroupHeader({
   onUngroupTags,
   onViewStats,
   onDeleteGroup,
+  onRowClick,
+  highlighted = false,
   renameEditing = false,
   onSaveRename,
   onDoneRenameEditing,
@@ -101,9 +110,9 @@ export function GroupHeader({
       if ((e.target as HTMLElement).closest('button')) return;
       if (menuOpen) return;
       if (Date.now() - menuClosedAtRef.current < 200) return;
-      onToggleCollapse();
+      (onRowClick ?? onToggleCollapse)();
     },
-    [onToggleCollapse, menuOpen],
+    [onRowClick, onToggleCollapse, menuOpen],
   );
 
   const handleContextMenu = useCallback(
@@ -119,7 +128,7 @@ export function GroupHeader({
       className={cn(
         'group/item hover:bg-state-hover flex w-full min-w-0 cursor-pointer items-center rounded-lg text-sm',
         isMobile ? 'h-11' : 'h-8',
-        menuOpen && 'bg-state-selected',
+        (menuOpen || highlighted) && 'bg-state-selected',
         !checked && !indeterminate && 'opacity-50',
       )}
       onClick={handleRowClick}
@@ -142,12 +151,25 @@ export function GroupHeader({
       </span>
       {!renameEditing && (
         <>
-          <ChevronRight
-            className={cn(
-              'text-muted-foreground ml-1 size-4 shrink-0 transition-transform',
-              !collapsed && 'rotate-90',
-            )}
-          />
+          {/* chevron: 親行 onClick に波及させず、折りたたみのみを担当する独立ボタン */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapse();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label={
+              collapsed ? t('calendar.filter.expandGroup') : t('calendar.filter.collapseGroup')
+            }
+            aria-expanded={!collapsed}
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target (既存 👁/⋯ と同じパターン)
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 before:absolute before:-inset-2 before:content-['']"
+          >
+            <ChevronRight
+              className={cn('size-4 transition-transform', !collapsed && 'rotate-90')}
+            />
+          </button>
 
           <div className="flex-1" />
         </>
