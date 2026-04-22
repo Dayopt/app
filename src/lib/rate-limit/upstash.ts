@@ -227,7 +227,7 @@ function getClientIdentifier(request: Request): string {
  * - 環境変数が設定されると自動的にUpstash版が有効化
  * - 未設定の場合は既存のインメモリ実装にフォールバック
  *
- * 詳細: docs/integrations/UPSTASH_SETUP.md
+ * 詳細: ./docs/upstash-setup.md
  */
 
 /**
