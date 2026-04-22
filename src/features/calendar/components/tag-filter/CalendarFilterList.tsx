@@ -131,7 +131,6 @@ export function CalendarFilterList() {
         {/* タグ */}
         <SidebarSection
           title={t('calendar.filter.tags')}
-          defaultOpen
           className="py-1"
           action={
             <CreateTagButton onStart={() => setIsCreatingAtRoot(true)} active={isCreatingAtRoot} />
