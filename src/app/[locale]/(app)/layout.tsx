@@ -8,7 +8,6 @@
  * 責務分離:
  * - このlayout: IntlProvider（i18n）+ Providers（データ層）+ BaseLayout（UIシェル）
  * - GlobalOverlays: グローバルダイアログ群（別ファイルに分離）
- * - ClientPageRouter: クライアントサイドページ切り替え
  *
  * @see src/shell/providers.tsx - フルProviders定義
  * @see ./_overlays/GlobalOverlays.tsx - グローバルダイアログ群
@@ -27,7 +26,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { ClientPageRouter } from './_composition/ClientPageRouter';
 import { GlobalOverlays } from './_overlays/GlobalOverlays';
 
 /** アプリページで必要なnamespace */
@@ -56,7 +54,7 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     <IntlProvider namespaces={APP_NAMESPACES}>
       <Providers>
         <BaseLayout>
-          <ClientPageRouter>{children}</ClientPageRouter>
+          {children}
           <GlobalOverlays />
         </BaseLayout>
       </Providers>
