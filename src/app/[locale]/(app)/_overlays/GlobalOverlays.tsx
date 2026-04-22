@@ -3,7 +3,7 @@
 import { toast } from '@/lib/toast';
 import { useLocale, useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import { useEntryInspectorStore } from '@/features/entry';
@@ -54,6 +54,7 @@ export function GlobalOverlays() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const pathname = usePathname();
 
   // ツアー: ステップバリデーション（現在は空）
   const stepValidators: StepValidators = useMemo(() => ({}), []);
@@ -71,6 +72,7 @@ export function GlobalOverlays() {
   const closeSheet = useShellStore.use.closeSheet();
   const contactOpen = activeSheet?.type === 'contact';
   const settingsOpen = activeSheet?.type === 'settings';
+  const isInspectorOpen = useEntryInspectorStore((s) => s.isOpen);
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
 
   // C4: モーダル（Settings/Contact）が開いたら Inspector を閉じる（排他制御）
@@ -80,13 +82,23 @@ export function GlobalOverlays() {
     }
   }, [settingsOpen, contactOpen, closeInspector]);
 
+  // Inspector は Calendar 配下専用 — /calendar/ 外への遷移で自動 close
+  // handleViewStats から close を呼ぶと useInspectorURLSync の URL 同期が
+  // router.push を打ち消すため、pathname 変化を契機に close する。
+  useEffect(() => {
+    if (!isInspectorOpen) return;
+    const onCalendarPage = pathname?.includes('/calendar/') ?? false;
+    if (!onCalendarPage) {
+      closeInspector();
+    }
+  }, [pathname, isInspectorOpen, closeInspector]);
+
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
-      closeInspector();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale, closeInspector],
+    [router, locale],
   );
 
   return (
