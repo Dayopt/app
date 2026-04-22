@@ -32,6 +32,16 @@ describe('snapToBucket', () => {
     expect(snapToBucket(Number.NaN)).toBe(0);
     expect(snapToBucket(Number.POSITIVE_INFINITY)).toBe(0);
   });
+
+  it('小数点: 2.5 → 5 (Math.round は half-away-from-zero), 2.49 → 0 (除外)', () => {
+    expect(snapToBucket(2.5)).toBe(5);
+    expect(snapToBucket(2.49)).toBe(0);
+  });
+
+  it('slider 上限 (240) を超える duration: 300 → 300、snap 後も保持', () => {
+    expect(snapToBucket(300)).toBe(300);
+    expect(snapToBucket(297)).toBe(295);
+  });
 });
 
 describe('computeDurationDistribution', () => {
@@ -125,5 +135,38 @@ describe('computeDurationDistribution', () => {
   it('bins は duration 昇順で返る', () => {
     const result = computeDurationDistribution(makeSamples([60, 30, 120, 45]));
     expect(result.bins.map((b) => b.durationMinutes)).toEqual([30, 45, 60, 120]);
+  });
+
+  it('全て同じ duration (variance=0): 候補 1 個 / varianceFlag false', () => {
+    const result = computeDurationDistribution(
+      makeSamples([60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 60]),
+    );
+    expect(result.sampleSize).toBe(12);
+    expect(result.candidates).toEqual([{ durationMinutes: 60, count: 12 }]);
+    expect(result.bins).toEqual([{ durationMinutes: 60, count: 12 }]);
+    expect(result.varianceFlag).toBe(false); // std/mean = 0 / 60 = 0 < 0.6
+  });
+
+  it('slider 範囲外 duration (300m など) が raw データに混ざっても集計される', () => {
+    const result = computeDurationDistribution(
+      makeSamples([300, 300, 60, 60, 60, 60, 60, 60, 60, 60]),
+    );
+    expect(result.sampleSize).toBe(10);
+    // 60 が 8 票で 1 位、300 が 2 票で 2 位
+    expect(result.candidates[0]).toEqual({ durationMinutes: 60, count: 8 });
+    expect(result.candidates[1]).toEqual({ durationMinutes: 300, count: 2 });
+  });
+
+  it('5 分未満 (2.5m) は除外されないが 5 分に snap される', () => {
+    // 2.5 は snap 後に 5 → bins に 5 分 bucket が作られる
+    const result = computeDurationDistribution(makeSamples([2.5, 2.5, 5, 5]));
+    expect(result.bins).toEqual([{ durationMinutes: 5, count: 4 }]);
+  });
+
+  it('2.49 以下は 0 snap で除外される', () => {
+    const result = computeDurationDistribution(makeSamples([2.49, 1, 0.5, 30]));
+    expect(result.bins).toEqual([{ durationMinutes: 30, count: 1 }]);
+    // sampleSize は入力件数ベース（除外前）
+    expect(result.sampleSize).toBe(4);
   });
 });
