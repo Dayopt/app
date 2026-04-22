@@ -795,7 +795,6 @@ function SortableTagItem({
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? parentTag.id : null)}
                 tag={{ id: parentTag.id, name: parentTag.name, color: parentTag.color }}
                 defaultDurationMinutes={30}
-                onSubmit={() => onOpenPopover(null)}
                 isMobile={isMobile ?? false}
               />
             ) : null}
@@ -924,7 +923,6 @@ function SortableTagItem({
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
                 tag={{ id: tag.id, name: tag.name, color: tag.color }}
                 defaultDurationMinutes={30}
-                onSubmit={() => onOpenPopover(null)}
                 isMobile={isMobile ?? false}
               />
             ) : null}

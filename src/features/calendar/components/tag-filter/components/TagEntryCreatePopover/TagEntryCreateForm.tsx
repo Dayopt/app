@@ -37,6 +37,8 @@ export interface TagEntryCreateFormProps {
   isLoading?: boolean;
   /** 分布データ fetch エラー。candidates / histogram を hide し slider のみ有効化 */
   isError?: boolean;
+  /** エントリ作成 mutation 進行中。作成ボタンを disable */
+  isSubmitting?: boolean;
   className?: string;
 }
 
@@ -64,6 +66,7 @@ export function TagEntryCreateForm({
   onCustomTimeClick,
   isLoading = false,
   isError = false,
+  isSubmitting = false,
   className,
 }: TagEntryCreateFormProps) {
   const [startKey, setStartKey] = useState(defaultStartKey);
@@ -132,10 +135,15 @@ export function TagEntryCreateForm({
 
       {/* 6. アクション */}
       <div className="flex items-center justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
           キャンセル
         </Button>
-        <Button type="button" size="sm" onClick={() => onSubmit({ startKey, durationMinutes })}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => onSubmit({ startKey, durationMinutes })}
+          disabled={isSubmitting || !startKey}
+        >
           作成
         </Button>
       </div>
