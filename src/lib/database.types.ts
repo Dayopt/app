@@ -597,6 +597,19 @@ export type Database = {
           total_minutes: number;
         }[];
       };
+      get_tag_duration_distribution: {
+        Args: {
+          p_days_back?: number;
+          p_limit?: number;
+          p_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: {
+          duration_minutes: number;
+          entry_id: string;
+          started_at: string;
+        }[];
+      };
       get_tag_fulfillment_distribution: {
         Args: {
           p_end_date?: string;
