@@ -83,9 +83,10 @@ export function GlobalOverlays() {
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
+      closeInspector();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale],
+    [router, locale, closeInspector],
   );
 
   return (
