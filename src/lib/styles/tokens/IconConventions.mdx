@@ -60,13 +60,14 @@ grep -n "icon:.*IconName\|icon: 'IconName'" src/features/stats/
 
 ### AI / Insight
 
-| アイコン    | 用途                                                                    |
-| ----------- | ----------------------------------------------------------------------- |
-| `Sparkles`  | AI 機能全般（Watching AI, Insight 生成, AI レポート）                   |
-| `Eye`       | 観察系（Watching AI のモードアイコンなど「観察する」意味が強い場面）    |
-| `Lightbulb` | ヒント / tips（AI 由来でない一般的な示唆。UI ツアー、空状態のヒント等） |
+| アイコン    | 用途                                                                                                       |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| `Sparkles`  | AI 機能全般 + Watching AI のモードアイコン（BottomTab / PageNav / AI モードメインの empty state）          |
+| `Lightbulb` | ヒント / tips（AI 由来でない一般的な示唆。UI ツアー、空状態のヒント等。AI Insight 系のアイコンとしても可） |
 
-**判断基準**: AI が生成したもの = `Sparkles`、ユーザーや静的ロジックが出すヒント = `Lightbulb`。「AI が観察中」という状態の明示のみ `Eye`。
+**判断基準**: AI が生成したもの + Watching AI モード全般 = `Sparkles`、ユーザーや静的ロジックが出すヒント = `Lightbulb`。
+
+**履歴**: 2026-04-23 — `Eye` を本セクションから予約解除。Phase 2-C Step C-4 の BottomTab 4 タブ並びで `Eye` が生き物的・有機的に浮き、他 3 タブ（Calendar / Stats / Account、抽象的・機能的）との調和を崩す視覚検証結果による。「観察」の意味は `Sparkles` + ラベル `Watching AI` の組み合わせで担保する。`Eye` はパスワード表示切替・タグ visibility 切替等の汎用 visibility toggle 用途では引き続き使用。
 
 ### 警告 / エラー
 
