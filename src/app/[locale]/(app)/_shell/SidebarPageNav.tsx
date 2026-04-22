@@ -1,12 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
 import { PageNav } from '@/lib/components/shell/sidebar';
-import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
@@ -26,50 +25,30 @@ function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
 export function SidebarPageNav() {
   const pathname = usePathname();
   const calendarNav = useCalendarNavigation();
-  const switchToPage = useClientRouterStore((s) => s.switchToPage);
-  const clientPage = useClientRouterStore((s) => s.clientPage);
   const statsGranularity = useStatsFilterStore((s) => s.granularity);
   const statsDate = useStatsFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
+  const activePage = getActivePageFromPath(pathname ?? '/');
 
-  // clientPage（Zustand）を優先、null（初回/リロード）時は pathname から判定
-  const activePage = clientPage ?? getActivePageFromPath(pathname ?? '/');
-
-  const handleCalendarClick = useCallback(() => {
-    if (activePage === 'calendar') return;
-
-    window.history.pushState(
-      null,
-      '',
+  const calendarHref = useMemo(
+    () =>
       buildCalendarPath({
         locale,
         viewType: calendarNav?.viewType ?? 'day',
         currentDate: calendarNav?.currentDate,
       }),
-    );
-    switchToPage('calendar');
-  }, [activePage, calendarNav, locale, switchToPage]);
+    [locale, calendarNav?.viewType, calendarNav?.currentDate],
+  );
 
-  const handleStatsClick = useCallback(() => {
-    if (activePage === 'stats') return;
-
-    window.history.pushState(
-      null,
-      '',
+  const statsHref = useMemo(
+    () =>
       buildStatsPath(locale, 'review', {
         granularity: statsGranularity,
         date: statsDate,
       }),
-    );
-    switchToPage('stats');
-  }, [activePage, locale, statsGranularity, statsDate, switchToPage]);
-
-  return (
-    <PageNav
-      activePage={activePage}
-      onCalendarClick={handleCalendarClick}
-      onStatsClick={handleStatsClick}
-    />
+    [locale, statsGranularity, statsDate],
   );
+
+  return <PageNav activePage={activePage} calendarHref={calendarHref} statsHref={statsHref} />;
 }
