@@ -43,6 +43,7 @@ const APP_NAMESPACES = [
   'error',
   'contact',
   'tour',
+  'ai',
 ];
 
 interface AppLayoutProps {

@@ -1,0 +1,35 @@
+{
+  "ai": {
+    "sidebar": {
+      "title": "Watching AI",
+      "conversations": {
+        "empty": "No conversations yet"
+      },
+      "soon": {
+        "label": "Coming up",
+        "weeklyReport": {
+          "title": "Weekly report",
+          "description": "Summarizes how you spent time this week"
+        },
+        "insights": {
+          "title": "Insights",
+          "description": "Shares patterns it notices"
+        },
+        "anomaly": {
+          "title": "Anomaly detection",
+          "description": "Quietly flags what looks different"
+        }
+      }
+    },
+    "main": {
+      "title": "Watching AI is coming",
+      "description": "Observes how you spend time, finds patterns, and shares what it notices."
+    },
+    "thread": {
+      "placeholder": {
+        "title": "This conversation is coming soon",
+        "description": "Once Watching AI is available, conversation history will appear here"
+      }
+    }
+  }
+}
