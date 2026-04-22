@@ -45,7 +45,6 @@ import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
-import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
@@ -428,14 +427,12 @@ function SortableTagItem({
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal } = useTagModalNavigation();
   const router = useRouter();
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   const navigateToTagStats = useCallback(
     (tagId: string) => {
-      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale, resetToServer],
+    [router, locale],
   );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,

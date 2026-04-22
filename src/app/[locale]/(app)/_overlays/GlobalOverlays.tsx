@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo } from 'react';
 
 import { useEntryInspectorStore } from '@/features/entry';
 import { Toaster } from '@/lib/components/ui/toast';
-import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import type { StepValidationResult, StepValidators } from '@/features/tour';
@@ -55,7 +54,6 @@ export function GlobalOverlays() {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   // ツアー: ステップバリデーション（現在は空）
   const stepValidators: StepValidators = useMemo(() => ({}), []);
@@ -85,10 +83,9 @@ export function GlobalOverlays() {
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
-      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale, resetToServer],
+    [router, locale],
   );
 
   return (
