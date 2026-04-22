@@ -2,11 +2,8 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let mockPathname = '/ja/calendar/day';
-let mockClientPage: 'calendar' | 'stats' | null = null;
 
 const mockPush = vi.fn();
-const mockSwitchToPage = vi.fn();
-const mockResetToServer = vi.fn();
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
@@ -28,21 +25,6 @@ vi.mock('@/features/calendar', async () => {
     formatCalendarDateParam: (date: Date) => dateFns.format(date, 'yyyy-MM-dd'),
   };
 });
-
-vi.mock('@/lib/stores/useClientRouterStore', () => ({
-  useClientRouterStore: (
-    selector: (state: {
-      switchToPage: typeof mockSwitchToPage;
-      clientPage: typeof mockClientPage;
-      resetToServer: typeof mockResetToServer;
-    }) => unknown,
-  ) =>
-    selector({
-      switchToPage: mockSwitchToPage,
-      clientPage: mockClientPage,
-      resetToServer: mockResetToServer,
-    }),
-}));
 
 vi.mock('@/features/auth', () => ({
   useAuthStore: (
@@ -71,7 +53,6 @@ describe('BottomTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPathname = '/ja/calendar/day';
-    mockClientPage = null;
   });
 
   it('uses page navigation semantics instead of tab semantics', () => {
