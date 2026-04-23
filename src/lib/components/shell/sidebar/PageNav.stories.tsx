@@ -38,7 +38,6 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
             aria-current={isActive ? 'page' : undefined}
             className={cn(
               'flex h-8 items-center justify-center rounded-lg text-sm no-underline',
-              'transition-all duration-200 motion-reduce:transition-none',
               'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
               isActive
                 ? 'bg-muted text-foreground gap-2 px-4 font-medium'
@@ -49,7 +48,6 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
             <span
               className={cn(
                 'overflow-hidden whitespace-nowrap',
-                'transition-all duration-200 motion-reduce:transition-none',
                 isActive ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0',
               )}
             >
