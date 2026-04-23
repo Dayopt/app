@@ -1,6 +1,7 @@
 'use client';
 
 import { Calendar, Clock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { DateRow, TimeRow } from '@/features/entry';
 import { TagIcon } from '@/features/tags';
@@ -15,13 +16,10 @@ export interface TagEntryCreateFormProps {
     color: string | null;
     icon: string | null;
   };
-  /** 選択日付（時刻 00:00） */
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
-  /** 開始時刻 HH:MM */
   startTime: string;
   onStartTimeChange: (hhmm: string) => void;
-  /** 終了時刻 HH:MM */
   endTime: string;
   onEndTimeChange: (hhmm: string) => void;
   onSubmit: () => void;
@@ -32,14 +30,17 @@ export interface TagEntryCreateFormProps {
 }
 
 /**
- * タグエントリ作成フォーム body（Inspector 流用版）。
+ * タグエントリ作成フォーム body。
  *
+ * レイアウト:
  * 1. タグアイコン + 名前ヘッダー
- * 2. 日付行 (Inspector の `<DateRow>`)
- * 3. 予定行 (Inspector の `<TimeRow>`) — 開始 → 終了の 2 つの TimeSelect
- * 4. キャンセル / 作成 ボタン
+ * 2. **Inspector と同じ "スケジュールカード"** (`bg-muted rounded-2xl`) 内に
+ *    - 日付行 (`DateRow`)
+ *    - 予定行 (`TimeRow` = 開始 → 終了)
+ * 3. キャンセル / 作成 ボタン
  *
- * 旧 Duration スライダーと日付チップは撤廃。Inspector と同じ入力 UI に一本化。
+ * Inspector (EntryInspectorForm) のスケジュールカードと同じ container 構造・
+ * 色味・間隔を使うことで、視覚的一貫性を確保する。
  */
 export function TagEntryCreateForm({
   tag,
@@ -55,37 +56,41 @@ export function TagEntryCreateForm({
   hasError = false,
   className,
 }: TagEntryCreateFormProps) {
+  const t = useTranslations();
+
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-3', className)}>
       {/* 1. タグ名ヘッダー */}
-      <div className="flex items-center gap-2 pb-1">
+      <div className="flex items-center gap-2">
         <TagIcon icon={tag.icon} color={tag.color} size="sm" />
         <ColonTagLabel name={tag.name} variant="separator" className="text-base font-medium" />
       </div>
 
-      {/* 2. 日付 */}
-      <DateRow
-        label="日付"
-        icon={Calendar}
-        selectedDate={selectedDate}
-        onDateChange={(d) => {
-          if (d) onDateSelect(d);
-        }}
-      />
+      {/* 2. スケジュールカード (Inspector と同じ) */}
+      <div className="bg-muted rounded-2xl">
+        <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
+          <DateRow
+            label={t('entry.inspector.time.date')}
+            icon={Calendar}
+            selectedDate={selectedDate}
+            onDateChange={(d) => {
+              if (d) onDateSelect(d);
+            }}
+          />
+          <TimeRow
+            label={t('entry.inspector.time.planned')}
+            icon={Clock}
+            startTime={startTime}
+            endTime={endTime}
+            onStartChange={onStartTimeChange}
+            onEndChange={onEndTimeChange}
+            hasError={hasError}
+          />
+        </div>
+      </div>
 
-      {/* 3. 予定（開始 → 終了） */}
-      <TimeRow
-        label="予定"
-        icon={Clock}
-        startTime={startTime}
-        endTime={endTime}
-        onStartChange={onStartTimeChange}
-        onEndChange={onEndTimeChange}
-        hasError={hasError}
-      />
-
-      {/* 4. アクション */}
-      <div className="flex items-center justify-end gap-2 pt-2">
+      {/* 3. アクション */}
+      <div className="flex items-center justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
           キャンセル
         </Button>
