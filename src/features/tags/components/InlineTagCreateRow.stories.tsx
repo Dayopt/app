@@ -35,7 +35,7 @@ const mockTags: Tag[] = [
  * InlineTagCreateRow — タグ新規作成のインラインフォーム
  *
  * name 入力 + 色スウォッチ。Enter で確定 / Esc または外クリックでキャンセル。
- * `inheritedColor` を渡すとグループ色を継承し、色選択 UI は非表示になる。
+ * `defaultColor` を渡すと色スウォッチの初期選択値として使われる（変更可能）。
  */
 const meta = {
   title: 'Features/Tags/InlineTagCreateRow',
@@ -80,12 +80,12 @@ export const BadgeVariant: Story = {
   ),
 };
 
-/** グループ色を継承する場合。カラースウォッチ行が省略される。 */
-export const WithInheritedColor: Story = {
+/** グループ内作成時。親色が初期選択として入るが、他の色に変更可能。 */
+export const WithDefaultColorFromGroup: Story = {
   args: {
     variant: 'row',
     defaultGroup: 'Work',
-    inheritedColor: 'indigo',
+    defaultColor: 'indigo',
   },
   render: (args) => (
     <div className="w-64">
@@ -111,9 +111,9 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs">inherited color (group 内)</p>
+        <p className="text-muted-foreground text-xs">default color from group</p>
         <div className="w-64">
-          <InlineTagCreateRow {...args} variant="row" defaultGroup="Work" inheritedColor="indigo" />
+          <InlineTagCreateRow {...args} variant="row" defaultGroup="Work" defaultColor="indigo" />
         </div>
       </div>
     </div>
