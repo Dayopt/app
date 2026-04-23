@@ -59,15 +59,15 @@ export function TagEntryCreateForm({
   const t = useTranslations();
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
-      {/* 1. タグ名ヘッダー */}
-      <div className="flex items-center gap-2">
+    <div className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}>
+      {/* Row 0: タグ名ヘッダー（Inspector の TagRow 相当） */}
+      <div className="flex min-h-9 items-center gap-2">
         <TagIcon icon={tag.icon} color={tag.color} size="sm" />
         <ColonTagLabel name={tag.name} variant="separator" className="text-base font-medium" />
       </div>
 
-      {/* 2. スケジュールカード (Inspector と同じ) */}
-      <div className="bg-muted rounded-2xl">
+      {/* スケジュールカード (Inspector と同じ bg-muted rounded-2xl) */}
+      <div className="bg-muted mt-2 rounded-2xl">
         <div className="flex flex-col gap-2 px-4 pt-2 pb-4">
           <DateRow
             label={t('entry.inspector.time.date')}
@@ -85,12 +85,13 @@ export function TagEntryCreateForm({
             onStartChange={onStartTimeChange}
             onEndChange={onEndTimeChange}
             hasError={hasError}
+            forceSingleRow
           />
         </div>
       </div>
 
-      {/* 3. アクション */}
-      <div className="flex items-center justify-end gap-2">
+      {/* アクション（キャンセル / 作成） */}
+      <div className="mt-4 flex items-center justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
           キャンセル
         </Button>

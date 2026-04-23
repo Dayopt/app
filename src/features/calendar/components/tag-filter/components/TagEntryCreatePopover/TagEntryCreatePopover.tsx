@@ -6,7 +6,7 @@ import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import { useEntryMutations } from '@/features/entry';
-import { Drawer, DrawerContent } from '@/lib/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { toast } from '@/lib/toast';
 
@@ -175,10 +175,12 @@ export function TagEntryCreatePopover({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- env() safe-area */}
-        <DrawerContent className="px-4 pt-2 pb-[env(safe-area-inset-bottom)]">
-          {formNode}
+      <Drawer open={open} onOpenChange={onOpenChange} handleOnly repositionInputs={false}>
+        <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
+          <DrawerTitle className="sr-only">{tag.name}</DrawerTitle>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-lg">{formNode}</div>
+          </div>
         </DrawerContent>
       </Drawer>
     );
@@ -192,7 +194,7 @@ export function TagEntryCreatePopover({
         align="start"
         sideOffset={8}
         collisionPadding={16}
-        className="w-80"
+        className="w-80 p-0"
         onOpenAutoFocus={(e) => {
           e.preventDefault();
         }}
