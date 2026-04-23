@@ -5,6 +5,7 @@
  * 実装は Phase 2-B Step 2 で nav + Link + aria-current に移行済。
  * mock も Link ベース (aria-current) に揃える (Phase 2-C Step C-5)。
  * Phase 2-D Step D-2 で v2 デザイン (expanding tab) に同期。
+ * Phase 2-D Step D-5 で amber β バッジ (AI タブ) に対応。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -17,12 +18,25 @@ import { cn } from '@/lib/utils';
 // ストーリーでは同じ見た目の静的モックを使用する。
 
 type ActivePage = 'calendar' | 'stats' | 'ai';
+type BadgeVariant = 'new' | 'beta';
 
-function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
-  const tabs: Array<{ id: ActivePage; label: string; icon: typeof CalendarDays; href: string }> = [
+function MockPageNav({
+  activePage = 'calendar',
+  aiBadge = null,
+}: {
+  activePage?: ActivePage;
+  aiBadge?: BadgeVariant | null;
+}) {
+  const tabs: Array<{
+    id: ActivePage;
+    label: string;
+    icon: typeof CalendarDays;
+    href: string;
+    badge?: BadgeVariant | null;
+  }> = [
     { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
     { id: 'stats', label: '統計', icon: BarChart3, href: '/ja/stats/review' },
-    { id: 'ai', label: 'AI', icon: Sparkles, href: '/ja/ai' },
+    { id: 'ai', label: 'AI', icon: Sparkles, href: '/ja/ai', badge: aiBadge },
   ];
 
   return (
@@ -44,7 +58,20 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
                 : 'text-muted-foreground hover:bg-state-hover w-8',
             )}
           >
-            <Icon className="size-4 shrink-0" />
+            <span className="relative inline-flex shrink-0 items-center justify-center">
+              <Icon className="size-4 shrink-0" />
+              {tab.badge && (
+                <span
+                  aria-label={tab.badge === 'beta' ? 'β' : 'NEW'}
+                  className={cn(
+                    'absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1',
+                    'bg-warning text-warning-foreground text-xs leading-none font-medium',
+                  )}
+                >
+                  {tab.badge === 'beta' ? 'β' : 'NEW'}
+                </span>
+              )}
+            </span>
             <span
               className={cn(
                 'overflow-hidden whitespace-nowrap',
@@ -94,6 +121,14 @@ export const AiActive: Story = {
   },
 };
 
+/** AI に β バッジ付き（SidebarPageNav の本番 props に相当）。 */
+export const WithAiBetaBadge: Story = {
+  args: {
+    activePage: 'calendar',
+    aiBadge: 'beta',
+  },
+};
+
 /** 全パターン一覧。 */
 export const AllPatterns: Story = {
   render: () => (
@@ -109,6 +144,14 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-2 text-xs">AI Active</p>
         <MockPageNav activePage="ai" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs">Calendar Active + AI β badge</p>
+        <MockPageNav activePage="calendar" aiBadge="beta" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 text-xs">AI Active + NEW badge</p>
+        <MockPageNav activePage="ai" aiBadge="new" />
       </div>
     </div>
   ),

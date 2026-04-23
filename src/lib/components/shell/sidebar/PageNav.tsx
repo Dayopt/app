@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+import { NavBadge, type NavBadgeVariant } from './NavBadge';
+
 type ActivePage = 'calendar' | 'stats' | 'ai';
 
 interface PageNavProps {
@@ -16,6 +18,7 @@ interface PageNavProps {
   calendarHref: string;
   statsHref: string;
   aiHref: string;
+  aiBadge?: NavBadgeVariant | null;
   className?: string;
 }
 
@@ -24,10 +27,18 @@ type NavTab = {
   label: string;
   icon: LucideIcon;
   href: string;
+  badge?: NavBadgeVariant | null;
 };
 
 /** ページナビゲーション（Calendar / Stats / AI セグメントコントロール） */
-export function PageNav({ activePage, calendarHref, statsHref, aiHref, className }: PageNavProps) {
+export function PageNav({
+  activePage,
+  calendarHref,
+  statsHref,
+  aiHref,
+  aiBadge,
+  className,
+}: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
@@ -52,7 +63,7 @@ export function PageNav({ activePage, calendarHref, statsHref, aiHref, className
   const tabs: NavTab[] = [
     { id: 'calendar', label: t('calendar'), icon: CalendarDays, href: calendarHref },
     { id: 'stats', label: t('stats'), icon: BarChart3, href: statsHref },
-    { id: 'ai', label: t('ai'), icon: Sparkles, href: aiHref },
+    { id: 'ai', label: t('ai'), icon: Sparkles, href: aiHref, badge: aiBadge ?? null },
   ];
 
   return (
@@ -84,7 +95,10 @@ export function PageNav({ activePage, calendarHref, statsHref, aiHref, className
                   : 'text-muted-foreground hover:bg-state-hover w-8',
               )}
             >
-              <Icon className="size-4 shrink-0" />
+              <span className="relative inline-flex shrink-0 items-center justify-center">
+                <Icon className="size-4 shrink-0" />
+                {tab.badge && <NavBadge variant={tab.badge} />}
+              </span>
               <span
                 className={cn(
                   'overflow-hidden whitespace-nowrap',

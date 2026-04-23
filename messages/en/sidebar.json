@@ -4,6 +4,10 @@
       "calendar": "Calendar",
       "stats": "Stats",
       "ai": "AI"
+    },
+    "navBadge": {
+      "new": "NEW",
+      "beta": "Beta"
     }
   }
 }

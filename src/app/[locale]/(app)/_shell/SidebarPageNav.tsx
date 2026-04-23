@@ -59,6 +59,7 @@ export function SidebarPageNav() {
       calendarHref={calendarHref}
       statsHref={statsHref}
       aiHref={aiHref}
+      aiBadge="beta"
     />
   );
 }
