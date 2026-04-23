@@ -792,8 +792,10 @@ function SortableTagItem({
                 tag={{
                   id: parentTag.id,
                   name: parentTag.name,
-                  color: parentTag.color,
-                  icon: parentTag.icon,
+                  // sidebar の GroupHeader と同じ `displayColor`（resolveTagColor +
+                  // optimistic 反映済み）を popover に伝え、色味を揃える
+                  color: displayColor,
+                  icon: parentTag.icon ?? tag.icon,
                 }}
                 defaultDurationMinutes={30}
                 isMobile={isMobile ?? false}
@@ -922,7 +924,7 @@ function SortableTagItem({
               <TagEntryCreatePopover
                 open
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
-                tag={{ id: tag.id, name: tag.name, color: tag.color, icon: tag.icon }}
+                tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
                 defaultDurationMinutes={30}
                 isMobile={isMobile ?? false}
               />
