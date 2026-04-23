@@ -9,7 +9,7 @@ import { PageNav } from '@/lib/components/shell/sidebar';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
-function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
+function getActivePageFromPath(pathname: string): 'calendar' | 'stats' | 'ai' {
   const segments = pathname.split('/');
   const pathWithoutLocale =
     segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
@@ -18,6 +18,7 @@ function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
   if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  if (pathWithoutLocale.startsWith('/ai')) return 'ai';
   return 'calendar';
 }
 
@@ -50,5 +51,14 @@ export function SidebarPageNav() {
     [locale, statsGranularity, statsDate],
   );
 
-  return <PageNav activePage={activePage} calendarHref={calendarHref} statsHref={statsHref} />;
+  const aiHref = useMemo(() => `/${locale}/ai`, [locale]);
+
+  return (
+    <PageNav
+      activePage={activePage}
+      calendarHref={calendarHref}
+      statsHref={statsHref}
+      aiHref={aiHref}
+    />
+  );
 }

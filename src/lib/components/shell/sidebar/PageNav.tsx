@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, CalendarDays } from 'lucide-react';
+import { BarChart3, CalendarDays, Sparkles } from 'lucide-react';
 
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -8,14 +8,15 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface PageNavProps {
-  activePage: 'calendar' | 'stats';
+  activePage: 'calendar' | 'stats' | 'ai';
   calendarHref: string;
   statsHref: string;
+  aiHref: string;
   className?: string;
 }
 
-/** ページナビゲーション（Calendar / Stats セグメントコントロール） */
-export function PageNav({ activePage, calendarHref, statsHref, className }: PageNavProps) {
+/** ページナビゲーション（Calendar / Stats / AI セグメントコントロール） */
+export function PageNav({ activePage, calendarHref, statsHref, aiHref, className }: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
@@ -54,6 +55,20 @@ export function PageNav({ activePage, calendarHref, statsHref, className }: Page
       >
         <BarChart3 className="size-4" />
         <span>{t('stats')}</span>
+      </Link>
+      <Link
+        href={aiHref}
+        prefetch
+        aria-current={activePage === 'ai' ? 'page' : undefined}
+        className={cn(
+          'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
+          activePage === 'ai'
+            ? 'bg-muted text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
+        )}
+      >
+        <Sparkles className="size-4" />
+        <span>{t('ai')}</span>
       </Link>
     </nav>
   );

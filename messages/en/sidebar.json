@@ -2,7 +2,8 @@
   "sidebar": {
     "pageNav": {
       "calendar": "Calendar",
-      "stats": "Stats"
+      "stats": "Stats",
+      "ai": "AI"
     }
   }
 }
