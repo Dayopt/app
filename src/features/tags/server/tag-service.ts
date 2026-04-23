@@ -797,54 +797,9 @@ export class TagService {
 
     return statsData;
   }
-
-  /**
-   * タグごとの直近 duration サンプルを取得
-   *
-   * sidebar タグ行クリック → エントリ作成ポップアップの duration 候補計算に使用。
-   * bucket 化 / 候補抽出 / histogram / variance 計算は client 側で行う。
-   *
-   * @param options - userId / tagId / 取得範囲（日数・件数）
-   * @returns 直近エントリの duration(分) と開始時刻の配列
-   */
-  async getDurationDistribution(options: {
-    userId: string;
-    tagId: string;
-    daysBack?: number;
-    limit?: number;
-  }): Promise<DurationDistributionSample[]> {
-    const { userId, tagId, daysBack, limit } = options;
-
-    const { data, error } = await this.supabase.rpc('get_tag_duration_distribution', {
-      p_user_id: userId,
-      p_tag_id: tagId,
-      ...(daysBack !== undefined && { p_days_back: daysBack }),
-      ...(limit !== undefined && { p_limit: limit }),
-    });
-
-    if (error) {
-      throw new TagServiceError(
-        'FETCH_FAILED',
-        `Failed to fetch tag duration distribution: ${error.message}`,
-      );
-    }
-
-    return (data ?? []).map((row) => ({
-      entryId: row.entry_id,
-      durationMinutes: row.duration_minutes,
-      startedAt: row.started_at,
-    }));
-  }
 }
 
 export type { TagDeleteStrategy } from '../types';
-
-/** duration 分布の 1 サンプル（client 側で bucket 化する前の raw 行） */
-export interface DurationDistributionSample {
-  entryId: string;
-  durationMinutes: number;
-  startedAt: string;
-}
 
 /** タグ統計の型 */
 export interface TagStatsRow {

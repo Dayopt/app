@@ -12,7 +12,6 @@
  * - tags.merge: タグマージ
  * - tags.delete: タグ削除
  * - tags.reorder: タグ並び替え（sort_order更新）
- * - tags.durationDistribution: タグごとの直近duration分布（sidebar エントリ作成ポップアップ用）
  */
 
 import { z } from 'zod';
@@ -410,37 +409,6 @@ export const tagsRouter = createTRPCRouter({
         });
 
         return result;
-      } catch (error) {
-        return handleServiceError(error);
-      }
-    }),
-
-  /**
-   * タグごとの直近 duration 分布
-   *
-   * sidebar タグ行クリック → エントリ作成ポップアップの duration 候補計算に使用。
-   * 直近 90 日・最大 20 件の raw サンプルを返す（bucket 化は client 側）。
-   */
-  durationDistribution: protectedProcedure
-    .meta({ description: 'タグごとの直近duration分布（raw サンプル配列）' })
-    .input(
-      z.object({
-        tagId: z.string().uuid(),
-        daysBack: z.number().int().min(1).max(365).optional(),
-        limit: z.number().int().min(1).max(100).optional(),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      try {
-        const service = createTagService(ctx.supabase);
-        const samples = await service.getDurationDistribution({
-          userId: ctx.userId,
-          tagId: input.tagId,
-          ...(input.daysBack !== undefined && { daysBack: input.daysBack }),
-          ...(input.limit !== undefined && { limit: input.limit }),
-        });
-
-        return { samples };
       } catch (error) {
         return handleServiceError(error);
       }
