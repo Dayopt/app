@@ -70,6 +70,13 @@ export { EntryCard } from './components/card';
 export type { EntryCardPosition, EntryCardProps } from './components/card';
 
 // =============================================================================
+// Components (Inspector fields — 他 feature から再利用可能な入力 row)
+// =============================================================================
+export { DateRow } from './components/inspector/fields/DateRow';
+export { TimeRow } from './components/inspector/fields/TimeRow';
+export { TimeSelect } from './components/inspector/fields/TimeSelect';
+
+// =============================================================================
 // Server (Service layer — server-only ガードで保護済み)
 // =============================================================================
 export { EntryService } from './server/entry-service';

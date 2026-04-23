@@ -626,17 +626,13 @@ function SortableTagItem({
         return;
       }
 
-      // 衝突なし → 通常のリネーム
-      const groupColor = newGroup
-        ? resolveTagColor(groupOptions.find((g) => g.name === newGroup)?.color)
-        : undefined;
+      // 衝突なし → 通常のリネーム（色は継承しない。各タグが独立した色を保持）
       updateTagMutation.mutate({
         id: tag.id,
         name: newName,
-        ...(groupColor ? { color: groupColor } : {}),
       });
     },
-    [tag.id, tag.name, suffix, groupOptions, updateTagMutation, findTagByName],
+    [tag.id, tag.name, suffix, updateTagMutation, findTagByName],
   );
 
   // グループリネームハンドラー
@@ -793,7 +789,12 @@ function SortableTagItem({
               <TagEntryCreatePopover
                 open
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? parentTag.id : null)}
-                tag={{ id: parentTag.id, name: parentTag.name, color: parentTag.color }}
+                tag={{
+                  id: parentTag.id,
+                  name: parentTag.name,
+                  color: parentTag.color,
+                  icon: parentTag.icon,
+                }}
                 defaultDurationMinutes={30}
                 isMobile={isMobile ?? false}
               />
@@ -807,7 +808,7 @@ function SortableTagItem({
             <InlineTagCreateRow
               variant="row"
               defaultGroup={currentGroup}
-              inheritedColor={resolveTagColor(displayColor)}
+              defaultColor={resolveTagColor(displayColor)}
               existingTags={allTags}
               onSubmit={(name, color) => {
                 createTagMutation.mutate({ name, color });
@@ -921,7 +922,7 @@ function SortableTagItem({
               <TagEntryCreatePopover
                 open
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
-                tag={{ id: tag.id, name: tag.name, color: tag.color }}
+                tag={{ id: tag.id, name: tag.name, color: tag.color, icon: tag.icon }}
                 defaultDurationMinutes={30}
                 isMobile={isMobile ?? false}
               />
