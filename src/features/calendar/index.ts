@@ -19,6 +19,7 @@ export { ViewSwitcherList } from './components/layout/Header/ViewSwitcherList';
 // Filter
 // =============================================================================
 export { CalendarFilterList } from './components/tag-filter/CalendarFilterList';
+export { TagChipRow } from './components/tag-filter/components/TagChipRow';
 
 // =============================================================================
 // Types
