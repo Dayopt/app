@@ -67,7 +67,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           )}
         >
           <div className="h-full w-64">
-            <Sidebar>
+            <Sidebar pageNav={<SidebarPageNav />}>
               <SidebarContent />
             </Sidebar>
           </div>
@@ -77,7 +77,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
         <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
           {!hasOwnHeader && (
-            <AppHeader leftSlot={sidebarToggle} rightSlot={<SidebarPageNav />}>
+            <AppHeader leftSlot={sidebarToggle}>
               {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
             </AppHeader>
           )}

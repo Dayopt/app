@@ -4,6 +4,7 @@
  * ヘッダー右端のページナビゲーション（Calendar / Stats / AI セグメントコントロール）。
  * 実装は Phase 2-B Step 2 で nav + Link + aria-current に移行済。
  * mock も Link ベース (aria-current) に揃える (Phase 2-C Step C-5)。
+ * Phase 2-D Step D-2 で v2 デザイン (expanding tab) に同期。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -25,10 +26,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
   ];
 
   return (
-    <nav
-      className="border-border flex items-center overflow-hidden rounded-full border"
-      aria-label="ページナビゲーション"
-    >
+    <nav className="flex items-center" aria-label="ページナビゲーション">
       {tabs.map((tab) => {
         const isActive = activePage === tab.id;
         const Icon = tab.icon;
@@ -36,16 +34,27 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
           <a
             key={tab.id}
             href={tab.href}
+            aria-label={isActive ? undefined : tab.label}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
+              'flex h-8 items-center justify-center rounded-lg text-sm no-underline',
+              'transition-all duration-200 motion-reduce:transition-none',
+              'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
               isActive
-                ? 'bg-muted text-foreground font-medium'
-                : 'text-muted-foreground hover:bg-state-hover',
+                ? 'bg-muted text-foreground gap-2 px-4 font-medium'
+                : 'text-muted-foreground hover:bg-state-hover w-8',
             )}
           >
-            <Icon className="size-4" />
-            <span>{tab.label}</span>
+            <Icon className="size-4 shrink-0" />
+            <span
+              className={cn(
+                'overflow-hidden whitespace-nowrap',
+                'transition-all duration-200 motion-reduce:transition-none',
+                isActive ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0',
+              )}
+            >
+              {tab.label}
+            </span>
           </a>
         );
       })}
