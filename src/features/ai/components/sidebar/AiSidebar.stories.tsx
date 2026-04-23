@@ -30,7 +30,7 @@ function MockSidebarSection({ title, children }: { title: string; children: Reac
  */
 function MockAiSidebar() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 px-2">
       <MockSidebarSection title="Watching AI">
         <p className="text-muted-foreground px-2 py-2 text-sm">会話はまだありません</p>
       </MockSidebarSection>

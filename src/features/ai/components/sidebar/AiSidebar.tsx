@@ -16,7 +16,7 @@ export function AiSidebar() {
   const t = useTranslations('ai.sidebar');
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 px-2">
       <SidebarSection title={t('title')}>
         <p className="text-muted-foreground px-2 py-2 text-sm">{t('conversations.empty')}</p>
       </SidebarSection>
