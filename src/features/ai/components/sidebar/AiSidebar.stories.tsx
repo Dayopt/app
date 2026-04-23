@@ -32,7 +32,7 @@ function MockAiSidebar() {
   return (
     <div className="flex flex-col gap-4">
       <MockSidebarSection title="Watching AI">
-        <p className="text-muted-foreground px-2 text-sm">会話はまだありません</p>
+        <p className="text-muted-foreground px-2 py-2 text-sm">会話はまだありません</p>
       </MockSidebarSection>
 
       <MockAiSoonList />
@@ -64,11 +64,11 @@ const SOON_ITEMS = [
 function MockAiSoonList() {
   return (
     <MockSidebarSection title="予定">
-      <div className="flex flex-col gap-2 px-2">
+      <div className="flex flex-col">
         {SOON_ITEMS.map(({ key, Icon, title, description }) => (
           <div
             key={key}
-            className="text-muted-foreground flex flex-col gap-1 py-1"
+            className="text-muted-foreground flex flex-col gap-1 px-2 py-2"
             aria-disabled="true"
           >
             <div className="flex items-center gap-2">

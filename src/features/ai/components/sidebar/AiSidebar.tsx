@@ -8,9 +8,9 @@ import { SidebarSection } from '@/lib/components/shell/sidebar/SidebarSection';
 /**
  * AI モード Sidebar 中身 (Watching AI placeholder)
  *
- * 見出しは Calendar の Tag セクションと同じ SidebarSection に揃える (Phase 2-D Step D-6)。
- * - ブロック 1: SidebarSection "Watching AI" + 空 Conversations list
- * - ブロック 2: SidebarSection "Coming Soon" + 予定機能 3 項目 (disabled 見た目)
+ * 見出しは CalendarSidebar の Tag セクションと同じ SidebarSection で統一し、
+ * content 内の padding も Calendar と同じ「各行が px-2 py-2 を自分で持つ」
+ * パターンに揃える (Phase 2-D Step D-6)。
  */
 export function AiSidebar() {
   const t = useTranslations('ai.sidebar');
@@ -18,7 +18,7 @@ export function AiSidebar() {
   return (
     <div className="flex flex-col gap-4">
       <SidebarSection title={t('title')}>
-        <p className="text-muted-foreground px-2 text-sm">{t('conversations.empty')}</p>
+        <p className="text-muted-foreground px-2 py-2 text-sm">{t('conversations.empty')}</p>
       </SidebarSection>
 
       <AiSoonList />
@@ -37,11 +37,11 @@ function AiSoonList() {
 
   return (
     <SidebarSection title={t('label')}>
-      <div className="flex flex-col gap-2 px-2">
+      <div className="flex flex-col">
         {SOON_ITEMS.map(({ key, Icon }) => (
           <div
             key={key}
-            className="text-muted-foreground flex flex-col gap-1 py-1"
+            className="text-muted-foreground flex flex-col gap-1 px-2 py-2"
             aria-disabled="true"
           >
             <div className="flex items-center gap-2">
