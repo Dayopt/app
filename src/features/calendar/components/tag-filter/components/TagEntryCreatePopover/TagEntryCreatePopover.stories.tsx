@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { fn } from 'storybook/test';
 
+import { TagIcon } from '@/features/tags';
+
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 
 const MOCK_TAG = {
@@ -11,27 +13,26 @@ const MOCK_TAG = {
   icon: 'briefcase',
 };
 
-/**
- * trpcMocks で配線する最小セット。
- * - `entries.list`: 今日のエントリ（デフォルト空配列）→ 開始時刻チップは「今」のみ
- *
- * Story 側で実データを詰めれば blocking entry / chained entry のケースも再現可能。
- */
+/** trpcMocks: 今日分 entries.list（既定は空配列） */
 function mockTrpc(entries: unknown[] = []) {
-  return {
-    'entries.list': entries,
-  };
+  return { 'entries.list': entries };
 }
 
 /**
- * sidebar タグ行クリックで開くエントリ作成ポップアップ（ミニマル 3 要素構成）。
+ * sidebar タグ行クリック → エントリ作成ポップアップ（Inspector 流用版）。
  *
- * - ヘッダー: タグアイコン + 名前（colon ラベル）
- * - 開始時刻: 今 / 30 分境界 / 次の空きチップ（entries.list から動的算出）
- * - 期間: 5-240m スライダー
- * - 作成: undo トースト 5s、エラー時は popover 閉じない
+ * 構成:
+ *   [icon] タグ名
+ *   ┌─ bg-muted rounded-2xl ─┐
+ *   │ 📅 日付   04/22/2026   │
+ *   │ 🕐 予定   07:15 → 08:45 │
+ *   └────────────────────────┘
+ *              [キャンセル] [作成]
  *
- * (j) で日付セレクタ追加、(k) で variants 再設計予定。
+ * - 日付 / 時刻入力は Inspector の DateRow / TimeRow を流用
+ * - container (`bg-muted rounded-2xl`) も Inspector と同じ
+ * - 作成成功で popover close + 5s undo トースト。失敗時は popover 維持で再試行可能
+ * - 実機 / dev での dogfooding を前提に、Storybook variants は配置確認用の最小セット
  */
 const meta = {
   title: 'Features/Calendar/Sidebar/TagFilter/TagEntryCreatePopover',
@@ -53,8 +54,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 共通 render: controlled state + relative な親（sidebar タグ行の代用） */
-function renderPopover(defaultDuration: number, isMobile = false) {
+/** 共通 render: controlled state + sidebar タグ行の代用 trigger */
+function renderPopover(opts: { isMobile?: boolean } = {}) {
   function Renderer() {
     const [open, setOpen] = useState(true);
     return (
@@ -71,14 +72,14 @@ function renderPopover(defaultDuration: number, isMobile = false) {
           }}
           className="border-border hover:bg-state-hover relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg border px-4 text-sm"
         >
-          <span aria-hidden className="bg-tag-blue size-2 shrink-0 rounded-full" />
-          <span className="truncate">仕事:Deep Work</span>
+          <TagIcon icon={MOCK_TAG.icon} color={MOCK_TAG.color} size="sm" />
+          <span className="truncate">{MOCK_TAG.name}</span>
           <TagEntryCreatePopover
             open={open}
             onOpenChange={setOpen}
             tag={MOCK_TAG}
-            defaultDurationMinutes={defaultDuration}
-            isMobile={isMobile}
+            defaultDurationMinutes={30}
+            isMobile={opts.isMobile ?? false}
           />
         </div>
       </div>
@@ -87,21 +88,18 @@ function renderPopover(defaultDuration: number, isMobile = false) {
   return <Renderer />;
 }
 
-/** デフォルト: 今日のエントリなし → 開始時刻チップは「今」のみ、slider 30m */
+/** デフォルト: PC Popover で開いた状態。今日・現在時刻 +15 分 ceil が初期値 */
 export const Default: Story = {
   parameters: { trpcMocks: mockTrpc() },
-  render: () => renderPopover(30),
+  render: () => renderPopover(),
 };
 
-/**
- * モバイル: bottom sheet（vaul Drawer）で画面下から開く。
- * Storybook viewport は mobile1 固定。実機では `isMobile` を TagFlatList から渡す。
- */
+/** モバイル: bottom sheet (vaul Drawer) で画面下から開く */
 export const Mobile: Story = {
   parameters: {
     viewport: { defaultViewport: 'mobile1' },
     layout: 'fullscreen',
     trpcMocks: mockTrpc(),
   },
-  render: () => renderPopover(30, true),
+  render: () => renderPopover({ isMobile: true }),
 };
