@@ -15,9 +15,10 @@ Project 単位の完了記録アーカイブ。詳細な工程は各 project の
 
 ## Completed projects
 
-| Project                       | 完了日     | 規模                | summary                                                            |
-| ----------------------------- | ---------- | ------------------- | ------------------------------------------------------------------ |
-| `sidebar-routing-unification` | 2026-04-22 | 8 コミット / -28 行 | [summary](./sidebar-routing-unification/summary.md) (旧 Phase 2-B) |
+| Project                       | 完了日     | 規模                  | summary                                                            |
+| ----------------------------- | ---------- | --------------------- | ------------------------------------------------------------------ |
+| `sidebar-routing-unification` | 2026-04-22 | 8 コミット / -28 行   | [summary](./sidebar-routing-unification/summary.md) (旧 Phase 2-B) |
+| `sidebar-3-mode-structure`    | 2026-04-23 | 7 コミット / +2267 行 | [summary](./sidebar-3-mode-structure/summary.md) (旧 Phase 2-C)    |
 
 ## 命名規則
 
