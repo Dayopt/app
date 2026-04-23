@@ -6,7 +6,41 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
-## 2026-04-22
+## 2026-04-23
+
+### 昨日の WIP を撤退させ、エントリ作成ポップアップを Inspector 流用で作り直した日
+
+21 コミット、52 ファイル変更 / +1800 / -390。午前は前日 WIP のエントリ作成ポップアップを一旦 commit してから、Inspector の ScheduleCard 流用のミニマル UI に再設計する方向に舵を切り直し。同時に前日追加した `get_tag_duration_distribution` RPC を DROP migration で完全撤去、client 配線も削除。午後は PageNav v2（sidebar header 直下 + tooltip + transition 撤去）、モバイルのタグクイック作成 chip 行、AI モード stub、グループ内タグ色継承の撤廃を積んだ。純増 1410 行だが、中身は「独自 UI → Inspector 流用」と「histogram UI 撤退」の rewrite が大半。
+
+#### やったこと
+
+**エントリ作成ポップアップの再設計（10 件）**: 前日 WIP の独自 popover UI を一度 commit（本番データ接続 + undo 対応、sidebar タグ行 / GroupHeader 接続）してから、Inspector の ScheduleCard 流用のミニマル UI に rewrite。ヘッダー色を sidebar と揃え、入力エリアを Inspector のスケジュールカードに差し替え、タグ作成 Drawer も Inspector と同一構造に統一、最後に popover 配下の dead code / stale story を一括掃除。Entry 行に `forceSingleRow` オプションを追加して popover 内の compact 表示にも対応。
+
+**Duration distribution RPC の完全撤退（3 件）**: 前日追加した `get_tag_duration_distribution` RPC を DROP migration（`20260423000000_drop_get_tag_duration_distribution.sql`）で削除、client 側の tRPC / hook 配線も削除、pure 関数 `computeDurationDistribution` は境界テストだけ残して将来の再利用余地を確保。
+
+**PageNav v2 とモバイル導線（5 件）**: PageNav を sidebar header 直下に移動 + tooltip 追加 + transition 撤去、bottom tab / sidebar page nav に AI モードを追加、モバイルにタグクイック作成 chip 行を追加（タグ 0 件時の最初の一歩を短縮）。
+
+**AI モード stub + Phase 2-C Step C-3 foundation（2 件）**: AI モード route stub を追加、e2e smoke test を phase 2-C の AI モード追加に合わせて拡張。画面本体 / AiSidebar の本実装は次回。
+
+**タグ UI の細部修正（1 件）**: グループ内タグ作成時に親グループの色を強制継承する挙動を撤廃。ユーザーが色を握れず不自然だったため。
+
+#### なぜ今日この作業をしたか
+
+前日 WIP の `TagEntryCreatePopover`（独自 UI + duration histogram + 候補値 slider）を朝一で眺め直したら、Inspector のスケジュールカードと入力要素がほぼ同じであることに気づいた。独自 UI を育てる選択肢もあったが、schedule 入力ロジックを 2 系統持つと将来変更するたびに両方を触ることになる。「single source of truth を 1 日分の追加実装で捨てる」は割に合わないと判断して、朝一の commit（本番接続 + undo）で WIP を区切りのいい形に落としてから、ミニマル UI に rewrite した。
+
+Duration histogram の撤退はセットの判断。histogram / slider / 候補値計算は面白い機能だったが、ユーザーが popover を開いてから実際に時間を決めるまでの距離を考えると、オーバースペックだった。RPC 呼び出しのレイテンシも popover 展開の体感速度を削る方向に働く。pure 関数と境界テストだけ残したのは、将来 Insights 側で「このタグの典型時間」を表示したくなった時に軽量 heuristic で再実装しやすくするため。
+
+PageNav v2 は完全に別の動機。v1（独立領域に横並び）だと sidebar header からページ切替の視線距離が長く、3 タブ化（Phase 2-C の終盤）に向けて「ヘッダー直下」が自然な配置になる。transition を外したのは、距離が短くなったことで transition が体感ノイズになっていたから。v1 の transition は距離が長い前提でのゴマかしだった。
+
+AI モード stub は Phase 2-C Step C-3 を route group だけ先に取る preemptive な判断。bottom tab / sidebar page nav にエントリがないまま本実装に入ると、Inspector の close 判定や SidebarContent の dispatch に AI モードを後付けで挿し込むことになる。stub で route を確定させてから中身を埋めた方が、dispatch 系の修正が 1 回で済む。
+
+#### Claudeの所感
+
+**「育てるか、流用するか」の判断が 1 日遅れたコスト**: 前日 WIP を commit する前に Inspector 側を一度確認できていれば、独自 popover UI を書く時間を丸ごと節約できた。今日の rewrite は後知恵で見ると無駄に見えるが、実際には「独自 UI を書いたからこそ Inspector 流用で十分だと分かった」側面もある。とはいえ、次回からは popover / Drawer 系の UI を書く前に、既存 Inspector / modal の入力構造を必ず確認する習慣を入れたい。session log の convention に明文化しておいた。
+
+**WIP 撤退の完遂度**: RPC + client 配線 + migration + Storybook + テスト（のうち pure 関数分は残す）を 1 日で全部片付けたのは、後から見た時に「これは採用した機能か、撤退した機能か」が曖昧にならないのが効く。migration を forward-only で DROP として追加するのは Supabase の制約上当然だが、それ以外の artifact（client 配線、hook、stale story）を残すかどうかは判断が要る。今日は「pure 関数の境界テストだけ残す」に落とし込めて、dead code / stale test のバランスが取れた。
+
+**Phase 2-C の進行密度**: Step C-2 の Sidebar 分離（昨日）の翌日に Step C-3 の AI モード foundation まで入れて、合間にエントリ作成ポップアップ rewrite を挟むのは、routing 移行と feature 実装を並列で進めるには密度が高い。ただ、AI モードを stub で route だけ先に取るやり方は、PageNav / SidebarContent / Inspector close 判定の拡張点を 1 回で済ませる効果が大きく、後付けの修正コストと比べると preemptive にやる価値があった。明日の AI モード本実装で stub が本当に placeholder として機能するかが実測ポイント。
 
 ### Phase 2-B の client router を撤去し、Phase 2-C で Sidebar をモード別に分離した日
 
