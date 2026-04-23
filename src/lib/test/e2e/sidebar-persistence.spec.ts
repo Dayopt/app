@@ -50,4 +50,29 @@ test.describe('Sidebar Persistence: Dynamic href preserves viewType', () => {
     // week viewType が保持 (day にリセットされない)
     await expect(page).toHaveURL(/\/ja\/calendar\/week/);
   });
+
+  test('calendar week view survives round trip via ai', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
+
+    // Phase 2-C Step C-2 の Sidebar pathname dispatch が state を壊さないことの
+    // regression guard。AI モード経由でも CalendarNavigationProvider の state が
+    // 保持され、動的 href (buildCalendarPath) が week を維持する。
+    await loginAndNavigate(page);
+
+    await page.goto('/ja/calendar/week?date=2026-04-20');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+
+    // AI へ遷移 (Phase 2-C Step C-5 で PageNav に AI タブ追加)
+    const aiLink = page.getByRole('link', { name: /^AI$/i }).first();
+    await aiLink.click();
+    await expect(page).toHaveURL(/\/ja\/ai/);
+
+    // Calendar に戻る (動的 href で week 保持)
+    const calendarLink = page.getByRole('link', { name: /カレンダー|Calendar/i }).first();
+    await calendarLink.click();
+
+    // week viewType が保持 (Sidebar dispatch の副作用で state がリセットされていない)
+    await expect(page).toHaveURL(/\/ja\/calendar\/week/);
+  });
 });

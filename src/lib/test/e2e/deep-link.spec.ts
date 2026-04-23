@@ -67,4 +67,43 @@ test.describe('Deep Link: SSR rendering of app routes', () => {
     const calendarLink = page.getByRole('link', { name: /カレンダー|Calendar/i }).first();
     await expect(calendarLink).toHaveAttribute('aria-current', 'page');
   });
+
+  test('ai mode renders with sidebar on direct access', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
+
+    await loginAndNavigate(page);
+
+    // 直接 /ja/ai に遷移 (Phase 2-C Step C-3 で新設)
+    await page.goto('/ja/ai');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/ja\/ai/);
+
+    // Sidebar が SSR から表示 (AiSidebar が pathname dispatch で描画)
+    const sidebar = page.locator('[role="navigation"]').first();
+    await expect(sidebar).toBeVisible();
+
+    // AI link (PageNav) が aria-current="page"
+    const aiLink = page.getByRole('link', { name: /^AI$/i }).first();
+    await expect(aiLink).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('ai thread detail stub renders on direct access', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
+
+    await loginAndNavigate(page);
+
+    // 直接 /ja/ai/threads/{任意 ID} に遷移 (Phase 2-C Step C-3 stub)
+    // threadId 任意文字列を受け入れ、404 にならない
+    await page.goto('/ja/ai/threads/test123');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/ja\/ai\/threads\/test123/);
+
+    // Sidebar は AiSidebar のまま維持 (pathname prefix 判定で 'ai' mode)
+    const sidebar = page.locator('[role="navigation"]').first();
+    await expect(sidebar).toBeVisible();
+
+    // AI link が aria-current="page" (/ai/threads/* も AI mode として判定)
+    const aiLink = page.getByRole('link', { name: /^AI$/i }).first();
+    await expect(aiLink).toHaveAttribute('aria-current', 'page');
+  });
 });
