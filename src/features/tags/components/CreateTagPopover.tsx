@@ -390,6 +390,11 @@ export function CreateTagPopover({
         sideOffset={8}
         collisionPadding={16}
         className="w-80 p-3"
+        onOpenAutoFocus={(e) => {
+          // Radix のデフォルト auto-focus と Input の autoFocus が競合すると
+          // focus change が一瞬 outside 扱いになり即閉じるため無効化する。
+          e.preventDefault();
+        }}
       >
         {formBody}
       </PopoverContent>
