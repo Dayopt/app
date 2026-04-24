@@ -4,7 +4,7 @@
 > **対象**: Dayopt `src/app/[locale]/(app)/**` の視覚デザイン (PageNav / BottomTabBar / Sidebar 外殻)
 > **前提**: Phase 2-C (3 モード layout 再編) 完了済 (最終コミット `70ef2ed51` / 2026-04-23)
 > **性質**: 視覚デザイン主軸の refactor (routing / 構造変更なし)
-> **親設計**: [sidebar-redesign-plan.md](./sidebar-redesign-plan.md) §7 Phase 2-D を継承
+> **親設計**: `docs/design/sidebar-redesign-plan.md` §7 Phase 2-D を継承
 
 ## Context
 
@@ -77,7 +77,7 @@ Phase 2-D では以下の視覚課題を解決する:
 
 ### 1.1 PageNav.tsx (Desktop)
 
-[src/lib/components/shell/sidebar/PageNav.tsx](../../src/lib/components/shell/sidebar/PageNav.tsx)
+[src/lib/components/shell/sidebar/PageNav.tsx](../../../../src/lib/components/shell/sidebar/PageNav.tsx)
 
 ```tsx
 <nav className="border-border flex items-center overflow-hidden rounded-full border">
@@ -112,7 +112,7 @@ Phase 2-D では以下の視覚課題を解決する:
 
 ### 1.2 BottomTabBar.tsx (Mobile)
 
-[src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>)
+[src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>)
 
 ```tsx
 <nav className="bg-surface-container z-bottom-tab pb-safe shadow-card fixed inset-x-0 bottom-0">
@@ -153,7 +153,7 @@ Phase 2-D では以下の視覚課題を解決する:
 
 ### 1.3 Sidebar.tsx
 
-[src/lib/components/shell/sidebar/Sidebar.tsx](../../src/lib/components/shell/sidebar/Sidebar.tsx)
+[src/lib/components/shell/sidebar/Sidebar.tsx](../../../../src/lib/components/shell/sidebar/Sidebar.tsx)
 
 **現状の特徴**:
 
@@ -169,7 +169,7 @@ Phase 2-D では以下の視覚課題を解決する:
 
 ### 1.4 design-tokens.css の現状
 
-[src/lib/styles/tokens/colors.css](../../src/lib/styles/tokens/colors.css) より:
+[src/lib/styles/tokens/colors.css](../../../../src/lib/styles/tokens/colors.css) より:
 
 - `--muted: var(--neutral-95)` (L=0.95) — 現 active 背景
 - `--state-active: oklch(0.95 0.025 260)` (H260) — 選択中の一般トークン
@@ -889,18 +889,18 @@ Phase 2-D で扱わない課題の記録:
 
 ## Critical Files
 
-- [src/lib/components/shell/sidebar/PageNav.tsx](../../src/lib/components/shell/sidebar/PageNav.tsx) — Step D-2 / D-3 / D-5 で変更
-- [src/lib/components/shell/sidebar/PageNav.stories.tsx](../../src/lib/components/shell/sidebar/PageNav.stories.tsx) — Step D-2 / D-7 で変更
-- [src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>) — Step D-4 / D-5 で変更
-- [src/app/[locale]/(app)/\_shell/BottomTabBar.stories.tsx](<../../src/app/[locale]/(app)/_shell/BottomTabBar.stories.tsx>) — Step D-4 / D-5 / D-7 で変更
-- [src/lib/components/shell/sidebar/NavBadge.tsx](../../src/lib/components/shell/sidebar/NavBadge.tsx) — **新規** (Step D-5)
-- [src/lib/components/shell/sidebar/NavBadge.stories.tsx](../../src/lib/components/shell/sidebar/NavBadge.stories.tsx) — **新規** (Step D-5)
-- [src/lib/components/shell/sidebar/index.ts](../../src/lib/components/shell/sidebar/index.ts) — barrel 更新 (Step D-5)
-- [src/app/[locale]/(app)/\_shell/SidebarPageNav.tsx](<../../src/app/[locale]/(app)/_shell/SidebarPageNav.tsx>) — `aiBadge` prop 渡し (Step D-5)
-- [src/app/[locale]/(app)/\_shell/CalendarSidebar.tsx](<../../src/app/[locale]/(app)/_shell/CalendarSidebar.tsx>) — セクション見出し統一 (Step D-6)
-- [src/app/[locale]/(app)/\_shell/StatsSidebar.tsx](<../../src/app/[locale]/(app)/_shell/StatsSidebar.tsx>) — セクション見出し統一 (Step D-6)
+- [src/lib/components/shell/sidebar/PageNav.tsx](../../../../src/lib/components/shell/sidebar/PageNav.tsx) — Step D-2 / D-3 / D-5 で変更
+- [src/lib/components/shell/sidebar/PageNav.stories.tsx](../../../../src/lib/components/shell/sidebar/PageNav.stories.tsx) — Step D-2 / D-7 で変更
+- [src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>) — Step D-4 / D-5 で変更
+- [src/app/[locale]/(app)/\_shell/BottomTabBar.stories.tsx](<../../../../src/app/[locale]/(app)/_shell/BottomTabBar.stories.tsx>) — Step D-4 / D-5 / D-7 で変更
+- [src/lib/components/shell/sidebar/NavBadge.tsx](../../../../src/lib/components/shell/sidebar/NavBadge.tsx) — **新規** (Step D-5)
+- [src/lib/components/shell/sidebar/NavBadge.stories.tsx](../../../../src/lib/components/shell/sidebar/NavBadge.stories.tsx) — **新規** (Step D-5)
+- [src/lib/components/shell/sidebar/index.ts](../../../../src/lib/components/shell/sidebar/index.ts) — barrel 更新 (Step D-5)
+- [src/app/[locale]/(app)/\_shell/SidebarPageNav.tsx](<../../../../src/app/[locale]/(app)/_shell/SidebarPageNav.tsx>) — `aiBadge` prop 渡し (Step D-5)
+- [src/app/[locale]/(app)/\_shell/CalendarSidebar.tsx](<../../../../src/app/[locale]/(app)/_shell/CalendarSidebar.tsx>) — セクション見出し統一 (Step D-6)
+- [src/app/[locale]/(app)/\_shell/StatsSidebar.tsx](<../../../../src/app/[locale]/(app)/_shell/StatsSidebar.tsx>) — セクション見出し統一 (Step D-6)
 - [messages/ja/sidebar.json](../../messages/ja/sidebar.json) / [messages/en/sidebar.json](../../messages/en/sidebar.json) — `navBadge` namespace 追加 (Step D-5)
-- [src/lib/styles/tokens/colors.css](../../src/lib/styles/tokens/colors.css) — amber トークン追加 (Step D-1、相談事項 C 次第)
+- [src/lib/styles/tokens/colors.css](../../../../src/lib/styles/tokens/colors.css) — amber トークン追加 (Step D-1、相談事項 C 次第)
 
 ## 推定作業量
 
