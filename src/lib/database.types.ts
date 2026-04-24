@@ -422,7 +422,7 @@ export type Database = {
       };
       batch_reorder_tags_hierarchy: {
         Args: {
-          p_parent_ids: (string | null)[];
+          p_parent_ids: string[];
           p_sort_orders: number[];
           p_tag_ids: string[];
           p_user_id: string;
@@ -759,6 +759,10 @@ export type Database = {
       };
       soft_delete_entry: {
         Args: { p_entry_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      update_personalization: {
+        Args: { p_path: string; p_user_id: string; p_value: Json };
         Returns: undefined;
       };
       use_recovery_code: {

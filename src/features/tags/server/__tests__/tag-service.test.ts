@@ -450,12 +450,6 @@ function setupMockInsertQuery(mockFrom: ReturnType<typeof vi.fn>, data: unknown)
   return mock;
 }
 
-function setupMockInsertError(mockFrom: ReturnType<typeof vi.fn>, code: string, message: string) {
-  const mock = createChainableMock(null, { message, code });
-  mockFrom.mockReturnValue(mock);
-  return mock;
-}
-
 function setupMockUpdateQuery(
   mockFrom: ReturnType<typeof vi.fn>,
   existingData: unknown,

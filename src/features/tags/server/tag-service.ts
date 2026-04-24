@@ -924,7 +924,7 @@ export class TagService {
       {
         p_user_id: userId,
         p_tag_ids: updates.map((u) => u.id),
-        p_parent_ids: updates.map((u) => u.parent_id),
+        p_parent_ids: updates.map((u) => u.parent_id) as never,
         p_sort_orders: updates.map((u) => u.sort_order),
       },
     );
