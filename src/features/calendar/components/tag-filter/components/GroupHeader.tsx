@@ -64,7 +64,7 @@ interface GroupHeaderProps {
  * 親タグのヘッダー行
  *
  * シェブロン（展開/折りたたみ） + チェックボックス + 親タグ名 + メニュー。
- * リネームはメニュー→ `onRenameGroup` で親側が `RenameTagPopover` を開く。
+ * リネームはメニュー→ `onRenameGroup` で親側が `TagRenameModal` を開く。
  */
 export function GroupHeader({
   label,

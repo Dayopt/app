@@ -16,17 +16,25 @@ export interface TagMergeSourceTag {
   color?: string | null;
 }
 
+/** タグリネームモーダルで渡す対象タグの identity */
+export interface TagRenameTarget {
+  id: string;
+  name: string;
+  parent_id: string | null;
+}
+
 /**
  * シェルレベルのシート/ダイアログ（排他: 1つしか開かない）
  *
- * `contact` / `settings` は Sheet 系、`tagMerge` は Modal 系だが、shell
- * 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
+ * `contact` / `settings` は Sheet 系、`tagMerge` / `tagRename` は Modal 系だが、
+ * shell 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
  * を統合、P2-2）。
  */
 export type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
-  | { type: 'tagMerge'; sourceTag: TagMergeSourceTag };
+  | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }
+  | { type: 'tagRename'; tag: TagRenameTarget };
 
 // ── State ──
 
@@ -71,6 +79,10 @@ interface ShellStoreActions {
   // Tag merge modal convenience
   openTagMergeModal: (sourceTag: TagMergeSourceTag) => void;
   closeTagMergeModal: () => void;
+
+  // Tag rename modal convenience
+  openTagRenameModal: (tag: TagRenameTarget) => void;
+  closeTagRenameModal: () => void;
 }
 
 // ── Store ──
@@ -134,6 +146,16 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           const { activeSheet } = get();
           if (activeSheet?.type === 'tagMerge') {
             set({ activeSheet: null }, false, 'closeTagMergeModal');
+          }
+        },
+
+        // ── Tag Rename Modal Convenience ──
+        openTagRenameModal: (tag) =>
+          set({ activeSheet: { type: 'tagRename', tag } }, false, 'openTagRenameModal'),
+        closeTagRenameModal: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'tagRename') {
+            set({ activeSheet: null }, false, 'closeTagRenameModal');
           }
         },
       }),

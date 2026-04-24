@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { RenameTagPopover, useTags, useUpdateTag } from '@/features/tags';
+import { useTags } from '@/features/tags';
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
@@ -53,28 +53,18 @@ export function FilterItem({
   onShowOnlyThis,
 }: FilterItemProps) {
   const t = useTranslations();
-  const updateTagMutation = useUpdateTag();
   const { showOnlyTag } = useCalendarFilterStore();
-  const { openTagMergeModal } = useTagModalNavigation();
+  const { openTagMergeModal, openTagRenameModal } = useTagModalNavigation();
   const { data: existingTags } = useTags();
 
   // Menu open state
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Inline rename 編集状態
-  const [isEditingName, setIsEditingName] = useState(false);
 
   // Edit hook (色・アイコン変更)
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId,
     initialColor: checkboxColor,
   });
-
-  // リネーム対象タグ（RenameTagPopover の tag prop 用）
-  const targetTag = useMemo(
-    () => (tagId ? (existingTags ?? []).find((tag) => tag.id === tagId) : undefined),
-    [existingTags, tagId],
-  );
 
   // Context menu handler
   const handleContextMenu = useCallback(
@@ -104,10 +94,20 @@ export function FilterItem({
     [disabled, onCheckedChange],
   );
 
+  const handleRename = useCallback(() => {
+    if (!tagId) return;
+    const target = (existingTags ?? []).find((tag) => tag.id === tagId);
+    openTagRenameModal({
+      id: tagId,
+      name: target?.name ?? label,
+      parent_id: target?.parent_id ?? null,
+    });
+  }, [tagId, existingTags, label, openTagRenameModal]);
+
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover relative flex h-8 w-full min-w-0 items-center rounded-lg text-sm [@media(pointer:coarse)]:min-h-11',
+        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded-lg text-sm [@media(pointer:coarse)]:min-h-11',
         disabled && 'cursor-not-allowed opacity-50',
         dragHandleProps && 'cursor-grab active:cursor-grabbing',
         !dragHandleProps && !disabled && 'cursor-pointer',
@@ -130,24 +130,11 @@ export function FilterItem({
       <HoverTooltip
         content={label}
         side="top"
-        disabled={menuOpen || isEditingName}
+        disabled={menuOpen}
         wrapperClassName="ml-1 min-w-0 flex-1"
       >
         <span className={cn('min-w-0 truncate', labelClassName)}>{label}</span>
       </HoverTooltip>
-
-      {targetTag ? (
-        <RenameTagPopover
-          open={isEditingName}
-          onOpenChange={setIsEditingName}
-          tag={targetTag}
-          existingTags={existingTags ?? []}
-          onSubmit={async (name) => {
-            await updateTagMutation.mutateAsync({ id: targetTag.id, name });
-            setIsEditingName(false);
-          }}
-        />
-      ) : null}
 
       {/* Menu trigger */}
       {(tagId || onShowOnlyThis) && !disabled && (
@@ -166,7 +153,7 @@ export function FilterItem({
           {tagId ? (
             <FilterItemMenu
               displayColor={displayColor}
-              onOpenRenameDialog={() => setIsEditingName(true)}
+              onOpenRenameDialog={handleRename}
               onColorChange={handleColorChange}
               onIconChange={handleIconChange}
               onOpenMergeModal={() =>

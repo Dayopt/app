@@ -23,7 +23,6 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
   CreateTagPopover,
-  RenameTagPopover,
   TagIcon,
   buildTagHierarchyUpdates,
   flattenTagTree,
@@ -523,6 +522,7 @@ function SortableParentBlock({
   const router = useRouter();
   const updateTagMutation = useUpdateTag();
   const createTagMutation = useCreateTag();
+  const { openTagRenameModal } = useTagModalNavigation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: node.tag.id,
     disabled: isMobile,
@@ -532,7 +532,6 @@ function SortableParentBlock({
     initialColor: node.tag.color ?? undefined,
   });
 
-  const [isEditingName, setIsEditingName] = useState(false);
   const [isCreatingChild, setIsCreatingChild] = useState(false);
 
   const groupTagIds = useMemo(
@@ -591,7 +590,13 @@ function SortableParentBlock({
             onIconChange={(icon) => updateTagMutation.mutate({ id: node.tag.id, icon })}
             currentIcon={headerIcon}
             onAddTagToGroup={() => setIsCreatingChild(true)}
-            onRenameGroup={() => setIsEditingName(true)}
+            onRenameGroup={() =>
+              openTagRenameModal({
+                id: node.tag.id,
+                name: node.tag.name,
+                parent_id: node.tag.parent_id ?? null,
+              })
+            }
             onViewStats={() => router.push(`/${locale}/stats/tags/${node.tag.id}`)}
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
@@ -612,17 +617,6 @@ function SortableParentBlock({
               isMobile={isMobile}
             />
           ) : null}
-
-          <RenameTagPopover
-            open={isEditingName}
-            onOpenChange={setIsEditingName}
-            tag={node.tag}
-            existingTags={allTags}
-            onSubmit={async (name) => {
-              await updateTagMutation.mutateAsync({ id: node.tag.id, name });
-              setIsEditingName(false);
-            }}
-          />
 
           <CreateTagPopover
             open={isCreatingChild}
@@ -728,14 +722,13 @@ function SortableTagItem({
   });
   const updateTagMutation = useUpdateTag();
   const mergeTagMutation = useMergeTag();
-  const { openTagMergeModal } = useTagModalNavigation();
+  const { openTagMergeModal, openTagRenameModal } = useTagModalNavigation();
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
   });
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
   const [groupChangeConflict, setGroupChangeConflict] = useState<{
     targetTagId: string;
     targetName: string;
@@ -822,22 +815,11 @@ function SortableTagItem({
             <HoverTooltip
               content={tag.name}
               side="top"
-              disabled={menuOpen || isEditingName}
+              disabled={menuOpen}
               wrapperClassName="ml-2 min-w-0 flex-1"
             >
               <span className="min-w-0 truncate">{tag.name}</span>
             </HoverTooltip>
-
-            <RenameTagPopover
-              open={isEditingName}
-              onOpenChange={setIsEditingName}
-              tag={tag}
-              existingTags={allTags}
-              onSubmit={async (name) => {
-                await updateTagMutation.mutateAsync({ id: tag.id, name });
-                setIsEditingName(false);
-              }}
-            />
 
             <button
               type="button"
@@ -878,7 +860,13 @@ function SortableTagItem({
                 groupOptions={groupOptions}
                 isGrouped={currentParentId !== null}
                 isMobile={isMobile}
-                onOpenRenameDialog={() => setIsEditingName(true)}
+                onOpenRenameDialog={() =>
+                  openTagRenameModal({
+                    id: tag.id,
+                    name: tag.name,
+                    parent_id: tag.parent_id ?? null,
+                  })
+                }
                 onColorChange={handleColorChange}
                 onIconChange={handleIconChange}
                 onChangeGroup={handleChangeParent}
