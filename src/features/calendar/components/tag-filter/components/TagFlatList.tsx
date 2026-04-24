@@ -1,52 +1,40 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
-import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff, GripVertical, MoreHorizontal } from 'lucide-react';
 
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   PointerSensor,
   closestCorners,
+  pointerWithin,
+  useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
-import type { Tag } from '@/features/tags';
+import type { Tag, TagTreeNode } from '@/features/tags';
 import {
-  InlineTagCreateRow,
-  InlineTagNameEdit,
-  TagDeleteStrategyDialog,
+  CreateTagPopover,
+  RenameTagPopover,
   TagIcon,
-  buildColonTagName,
-  getTagDisplayLabel,
-  parseColonTag,
+  buildTagHierarchyUpdates,
+  flattenTagTree,
   useCreateTag,
-  useDeleteGroup,
   useMergeTag,
-  useRenameGroup,
   useReorderTags,
-  useUngroupTags,
   useUpdateTag,
 } from '@/features/tags';
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
-import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
@@ -57,161 +45,180 @@ import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 
-/**
- * dnd-kit Multiple Containers ベースの DnD 実装。
- *
- * - __root__ コンテナ: chunks (solo tag / group block) の dndId 配列
- *   - solo chunk → その tag.id
- *   - group chunk → absorbed parent の tag.id、または virtual group の synthetic id (`$vgroup:<prefix>`)
- * - group:<prefix> コンテナ: その group の子タグ id 配列
- *
- * drag within container (arrayMove) → 同一コンテナで reorder。
- * cross-container drop → noop（階層変更は ⋯ メニュー）。
- */
 const ROOT = '__root__';
-const VGROUP_PREFIX = '$vgroup:';
-const groupKey = (prefix: string) => `group:${prefix}`;
 
-type ContainerId = string;
-type ContainersState = Record<ContainerId, string[]>;
+function childContainerId(parentId: string) {
+  return `children:${parentId}`;
+}
 
-type Chunk =
-  | { kind: 'solo'; dndId: string; tag: Tag }
+type TreeTag =
   | {
-      kind: 'group';
-      dndId: string;
-      prefix: string;
-      absorbedParent?: Tag;
+      kind: 'root';
+      tag: Tag;
       children: Tag[];
+    }
+  | {
+      kind: 'child';
+      tag: Tag;
+      parentId: string;
     };
 
-interface DerivedDnd {
-  chunks: Chunk[];
-  containers: ContainersState;
-  chunkByDndId: Map<string, Chunk>;
+function cloneNodes(nodes: TagTreeNode[]): TagTreeNode[] {
+  return nodes.map((node) => ({
+    tag: { ...node.tag },
+    children: node.children.map((child) => ({ ...child })),
+  }));
 }
 
-/** tags → chunks + containers */
-function deriveDnd(tags: Tag[]): DerivedDnd {
-  const parsed = tags
-    .filter((t) => t.is_active !== false)
-    .map((tag) => ({ tag, ...parseColonTag(tag.name) }));
-
-  const groups = new Map<string, Tag[]>();
-  for (const item of parsed) {
-    if (item.suffix !== null) {
-      const arr = groups.get(item.prefix) ?? [];
-      arr.push(item.tag);
-      groups.set(item.prefix, arr);
-    }
-  }
-  for (const [, members] of groups) {
-    members.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  }
-
-  const absorbedParentByPrefix = new Map<string, Tag>();
-  const absorbedIds = new Set<string>();
-  for (const item of parsed) {
-    if (item.suffix === null && groups.has(item.tag.name)) {
-      absorbedParentByPrefix.set(item.tag.name, item.tag);
-      absorbedIds.add(item.tag.id);
-    }
-  }
-
-  const sortedParsed = parsed
-    .slice()
-    .sort((a, b) => (a.tag.sort_order ?? 0) - (b.tag.sort_order ?? 0));
-
-  const chunks: Chunk[] = [];
-  const processed = new Set<string>();
-  const seenPrefixes = new Set<string>();
-
-  for (const item of sortedParsed) {
-    if (processed.has(item.tag.id)) continue;
-
-    if (absorbedIds.has(item.tag.id)) {
-      const prefix = item.tag.name;
-      if (seenPrefixes.has(prefix)) {
-        processed.add(item.tag.id);
-        continue;
-      }
-      seenPrefixes.add(prefix);
-      processed.add(item.tag.id);
-      const members = groups.get(prefix) ?? [];
-      for (const m of members) processed.add(m.id);
-      chunks.push({
-        kind: 'group',
-        dndId: item.tag.id,
-        prefix,
-        absorbedParent: item.tag,
-        children: members,
-      });
-      continue;
-    }
-
-    if (item.suffix !== null && groups.has(item.prefix)) {
-      if (seenPrefixes.has(item.prefix)) {
-        processed.add(item.tag.id);
-        continue;
-      }
-      seenPrefixes.add(item.prefix);
-      const members = groups.get(item.prefix) ?? [];
-      for (const m of members) processed.add(m.id);
-      chunks.push({
-        kind: 'group',
-        dndId: `${VGROUP_PREFIX}${item.prefix}`,
-        prefix: item.prefix,
-        children: members,
-      });
-      continue;
-    }
-
-    chunks.push({ kind: 'solo', dndId: item.tag.id, tag: item.tag });
-    processed.add(item.tag.id);
-  }
-
-  const rootItems = chunks.map((c) => c.dndId);
-  const containers: ContainersState = { [ROOT]: rootItems };
-  for (const chunk of chunks) {
-    if (chunk.kind === 'group') {
-      containers[groupKey(chunk.prefix)] = chunk.children.map((c) => c.id);
-    }
-  }
-
-  const chunkByDndId = new Map<string, Chunk>();
-  for (const chunk of chunks) chunkByDndId.set(chunk.dndId, chunk);
-
-  return { chunks, containers, chunkByDndId };
+function findRootIndex(nodes: TagTreeNode[], tagId: string): number {
+  return nodes.findIndex((node) => node.tag.id === tagId);
 }
 
-/** containers + chunks → reorder mutation updates */
-function flattenToSortOrder(
-  containers: ContainersState,
-  chunkByDndId: Map<string, Chunk>,
-): { id: string; sort_order: number }[] {
-  const updates: { id: string; sort_order: number }[] = [];
-  const rootOrder = containers[ROOT] ?? [];
-  let i = 0;
-  for (const dndId of rootOrder) {
-    const chunk = chunkByDndId.get(dndId);
-    if (!chunk) continue;
-    if (chunk.kind === 'solo') {
-      updates.push({ id: chunk.tag.id, sort_order: i++ });
-      continue;
-    }
-    if (chunk.absorbedParent) {
-      updates.push({ id: chunk.absorbedParent.id, sort_order: i++ });
-    }
-    const groupItems = containers[groupKey(chunk.prefix)] ?? [];
-    for (const childId of groupItems) {
-      updates.push({ id: childId, sort_order: i++ });
+function findChildLocation(
+  nodes: TagTreeNode[],
+  tagId: string,
+): { rootIndex: number; childIndex: number } | null {
+  for (let rootIndex = 0; rootIndex < nodes.length; rootIndex += 1) {
+    const childIndex = nodes[rootIndex]?.children.findIndex((child) => child.id === tagId) ?? -1;
+    if (childIndex >= 0) {
+      return { rootIndex, childIndex };
     }
   }
-  return updates;
+  return null;
 }
+
+function findTreeTag(nodes: TagTreeNode[], tagId: string): TreeTag | null {
+  const rootIndex = findRootIndex(nodes, tagId);
+  if (rootIndex >= 0) {
+    const root = nodes[rootIndex]!;
+    return { kind: 'root', tag: root.tag, children: root.children };
+  }
+
+  const childLocation = findChildLocation(nodes, tagId);
+  if (!childLocation) return null;
+
+  const parent = nodes[childLocation.rootIndex]!;
+  const child = parent.children[childLocation.childIndex]!;
+  return {
+    kind: 'child',
+    tag: child,
+    parentId: parent.tag.id,
+  };
+}
+
+function findContainer(nodes: TagTreeNode[], id: string): string | null {
+  if (id === ROOT) return ROOT;
+  if (id.startsWith('children:')) return id;
+  if (findRootIndex(nodes, id) >= 0) return ROOT;
+
+  const childLocation = findChildLocation(nodes, id);
+  return childLocation ? childContainerId(nodes[childLocation.rootIndex]!.tag.id) : null;
+}
+
+function canBecomeChild(treeTag: TreeTag): boolean {
+  return treeTag.kind === 'child' || treeTag.children.length === 0;
+}
+
+function insertAt<T>(items: T[], index: number, item: T): T[] {
+  return [...items.slice(0, index), item, ...items.slice(index)];
+}
+
+function moveTagTree(nodes: TagTreeNode[], activeId: string, overId: string): TagTreeNode[] | null {
+  const active = findTreeTag(nodes, activeId);
+  if (!active) return null;
+
+  const destinationContainer = findContainer(nodes, overId);
+  if (!destinationContainer) return null;
+
+  const nextNodes = cloneNodes(nodes);
+  const rootIndex = findRootIndex(nextNodes, activeId);
+  const childLocation = findChildLocation(nextNodes, activeId);
+
+  let movingRoot: TagTreeNode | null = null;
+  let movingChild: Tag | null = null;
+
+  if (rootIndex >= 0) {
+    movingRoot = nextNodes[rootIndex]!;
+    nextNodes.splice(rootIndex, 1);
+  } else if (childLocation) {
+    movingChild = nextNodes[childLocation.rootIndex]!.children[childLocation.childIndex]!;
+    nextNodes[childLocation.rootIndex]!.children.splice(childLocation.childIndex, 1);
+  } else {
+    return null;
+  }
+
+  if (destinationContainer === ROOT) {
+    const rawIndex =
+      overId === ROOT
+        ? nextNodes.length
+        : findRootIndex(nextNodes, overId) >= 0
+          ? findRootIndex(nextNodes, overId)
+          : nextNodes.length;
+
+    if (movingRoot) {
+      nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, movingRoot);
+      return nextNodes;
+    }
+
+    if (!movingChild) return null;
+    nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, {
+      tag: { ...movingChild, parent_id: null },
+      children: [],
+    });
+    return nextNodes;
+  }
+
+  const targetParentId = destinationContainer.replace(/^children:/, '');
+  if (activeId === targetParentId) return null;
+
+  const targetRootIndex = findRootIndex(nextNodes, targetParentId);
+  if (targetRootIndex < 0) return null;
+
+  if (movingRoot && movingRoot.children.length > 0) {
+    return null;
+  }
+
+  const targetNode = nextNodes[targetRootIndex]!;
+  const baseChildren = targetNode.children.slice();
+  const rawIndex =
+    overId === destinationContainer
+      ? baseChildren.length
+      : baseChildren.findIndex((child) => child.id === overId);
+  const insertIndex = rawIndex >= 0 ? rawIndex : baseChildren.length;
+
+  if (movingRoot) {
+    targetNode.children = insertAt(baseChildren, insertIndex, {
+      ...movingRoot.tag,
+      parent_id: targetParentId,
+    });
+    return nextNodes;
+  }
+
+  if (!movingChild) return null;
+  targetNode.children = insertAt(baseChildren, insertIndex, {
+    ...movingChild,
+    parent_id: targetParentId,
+  });
+  return nextNodes;
+}
+
+const preferSmallestCollision: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    return [...pointerCollisions].sort((a, b) => {
+      const aRect = args.droppableRects.get(a.id);
+      const bRect = args.droppableRects.get(b.id);
+      if (!aRect || !bRect) return 0;
+      return aRect.width * aRect.height - bRect.width * bRect.height;
+    });
+  }
+
+  return closestCorners(args);
+};
 
 interface TagFlatListProps {
-  tags: Tag[];
+  nodes: TagTreeNode[];
+  allTags: Tag[];
   visibleTagIds: Set<string>;
   tagCounts: Record<string, number>;
   onToggleTag: (tagId: string) => void;
@@ -220,242 +227,124 @@ interface TagFlatListProps {
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
-  /** モバイル時: DnD無効・メニュー簡略化 */
   isMobile?: boolean;
 }
 
-/**
- * タグフラットリスト（DnD並び替え付き）
- *
- * dnd-kit Multiple Containers パターン。
- * - root chunk (solo + group block) を __root__ SortableContext で並び替え
- * - group 内の子タグは nested SortableContext で並び替え
- * - cross-container drop は noop
- */
 export function TagFlatList({
-  tags,
+  nodes,
+  allTags,
   visibleTagIds,
   tagCounts,
   onToggleTag,
   onDeleteTag,
-  onShowOnlyTag: _onShowOnlyTag,
+  onShowOnlyTag,
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
   isMobile,
 }: TagFlatListProps) {
-  // グループ折りたたみ状態
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
-  // エントリ作成ポップアップの開閉（parent 集約 = 1 タグのみ開く）
   const [openPopoverTagId, setOpenPopoverTagId] = useState<string | null>(null);
+  const [localNodes, setLocalNodes] = useState<TagTreeNode[] | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const toggleGroupCollapse = useCallback((prefix: string) => {
+  const displayedNodes = localNodes ?? nodes;
+  const displayedTags = useMemo(() => flattenTagTree(displayedNodes), [displayedNodes]);
+  const rootIds = useMemo(() => displayedNodes.map((node) => node.tag.id), [displayedNodes]);
+  const activeTreeTag = useMemo(
+    () => (activeId ? findTreeTag(displayedNodes, activeId) : null),
+    [activeId, displayedNodes],
+  );
+  const activeTag = useMemo(
+    () => (activeId ? (displayedTags.find((tag) => tag.id === activeId) ?? null) : null),
+    [activeId, displayedTags],
+  );
+
+  const groupOptions = useMemo<GroupOption[]>(
+    () =>
+      displayedNodes.map((node) => ({
+        id: node.tag.id,
+        name: node.tag.name,
+        color: node.tag.color,
+        icon: node.tag.icon,
+      })),
+    [displayedNodes],
+  );
+
+  const reorderMutation = useReorderTags();
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: isMobile ? Number.POSITIVE_INFINITY : 8 },
+    }),
+  );
+
+  const toggleGroupCollapse = useCallback((tagId: string) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(prefix)) next.delete(prefix);
-      else next.add(prefix);
+      if (next.has(tagId)) next.delete(tagId);
+      else next.add(tagId);
       return next;
     });
   }, []);
 
-  // グループ候補: ルート直下のフラットタグのみ（子タグは出さない）
-  const groupOptions = useMemo<GroupOption[]>(() => {
-    return tags
-      .filter((tag) => parseColonTag(tag.name).suffix === null && tag.is_active !== false)
-      .slice()
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      .map((tag) => ({ name: tag.name, color: tag.color, icon: tag.icon }));
-  }, [tags]);
-
-  // derive chunks + containers (server-derived)
-  const serverDerived = useMemo(() => deriveDnd(tags), [tags]);
-
-  // ローカル overlay: drag 中は setLocalContainers で state を上書き、
-  // mutation onSettled でサーバーに戻す。
-  const [localContainers, setLocalContainers] = useState<ContainersState | null>(null);
-  const containers = localContainers ?? serverDerived.containers;
-
-  const reorderMutation = useReorderTags();
-
-  // DnD 状態
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  // sensors: PC は pointer + keyboard、モバイルは drag 無効（distance: Infinity）
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: isMobile ? Number.POSITIVE_INFINITY : 8 },
-  });
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-  const sensors = useSensors(...(isMobile ? [pointerSensor] : [pointerSensor, keyboardSensor]));
-
-  const findContainer = useCallback(
-    (id: string): ContainerId | null => {
-      if (id in containers) return id;
-      for (const cid of Object.keys(containers)) {
-        if ((containers[cid] ?? []).includes(id)) return cid;
-      }
-      return null;
-    },
-    [containers],
-  );
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      setActiveId(event.active.id as string);
-      setOpenPopoverTagId(null);
-      if (!localContainers) setLocalContainers(serverDerived.containers);
-    },
-    [localContainers, serverDerived.containers],
-  );
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+    setOpenPopoverTagId(null);
+  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveId(null);
+
       if (!over) return;
 
-      const activeContainer = findContainer(active.id as string);
-      const overContainer = findContainer(over.id as string);
-      if (!activeContainer || !overContainer) return;
-      // cross-container drop は noop（階層変更は別経路）
-      if (activeContainer !== overContainer) return;
+      const nextTree = moveTagTree(displayedNodes, active.id as string, over.id as string);
+      if (!nextTree) return;
 
-      const current = containers[activeContainer] ?? [];
-      const oldIndex = current.indexOf(active.id as string);
-      const newIndex = current.indexOf(over.id as string);
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-      const nextContainers: ContainersState = {
-        ...containers,
-        [activeContainer]: arrayMove(current, oldIndex, newIndex),
-      };
-      setLocalContainers(nextContainers);
-
-      const updates = flattenToSortOrder(nextContainers, serverDerived.chunkByDndId);
+      setLocalNodes(nextTree);
       reorderMutation.mutate(
-        { updates },
+        { updates: buildTagHierarchyUpdates(nextTree) },
         {
-          onSettled: () => setLocalContainers(null),
+          onSettled: () => {
+            setLocalNodes(null);
+          },
         },
       );
     },
-    [containers, findContainer, reorderMutation, serverDerived.chunkByDndId],
+    [displayedNodes, reorderMutation],
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveId(null);
   }, []);
 
-  const handleRequestOpenPopover = useCallback((tagId: string) => {
-    setOpenPopoverTagId(tagId);
-  }, []);
-
-  // ローカル containers をベースに chunks を再構築（drag 中の即時反映）
-  const chunks = useMemo(() => {
-    if (!localContainers) return serverDerived.chunks;
-    const newRoot = localContainers[ROOT] ?? [];
-    const result: Chunk[] = [];
-    for (const dndId of newRoot) {
-      const chunk = serverDerived.chunkByDndId.get(dndId);
-      if (!chunk) continue;
-      if (chunk.kind === 'solo') {
-        result.push(chunk);
-      } else {
-        const childIds = localContainers[groupKey(chunk.prefix)] ?? [];
-        const byId = new Map(chunk.children.map((c) => [c.id, c]));
-        const reorderedChildren: Tag[] = [];
-        for (const cid of childIds) {
-          const t = byId.get(cid);
-          if (t) reorderedChildren.push(t);
-        }
-        result.push({ ...chunk, children: reorderedChildren });
-      }
-    }
-    return result;
-  }, [localContainers, serverDerived]);
-
-  // 衝突チェック (キャッシュから判定)
-  const getUngroupConflicts = useCallback(
-    (prefix: string): string[] => {
-      const prefixPattern = `${prefix}:`;
-      const existingNames = new Set(tags.map((t) => t.name));
-      return tags
-        .filter((t) => t.name.startsWith(prefixPattern))
-        .map((t) => t.name.slice(prefixPattern.length))
-        .filter((suffix) => existingNames.has(suffix));
-    },
-    [tags],
-  );
-
-  const findTagByName = useCallback(
-    (name: string): Tag | undefined => tags.find((t) => t.name === name),
-    [tags],
-  );
-
-  const activeTag: Tag | null = useMemo(() => {
-    if (!activeId) return null;
-    // solo / child 両方の可能性
-    const chunk = serverDerived.chunkByDndId.get(activeId);
-    if (chunk) {
-      if (chunk.kind === 'solo') return chunk.tag;
-      if (chunk.kind === 'group') {
-        // absorbed parent のドラッグ
-        if (chunk.absorbedParent) return chunk.absorbedParent;
-        // virtual group: 最初の child を表示
-        return chunk.children[0] ?? null;
-      }
-    }
-    // child row のドラッグ: tags から検索
-    return tags.find((t) => t.id === activeId) ?? null;
-  }, [activeId, serverDerived.chunkByDndId, tags]);
-
-  // モバイル: DnDなしの素のリスト描画
   if (isMobile) {
     return (
-      <div role="list">
-        {chunks.map((chunk) =>
-          chunk.kind === 'solo' ? (
-            <SortableTagItem
-              key={chunk.dndId}
-              tag={chunk.tag}
-              allTags={tags}
-              checked={visibleTagIds.has(chunk.tag.id)}
-              groupOptions={groupOptions}
-              isGrouped={false}
-              isMobile
-              onToggle={() => onToggleTag(chunk.tag.id)}
-              onDeleteTag={() => onDeleteTag(chunk.tag.id, chunk.tag.name)}
-              findTagByName={findTagByName}
-              openPopoverTagId={openPopoverTagId}
-              onOpenPopover={setOpenPopoverTagId}
-              onRequestOpenPopover={handleRequestOpenPopover}
-            />
-          ) : (
-            <SortableGroupBlock
-              key={chunk.dndId}
-              chunk={chunk}
-              allTags={tags}
-              tagCounts={tagCounts}
-              visibleTagIds={visibleTagIds}
-              groupOptions={groupOptions}
-              collapsed={collapsedGroups.has(chunk.prefix)}
-              isMobile
-              onToggleTag={onToggleTag}
-              onDeleteTag={onDeleteTag}
-              onToggleGroupTags={onToggleGroupTags}
-              onShowOnlyGroupTags={onShowOnlyGroupTags}
-              getGroupVisibility={getGroupVisibility}
-              onToggleCollapse={() => toggleGroupCollapse(chunk.prefix)}
-              getUngroupConflicts={getUngroupConflicts}
-              findTagByName={findTagByName}
-              openPopoverTagId={openPopoverTagId}
-              onOpenPopover={setOpenPopoverTagId}
-              onRequestOpenPopover={handleRequestOpenPopover}
-            />
-          ),
-        )}
+      <div role="list" className="space-y-1">
+        {displayedNodes.map((node) => (
+          <TagTreeItem
+            key={node.tag.id}
+            node={node}
+            allTags={allTags}
+            visibleTagIds={visibleTagIds}
+            tagCounts={tagCounts}
+            groupOptions={groupOptions}
+            collapsed={collapsedGroups.has(node.tag.id)}
+            activeTreeTag={null}
+            activeDragId={null}
+            isMobile
+            onToggleTag={onToggleTag}
+            onDeleteTag={onDeleteTag}
+            onShowOnlyTag={onShowOnlyTag}
+            onToggleGroupTags={onToggleGroupTags}
+            onShowOnlyGroupTags={onShowOnlyGroupTags}
+            getGroupVisibility={getGroupVisibility}
+            openPopoverTagId={openPopoverTagId}
+            onOpenPopover={setOpenPopoverTagId}
+            onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
+          />
+        ))}
       </div>
     );
   }
@@ -463,266 +352,229 @@ export function TagFlatList({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={preferSmallestCollision}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <SortableContext items={containers[ROOT] ?? []} strategy={verticalListSortingStrategy}>
-        <div role="list">
-          {chunks.map((chunk) =>
-            chunk.kind === 'solo' ? (
-              <SortableTagItem
-                key={chunk.dndId}
-                tag={chunk.tag}
-                allTags={tags}
-                checked={visibleTagIds.has(chunk.tag.id)}
-                groupOptions={groupOptions}
-                isGrouped={false}
-                isMobile={false}
-                onToggle={() => onToggleTag(chunk.tag.id)}
-                onDeleteTag={() => onDeleteTag(chunk.tag.id, chunk.tag.name)}
-                findTagByName={findTagByName}
-                openPopoverTagId={openPopoverTagId}
-                onOpenPopover={setOpenPopoverTagId}
-                onRequestOpenPopover={handleRequestOpenPopover}
-              />
-            ) : (
-              <SortableGroupBlock
-                key={chunk.dndId}
-                chunk={chunk}
-                allTags={tags}
-                tagCounts={tagCounts}
-                visibleTagIds={visibleTagIds}
-                groupOptions={groupOptions}
-                collapsed={collapsedGroups.has(chunk.prefix)}
-                isMobile={false}
-                onToggleTag={onToggleTag}
-                onDeleteTag={onDeleteTag}
-                onToggleGroupTags={onToggleGroupTags}
-                onShowOnlyGroupTags={onShowOnlyGroupTags}
-                getGroupVisibility={getGroupVisibility}
-                onToggleCollapse={() => toggleGroupCollapse(chunk.prefix)}
-                getUngroupConflicts={getUngroupConflicts}
-                findTagByName={findTagByName}
-                openPopoverTagId={openPopoverTagId}
-                onOpenPopover={setOpenPopoverTagId}
-                onRequestOpenPopover={handleRequestOpenPopover}
-              />
-            ),
-          )}
-        </div>
+      <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
+        <DroppableArea id={ROOT} role="list" className="space-y-1 rounded-xl">
+          {displayedNodes.map((node) => (
+            <TagTreeItem
+              key={node.tag.id}
+              node={node}
+              allTags={allTags}
+              visibleTagIds={visibleTagIds}
+              tagCounts={tagCounts}
+              groupOptions={groupOptions}
+              collapsed={collapsedGroups.has(node.tag.id)}
+              activeTreeTag={activeTreeTag}
+              activeDragId={activeId}
+              isMobile={false}
+              onToggleTag={onToggleTag}
+              onDeleteTag={onDeleteTag}
+              onShowOnlyTag={onShowOnlyTag}
+              onToggleGroupTags={onToggleGroupTags}
+              onShowOnlyGroupTags={onShowOnlyGroupTags}
+              getGroupVisibility={getGroupVisibility}
+              openPopoverTagId={openPopoverTagId}
+              onOpenPopover={setOpenPopoverTagId}
+              onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
+            />
+          ))}
+        </DroppableArea>
       </SortableContext>
+
       <DragOverlay>{activeTag ? <TagOverlayCard tag={activeTag} /> : null}</DragOverlay>
     </DndContext>
   );
 }
 
-/* ============================================================================
- * SortableGroupBlock — グループ全体（header + 子タグ）
- * ========================================================================== */
-
-interface SortableGroupBlockProps {
-  chunk: Extract<Chunk, { kind: 'group' }>;
+interface TagTreeItemProps {
+  node: TagTreeNode;
   allTags: Tag[];
-  tagCounts: Record<string, number>;
   visibleTagIds: Set<string>;
+  tagCounts: Record<string, number>;
   groupOptions: GroupOption[];
   collapsed: boolean;
+  activeTreeTag: TreeTag | null;
+  activeDragId: string | null;
+  isMobile: boolean;
+  onToggleTag: (tagId: string) => void;
+  onDeleteTag: (tagId: string, tagName: string) => void;
+  onShowOnlyTag: (tagId: string) => void;
+  onToggleGroupTags: (tagIds: string[]) => void;
+  onShowOnlyGroupTags: (tagIds: string[]) => void;
+  getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
+  openPopoverTagId: string | null;
+  onOpenPopover: (tagId: string | null) => void;
+  onToggleCollapse: () => void;
+}
+
+function TagTreeItem({
+  node,
+  allTags,
+  visibleTagIds,
+  tagCounts,
+  groupOptions,
+  collapsed,
+  activeTreeTag,
+  activeDragId,
+  isMobile,
+  onToggleTag,
+  onDeleteTag,
+  onShowOnlyTag,
+  onToggleGroupTags,
+  onShowOnlyGroupTags,
+  getGroupVisibility,
+  openPopoverTagId,
+  onOpenPopover,
+  onToggleCollapse,
+}: TagTreeItemProps) {
+  if (node.children.length === 0) {
+    return (
+      <SortableTagItem
+        tag={node.tag}
+        allTags={allTags}
+        checked={visibleTagIds.has(node.tag.id)}
+        groupOptions={groupOptions.filter((group) => group.id !== node.tag.id)}
+        currentParentId={null}
+        isMobile={isMobile}
+        dragKind="root"
+        activeDragId={activeDragId}
+        canAcceptChildren={
+          !isMobile &&
+          !!activeTreeTag &&
+          activeTreeTag.tag.id !== node.tag.id &&
+          canBecomeChild(activeTreeTag)
+        }
+        onToggle={() => onToggleTag(node.tag.id)}
+        onDeleteTag={() => onDeleteTag(node.tag.id, node.tag.name)}
+        onShowOnlyTag={() => onShowOnlyTag(node.tag.id)}
+        openPopoverTagId={openPopoverTagId}
+        onOpenPopover={onOpenPopover}
+      />
+    );
+  }
+
+  return (
+    <SortableParentBlock
+      node={node}
+      allTags={allTags}
+      visibleTagIds={visibleTagIds}
+      tagCounts={tagCounts}
+      groupOptions={groupOptions}
+      collapsed={collapsed}
+      activeTreeTag={activeTreeTag}
+      activeDragId={activeDragId}
+      isMobile={isMobile}
+      onToggleTag={onToggleTag}
+      onDeleteTag={onDeleteTag}
+      onToggleGroupTags={onToggleGroupTags}
+      onShowOnlyGroupTags={onShowOnlyGroupTags}
+      getGroupVisibility={getGroupVisibility}
+      openPopoverTagId={openPopoverTagId}
+      onOpenPopover={onOpenPopover}
+      onToggleCollapse={onToggleCollapse}
+    />
+  );
+}
+
+interface SortableParentBlockProps {
+  node: TagTreeNode;
+  allTags: Tag[];
+  visibleTagIds: Set<string>;
+  tagCounts: Record<string, number>;
+  groupOptions: GroupOption[];
+  collapsed: boolean;
+  activeTreeTag: TreeTag | null;
+  activeDragId: string | null;
   isMobile: boolean;
   onToggleTag: (tagId: string) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
-  onToggleCollapse: () => void;
-  getUngroupConflicts: (prefix: string) => string[];
-  findTagByName: (name: string) => Tag | undefined;
   openPopoverTagId: string | null;
   onOpenPopover: (tagId: string | null) => void;
-  onRequestOpenPopover: (tagId: string) => void;
+  onToggleCollapse: () => void;
 }
 
-function SortableGroupBlock({
-  chunk,
+function SortableParentBlock({
+  node,
   allTags,
-  tagCounts,
   visibleTagIds,
+  tagCounts,
   groupOptions,
   collapsed,
+  activeTreeTag,
+  activeDragId,
   isMobile,
   onToggleTag,
   onDeleteTag,
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
-  onToggleCollapse,
-  getUngroupConflicts,
-  findTagByName,
   openPopoverTagId,
   onOpenPopover,
-  onRequestOpenPopover,
-}: SortableGroupBlockProps) {
-  const t = useTranslations();
+  onToggleCollapse,
+}: SortableParentBlockProps) {
   const locale = useLocale();
   const router = useRouter();
   const updateTagMutation = useUpdateTag();
   const createTagMutation = useCreateTag();
-  const renameGroupMutation = useRenameGroup();
-  const ungroupTagsMutation = useUngroupTags();
-  const deleteGroupMutation = useDeleteGroup();
-
-  const { prefix, absorbedParent, children, dndId } = chunk;
-
-  // GroupHeader は __root__ コンテナで drag 可能。
-  // absorbed parent の id、もしくは virtual group の synthetic id を使う。
-  const headerSortable = useSortable({
-    id: dndId,
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: node.tag.id,
     disabled: isMobile,
   });
-
-  const {
-    displayColor,
-    handleColorChange: _unused,
-    handleIconChange: __unused,
-  } = useFilterItemEdit({
-    tagId: absorbedParent?.id ?? children[0]?.id ?? '',
-    initialColor: absorbedParent?.color ?? children[0]?.color ?? undefined,
+  const { displayColor } = useFilterItemEdit({
+    tagId: node.tag.id,
+    initialColor: node.tag.color ?? undefined,
   });
-  void _unused;
-  void __unused;
 
-  // group 単位の state
-  const [isEditingGroupName, setIsEditingGroupName] = useState(false);
-  const [isCreatingInGroup, setIsCreatingInGroup] = useState(false);
-  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
-  const [ungroupConflicts, setUngroupConflicts] = useState<string[] | null>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isCreatingChild, setIsCreatingChild] = useState(false);
 
-  const groupTagIds = useMemo(() => {
-    const ids = children.map((c) => c.id);
-    if (absorbedParent) ids.unshift(absorbedParent.id);
-    return ids;
-  }, [children, absorbedParent]);
-
-  const groupCount = useMemo(
-    () => groupTagIds.reduce((sum, id) => sum + (tagCounts[id] ?? 0), 0),
-    [groupTagIds, tagCounts],
+  const groupTagIds = useMemo(
+    () => [node.tag.id, ...node.children.map((child) => child.id)],
+    [node.children, node.tag.id],
   );
-
   const groupVisibility = getGroupVisibility(groupTagIds);
-
-  // リネーム: 重複チェック対象
-  const groupRenameExistingNames = useMemo(() => {
-    const otherGroupPrefixes = new Set<string>();
-    const rootNames = new Set<string>();
-    for (const tag of allTags) {
-      const { prefix: p, suffix: s } = parseColonTag(tag.name);
-      if (s !== null) {
-        if (p !== prefix) otherGroupPrefixes.add(p);
-      } else {
-        rootNames.add(tag.name);
-      }
-    }
-    return [...otherGroupPrefixes, ...rootNames];
-  }, [allTags, prefix]);
-
-  const handleSaveGroupRename = useCallback(
-    async (newPrefix: string) => {
-      renameGroupMutation.mutate({ oldPrefix: prefix, newPrefix });
-    },
-    [prefix, renameGroupMutation],
-  );
-
-  const handleUngroupTags = useCallback(() => {
-    const conflicts = getUngroupConflicts(prefix);
-    if (conflicts.length > 0) {
-      setUngroupConflicts(conflicts);
-    } else {
-      ungroupTagsMutation.mutate({ prefix });
-    }
-  }, [prefix, ungroupTagsMutation, getUngroupConflicts]);
-
-  const handleConfirmUngroupWithMerge = useCallback(async () => {
-    try {
-      await ungroupTagsMutation.mutateAsync({ prefix, mergeConflicts: true });
-    } finally {
-      setUngroupConflicts(null);
-    }
-  }, [prefix, ungroupTagsMutation]);
-
-  const handleDeleteGroup = useCallback(() => {
-    if (groupCount === 0) {
-      deleteGroupMutation.mutate({ prefix });
-    } else {
-      setShowDeleteGroupDialog(true);
-    }
-  }, [prefix, groupCount, deleteGroupMutation]);
-
-  const handleConfirmDeleteGroup = useCallback(
-    async (strategy: 'delete_entries' | 'reassign', targetTagId?: string) => {
-      try {
-        await deleteGroupMutation.mutateAsync({ prefix, strategy, targetTagId });
-      } finally {
-        setShowDeleteGroupDialog(false);
-      }
-    },
-    [prefix, deleteGroupMutation],
-  );
-
-  const availableTagsForGroupReassign = useMemo(() => {
-    const groupIdSet = new Set(groupTagIds);
-    return allTags.filter((tag) => !groupIdSet.has(tag.id));
-  }, [allTags, groupTagIds]);
-
-  const handleGroupColorChange = useCallback(
-    (color: TagColorName) => {
-      for (const id of groupTagIds) {
-        updateTagMutation.mutate({ id, color });
-      }
-    },
-    [groupTagIds, updateTagMutation],
-  );
-
-  const handleParentIconChange = useCallback(
-    (icon: string | null) => {
-      if (!absorbedParent) return;
-      updateTagMutation.mutate({ id: absorbedParent.id, icon });
-    },
-    [absorbedParent, updateTagMutation],
-  );
-
-  const navigateToTagStats = useCallback(
-    (tagId: string) => {
-      router.push(`/${locale}/stats/tags/${tagId}`);
-    },
-    [router, locale],
-  );
-
-  const headerIcon = absorbedParent?.icon ?? children[0]?.icon ?? null;
+  const headerIcon = node.tag.icon ?? node.children[0]?.icon ?? null;
+  const isPopoverOpen = openPopoverTagId === node.tag.id;
+  const shouldShowChildContainer = !collapsed || activeDragId !== null;
+  const canDropChildHere =
+    !!activeTreeTag && activeTreeTag.tag.id !== node.tag.id && canBecomeChild(activeTreeTag);
 
   const style = isMobile
     ? undefined
     : {
-        transform: CSS.Translate.toString(headerSortable.transform),
-        transition: headerSortable.transition,
+        transform: CSS.Translate.toString(transform),
+        transition,
       };
 
-  const isHeaderDragging = headerSortable.isDragging;
-  const isGroupRowPopoverOpen = absorbedParent != null && openPopoverTagId === absorbedParent.id;
-
   return (
-    <>
-      <div
-        ref={headerSortable.setNodeRef}
-        style={style}
-        className={cn(!isMobile && isHeaderDragging && 'z-10 cursor-grabbing opacity-50')}
-        {...(isMobile ? {} : { ...headerSortable.attributes, ...headerSortable.listeners })}
-        draggable={false}
-        role="listitem"
-      >
-        <div className="relative">
+    <div style={style} className={cn(!isMobile && isDragging && 'z-10 opacity-50')} role="listitem">
+      <div ref={setNodeRef} className="relative">
+        {!isMobile ? (
+          <div
+            className="absolute top-0 bottom-0 left-1 z-10 flex items-center"
+            {...attributes}
+            {...listeners}
+          >
+            <button
+              type="button"
+              aria-label="move"
+              className="text-muted-foreground hover:text-foreground flex size-6 items-center justify-center rounded-lg"
+            >
+              <GripVertical className="size-4" />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="pl-6">
           <GroupHeader
-            label={prefix}
+            label={node.tag.name}
             checked={groupVisibility === 'all'}
             indeterminate={groupVisibility === 'some'}
             collapsed={collapsed}
@@ -731,121 +583,124 @@ function SortableGroupBlock({
             onCheckedChange={() => onToggleGroupTags(groupTagIds)}
             onToggleCollapse={onToggleCollapse}
             onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
-            onColorChange={handleGroupColorChange}
-            onIconChange={absorbedParent ? handleParentIconChange : undefined}
+            onColorChange={(color) => {
+              groupTagIds.forEach((tagId) => {
+                updateTagMutation.mutate({ id: tagId, color });
+              });
+            }}
+            onIconChange={(icon) => updateTagMutation.mutate({ id: node.tag.id, icon })}
             currentIcon={headerIcon}
-            onAddTagToGroup={() => setIsCreatingInGroup(true)}
-            onRenameGroup={() => setIsEditingGroupName(true)}
-            onUngroupTags={handleUngroupTags}
-            onViewStats={() => navigateToTagStats(absorbedParent?.id ?? children[0]?.id ?? '')}
-            onDeleteGroup={handleDeleteGroup}
-            onRowClick={absorbedParent ? () => onRequestOpenPopover(absorbedParent.id) : undefined}
-            highlighted={isGroupRowPopoverOpen}
-            renameEditing={isEditingGroupName}
-            onSaveRename={handleSaveGroupRename}
-            onDoneRenameEditing={() => setIsEditingGroupName(false)}
-            renameExistingNames={groupRenameExistingNames}
+            onAddTagToGroup={() => setIsCreatingChild(true)}
+            onRenameGroup={() => setIsEditingName(true)}
+            onViewStats={() => router.push(`/${locale}/stats/tags/${node.tag.id}`)}
+            onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
+            onRowClick={() => onOpenPopover(node.tag.id)}
+            highlighted={isPopoverOpen}
           />
-          {isGroupRowPopoverOpen && absorbedParent ? (
+
+          {isPopoverOpen ? (
             <TagEntryCreatePopover
               open
-              onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? absorbedParent.id : null)}
+              onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? node.tag.id : null)}
               tag={{
-                id: absorbedParent.id,
-                name: absorbedParent.name,
+                id: node.tag.id,
+                name: node.tag.name,
                 color: displayColor,
-                icon: absorbedParent.icon ?? headerIcon,
+                icon: node.tag.icon ?? headerIcon,
               }}
               defaultDurationMinutes={30}
               isMobile={isMobile}
             />
           ) : null}
+
+          <RenameTagPopover
+            open={isEditingName}
+            onOpenChange={setIsEditingName}
+            tag={node.tag}
+            existingTags={allTags}
+            onSubmit={async (name) => {
+              await updateTagMutation.mutateAsync({ id: node.tag.id, name });
+              setIsEditingName(false);
+            }}
+          />
+
+          <CreateTagPopover
+            open={isCreatingChild}
+            onOpenChange={setIsCreatingChild}
+            initialParentId={node.tag.id}
+            existingTags={allTags}
+            onSubmit={async (input) => {
+              await createTagMutation.mutateAsync({
+                name: input.name,
+                color: input.color,
+                parentId: input.parentId,
+                ...(input.icon ? { icon: input.icon } : {}),
+              });
+              setIsCreatingChild(false);
+            }}
+          />
         </div>
       </div>
 
-      {/* グループ内へのインライン作成フォーム */}
-      {isCreatingInGroup && (
-        <div className="pr-2 pl-4">
-          <InlineTagCreateRow
-            variant="row"
-            defaultGroup={prefix}
-            defaultColor={resolveTagColor(displayColor)}
-            existingTags={allTags}
-            onSubmit={(name, color) => {
-              createTagMutation.mutate({ name, color });
-              setIsCreatingInGroup(false);
-            }}
-            onCancel={() => setIsCreatingInGroup(false)}
-          />
-        </div>
-      )}
-
-      {/* 子タグ: nested SortableContext */}
-      {!collapsed && (
-        <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-          {children.map((child) => (
-            <SortableTagItem
-              key={child.id}
-              tag={child}
-              allTags={allTags}
-              checked={visibleTagIds.has(child.id)}
-              groupOptions={groupOptions}
-              isGrouped
-              groupPrefix={prefix}
-              isMobile={isMobile}
-              onToggle={() => onToggleTag(child.id)}
-              onDeleteTag={() => onDeleteTag(child.id, child.name)}
-              findTagByName={findTagByName}
-              openPopoverTagId={openPopoverTagId}
-              onOpenPopover={onOpenPopover}
-              onRequestOpenPopover={onRequestOpenPopover}
-            />
-          ))}
+      {shouldShowChildContainer ? (
+        <SortableContext
+          items={node.children.map((child) => child.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <DroppableArea
+            id={childContainerId(node.tag.id)}
+            className={cn(
+              'ml-10 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
+              activeDragId && canDropChildHere && 'bg-muted/30',
+            )}
+          >
+            {!collapsed
+              ? node.children.map((child) => (
+                  <SortableTagItem
+                    key={child.id}
+                    tag={child}
+                    allTags={allTags}
+                    checked={visibleTagIds.has(child.id)}
+                    groupOptions={groupOptions.filter((group) => group.id !== child.id)}
+                    currentParentId={node.tag.id}
+                    isMobile={isMobile}
+                    dragKind="child"
+                    activeDragId={activeDragId}
+                    canAcceptChildren={false}
+                    onToggle={() => onToggleTag(child.id)}
+                    onDeleteTag={() => onDeleteTag(child.id, child.name)}
+                    onShowOnlyTag={() => onShowOnlyGroupTags([child.id])}
+                    openPopoverTagId={openPopoverTagId}
+                    onOpenPopover={onOpenPopover}
+                  />
+                ))
+              : null}
+          </DroppableArea>
         </SortableContext>
-      )}
+      ) : null}
 
-      <TagDeleteStrategyDialog
-        open={showDeleteGroupDialog}
-        onClose={() => setShowDeleteGroupDialog(false)}
-        onConfirm={handleConfirmDeleteGroup}
-        tagName={prefix}
-        entryCount={groupCount}
-        availableTags={availableTagsForGroupReassign}
-      />
-
-      <ConfirmDialog
-        open={ungroupConflicts !== null}
-        onClose={() => setUngroupConflicts(null)}
-        onConfirm={handleConfirmUngroupWithMerge}
-        title={t('calendar.filter.ungroupConflict.title')}
-        description={t('calendar.filter.ungroupConflict.description', {
-          names: ungroupConflicts?.join(', ') ?? '',
-        })}
-        variant="warning"
-      />
-    </>
+      {tagCounts[node.tag.id] ? (
+        <div className="text-muted-foreground mt-1 ml-10 text-xs">{tagCounts[node.tag.id]}</div>
+      ) : null}
+    </div>
   );
 }
-
-/* ============================================================================
- * SortableTagItem — 1 タグ行（solo or group child）
- * ========================================================================== */
 
 interface SortableTagItemProps {
   tag: Tag;
   allTags: Tag[];
   checked: boolean;
   groupOptions: GroupOption[];
-  isGrouped: boolean;
-  /** isGrouped=true のとき必須 */
-  groupPrefix?: string;
+  currentParentId: string | null;
   isMobile: boolean;
+  dragKind: 'root' | 'child';
+  activeDragId: string | null;
+  canAcceptChildren: boolean;
   onToggle: () => void;
   onDeleteTag: () => void;
-  findTagByName: (name: string) => Tag | undefined;
+  onShowOnlyTag: () => void;
   openPopoverTagId: string | null;
   onOpenPopover: (tagId: string | null) => void;
-  onRequestOpenPopover: (tagId: string) => void;
 }
 
 function SortableTagItem({
@@ -853,15 +708,16 @@ function SortableTagItem({
   allTags,
   checked,
   groupOptions,
-  isGrouped,
-  groupPrefix,
+  currentParentId,
   isMobile,
+  dragKind,
+  activeDragId,
+  canAcceptChildren,
   onToggle,
   onDeleteTag,
-  findTagByName,
+  onShowOnlyTag,
   openPopoverTagId,
   onOpenPopover,
-  onRequestOpenPopover,
 }: SortableTagItemProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -872,16 +728,7 @@ function SortableTagItem({
   });
   const updateTagMutation = useUpdateTag();
   const mergeTagMutation = useMergeTag();
-  const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal } = useTagModalNavigation();
-
-  const navigateToTagStats = useCallback(
-    (tagId: string) => {
-      router.push(`/${locale}/stats/tags/${tagId}`);
-    },
-    [router, locale],
-  );
-
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
     initialColor: tag.color ?? undefined,
@@ -891,45 +738,37 @@ function SortableTagItem({
   const [isEditingName, setIsEditingName] = useState(false);
   const [groupChangeConflict, setGroupChangeConflict] = useState<{
     targetTagId: string;
-    newName: string;
+    targetName: string;
   } | null>(null);
 
-  const { suffix } = useMemo(() => parseColonTag(tag.name), [tag.name]);
-  const currentGroup = groupPrefix ?? '';
+  const isPopoverOpen = openPopoverTagId === tag.id;
+  const style = isMobile
+    ? undefined
+    : {
+        transform: CSS.Translate.toString(transform),
+        transition,
+      };
 
-  const tagRenameExistingNames = useMemo(() => {
-    if (isGrouped) {
-      const prefixPattern = `${currentGroup}:`;
-      return allTags
-        .filter((other) => other.id !== tag.id && other.name.startsWith(prefixPattern))
-        .map((other) => other.name.slice(prefixPattern.length));
-    }
-    return allTags
-      .filter((other) => other.id !== tag.id && parseColonTag(other.name).suffix === null)
-      .map((other) => other.name);
-  }, [allTags, tag.id, isGrouped, currentGroup]);
+  const handleChangeParent = useCallback(
+    (newParentId: string | null) => {
+      const conflict = allTags.find(
+        (candidate) =>
+          candidate.id !== tag.id &&
+          candidate.parent_id === newParentId &&
+          candidate.name.toLowerCase() === tag.name.toLowerCase(),
+      );
 
-  const handleSaveRename = useCallback(
-    async (newName: string) => {
-      const fullName = isGrouped ? buildColonTagName(currentGroup, newName) : newName;
-      updateTagMutation.mutate({ id: tag.id, name: fullName });
-    },
-    [tag.id, isGrouped, currentGroup, updateTagMutation],
-  );
-
-  const handleChangeGroup = useCallback(
-    (newGroup: string | null) => {
-      const baseName = suffix ?? tag.name;
-      const newName = newGroup ? buildColonTagName(newGroup, baseName) : baseName;
-
-      const existingTag = findTagByName(newName);
-      if (existingTag && existingTag.id !== tag.id) {
-        setGroupChangeConflict({ targetTagId: existingTag.id, newName });
+      if (conflict) {
+        setGroupChangeConflict({
+          targetTagId: conflict.id,
+          targetName: conflict.name,
+        });
         return;
       }
-      updateTagMutation.mutate({ id: tag.id, name: newName });
+
+      updateTagMutation.mutate({ id: tag.id, parentId: newParentId });
     },
-    [tag.id, tag.name, suffix, updateTagMutation, findTagByName],
+    [allTags, tag.id, tag.name, updateTagMutation],
   );
 
   const handleConfirmGroupChangeMerge = useCallback(async () => {
@@ -942,159 +781,190 @@ function SortableTagItem({
     } finally {
       setGroupChangeConflict(null);
     }
-  }, [tag.id, groupChangeConflict, mergeTagMutation]);
-
-  const displayLabel = getTagDisplayLabel(tag.name, isGrouped);
-
-  const style = isMobile
-    ? undefined
-    : {
-        transform: CSS.Translate.toString(transform),
-        transition,
-      };
-
-  const isRowPopoverOpen = openPopoverTagId === tag.id;
+  }, [groupChangeConflict, mergeTagMutation, tag.id]);
 
   return (
     <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        className={cn(!isMobile && isDragging && 'z-10 cursor-grabbing opacity-50')}
-        {...(isMobile ? {} : { ...attributes, ...listeners })}
-        draggable={false}
-        role="listitem"
-      >
+      <div className="space-y-1" role="listitem">
         <div
-          className={cn(
-            'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
-            isMobile ? 'h-11' : 'h-8',
-            !isMobile && isDragging && 'cursor-grabbing',
-            'hover:bg-state-hover',
-            menuOpen && 'bg-state-selected',
-            isRowPopoverOpen && 'bg-state-selected',
-            isGrouped && 'pl-4',
-            !checked && 'opacity-50',
-          )}
-          onClick={() => onRequestOpenPopover(tag.id)}
+          ref={setNodeRef}
+          style={style}
+          className={cn(!isMobile && isDragging && 'z-10 cursor-grabbing opacity-50')}
         >
-          <span className="ml-2 shrink-0">
-            <TagIcon icon={tag.icon} color={displayColor} size="sm" />
-          </span>
+          <div
+            className={cn(
+              'group/item relative flex items-center rounded-lg text-sm',
+              dragKind === 'child' ? 'pl-4' : '',
+              isMobile ? 'h-11' : 'h-8',
+              'hover:bg-state-hover',
+              menuOpen && 'bg-state-selected',
+              isPopoverOpen && 'bg-state-selected',
+              !checked && 'opacity-50',
+            )}
+            onClick={() => onOpenPopover(tag.id)}
+          >
+            {!isMobile ? (
+              <button
+                type="button"
+                aria-label={t('common.actions.move')}
+                className="text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg"
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="size-4" />
+              </button>
+            ) : null}
 
-          {isEditingName ? (
-            <span className="ml-2 min-w-0 flex-1">
-              <InlineTagNameEdit
-                value={displayLabel}
-                onSave={handleSaveRename}
-                existingNames={tagRenameExistingNames}
-                editing={isEditingName}
-                onDoneEditing={() => setIsEditingName(false)}
-                ariaLabel={displayLabel}
-              />
+            <span className="ml-2 shrink-0">
+              <TagIcon icon={tag.icon} color={displayColor} size="sm" />
             </span>
-          ) : (
+
             <HoverTooltip
               content={tag.name}
               side="top"
-              disabled={menuOpen}
+              disabled={menuOpen || isEditingName}
               wrapperClassName="ml-2 min-w-0 flex-1"
             >
-              <span className="min-w-0 truncate">{displayLabel}</span>
+              <span className="min-w-0 truncate">{tag.name}</span>
             </HoverTooltip>
-          )}
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
-            className={cn(
-              "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
-              checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
-              isMobile && 'opacity-100',
-            )}
-          >
-            {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-          </button>
-
-          <div className="w-1 shrink-0" />
-
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('calendar.filter.tagMenu')}
-                // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
-                className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 before:absolute before:-inset-2 before:content-[''] [@media(hover:none)]:opacity-100"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                <MoreHorizontal className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <FilterItemMenu
-              displayColor={displayColor}
-              currentIcon={tag.icon}
-              currentGroup={suffix !== null ? currentGroup : null}
-              currentTagName={tag.name}
-              groupOptions={groupOptions}
-              isGrouped={isGrouped}
-              isMobile={isMobile}
-              onOpenRenameDialog={() => setIsEditingName(true)}
-              onColorChange={handleColorChange}
-              onIconChange={handleIconChange}
-              onChangeGroup={handleChangeGroup}
-              onOpenMergeModal={() =>
-                openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
-              }
-              onShowOnlyTag={() => showOnlyTag(tag.id)}
-              onViewStats={() => navigateToTagStats(tag.id)}
-              onDeleteTag={onDeleteTag}
+            <RenameTagPopover
+              open={isEditingName}
+              onOpenChange={setIsEditingName}
+              tag={tag}
+              existingTags={allTags}
+              onSubmit={async (name) => {
+                await updateTagMutation.mutateAsync({ id: tag.id, name });
+                setIsEditingName(false);
+              }}
             />
-          </DropdownMenu>
 
-          {isRowPopoverOpen ? (
-            <TagEntryCreatePopover
-              open
-              onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
-              tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
-              defaultDurationMinutes={30}
-              isMobile={isMobile}
-            />
-          ) : null}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggle();
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              aria-label={checked ? t('calendar.filter.hide') : t('calendar.filter.show')}
+              className={cn(
+                "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
+                checked ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+                isMobile && 'opacity-100',
+              )}
+            >
+              {checked ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+            </button>
+
+            <div className="w-1 shrink-0" />
+
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('calendar.filter.tagMenu')}
+                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-hover/item:opacity-100 [@media(hover:none)]:opacity-100"
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <FilterItemMenu
+                displayColor={displayColor}
+                currentIcon={tag.icon}
+                currentGroup={currentParentId}
+                currentTagId={tag.id}
+                groupOptions={groupOptions}
+                isGrouped={currentParentId !== null}
+                isMobile={isMobile}
+                onOpenRenameDialog={() => setIsEditingName(true)}
+                onColorChange={handleColorChange}
+                onIconChange={handleIconChange}
+                onChangeGroup={handleChangeParent}
+                onOpenMergeModal={() =>
+                  openTagMergeModal({ id: tag.id, name: tag.name, color: tag.color ?? null })
+                }
+                onShowOnlyTag={onShowOnlyTag}
+                onViewStats={() => router.push(`/${locale}/stats/tags/${tag.id}`)}
+                onDeleteTag={onDeleteTag}
+              />
+            </DropdownMenu>
+
+            {isPopoverOpen ? (
+              <TagEntryCreatePopover
+                open
+                onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
+                tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
+                defaultDurationMinutes={30}
+                isMobile={isMobile}
+              />
+            ) : null}
+          </div>
         </div>
+
+        {!isMobile && dragKind === 'root' && activeDragId !== null ? (
+          <DroppableArea
+            id={childContainerId(tag.id)}
+            className={cn(
+              'ml-10 h-4 rounded-xl border border-dashed border-transparent',
+              canAcceptChildren ? 'text-muted-foreground' : 'hidden',
+            )}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog
         open={groupChangeConflict !== null}
         onClose={() => setGroupChangeConflict(null)}
         onConfirm={handleConfirmGroupChangeMerge}
-        title={t('calendar.filter.ungroupConflict.title')}
-        description={t('calendar.filter.ungroupConflict.description', {
-          names: groupChangeConflict?.newName ?? '',
-        })}
-        variant="warning"
+        title={t('calendar.filter.mergeTag.title')}
+        description={
+          groupChangeConflict
+            ? t('calendar.filter.mergeTag.description', {
+                sourceName: tag.name,
+                targetName: groupChangeConflict.targetName,
+              })
+            : ''
+        }
+        confirmLabel={t('calendar.filter.mergeTag.confirm')}
+        variant="destructive"
       />
     </>
   );
 }
 
-/* ============================================================================
- * TagOverlayCard — DragOverlay ghost
- * ========================================================================== */
+function DroppableArea({
+  id,
+  role,
+  className,
+  children,
+}: {
+  id: string;
+  role?: string;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      role={role}
+      className={cn(className, isOver && 'border-primary/40 bg-primary/5')}
+    >
+      {children}
+    </div>
+  );
+}
 
 function TagOverlayCard({ tag }: { tag: Tag }) {
   const color = resolveTagColor(tag.color);
-  const { suffix } = parseColonTag(tag.name);
-  const label = suffix ?? tag.name;
+
   return (
     <div className="bg-card shadow-card flex cursor-grabbing items-center gap-2 rounded-lg border p-2 text-sm">
       <TagIcon icon={tag.icon} color={color} size="sm" />
-      <span className="truncate">{label}</span>
+      <span className="truncate">{tag.name}</span>
     </div>
   );
 }

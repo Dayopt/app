@@ -183,6 +183,22 @@
         "description": "{count}個のタグが削除されます。エントリー自体は削除されません。",
         "success": "「{name}」グループを削除しました（{count}個のタグ）",
         "failed": "グループを削除できませんでした。もう一度お試しください"
+      },
+      "createDialog": {
+        "title": "新しいタグを作成",
+        "name": "タグ名",
+        "namePlaceholder": "例: 仕事、勉強",
+        "selectColor": "色を選択",
+        "selectIcon": "アイコンを選択",
+        "selectGroup": "グループを選択",
+        "noGroup": "グループなし",
+        "duplicateName": "同じ名前のタグが既にあります。別の名前を入力してください"
+      },
+      "renamePopover": {
+        "title": "タグ名を変更",
+        "name": "タグ名",
+        "namePlaceholder": "新しいタグ名",
+        "duplicateName": "同じ名前のタグが既にあります。別の名前を入力してください"
       }
     },
     "tagSelector": {

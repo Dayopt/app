@@ -33,10 +33,8 @@ function granularityToBucket(g: StatsGranularity): 'week' | 'month' | 'day' {
 /**
  * タグ概要データ（7 RPC並列）を取得するフック。
  *
- * tagName はクエリキーに含まれるため、全コンポーネントで同一値を使う必要がある。
- * タグ名未取得時は tagId をフォールバックとして使い、prefetch キーと一致させる。
  */
-export function useTagOverviewData(tagId: string, tagName?: string) {
+export function useTagOverviewData(tagId: string) {
   const granularity = useStatsFilterStore((s) => s.granularity);
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const timezone = useCalendarSettingsStore((s) => s.timezone);
@@ -47,12 +45,8 @@ export function useTagOverviewData(tagId: string, tagName?: string) {
     [currentDate, granularity, timezone, weekStartsOn],
   );
 
-  // prefetch と同じフォールバック: tagName 未指定時は tagId
-  const effectiveTagName = tagName || tagId;
-
   return api.entries.getTagOverview.useQuery({
     tagId,
-    tagName: effectiveTagName,
     ...dateRange,
   });
 }

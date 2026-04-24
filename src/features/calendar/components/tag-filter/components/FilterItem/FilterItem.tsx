@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { InlineTagNameEdit, useTags, useUpdateTag } from '@/features/tags';
+import { RenameTagPopover, useTags, useUpdateTag } from '@/features/tags';
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
@@ -70,19 +70,10 @@ export function FilterItem({
     initialColor: checkboxColor,
   });
 
-  // 重複チェック用: 自分自身を除いた他タグ名
-  const renameExistingNames = useMemo(
-    () => (existingTags ?? []).filter((tag) => tag.id !== tagId).map((tag) => tag.name),
+  // リネーム対象タグ（RenameTagPopover の tag prop 用）
+  const targetTag = useMemo(
+    () => (tagId ? (existingTags ?? []).find((tag) => tag.id === tagId) : undefined),
     [existingTags, tagId],
-  );
-
-  // Rename save handler
-  const handleSaveRename = useCallback(
-    async (newName: string) => {
-      if (!tagId) return;
-      updateTagMutation.mutate({ id: tagId, name: newName });
-    },
-    [tagId, updateTagMutation],
   );
 
   // Context menu handler
@@ -116,7 +107,7 @@ export function FilterItem({
   return (
     <div
       className={cn(
-        'group/item hover:bg-state-hover flex h-8 w-full min-w-0 items-center rounded-lg text-sm [@media(pointer:coarse)]:min-h-11',
+        'group/item hover:bg-state-hover relative flex h-8 w-full min-w-0 items-center rounded-lg text-sm [@media(pointer:coarse)]:min-h-11',
         disabled && 'cursor-not-allowed opacity-50',
         dragHandleProps && 'cursor-grab active:cursor-grabbing',
         !dragHandleProps && !disabled && 'cursor-pointer',
@@ -136,30 +127,30 @@ export function FilterItem({
         style={checkboxColorStyle}
       />
       {icon && <span className="text-muted-foreground ml-2 shrink-0">{icon}</span>}
-      {isEditingName && tagId ? (
-        <span className="ml-1 min-w-0 flex-1">
-          <InlineTagNameEdit
-            value={label}
-            onSave={handleSaveRename}
-            existingNames={renameExistingNames}
-            editing={isEditingName}
-            onDoneEditing={() => setIsEditingName(false)}
-            ariaLabel={label}
-          />
-        </span>
-      ) : (
-        <HoverTooltip
-          content={label}
-          side="top"
-          disabled={menuOpen}
-          wrapperClassName="ml-1 min-w-0 flex-1"
-        >
-          <span className={cn('min-w-0 truncate', labelClassName)}>{label}</span>
-        </HoverTooltip>
-      )}
+      <HoverTooltip
+        content={label}
+        side="top"
+        disabled={menuOpen || isEditingName}
+        wrapperClassName="ml-1 min-w-0 flex-1"
+      >
+        <span className={cn('min-w-0 truncate', labelClassName)}>{label}</span>
+      </HoverTooltip>
+
+      {targetTag ? (
+        <RenameTagPopover
+          open={isEditingName}
+          onOpenChange={setIsEditingName}
+          tag={targetTag}
+          existingTags={existingTags ?? []}
+          onSubmit={async (name) => {
+            await updateTagMutation.mutateAsync({ id: targetTag.id, name });
+            setIsEditingName(false);
+          }}
+        />
+      ) : null}
 
       {/* Menu trigger */}
-      {(tagId || onShowOnlyThis) && !disabled && !isEditingName && (
+      {(tagId || onShowOnlyThis) && !disabled && (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
@@ -191,7 +182,7 @@ export function FilterItem({
       )}
 
       {/* Count */}
-      {count !== undefined && !isEditingName && (
+      {count !== undefined && (
         <span className="text-muted-foreground ml-1 shrink-0 pr-2 text-xs tabular-nums">
           {count}
         </span>

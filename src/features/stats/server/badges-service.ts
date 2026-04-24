@@ -322,7 +322,7 @@ export class BadgesService {
         .eq('id', userId)
         .single(),
       // 7. tags (for group detection via colon syntax)
-      this.supabase.from('tags').select('name').eq('user_id', userId),
+      this.supabase.from('tags').select('name, parent_id').eq('user_id', userId),
     ]);
 
     const entries = entriesResult.data ?? [];
@@ -425,8 +425,8 @@ export class BadgesService {
 
     const maxTagMinutes = Math.max(0, ...[...tagMinutes.values()]);
 
-    // --- Group tag (colon syntax: "group:name") ---
-    const hasGroupTag = tags.some((t) => t.name.includes(':'));
+    // --- Hierarchical tag ---
+    const hasGroupTag = tags.some((t) => t.parent_id != null);
 
     // --- Chronotype zones: custom_zones ベースで3ティア判定 ---
     const chronotypeZoneCount = computeChronotypeZoneCount(entries, zones, timezone);

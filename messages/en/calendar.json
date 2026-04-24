@@ -183,6 +183,22 @@
         "description": "{count} tags will be deleted. Entries themselves will not be deleted.",
         "success": "Deleted group \"{name}\" ({count} tags)",
         "failed": "Failed to delete group"
+      },
+      "createDialog": {
+        "title": "Create a new tag",
+        "name": "Tag name",
+        "namePlaceholder": "e.g. Work, Study",
+        "selectColor": "Select color",
+        "selectIcon": "Select icon",
+        "selectGroup": "Select group",
+        "noGroup": "No group",
+        "duplicateName": "A tag with this name already exists. Please choose a different name."
+      },
+      "renamePopover": {
+        "title": "Rename tag",
+        "name": "Tag name",
+        "namePlaceholder": "New tag name",
+        "duplicateName": "A tag with this name already exists. Please choose a different name."
       }
     },
     "tagSelector": {

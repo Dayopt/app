@@ -17,6 +17,7 @@ function makeTag(overrides: Partial<Tag> & { name: string }): Tag {
     color: 'blue',
     icon: null,
     is_active: true,
+    parent_id: null,
     sort_order: 0,
     created_at: null,
     updated_at: null,

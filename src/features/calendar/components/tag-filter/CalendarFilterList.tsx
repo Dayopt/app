@@ -2,42 +2,46 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 
 import { useIsFetching } from '@tanstack/react-query';
 
+import type { CreateTagPopoverSubmitInput } from '@/features/tags';
 import {
-  InlineTagCreateRow,
+  CreateTagPopover,
+  flattenTagTree,
   TagDeleteStrategyDialog,
   tagKeys,
   useCreateTag,
   useDeleteTag,
-  useTags,
+  useTagsHierarchy,
 } from '@/features/tags';
 import { SidebarSection } from '@/lib/components/shell/sidebar';
+import { Button } from '@/lib/components/ui/button';
 import { Skeleton } from '@/lib/components/ui/skeleton';
+import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
-import type { TagColorName } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 
-import { CreateTagButton } from './components/CreateTagButton';
 import { TagFlatList } from './components/TagFlatList';
 
 /**
  * カレンダーフィルターリスト
  *
  * Googleカレンダーの「マイカレンダー」のようなUI
- * - タグ: コロン記法プレフィックスでグルーピング表示
+ * - タグ: 親子2階層でグルーピング表示
  * - チェックボックスで表示/非表示を切替
- * - `+` 押下でリスト末尾に inline 作成フォームを展開
+ * - `+` 押下で Popover 新規作成フォームを展開（PC/モバイル共通）
  */
 export function CalendarFilterList() {
   const t = useTranslations();
   const isMobile = useIsMobile();
-  const { data: tags, isLoading: tagsLoading } = useTags();
+  const { data: nodes, isLoading: tagsLoading } = useTagsHierarchy();
   const { data: tagStats, isError: isTagStatsError } = api.entries.getTagStats.useQuery();
+  const tags = useMemo(() => flattenTagTree(nodes ?? []), [nodes]);
 
   // エラー時は null にすることで、削除確認ダイアログを常に表示（誤削除防止）
   const tagPlanCounts = useMemo(
@@ -57,8 +61,8 @@ export function CalendarFilterList() {
   const showOnlyGroupTags = useCalendarFilterStore((s) => s.showOnlyGroupTags);
   const getGroupVisibility = useCalendarFilterStore((s) => s.getGroupVisibility);
 
-  // tags.list フェッチ中はフィルター初期化をスキップ（Race Condition防止）
-  const isTagsFetching = useIsFetching({ queryKey: tagKeys.list() }) > 0;
+  // hierarchy フェッチ中はフィルター初期化をスキップ（Race Condition防止）
+  const isTagsFetching = useIsFetching({ queryKey: tagKeys.hierarchy() }) > 0;
 
   // タグ一覧取得後に初期化（フェッチ中は競合防止のためスキップ）
   useEffect(() => {
@@ -71,13 +75,21 @@ export function CalendarFilterList() {
 
   const isLoading = tagsLoading;
 
-  // ルート直下への inline 作成フォーム表示状態
-  const [isCreatingAtRoot, setIsCreatingAtRoot] = useState(false);
+  const [isCreatePopoverOpen, setIsCreatePopoverOpen] = useState(false);
 
-  const handleInlineCreate = useCallback(
-    (name: string, color: TagColorName) => {
-      createTagMutation.mutate({ name, color });
-      setIsCreatingAtRoot(false);
+  const handlePopoverSubmit = useCallback(
+    async (input: CreateTagPopoverSubmitInput) => {
+      try {
+        await createTagMutation.mutateAsync({
+          name: input.name,
+          color: input.color,
+          parentId: input.parentId,
+          ...(input.icon ? { icon: input.icon } : {}),
+        });
+        setIsCreatePopoverOpen(false);
+      } catch {
+        // mutation フック側で toast 済み。Popover は閉じない
+      }
     },
     [createTagMutation],
   );
@@ -133,29 +145,35 @@ export function CalendarFilterList() {
           title={t('calendar.filter.tags')}
           className="py-1"
           action={
-            <CreateTagButton onStart={() => setIsCreatingAtRoot(true)} active={isCreatingAtRoot} />
+            <HoverTooltip content={t('calendar.filter.createTag')} side="top">
+              <CreateTagPopover
+                open={isCreatePopoverOpen}
+                onOpenChange={setIsCreatePopoverOpen}
+                existingTags={tags ?? []}
+                onSubmit={handlePopoverSubmit}
+              >
+                <Button
+                  variant="ghost"
+                  icon
+                  className="size-6"
+                  aria-label={t('calendar.filter.createTag')}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </CreateTagPopover>
+            </HoverTooltip>
           }
         >
-          {isCreatingAtRoot && (
-            <div className="px-2 py-1">
-              <InlineTagCreateRow
-                variant="row"
-                existingTags={tags ?? []}
-                onSubmit={handleInlineCreate}
-                onCancel={() => setIsCreatingAtRoot(false)}
-              />
-            </div>
-          )}
-
           {isLoading ? (
             <div className="space-y-1 py-1">
               <Skeleton className="h-6 w-full" />
               <Skeleton className="h-6 w-full" />
               <Skeleton className="h-6 w-full" />
             </div>
-          ) : tags && tags.length > 0 ? (
+          ) : nodes && nodes.length > 0 ? (
             <TagFlatList
-              tags={tags}
+              nodes={nodes}
+              allTags={tags}
               visibleTagIds={visibleTagIds}
               tagCounts={tagPlanCounts ?? {}}
               onToggleTag={toggleTag}
@@ -167,11 +185,9 @@ export function CalendarFilterList() {
               isMobile={isMobile}
             />
           ) : (
-            !isCreatingAtRoot && (
-              <div className="text-muted-foreground px-2 py-2 text-xs">
-                {t('calendar.filter.noTags')}
-              </div>
-            )
+            <div className="text-muted-foreground px-2 py-2 text-xs">
+              {t('calendar.filter.noTags')}
+            </div>
           )}
         </SidebarSection>
       </div>

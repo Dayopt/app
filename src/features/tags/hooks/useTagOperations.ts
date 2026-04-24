@@ -47,6 +47,7 @@ export function useTagOperations(tags: Tag[]) {
           user_id: 'current-user',
           color: data.color || DEFAULT_TAG_COLOR,
           icon: data.icon ?? null,
+          parent_id: data.parentId ?? null,
           is_active: true,
           sort_order: tags.length,
           created_at: new Date().toISOString(),
@@ -60,6 +61,7 @@ export function useTagOperations(tags: Tag[]) {
           name: data.name,
           color: data.color,
           icon: data.icon,
+          parentId: data.parentId,
         });
       } catch (error) {
         logger.error('Failed to create tag:', error);

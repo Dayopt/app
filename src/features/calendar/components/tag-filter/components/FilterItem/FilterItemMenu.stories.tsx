@@ -65,9 +65,9 @@ export const StandaloneTag: Story = {
   args: {
     currentGroup: null,
     groupOptions: [
-      { name: '開発', color: 'green' },
-      { name: 'デザイン', color: 'orange' },
-      { name: 'マーケティング', color: 'blue' },
+      { id: 'group-dev', name: '開発', color: 'green' },
+      { id: 'group-design', name: 'デザイン', color: 'orange' },
+      { id: 'group-marketing', name: 'マーケティング', color: 'blue' },
     ],
     onChangeGroup: fn(),
   },
@@ -90,11 +90,11 @@ export const StandaloneTag: Story = {
 export const GroupedTag: Story = {
   args: {
     isGrouped: true,
-    currentGroup: '開発',
+    currentGroup: 'group-dev',
     groupOptions: [
-      { name: '開発', color: 'green' },
-      { name: 'デザイン', color: 'orange' },
-      { name: 'マーケティング', color: 'blue' },
+      { id: 'group-dev', name: '開発', color: 'green' },
+      { id: 'group-design', name: 'デザイン', color: 'orange' },
+      { id: 'group-marketing', name: 'マーケティング', color: 'blue' },
     ],
     onChangeGroup: fn(),
   },
@@ -174,8 +174,8 @@ export const Comparison: Story = {
             currentIcon="briefcase"
             currentGroup={null}
             groupOptions={[
-              { name: '開発', color: 'green' },
-              { name: 'デザイン', color: 'orange' },
+              { id: 'group-dev', name: '開発', color: 'green' },
+              { id: 'group-design', name: 'デザイン', color: 'orange' },
             ]}
             onOpenRenameDialog={fn()}
             onColorChange={fn()}
@@ -197,10 +197,10 @@ export const Comparison: Story = {
             displayColor="green"
             currentIcon="briefcase"
             isGrouped
-            currentGroup="開発"
+            currentGroup="group-dev"
             groupOptions={[
-              { name: '開発', color: 'green' },
-              { name: 'デザイン', color: 'orange' },
+              { id: 'group-dev', name: '開発', color: 'green' },
+              { id: 'group-design', name: 'デザイン', color: 'orange' },
             ]}
             onOpenRenameDialog={fn()}
             onColorChange={fn()}

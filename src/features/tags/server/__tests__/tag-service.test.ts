@@ -40,16 +40,40 @@ describe('TagService', () => {
     });
 
     it('should apply default sort (sort_order + name)', async () => {
-      const mockQuery = setupMockQuery(mockSupabase.from, []);
+      setupMockQuery(mockSupabase.from, [
+        {
+          id: 'child-2',
+          name: 'B',
+          user_id: userId,
+          parent_id: 'root-1',
+          sort_order: 1,
+        },
+        {
+          id: 'root-2',
+          name: 'Zeta',
+          user_id: userId,
+          parent_id: null,
+          sort_order: 1,
+        },
+        {
+          id: 'root-1',
+          name: 'Alpha',
+          user_id: userId,
+          parent_id: null,
+          sort_order: 0,
+        },
+        {
+          id: 'child-1',
+          name: 'A',
+          user_id: userId,
+          parent_id: 'root-1',
+          sort_order: 0,
+        },
+      ]);
 
-      await service.list({ userId });
+      const result = await service.list({ userId });
 
-      // デフォルトではsort_orderでソート後、名前でセカンダリソート
-      expect(mockQuery.order).toHaveBeenCalledWith('sort_order', {
-        ascending: true,
-        nullsFirst: false,
-      });
-      expect(mockQuery.order).toHaveBeenCalledWith('name', { ascending: true });
+      expect(result.map((tag) => tag.id)).toEqual(['root-1', 'child-1', 'child-2', 'root-2']);
     });
 
     it('should apply custom sort', async () => {
@@ -198,20 +222,15 @@ describe('TagService', () => {
     });
 
     it('should throw DUPLICATE_NAME for duplicate tag name', async () => {
-      setupMockInsertError(mockSupabase.from, '23505', 'Duplicate key');
+      mockSupabase.from
+        .mockReturnValueOnce(createChainableMock([]))
+        .mockReturnValueOnce(
+          createChainableMock(null, { message: 'Duplicate key', code: '23505' }),
+        );
 
-      await expect(
-        service.create({
-          userId,
-          input: { name: 'Duplicate' },
-        }),
-      ).rejects.toThrow(TagServiceError);
-
-      try {
-        await service.create({ userId, input: { name: 'Duplicate' } });
-      } catch (error) {
-        expect((error as TagServiceError).code).toBe('DUPLICATE_NAME');
-      }
+      await expect(service.create({ userId, input: { name: 'Duplicate' } })).rejects.toMatchObject({
+        code: 'DUPLICATE_NAME',
+      });
     });
   });
 
@@ -311,35 +330,39 @@ describe('TagService', () => {
 
     it('should update sort_order via batch_reorder_tags RPC on success', async () => {
       // 所有権チェック: 全 tag が user のもの
-      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }, { id: 'tag-2' }]);
+      setupMockQuery(mockSupabase.from, [
+        { id: 'tag-1', parent_id: null },
+        { id: 'tag-2', parent_id: null },
+      ]);
       mockSupabase.rpc.mockResolvedValueOnce({ data: 2, error: null });
 
       const result = await service.reorder({
         userId,
         updates: [
-          { id: 'tag-1', sort_order: 0 },
-          { id: 'tag-2', sort_order: 1 },
+          { id: 'tag-1', parent_id: null, sort_order: 0 },
+          { id: 'tag-2', parent_id: null, sort_order: 1 },
         ],
       });
 
       expect(result).toEqual({ count: 2 });
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('batch_reorder_tags', {
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('batch_reorder_tags_hierarchy', {
         p_user_id: userId,
         p_tag_ids: ['tag-1', 'tag-2'],
+        p_parent_ids: [null, null],
         p_sort_orders: [0, 1],
       });
     });
 
     it('should throw NOT_FOUND when update includes a tag owned by another user', async () => {
       // tag-1 だけ自分のもの、tag-2 は所有権なし（select の結果に含まれない）
-      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }]);
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1', parent_id: null }]);
 
       await expect(
         service.reorder({
           userId,
           updates: [
-            { id: 'tag-1', sort_order: 0 },
-            { id: 'tag-2', sort_order: 1 },
+            { id: 'tag-1', parent_id: null, sort_order: 0 },
+            { id: 'tag-2', parent_id: null, sort_order: 1 },
           ],
         }),
       ).rejects.toThrow(TagServiceError);
@@ -349,23 +372,26 @@ describe('TagService', () => {
     });
 
     it('should throw UPDATE_FAILED when RPC returns an error', async () => {
-      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }]);
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1', parent_id: null }]);
       mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'db down' } });
 
       await expect(
-        service.reorder({ userId, updates: [{ id: 'tag-1', sort_order: 0 }] }),
+        service.reorder({ userId, updates: [{ id: 'tag-1', parent_id: null, sort_order: 0 }] }),
       ).rejects.toThrow(/Failed to reorder tags/);
     });
 
     it('should fallback to updates.length when RPC returns non-numeric count', async () => {
-      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }, { id: 'tag-2' }]);
+      setupMockQuery(mockSupabase.from, [
+        { id: 'tag-1', parent_id: null },
+        { id: 'tag-2', parent_id: null },
+      ]);
       mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null });
 
       const result = await service.reorder({
         userId,
         updates: [
-          { id: 'tag-1', sort_order: 0 },
-          { id: 'tag-2', sort_order: 1 },
+          { id: 'tag-1', parent_id: null, sort_order: 0 },
+          { id: 'tag-2', parent_id: null, sort_order: 1 },
         ],
       });
 

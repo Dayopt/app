@@ -22,7 +22,6 @@ const DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 interface TagDowChartProps {
   tagId: string;
-  tagName?: string | undefined;
 }
 
 /**
@@ -30,10 +29,10 @@ interface TagDowChartProps {
  *
  * 縦棒グラフで各曜日の利用分数を表示。月曜始まり。
  */
-export function TagDowChart({ tagId, tagName }: TagDowChartProps) {
+export function TagDowChart({ tagId }: TagDowChartProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const { data: overview, isPending } = useTagOverviewData(tagId);
   const data = overview?.dow ?? null;
 
   if (isPending) {

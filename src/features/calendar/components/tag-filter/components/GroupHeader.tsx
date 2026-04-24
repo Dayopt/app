@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { IconPickerDropdownItems, InlineTagNameEdit, TagIcon } from '@/features/tags';
+import { IconPickerDropdownItems, TagIcon } from '@/features/tags';
 import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
 import {
   DropdownMenu,
@@ -58,17 +58,13 @@ interface GroupHeaderProps {
   onRowClick?: (() => void) | undefined;
   /** 行に選択中表現（bg-state-selected）を付ける。ポップアップが開いているときに true */
   highlighted?: boolean;
-  /** インラインリネーム: 編集モードの制御 */
-  renameEditing?: boolean;
-  onSaveRename?: ((next: string) => void | Promise<void>) | undefined;
-  onDoneRenameEditing?: (() => void) | undefined;
-  renameExistingNames?: string[];
 }
 
 /**
- * コロン記法グループのヘッダー行
+ * 親タグのヘッダー行
  *
- * シェブロン（展開/折りたたみ） + チェックボックス + プレフィックス名 + メニュー
+ * シェブロン（展開/折りたたみ） + チェックボックス + 親タグ名 + メニュー。
+ * リネームはメニュー→ `onRenameGroup` で親側が `RenameTagPopover` を開く。
  */
 export function GroupHeader({
   label,
@@ -90,10 +86,6 @@ export function GroupHeader({
   onDeleteGroup,
   onRowClick,
   highlighted = false,
-  renameEditing = false,
-  onSaveRename,
-  onDoneRenameEditing,
-  renameExistingNames,
 }: GroupHeaderProps) {
   const t = useTranslations();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -138,169 +130,141 @@ export function GroupHeader({
       <span className="ml-2 shrink-0">
         <TagIcon icon={currentIcon ?? null} color={displayColor} size="sm" />
       </span>
-      <span className={cn('ml-2 min-w-0', renameEditing ? 'flex-1' : undefined)}>
-        <InlineTagNameEdit
-          value={label}
-          onSave={onSaveRename ?? (() => undefined)}
-          existingNames={renameExistingNames ?? []}
-          editing={renameEditing}
-          onDoneEditing={onDoneRenameEditing ?? (() => undefined)}
-          ariaLabel={label}
-          className="truncate"
-        />
-      </span>
-      {!renameEditing && (
-        <>
-          {/* chevron: 親行 onClick に波及させず、折りたたみのみを担当する独立ボタン */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleCollapse();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={
-              collapsed ? t('calendar.filter.expandGroup') : t('calendar.filter.collapseGroup')
-            }
-            aria-expanded={!collapsed}
-            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target (既存 👁/⋯ と同じパターン)
-            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 before:absolute before:-inset-2 before:content-['']"
-          >
-            <ChevronRight
-              className={cn('size-4 transition-transform', !collapsed && 'rotate-90')}
-            />
-          </button>
+      <span className="text-foreground ml-2 min-w-0 truncate">{label}</span>
 
-          <div className="flex-1" />
-        </>
-      )}
+      {/* chevron: 親行 onClick に波及させず、折りたたみのみを担当する独立ボタン */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleCollapse();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={
+          collapsed ? t('calendar.filter.expandGroup') : t('calendar.filter.collapseGroup')
+        }
+        aria-expanded={!collapsed}
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target (既存 👁/⋯ と同じパターン)
+        className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg transition-colors duration-150 before:absolute before:-inset-2 before:content-['']"
+      >
+        <ChevronRight className={cn('size-4 transition-transform', !collapsed && 'rotate-90')} />
+      </button>
 
-      {!renameEditing && (
-        <>
-          {/* 👁 フィルタートグル */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCheckedChange();
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            className={cn(
-              "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
-              checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
-              isMobile && 'opacity-100',
-            )}
-            aria-label={
-              checked || indeterminate ? t('calendar.filter.hide') : t('calendar.filter.show')
-            }
-          >
-            {checked || indeterminate ? (
-              <Eye className="size-3.5" />
-            ) : (
-              <EyeOff className="size-3.5" />
-            )}
-          </button>
+      <div className="flex-1" />
 
-          <div className="w-1 shrink-0" />
-        </>
-      )}
+      {/* 👁 フィルタートグル */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onCheckedChange();
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={cn(
+          "text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg transition-opacity before:absolute before:-inset-2 before:content-['']",
+          checked || indeterminate ? 'opacity-0 group-hover/item:opacity-100' : 'opacity-100',
+          isMobile && 'opacity-100',
+        )}
+        aria-label={
+          checked || indeterminate ? t('calendar.filter.hide') : t('calendar.filter.show')
+        }
+      >
+        {checked || indeterminate ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+      </button>
+
+      <div className="w-1 shrink-0" />
 
       {/* Menu */}
-      {!renameEditing && (
-        <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              aria-label={t('calendar.filter.tagMenu')}
-              // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="right">
-            {isMobile ? (
+      <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t('calendar.filter.tagMenu')}
+            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- pseudo-element touch target
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover relative flex size-6 shrink-0 items-center justify-center rounded-lg opacity-0 transition-opacity group-focus-within/item:opacity-100 group-hover/item:opacity-100 before:absolute before:-inset-2.5 before:content-[''] [@media(hover:none)]:opacity-100"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <MoreHorizontal className="size-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="right">
+          {isMobile ? (
+            <DropdownMenuItem onClick={onShowOnlyGroup}>
+              <Eye className="mr-2 size-4" />
+              {t('calendar.filter.showOnlyThis')}
+            </DropdownMenuItem>
+          ) : (
+            <>
+              {onAddTagToGroup && (
+                <DropdownMenuItem onClick={onAddTagToGroup}>
+                  <Plus className="mr-2 size-4" />
+                  {t('calendar.filter.addTagToGroup')}
+                </DropdownMenuItem>
+              )}
+              {onRenameGroup && (
+                <DropdownMenuItem onClick={onRenameGroup}>
+                  <Pencil className="mr-2 size-4" />
+                  {t('calendar.filter.rename')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Palette className="mr-2 size-4" />
+                  {t('calendar.filter.changeColor')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
+                  <ColorPaletteMenuItems
+                    selectedColor={displayColor}
+                    onColorSelect={onColorChange}
+                  />
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              {onIconChange && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Smile className="mr-2 size-4" />
+                    {t('calendar.filter.changeIcon')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
+                    <IconPickerDropdownItems value={currentIcon ?? null} onChange={onIconChange} />
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
+              {/* --- アクション --- */}
+              <DropdownMenuSeparator />
+
+              {onUngroupTags && (
+                <DropdownMenuItem onClick={onUngroupTags}>
+                  <Unlink className="mr-2 size-4" />
+                  {t('calendar.filter.ungroupTags')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onShowOnlyGroup}>
                 <Eye className="mr-2 size-4" />
                 {t('calendar.filter.showOnlyThis')}
               </DropdownMenuItem>
-            ) : (
-              <>
-                {onAddTagToGroup && (
-                  <DropdownMenuItem onClick={onAddTagToGroup}>
-                    <Plus className="mr-2 size-4" />
-                    {t('calendar.filter.addTagToGroup')}
-                  </DropdownMenuItem>
-                )}
-                {onRenameGroup && (
-                  <DropdownMenuItem onClick={onRenameGroup}>
-                    <Pencil className="mr-2 size-4" />
-                    {t('calendar.filter.rename')}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 size-4" />
-                    {t('calendar.filter.changeColor')}
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent onClick={(e) => e.stopPropagation()}>
-                    <ColorPaletteMenuItems
-                      selectedColor={displayColor}
-                      onColorSelect={onColorChange}
-                    />
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                {onIconChange && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Smile className="mr-2 size-4" />
-                      {t('calendar.filter.changeIcon')}
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto p-2">
-                      <IconPickerDropdownItems
-                        value={currentIcon ?? null}
-                        onChange={onIconChange}
-                      />
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                )}
-                {/* --- アクション --- */}
-                <DropdownMenuSeparator />
-
-                {onUngroupTags && (
-                  <DropdownMenuItem onClick={onUngroupTags}>
-                    <Unlink className="mr-2 size-4" />
-                    {t('calendar.filter.ungroupTags')}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={onShowOnlyGroup}>
-                  <Eye className="mr-2 size-4" />
-                  {t('calendar.filter.showOnlyThis')}
+              {onViewStats && (
+                <DropdownMenuItem onClick={onViewStats}>
+                  <BarChart3 className="mr-2 size-4" />
+                  {t('calendar.filter.viewStats')}
                 </DropdownMenuItem>
-                {onViewStats && (
-                  <DropdownMenuItem onClick={onViewStats}>
-                    <BarChart3 className="mr-2 size-4" />
-                    {t('calendar.filter.viewStats')}
-                  </DropdownMenuItem>
-                )}
+              )}
 
-                {/* --- 破壊的操作 --- */}
-                {onDeleteGroup && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
-                      <Trash2 className="mr-2 size-4" />
-                      {t('calendar.filter.deleteGroup.label')}
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+              {/* --- 破壊的操作 --- */}
+              {onDeleteGroup && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDeleteGroup} variant="destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    {t('common.actions.delete')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

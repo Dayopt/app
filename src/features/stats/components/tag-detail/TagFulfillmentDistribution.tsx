@@ -15,7 +15,6 @@ const SCORE_CONFIG = [
 
 interface TagFulfillmentDistributionProps {
   tagId: string;
-  tagName?: string | undefined;
 }
 
 /**
@@ -23,10 +22,10 @@ interface TagFulfillmentDistributionProps {
  *
  * 😊/😐/😞 の割合をバーで表示。
  */
-export function TagFulfillmentDistribution({ tagId, tagName }: TagFulfillmentDistributionProps) {
+export function TagFulfillmentDistribution({ tagId }: TagFulfillmentDistributionProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const { data: overview, isPending } = useTagOverviewData(tagId);
   const data = overview?.fulfillmentDist ?? null;
 
   if (isPending) {
