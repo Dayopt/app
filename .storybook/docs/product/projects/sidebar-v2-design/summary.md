@@ -2,7 +2,7 @@
 
 完了日: 2026-04-24
 
-> **overview**: [overview.md](./overview.md) (Phase 2-A 全体 plan `docs/design/sidebar-redesign-plan.md` §7 Phase 2-D を継承)
+> **overview**: [overview.md](./overview.md) (Phase 2-A 全体 plan `../sidebar-redesign/overview.md` §7 Phase 2-D を継承)
 
 ## Project ゴール
 
@@ -58,7 +58,7 @@ Phase 2-C で確立した 3 モード構造 (Calendar / Stats / AI) の上に、
 
 ## 関連リンク
 
-- 親 Plan: `docs/design/sidebar-redesign-plan.md` §7 Phase 2-D
+- 親 Plan: `../sidebar-redesign/overview.md` §7 Phase 2-D
 - 全体設計: [overview.md](./overview.md)
 - 先行 Project: `sidebar-3-mode-structure`
 - 並行 Project: `feature-colocation-migration` (進行中)

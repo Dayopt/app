@@ -202,15 +202,15 @@ Portal 方式は抽象化コストがあり、**妥協案で問題が顕在化�
 
 ### 8.1 Step 一覧
 
-| Step | 内容                                                     | 触るファイル                                                                                         | ゲート                           | 実績                                                                                                                                                                                     |
-| ---- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | grep 影響範囲確定                                        | -                                                                                                    | 参照一覧報告                     | ✅ 参照 6 箇所特定 (`SidebarPageNav` / `BottomTabBar` / `GlobalOverlays` / `TagFlatList` / store / Storybook mock)                                                                       |
-| 2    | `SidebarPageNav` を `<Link>` ベース化                    | SidebarPageNav.tsx, PageNav.tsx                                                                      | typecheck / lint / 手動          | ✅ 動的 href を `useMemo` + `buildCalendarPath` / `buildStatsPath` で算出。nav セマンティクスに置換                                                                                      |
-| 3    | `BottomTabBar` を `<Link>` ベース化                      | BottomTabBar.tsx, BottomTabBar.test.tsx                                                              | typecheck / lint / test          | ✅ `useRouter` / `useClientRouterStore` 依存撤去。test は pushState spy → href 属性 assertion に書き換え                                                                                 |
-| 4    | `ClientPageRouter` 削除 + `(app)/layout.tsx` 更新        | ClientPageRouter.tsx (削除), layout.tsx                                                              | **8.2 の手動確認シナリオ全通過** | ✅ 事前設計 ([step-4-detail.md](../../.storybook/docs/product/projects/sidebar-routing-unification/step-4-detail.md)) で「dead code 化済み」と確認してから削除。`_composition/` 自動削除 |
-| 5    | `GlobalOverlays` + `TagFlatList` の `resetToServer` 撤去 | GlobalOverlays.tsx, TagFlatList.tsx                                                                  | typecheck / 手動 Inspector       | ✅ import + 呼び出し撤去。Inspector auto-close の既存欠損 (X1) が手動確認で顕在化 → 先行 fix として処理                                                                                  |
-| 6    | `useClientRouterStore` 削除 + Storybook mock 更新        | useClientRouterStore.ts (削除), .storybook/mocks/stores.tsx, \*.stories.tsx                          | **8.3 の Storybook 起動ゲート**  | ✅ grep 0 件確認後に `git rm`。Storybook mock 側の残骸参照もクリーンアップ                                                                                                               |
-| 7    | E2E smoke 追加 + commit                                  | mode-switching.spec.ts / deep-link.spec.ts / sidebar-persistence.spec.ts / mobile-navigation.spec.ts | test:e2e:smoke                   | ✅ 3 spec 新規 + `mobile-navigation.spec.ts` の hidden regression (X2) を link セレクタに書き換え                                                                                        |
+| Step | 内容                                                     | 触るファイル                                                                                         | ゲート                           | 実績                                                                                                                                                 |
+| ---- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | grep 影響範囲確定                                        | -                                                                                                    | 参照一覧報告                     | ✅ 参照 6 箇所特定 (`SidebarPageNav` / `BottomTabBar` / `GlobalOverlays` / `TagFlatList` / store / Storybook mock)                                   |
+| 2    | `SidebarPageNav` を `<Link>` ベース化                    | SidebarPageNav.tsx, PageNav.tsx                                                                      | typecheck / lint / 手動          | ✅ 動的 href を `useMemo` + `buildCalendarPath` / `buildStatsPath` で算出。nav セマンティクスに置換                                                  |
+| 3    | `BottomTabBar` を `<Link>` ベース化                      | BottomTabBar.tsx, BottomTabBar.test.tsx                                                              | typecheck / lint / test          | ✅ `useRouter` / `useClientRouterStore` 依存撤去。test は pushState spy → href 属性 assertion に書き換え                                             |
+| 4    | `ClientPageRouter` 削除 + `(app)/layout.tsx` 更新        | ClientPageRouter.tsx (削除), layout.tsx                                                              | **8.2 の手動確認シナリオ全通過** | ✅ 事前設計 ([step-4-detail.md](../sidebar-routing-unification/step-4-detail.md)) で「dead code 化済み」と確認してから削除。`_composition/` 自動削除 |
+| 5    | `GlobalOverlays` + `TagFlatList` の `resetToServer` 撤去 | GlobalOverlays.tsx, TagFlatList.tsx                                                                  | typecheck / 手動 Inspector       | ✅ import + 呼び出し撤去。Inspector auto-close の既存欠損 (X1) が手動確認で顕在化 → 先行 fix として処理                                              |
+| 6    | `useClientRouterStore` 削除 + Storybook mock 更新        | useClientRouterStore.ts (削除), .storybook/mocks/stores.tsx, \*.stories.tsx                          | **8.3 の Storybook 起動ゲート**  | ✅ grep 0 件確認後に `git rm`。Storybook mock 側の残骸参照もクリーンアップ                                                                           |
+| 7    | E2E smoke 追加 + commit                                  | mode-switching.spec.ts / deep-link.spec.ts / sidebar-persistence.spec.ts / mobile-navigation.spec.ts | test:e2e:smoke                   | ✅ 3 spec 新規 + `mobile-navigation.spec.ts` の hidden regression (X2) を link セレクタに書き換え                                                    |
 
 ### 8.2 Step 4 手動確認シナリオ (ClientPageRouter 削除後の全通過が必須)
 
@@ -282,7 +282,7 @@ Step 2〜7 を以下の 3〜4 コミットに整理:
 
 Phase 2-B 実施 (8 コミット / 2026-04-22 完了) で得た、設計書策定時 (Phase 2-A) には見えていなかった知見を記録する。Phase 2-C 着手時の判断材料となる。
 
-詳細な Phase 2-C 詳細設計は [overview.md](../../.storybook/docs/product/projects/sidebar-3-mode-structure/overview.md) を参照。
+詳細な Phase 2-C 詳細設計は [overview.md](../sidebar-3-mode-structure/overview.md) を参照。
 
 ### 10.1 ClientPageRouter は実質 dead code だった
 
@@ -292,7 +292,7 @@ Step 2 (SidebarPageNav Link 化) + Step 3 (BottomTabBar Link 化) の時点で `
 - これは Sidebar 静止が `ClientPageRouter` の寄与ではなく、**`desktop-layout.tsx` の layout スコープ (Next.js partial rendering)** で既に実現されていたことを意味する
 - Phase 2-A で前提としていた「Sidebar ちらつき対策」の必要性自体が薄い
 
-**Phase 2-C への影響**: Sidebar 外殻分離の Option 選択 (Phase 2-A §4.3) を再評価し、Option Y (SidebarContent の pathname ディスパッチ) を推奨する判断根拠となった。詳細は [overview.md §4](../../.storybook/docs/product/projects/sidebar-3-mode-structure/overview.md#4-sidebar-外殻分離-option-比較と推奨)。
+**Phase 2-C への影響**: Sidebar 外殻分離の Option 選択 (Phase 2-A §4.3) を再評価し、Option Y (SidebarContent の pathname ディスパッチ) を推奨する判断根拠となった。詳細は [overview.md §4](../sidebar-3-mode-structure/overview.md#4-sidebar-外殻分離-option-比較と推奨)。
 
 ### 10.2 SSR prefetch が CSR バイパスで壊れていた (副次的に解消)
 
@@ -303,13 +303,13 @@ Step 2 (SidebarPageNav Link 化) + Step 3 (BottomTabBar Link 化) の時点で `
 
 Step 4 での `ClientPageRouter` 撤去で、この欠損が副次的に解消された。初回モード遷移時の体感速度が向上しているはず (未計測)。
 
-**Phase 2-C への影響**: `(modes)` 移動後も prefetch 経路 (各 page.tsx) を保持することを制約として明記 ([overview.md §9.1 R3](../../.storybook/docs/product/projects/sidebar-3-mode-structure/overview.md#91-phase-2-a-r1-r10-の再評価))。
+**Phase 2-C への影響**: `(modes)` 移動後も prefetch 経路 (各 page.tsx) を保持することを制約として明記 ([overview.md §9.1 R3](../sidebar-3-mode-structure/overview.md#91-phase-2-a-r1-r10-の再評価))。
 
 ### 10.3 `stats/layout.tsx` の二重定義経路が解消された
 
 `ClientPageRouter` が `clientPage === 'stats'` で `<StatsPage />` を直接レンダリングしていた経路では `stats/layout.tsx` (= `StatsLayoutShell` ラッパー) が**bypass されていた**。Step 4 で撤去したことで、常に `stats/layout.tsx` 経由になり二重定義が解消。
 
-**Phase 2-C への影響**: `(modes)/stats/layout.tsx` の維持が正当化された ([overview.md §12 相談事項 C](../../.storybook/docs/product/projects/sidebar-3-mode-structure/overview.md#12-相談事項-ユーザー判断が必要))。
+**Phase 2-C への影響**: `(modes)/stats/layout.tsx` の維持が正当化された ([overview.md §12 相談事項 C](../sidebar-3-mode-structure/overview.md#12-相談事項-ユーザー判断が必要))。
 
 ### 10.4 Inspector 自動 close の既存欠損が手動確認で顕在化
 
@@ -338,17 +338,17 @@ Step 4 の手動確認シナリオ 6 (Inspector → View Stats) で、Inspector 
 Phase 2-A §8.4 で想定した「Step 5-7 一括 = 1 コミット」案は blast radius が過大で、実際には各 Step を独立コミットに戻した。結果 8 コミット。
 
 - **教訓**: 「cleanup 系コミットの一括化」は魅力的だが、各 Step の検証ゲートを独立に通したい場合は分離が正解
-- Phase 2-C の Step 分割 ([overview.md §10.1](../../.storybook/docs/product/projects/sidebar-3-mode-structure/overview.md#101-step-一覧)) では最初から 6 Step / 6-7 コミットで計画する
+- Phase 2-C の Step 分割 ([overview.md §10.1](../sidebar-3-mode-structure/overview.md#101-step-一覧)) では最初から 6 Step / 6-7 コミットで計画する
 
 ---
 
 ## Critical Files
 
 - ~~src/app/[locale]/(app)/\_composition/ClientPageRouter.tsx~~ — ✅ **2-B で削除済** (`ab5048a8c`)
-- [src/app/[locale]/(app)/\_shell/SidebarPageNav.tsx](<../../src/app/[locale]/(app)/_shell/SidebarPageNav.tsx>) — ✅ 2-B で `<Link>` 化 (`9918c31c9`)、2-C で 3 タブ化
-- [src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>) — ✅ 2-B で `<Link>` 化 (`dedc00dae`)、2-C で 4 タブ化
-- [src/app/[locale]/(app)/\_shell/SidebarContent.tsx](<../../src/app/[locale]/(app)/_shell/SidebarContent.tsx>) — 2-C で mode ディスパッチに拡張 (Option Y)
-- [src/app/[locale]/(app)/layout.tsx](<../../src/app/[locale]/(app)/layout.tsx>) — ✅ 2-B で役割縮小、2-C で `APP_NAMESPACES` に `'ai'` 追加
+- [src/app/[locale]/(app)/\_shell/SidebarPageNav.tsx](<../../../../src/app/[locale]/(app)/_shell/SidebarPageNav.tsx>) — ✅ 2-B で `<Link>` 化 (`9918c31c9`)、2-C で 3 タブ化
+- [src/app/[locale]/(app)/\_shell/BottomTabBar.tsx](<../../../../src/app/[locale]/(app)/_shell/BottomTabBar.tsx>) — ✅ 2-B で `<Link>` 化 (`dedc00dae`)、2-C で 4 タブ化
+- [src/app/[locale]/(app)/\_shell/SidebarContent.tsx](<../../../../src/app/[locale]/(app)/_shell/SidebarContent.tsx>) — 2-C で mode ディスパッチに拡張 (Option Y)
+- [src/app/[locale]/(app)/layout.tsx](<../../../../src/app/[locale]/(app)/layout.tsx>) — ✅ 2-B で役割縮小、2-C で `APP_NAMESPACES` に `'ai'` 追加
 - ~~src/lib/stores/useClientRouterStore.ts~~ — ✅ **2-B で削除済** (`4192f2fe3`)
-- [src/app/[locale]/(app)/\_overlays/GlobalOverlays.tsx](<../../src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx>) — ✅ 2-B で `resetToServer` 撤去 (`69e1df5cc`) + Inspector pathname-watch 追加 (`61c9071ec`)
-- [src/features/calendar/components/tag-filter/components/TagFlatList.tsx](../../src/features/calendar/components/tag-filter/components/TagFlatList.tsx) — ✅ 2-B で import 削除
+- [src/app/[locale]/(app)/\_overlays/GlobalOverlays.tsx](<../../../../src/app/[locale]/(app)/_overlays/GlobalOverlays.tsx>) — ✅ 2-B で `resetToServer` 撤去 (`69e1df5cc`) + Inspector pathname-watch 追加 (`61c9071ec`)
+- [src/features/calendar/components/tag-filter/components/TagFlatList.tsx](../../../../src/features/calendar/components/tag-filter/components/TagFlatList.tsx) — ✅ 2-B で import 削除

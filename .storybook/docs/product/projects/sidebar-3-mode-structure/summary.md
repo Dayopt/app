@@ -2,7 +2,7 @@
 
 完了日: 2026-04-23
 
-> **overview**: [overview.md](./overview.md) (Phase 2-A 全体 plan `docs/design/sidebar-redesign-plan.md` §4-5 を起点とし、Phase 2-B 実施後の知見を反映して Phase 2-C を詳細化)
+> **overview**: [overview.md](./overview.md) (Phase 2-A 全体 plan `../sidebar-redesign/overview.md` §4-5 を起点とし、Phase 2-B 実施後の知見を反映して Phase 2-C を詳細化)
 
 ## Project ゴール
 
@@ -43,7 +43,7 @@ Phase 2-C は route group 移動を伴うため、多数の rename を含む。n
 
 ## 関連リンク
 
-- 親 Plan: `docs/design/sidebar-redesign-plan.md` §4-5
+- 親 Plan: `../sidebar-redesign/overview.md` §4-5
 - 全体設計: [overview.md](./overview.md)
 - Step 2 詳細: [step-2-detail.md](./step-2-detail.md) — Sidebar モード別分離 (Option Y)
 - Step 3 詳細: [step-3-detail.md](./step-3-detail.md) — AI モード stub

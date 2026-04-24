@@ -4,7 +4,7 @@
 > **対象**: Dayopt `src/app/[locale]/(app)/**` の視覚デザイン (PageNav / BottomTabBar / Sidebar 外殻)
 > **前提**: Phase 2-C (3 モード layout 再編) 完了済 (最終コミット `70ef2ed51` / 2026-04-23)
 > **性質**: 視覚デザイン主軸の refactor (routing / 構造変更なし)
-> **親設計**: `docs/design/sidebar-redesign-plan.md` §7 Phase 2-D を継承
+> **親設計**: `../sidebar-redesign/overview.md` §7 Phase 2-D を継承
 
 ## Context
 

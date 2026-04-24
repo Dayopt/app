@@ -2,7 +2,7 @@
 
 完了日: 2026-04-22
 
-> **overview**: 本 project は Phase 2-A の全体 plan (`docs/design/sidebar-redesign-plan.md` §8) を overview として継承する。Phase 2-B 固有の全体設計書は新設していない。本 project 配下には Step 4 詳細設計 (`step-4-detail.md`) のみ配置。
+> **overview**: 本 project は Phase 2-A の全体 plan (`../sidebar-redesign/overview.md` §8) を overview として継承する。Phase 2-B 固有の全体設計書は新設していない。本 project 配下には Step 4 詳細設計 (`step-4-detail.md`) のみ配置。
 
 ## Project ゴール
 
@@ -40,6 +40,6 @@ Phase 2-B 実施中に「**Sidebar は既に layout スコープで静止して�
 
 ## 関連リンク
 
-- 親 Plan: `docs/design/sidebar-redesign-plan.md` §8 Phase 2-B 実装プロンプト骨子
+- 親 Plan: `../sidebar-redesign/overview.md` §8 Phase 2-B 実装プロンプト骨子
 - Step 4 詳細設計: [step-4-detail.md](./step-4-detail.md)
 - 後続 Project: `sidebar-3-mode-structure`

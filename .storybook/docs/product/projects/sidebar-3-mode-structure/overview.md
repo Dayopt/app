@@ -1,7 +1,7 @@
 # Phase 2-C 詳細設計: 3 モード layout 再編
 
 > **策定日**: 2026-04-22
-> **Parent**: `docs/design/sidebar-redesign-plan.md` §4-5
+> **Parent**: `../sidebar-redesign/overview.md` §4-5
 > **前提**: Phase 2-B 完了 (ClientPageRouter 撤去 + Link 化 / 8 コミット)
 > **Phase**: 2-C (実施中 — Step C-1 完了)
 > **スコープ**: `(modes)` route group 導入 + Sidebar モード別分離 + AI stub + Mobile 4 タブ化 + Desktop PageNav 3 タブ化

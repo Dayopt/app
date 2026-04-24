@@ -2,7 +2,7 @@
 
 > **策定日**: 2026-04-22
 > **対象**: `src/app/[locale]/(app)/_composition/ClientPageRouter.tsx` 撤去
-> **親 Plan**: `docs/design/sidebar-redesign-plan.md` §8 Phase 2-B 実装プロンプト骨子
+> **親 Plan**: `../sidebar-redesign/overview.md` §8 Phase 2-B 実装プロンプト骨子
 
 ## 結論 (TL;DR)
 
@@ -259,7 +259,7 @@ Next.js App Router の partial rendering 仕様:
 
 ## 5. 手動確認シナリオの詳細化 (Step 4 固有)
 
-親 plan (`docs/design/sidebar-redesign-plan.md` §8.2 Step 4 手動確認シナリオ) の 6 項目を Step 4 観点で詳細化。
+親 plan (`../sidebar-redesign/overview.md` §8.2 Step 4 手動確認シナリオ) の 6 項目を Step 4 観点で詳細化。
 
 ### シナリオ 1: Desktop Calendar ↔ Stats 往復
 
