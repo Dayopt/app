@@ -56,7 +56,7 @@ const tagDateRangeInput = z.object({
 });
 
 const childTagInput = z.object({
-  prefix: z.string().min(1),
+  parentTagId: z.string().uuid(),
   startDate: z.string().datetime({ offset: true }).optional(),
   endDate: z.string().datetime({ offset: true }).optional(),
 });
@@ -71,7 +71,6 @@ const childTagInput = z.object({
 
 const tagOverviewInput = z.object({
   tagId: z.string().uuid(),
-  tagName: z.string().min(1),
   startDate: z.string().datetime({ offset: true }).optional(),
   endDate: z.string().datetime({ offset: true }).optional(),
 });
@@ -102,10 +101,6 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
           ...dateRange,
         };
 
-        // コロン記法のprefixを抽出（子タグ取得用）
-        const colonIndex = input.tagName.indexOf(':');
-        const prefix = colonIndex >= 0 ? input.tagName.substring(0, colonIndex) : input.tagName;
-
         const [
           cumulativeRes,
           fulfillmentRes,
@@ -124,7 +119,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
             supabase.rpc('get_tag_dow_distribution', rpcParams),
             supabase.rpc('get_child_tag_breakdown', {
               p_user_id: userId,
-              p_prefix: prefix,
+              p_parent_tag_id: input.tagId,
               ...dateRange,
             }),
           ]),
@@ -476,11 +471,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
     }),
 
   // ---------------------------------------------------------------------------
-  // Child Tag Breakdown (colon notation)
+  // Child Tag Breakdown
   // ---------------------------------------------------------------------------
 
   getChildTagBreakdown: proProcedure
-    .meta({ description: 'コロン記法子タグ内訳' })
+    .meta({ description: '子タグ内訳' })
     .input(childTagInput)
     .query(async ({ ctx, input }) => {
       try {
@@ -489,7 +484,7 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
         const { data, error } = await traceDbQuery('tag_stats.get_child_tag_breakdown', async () =>
           supabase.rpc('get_child_tag_breakdown', {
             p_user_id: userId,
-            p_prefix: input.prefix,
+            p_parent_tag_id: input.parentTagId,
             ...buildDateRange(input.startDate, input.endDate),
           }),
         );

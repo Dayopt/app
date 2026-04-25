@@ -44,7 +44,12 @@ interface TagRowProps {
   tagColor?: string | null | undefined;
   onTagChange: (tagId: string | null) => void;
   /** タグ作成コールバック（上位で useCreateTag を呼ぶ） */
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => void;
   /** 統計を見るコールバック */
   onViewStats?: (() => void) | undefined;
   /** 削除ボタンのコールバック */
@@ -87,8 +92,8 @@ export function TagRow({
   );
 
   const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null, icon?: string | null) => {
-      await onCreateAndSelect(name, color, icon);
+    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
+      await onCreateAndSelect(name, color, icon, parentId);
       setSelectorOpen(false);
     },
     [onCreateAndSelect],

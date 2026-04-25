@@ -6,7 +6,91 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
-## 2026-04-22
+## 2026-04-24
+
+### sidebar-redesign umbrella を close-out しつつ、TagFlatList の DnD を公式パターンで作り直した日
+
+21 コミット、100 ファイル変更 / +9091 / -2167。午前は workflow 規約の新設（規模別判定 + project 命名規則）と、それに合わせて sidebar-redesign umbrella と子 3 project（routing-unification / 3-mode-structure / v2-design）を `.storybook/docs/product/projects/` に一斉アーカイブ。同時に Phase 2-E（feature-colocation-migration）の WIP は umbrella close-out 優先で撤退。午後は AI feature scaffolding（barrel + aiRouter stub + anthropic-client wrapper + L2 ESLint 境界）の先行配置、TagFlatList を dnd-kit Multiple Containers ベースにゼロから書き直し、parent_id 階層を DB / service / hooks に復活、タグ作成・リネーム UI を Popover に統合した上で rename だけ global Dialog modal に再移行。最後に i18n の auth namespace 漏れと Radix Popover の auto-focus 競合を fix。純増 6924 行だが、半分は TagFlatList rewrite と parent_id 階層の復活、もう半分は設計書の path 移動と summary.md 追加。
+
+#### やったこと
+
+**workflow 規約と project 命名の統一（5 件）**: `.claude/rules/workflow.md` に大規模/中規模/小規模の判定基準と進め方、project 命名規則 `{domain}-{action}[-{variant}]`、設計書保存場所を明文化。同時に既存の Phase 2-B/2-C/2-D 設計書を新命名（sidebar-routing-unification / sidebar-3-mode-structure / sidebar-v2-design）に rename + path 移動。`docs/design/sidebar-redesign-plan.md` を `.storybook/docs/product/projects/sidebar-redesign/` にディレクトリ昇格して umbrella の summary.md を新規作成。projects/README.md の Active / Completed を整理。
+
+**Phase 2-E WIP の撤退（1 件）**: feature-colocation-migration の WIP（AiSidebar / AiMainContent / aiRouter を `src/features/ai/` 配下に移動する作業）を全 revert。AiSidebar を `_shell/` 配下に戻し、`src/features/ai/components/{main,thread}` を削除、SidebarContent / page / eslint 設定の worktree modification も全て revert。umbrella close-out を優先する判断。
+
+**AI sidebar の余白統一と β バッジ（4 件）**: AI sidebar の SidebarSection 内 padding を Calendar の「外 wrapper px-2 + 各行 px-2 py-2」二重構造に揃え、外側 wrapper の px-2 漏れも修正。AI モードの見出しを SidebarSection に統一、bottom tab に β バッジ追加。
+
+**AI feature scaffolding（3 件）**: `src/features/ai/` に barrel / aiRouter（空 stub）/ types を配置、`@anthropic-ai/sdk` を追加して factory pattern wrapper（`anthropic-client.ts`）を用意、tRPC root に ai namespace 登録、eslint.config.mjs に L2 barrel-only 境界追加。設計書を `.storybook/docs/product/projects/ai-feature-scaffolding/` にアーカイブして summary 追加、後続 project watching-ai-implementation の overview を draft。
+
+**TagFlatList の dnd-kit Multiple Containers 書き直し（1 件）**: 自作の DnD ロジック（sectionScopedCollisionDetection / trailing click guard / 仮想化統合）が絡み合って動作不能になっていた問題をリセット。公式 Multiple Containers 準拠で chunks 方式に再構築（solo / group block を `__root__` SortableContext、子タグを nested SortableContext）。仮想化は一旦無効化、cross-container drop は sidebar 側 noop。playground を 2 つ追加（`/playground/dnd-multi-container` で公式参照実装、`/playground/dnd-tags` で Dayopt tags 適用版）。
+
+**parent_id 階層と Popover ベースのタグ UI 復活（1 件、巨大）**: Sidebar のタグ作成フローを Dialog+inline から Popover に統合、リネームも同じ Popover パターンに統一。CreateTagPopover（色 / アイコン / グループ / 名前）と RenameTagPopover を新規追加し、CalendarFilterList / TagFlatList / FilterItem / GroupHeader / TagQuickSelector を Popover ベースに移行。InlineTagCreateRow / InlineTagNameEdit / CreateTagButton は削除。DB 側は parent_id による親子 2 階層を schema / service / router / hooks / types に復活（migration: `20260424000000_restore_tag_parent_hierarchy`）。
+
+**タグリネーム UI の global Dialog modal 化（1 件）**: 同日中に CreateTagPopover / RenameTagPopover を入れたが、リネームは複数の呼び出し起点（FilterItem / TagFlatList の SortableParentBlock / SortableTagItem）から開かれるため、各側で popover open state を持つ構造になってしまった。useShellStore の activeSheet に 'tagRename' を追加、Providers で GlobalTagRenameModal を単一 mount する形にリファクタ。RenameTagPopover 関連 3 ファイルを削除。
+
+**fix と DB 型再生成（4 件）**: Radix Popover の `onOpenAutoFocus` と Input の autoFocus 競合で CreateTagPopover が即時クローズする問題を fix（onOpenAutoFocus で preventDefault）。Supabase 型を再生成し `batch_reorder_tags_hierarchy` の `p_parent_ids` シグネチャ変更（`(string | null)[]` → `string[]`）に追従、null 渡しは `as never` で variance を逃す。`.claudeignore` / `quality-reports/.gitkeep` を削除。(app) layout の APP_NAMESPACES に auth を追加（SessionTimeoutDialog の MISSING_MESSAGE fix）。
+
+#### なぜ今日この作業をしたか
+
+Workflow 規約と project 命名の統一は、ここ 1 ヶ月で「Phase 2-B」「Phase 2-C」のような記号命名が増えてきて、後から開いた時に内容が思い出せないのと、umbrella plan が完了しても `docs/design/` 配下に残り続けて Active / Completed の境界が曖昧になっていたのを直したかった。命名を `{domain}-{action}` に揃えると、ファイル名だけで「sidebar の routing を unification する」「sidebar の 3 mode 構造を作る」と読めるので、grep / 設計書一覧でのスキャン速度が上がる。完了 project は `.storybook/docs/product/projects/{name}/` にディレクトリ形式で昇格させ、summary.md で「成果 / ハマり点 / 引き継ぎ」を残す形にしたのも同じ動機（後で参照可能な状態にする）。
+
+Phase 2-E WIP の撤退は umbrella close-out との優先順位の問題。feature-colocation-migration を進めると AiSidebar の path 変更が大量に発生して umbrella の summary.md を書く前に状態が複雑化する。「umbrella を Completed にする時点で worktree がきれい」を優先する判断で、Phase 2-E は独立 project として再着手するかも含めて保留。
+
+AI feature scaffolding は watching-ai-implementation（後続の本実装 project）の前段として「先に器を作る」判断。`src/features/ai/` の barrel / aiRouter stub / anthropic-client wrapper / L2 ESLint 境界を確定させてから本実装に入ると、procedure を追加するたびに境界違反やエクスポート構造の手戻りがなくなる。`@anthropic-ai/sdk` を直接 import するのではなく factory pattern wrapper 経由でアクセスする決まりも、テストでモック差し替えが必要になった時の準備。
+
+TagFlatList の dnd-kit 書き直しは、ここ数日「自作 collision detection が絡み合って動作不能」という症状が再現していて、部分修正では追いつかないと判断した。playground を 2 つ用意したのは、公式サンプルをそのまま動かしてから Dayopt tags を適用するアプローチを取りたかったから（公式パターンの不変式を壊さずに本番に持ち込む）。仮想化は一旦無効化したが、これはリスト長で実害が出てから再導入する。
+
+parent_id 階層の復活は、過去に「flat 構造で十分」と判断して階層を抜いた経緯があるが、グループ内タグの並び替え / 表示順 / 親色の継承などで「やっぱり親子関係が必要」という需要が複数箇所から出てきた。Popover ベースの UI 統合とセットでやることで、UI 側で「親グループの中にタグを作る」フローを自然に表現できる。
+
+タグリネーム UI の global modal 化は、Popover ベースで一度実装してみたら呼び出し起点が思っていたより多く、各側で open state を持つ構造が複雑化したため。リネームは「対象タグが特定できれば UI の起点はどこでもよい」性質なので、global Dialog modal を Providers で単一 mount し useShellStore の activeSheet で開閉する形が適切。同日中の rewrite だが「実装してみてから判断する」のは妥当な進め方だった。
+
+i18n の auth namespace 漏れは Sentry / runtime の MISSING_MESSAGE で発覚。(app) layout で SessionTimeoutDialog が mount されるが auth namespace が APP_NAMESPACES に入っていなかった。route group ごとの namespace 配信は静的解析で検出しにくいので、shared component が touch する namespace を意識的に拾う必要がある。
+
+#### Claudeの所感
+
+**「umbrella を閉じる」と「次の作業を始める」の優先順位**: Phase 2-E の WIP を抱えたまま umbrella close-out すると、worktree が dirty な状態で summary.md を書くことになり「何が完了で何が WIP か」の境界が曖昧になる。今日の判断（Phase 2-E を全 revert して umbrella を閉じる）は、project の close-out コストを最小化する観点で正しい選択だった。次回からは umbrella project の close-out 直前に「子 project ではない WIP を抱えていないか」を必ず確認する習慣を入れたい。
+
+**自作ロジックは「動かない」が露呈する前に書き直しを判断する**: TagFlatList の自作 DnD は段階的に複雑化していて、collision detection / trailing click guard / 仮想化統合の組み合わせで「ここを直すとあそこが壊れる」状態だった。今日の rewrite は実は遅すぎた判断で、もっと早い段階（自作 collision detection を追加した時点）で公式パターンに移行する選択肢があった。`workflow.md` の「未知の発見リスクが高い」項目に「自作ロジックが 3 層以上絡んでいる」を追加してもいいかもしれない。
+
+**「実装してみてから判断する」を 1 日で 2 周回した日**: タグリネーム UI を Popover で実装 → 呼び出し側の構造を見て global modal に rewrite、というのは普通なら 2-3 日に分けて行う判断を 1 日で回した。これができたのは TagFlatList / FilterItem の構造が頭に乗ったままだったからで、コンテキストが暖まっている時に「実装 → 評価 → rewrite」を一気に回すのは効率がよい。一方でこのリズムは持続しないので、コンテキストが冷めた段階での rewrite は「翌日に持ち越して判断する」を default にしたい。
+
+---
+
+## 2026-04-23
+
+### 昨日の WIP を撤退させ、エントリ作成ポップアップを Inspector 流用で作り直した日
+
+21 コミット、52 ファイル変更 / +1800 / -390。午前は前日 WIP のエントリ作成ポップアップを一旦 commit してから、Inspector の ScheduleCard 流用のミニマル UI に再設計する方向に舵を切り直し。同時に前日追加した `get_tag_duration_distribution` RPC を DROP migration で完全撤去、client 配線も削除。午後は PageNav v2（sidebar header 直下 + tooltip + transition 撤去）、モバイルのタグクイック作成 chip 行、AI モード stub、グループ内タグ色継承の撤廃を積んだ。純増 1410 行だが、中身は「独自 UI → Inspector 流用」と「histogram UI 撤退」の rewrite が大半。
+
+#### やったこと
+
+**エントリ作成ポップアップの再設計（10 件）**: 前日 WIP の独自 popover UI を一度 commit（本番データ接続 + undo 対応、sidebar タグ行 / GroupHeader 接続）してから、Inspector の ScheduleCard 流用のミニマル UI に rewrite。ヘッダー色を sidebar と揃え、入力エリアを Inspector のスケジュールカードに差し替え、タグ作成 Drawer も Inspector と同一構造に統一、最後に popover 配下の dead code / stale story を一括掃除。Entry 行に `forceSingleRow` オプションを追加して popover 内の compact 表示にも対応。
+
+**Duration distribution RPC の完全撤退（3 件）**: 前日追加した `get_tag_duration_distribution` RPC を DROP migration（`20260423000000_drop_get_tag_duration_distribution.sql`）で削除、client 側の tRPC / hook 配線も削除、pure 関数 `computeDurationDistribution` は境界テストだけ残して将来の再利用余地を確保。
+
+**PageNav v2 とモバイル導線（5 件）**: PageNav を sidebar header 直下に移動 + tooltip 追加 + transition 撤去、bottom tab / sidebar page nav に AI モードを追加、モバイルにタグクイック作成 chip 行を追加（タグ 0 件時の最初の一歩を短縮）。
+
+**AI モード stub + Phase 2-C Step C-3 foundation（2 件）**: AI モード route stub を追加、e2e smoke test を phase 2-C の AI モード追加に合わせて拡張。画面本体 / AiSidebar の本実装は次回。
+
+**タグ UI の細部修正（1 件）**: グループ内タグ作成時に親グループの色を強制継承する挙動を撤廃。ユーザーが色を握れず不自然だったため。
+
+#### なぜ今日この作業をしたか
+
+前日 WIP の `TagEntryCreatePopover`（独自 UI + duration histogram + 候補値 slider）を朝一で眺め直したら、Inspector のスケジュールカードと入力要素がほぼ同じであることに気づいた。独自 UI を育てる選択肢もあったが、schedule 入力ロジックを 2 系統持つと将来変更するたびに両方を触ることになる。「single source of truth を 1 日分の追加実装で捨てる」は割に合わないと判断して、朝一の commit（本番接続 + undo）で WIP を区切りのいい形に落としてから、ミニマル UI に rewrite した。
+
+Duration histogram の撤退はセットの判断。histogram / slider / 候補値計算は面白い機能だったが、ユーザーが popover を開いてから実際に時間を決めるまでの距離を考えると、オーバースペックだった。RPC 呼び出しのレイテンシも popover 展開の体感速度を削る方向に働く。pure 関数と境界テストだけ残したのは、将来 Insights 側で「このタグの典型時間」を表示したくなった時に軽量 heuristic で再実装しやすくするため。
+
+PageNav v2 は完全に別の動機。v1（独立領域に横並び）だと sidebar header からページ切替の視線距離が長く、3 タブ化（Phase 2-C の終盤）に向けて「ヘッダー直下」が自然な配置になる。transition を外したのは、距離が短くなったことで transition が体感ノイズになっていたから。v1 の transition は距離が長い前提でのゴマかしだった。
+
+AI モード stub は Phase 2-C Step C-3 を route group だけ先に取る preemptive な判断。bottom tab / sidebar page nav にエントリがないまま本実装に入ると、Inspector の close 判定や SidebarContent の dispatch に AI モードを後付けで挿し込むことになる。stub で route を確定させてから中身を埋めた方が、dispatch 系の修正が 1 回で済む。
+
+#### Claudeの所感
+
+**「育てるか、流用するか」の判断が 1 日遅れたコスト**: 前日 WIP を commit する前に Inspector 側を一度確認できていれば、独自 popover UI を書く時間を丸ごと節約できた。今日の rewrite は後知恵で見ると無駄に見えるが、実際には「独自 UI を書いたからこそ Inspector 流用で十分だと分かった」側面もある。とはいえ、次回からは popover / Drawer 系の UI を書く前に、既存 Inspector / modal の入力構造を必ず確認する習慣を入れたい。session log の convention に明文化しておいた。
+
+**WIP 撤退の完遂度**: RPC + client 配線 + migration + Storybook + テスト（のうち pure 関数分は残す）を 1 日で全部片付けたのは、後から見た時に「これは採用した機能か、撤退した機能か」が曖昧にならないのが効く。migration を forward-only で DROP として追加するのは Supabase の制約上当然だが、それ以外の artifact（client 配線、hook、stale story）を残すかどうかは判断が要る。今日は「pure 関数の境界テストだけ残す」に落とし込めて、dead code / stale test のバランスが取れた。
+
+**Phase 2-C の進行密度**: Step C-2 の Sidebar 分離（昨日）の翌日に Step C-3 の AI モード foundation まで入れて、合間にエントリ作成ポップアップ rewrite を挟むのは、routing 移行と feature 実装を並列で進めるには密度が高い。ただ、AI モードを stub で route だけ先に取るやり方は、PageNav / SidebarContent / Inspector close 判定の拡張点を 1 回で済ませる効果が大きく、後付けの修正コストと比べると preemptive にやる価値があった。明日の AI モード本実装で stub が本当に placeholder として機能するかが実測ポイント。
 
 ### Phase 2-B の client router を撤去し、Phase 2-C で Sidebar をモード別に分離した日
 

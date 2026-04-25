@@ -246,6 +246,7 @@ export type Database = {
           id: string;
           is_active: boolean;
           name: string;
+          parent_id: string | null;
           sort_order: number;
           updated_at: string | null;
           user_id: string;
@@ -257,6 +258,7 @@ export type Database = {
           id?: string;
           is_active?: boolean;
           name: string;
+          parent_id?: string | null;
           sort_order?: number;
           updated_at?: string | null;
           user_id: string;
@@ -268,11 +270,20 @@ export type Database = {
           id?: string;
           is_active?: boolean;
           name?: string;
+          parent_id?: string | null;
           sort_order?: number;
           updated_at?: string | null;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: 'tags_parent_id_fkey';
+            columns: ['parent_id'];
+            isOneToOne: false;
+            referencedRelation: 'tags';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       user_badges: {
         Row: {
@@ -409,6 +420,15 @@ export type Database = {
         };
         Returns: number;
       };
+      batch_reorder_tags_hierarchy: {
+        Args: {
+          p_parent_ids: string[];
+          p_sort_orders: number[];
+          p_tag_ids: string[];
+          p_user_id: string;
+        };
+        Returns: number;
+      };
       bulk_soft_delete_entries: {
         Args: { p_entry_ids: string[]; p_user_id: string };
         Returns: number;
@@ -450,7 +470,7 @@ export type Database = {
       get_child_tag_breakdown: {
         Args: {
           p_end_date?: string;
-          p_prefix: string;
+          p_parent_tag_id: string;
           p_start_date?: string;
           p_user_id: string;
         };
@@ -712,6 +732,14 @@ export type Database = {
             };
             Returns: Json;
           };
+      merge_tags_with_hierarchy: {
+        Args: {
+          p_source_tag_id: string;
+          p_target_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
         Returns: {
@@ -721,6 +749,7 @@ export type Database = {
           id: string;
           is_active: boolean;
           name: string;
+          parent_id: string | null;
           sort_order: number;
           updated_at: string | null;
           user_id: string;
@@ -738,6 +767,10 @@ export type Database = {
       };
       soft_delete_entry: {
         Args: { p_entry_id: string; p_user_id: string };
+        Returns: undefined;
+      };
+      update_personalization: {
+        Args: { p_path: string; p_user_id: string; p_value: Json };
         Returns: undefined;
       };
       use_recovery_code: {

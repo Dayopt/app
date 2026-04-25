@@ -5,14 +5,14 @@
  *
  * タグ選択用の共通 badge リスト。
  * - pill 型 badge の flex-wrap レイアウト
- * - コロン記法のドリルダウン（親 → 子タグ）
+ * - 親子タグのドリルダウン（親 → 子タグ）
  * - 任意で検索ボックス、新規作成 badge を末尾に表示
- * - inlineCreate を渡すと新規作成 badge 押下で InlineTagCreateRow を末尾に inline 展開
  *
  * 外枠（Drawer / Popover / Dialog）は呼び出し側が用意し、中身として差し込む。
+ * 新規作成は `onCreate` コールバックで呼び出し側が `CreateTagPopover` 等を開く。
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -21,11 +21,9 @@ import { Input } from '@/lib/components/ui/input';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { parseColonTag } from '../lib/tag-colon';
-import { InlineTagCreateRow } from './InlineTagCreateRow';
+import { buildTagTree } from '../lib/tag-tree';
 import { TagIcon } from './TagIcon';
 
-import type { TagColorName } from '@/lib/tag-colors';
 import type { Tag } from '../types';
 
 export interface TagBadgeListHoverInfo {
@@ -34,51 +32,18 @@ export interface TagBadgeListHoverInfo {
   color: string | null;
 }
 
-export interface TagBadgeListInlineCreateConfig {
-  existingTags: Tag[];
-  onSubmit: (name: string, color: TagColorName) => void | Promise<void>;
-}
-
 export interface TagBadgeListProps {
   tags: Tag[];
   selectedId?: string | null | undefined;
   onSelect: (tagId: string, tagName: string) => void;
-  /** 除外するタグID（自身をマージ/再割当候補から外す用途） */
   excludeIds?: readonly string[];
-  /** 検索ボックスを上に表示 */
   searchable?: boolean;
-  /** コロン記法でのドリルダウンを有効化（default: true） */
   supportDrilldown?: boolean;
-  /** 設定すると末尾に破線 badge で新規作成ボタンを表示 */
   onCreate?: (() => void) | undefined;
-  /** 末尾の「+」押下で inline 作成フォームを展開。渡さないときは onCreate にフォールバック */
-  inlineCreate?: TagBadgeListInlineCreateConfig | undefined;
-  /** ホバー時のコールバック（プレビュー用途） */
   onTagHover?: ((info: TagBadgeListHoverInfo | null) => void) | undefined;
-  /** role="radiogroup" を付ける（dialog内フォーム用途） */
   asRadioGroup?: boolean;
-  /** ARIA label。asRadioGroup または supportDrilldown=false 時に使用 */
   ariaLabel?: string;
-  /** 外周 padding。default: 'px-4 py-2' */
   padding?: string;
-}
-
-function groupByColonPrefix(tags: Tag[]) {
-  const childMap = new Map<string, Tag[]>();
-  const topLevel: Tag[] = [];
-
-  for (const tag of tags) {
-    const { prefix, suffix } = parseColonTag(tag.name);
-    if (suffix !== null) {
-      const existing = childMap.get(prefix) ?? [];
-      existing.push(tag);
-      childMap.set(prefix, existing);
-    } else {
-      topLevel.push(tag);
-    }
-  }
-
-  return { topLevel, childrenByPrefix: childMap };
 }
 
 interface TagBadgeCellProps {
@@ -130,9 +95,9 @@ function TagBadgeCell({
     >
       <TagIcon icon={tag.icon} color={tag.color} size="sm" />
       <span className="truncate">{displayName}</span>
-      {hasChildren && (
+      {hasChildren ? (
         <ChevronRight className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
-      )}
+      ) : null}
     </button>
   );
 }
@@ -161,18 +126,16 @@ export function TagBadgeList({
   searchable = false,
   supportDrilldown = true,
   onCreate,
-  inlineCreate,
   onTagHover,
   asRadioGroup = false,
   ariaLabel,
   padding = 'px-4 py-2',
 }: TagBadgeListProps) {
   const t = useTranslations('calendar');
-  const [view, setView] = useState<{ type: 'grid' } | { type: 'drill'; prefix: string }>({
+  const [view, setView] = useState<{ type: 'grid' } | { type: 'drill'; parentId: string }>({
     type: 'grid',
   });
   const [query, setQuery] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
 
   const excludeSet = useMemo(() => new Set(excludeIds ?? []), [excludeIds]);
 
@@ -183,43 +146,25 @@ export function TagBadgeList({
     return filtered.filter((tag) => tag.name.toLowerCase().includes(q));
   }, [tags, excludeSet, query]);
 
-  const { topLevel, childrenByPrefix } = useMemo(() => {
+  const tree = useMemo(() => {
+    // drilldown 非対応モード（タグ再割当て等のフラットピッカー）では
+    // 親 / 子を区別せず全タグを兄弟として並べる。`parent_id === null` で
+    // フィルタすると階層を持つユーザーが子タグを選択できなくなる。
     if (!supportDrilldown) {
-      return { topLevel: visibleTags, childrenByPrefix: new Map<string, Tag[]>() };
+      return visibleTags.map((tag) => ({ tag, children: [] }));
     }
-    return groupByColonPrefix(visibleTags);
+    return buildTagTree(visibleTags);
   }, [visibleTags, supportDrilldown]);
 
   const handleHover = onTagHover ? (info: TagBadgeListHoverInfo) => onTagHover(info) : undefined;
   const handleHoverEnd = onTagHover ? () => onTagHover(null) : undefined;
 
-  const handleCreateBadgeClick = useCallback(() => {
-    if (inlineCreate) {
-      setIsCreating(true);
-    } else if (onCreate) {
-      onCreate();
-    }
-  }, [inlineCreate, onCreate]);
+  const showCreateButton = Boolean(onCreate);
 
-  const handleInlineSubmit = useCallback(
-    async (name: string, color: TagColorName) => {
-      if (!inlineCreate) return;
-      await inlineCreate.onSubmit(name, color);
-      setIsCreating(false);
-    },
-    [inlineCreate],
-  );
-
-  const handleInlineCancel = useCallback(() => {
-    setIsCreating(false);
-  }, []);
-
-  const showCreateButton = Boolean(onCreate || inlineCreate);
-
-  // ドリルダウン画面
   if (view.type === 'drill') {
-    const parent = topLevel.find((tag) => tag.name === view.prefix);
-    const children = childrenByPrefix.get(view.prefix) ?? [];
+    const parentNode = tree.find((node) => node.tag.id === view.parentId);
+    const parent = parentNode?.tag;
+    const children = parentNode?.children ?? [];
 
     return (
       <div className="flex flex-col">
@@ -230,8 +175,8 @@ export function TagBadgeList({
         >
           <span className="group-hover:bg-state-hover flex items-center gap-2 rounded-lg px-2 py-1 transition-colors">
             <ChevronLeft className="text-muted-foreground size-5" />
-            {parent && <TagIcon icon={parent.icon} color={parent.color} size="sm" />}
-            <span className="text-foreground font-medium">{view.prefix}</span>
+            {parent ? <TagIcon icon={parent.icon} color={parent.color} size="sm" /> : null}
+            <span className="text-foreground font-medium">{parent?.name ?? ''}</span>
           </span>
         </button>
 
@@ -240,7 +185,7 @@ export function TagBadgeList({
           role={asRadioGroup ? 'radiogroup' : undefined}
           aria-label={asRadioGroup ? ariaLabel : undefined}
         >
-          {parent && (
+          {parent ? (
             <TagBadgeCell
               tag={parent}
               displayName={parent.name}
@@ -251,34 +196,28 @@ export function TagBadgeList({
               onHoverEnd={handleHoverEnd}
               asRadio={asRadioGroup}
             />
-          )}
-          {children.map((child) => {
-            const { suffix } = parseColonTag(child.name);
-            return (
-              <TagBadgeCell
-                key={child.id}
-                tag={child}
-                displayName={suffix ?? child.name}
-                isSelected={selectedId === child.id}
-                hasChildren={false}
-                onSelect={() => onSelect(child.id, child.name)}
-                onHover={handleHover}
-                onHoverEnd={handleHoverEnd}
-                asRadio={asRadioGroup}
-              />
-            );
-          })}
+          ) : null}
+          {children.map((child) => (
+            <TagBadgeCell
+              key={child.id}
+              tag={child}
+              displayName={child.name}
+              isSelected={selectedId === child.id}
+              hasChildren={false}
+              onSelect={() => onSelect(child.id, child.name)}
+              onHover={handleHover}
+              onHoverEnd={handleHoverEnd}
+              asRadio={asRadioGroup}
+            />
+          ))}
         </div>
       </div>
     );
   }
 
-  // メイン画面
-  const hasAnyResult = topLevel.length > 0;
-
   return (
     <div className="flex flex-col">
-      {searchable && (
+      {searchable ? (
         <div className={cn('relative', padding)}>
           <Search className="text-muted-foreground absolute top-1/2 left-6 size-4 -translate-y-1/2" />
           <Input
@@ -289,59 +228,42 @@ export function TagBadgeList({
             className="pl-8"
           />
         </div>
-      )}
+      ) : null}
 
       <div
         className={cn('flex flex-wrap gap-2', padding)}
         role={asRadioGroup ? 'radiogroup' : undefined}
         aria-label={asRadioGroup ? ariaLabel : undefined}
       >
-        {isCreating && inlineCreate && (
-          <div className="w-full max-w-xs">
-            <InlineTagCreateRow
-              variant="badge"
-              existingTags={inlineCreate.existingTags}
-              onSubmit={handleInlineSubmit}
-              onCancel={handleInlineCancel}
-            />
-          </div>
-        )}
-
-        {!hasAnyResult && !isCreating && (
+        {tree.length === 0 ? (
           <p className="text-muted-foreground w-full py-6 text-center text-sm">
             {t('tagSelector.noResults')}
           </p>
-        )}
+        ) : null}
 
-        {topLevel.map((tag) => {
-          const hasChildren = supportDrilldown && childrenByPrefix.has(tag.name);
-          const displayName = supportDrilldown
-            ? (parseColonTag(tag.name).suffix ?? tag.name)
-            : tag.name;
-          return (
-            <TagBadgeCell
-              key={tag.id}
-              tag={tag}
-              displayName={displayName}
-              isSelected={selectedId === tag.id}
-              hasChildren={hasChildren}
-              onSelect={() => {
-                if (hasChildren) {
-                  setView({ type: 'drill', prefix: tag.name });
-                } else {
-                  onSelect(tag.id, tag.name);
-                }
-              }}
-              onHover={handleHover}
-              onHoverEnd={handleHoverEnd}
-              asRadio={asRadioGroup}
-            />
-          );
-        })}
+        {tree.map(({ tag, children }) => (
+          <TagBadgeCell
+            key={tag.id}
+            tag={tag}
+            displayName={tag.name}
+            isSelected={selectedId === tag.id}
+            hasChildren={supportDrilldown && children.length > 0}
+            onSelect={() => {
+              if (supportDrilldown && children.length > 0) {
+                setView({ type: 'drill', parentId: tag.id });
+                return;
+              }
+              onSelect(tag.id, tag.name);
+            }}
+            onHover={handleHover}
+            onHoverEnd={handleHoverEnd}
+            asRadio={asRadioGroup}
+          />
+        ))}
 
-        {!isCreating && showCreateButton && (
-          <CreateBadge label={t('tagSelector.new')} onClick={handleCreateBadgeClick} />
-        )}
+        {showCreateButton ? (
+          <CreateBadge label={t('tagSelector.new')} onClick={() => onCreate?.()} />
+        ) : null}
       </div>
     </div>
   );

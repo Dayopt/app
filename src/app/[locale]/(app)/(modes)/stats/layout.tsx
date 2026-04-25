@@ -1,5 +1,3 @@
-import { SidebarPageNav } from '../../_shell/SidebarPageNav';
-
 import { StatsLayoutShell } from './_composition/StatsLayoutShell';
 
 /**
@@ -9,5 +7,5 @@ import { StatsLayoutShell } from './_composition/StatsLayoutShell';
  * タブ遷移時はコンテンツ（children）だけが差し替わる。
  */
 export default function StatsLayout({ children }: { children: React.ReactNode }) {
-  return <StatsLayoutShell headerRightExtra={<SidebarPageNav />}>{children}</StatsLayoutShell>;
+  return <StatsLayoutShell>{children}</StatsLayoutShell>;
 }

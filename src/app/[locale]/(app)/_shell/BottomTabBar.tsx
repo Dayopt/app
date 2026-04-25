@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
+import { NavBadge, type NavBadgeVariant } from '@/lib/components/shell/sidebar/NavBadge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
@@ -75,6 +76,7 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
     label: string;
     icon: typeof CalendarDays;
     href: string;
+    badge?: NavBadgeVariant | null;
   }> = useMemo(
     () => [
       {
@@ -94,6 +96,7 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
         label: t('navigation.bottomTab.ai'),
         icon: Sparkles,
         href: aiHref,
+        badge: 'beta',
       },
       {
         id: 'account',
@@ -148,6 +151,7 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
                 ) : (
                   <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
                 )}
+                {tab.badge && <NavBadge variant={tab.badge} />}
               </span>
               <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>
             </Link>

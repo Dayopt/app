@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { InlineTagNameEdit, useTags, useUpdateTag } from '@/features/tags';
+import { useTags } from '@/features/tags';
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
@@ -53,37 +53,18 @@ export function FilterItem({
   onShowOnlyThis,
 }: FilterItemProps) {
   const t = useTranslations();
-  const updateTagMutation = useUpdateTag();
   const { showOnlyTag } = useCalendarFilterStore();
-  const { openTagMergeModal } = useTagModalNavigation();
+  const { openTagMergeModal, openTagRenameModal } = useTagModalNavigation();
   const { data: existingTags } = useTags();
 
   // Menu open state
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Inline rename 編集状態
-  const [isEditingName, setIsEditingName] = useState(false);
 
   // Edit hook (色・アイコン変更)
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId,
     initialColor: checkboxColor,
   });
-
-  // 重複チェック用: 自分自身を除いた他タグ名
-  const renameExistingNames = useMemo(
-    () => (existingTags ?? []).filter((tag) => tag.id !== tagId).map((tag) => tag.name),
-    [existingTags, tagId],
-  );
-
-  // Rename save handler
-  const handleSaveRename = useCallback(
-    async (newName: string) => {
-      if (!tagId) return;
-      updateTagMutation.mutate({ id: tagId, name: newName });
-    },
-    [tagId, updateTagMutation],
-  );
 
   // Context menu handler
   const handleContextMenu = useCallback(
@@ -113,6 +94,16 @@ export function FilterItem({
     [disabled, onCheckedChange],
   );
 
+  const handleRename = useCallback(() => {
+    if (!tagId) return;
+    const target = (existingTags ?? []).find((tag) => tag.id === tagId);
+    openTagRenameModal({
+      id: tagId,
+      name: target?.name ?? label,
+      parent_id: target?.parent_id ?? null,
+    });
+  }, [tagId, existingTags, label, openTagRenameModal]);
+
   return (
     <div
       className={cn(
@@ -136,30 +127,17 @@ export function FilterItem({
         style={checkboxColorStyle}
       />
       {icon && <span className="text-muted-foreground ml-2 shrink-0">{icon}</span>}
-      {isEditingName && tagId ? (
-        <span className="ml-1 min-w-0 flex-1">
-          <InlineTagNameEdit
-            value={label}
-            onSave={handleSaveRename}
-            existingNames={renameExistingNames}
-            editing={isEditingName}
-            onDoneEditing={() => setIsEditingName(false)}
-            ariaLabel={label}
-          />
-        </span>
-      ) : (
-        <HoverTooltip
-          content={label}
-          side="top"
-          disabled={menuOpen}
-          wrapperClassName="ml-1 min-w-0 flex-1"
-        >
-          <span className={cn('min-w-0 truncate', labelClassName)}>{label}</span>
-        </HoverTooltip>
-      )}
+      <HoverTooltip
+        content={label}
+        side="top"
+        disabled={menuOpen}
+        wrapperClassName="ml-1 min-w-0 flex-1"
+      >
+        <span className={cn('min-w-0 truncate', labelClassName)}>{label}</span>
+      </HoverTooltip>
 
       {/* Menu trigger */}
-      {(tagId || onShowOnlyThis) && !disabled && !isEditingName && (
+      {(tagId || onShowOnlyThis) && !disabled && (
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
@@ -175,7 +153,7 @@ export function FilterItem({
           {tagId ? (
             <FilterItemMenu
               displayColor={displayColor}
-              onOpenRenameDialog={() => setIsEditingName(true)}
+              onOpenRenameDialog={handleRename}
               onColorChange={handleColorChange}
               onIconChange={handleIconChange}
               onOpenMergeModal={() =>
@@ -191,7 +169,7 @@ export function FilterItem({
       )}
 
       {/* Count */}
-      {count !== undefined && !isEditingName && (
+      {count !== undefined && (
         <span className="text-muted-foreground ml-1 shrink-0 pr-2 text-xs tabular-nums">
           {count}
         </span>

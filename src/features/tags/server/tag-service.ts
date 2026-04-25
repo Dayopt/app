@@ -21,7 +21,8 @@ import 'server-only';
 import type { Database } from '@/lib/database.types';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Tag, TagDeleteStrategy } from '../types';
+import { buildTagTree, flattenTagTree } from '../lib/tag-tree';
+import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
 
 /** DB タグ行の型 */
 type DbTagRow = Database['public']['Tables']['tags']['Row'];
@@ -37,31 +38,10 @@ function transformDbTag(dbTag: DbTagRow): Tag {
     color: dbTag.color,
     icon: dbTag.icon,
     is_active: dbTag.is_active,
+    parent_id: dbTag.parent_id ?? null,
     sort_order: dbTag.sort_order,
     created_at: dbTag.created_at,
     updated_at: dbTag.updated_at,
-  };
-}
-
-/** merge_tags RPC関数の戻り値型 */
-interface MergeTagsRpcResult {
-  success: boolean;
-  merged_associations: number;
-  deleted_tags: number;
-  target_tag: DbTagRow;
-}
-
-/**
- * merge_tags RPC呼び出し
- */
-async function callMergeTagsRpc(
-  supabase: SupabaseClient<Database>,
-  args: Database['public']['Functions']['merge_tags']['Args'],
-): Promise<{ data: MergeTagsRpcResult | null; error: Error | null }> {
-  const result = await supabase.rpc('merge_tags', args);
-  return {
-    data: result.data as MergeTagsRpcResult | null,
-    error: result.error,
   };
 }
 
@@ -70,6 +50,7 @@ export interface CreateTagInput {
   name: string;
   color?: string | undefined;
   icon?: string | undefined;
+  parentId?: string | null | undefined;
 }
 
 /** タグ更新入力 */
@@ -77,12 +58,13 @@ export interface UpdateTagInput {
   name?: string | undefined;
   color?: string | undefined;
   icon?: string | null | undefined;
+  parentId?: string | null | undefined;
 }
 
 /** タグ一覧取得オプション */
 export interface ListTagsOptions {
   userId: string;
-  sortField?: 'name' | 'created_at' | 'updated_at' | 'tag_number' | undefined;
+  sortField?: 'name' | 'created_at' | 'updated_at' | 'tag_number' | 'sort_order' | undefined;
   sortOrder?: 'asc' | 'desc' | undefined;
 }
 
@@ -105,6 +87,7 @@ export interface MergeTagsResult {
 /** タグ並び替え更新 */
 export interface ReorderTagUpdate {
   id: string;
+  parent_id: string | null;
   sort_order: number;
 }
 
@@ -139,6 +122,51 @@ export class TagServiceError extends ServiceError {
 export class TagService {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
+  private async listRows(userId: string): Promise<DbTagRow[]> {
+    const { data, error } = await this.supabase
+      .from('tags')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (error) {
+      throw new TagServiceError('FETCH_FAILED', `Failed to fetch tags: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  private async getNextSortOrder(userId: string, parentId: string | null): Promise<number> {
+    const query = this.supabase
+      .from('tags')
+      .select('sort_order')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (parentId) {
+      query.eq('parent_id', parentId);
+    } else {
+      query.is('parent_id', null);
+    }
+
+    const { data, error } = await query.order('sort_order', { ascending: false }).limit(1);
+
+    if (error) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to resolve sibling sort order: ${error.message}`,
+      );
+    }
+
+    const maxSortOrder = data?.[0]?.sort_order ?? -1;
+    return maxSortOrder + 1;
+  }
+
+  async listHierarchy(options: { userId: string }): Promise<TagTreeNode[]> {
+    const rows = await this.listRows(options.userId);
+    return buildTagTree(rows.map(transformDbTag));
+  }
+
   /**
    * タグ一覧取得
    *
@@ -153,13 +181,17 @@ export class TagService {
   async list(options: ListTagsOptions): Promise<Tag[]> {
     const { userId, sortField, sortOrder } = options;
 
-    // 直接DBクエリを実行（サーバーサイドキャッシュは一時的に無効化）
+    if (sortField === undefined || sortField === 'sort_order') {
+      const hierarchy = await this.listHierarchy({ userId });
+      return flattenTagTree(hierarchy);
+    }
+
     const { data, error } = await this.supabase
       .from('tags')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .order(sortField ?? 'sort_order', {
+      .order(sortField, {
         ascending: (sortOrder ?? 'asc') === 'asc',
         nullsFirst: false,
       })
@@ -213,11 +245,22 @@ export class TagService {
       throw new TagServiceError('INVALID_INPUT', 'Tag name must be 50 characters or less');
     }
 
-    // 新規タグを先頭に表示するため、既存タグのsort_orderを一括インクリメント
-    // N+1回の個別UPDATEではなく、RPCで1回のSQLで実行
-    await this.supabase.rpc('increment_tag_sort_orders', {
-      p_user_id: userId,
-    });
+    const parentId = input.parentId ?? null;
+
+    if (parentId) {
+      // 2 階層モデルを保つため「親自身がすでに子タグである」場合のみ弾く。
+      // 「親が子を持っているか」ではない (sibling は何個でも作れる)。
+      const parentTag = await this.getById({ userId, tagId: parentId });
+
+      if (parentTag.parent_id !== null) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Cannot create a child under a tag that already has a parent',
+        );
+      }
+    }
+
+    const nextSortOrder = await this.getNextSortOrder(userId, parentId);
 
     // タグデータ作成（sort_order = 0で先頭に追加）
     const tagData: Database['public']['Tables']['tags']['Insert'] = {
@@ -226,7 +269,8 @@ export class TagService {
       color: input.color || 'blue',
       icon: input.icon ?? null,
       is_active: true,
-      sort_order: 0,
+      parent_id: parentId,
+      sort_order: nextSortOrder,
     };
 
     const { data, error } = await this.supabase.from('tags').insert(tagData).select().single();
@@ -251,7 +295,7 @@ export class TagService {
     const { userId, tagId, updates } = options;
 
     // 所有権チェック（エラーが発生すれば NOT_FOUND になる）
-    await this.getById({ userId, tagId });
+    const existingTag = await this.getById({ userId, tagId });
 
     // バリデーション
     if (updates.name !== undefined) {
@@ -268,6 +312,49 @@ export class TagService {
     if (updates.name !== undefined) updateData.name = updates.name.trim();
     if (updates.color !== undefined) updateData.color = updates.color;
     if (updates.icon !== undefined) updateData.icon = updates.icon;
+    if (updates.parentId !== undefined) {
+      const nextParentId = updates.parentId;
+
+      if (nextParentId === tagId) {
+        throw new TagServiceError('INVALID_INPUT', 'A tag cannot be its own parent');
+      }
+
+      if (nextParentId) {
+        const nextParent = await this.getById({ userId, tagId: nextParentId });
+        if (nextParent.parent_id !== null) {
+          throw new TagServiceError(
+            'INVALID_INPUT',
+            'Maximum nesting depth is 1 level. Parent tag cannot be a child of another tag.',
+          );
+        }
+
+        const { count: childCount, error: childCountError } = await this.supabase
+          .from('tags')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('parent_id', tagId)
+          .eq('is_active', true);
+
+        if (childCountError) {
+          throw new TagServiceError(
+            'FETCH_FAILED',
+            `Failed to verify tag children: ${childCountError.message}`,
+          );
+        }
+
+        if ((childCount ?? 0) > 0) {
+          throw new TagServiceError(
+            'INVALID_INPUT',
+            'Cannot move a tag with children to be a child of another tag.',
+          );
+        }
+      }
+
+      updateData.parent_id = nextParentId;
+      if (nextParentId !== existingTag.parent_id) {
+        updateData.sort_order = await this.getNextSortOrder(userId, nextParentId);
+      }
+    }
 
     const { data, error } = await this.supabase
       .from('tags')
@@ -566,10 +653,11 @@ export class TagService {
   }
 
   /**
-   * タグマージ（トランザクション対応）
+   * タグマージ（atomic）
    *
-   * PL/pgSQL Stored Procedureを使用してトランザクション的にタグをマージします。
-   * ソースタグの関連付けをターゲットタグに移行し、ソースタグを削除します。
+   * `merge_tags_with_hierarchy` RPC で entries 移動 + children 再 parent +
+   * source 非アクティブ化を 1 transaction にまとめて実行する。途中失敗時は全体
+   * rollback されるため partial state は発生しない。
    *
    * @param options - マージオプション
    * @returns マージ結果
@@ -581,35 +669,56 @@ export class TagService {
       throw new TagServiceError('SAME_TAG_MERGE', 'Cannot merge a tag with itself');
     }
 
-    try {
-      const { data, error } = await callMergeTagsRpc(this.supabase, {
+    // 早期 validation: 両 tag の存在 + child→parent merge ガード。
+    // 同じガードは RPC 内部にもあるが、TS 側でも実施することで意味のあるエラー
+    // メッセージ (`TagServiceError` の code) を呼び出し側に渡せる。
+    const [, targetTag] = await Promise.all([
+      this.getById({ userId, tagId: sourceTagId }),
+      this.getById({ userId, tagId: targetTagId }),
+    ]);
+
+    const { count: sourceChildrenCount, error: sourceChildrenError } = await this.supabase
+      .from('tags')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('parent_id', sourceTagId)
+      .eq('is_active', true);
+
+    if (sourceChildrenError) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to inspect source tag children: ${sourceChildrenError.message}`,
+      );
+    }
+
+    if ((sourceChildrenCount ?? 0) > 0 && targetTag.parent_id !== null) {
+      throw new TagServiceError('INVALID_INPUT', 'Cannot merge a parent tag into a child tag.');
+    }
+
+    const { data: rpcData, error: rpcError } = await this.supabase.rpc(
+      'merge_tags_with_hierarchy',
+      {
         p_user_id: userId,
         p_source_tag_id: sourceTagId,
         p_target_tag_id: targetTagId,
-      });
+      },
+    );
 
-      if (error) {
-        throw new TagServiceError('MERGE_FAILED', `Failed to merge tags: ${error.message}`);
-      }
-
-      if (!data || !data.success) {
-        throw new TagServiceError('MERGE_FAILED', 'Merge operation failed');
-      }
-
-      return {
-        success: true,
-        mergedAssociations: data.merged_associations,
-        targetTag: transformDbTag(data.target_tag),
-      };
-    } catch (error) {
-      if (error instanceof TagServiceError) {
-        throw error;
-      }
+    if (rpcError) {
       throw new TagServiceError(
         'MERGE_FAILED',
-        error instanceof Error ? error.message : 'Unknown error',
+        `Failed to merge tags atomically: ${rpcError.message}`,
       );
     }
+
+    const migrated =
+      (rpcData as { migrated?: number; children_reparented?: number } | null)?.migrated ?? 0;
+
+    return {
+      success: true,
+      mergedAssociations: migrated,
+      targetTag,
+    };
   }
 
   /**
@@ -628,6 +737,19 @@ export class TagService {
 
     // 所有権チェック
     const tag = await this.getById({ userId, tagId });
+    const { data: childTags, error: childTagsError } = await this.supabase
+      .from('tags')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('parent_id', tagId)
+      .eq('is_active', true);
+
+    if (childTagsError) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to inspect tag children: ${childTagsError.message}`,
+      );
+    }
 
     // 関連エントリがある場合は strategy 必須（参照ありのタグは暗黙削除させない）
     if (!strategy) {
@@ -671,6 +793,27 @@ export class TagService {
       await this.supabase.from('entries').delete().eq('tag_id', tagId).eq('user_id', userId);
     }
 
+    if ((childTags?.length ?? 0) > 0) {
+      const nextRootSortOrder = await this.getNextSortOrder(userId, null);
+      const childUpdateResults = await Promise.all(
+        childTags.map((child, index) =>
+          this.supabase
+            .from('tags')
+            .update({ parent_id: null, sort_order: nextRootSortOrder + index })
+            .eq('user_id', userId)
+            .eq('id', child.id),
+        ),
+      );
+
+      const promoteChildrenError = childUpdateResults.find((result) => result.error)?.error;
+      if (promoteChildrenError) {
+        throw new TagServiceError(
+          'UPDATE_FAILED',
+          `Failed to promote child tags: ${promoteChildrenError.message}`,
+        );
+      }
+    }
+
     // タグ削除
     const { error } = await this.supabase
       .from('tags')
@@ -708,7 +851,7 @@ export class TagService {
     const tagIds = updates.map((u) => u.id);
     const { data: existingTags, error: fetchError } = await this.supabase
       .from('tags')
-      .select('id')
+      .select('id,parent_id')
       .eq('user_id', userId)
       .in('id', tagIds);
 
@@ -722,12 +865,28 @@ export class TagService {
       throw new TagServiceError('NOT_FOUND', `Tags not found: ${invalidIds.join(', ')}`);
     }
 
-    // RPC で1クエリにバッチ更新
-    const { data: updatedCount, error: rpcError } = await this.supabase.rpc('batch_reorder_tags', {
-      p_user_id: userId,
-      p_tag_ids: updates.map((u) => u.id),
-      p_sort_orders: updates.map((u) => u.sort_order),
-    });
+    const currentById = new Map(existingTags?.map((tag) => [tag.id, tag.parent_id ?? null]) ?? []);
+    for (const update of updates) {
+      if (update.parent_id === update.id) {
+        throw new TagServiceError('INVALID_INPUT', 'A tag cannot be its own parent');
+      }
+      if (update.parent_id && currentById.get(update.parent_id) !== null) {
+        throw new TagServiceError(
+          'INVALID_INPUT',
+          'Maximum nesting depth is 1 level. Parent tag cannot be a child of another tag.',
+        );
+      }
+    }
+
+    const { data: updatedCount, error: rpcError } = await this.supabase.rpc(
+      'batch_reorder_tags_hierarchy',
+      {
+        p_user_id: userId,
+        p_tag_ids: updates.map((u) => u.id),
+        p_parent_ids: updates.map((u) => u.parent_id) as never,
+        p_sort_orders: updates.map((u) => u.sort_order),
+      },
+    );
 
     if (rpcError) {
       throw new TagServiceError('UPDATE_FAILED', `Failed to reorder tags: ${rpcError.message}`);

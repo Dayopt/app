@@ -9,7 +9,6 @@ import { useTagOverviewData } from '../../hooks/useTagDetailData';
 
 interface TagDetailHeroProps {
   tagId: string;
-  tagName?: string | undefined;
 }
 
 /**
@@ -20,10 +19,10 @@ interface TagDetailHeroProps {
  *
  * getTagOverview で全データを一括取得。
  */
-export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
+export function TagDetailHero({ tagId }: TagDetailHeroProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const { data: overview, isPending } = useTagOverviewData(tagId);
 
   if (isPending) {
     return <Skeleton className="h-28 w-full rounded-2xl" />;
@@ -103,7 +102,7 @@ export function TagDetailHero({ tagId, tagName }: TagDetailHeroProps) {
                     className="inline-block size-2 rounded-full"
                     style={{ backgroundColor: `var(--tag-${color})` }}
                   />
-                  {child.name.split(':').pop()} — {child.hours.toFixed(1)}h
+                  {child.name} - {child.hours.toFixed(1)}h
                 </span>
               );
             })}

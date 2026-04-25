@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { getTagDisplayLabel, TagIcon, useTags, type Tag } from '@/features/tags';
+import { TagIcon, useTags, type Tag } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
@@ -15,13 +15,10 @@ export interface TagChipRowProps {
   className?: string;
 }
 
-/** sort_order 昇順に並べた active タグ（sidebar の TagFlatList と同一ソート） */
+/** useTags() は hierarchy flatten 済み順を返すため、その順序を維持して active のみ抽出する。 */
 function sortActiveTags(tags: Tag[] | undefined): Tag[] {
   if (!tags) return [];
-  return tags
-    .filter((tag) => tag.is_active !== false)
-    .slice()
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  return tags.filter((tag) => tag.is_active !== false);
 }
 
 /**
@@ -69,7 +66,7 @@ export function TagChipRow({
       aria-label="タグクイック作成"
     >
       {sortedTags.map((tag) => {
-        const label = getTagDisplayLabel(tag.name, true);
+        const label = tag.name;
         return (
           <button
             key={tag.id}

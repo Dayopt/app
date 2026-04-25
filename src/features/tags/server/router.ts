@@ -6,6 +6,7 @@
  *
  * エンドポイント:
  * - tags.list: タグ一覧取得（フラット）
+ * - tags.listHierarchy: タグ階層取得
  * - tags.getById: タグID指定で取得
  * - tags.create: タグ作成
  * - tags.update: タグ更新
@@ -34,8 +35,10 @@ export const tagsRouter = createTRPCRouter({
     .input(
       z
         .object({
-          sortField: z.enum(['name', 'created_at', 'updated_at', 'tag_number']).default('name'),
-          sortOrder: z.enum(['asc', 'desc']).default('asc'),
+          sortField: z
+            .enum(['name', 'created_at', 'updated_at', 'tag_number', 'sort_order'])
+            .optional(),
+          sortOrder: z.enum(['asc', 'desc']).optional(),
         })
         .optional(),
     )
@@ -56,6 +59,15 @@ export const tagsRouter = createTRPCRouter({
         return handleServiceError(error);
       }
     }),
+
+  listHierarchy: protectedProcedure.meta({ description: 'タグ階層取得' }).query(async ({ ctx }) => {
+    try {
+      const service = createTagService(ctx.supabase);
+      return await service.listHierarchy({ userId: ctx.userId });
+    } catch (error) {
+      return handleServiceError(error);
+    }
+  }),
 
   /**
    * タグID指定で取得
@@ -89,6 +101,7 @@ export const tagsRouter = createTRPCRouter({
     .input(
       z.object({
         name: z.string().min(1).max(50),
+        parentId: z.string().uuid().nullable().optional(),
         color: z
           .enum([
             'red',
@@ -119,6 +132,7 @@ export const tagsRouter = createTRPCRouter({
             name: input.name,
             color: input.color,
             icon: input.icon,
+            parentId: input.parentId,
           },
         });
 
@@ -145,6 +159,7 @@ export const tagsRouter = createTRPCRouter({
       z.object({
         id: z.string().uuid(),
         name: z.string().min(1).max(50).optional(),
+        parentId: z.string().uuid().nullable().optional(),
         color: z
           .enum([
             'red',
@@ -177,6 +192,7 @@ export const tagsRouter = createTRPCRouter({
             name: input.name,
             color: input.color,
             icon: input.icon,
+            parentId: input.parentId,
           },
         });
 
@@ -386,6 +402,7 @@ export const tagsRouter = createTRPCRouter({
           .array(
             z.object({
               id: z.string().uuid(),
+              parent_id: z.string().uuid().nullable(),
               sort_order: z.number().int(),
             }),
           )

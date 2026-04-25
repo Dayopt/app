@@ -20,7 +20,6 @@ const chartConfig = {
 
 interface TagHourlyChartProps {
   tagId: string;
-  tagName?: string | undefined;
 }
 
 /**
@@ -28,10 +27,10 @@ interface TagHourlyChartProps {
  *
  * 横棒グラフで各時間帯の利用分数を表示。
  */
-export function TagHourlyChart({ tagId, tagName }: TagHourlyChartProps) {
+export function TagHourlyChart({ tagId }: TagHourlyChartProps) {
   const t = useTranslations('calendar.stats.tagDetail');
 
-  const { data: overview, isPending } = useTagOverviewData(tagId, tagName);
+  const { data: overview, isPending } = useTagOverviewData(tagId);
   const data = overview?.hourly ?? null;
 
   if (isPending) {

@@ -73,6 +73,15 @@ const GlobalTagMergeModal = dynamic(
   { ssr: false },
 );
 
+// GlobalTagRenameModalを遅延ロード
+const GlobalTagRenameModal = dynamic(
+  () =>
+    import('@/features/tags/components/GlobalTagRenameModal').then(
+      (mod) => mod.GlobalTagRenameModal,
+    ),
+  { ssr: false },
+);
+
 interface ProvidersProps {
   children: React.ReactNode;
 }
@@ -209,6 +218,7 @@ export function Providers({ children }: ProvidersProps) {
                   されるのを防ぐ。TanStack Query の永続 cache が効けば体感遅延は極小。 */}
               <UserSettingsInitializer>{children}</UserSettingsInitializer>
               <GlobalTagMergeModal />
+              <GlobalTagRenameModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>
         </ThemeProvider>

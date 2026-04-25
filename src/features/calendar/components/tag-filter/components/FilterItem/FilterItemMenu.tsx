@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 
 /** タグのグループ情報 */
 export interface GroupOption {
+  id: string;
   name: string;
   color: string | null;
   icon?: string | null;
@@ -38,10 +39,10 @@ interface FilterItemMenuProps {
   displayColor: string;
   /** 現在のアイコン名 */
   currentIcon?: string | null | undefined;
-  /** 現在のグループ名（null = 独立タグ） */
+  /** 現在の親タグID（null = ルートタグ） */
   currentGroup?: string | null | undefined;
-  /** 対象タグ自身の名前。親候補リストから自身を除外するために使う */
-  currentTagName?: string | undefined;
+  /** 対象タグ自身のID。親候補リストから自身を除外するために使う */
+  currentTagId?: string | undefined;
   /** グループ候補一覧 */
   groupOptions?: GroupOption[] | undefined;
   /** グループに属するタグか（色変更はグループ単位のため個別無効） */
@@ -53,7 +54,7 @@ interface FilterItemMenuProps {
   onOpenRenameDialog: () => void;
   onColorChange: (color: TagColorName) => void;
   onIconChange?: ((icon: string | null) => void) | undefined;
-  onChangeGroup?: ((newGroup: string | null) => void) | undefined;
+  onChangeGroup?: ((newGroupId: string | null) => void) | undefined;
   onOpenMergeModal: () => void;
   onShowOnlyTag: () => void;
   onViewStats?: (() => void) | undefined;
@@ -65,7 +66,7 @@ export function FilterItemMenu({
   displayColor,
   currentIcon,
   currentGroup,
-  currentTagName,
+  currentTagId,
   groupOptions,
   isGrouped,
   isMobile,
@@ -81,7 +82,7 @@ export function FilterItemMenu({
   const t = useTranslations();
 
   // 自分自身を親候補から除外
-  const parentOptions = (groupOptions ?? []).filter((group) => group.name !== currentTagName);
+  const parentOptions = (groupOptions ?? []).filter((group) => group.id !== currentTagId);
 
   // モバイル: 「このタグだけ表示」+「削除」のみ。管理系は設定画面へ委譲
   if (isMobile) {
@@ -160,11 +161,11 @@ export function FilterItemMenu({
               <>
                 <DropdownMenuSeparator />
                 {parentOptions.map((group) => {
-                  const isCurrent = currentGroup === group.name;
+                  const isCurrent = currentGroup === group.id;
                   return (
                     <DropdownMenuItem
-                      key={group.name}
-                      onClick={() => onChangeGroup(group.name)}
+                      key={group.id}
+                      onClick={() => onChangeGroup(group.id)}
                       className={cn(isCurrent ? 'bg-state-selected' : undefined)}
                     >
                       <TagIcon

@@ -20,7 +20,7 @@ import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
-import { DEFAULT_TAG_ICON } from '../lib/curated-icons';
+import { CreateTagPopover } from './CreateTagPopover';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';
 
@@ -46,7 +46,12 @@ interface TagQuickSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => void;
   /** タグホバー時のコールバック（プレビュー用） */
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
   /** PC: アンカー要素の横にパネルを配置する */
@@ -66,18 +71,20 @@ function TagQuickSelectorContent({
   onTagHover,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => void;
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreatePopoverOpen, setIsCreatePopoverOpen] = useState(false);
 
-  // アクティブなタグのみ、ソート済み
-  const sortedTags = useMemo(() => {
-    const active = (tags ?? []).filter((tag) => tag.is_active !== false);
-    return [...active].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-  }, [tags]);
+  const sortedTags = useMemo(() => (tags ?? []).filter((tag) => tag.is_active !== false), [tags]);
 
   const handleSelect = useCallback(
     (tagId: string, tagName: string) => {
@@ -87,9 +94,15 @@ function TagQuickSelectorContent({
     [onSelect],
   );
 
-  const handleInlineSubmit = useCallback(
-    (name: string, color: TagColorName) => {
-      onCreateAndSelect(name, color, DEFAULT_TAG_ICON);
+  const handleEditorSubmit = useCallback(
+    async (input: {
+      name: string;
+      color: TagColorName;
+      icon: string | null;
+      parentId: string | null;
+    }) => {
+      onCreateAndSelect(input.name, input.color, input.icon, input.parentId);
+      setIsCreatePopoverOpen(false);
     },
     [onCreateAndSelect],
   );
@@ -124,26 +137,40 @@ function TagQuickSelectorContent({
             })}
           </div>
         </div>
-        <TagBadgeList
-          tags={sortedTags}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-          inlineCreate={{ onSubmit: handleInlineSubmit, existingTags: sortedTags }}
-          onTagHover={onTagHover}
-        />
+        <div className="relative">
+          <TagBadgeList
+            tags={sortedTags}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            onCreate={() => setIsCreatePopoverOpen(true)}
+            onTagHover={onTagHover}
+          />
+          <CreateTagPopover
+            open={isCreatePopoverOpen}
+            onOpenChange={setIsCreatePopoverOpen}
+            existingTags={sortedTags}
+            onSubmit={handleEditorSubmit}
+          />
+        </div>
       </div>
     );
   }
 
-  // メイン: タグ badge 一覧 + inline 作成
+  // メイン: タグ badge 一覧 + 作成 Popover
   return (
-    <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
+    <div className="relative overflow-y-auto" style={{ maxHeight: '50vh' }}>
       <TagBadgeList
         tags={sortedTags}
         selectedId={selectedId}
         onSelect={handleSelect}
-        inlineCreate={{ onSubmit: handleInlineSubmit, existingTags: sortedTags }}
+        onCreate={() => setIsCreatePopoverOpen(true)}
         onTagHover={onTagHover}
+      />
+      <CreateTagPopover
+        open={isCreatePopoverOpen}
+        onOpenChange={setIsCreatePopoverOpen}
+        existingTags={sortedTags}
+        onSubmit={handleEditorSubmit}
       />
     </div>
   );

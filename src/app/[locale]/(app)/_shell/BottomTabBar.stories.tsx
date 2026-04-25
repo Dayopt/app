@@ -5,6 +5,7 @@
  * usePathname / useRouter 等に依存するため、同じ見た目の静的モックを使用。
  * 実装は Phase 2-B Step 3 で <Link> ベースに移行済。mock も link 形式で
  * 実装と整合させる (Phase 2-C Step C-4)。
+ * Phase 2-D Step D-5 で AI タブの amber β バッジに対応。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -13,18 +14,27 @@ import { BarChart3, CalendarDays, Sparkles, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type TabId = 'calendar' | 'stats' | 'ai' | 'account';
+type BadgeVariant = 'new' | 'beta';
 
 function MockBottomTabBar({
   activeTab = 'calendar',
   hidden = false,
+  aiBadge = 'beta',
 }: {
   activeTab?: TabId;
   hidden?: boolean;
+  aiBadge?: BadgeVariant | null;
 }) {
-  const tabs: Array<{ id: TabId; label: string; icon: typeof CalendarDays; href: string }> = [
+  const tabs: Array<{
+    id: TabId;
+    label: string;
+    icon: typeof CalendarDays;
+    href: string;
+    badge?: BadgeVariant | null;
+  }> = [
     { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
     { id: 'stats', label: '統計', icon: BarChart3, href: '/ja/stats/review' },
-    { id: 'ai', label: 'AI', icon: Sparkles, href: '/ja/ai' },
+    { id: 'ai', label: 'AI', icon: Sparkles, href: '/ja/ai', badge: aiBadge },
     { id: 'account', label: 'アカウント', icon: UserCircle, href: '/ja/settings' },
   ];
 
@@ -59,6 +69,17 @@ function MockBottomTabBar({
                 )}
               >
                 <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
+                {tab.badge && (
+                  <span
+                    aria-label={tab.badge === 'beta' ? 'β' : 'NEW'}
+                    className={cn(
+                      'absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1',
+                      'bg-warning text-warning-foreground text-xs leading-none font-medium',
+                    )}
+                  >
+                    {tab.badge === 'beta' ? 'β' : 'NEW'}
+                  </span>
+                )}
               </span>
               <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>
             </a>
@@ -89,7 +110,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** カレンダータブがアクティブ（デフォルト）。 */
+/** カレンダータブがアクティブ（デフォルト、AI に β バッジ付き）。 */
 export const CalendarActive: Story = {
   args: { activeTab: 'calendar' },
 };
@@ -99,7 +120,7 @@ export const StatsActive: Story = {
   args: { activeTab: 'stats' },
 };
 
-/** AI タブがアクティブ（Watching AI への動線）。 */
+/** AI タブがアクティブ（Watching AI への動線、β バッジ付き）。 */
 export const AiActive: Story = {
   args: { activeTab: 'ai' },
 };
@@ -112,6 +133,11 @@ export const AccountActive: Story = {
 /** スクロール連動で非表示状態。 */
 export const Hidden: Story = {
   args: { activeTab: 'calendar', hidden: true },
+};
+
+/** バッジなし（β 表示を外した状態）。 */
+export const WithoutBadge: Story = {
+  args: { activeTab: 'calendar', aiBadge: null },
 };
 
 /** 全パターン一覧。 */
@@ -142,8 +168,8 @@ export const AllPatterns: Story = {
         <MockBottomTabBar activeTab="account" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs">Hidden（スクロール連動で非表示）</p>
-        <MockBottomTabBar activeTab="calendar" hidden />
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Without Badge</p>
+        <MockBottomTabBar activeTab="calendar" aiBadge={null} />
       </div>
     </div>
   ),

@@ -7,12 +7,14 @@
 
 // Components
 export {
-  // Inline forms
-  InlineTagCreateRow,
-  InlineTagNameEdit,
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';
+export { CreateTagPopover } from './components/CreateTagPopover';
+export type {
+  CreateTagPopoverProps,
+  CreateTagPopoverSubmitInput,
+} from './components/CreateTagPopover';
 export { IconPicker, IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
@@ -30,6 +32,7 @@ export {
   useTag,
   // Tags CRUD
   useTags,
+  useTagsHierarchy,
   useTagsMap,
   useUngroupTags,
   useUpdateTag,
@@ -37,11 +40,12 @@ export {
 
 // Lib
 export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-colon';
+export { buildTagHierarchyUpdates, buildTagTree, flattenTagTree } from './lib/tag-tree';
 
 // Server (Service layer — server-only ガードで保護済み)
 export { TagService } from './server/tag-service';
 
 // Types
-export type { Tag } from './types';
+export type { Tag, TagTreeNode } from './types';
 
 // ここにないものはfeature内部専用

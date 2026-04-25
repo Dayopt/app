@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Suspense, useEffect, useMemo } from 'react';
 
-import { useTag } from '@/features/tags';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -61,16 +60,13 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
     syncCurrentDate(currentDate);
   }, [granularity, currentDate, syncGranularity, syncCurrentDate]);
 
-  const { data: tag } = useTag(tagId);
-  const tagName = tag?.name;
-
   return (
     <div className="scrollbar-stable flex-1 overflow-y-auto">
       <div className="flex flex-col gap-6 p-4">
         {/* ① Hero: 合計時間 + KPI + 子タグバー */}
         <FeatureErrorBoundary featureName="tag-detail-hero">
           <Suspense fallback={<Skeleton className="h-28 w-full rounded-2xl" />}>
-            <TagDetailHero tagId={tagId} tagName={tagName} />
+            <TagDetailHero tagId={tagId} />
           </Suspense>
         </FeatureErrorBoundary>
 
@@ -82,12 +78,12 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
             <FeatureErrorBoundary featureName="tag-detail-hourly">
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
-                <TagHourlyChart tagId={tagId} tagName={tagName} />
+                <TagHourlyChart tagId={tagId} />
               </Suspense>
             </FeatureErrorBoundary>
             <FeatureErrorBoundary featureName="tag-detail-dow">
               <Suspense fallback={<Skeleton className="h-44 w-full rounded-2xl" />}>
-                <TagDowChart tagId={tagId} tagName={tagName} />
+                <TagDowChart tagId={tagId} />
               </Suspense>
             </FeatureErrorBoundary>
           </div>
@@ -101,7 +97,7 @@ export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: Tag
           <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2')}>
             <FeatureErrorBoundary featureName="tag-detail-fulfillment">
               <Suspense fallback={<Skeleton className="h-32 w-full rounded-2xl" />}>
-                <TagFulfillmentDistribution tagId={tagId} tagName={tagName} />
+                <TagFulfillmentDistribution tagId={tagId} />
               </Suspense>
             </FeatureErrorBoundary>
             <FeatureErrorBoundary featureName="tag-detail-accuracy">

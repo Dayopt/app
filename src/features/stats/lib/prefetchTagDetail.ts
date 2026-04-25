@@ -13,11 +13,7 @@ import { computeStatsDateRange } from './compute-date-range';
  * 旧: 個別8本のRPC → 新: getTagOverview (7並列) + getTagTimeline (2並列) の2本。
  * クライアント側と同じクエリキーでプリフェッチ → キャッシュヒット保証。
  */
-export async function prefetchTagDetailData(
-  tagId: string,
-  granularity: StatsGranularity = 'week',
-  tagName: string = '',
-) {
+export async function prefetchTagDetailData(tagId: string, granularity: StatsGranularity = 'week') {
   const helpers = await createServerHelpers();
 
   const now = new Date();
@@ -29,7 +25,6 @@ export async function prefetchTagDetailData(
     await Promise.all([
       helpers.entries.getTagOverview.prefetch({
         tagId,
-        tagName: tagName || tagId,
         ...dateRange,
       }),
       helpers.entries.getTagTimeline.prefetch({

@@ -22,6 +22,7 @@ interface TrpcTagUpdateInput {
   name?: string | undefined;
   color?: TagColorName | undefined;
   icon?: string | null | undefined;
+  parentId?: string | null | undefined;
 }
 
 /** タグ更新の入力型 */
@@ -45,6 +46,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
         name: input.name,
         color: input.color || DEFAULT_TAG_COLOR,
         icon: input.icon ?? null,
+        parent_id: input.parentId ?? null,
         sort_order: 0,
         is_active: true,
         user_id: '',
@@ -81,6 +83,7 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
     },
     onSettled: () => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
     },
   });
 }
@@ -102,6 +105,7 @@ export function useUpdateTag() {
           name: newData.name ?? tag.name,
           color: newData.color ?? tag.color,
           icon: newData.icon !== undefined ? newData.icon : tag.icon,
+          parent_id: newData.parentId !== undefined ? newData.parentId : tag.parent_id,
         };
       };
 
@@ -130,6 +134,7 @@ export function useUpdateTag() {
     onSettled: (_data, _err, input) => {
       void utils.entries.list.invalidate();
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
     },
   });
@@ -183,6 +188,7 @@ export function useDeleteTag() {
     },
     onSettled: (_data, _err, input) => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
       void utils.entries.getTagStats.invalidate();
@@ -221,6 +227,7 @@ export function useRenameTag() {
     },
     onSettled: (_data, _err, input) => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
     },
@@ -250,6 +257,7 @@ export function useUpdateTagColor() {
     },
     onSettled: (_data, _err, input) => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.tags.getById.invalidate({ id: input.id });
       void utils.entries.list.invalidate();
     },
@@ -298,6 +306,7 @@ export function useRenameGroup() {
     },
     onSettled: () => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.entries.list.invalidate();
     },
   });
@@ -347,6 +356,7 @@ export function useUngroupTags() {
             name: prefix,
             color: representative?.color ?? DEFAULT_TAG_COLOR,
             icon: representative?.icon ?? null,
+            parent_id: null,
             sort_order: 0,
             is_active: true,
             user_id: '',
@@ -377,6 +387,7 @@ export function useUngroupTags() {
     },
     onSettled: () => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.entries.list.invalidate();
     },
   });
@@ -418,6 +429,7 @@ export function useDeleteGroup() {
     },
     onSettled: () => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
       void utils.entries.list.invalidate();
       void utils.entries.getTagStats.invalidate();
     },
@@ -427,6 +439,7 @@ export function useDeleteGroup() {
 /** タグ並び替えの入力型 */
 export interface ReorderTagInput {
   id: string;
+  parent_id: string | null;
   sort_order: number;
 }
 
@@ -447,13 +460,14 @@ export function useReorderTags() {
         const newData = oldData.data.map((tag) => {
           const update = updates.find((u) => u.id === tag.id);
           if (update) {
-            return { ...tag, sort_order: update.sort_order };
+            return {
+              ...tag,
+              parent_id: update.parent_id,
+              sort_order: update.sort_order,
+            };
           }
           return tag;
         });
-
-        // sort_order順にソートして配列の順番も反映
-        newData.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
         return { ...oldData, data: newData };
       });
@@ -466,6 +480,7 @@ export function useReorderTags() {
     },
     onSettled: () => {
       void utils.tags.list.invalidate();
+      void utils.tags.listHierarchy.invalidate();
     },
   });
 }
