@@ -664,10 +664,11 @@ export class TagService {
   }
 
   /**
-   * タグマージ（トランザクション対応）
+   * タグマージ（atomic）
    *
-   * PL/pgSQL Stored Procedureを使用してトランザクション的にタグをマージします。
-   * ソースタグの関連付けをターゲットタグに移行し、ソースタグを削除します。
+   * `merge_tags_with_hierarchy` RPC で entries 移動 + children 再 parent +
+   * source 非アクティブ化を 1 transaction にまとめて実行する。途中失敗時は全体
+   * rollback されるため partial state は発生しない。
    *
    * @param options - マージオプション
    * @returns マージ結果
@@ -679,14 +680,17 @@ export class TagService {
       throw new TagServiceError('SAME_TAG_MERGE', 'Cannot merge a tag with itself');
     }
 
+    // 早期 validation: 両 tag の存在 + child→parent merge ガード。
+    // 同じガードは RPC 内部にもあるが、TS 側でも実施することで意味のあるエラー
+    // メッセージ (`TagServiceError` の code) を呼び出し側に渡せる。
     const [, targetTag] = await Promise.all([
       this.getById({ userId, tagId: sourceTagId }),
       this.getById({ userId, tagId: targetTagId }),
     ]);
 
-    const { data: sourceChildren, error: sourceChildrenError } = await this.supabase
+    const { count: sourceChildrenCount, error: sourceChildrenError } = await this.supabase
       .from('tags')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('parent_id', sourceTagId)
       .eq('is_active', true);
@@ -698,66 +702,32 @@ export class TagService {
       );
     }
 
-    if ((sourceChildren?.length ?? 0) > 0 && targetTag.parent_id !== null) {
+    if ((sourceChildrenCount ?? 0) > 0 && targetTag.parent_id !== null) {
       throw new TagServiceError('INVALID_INPUT', 'Cannot merge a parent tag into a child tag.');
     }
 
-    const { error: moveEntriesError, count: migratedCount } = await this.supabase
-      .from('entries')
-      .update({ tag_id: targetTagId }, { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('tag_id', sourceTagId);
+    const { data: rpcData, error: rpcError } = await this.supabase.rpc(
+      'merge_tags_with_hierarchy',
+      {
+        p_user_id: userId,
+        p_source_tag_id: sourceTagId,
+        p_target_tag_id: targetTagId,
+      },
+    );
 
-    if (moveEntriesError) {
+    if (rpcError) {
       throw new TagServiceError(
         'MERGE_FAILED',
-        `Failed to move source tag entries: ${moveEntriesError.message}`,
+        `Failed to merge tags atomically: ${rpcError.message}`,
       );
     }
 
-    if ((sourceChildren?.length ?? 0) > 0) {
-      const nextSortOrder = await this.getNextSortOrder(userId, targetTagId);
-      const childIds = sourceChildren.map((child) => child.id);
-
-      const childUpdateResults = await Promise.all(
-        childIds.map((childId, index) =>
-          this.supabase
-            .from('tags')
-            .update({
-              parent_id: targetTagId,
-              sort_order: nextSortOrder + index,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', childId)
-            .eq('user_id', userId),
-        ),
-      );
-
-      const childUpdateError = childUpdateResults.find((result) => result.error)?.error;
-      if (childUpdateError) {
-        throw new TagServiceError(
-          'MERGE_FAILED',
-          `Failed to reparent source tag children: ${childUpdateError.message}`,
-        );
-      }
-    }
-
-    const { error: deactivateError } = await this.supabase
-      .from('tags')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', sourceTagId)
-      .eq('user_id', userId);
-
-    if (deactivateError) {
-      throw new TagServiceError(
-        'MERGE_FAILED',
-        `Failed to deactivate source tag: ${deactivateError.message}`,
-      );
-    }
+    const migrated =
+      (rpcData as { migrated?: number; children_reparented?: number } | null)?.migrated ?? 0;
 
     return {
       success: true,
-      mergedAssociations: migratedCount ?? 0,
+      mergedAssociations: migrated,
       targetTag,
     };
   }

@@ -732,6 +732,14 @@ export type Database = {
             };
             Returns: Json;
           };
+      merge_tags_with_hierarchy: {
+        Args: {
+          p_source_tag_id: string;
+          p_target_tag_id: string;
+          p_user_id: string;
+        };
+        Returns: Json;
+      };
       rename_tag_group: {
         Args: { p_new_prefix: string; p_old_prefix: string; p_user_id: string };
         Returns: {
