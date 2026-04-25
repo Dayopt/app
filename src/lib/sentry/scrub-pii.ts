@@ -95,6 +95,30 @@ function scrubString(input: string): string {
     });
 }
 
+/**
+ * `key=value&key2=value2` 形式の raw query string を key name で redact
+ *
+ * `scrubString` は token 長 / pattern でしか拾えないため、`token=abc123` のような
+ * 短い PII 値は素通りしてしまう。Sentry の `request.query_string` は文字列で
+ * 渡るケースがあるので、明示的に URLSearchParams で parse して key 単位で scrub する。
+ */
+function scrubQueryString(input: string): string {
+  try {
+    const params = new URLSearchParams(input);
+    let changed = false;
+    for (const key of Array.from(new Set(Array.from(params.keys())))) {
+      if (PII_KEYS.has(key.toLowerCase())) {
+        params.set(key, REDACTED);
+        changed = true;
+      }
+    }
+    if (!changed) return scrubString(input);
+    return params.toString();
+  } catch {
+    return scrubString(input);
+  }
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== 'object') return false;
   const proto = Object.getPrototypeOf(value);
@@ -161,7 +185,7 @@ export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
     if (isPlainObject(req.query_string)) {
       req.query_string = scrubObject(req.query_string, 0);
     } else if (typeof req.query_string === 'string') {
-      req.query_string = scrubString(req.query_string);
+      req.query_string = scrubQueryString(req.query_string);
     }
     if (typeof req.cookies === 'string') req.cookies = REDACTED;
     if (isPlainObject(req.data)) req.data = scrubObject(req.data, 0);
