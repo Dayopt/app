@@ -93,7 +93,7 @@ export function TagEntryCreateForm({
       {/* アクション（キャンセル / 作成） */}
       <div className="mt-4 flex items-center justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
-          キャンセル
+          {t('common.actions.cancel')}
         </Button>
         <Button
           type="button"
@@ -101,7 +101,7 @@ export function TagEntryCreateForm({
           onClick={onSubmit}
           disabled={isSubmitting || !startTime || !endTime}
         >
-          作成
+          {t('common.actions.create')}
         </Button>
       </div>
     </div>
