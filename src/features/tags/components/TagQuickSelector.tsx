@@ -46,7 +46,12 @@ interface TagQuickSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => void;
   /** タグホバー時のコールバック（プレビュー用） */
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
   /** PC: アンカー要素の横にパネルを配置する */
@@ -66,7 +71,12 @@ function TagQuickSelectorContent({
   onTagHover,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
-  onCreateAndSelect: (name: string, color?: string | null, icon?: string | null) => void;
+  onCreateAndSelect: (
+    name: string,
+    color?: string | null,
+    icon?: string | null,
+    parentId?: string | null,
+  ) => void;
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
 }) {
   const t = useTranslations('calendar');
@@ -91,7 +101,7 @@ function TagQuickSelectorContent({
       icon: string | null;
       parentId: string | null;
     }) => {
-      onCreateAndSelect(input.name, input.color, input.icon);
+      onCreateAndSelect(input.name, input.color, input.icon, input.parentId);
       setIsCreatePopoverOpen(false);
     },
     [onCreateAndSelect],

@@ -115,7 +115,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   // 新規タグ作成 → エントリ作成
   const handleCreateAndSelect = useCallback(
-    async (name: string, color?: string | null, icon?: string | null) => {
+    async (name: string, color?: string | null, icon?: string | null, parentId?: string | null) => {
       if (!pendingSelection || isCreating) return;
 
       setIsCreating(true);
@@ -124,6 +124,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           name,
           color: resolveTagColor(color),
           icon: icon ?? undefined,
+          parentId: parentId ?? undefined,
         });
         // mutateAsync resolved → handleCreate で続行
         handleCreate(newTag.id, name);

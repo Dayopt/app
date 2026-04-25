@@ -248,22 +248,11 @@ export class TagService {
     const parentId = input.parentId ?? null;
 
     if (parentId) {
+      // 2 階層モデルを保つため「親自身がすでに子タグである」場合のみ弾く。
+      // 「親が子を持っているか」ではない (sibling は何個でも作れる)。
       const parentTag = await this.getById({ userId, tagId: parentId });
-      const { count: grandChildCount, error: childCheckError } = await this.supabase
-        .from('tags')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('parent_id', parentTag.id)
-        .eq('is_active', true);
 
-      if (childCheckError) {
-        throw new TagServiceError(
-          'FETCH_FAILED',
-          `Failed to verify parent tag: ${childCheckError.message}`,
-        );
-      }
-
-      if ((grandChildCount ?? 0) > 0) {
+      if (parentTag.parent_id !== null) {
         throw new TagServiceError(
           'INVALID_INPUT',
           'Cannot create a child under a tag that already has a parent',
