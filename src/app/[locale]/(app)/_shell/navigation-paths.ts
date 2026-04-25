@@ -1,6 +1,23 @@
 import type { CalendarViewType } from '@/features/calendar';
 import { formatCalendarDateParam } from '@/features/calendar';
 
+export type AppMode = 'calendar' | 'stats' | 'ai' | 'other';
+
+/**
+ * pathname から現在の app モードを判定する。
+ *
+ * Sidebar の中身を pathname dispatch で切替えるための central point。
+ * route group (modes) は URL に現れないため、判定は prefix ベースで問題ない。
+ * locale prefix / trailing slash / query string に非依存。
+ */
+export function getModeFromPath(pathname: string | null | undefined): AppMode {
+  if (!pathname) return 'other';
+  if (pathname.includes('/calendar/') || pathname.endsWith('/calendar')) return 'calendar';
+  if (pathname.includes('/stats/') || pathname.endsWith('/stats')) return 'stats';
+  if (pathname.includes('/ai/') || pathname.endsWith('/ai')) return 'ai';
+  return 'other';
+}
+
 export function getLocaleFromPathname(pathname: string | null | undefined): 'ja' | 'en' {
   const segments = pathname?.split('/') ?? [];
   return segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')

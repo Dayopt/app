@@ -372,10 +372,9 @@ const CONVENTION_GROUPS: IconGroup[] = [
   },
   {
     title: 'AI / Insight',
-    note: 'Sparkles は AI 専用予約',
+    note: 'Sparkles は AI 専用予約 (Watching AI モードアイコン含む)',
     items: [
-      { icon: Sparkles, name: 'Sparkles', usage: 'AI 機能全般' },
-      { icon: Eye, name: 'Eye', usage: '観察系 (Watching AI)' },
+      { icon: Sparkles, name: 'Sparkles', usage: 'AI 機能全般 + Watching AI モード' },
       { icon: Lightbulb, name: 'Lightbulb', usage: 'ヒント / tips (非 AI)' },
     ],
   },

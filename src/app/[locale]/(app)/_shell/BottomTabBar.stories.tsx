@@ -1,16 +1,18 @@
 /**
  * BottomTabBar Stories
  *
- * モバイル用ボトムタブナビゲーション（Calendar / Stats / Account）。
+ * モバイル用ボトムタブナビゲーション（Calendar / Stats / AI / Account）。
  * usePathname / useRouter 等に依存するため、同じ見た目の静的モックを使用。
+ * 実装は Phase 2-B Step 3 で <Link> ベースに移行済。mock も link 形式で
+ * 実装と整合させる (Phase 2-C Step C-4)。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
+import { BarChart3, CalendarDays, Sparkles, UserCircle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-type TabId = 'calendar' | 'stats' | 'account';
+type TabId = 'calendar' | 'stats' | 'ai' | 'account';
 
 function MockBottomTabBar({
   activeTab = 'calendar',
@@ -19,10 +21,11 @@ function MockBottomTabBar({
   activeTab?: TabId;
   hidden?: boolean;
 }) {
-  const tabs: Array<{ id: TabId; label: string; icon: typeof CalendarDays }> = [
-    { id: 'calendar', label: 'カレンダー', icon: CalendarDays },
-    { id: 'stats', label: '統計', icon: BarChart3 },
-    { id: 'account', label: 'アカウント', icon: UserCircle },
+  const tabs: Array<{ id: TabId; label: string; icon: typeof CalendarDays; href: string }> = [
+    { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
+    { id: 'stats', label: '統計', icon: BarChart3, href: '/ja/stats/review' },
+    { id: 'ai', label: 'AI', icon: Sparkles, href: '/ja/ai' },
+    { id: 'account', label: 'アカウント', icon: UserCircle, href: '/ja/settings' },
   ];
 
   return (
@@ -40,9 +43,9 @@ function MockBottomTabBar({
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
           return (
-            <button
-              type="button"
+            <a
               key={tab.id}
+              href={tab.href}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 transition-colors',
@@ -58,7 +61,7 @@ function MockBottomTabBar({
                 <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
               </span>
               <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>
-            </button>
+            </a>
           );
         })}
       </div>
@@ -96,6 +99,11 @@ export const StatsActive: Story = {
   args: { activeTab: 'stats' },
 };
 
+/** AI タブがアクティブ（Watching AI への動線）。 */
+export const AiActive: Story = {
+  args: { activeTab: 'ai' },
+};
+
 /** アカウントタブがアクティブ。 */
 export const AccountActive: Story = {
   args: { activeTab: 'account' },
@@ -110,7 +118,7 @@ export const Hidden: Story = {
 export const AllPatterns: Story = {
   decorators: [
     (Story) => (
-      <div className="relative h-[600px]">
+      <div className="relative h-[700px]">
         <Story />
       </div>
     ),
@@ -124,6 +132,10 @@ export const AllPatterns: Story = {
       <div>
         <p className="text-muted-foreground mb-2 px-4 text-xs">Stats Active</p>
         <MockBottomTabBar activeTab="stats" />
+      </div>
+      <div>
+        <p className="text-muted-foreground mb-2 px-4 text-xs">AI Active</p>
+        <MockBottomTabBar activeTab="ai" />
       </div>
       <div>
         <p className="text-muted-foreground mb-2 px-4 text-xs">Account Active</p>

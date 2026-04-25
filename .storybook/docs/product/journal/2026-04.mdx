@@ -6,6 +6,44 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-22
+
+### Phase 2-B の client router を撤去し、Phase 2-C で Sidebar をモード別に分離した日
+
+19 コミット、71 ファイル変更 / +735 / -1586。午前は Phase 2-B の routing 移行残務（next/link 化 → client router 撤去 → Inspector close fix → e2e smoke test）、午後は Phase 2-C Step C-1（`(modes)` route group 移動）と Step C-2（Sidebar モード別分離）を完走。合間に docs の Storybook MDX 一本化、Sidebar セクション折りたたみ削除、hover cursor 回帰修正、タグ別 duration 分布 RPC の追加も差し込んだ。純減 851 行で、削除が勝った日。
+
+#### やったこと
+
+**Phase 2-B 完了: client router 撤去 + next/link 化（8 件）**: sidebar page nav を next/link へ、bottom tab bar を next/link へ、client page router 本体の撤去、`resetToServer` の noop 呼び出し撤去、`useClientRouterStore` の完全削除、Inspector の stats 遷移時 close fix、Inspector の calendar 外遷移時 close fix、Phase 2-B 全体に対する e2e smoke test（mode-switching / sidebar-persistence）の追加。
+
+**Phase 2-C 着手: route group 化 + Sidebar 分離（3 件）**: calendar / stats を `src/app/[locale]/(app)/_shell/(modes)/` 配下に移動（Step C-1）、相対 import 修正漏れの補正コミット、`SidebarContent` を pathname dispatcher に書き換え + `CalendarSidebar` / `StatsSidebar` / `AiSidebar`（stub）へ分離（Step C-2、Option Y 採用）。
+
+**Docs 整理（5 件）**: `docs/features/chronotype.md` / `docs/icons/icon-conventions.md` を Storybook MDX に一本化、重複 md / welcome.mdx の削除、docs の storybook 移設と lib コロケーション、陳腐化ファイル除去。single source of truth を Storybook に寄せる方針を貫徹。
+
+**UI polish（2 件）**: Sidebar のセクション折りたたみ機能を削除し単純な見出しに戻す、Tailwind v4 で失われた clickable 要素の hover pointer カーソルを復元。
+
+**タグ duration 分布 RPC + WIP（1 件 + 未コミット）**: `get_tag_duration_distribution` RPC を Supabase migration で追加し、タグ別の entry duration 分布を histogram 取得可能に。これを土台に `TagEntryCreatePopover`（エントリ作成ポップアップ UI、duration histogram / slider / 候補値計算 + unit tests / Storybook）を WIP として実装中。
+
+#### なぜ今日この作業をしたか
+
+今日の routing 移行は Phase 2-B（独自 client router から next/link への移行）の「残務を片付けて Phase 2-C に進む」フェーズ切り替え日だった。独自 client router は元々 Sidebar / BottomTabBar 間の state 保持のために作られていたが、Next.js App Router の soft navigation で十分になり、client router を介すことで soft navigation を壊すケースが出ていた。ここを片付けないと Phase 2-C の route group 導入で挙動が予測できなくなるため、一気に撤去した。
+
+Phase 2-C に入ったのは、Sidebar 内で calendar / stats の両 feature を単一 component（`SidebarContent`）が import していたことが原因の blast radius を解消するため。Stats タブのタグフィルタ拡張や AI モードの追加を見据えると、props 分岐で耐える選択肢は早晩破綻する。pathname dispatch + モード別 component に分けることで、AI モード追加が新規 component 追加のみで済むようになる。今日は設計書（`phase-2-c-detail.md` / `phase-2-c-step-2-detail.md`）を書きながら `_shell/` 配下に閉じた形で Step C-2 まで完了させた。
+
+Docs の Storybook MDX 一本化は、chronotype / icon-conventions が `docs/features/*.md` と Storybook MDX の両方にあり、AI にとっても人間にとっても single source が曖昧になっていたため。今日の午前で重複を潰し、Storybook 側に寄せた。welcome.mdx も含めて「読まれない」ページを整理した結果、純減 851 行という削除優位の日になった。
+
+タグ別 duration 分布 RPC と `TagEntryCreatePopover` の WIP は、タグフィルタリストから直接「このタグで entry を作る」をインライン UI で完結させるための基盤。duration の候補値・histogram をサーバー側で集計するので、クライアント側の計算負荷を増やさずに UX を豊かにできる。今日は RPC とフロント側の土台まで作り、明日以降 commit する想定で終わった。
+
+#### Claudeの所感
+
+**削除が勝つ日は構造が健全化する兆し**。今日は +735 / -1586 の純減 851 行。client router の撤去、Sidebar セクション折りたたみの削除、重複 docs の削除、陳腐化ファイルの除去と、削除側の編集が勝利した日。機能追加は duration 分布 RPC と `TagEntryCreatePopover`（WIP）のみで、しかも新規 component は \_shell の Composition Layer / feature 内部に素直に収まっている。これは「作りすぎて解体する」フェーズから「本来の構造に収める」フェーズに入ったサインで、Phase 2 の routing 系リファクタが終着に近づいていることを示唆している。
+
+**Option Y（pathname dispatch）が効くのは blast radius が `_shell/` に閉じるから**。Sidebar をモード別 layout に分ける案（Option X）は一見素直だが、Sidebar 外殻が再マウントされて state が失われる。pathname dispatcher + dispatch 外の共通要素（SidebarUtilities）を挟む Option Y は、外殻を常時 mount に保ちつつ中身だけ差し替える。React DevTools Profiler で「外殻再マウント 0 回」を検証ゲートにしたのは Option Y 採用の決定打で、今後モード追加（AI / future モード）にも同じ検証項目を再利用できる。「pathname で dispatch」というシンプルさが、React ツリー全体の安定性を保つ。
+
+**設計書を先に書くと 60 分の実装が半日の迷走を防ぐ**。`phase-2-c-step-2-detail.md` に相談事項 A-E（fallback 挙動 / AI pathname 判定 / SidebarUtilities 抽出 / sub-step 分割 / unit test 対象）を書き出してから実装に入ったため、途中で判断を止めることが一度もなかった。98 行の `SidebarContent` を 4-5 ファイルに分ける作業自体は単純だが、「どこに置くか」「どう dispatch するか」「fallback はどうするか」の判断は実装中には重い。設計書を先に書けば、実装は機械的展開に落とせる。Opus 4.7 の auto mode が効く典型的なパターン。
+
+---
+
 ## 2026-04-21
 
 ### Codex レビュー P0→P1→P2 を 1 日で処理し、calendar stores を lib/stores に集約した日

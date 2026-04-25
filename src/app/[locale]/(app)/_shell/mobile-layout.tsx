@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { isCalendarViewPath } from '@/features/calendar';
+import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
@@ -60,12 +60,14 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
     [pathWithoutLocale],
   );
 
+  const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
+
   // calendar / stats 系はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
   // 詳細操作は PC 限定のため、情報として明示する
   const isDesktopOnlyEditPage = useMemo(
-    () => isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/stats'),
-    [pathWithoutLocale],
+    () => isCalendarView || pathWithoutLocale.startsWith('/stats'),
+    [isCalendarView, pathWithoutLocale],
   );
 
   return (
@@ -85,9 +87,14 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* モバイル閲覧専用の告知（calendar / stats） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（BottomTabBar分の余白を確保） */}
-        <MainContentWrapper className="pb-16">{children}</MainContentWrapper>
+        {/* Main Content（calendar view では TagChipRow + BottomTabBar 分の余白を確保） */}
+        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
+          {children}
+        </MainContentWrapper>
       </div>
+
+      {/* calendar view のみ: タグクイック作成 chip 行（TabBar 直上に固定） */}
+      {isCalendarView && <TagChipRow hidden={hidden} />}
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar hidden={hidden} />

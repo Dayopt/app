@@ -1,21 +1,21 @@
 'use client';
 
-import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
+import { BarChart3, CalendarDays, Sparkles, UserCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
-import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
-type TabId = 'calendar' | 'stats' | 'account';
+type TabId = 'calendar' | 'stats' | 'ai' | 'account';
 
 function getActiveTabFromPath(pathname: string): TabId {
   const segments = pathname.split('/');
@@ -26,6 +26,7 @@ function getActiveTabFromPath(pathname: string): TabId {
 
   if (pathWithoutLocale.startsWith('/settings')) return 'account';
   if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  if (pathWithoutLocale.startsWith('/ai')) return 'ai';
   return 'calendar';
 }
 
@@ -33,15 +34,11 @@ interface BottomTabBarProps {
   hidden?: boolean;
 }
 
-/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Account） */
+/** モバイル用ボトムタブナビゲーション（Calendar / Stats / AI / Account） */
 export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
   const t = useTranslations();
   const pathname = usePathname();
-  const router = useRouter();
   const calendarNav = useCalendarNavigation();
-  const switchToPage = useClientRouterStore((s) => s.switchToPage);
-  const clientPage = useClientRouterStore((s) => s.clientPage);
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
@@ -49,71 +46,63 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
   const statsDate = useStatsFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
+  const activeTab: TabId = getActiveTabFromPath(pathname ?? '/');
 
-  // clientPage（Zustand）を優先、null時は pathname から判定
-  const activeTab: TabId = useMemo(() => {
-    if (clientPage) return clientPage;
-    return getActiveTabFromPath(pathname ?? '/');
-  }, [clientPage, pathname]);
-
-  const handleCalendarClick = useCallback(() => {
-    if (activeTab === 'calendar') return;
-
-    window.history.pushState(
-      null,
-      '',
+  const calendarHref = useMemo(
+    () =>
       buildCalendarPath({
         locale,
         viewType: calendarNav?.viewType ?? 'day',
         currentDate: calendarNav?.currentDate,
       }),
-    );
-    switchToPage('calendar');
-  }, [activeTab, calendarNav, locale, switchToPage]);
+    [locale, calendarNav?.viewType, calendarNav?.currentDate],
+  );
 
-  const handleStatsClick = useCallback(() => {
-    if (activeTab === 'stats') return;
+  const statsHref = useMemo(
+    () =>
+      buildStatsPath(locale, 'review', {
+        granularity: statsGranularity,
+        date: statsDate,
+      }),
+    [locale, statsGranularity, statsDate],
+  );
 
-    window.history.pushState(
-      null,
-      '',
-      buildStatsPath(locale, 'review', { granularity: statsGranularity, date: statsDate }),
-    );
-    switchToPage('stats');
-  }, [activeTab, locale, statsGranularity, statsDate, switchToPage]);
-
-  const handleAccountClick = useCallback(() => {
-    resetToServer();
-    router.push(`/${locale}/settings`);
-  }, [router, locale, resetToServer]);
+  const accountHref = `/${locale}/settings`;
+  const aiHref = `/${locale}/ai`;
 
   const tabs: Array<{
     id: TabId;
     label: string;
     icon: typeof CalendarDays;
-    onClick: () => void;
+    href: string;
   }> = useMemo(
     () => [
       {
         id: 'calendar',
         label: t('navigation.bottomTab.calendar'),
         icon: CalendarDays,
-        onClick: handleCalendarClick,
+        href: calendarHref,
       },
       {
         id: 'stats',
         label: t('navigation.bottomTab.stats'),
         icon: BarChart3,
-        onClick: handleStatsClick,
+        href: statsHref,
+      },
+      {
+        id: 'ai',
+        label: t('navigation.bottomTab.ai'),
+        icon: Sparkles,
+        href: aiHref,
       },
       {
         id: 'account',
         label: t('navigation.bottomTab.account'),
         icon: UserCircle,
-        onClick: handleAccountClick,
+        href: accountHref,
       },
     ],
-    [t, handleCalendarClick, handleStatsClick, handleAccountClick],
+    [t, calendarHref, statsHref, aiHref, accountHref],
   );
 
   return (
@@ -131,11 +120,11 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
           return (
-            <button
-              type="button"
+            <Link
               key={tab.id}
+              href={tab.href}
+              prefetch
               aria-current={isActive ? 'page' : undefined}
-              onClick={tab.onClick}
               className={cn(
                 'flex min-h-11 flex-1 flex-col items-center justify-center gap-1 transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground',
@@ -161,7 +150,7 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
                 )}
               </span>
               <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

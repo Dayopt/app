@@ -25,8 +25,8 @@ import type { Tag } from '../types';
 export interface InlineTagCreateRowProps {
   /** 固定 group（prefix）— GroupHeader 内作成時に渡す */
   defaultGroup?: string | null | undefined;
-  /** group から継承する色。指定時はカラースウォッチ行を出さない */
-  inheritedColor?: TagColorName | null | undefined;
+  /** 色スウォッチの初期選択値。省略時は DEFAULT_TAG_COLOR */
+  defaultColor?: TagColorName | null | undefined;
   /** 重複チェック用 */
   existingTags: Tag[];
   onSubmit: (name: string, color: TagColorName) => void | Promise<void>;
@@ -38,13 +38,13 @@ export interface InlineTagCreateRowProps {
 /**
  * インラインタグ作成フォーム
  *
- * - name 入力 + 色スウォッチ（`inheritedColor` 指定時は色選択 UI を省略）
+ * - name 入力 + 色スウォッチ（`defaultColor` 指定時は初期選択値として使う）
  * - Enter: 送信 / Esc: キャンセル / outside blur: キャンセル
  * - アイコンは DEFAULT_TAG_ICON 固定。作成後に filter menu から変更する運用
  */
 export function InlineTagCreateRow({
   defaultGroup,
-  inheritedColor,
+  defaultColor,
   existingTags,
   onSubmit,
   onCancel,
@@ -56,14 +56,12 @@ export function InlineTagCreateRow({
 
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState<TagColorName>(
-    inheritedColor ?? DEFAULT_TAG_COLOR,
+    defaultColor ?? DEFAULT_TAG_COLOR,
   );
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const effectiveColor: TagColorName = inheritedColor ?? selectedColor;
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -88,11 +86,11 @@ export function InlineTagCreateRow({
 
     setSubmitting(true);
     try {
-      await onSubmit(combined, effectiveColor);
+      await onSubmit(combined, selectedColor);
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, name, defaultGroup, existingTags, onSubmit, effectiveColor, tTags]);
+  }, [submitting, name, defaultGroup, existingTags, onSubmit, selectedColor, tTags]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -128,7 +126,7 @@ export function InlineTagCreateRow({
       )}
     >
       <div className="flex items-center gap-2">
-        <TagIcon icon={DEFAULT_TAG_ICON} color={effectiveColor} size="sm" />
+        <TagIcon icon={DEFAULT_TAG_ICON} color={selectedColor} size="sm" />
         <Input
           value={name}
           onChange={(e) => {
@@ -145,37 +143,33 @@ export function InlineTagCreateRow({
         />
       </div>
 
-      {!inheritedColor && (
-        <div
-          role="radiogroup"
-          aria-label={tCalendar('tagSelector.color')}
-          className="flex flex-wrap gap-1"
-        >
-          {TAG_COLOR_NAMES.map((color) => {
-            const classes = getTagColorClasses(color);
-            const isActive = selectedColor === color;
-            return (
-              <button
-                key={color}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                aria-label={color}
-                onClick={() => setSelectedColor(color)}
-                className={cn(
-                  'flex size-8 shrink-0 items-center justify-center rounded-full transition-all',
-                  isActive
-                    ? 'ring-primary ring-2 ring-offset-2'
-                    : 'hover:scale-110 active:scale-95',
-                  classes.dot,
-                )}
-              >
-                {isActive && <Check className="size-4 text-white" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div
+        role="radiogroup"
+        aria-label={tCalendar('tagSelector.color')}
+        className="flex flex-wrap gap-1"
+      >
+        {TAG_COLOR_NAMES.map((color) => {
+          const classes = getTagColorClasses(color);
+          const isActive = selectedColor === color;
+          return (
+            <button
+              key={color}
+              type="button"
+              role="radio"
+              aria-checked={isActive}
+              aria-label={color}
+              onClick={() => setSelectedColor(color)}
+              className={cn(
+                'flex size-8 shrink-0 items-center justify-center rounded-full transition-all',
+                isActive ? 'ring-primary ring-2 ring-offset-2' : 'hover:scale-110 active:scale-95',
+                classes.dot,
+              )}
+            >
+              {isActive && <Check className="size-4 text-white" />}
+            </button>
+          );
+        })}
+      </div>
 
       {error && <FieldError announceImmediately>{error}</FieldError>}
 

@@ -150,6 +150,8 @@
       "viewStats": "統計を見る",
       "hide": "カレンダーから非表示",
       "show": "カレンダーに表示",
+      "expandGroup": "グループを展開",
+      "collapseGroup": "グループを折りたたむ",
       "noGroup": "グループなし",
       "deleteTag": {
         "title": "「{name}」を削除",

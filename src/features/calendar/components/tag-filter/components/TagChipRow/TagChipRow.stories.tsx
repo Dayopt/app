@@ -1,0 +1,148 @@
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+import type { Tag } from '@/features/tags';
+
+import { TagChipRow } from './TagChipRow';
+
+/** MOCK_TAGS: sidebar と同じ sort_order で chip 行に並ぶ想定 */
+const MOCK_TAGS: Tag[] = [
+  {
+    id: 'tag-1',
+    name: '仕事',
+    user_id: 'user-1',
+    color: 'blue',
+    icon: 'briefcase',
+    is_active: true,
+    sort_order: 0,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-2',
+    name: '仕事:会議',
+    user_id: 'user-1',
+    color: 'blue',
+    icon: 'users',
+    is_active: true,
+    sort_order: 1,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-3',
+    name: '仕事:開発',
+    user_id: 'user-1',
+    color: 'indigo',
+    icon: 'code',
+    is_active: true,
+    sort_order: 2,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-4',
+    name: '勉強',
+    user_id: 'user-1',
+    color: 'green',
+    icon: 'book-open',
+    is_active: true,
+    sort_order: 3,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-5',
+    name: '運動',
+    user_id: 'user-1',
+    color: 'amber',
+    icon: 'dumbbell',
+    is_active: true,
+    sort_order: 4,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-6',
+    name: '休憩',
+    user_id: 'user-1',
+    color: 'orange',
+    icon: 'coffee',
+    is_active: true,
+    sort_order: 5,
+    created_at: null,
+    updated_at: null,
+  },
+  {
+    id: 'tag-7',
+    name: '読書',
+    user_id: 'user-1',
+    color: 'teal',
+    icon: 'book',
+    is_active: true,
+    sort_order: 6,
+    created_at: null,
+    updated_at: null,
+  },
+];
+
+/** 30 件までスケールさせた版（横スクロールの確認用） */
+const MANY_TAGS: Tag[] = Array.from({ length: 30 }, (_, i) => ({
+  id: `tag-many-${i}`,
+  name: `タグ${i + 1}`,
+  user_id: 'user-1',
+  color: ['blue', 'indigo', 'green', 'amber', 'orange', 'teal', 'pink', 'violet'][i % 8] ?? 'gray',
+  icon: null,
+  is_active: true,
+  sort_order: i,
+  created_at: null,
+  updated_at: null,
+}));
+
+/**
+ * モバイル専用タグチップ行。タイムライン下部・タブバー上に配置される想定。
+ *
+ * - sort_order 昇順で並ぶ（PC sidebar と完全一致）
+ * - is_active === false のタグは除外
+ * - 葉タグは suffix のみ表示（"仕事:会議" → "会議"）
+ * - タップで bottom sheet popover（既存 TagEntryCreatePopover を isMobile=true で再利用）
+ */
+const meta = {
+  title: 'Features/Calendar/Sidebar/TagFilter/TagChipRow',
+  component: TagChipRow,
+  parameters: {
+    layout: 'fullscreen',
+    viewport: { defaultViewport: 'mobile1' },
+    a11y: { test: 'todo' },
+  },
+  decorators: [
+    (Story) => (
+      <div className="bg-background w-full">
+        <Story />
+      </div>
+    ),
+  ],
+} satisfies Meta<typeof TagChipRow>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** Default: 7 タグ、ほぼ画面に収まる */
+export const Default: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: MOCK_TAGS }, 'entries.list': [] },
+  },
+};
+
+/** ManyTags: 30 タグ、横スクロールで全件アクセス可能 */
+export const ManyTags: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: MANY_TAGS }, 'entries.list': [] },
+  },
+};
+
+/** Empty: タグゼロ → chip 行ごと非描画（null を返す） */
+export const Empty: Story = {
+  parameters: {
+    trpcMocks: { 'tags.list': { data: [] }, 'entries.list': [] },
+  },
+};

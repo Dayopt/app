@@ -1,12 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let mockPathname = '/ja/calendar/day';
-let mockClientPage: 'calendar' | 'stats' | null = null;
 
 const mockPush = vi.fn();
-const mockSwitchToPage = vi.fn();
-const mockResetToServer = vi.fn();
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
@@ -28,21 +25,6 @@ vi.mock('@/features/calendar', async () => {
     formatCalendarDateParam: (date: Date) => dateFns.format(date, 'yyyy-MM-dd'),
   };
 });
-
-vi.mock('@/lib/stores/useClientRouterStore', () => ({
-  useClientRouterStore: (
-    selector: (state: {
-      switchToPage: typeof mockSwitchToPage;
-      clientPage: typeof mockClientPage;
-      resetToServer: typeof mockResetToServer;
-    }) => unknown,
-  ) =>
-    selector({
-      switchToPage: mockSwitchToPage,
-      clientPage: mockClientPage,
-      resetToServer: mockResetToServer,
-    }),
-}));
 
 vi.mock('@/features/auth', () => ({
   useAuthStore: (
@@ -71,20 +53,19 @@ describe('BottomTabBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPathname = '/ja/calendar/day';
-    mockClientPage = null;
   });
 
   it('uses page navigation semantics instead of tab semantics', () => {
     render(<BottomTabBar />);
 
     const navigation = screen.getByRole('navigation', { name: 'common.aria.pageNavigation' });
-    const calendarButton = screen.getByRole('button', {
+    const calendarLink = screen.getByRole('link', {
       name: /navigation\.bottomTab\.calendar/,
     });
 
     expect(navigation).not.toHaveAttribute('role', 'tablist');
-    expect(calendarButton).toHaveAttribute('aria-current', 'page');
-    expect(calendarButton).not.toHaveAttribute('role', 'tab');
+    expect(calendarLink).toHaveAttribute('aria-current', 'page');
+    expect(calendarLink).not.toHaveAttribute('role', 'tab');
   });
 
   it('marks the route derived from pathname as current', () => {
@@ -92,26 +73,55 @@ describe('BottomTabBar', () => {
 
     render(<BottomTabBar />);
 
-    expect(screen.getByRole('button', { name: /navigation\.bottomTab\.stats/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.stats/ })).toHaveAttribute(
       'aria-current',
       'page',
     );
     expect(
-      screen.getByRole('button', { name: /navigation\.bottomTab\.calendar/ }),
+      screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ }),
     ).not.toHaveAttribute('aria-current');
   });
 
   it('keeps the local calendar day when generating the return URL', () => {
     mockPathname = '/ja/stats/review';
-    mockClientPage = 'stats';
 
     render(<BottomTabBar />);
 
-    const pushStateSpy = vi.spyOn(window.history, 'pushState');
+    const calendarLink = screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ });
 
-    fireEvent.click(screen.getByRole('button', { name: /navigation\.bottomTab\.calendar/ }));
+    expect(calendarLink).toHaveAttribute('href', '/ja/calendar/week?date=2026-03-25');
+  });
 
-    expect(pushStateSpy).toHaveBeenCalledWith(null, '', '/ja/calendar/week?date=2026-03-25');
-    pushStateSpy.mockRestore();
+  it('renders the ai tab with a static href', () => {
+    render(<BottomTabBar />);
+
+    const aiLink = screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ });
+
+    expect(aiLink).toHaveAttribute('href', '/ja/ai');
+  });
+
+  it('marks the ai tab as current for /ja/ai', () => {
+    mockPathname = '/ja/ai';
+
+    render(<BottomTabBar />);
+
+    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ }),
+    ).not.toHaveAttribute('aria-current');
+  });
+
+  it('marks the ai tab as current for thread detail routes', () => {
+    mockPathname = '/ja/ai/threads/abc123';
+
+    render(<BottomTabBar />);
+
+    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 });

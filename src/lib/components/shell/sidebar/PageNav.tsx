@@ -1,36 +1,37 @@
 'use client';
 
-import { BarChart3, CalendarDays } from 'lucide-react';
+import { BarChart3, CalendarDays, Sparkles } from 'lucide-react';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
 interface PageNavProps {
-  activePage: 'calendar' | 'stats';
-  onCalendarClick: () => void;
-  onStatsClick: () => void;
+  activePage: 'calendar' | 'stats' | 'ai';
+  calendarHref: string;
+  statsHref: string;
+  aiHref: string;
   className?: string;
 }
 
-/** ページナビゲーション（Calendar / Stats セグメントコントロール） */
-export function PageNav({ activePage, onCalendarClick, onStatsClick, className }: PageNavProps) {
+/** ページナビゲーション（Calendar / Stats / AI セグメントコントロール） */
+export function PageNav({ activePage, calendarHref, statsHref, aiHref, className }: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
   return (
-    <div
+    <nav
       className={cn(
         'border-border flex items-center overflow-hidden rounded-full border',
         className,
       )}
-      role="tablist"
       aria-label={tAria('pageNavigation')}
     >
-      <button
-        role="tab"
-        aria-selected={activePage === 'calendar'}
-        onClick={onCalendarClick}
+      <Link
+        href={calendarHref}
+        prefetch
+        aria-current={activePage === 'calendar' ? 'page' : undefined}
         className={cn(
           'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
           activePage === 'calendar'
@@ -40,11 +41,11 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
       >
         <CalendarDays className="size-4" />
         <span>{t('calendar')}</span>
-      </button>
-      <button
-        role="tab"
-        aria-selected={activePage === 'stats'}
-        onClick={onStatsClick}
+      </Link>
+      <Link
+        href={statsHref}
+        prefetch
+        aria-current={activePage === 'stats' ? 'page' : undefined}
         className={cn(
           'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
           activePage === 'stats'
@@ -54,7 +55,21 @@ export function PageNav({ activePage, onCalendarClick, onStatsClick, className }
       >
         <BarChart3 className="size-4" />
         <span>{t('stats')}</span>
-      </button>
-    </div>
+      </Link>
+      <Link
+        href={aiHref}
+        prefetch
+        aria-current={activePage === 'ai' ? 'page' : undefined}
+        className={cn(
+          'flex h-8 items-center justify-center gap-2 px-4 text-sm transition-colors',
+          activePage === 'ai'
+            ? 'bg-muted text-foreground font-medium'
+            : 'text-muted-foreground hover:bg-state-hover',
+        )}
+      >
+        <Sparkles className="size-4" />
+        <span>{t('ai')}</span>
+      </Link>
+    </nav>
   );
 }

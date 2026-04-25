@@ -1,0 +1,35 @@
+{
+  "ai": {
+    "sidebar": {
+      "title": "Watching AI",
+      "conversations": {
+        "empty": "会話はまだありません"
+      },
+      "soon": {
+        "label": "予定",
+        "weeklyReport": {
+          "title": "週次レポート",
+          "description": "今週の時間の使い方をまとめてお届けします"
+        },
+        "insights": {
+          "title": "気づき",
+          "description": "パターンから見つけた気づきを共有します"
+        },
+        "anomaly": {
+          "title": "異常検知",
+          "description": "いつもと違う兆しを静かにお知らせします"
+        }
+      }
+    },
+    "main": {
+      "title": "Watching AI は準備中",
+      "description": "あなたの時間の使い方を観察し、パターンを見つけて気づきをお届けします。"
+    },
+    "thread": {
+      "placeholder": {
+        "title": "この会話は準備中です",
+        "description": "Watching AI が使えるようになると、ここに AI との会話履歴が表示されます"
+      }
+    }
+  }
+}

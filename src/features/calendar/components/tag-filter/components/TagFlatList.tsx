@@ -45,7 +45,6 @@ import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
-import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
@@ -54,6 +53,7 @@ import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
+import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 
 import type { DragEndEvent } from '@dnd-kit/core';
 
@@ -106,6 +106,9 @@ export function TagFlatList({
 }: TagFlatListProps) {
   // グループ折りたたみ状態
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  // エントリ作成ポップアップの開閉（parent 集約 = 1 タグのみ開く）
+  const [openPopoverTagId, setOpenPopoverTagId] = useState<string | null>(null);
 
   const toggleGroupCollapse = useCallback((prefix: string) => {
     setCollapsedGroups((prev) => {
@@ -218,20 +221,89 @@ export function TagFlatList({
 
   const displayIds = useMemo(() => sortedTags.map((t) => t.id), [sortedTags]);
 
+  /**
+   * DnD セクション分割: dnd-kit の `over` 判定を同セクション内に限定するため、
+   * root (グループ外) と group (プレフィックス別) を別の `SortableContext` に分離する。
+   *
+   * これにより、子タグを別グループ／ルートへドラッグしても `over` にならず、
+   * flat sort_order とグループ contiguous 表示ロジックの矛盾（2+ 子タグでの並び替え異常）が
+   * 構造的に起きなくなる。
+   */
+
+  /** active/over のセクションキーを割り出す（root or group:<prefix>） */
+  const getSectionKeyForTagId = useCallback(
+    (tagId: string): string | null => {
+      const info = tagDisplayInfos.find((i) => i.tag.id === tagId);
+      if (!info) return null;
+      return info.isGrouped ? `group:${info.prefix}` : '__root__';
+    },
+    [tagDisplayInfos],
+  );
+
+  /**
+   * active と同じセクションの droppable だけを候補にする collision detection。
+   *
+   * nested SortableContext では `droppable` は DndContext 全体で共有されるため、
+   * items 分離だけでは cross-section drop を防げない。DndContext の collisionDetection で
+   * `droppableContainers` を filter することで、`over` が別セクションの item にならないようにする。
+   */
+  const sectionScopedCollisionDetection = useCallback<
+    NonNullable<React.ComponentProps<typeof DndContext>['collisionDetection']>
+  >(
+    (args) => {
+      const activeId = args.active.id;
+      const activeSection = getSectionKeyForTagId(activeId as string);
+      if (activeSection == null) return closestCenter(args);
+
+      const filteredContainers = args.droppableContainers.filter((container) => {
+        const section = getSectionKeyForTagId(container.id as string);
+        return section === activeSection;
+      });
+
+      return closestCenter({ ...args, droppableContainers: filteredContainers });
+    },
+    [getSectionKeyForTagId],
+  );
+
   const reorderMutation = useReorderTags();
 
-  // sensors は常に条件なしで呼び出す (React hooks rules)。モバイルでは activationConstraint を
-  // 実質無効化 (Infinity) して drag-to-reorder を発火させない (P0-6 Option B)
+  // DnD 並び替えは一時 pause（親配下 2+ 子タグのケースで破綻するため、ポップアップ実装を
+  // 優先する。復活させるときは distance 値を戻す）。コード / reorderMutation / useSortable /
+  // sort_order スキーマはすべて残したまま、sensor の activationConstraint で発動のみ止める。
   const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: isMobile ? Number.POSITIVE_INFINITY : 8 },
+    activationConstraint: { distance: Number.POSITIVE_INFINITY },
   });
   const keyboardSensor = useSensor(KeyboardSensor);
-  const sensors = useSensors(...(isMobile ? [] : [pointerSensor, keyboardSensor]));
+  // PC でもキーボード drag は pause（keyboardSensor を配列に含めない）
+  const sensors = useSensors(...(isMobile ? [] : [pointerSensor]));
+  // keyboardSensor は `React hooks rules` 遵守のため呼び出しは残す
+  void keyboardSensor;
+
+  // drag 直後の trailing click（ブラウザが pointerup 後に発火する click）を無効化するための
+  // タイムスタンプ。useSortable の isDragging は drag 完了時点で false に戻るため
+  // SortableTagItem の onClick から参照しても guard にならない。parent でタイムスタンプを持つ。
+  const dragEndedAtRef = useRef(0);
+
+  const handleDragStart = useCallback(() => {
+    // drag 中はポップアップが開いている状態にしない（誤って開いたままだと re-render が
+    // 重なり dnd-kit の計測タイミングと干渉しうる）
+    setOpenPopoverTagId(null);
+  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      dragEndedAtRef.current = Date.now();
+
       const { active, over } = event;
       if (!over || active.id === over.id) return;
+
+      // 安全弁: nested SortableContext が正しく効いていれば active と over は必ず同セクション。
+      // 万一 collision detection がまたいでしまった場合でも data corruption を避けるため
+      // cross-section drop は reject する。
+      const activeSection = getSectionKeyForTagId(active.id as string);
+      const overSection = getSectionKeyForTagId(over.id as string);
+      if (activeSection == null || overSection == null) return;
+      if (activeSection !== overSection) return;
 
       const oldIndex = displayIds.indexOf(active.id as string);
       const newIndex = displayIds.indexOf(over.id as string);
@@ -242,8 +314,22 @@ export function TagFlatList({
         updates: newOrder.map((id, i) => ({ id, sort_order: i })),
       });
     },
-    [displayIds, reorderMutation],
+    [displayIds, reorderMutation, getSectionKeyForTagId],
   );
+
+  const handleDragCancel = useCallback(() => {
+    dragEndedAtRef.current = Date.now();
+  }, []);
+
+  /**
+   * 行クリックでポップアップを開く要求。drag 直後 300ms 以内のクリックは
+   * trailing click と見做して無視する（dnd-kit の click 抑止は outer listener
+   * の要素にしか効かず、nested onClick には効かないため）。
+   */
+  const handleRequestOpenPopover = useCallback((tagId: string) => {
+    if (Date.now() - dragEndedAtRef.current < 300) return;
+    setOpenPopoverTagId(tagId);
+  }, []);
 
   // グループ解除時の衝突チェック（キャッシュから判定）
   const getUngroupConflicts = useCallback(
@@ -321,6 +407,9 @@ export function TagFlatList({
       onToggleCollapse={() => toggleGroupCollapse(info.prefix)}
       getUngroupConflicts={getUngroupConflicts}
       findTagByName={findTagByName}
+      openPopoverTagId={openPopoverTagId}
+      onOpenPopover={setOpenPopoverTagId}
+      onRequestOpenPopover={handleRequestOpenPopover}
     />
   );
 
@@ -329,10 +418,29 @@ export function TagFlatList({
     return <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>;
   }
 
-  // 仮想化が不要な場合は従来通りの描画
+  /**
+   * 単一 SortableContext + custom collisionDetection で セクション（root / group 別）を分離。
+   *
+   * 設計メモ: nested SortableContext は dnd-kit 仕様上 `droppable` 判定を
+   * 分離しない（SortableContext は items/strategy の provider のみ、droppable は
+   * DndContext 全体で共有される）。そのため、nested を使うと見た目は整うものの
+   * 実際の drag 検出には効かず、handleDragEnd の後段 guard に頼るだけになる。
+   *
+   * 本実装では **custom collisionDetection** で active と同セクションの droppable
+   * のみを候補にする → 他セクションは `over` にならず、drag 中の視覚フィードバックも
+   * 同セクション内だけに限定される。handleDragEnd の cross-section guard は安全弁。
+   */
+
+  // 仮想化が不要な場合
   if (!shouldVirtualize) {
     return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={sectionScopedCollisionDetection}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
         <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
           <div role="list">{tagDisplayInfos.map((info) => renderItem(info))}</div>
         </SortableContext>
@@ -340,9 +448,15 @@ export function TagFlatList({
     );
   }
 
-  // 仮想化モード: 表示範囲のアイテムのみレンダリング
+  // 仮想化モード: 表示範囲のアイテムのみレンダリング。
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={sectionScopedCollisionDetection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
       <SortableContext items={displayIds} strategy={verticalListSortingStrategy}>
         <div
           ref={scrollContainerRef}
@@ -394,6 +508,9 @@ function SortableTagItem({
   onToggleCollapse,
   getUngroupConflicts,
   findTagByName,
+  openPopoverTagId,
+  onOpenPopover,
+  onRequestOpenPopover,
 }: {
   tag: Tag;
   allTags: Tag[];
@@ -413,6 +530,10 @@ function SortableTagItem({
   onToggleCollapse: () => void;
   getUngroupConflicts: (prefix: string) => string[];
   findTagByName: (name: string) => Tag | undefined;
+  openPopoverTagId: string | null;
+  onOpenPopover: (tagId: string | null) => void;
+  /** 行クリックで popover を開く要求（drag 直後 300ms は parent 側で弾く） */
+  onRequestOpenPopover: (tagId: string) => void;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -428,14 +549,12 @@ function SortableTagItem({
   const { showOnlyTag } = useCalendarFilterStore();
   const { openTagMergeModal } = useTagModalNavigation();
   const router = useRouter();
-  const resetToServer = useClientRouterStore((s) => s.resetToServer);
 
   const navigateToTagStats = useCallback(
     (tagId: string) => {
-      resetToServer();
       router.push(`/${locale}/stats/tags/${tagId}`);
     },
-    [router, locale, resetToServer],
+    [router, locale],
   );
   const { displayColor, handleColorChange, handleIconChange } = useFilterItemEdit({
     tagId: tag.id,
@@ -507,17 +626,13 @@ function SortableTagItem({
         return;
       }
 
-      // 衝突なし → 通常のリネーム
-      const groupColor = newGroup
-        ? resolveTagColor(groupOptions.find((g) => g.name === newGroup)?.color)
-        : undefined;
+      // 衝突なし → 通常のリネーム（色は継承しない。各タグが独立した色を保持）
       updateTagMutation.mutate({
         id: tag.id,
         name: newName,
-        ...(groupColor ? { color: groupColor } : {}),
       });
     },
-    [tag.id, tag.name, suffix, groupOptions, updateTagMutation, findTagByName],
+    [tag.id, tag.name, suffix, updateTagMutation, findTagByName],
   );
 
   // グループリネームハンドラー
@@ -621,40 +736,72 @@ function SortableTagItem({
   // 折りたたみ時: グループ先頭以外は非表示
   const isHiddenByCollapse = isGrouped && !isFirstInGroup && collapsed;
 
+  // ポップアップ開閉状態（子タグ行 / グループ親行の 2 箇所で判定する）
+  const isChildRowPopoverOpen = openPopoverTagId === tag.id;
+  const isGroupRowPopoverOpen = parentTag != null && openPopoverTagId === parentTag.id;
+
   return (
     <>
       <div
         ref={setNodeRef}
         style={style}
-        className={cn(!isMobile && isDragging && 'z-10 opacity-50', isHiddenByCollapse && 'hidden')}
+        className={cn(
+          !isMobile && isDragging && 'z-10 cursor-grabbing opacity-50',
+          isHiddenByCollapse && 'hidden',
+        )}
         {...(isMobile ? {} : { ...attributes, ...listeners })}
+        // ブラウザ native HTML5 DnD の copy cursor を抑止（dnd-kit は pointer events 使用）
+        draggable={false}
         role="listitem"
       >
-        {/* グループ先頭タグの場合、GroupHeader を描画 */}
+        {/* グループ先頭タグの場合、GroupHeader を描画
+            吸収された親タグ (parentTag) があれば行クリックで popover を開く。
+            無い場合（仮想グループ）は onRowClick 未指定で既存の「行クリック=開閉」に fallback。
+            popover は GroupHeader を包む relative div に anchor する。 */}
         {isFirstInGroup && (
-          <GroupHeader
-            label={currentGroup}
-            checked={groupVisibility === 'all'}
-            indeterminate={groupVisibility === 'some'}
-            collapsed={collapsed}
-            displayColor={displayColor}
-            isMobile={isMobile ?? false}
-            onCheckedChange={() => onToggleGroupTags(groupTagIds)}
-            onToggleCollapse={onToggleCollapse}
-            onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
-            onColorChange={handleGroupColorChange}
-            onIconChange={parentTag ? handleParentIconChange : undefined}
-            currentIcon={parentTag?.icon ?? tag.icon}
-            onAddTagToGroup={() => setIsCreatingInGroup(true)}
-            onRenameGroup={() => setIsEditingGroupName(true)}
-            onUngroupTags={handleUngroupTags}
-            onViewStats={() => navigateToTagStats(parentTag?.id ?? tag.id)}
-            onDeleteGroup={handleDeleteGroup}
-            renameEditing={isEditingGroupName}
-            onSaveRename={handleSaveGroupRename}
-            onDoneRenameEditing={() => setIsEditingGroupName(false)}
-            renameExistingNames={groupRenameExistingNames}
-          />
+          <div className="relative">
+            <GroupHeader
+              label={currentGroup}
+              checked={groupVisibility === 'all'}
+              indeterminate={groupVisibility === 'some'}
+              collapsed={collapsed}
+              displayColor={displayColor}
+              isMobile={isMobile ?? false}
+              onCheckedChange={() => onToggleGroupTags(groupTagIds)}
+              onToggleCollapse={onToggleCollapse}
+              onShowOnlyGroup={() => onShowOnlyGroupTags(groupTagIds)}
+              onColorChange={handleGroupColorChange}
+              onIconChange={parentTag ? handleParentIconChange : undefined}
+              currentIcon={parentTag?.icon ?? tag.icon}
+              onAddTagToGroup={() => setIsCreatingInGroup(true)}
+              onRenameGroup={() => setIsEditingGroupName(true)}
+              onUngroupTags={handleUngroupTags}
+              onViewStats={() => navigateToTagStats(parentTag?.id ?? tag.id)}
+              onDeleteGroup={handleDeleteGroup}
+              onRowClick={parentTag ? () => onRequestOpenPopover(parentTag.id) : undefined}
+              highlighted={isGroupRowPopoverOpen}
+              renameEditing={isEditingGroupName}
+              onSaveRename={handleSaveGroupRename}
+              onDoneRenameEditing={() => setIsEditingGroupName(false)}
+              renameExistingNames={groupRenameExistingNames}
+            />
+            {isGroupRowPopoverOpen && parentTag ? (
+              <TagEntryCreatePopover
+                open
+                onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? parentTag.id : null)}
+                tag={{
+                  id: parentTag.id,
+                  name: parentTag.name,
+                  // sidebar の GroupHeader と同じ `displayColor`（resolveTagColor +
+                  // optimistic 反映済み）を popover に伝え、色味を揃える
+                  color: displayColor,
+                  icon: parentTag.icon ?? tag.icon,
+                }}
+                defaultDurationMinutes={30}
+                isMobile={isMobile ?? false}
+              />
+            ) : null}
+          </div>
         )}
 
         {/* グループ内へのインライン作成フォーム */}
@@ -663,7 +810,7 @@ function SortableTagItem({
             <InlineTagCreateRow
               variant="row"
               defaultGroup={currentGroup}
-              inheritedColor={resolveTagColor(displayColor)}
+              defaultColor={resolveTagColor(displayColor)}
               existingTags={allTags}
               onSubmit={(name, color) => {
                 createTagMutation.mutate({ name, color });
@@ -678,13 +825,15 @@ function SortableTagItem({
         {!(isFirstInGroup && collapsed) && (
           <div
             className={cn(
-              'group/item flex items-center rounded-lg text-sm',
-              isMobile ? 'h-11' : 'h-8 cursor-grab active:cursor-grabbing',
+              'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
+              isMobile ? 'h-11' : 'h-8',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
+              isChildRowPopoverOpen && 'bg-state-selected',
               isGrouped && 'pl-4',
               !checked && 'opacity-50',
             )}
+            onClick={() => onRequestOpenPopover(tag.id)}
           >
             {/* タグアイコン */}
             <span className="ml-2 shrink-0">
@@ -767,6 +916,19 @@ function SortableTagItem({
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>
+
+            {/* エントリ作成ポップアップ（sidebar タグ行クリックで開く）。
+                (c) はモックデータ（空分布）で開閉のみ検証。
+                実データ接続は (e)、配置時刻計算は (f)、onSubmit は (g) で実装。 */}
+            {isChildRowPopoverOpen ? (
+              <TagEntryCreatePopover
+                open
+                onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
+                tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
+                defaultDurationMinutes={30}
+                isMobile={isMobile ?? false}
+              />
+            ) : null}
           </div>
         )}
       </div>

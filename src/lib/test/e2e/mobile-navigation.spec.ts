@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+/**
+ * Mobile Navigation E2E
+ *
+ * Phase 2-B Step 3 regression guard:
+ * BottomTabBar が next/link ベースに移行したため、button ロケータから
+ * link ロケータへの置換と href 属性ベース確認を追加。
+ */
+
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
 
 async function loginAndNavigate(page: import('@playwright/test').Page) {
@@ -28,7 +36,7 @@ test.describe('Mobile Navigation', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(page).toHaveURL(/\/ja\/settings$/);
-    await expect(page.getByRole('button', { name: 'アカウント' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'アカウント' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -44,22 +52,34 @@ test.describe('Mobile Navigation', () => {
     await page.goto('/ja/calendar/day?date=2026-03-25');
     await page.waitForLoadState('networkidle');
 
-    const calendarButton = page.getByRole('button', { name: 'カレンダー' });
-    const statsButton = page.getByRole('button', { name: '統計' });
-    const accountButton = page.getByRole('button', { name: 'アカウント' });
+    const calendarLink = page.getByRole('link', { name: 'カレンダー' });
+    const statsLink = page.getByRole('link', { name: '統計' });
+    const aiLink = page.getByRole('link', { name: 'AI' });
+    const accountLink = page.getByRole('link', { name: 'アカウント' });
 
-    await expect(calendarButton).toHaveAttribute('aria-current', 'page');
+    // href 属性が動的に正しい URL を生成していることを確認 (Phase 2-B 動的 href)
+    await expect(calendarLink).toHaveAttribute('href', /\/ja\/calendar\/day\?date=2026-03-25/);
+    await expect(statsLink).toHaveAttribute('href', /\/ja\/stats\/review/);
+    await expect(aiLink).toHaveAttribute('href', '/ja/ai');
+    await expect(accountLink).toHaveAttribute('href', '/ja/settings');
 
-    await statsButton.click();
+    await expect(calendarLink).toHaveAttribute('aria-current', 'page');
+
+    await statsLink.click();
     await expect(page).toHaveURL(/\/ja\/stats\/review$/);
-    await expect(statsButton).toHaveAttribute('aria-current', 'page');
+    await expect(statsLink).toHaveAttribute('aria-current', 'page');
 
-    await calendarButton.click();
+    // AI タブ遷移 (Phase 2-C Step C-4 で追加)
+    await aiLink.click();
+    await expect(page).toHaveURL(/\/ja\/ai$/);
+    await expect(aiLink).toHaveAttribute('aria-current', 'page');
+
+    await calendarLink.click();
     await expect(page).toHaveURL(/\/ja\/calendar\/day\?date=2026-03-25$/);
-    await expect(calendarButton).toHaveAttribute('aria-current', 'page');
+    await expect(calendarLink).toHaveAttribute('aria-current', 'page');
 
-    await accountButton.click();
+    await accountLink.click();
     await expect(page).toHaveURL(/\/ja\/settings$/);
-    await expect(accountButton).toHaveAttribute('aria-current', 'page');
+    await expect(accountLink).toHaveAttribute('aria-current', 'page');
   });
 });

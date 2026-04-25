@@ -35,6 +35,13 @@ html.dark {
   color-scheme: dark;
 }
 
+/* Tailwind v4 preflight は button に cursor: pointer を付けないため、
+   クリック可能な要素であることをカーソルで示すデファクト挙動を復元する。
+   disabled は Tailwind の disabled:cursor-not-allowed / pointer-events-none で個別対応。 */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 /* ============================================
  * スクロールバーのスタイリング
  * ============================================ */

@@ -1,4 +1,4 @@
-import { SidebarPageNav } from '../_shell/SidebarPageNav';
+import { SidebarPageNav } from '../../_shell/SidebarPageNav';
 
 import { StatsLayoutShell } from './_composition/StatsLayoutShell';
 

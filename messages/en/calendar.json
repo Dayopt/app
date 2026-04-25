@@ -150,6 +150,8 @@
       "viewStats": "View statistics",
       "hide": "Hide from calendar",
       "show": "Show in calendar",
+      "expandGroup": "Expand group",
+      "collapseGroup": "Collapse group",
       "noGroup": "No group",
       "deleteTag": {
         "title": "Delete \"{name}\"",

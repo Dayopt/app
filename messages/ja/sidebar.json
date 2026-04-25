@@ -2,7 +2,8 @@
   "sidebar": {
     "pageNav": {
       "calendar": "カレンダー",
-      "stats": "統計"
+      "stats": "統計",
+      "ai": "AI"
     }
   }
 }
