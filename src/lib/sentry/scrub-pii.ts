@@ -38,6 +38,22 @@ const PII_KEYS = new Set([
   'recovery_code',
 ]);
 
+// URL を値として持つ key 群。`url` と完全一致するキーだけだと CSP report の
+// `documentUri` / `blockedUri` 等で query param が scrubUrl を通らないため、
+// URL を保持しうる key を明示列挙して scrubUrl 経由にする。
+const URL_KEYS = new Set([
+  'url',
+  'uri',
+  'href',
+  'referrer',
+  'referer',
+  'documenturi',
+  'blockeduri',
+  'sourcefile',
+  'redirect_uri',
+  'redirecturi',
+]);
+
 const REDACTED = '[REDACTED]';
 const MAX_DEPTH = 8;
 
@@ -100,7 +116,7 @@ function scrubObject(obj: Record<string, unknown>, depth: number): Record<string
       result[key] = REDACTED;
       continue;
     }
-    if (key.toLowerCase() === 'url' && typeof value === 'string') {
+    if (URL_KEYS.has(key.toLowerCase()) && typeof value === 'string') {
       result[key] = scrubUrl(value);
       continue;
     }
