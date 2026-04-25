@@ -147,10 +147,11 @@ export function TagBadgeList({
   }, [tags, excludeSet, query]);
 
   const tree = useMemo(() => {
+    // drilldown 非対応モード（タグ再割当て等のフラットピッカー）では
+    // 親 / 子を区別せず全タグを兄弟として並べる。`parent_id === null` で
+    // フィルタすると階層を持つユーザーが子タグを選択できなくなる。
     if (!supportDrilldown) {
-      return visibleTags
-        .filter((tag) => tag.parent_id === null)
-        .map((tag) => ({ tag, children: [] }));
+      return visibleTags.map((tag) => ({ tag, children: [] }));
     }
     return buildTagTree(visibleTags);
   }, [visibleTags, supportDrilldown]);
