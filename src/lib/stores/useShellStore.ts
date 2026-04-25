@@ -9,8 +9,24 @@ import { platformStorage } from '@/lib/zustand/storage';
 
 // ── Sheet Types ──
 
-/** シェルレベルのシート/ダイアログ（排他: 1つしか開かない） */
-export type SheetType = { type: 'contact' } | { type: 'settings'; category: SettingsCategory };
+/** タグマージモーダルで渡す source tag の identity */
+export interface TagMergeSourceTag {
+  id: string;
+  name: string;
+  color?: string | null;
+}
+
+/**
+ * シェルレベルのシート/ダイアログ（排他: 1つしか開かない）
+ *
+ * `contact` / `settings` は Sheet 系、`tagMerge` は Modal 系だが、shell
+ * 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
+ * を統合、P2-2）。
+ */
+export type SheetType =
+  | { type: 'contact' }
+  | { type: 'settings'; category: SettingsCategory }
+  | { type: 'tagMerge'; sourceTag: TagMergeSourceTag };
 
 // ── State ──
 
@@ -51,6 +67,10 @@ interface ShellStoreActions {
   openSettings: (category?: SettingsCategory) => void;
   closeSettings: () => void;
   setSettingsCategory: (category: SettingsCategory) => void;
+
+  // Tag merge modal convenience
+  openTagMergeModal: (sourceTag: TagMergeSourceTag) => void;
+  closeTagMergeModal: () => void;
 }
 
 // ── Store ──
@@ -104,6 +124,16 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           const { activeSheet } = get();
           if (activeSheet?.type === 'settings') {
             set({ activeSheet: { type: 'settings', category } }, false, 'setSettingsCategory');
+          }
+        },
+
+        // ── Tag Merge Modal Convenience ──
+        openTagMergeModal: (sourceTag) =>
+          set({ activeSheet: { type: 'tagMerge', sourceTag } }, false, 'openTagMergeModal'),
+        closeTagMergeModal: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'tagMerge') {
+            set({ activeSheet: null }, false, 'closeTagMergeModal');
           }
         },
       }),

@@ -40,7 +40,6 @@ const APP_NAMESPACES = [
   'record',
   'tags',
   'navigation',
-  'notification',
   'settings',
   'sidebar',
   'error',

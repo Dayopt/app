@@ -15,7 +15,6 @@ import { usePathname } from 'next/navigation';
 
 import { CalendarFilterList, useCalendarNavigation, ViewSwitcherList } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
-import { SidebarSection } from '@/lib/components/shell/sidebar';
 import { Button } from '@/lib/components/ui/button';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
@@ -23,7 +22,6 @@ import { useTheme } from '@/lib/hooks/useTheme';
 
 /** サイドバーコンテンツ（ミニカレンダー・ビュー切り替え・フィルターを組み立てる Composition Layer） */
 export function SidebarContent() {
-  const t = useTranslations();
   const pathname = usePathname();
   const navigation = useCalendarNavigation();
   const isStatsPage = pathname?.includes('/stats') ?? false;
@@ -43,16 +41,14 @@ export function SidebarContent() {
     <>
       {/* ミニカレンダー（PCのみ） */}
       <div className="hidden px-2 md:block">
-        <SidebarSection title={t('sidebar.calendar.title')} defaultOpen>
-          <MiniCalendar
-            selectedDate={miniCalendarDate}
-            onDateSelect={(date) => {
-              if (date) handleDateSelect(date);
-            }}
-            // eslint-disable-next-line tailwindcss/no-arbitrary-value -- calc expression
-            className="-mx-2 w-[calc(100%+16px)] bg-transparent"
-          />
-        </SidebarSection>
+        <MiniCalendar
+          selectedDate={miniCalendarDate}
+          onDateSelect={(date) => {
+            if (date) handleDateSelect(date);
+          }}
+          // eslint-disable-next-line tailwindcss/no-arbitrary-value -- calc expression
+          className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+        />
       </div>
 
       {/* ビュー切り替え・フィルター */}

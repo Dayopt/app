@@ -54,7 +54,6 @@
     "dataRemovedIntro": "以下のデータが完全に削除されました：",
     "dataPlans": "すべてのエントリーと時間記録",
     "dataTags": "タグとカテゴリ",
-    "dataNotifications": "通知設定",
     "dataProfile": "プロフィール情報",
     "mistakeLine": "この削除に覚えがない場合、または誤りであると思われる場合は、すぐに {supportEmail} までご連絡ください。",
     "recreateLine": "いつでも {appLink} から新しいアカウントを作成できます。",

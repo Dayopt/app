@@ -115,6 +115,7 @@
       }
     },
     "aria": {
+      "toastContainer": "Notifications",
       "clearSelection": "Clear selection",
       "openMenu": "Open menu",
       "closeSidebar": "Close sidebar",
@@ -123,7 +124,6 @@
       "closeFilterMenu": "Close filter menu",
       "changeColor": "Change color",
       "unread": "Unread",
-      "notifications": "Notifications",
       "close": "Close",
       "previousPlan": "Previous entry",
       "nextPlan": "Next entry",

@@ -3,8 +3,7 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: calendar filter storeをlib層に抽出
-import { useCalendarFilterStore } from '@/features/calendar';
+import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import {

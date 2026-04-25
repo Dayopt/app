@@ -1,8 +1,8 @@
 /**
  * SidebarSection Stories
  *
- * サイドバー共通の折りたたみセクション。
- * 実際のサイドバー構成を再現したストーリーで視覚ヒエラルキーを確認。
+ * サイドバー共通のセクション。
+ * title + 右端 action + 常時表示 children。実際のサイドバー構成を再現したストーリーで視覚ヒエラルキーを確認。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -144,7 +144,7 @@ function SidebarShell({ children }: { children: React.ReactNode }) {
 // Meta
 // ─────────────────────────────────────────────────────────
 
-/** SidebarSection — サイドバー共通の折りたたみセクション。ヘッダー + コンテンツのCollapsible。 */
+/** SidebarSection — サイドバー共通のセクション。title + 右端 action + 常時表示 children。 */
 const meta = {
   title: 'Components/Shell/Sidebar/Section',
   component: SidebarSection,
@@ -164,11 +164,10 @@ type Story = StoryObj<typeof meta>;
 const today = new Date();
 const noop = fn();
 
-/** 基本的な使用例（defaultOpen + action スロット）。 */
+/** 基本的な使用例。 */
 export const Default: Story = {
   args: {
     title: 'セクション',
-    defaultOpen: true,
     children: (
       <div className="space-y-1">
         <BlockItem
@@ -195,34 +194,10 @@ export const Default: Story = {
   ],
 };
 
-/** 閉じた状態。 */
-export const Collapsed: Story = {
-  args: {
-    title: 'セクション',
-    defaultOpen: false,
-    children: (
-      <BlockItem
-        tagName="仕事"
-        iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
-        durationMinutes={60}
-        onClick={noop}
-      />
-    ),
-  },
-  decorators: [
-    (Story) => (
-      <div className="w-64 px-2">
-        <Story />
-      </div>
-    ),
-  ],
-};
-
 /** action スロット付き（+ボタン）。 */
 export const WithAction: Story = {
   args: {
     title: 'パレット',
-    defaultOpen: true,
     action: <ActionButton />,
     children: (
       <div className="space-y-1">
@@ -261,18 +236,16 @@ export const FullSidebar: Story = {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
         {/* MiniCalendar in SidebarSection */}
         <div className="px-2">
-          <SidebarSection title="カレンダー" defaultOpen>
-            <MiniCalendar
-              selectedDate={today}
-              onDateSelect={() => {}}
-              className="-mx-2 w-[calc(100%+16px)] bg-transparent"
-            />
-          </SidebarSection>
+          <MiniCalendar
+            selectedDate={today}
+            onDateSelect={() => {}}
+            className="-mx-2 w-[calc(100%+16px)] bg-transparent"
+          />
         </div>
 
         {/* タグフィルター */}
         <div className="flex min-w-0 flex-col overflow-hidden px-2">
-          <SidebarSection title="タグ" defaultOpen action={<ActionButton />}>
+          <SidebarSection title="タグ" action={<ActionButton />}>
             <TagRow name="Work" color="blue" />
             <TagRow name="Learning" color="green" />
             <TagRow name="Life" color="amber" />
@@ -283,7 +256,7 @@ export const FullSidebar: Story = {
 
         {/* パレット */}
         <div className="w-full min-w-0 overflow-hidden px-2">
-          <SidebarSection title="パレット" defaultOpen>
+          <SidebarSection title="パレット">
             <BlockItem
               tagName="Work"
               iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
@@ -301,7 +274,7 @@ export const FullSidebar: Story = {
 
         {/* 履歴 */}
         <div className="w-full min-w-0 overflow-hidden px-2">
-          <SidebarSection title="履歴" defaultOpen>
+          <SidebarSection title="履歴">
             <BlockItem
               tagName="Work"
               iconSlot={<TagIcon icon="briefcase" color="blue" size="sm" />}
@@ -337,9 +310,9 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
-        <p className="text-muted-foreground mb-2 text-xs">Default（開いた状態）</p>
+        <p className="text-muted-foreground mb-2 text-xs">Default</p>
         <div className="w-64 px-2">
-          <SidebarSection title="セクション" defaultOpen>
+          <SidebarSection title="セクション">
             <BlockItem
               tagName="仕事"
               iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
@@ -356,22 +329,9 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs">Collapsed（閉じた状態）</p>
-        <div className="w-64 px-2">
-          <SidebarSection title="セクション">
-            <BlockItem
-              tagName="仕事"
-              iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
-              durationMinutes={60}
-              onClick={noop}
-            />
-          </SidebarSection>
-        </div>
-      </div>
-      <div>
         <p className="text-muted-foreground mb-2 text-xs">WithAction（+ボタン付き）</p>
         <div className="w-64 px-2">
-          <SidebarSection title="パレット" defaultOpen action={<ActionButton />}>
+          <SidebarSection title="パレット" action={<ActionButton />}>
             <BlockItem
               tagName="仕事"
               iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
@@ -387,7 +347,7 @@ export const AllPatterns: Story = {
           <MockSidebarHeader />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto">
             <div className="px-2">
-              <SidebarSection title="カレンダー" defaultOpen>
+              <SidebarSection title="カレンダー">
                 <MiniCalendar
                   selectedDate={today}
                   onDateSelect={() => {}}
@@ -396,14 +356,14 @@ export const AllPatterns: Story = {
               </SidebarSection>
             </div>
             <div className="flex min-w-0 flex-col overflow-hidden px-2">
-              <SidebarSection title="タグ" defaultOpen action={<ActionButton />}>
+              <SidebarSection title="タグ" action={<ActionButton />}>
                 <TagRow name="Work" color="blue" />
                 <TagRow name="Learning" color="green" />
                 <TagRow name="Life" color="amber" />
               </SidebarSection>
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
-              <SidebarSection title="パレット" defaultOpen>
+              <SidebarSection title="パレット">
                 <BlockItem
                   tagName="Work"
                   iconSlot={<TagIcon icon={null} color="blue" size="sm" />}
@@ -413,7 +373,7 @@ export const AllPatterns: Story = {
               </SidebarSection>
             </div>
             <div className="w-full min-w-0 overflow-hidden px-2">
-              <SidebarSection title="履歴" defaultOpen>
+              <SidebarSection title="履歴">
                 <BlockItem
                   tagName="Work"
                   iconSlot={<TagIcon icon={null} color="blue" size="sm" />}

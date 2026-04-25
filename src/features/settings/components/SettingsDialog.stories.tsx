@@ -120,16 +120,6 @@ export const DisplayCategory: Story = {
 };
 
 /**
- * 通知設定カテゴリ
- */
-export const NotificationsCategory: Story = {
-  render: () => {
-    useShellStore.setState({ activeSheet: { type: 'settings', category: 'notifications' } });
-    return <SettingsDialog />;
-  },
-};
-
-/**
  * データ設定カテゴリ
  */
 export const DataCategory: Story = {

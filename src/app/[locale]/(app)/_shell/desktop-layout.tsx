@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { PanelLeft } from 'lucide-react';
 
 import { isCalendarViewPath } from '@/features/calendar';
-import { ActivityPopover } from '@/features/notifications';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Sidebar } from '@/lib/components/shell/sidebar';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
@@ -68,7 +67,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           )}
         >
           <div className="h-full w-64">
-            <Sidebar footerActions={<ActivityPopover size="sm" />}>
+            <Sidebar>
               <SidebarContent />
             </Sidebar>
           </div>

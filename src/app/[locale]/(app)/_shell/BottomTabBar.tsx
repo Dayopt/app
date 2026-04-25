@@ -1,13 +1,12 @@
 'use client';
 
-import { BarChart3, Bell, CalendarDays, UserCircle } from 'lucide-react';
+import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
-import { useUnreadCount } from '@/features/notifications';
 import { useStatsFilterStore } from '@/features/stats';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { useClientRouterStore } from '@/lib/stores/useClientRouterStore';
@@ -16,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
-type TabId = 'calendar' | 'stats' | 'notifications' | 'account';
+type TabId = 'calendar' | 'stats' | 'account';
 
 function getActiveTabFromPath(pathname: string): TabId {
   const segments = pathname.split('/');
@@ -26,7 +25,6 @@ function getActiveTabFromPath(pathname: string): TabId {
       : pathname;
 
   if (pathWithoutLocale.startsWith('/settings')) return 'account';
-  if (pathWithoutLocale.startsWith('/notifications')) return 'notifications';
   if (pathWithoutLocale.startsWith('/stats')) return 'stats';
   return 'calendar';
 }
@@ -35,7 +33,7 @@ interface BottomTabBarProps {
   hidden?: boolean;
 }
 
-/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Notifications / Account） */
+/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Account） */
 export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
   const t = useTranslations();
   const pathname = usePathname();
@@ -44,7 +42,6 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
   const switchToPage = useClientRouterStore((s) => s.switchToPage);
   const clientPage = useClientRouterStore((s) => s.clientPage);
   const resetToServer = useClientRouterStore((s) => s.resetToServer);
-  const { data: unreadCount = 0 } = useUnreadCount();
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
@@ -85,11 +82,6 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
     switchToPage('stats');
   }, [activeTab, locale, statsGranularity, statsDate, switchToPage]);
 
-  const handleNotificationsClick = useCallback(() => {
-    resetToServer();
-    router.push(`/${locale}/notifications`);
-  }, [router, locale, resetToServer]);
-
   const handleAccountClick = useCallback(() => {
     resetToServer();
     router.push(`/${locale}/settings`);
@@ -100,7 +92,6 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
     label: string;
     icon: typeof CalendarDays;
     onClick: () => void;
-    badge?: number;
   }> = useMemo(
     () => [
       {
@@ -116,27 +107,13 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
         onClick: handleStatsClick,
       },
       {
-        id: 'notifications',
-        label: t('navigation.bottomTab.notifications'),
-        icon: Bell,
-        onClick: handleNotificationsClick,
-        badge: unreadCount,
-      },
-      {
         id: 'account',
         label: t('navigation.bottomTab.account'),
         icon: UserCircle,
         onClick: handleAccountClick,
       },
     ],
-    [
-      t,
-      handleCalendarClick,
-      handleStatsClick,
-      handleNotificationsClick,
-      handleAccountClick,
-      unreadCount,
-    ],
+    [t, handleCalendarClick, handleStatsClick, handleAccountClick],
   );
 
   return (
@@ -181,12 +158,6 @@ export function BottomTabBar({ hidden = false }: BottomTabBarProps) {
                   </Avatar>
                 ) : (
                   <Icon className="size-5" strokeWidth={isActive ? 2.5 : 1.5} />
-                )}
-                {/* 未読バッジ */}
-                {tab.badge != null && tab.badge > 0 && (
-                  <span className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-medium">
-                    {tab.badge > 9 ? '9+' : tab.badge}
-                  </span>
                 )}
               </span>
               <span className={cn('text-xs', isActive && 'font-medium')}>{tab.label}</span>

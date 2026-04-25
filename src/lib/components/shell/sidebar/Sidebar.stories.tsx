@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { Bell, PanelLeft } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/lib/components/ui/button';
@@ -30,16 +30,6 @@ function MockSidebarContent() {
         ))}
       </div>
     </>
-  );
-}
-
-// ── Mock: フッターアクション ──
-
-function MockFooterActions() {
-  return (
-    <Button variant="ghost" icon className="size-8" aria-label="Notifications">
-      <Bell className="size-4" />
-    </Button>
   );
 }
 
@@ -83,10 +73,7 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
         style={{ width: isOpen ? 256 : 0 }}
       >
         <div className="h-full w-64">
-          <Sidebar
-            footerActions={<MockFooterActions />}
-            {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}
-          >
+          <Sidebar {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}>
             <MockSidebarContent />
           </Sidebar>
         </div>
@@ -124,11 +111,10 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
 // Stories
 // ---------------------------------------------------------------------------
 
-/** デフォルト状態。コンテンツスロットとフッターアクション付き。 */
+/** デフォルト状態。コンテンツスロット付き。 */
 export const Default: Story = {
   args: {
     children: <MockSidebarContent />,
-    footerActions: <MockFooterActions />,
   },
   decorators: [
     (Story) => (
@@ -163,7 +149,7 @@ export const Empty: Story = {
  * 実装構成:
  * - ヘッダー: Dayoptロゴ + 検索ボタン + PanelLeft閉じるボタン
  * - コンテンツ: composition layerから注入（children スロット）
- * - フッター: UserMenu + footerActions（通知アイコン等）
+ * - フッター: UserMenu
  */
 export const Interactive: StoryObj = {
   render: () => <InteractiveDemo />,
@@ -173,16 +159,15 @@ export const Interactive: StoryObj = {
 export const AllPatterns: Story = {
   args: {
     children: <MockSidebarContent />,
-    footerActions: <MockFooterActions />,
   },
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div>
         <p className="text-muted-foreground mb-2 text-xs">
-          デフォルト状態（コンテンツスロットとフッターアクション付き）
+          デフォルト状態（コンテンツスロット付き）
         </p>
         <div className="h-[500px] w-64">
-          <Sidebar footerActions={<MockFooterActions />} aria-label="サイドバー（デフォルト）">
+          <Sidebar aria-label="サイドバー（デフォルト）">
             <MockSidebarContent />
           </Sidebar>
         </div>

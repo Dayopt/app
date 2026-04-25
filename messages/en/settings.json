@@ -72,7 +72,7 @@
       "twoFactorPrompt": "Require authentication code when signing in",
       "twoFactorActive": "Two-factor authentication active",
       "twoFactorProtection": "Your account is protected with an additional security layer.",
-      "emailUsedFor": "Used for login and notifications",
+      "emailUsedFor": "Used for login and account emails",
       "emailVerified": "Verified",
       "mfa": {
         "title": "Two-Factor Authentication (MFA)",
@@ -136,8 +136,6 @@
       "publicProfileDesc": "Allow other users to view your profile",
       "showEmail": "Show Email Address",
       "showEmailDesc": "Display email address on your profile",
-      "allowNotifications": "Allow Notifications",
-      "allowNotificationsDesc": "Receive notifications from the system",
       "debugInfo": "Debug Information",
       "debugInfoDesc": "Current settings values (for development)",
       "publicInfo": "Public basic information",
@@ -541,13 +539,7 @@
       "selectStartupScreen": "Select startup screen",
       "startupLast": "Continue where you left off",
       "startupPlan": "Entry",
-      "startupCalendar": "Calendar",
-      "userExperience": "User Experience",
-      "userExperienceDesc": "Animation and sound settings",
-      "animations": "Animations",
-      "animationsDesc": "Enable animation effects for transitions and buttons",
-      "soundEffects": "Sound Effects",
-      "soundEffectsDesc": "Play notification and click sounds"
+      "startupCalendar": "Calendar"
     },
     "common": {
       "saved": "Settings saved successfully",
@@ -567,8 +559,6 @@
         "calendarDesc": "Default view, snap interval, and display settings",
         "personalization": "Personalization",
         "personalizationDesc": "Values, chronotype, and AI style",
-        "notifications": "Notifications",
-        "notificationsDesc": "Notification and reminder settings",
         "dataControls": "Data Controls",
         "dataControlsDesc": "Export, import, and backup settings",
         "integrations": "Integrations",
@@ -613,7 +603,6 @@
         "tasksEvents": "Entries",
         "tagSettings": "Tag settings",
         "calendarSettings": "Calendar settings",
-        "notificationSettings": "Notification settings",
         "otherSettings": "Other settings"
       },
       "import": {
@@ -689,7 +678,7 @@
       "services": {
         "title": "Connected Services",
         "googleCalendarDesc": "Sync events with Google Calendar",
-        "slackDesc": "Send reminders and notifications to Slack",
+        "slackDesc": "Send messages to Slack",
         "connected": "Connected",
         "disconnect": "Disconnect",
         "connect": "Connect"

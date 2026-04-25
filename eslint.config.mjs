@@ -142,7 +142,6 @@ const eslintConfig = defineConfig([
           // Independent 禁止
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/notifications', '@/features/notifications/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
           // L0 deep import禁止（barrel のみ許可）
@@ -164,7 +163,6 @@ const eslintConfig = defineConfig([
           // Independent 禁止
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/notifications', '@/features/notifications/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
           // L0+L1 deep import禁止（barrel のみ許可）
@@ -185,7 +183,6 @@ const eslintConfig = defineConfig([
           { group: ['@/features/calendar', '@/features/calendar/**'], message: '同層featureのimport禁止。' },
           { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/notifications', '@/features/notifications/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
           { group: ['@/features/tags/**'], message: 'barrel import（@/features/tags）のみ使用。' },
@@ -196,12 +193,11 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Independent (auth, contact, notifications, onboarding, tour): 他featureへの依存ゼロ
+  // Independent (auth, contact, onboarding, tour): 他featureへの依存ゼロ
   {
     files: [
       'src/features/auth/**/*.{ts,tsx}',
       'src/features/contact/**/*.{ts,tsx}',
-      'src/features/notifications/**/*.{ts,tsx}',
       'src/features/onboarding/**/*.{ts,tsx}',
       'src/features/tour/**/*.{ts,tsx}',
     ],

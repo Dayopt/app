@@ -10,6 +10,8 @@
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@supabase/supabase-js';
 
+import { withPIIScrub } from '@/lib/sentry/scrub-pii';
+
 // サーバーサイドではSENTRY_DSNを優先（ランタイム環境変数）
 const SENTRY_DSN = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
 // VERCEL_ENVはVercelが自動設定（production, preview, development）
@@ -38,8 +40,10 @@ if (SENTRY_DSN) {
     // 本番・プレビュー環境のみ有効
     enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
 
-    // エラーフィルタリング
-    beforeSend(event, _hint) {
+    // エラーフィルタリング + PII スクラビング
+    // withPIIScrub は exception message / URL / breadcrumbs / contexts など
+    // 全フィールドを walk して PII を redact する
+    beforeSend: withPIIScrub((event) => {
       // 開発環境のノイズ除去
       if (!IS_PRODUCTION) {
         const errorMessage = event.exception?.values?.[0]?.value || '';
@@ -57,7 +61,7 @@ if (SENTRY_DSN) {
       }
 
       return event;
-    },
+    }),
 
     // サーバーサイド用インテグレーション
     integrations: [

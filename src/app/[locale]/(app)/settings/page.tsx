@@ -7,13 +7,13 @@ import {
   Book,
   ChevronDown,
   ChevronRight,
+  Crown,
   ExternalLink,
   FileText,
   LogOut,
   Megaphone,
   MessageSquare,
   Scale,
-  Sparkles,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -161,7 +161,7 @@ export default function SettingsPage() {
               onClick={() => router.push('/settings/billing')}
               className="border-border-subtle hover:bg-state-hover active:bg-state-hover flex w-full items-center gap-4 border-t px-4 py-4 transition-colors duration-150"
             >
-              <Sparkles className="text-primary size-5 shrink-0" />
+              <Crown className="text-primary size-5 shrink-0" />
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-base font-bold">{t('navigation.navUser.upgradePlan')}</p>
                 <p className="text-muted-foreground text-xs">

@@ -16,8 +16,7 @@ Sidebar (Container)
 ├── Header           Dayoptロゴ + 検索 + 閉じるボタン
 ├── PageNav          [📅 カレンダー │ 📊 統計] セグメントコントロール
 ├── ScrollArea       gap-4 (16px) で各セクションを配置
-│   ├── SidebarSection "カレンダー"
-│   │   └── MiniCalendar     月カレンダー（PCのみ）
+│   ├── MiniCalendar     月カレンダー（PCのみ、見出しなし）
 │   ├── CalendarFilterList
 │   │   └── SidebarSection "タグ"
 │   │       └── TagRow × N    チェックボックス + タグ名
@@ -36,7 +35,7 @@ Sidebar (Container)
 | -------------------- | -------------------------------------------------------------------- |
 | `Sidebar.tsx`        | コンテナ: `<aside>` + ヘッダー + PageNav + スクロール領域 + フッター |
 | `PageNav.tsx`        | Calendar / Stats セグメントコントロール（pushState + Zustand）       |
-| `SidebarSection.tsx` | 折りたたみセクション（Collapsible + title + action スロット）        |
+| `SidebarSection.tsx` | セクション（title + action スロット）                                |
 | `BlockItem.tsx`      | パレットのブロックアイテム（アイコン + タグ名 + duration）           |
 | `UserMenu.tsx`       | フッターのユーザーアバター/名前                                      |
 | `SidebarContent.tsx` | Composition Layer: feature コンポーネントの組み立て                  |

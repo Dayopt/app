@@ -24,7 +24,7 @@ import { SettingsSidebar } from './SettingsSidebar';
  *
  * PC: button で store のカテゴリを切替（URL変更なし）。
  * Mobile: Link でページ遷移（pathname からアクティブカテゴリを判定）。
- * 6カテゴリ（プロフィール・表示・通知・データ・課金・アカウント）を表示。
+ * 5カテゴリ（プロフィール・表示・データ・課金・アカウント）を表示。
  */
 const meta = {
   title: 'Features/Settings/SettingsSidebar',
@@ -70,18 +70,6 @@ export const DisplayActive: Story = {
   decorators: [
     (Story) => {
       useShellStore.setState({ activeSheet: { type: 'settings', category: 'display' } });
-      return <Story />;
-    },
-  ],
-};
-
-/**
- * 通知設定カテゴリ選択中
- */
-export const NotificationsActive: Story = {
-  decorators: [
-    (Story) => {
-      useShellStore.setState({ activeSheet: { type: 'settings', category: 'notifications' } });
       return <Story />;
     },
   ],

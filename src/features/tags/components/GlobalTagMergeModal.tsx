@@ -1,19 +1,19 @@
 'use client';
 
-import { closeModal, useModalStore } from '@/lib/hooks/useModalStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { TagMergeModal } from './tag-merge-modal';
 
 /**
  * グローバルに配置するタグマージモーダル
  *
- * providers.tsxで配置し、どこからでもopenTagMergeModal()で開ける
+ * providers.tsx で配置し、どこからでも useShellStore.openTagMergeModal() で開ける。
+ * P2-2 で旧 useModalStore から useShellStore に統合。
  */
 export function GlobalTagMergeModal() {
-  const modal = useModalStore((state) => state.modal);
-  const isOpen = modal?.type === 'tagMerge';
-  const sourceTag = isOpen ? modal.sourceTag : null;
+  const activeSheet = useShellStore.use.activeSheet();
+  const closeTagMergeModal = useShellStore.use.closeTagMergeModal();
 
-  if (!sourceTag) return null;
+  if (activeSheet?.type !== 'tagMerge') return null;
 
-  return <TagMergeModal open={isOpen} onClose={closeModal} sourceTag={sourceTag} />;
+  return <TagMergeModal open onClose={closeTagMergeModal} sourceTag={activeSheet.sourceTag} />;
 }

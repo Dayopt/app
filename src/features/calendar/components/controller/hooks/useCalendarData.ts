@@ -13,7 +13,7 @@ import { api } from '@/lib/trpc';
 import * as Sentry from '@sentry/nextjs';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
-import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 
 import { calculateViewDateRange } from '../../../lib/range';
 

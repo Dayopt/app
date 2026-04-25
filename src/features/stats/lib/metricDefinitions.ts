@@ -9,7 +9,7 @@
  *   calendar.stats.metrics.{metricId}Desc
  */
 
-import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Sparkles, Target, Timer } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Star, Target, Timer } from 'lucide-react';
 
 import type { MetricDefinition, MetricId } from '../types/metrics.types';
 
@@ -26,7 +26,7 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     id: 'avgFulfillment',
     format: 'score',
     trendPositive: 'up',
-    icon: Sparkles,
+    icon: Star,
   },
   entryRate: {
     id: 'entryRate',

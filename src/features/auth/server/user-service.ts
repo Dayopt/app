@@ -84,7 +84,7 @@ export function createUserService(supabase: SupabaseClient<Database>) {
      * アカウント即時削除
      *
      * auth.users を削除すると CASCADE DELETE により
-     * entries, tags, notifications 等すべてのユーザーデータが自動削除される
+     * entries, tags 等すべてのユーザーデータが自動削除される
      */
     async deleteAccount(options: DeleteAccountOptions): Promise<DeleteAccountResult> {
       const { userId, userEmail, password, confirmText } = options;

@@ -9,6 +9,8 @@
 
 import * as Sentry from '@sentry/nextjs';
 
+import { withPIIScrub } from '@/lib/sentry/scrub-pii';
+
 // Edge環境ではSENTRY_DSNを優先（ランタイム環境変数）
 const SENTRY_DSN = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
 // VERCEL_ENVはVercelが自動設定（production, preview, development）
@@ -32,8 +34,8 @@ if (SENTRY_DSN) {
     // 本番・プレビュー環境のみ有効
     enabled: IS_PRODUCTION || VERCEL_ENV === 'preview',
 
-    // Edgeでは最小限のフィルタリング
-    beforeSend(event) {
+    // Edge のフィルタリング + PII スクラビング
+    beforeSend: withPIIScrub((event) => {
       // Edgeタイムアウトエラーは無視（正常動作の一部）
       const errorMessage = event.exception?.values?.[0]?.value || '';
       if (errorMessage.includes('Edge function has timed out')) {
@@ -41,6 +43,6 @@ if (SENTRY_DSN) {
       }
 
       return event;
-    },
+    }),
   });
 }

@@ -7,9 +7,6 @@
 -- ■ トリガー関数
 --   update_updated_at()                       — 汎用 updated_at 自動更新
 --   handle_new_user()                         — auth.users INSERT → profiles 自動作成
--- ■ クリーンアップ関数（pg_cron で定期実行）
---   delete_old_notifications()                — 既読30日超の通知を削除
-
 -- ■ RPC 関数
 --   merge_tags(user_id, source, target)       — タグをマージ（entry_tags移行 + ソース非アクティブ化）
 --   use_recovery_code(user_id, code_hash)     — MFAリカバリーコードを使用済みにマーク

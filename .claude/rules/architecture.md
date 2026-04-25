@@ -26,6 +26,41 @@ REST維持: `/api/auth/*`, `/api/health/*`, `/api/v1/system/*`, `/api/config/*`
 
 Zustand でグローバル、useState でローカル。セレクタで必要な状態のみ購読。
 
+### Store リネーム / 移動 / 削除時のチェックリスト
+
+`useXxxStore` を別 store に統合・別 path へ移動・削除する時、以下を必ず grep で確認する。見落とすと Storybook preview が無限リロードに陥る（2026-04-22 の事故事例）:
+
+```bash
+grep -rn "useOldStoreName" src .storybook tests 2>/dev/null
+```
+
+特に要チェック:
+
+- **`.storybook/mocks/stores.tsx`** — `STORE_REGISTRY` の key と import path
+- **`.storybook/decorators/`** — decorator で直接参照していないか
+- **Feature barrel** (`src/features/*/index.ts`) — re-export を消した場合、consumer 側が `@/features/xxx` から import し続けていないか
+- **Story ファイル** (`*.stories.tsx`) の `parameters.storeMocks` キー
+
+typecheck では `.storybook/` 配下の未 import ファイルが listFiles に乗らないケースがあるため、grep が第一防衛線。
+
+## i18n namespace の削除 / リネーム
+
+messages/ 配下の `{namespace}.json` を削除・リネームする時、以下を必ず grep で確認する。見落とすと Toaster 等のグローバルコンポーネントが MISSING_MESSAGE で crash し、Storybook / 本番でリロードループになる（2026-04-22 の事故事例）:
+
+```bash
+# useTranslations / getTranslations の namespace 参照
+grep -rnE "useTranslations\(['\"]{ns}['\"]|getTranslations\(['\"]{ns}['\"]" src .storybook
+
+# namespace リストへのハードコード
+grep -rn "['\"]{ns}['\"]" src/app/\*\*/layout.tsx src/lib/i18n/
+```
+
+特に要チェック:
+
+- **`APP_NAMESPACES` / `AUTH_NAMESPACES` 等の namespace 配列** — `src/app/[locale]/*/layout.tsx`
+- **グローバルに mount される component** — `Toaster` / `GlobalOverlays` / `IntlProvider` 等、失敗するとアプリ全体が落ちる
+- **`.storybook/mocks/` / `decorators/`** — storybook の i18n mock
+
 ## tRPC実装パターン
 
 Router → Service → Supabase の3層構造。feature-colocated で配置。

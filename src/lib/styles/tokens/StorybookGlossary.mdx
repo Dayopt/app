@@ -1,3 +1,7 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Foundations/Storybook Glossary" />
+
 # Storybook 用語集
 
 Storybook 8 の構成要素を公式用語に基づいて整理したリファレンス。
@@ -56,17 +60,17 @@ export const Destructive: Story = {
 
 ### 各プロパティ
 
-| プロパティ          | レベル                | 説明                                                                                                                                                                             |
-| ------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **StoryObj**        | 型                    | Story の型定義。`type Story = StoryObj<typeof meta>` で使う。                                                                                                                    |
-| **Args**            | Meta / Story          | Story に渡す props（コンポーネントの入力値）。Controls パネルから操作可能。                                                                                                      |
-| **ArgTypes**        | Meta / Story          | Args の型情報と Controls パネルでの表示方法を定義。`control` の種類（select, boolean 等）や `options` を指定する。                                                               |
-| **Render function** | Story                 | Story の描画方法をカスタムする関数。`render: (args) => <Component {...args} />`。複数コンポーネントの組み合わせ表示に使う。                                                      |
-| **Play function**   | Story                 | Story の描画後に自動実行されるインタラクション関数。`@storybook/addon-interactions` と組み合わせてユーザー操作をシミュレーションする。                                           |
-| **Decorators**      | Meta / Story / Global | Story を囲むラッパー。Provider 注入やレイアウト調整に使う。Dayopt では `preview.tsx` でグローバル Decorator を設定（テーマ切替、`NextIntlClientProvider`、`TRPCMockProvider`）。 |
-| **Parameters**      | Meta / Story / Global | Story や addon の振る舞いを制御する静的メタデータ。`backgrounds`, `docs`, `a11y` など addon ごとの設定を持つ。                                                                   |
-| **Tags**            | Meta / Story          | Story の分類ラベル。`'autodocs'` で自動ドキュメント生成を有効化する。                                                                                                            |
-| **Loaders**         | Meta / Story          | Story 描画前に非同期データを取得する関数。`loaded` プロパティ経由で Story に渡される。                                                                                           |
+| プロパティ          | レベル                | 説明                                                                                                                                                                           |
+| ------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **StoryObj**        | 型                    | Story の型定義。`type Story = StoryObj<typeof meta>` で使う。                                                                                                                  |
+| **Args**            | Meta / Story          | Story に渡す props(コンポーネントの入力値)。Controls パネルから操作可能。                                                                                                      |
+| **ArgTypes**        | Meta / Story          | Args の型情報と Controls パネルでの表示方法を定義。`control` の種類(select, boolean 等)や `options` を指定する。                                                               |
+| **Render function** | Story                 | Story の描画方法をカスタムする関数。`render: (args) => <Component {...args} />`。複数コンポーネントの組み合わせ表示に使う。                                                    |
+| **Play function**   | Story                 | Story の描画後に自動実行されるインタラクション関数。`@storybook/addon-interactions` と組み合わせてユーザー操作をシミュレーションする。                                         |
+| **Decorators**      | Meta / Story / Global | Story を囲むラッパー。Provider 注入やレイアウト調整に使う。Dayopt では `preview.tsx` でグローバル Decorator を設定(テーマ切替、`NextIntlClientProvider`、`TRPCMockProvider`)。 |
+| **Parameters**      | Meta / Story / Global | Story や addon の振る舞いを制御する静的メタデータ。`backgrounds`, `docs`, `a11y` など addon ごとの設定を持つ。                                                                 |
+| **Tags**            | Meta / Story          | Story の分類ラベル。`'autodocs'` で自動ドキュメント生成を有効化する。                                                                                                          |
+| **Loaders**         | Meta / Story          | Story 描画前に非同期データを取得する関数。`loaded` プロパティ経由で Story に渡される。                                                                                         |
 
 ---
 
@@ -74,26 +78,26 @@ export const Destructive: Story = {
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                   Toolbar                        │  ← GlobalTypes（テーマ切替など）
+│                   Toolbar                        │  ← GlobalTypes(テーマ切替など)
 ├──────────┬──────────────────────────────────────┤
 │          │                                      │
 │ Sidebar  │            Canvas                    │  ← Story描画エリア
 │          │         or Docs page                 │  ← autodocs自動生成ページ
 │          │                                      │
 │          ├──────────────────────────────────────┤
-│          │         Addons panel                  │  ← Controls, Actions, A11y
+│          │         Addons panel                 │  ← Controls, Actions, A11y
 │          │                                      │
 └──────────┴──────────────────────────────────────┘
 ```
 
 | パーツ             | 説明                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層（例: `Components/Button`）で構成される。Dayopt では `storySort` で `Docs > Tokens > Components > Patterns` の順に並べている。      |
+| **Sidebar**        | 左側の Story ツリー。Meta の `title` 階層(例: `Components/Button`)で構成される。Dayopt では `storySort` で `Docs > Tokens > Components > Patterns` の順に並べている。        |
 | **Canvas**         | Story を描画するメインエリア。1 つの Story を単独で表示する。                                                                                                                |
 | **Docs page**      | `tags: ['autodocs']` で自動生成されるドキュメントページ。コンポーネントの全 Story と props テーブルを一覧表示する。Dayopt では `DocsTemplate` でカスタムテンプレートを適用。 |
 | **Controls panel** | ArgTypes に基づくインタラクティブな props 操作パネル。Story の Args をリアルタイムに変更できる。                                                                             |
-| **Actions panel**  | イベントハンドラ（`onClick`, `onChange` 等）の呼び出しログを表示するパネル。                                                                                                 |
-| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替（Light / Dark）を設定。                                                                              |
+| **Actions panel**  | イベントハンドラ(`onClick`, `onChange` 等)の呼び出しログを表示するパネル。                                                                                                   |
+| **Toolbar**        | 上部バー。GlobalTypes で定義したツールを配置する。Dayopt ではテーマ切替(Light / Dark)を設定。                                                                                |
 | **Addons panel**   | 下部のタブ切替パネル。Controls, Actions, A11y などの addon が表示される。                                                                                                    |
 
 ---
@@ -104,9 +108,9 @@ export const Destructive: Story = {
 
 | ファイル        | 役割                                                                          | Dayopt での設定内容                                                                                                                                                                                |
 | --------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **main.ts**     | Storybook の中核設定。Story 対象ファイル、addons、framework を定義。          | `stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js\|jsx\|mjs\|ts\|tsx)']`, framework: `react-vite`, addons: docs / essentials / a11y / interactions, `reactDocgen: 'react-docgen-typescript'` |
+| **main.ts**     | Storybook の中核設定。Story 対象ファイル、addons、framework を定義。          | `stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js\|jsx\|mjs\|ts\|tsx)']`、framework: `react-vite`、addons: docs / essentials / a11y / interactions、`reactDocgen: 'react-docgen-typescript'` |
 | **preview.tsx** | Story 描画環境の設定。グローバル Decorators, Parameters, GlobalTypes を定義。 | テーマ切替 Decorator、`NextIntlClientProvider` / `TRPCMockProvider` の注入、a11y ルール設定、Controls matchers                                                                                     |
-| **manager.ts**  | Storybook UI そのもの（Sidebar, Toolbar）の外観設定。                         | テーマ、ブランディングなど                                                                                                                                                                         |
+| **manager.ts**  | Storybook UI そのもの(Sidebar, Toolbar)の外観設定。                           | テーマ、ブランディングなど                                                                                                                                                                         |
 
 ### Addons（拡張機能パッケージ）
 
@@ -127,7 +131,7 @@ Dayopt で使用している addon:
 | 用語                        | 説明                                                                                                                                                               |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Autodocs**                | Meta に `tags: ['autodocs']` を追加することで有効化。Meta と Story の情報から Docs ページを自動生成する。Dayopt では `DocsTemplate` でページレイアウトをカスタム。 |
-| **react-docgen-typescript** | TypeScript の型情報（props の型、デフォルト値、JSDoc コメント）から props テーブルを自動生成する仕組み。`main.ts` の `typescript.reactDocgen` で有効化。           |
+| **react-docgen-typescript** | TypeScript の型情報(props の型、デフォルト値、JSDoc コメント)から props テーブルを自動生成する仕組み。`main.ts` の `typescript.reactDocgen` で有効化。             |
 
 ---
 

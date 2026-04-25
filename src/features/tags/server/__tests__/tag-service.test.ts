@@ -300,6 +300,79 @@ describe('TagService', () => {
     });
   });
 
+  describe('reorder', () => {
+    it('should return count=0 when updates is empty (early return, no DB call)', async () => {
+      const result = await service.reorder({ userId, updates: [] });
+
+      expect(result).toEqual({ count: 0 });
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('should update sort_order via batch_reorder_tags RPC on success', async () => {
+      // 所有権チェック: 全 tag が user のもの
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }, { id: 'tag-2' }]);
+      mockSupabase.rpc.mockResolvedValueOnce({ data: 2, error: null });
+
+      const result = await service.reorder({
+        userId,
+        updates: [
+          { id: 'tag-1', sort_order: 0 },
+          { id: 'tag-2', sort_order: 1 },
+        ],
+      });
+
+      expect(result).toEqual({ count: 2 });
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('batch_reorder_tags', {
+        p_user_id: userId,
+        p_tag_ids: ['tag-1', 'tag-2'],
+        p_sort_orders: [0, 1],
+      });
+    });
+
+    it('should throw NOT_FOUND when update includes a tag owned by another user', async () => {
+      // tag-1 だけ自分のもの、tag-2 は所有権なし（select の結果に含まれない）
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }]);
+
+      await expect(
+        service.reorder({
+          userId,
+          updates: [
+            { id: 'tag-1', sort_order: 0 },
+            { id: 'tag-2', sort_order: 1 },
+          ],
+        }),
+      ).rejects.toThrow(TagServiceError);
+
+      // RPC は呼ばれない（所有権チェックで早期 throw）
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('should throw UPDATE_FAILED when RPC returns an error', async () => {
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }]);
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'db down' } });
+
+      await expect(
+        service.reorder({ userId, updates: [{ id: 'tag-1', sort_order: 0 }] }),
+      ).rejects.toThrow(/Failed to reorder tags/);
+    });
+
+    it('should fallback to updates.length when RPC returns non-numeric count', async () => {
+      setupMockQuery(mockSupabase.from, [{ id: 'tag-1' }, { id: 'tag-2' }]);
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.reorder({
+        userId,
+        updates: [
+          { id: 'tag-1', sort_order: 0 },
+          { id: 'tag-2', sort_order: 1 },
+        ],
+      });
+
+      expect(result).toEqual({ count: 2 });
+    });
+  });
+
   describe('merge', () => {
     it('should throw SAME_TAG_MERGE when source equals target', async () => {
       await expect(

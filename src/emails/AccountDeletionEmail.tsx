@@ -54,9 +54,6 @@ export function AccountDeletionEmail({
               <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
                 - {t('accountDeletion.dataTags')}
               </Text>
-              <Text style={{ ...styles.paragraph, margin: '0 0 8px' }}>
-                - {t('accountDeletion.dataNotifications')}
-              </Text>
               <Text style={{ ...styles.paragraph, margin: '0' }}>
                 - {t('accountDeletion.dataProfile')}
               </Text>

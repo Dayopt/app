@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
-import { AlertTriangle, Check, CreditCard, Sparkles, Zap } from 'lucide-react';
+import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -203,7 +203,7 @@ export function BillingSettings() {
       <SectionCard title={t('settings.subscription.currentPlan')}>
         <div className="flex items-center gap-4 py-2">
           <div className="bg-state-active flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
-            <Zap className="text-primary h-6 w-6" />
+            <Crown className="text-primary h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -301,7 +301,7 @@ export function BillingSettings() {
               >
                 {plan.recommended && (
                   <Badge className="absolute -top-2 left-1/2 -translate-x-1/2">
-                    <Sparkles className="mr-1 h-3 w-3" />
+                    <Crown className="mr-1 h-3 w-3" />
                     {t('settings.subscription.recommended')}
                   </Badge>
                 )}

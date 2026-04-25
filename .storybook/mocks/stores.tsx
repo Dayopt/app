@@ -20,12 +20,10 @@ import { useEffect } from 'react';
 import type { StoreApi } from 'zustand';
 
 import { useAuthStore } from '@/features/auth';
-import {
-  useCalendarFilterStore,
-  useCalendarNavigationStore,
-  useCalendarSettingsStore,
-} from '@/features/calendar';
-import { useModalStore } from '@/lib/hooks/useModalStore';
+import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
+import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 // ─────────────────────────────────────────────────────────
 // Registry
@@ -44,7 +42,7 @@ const STORE_REGISTRY: Record<string, StoreApi<Record<string, unknown>>> = {
   useCalendarSettingsStore: useCalendarSettingsStore as unknown as StoreApi<
     Record<string, unknown>
   >,
-  useModalStore: useModalStore as unknown as StoreApi<Record<string, unknown>>,
+  useShellStore: useShellStore as unknown as StoreApi<Record<string, unknown>>,
 };
 
 /** parameters.storeMocks の型 */

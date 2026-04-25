@@ -22,7 +22,6 @@ import { PasswordResetEmail } from './PasswordResetEmail';
 import { PaymentFailedEmail } from './PaymentFailedEmail';
 import { PaymentRecoveredEmail } from './PaymentRecoveredEmail';
 import { ProStartEmail } from './ProStartEmail';
-import { ReminderEmail } from './ReminderEmail';
 import { colors } from './styles';
 import { TrialExpiredEmail } from './TrialExpiredEmail';
 import { TrialExpiringEmail } from './TrialExpiringEmail';
@@ -125,7 +124,6 @@ export const Guidelines: Story = {
           <p className="pl-4">PaymentRecoveredEmail.tsx — 支払い復旧</p>
           <p className="pl-4">PasswordChangedEmail.tsx — PW変更通知</p>
           <p className="pl-4">CancellationConfirmEmail.tsx — Pro解約確認</p>
-          <p className="pl-4">ReminderEmail.tsx — プランリマインダー</p>
           <p className="pl-4">AccountDeletionEmail.tsx — アカウント削除（GDPR）</p>
           <p className="text-muted-foreground mt-4 text-xs">
             ※ Auth テンプレート3つは Storybook プレビュー用に src/emails/ にもコピーが存在。
@@ -183,7 +181,6 @@ export const Guidelines: Story = {
                 ['PaymentRecoveredEmail', '支払い復旧', 'email.sendPaymentRecovered'],
                 ['PasswordChangedEmail', 'PW変更通知', 'email.sendPasswordChanged'],
                 ['CancellationConfirmEmail', 'Pro解約確認', 'email.sendCancellationConfirm'],
-                ['ReminderEmail', 'リマインダー', 'email.sendReminder'],
                 ['AccountDeletionEmail', 'アカウント削除', 'email.sendAccountDeletion'],
               ].map(([name, use, trigger]) => (
                 <tr key={name} className="border-border border-b">
@@ -216,11 +213,11 @@ export const Guidelines: Story = {
           </div>
           <div>
             <h3 className="text-foreground mb-2 text-sm font-medium">
-              アプリメール（welcome / trial / pro / billing / reminder / overdue / deletion）
+              アプリメール（welcome / trial / pro / billing / deletion）
             </h3>
             <div className="bg-muted rounded-lg p-4 font-mono text-xs">
               <p>App → tRPC email.sendXxx → React Email render</p>
-              <p className="pl-4">→ src/features/notifications/server/email-router.ts</p>
+              <p className="pl-4">→ src/lib/email/router.ts</p>
               <p className="pl-4">→ Resend API → ユーザー</p>
             </div>
           </div>
@@ -233,7 +230,6 @@ export const Guidelines: Story = {
           <li>Auth / アプリ両方で styles.ts の共通スタイルを使用（同一値を維持）</li>
           <li>メールはライトモード固定（ダークモード未対応）</li>
           <li>CTA ボタンは1メールにつき1つ（明確なアクション）</li>
-          <li>フッターに通知設定リンクを含める（Reminder）</li>
           <li>パスワードリセット等はフォールバックURL（コピペ用）を表示</li>
           <li>maxWidth: 580px（モバイル表示を考慮）</li>
         </ul>
@@ -304,27 +300,6 @@ export const MagicLink: Story = {
         locale: 'ja',
       })}
       title="Magic Link"
-    />
-  ),
-};
-
-/** プランリマインダー */
-export const Reminder: Story = {
-  render: () => (
-    <BilingualEmailPreview
-      enElement={ReminderEmail({
-        userName: 'Tomoya',
-        entryTitle: 'Weekly team meeting',
-        startTime: '10:00 AM',
-        locale: 'en',
-      })}
-      jaElement={ReminderEmail({
-        userName: 'Tomoya',
-        entryTitle: 'ウィークリーチームミーティング',
-        startTime: '10:00',
-        locale: 'ja',
-      })}
-      title="Reminder"
     />
   ),
 };

@@ -14,22 +14,12 @@ const categoryComponents: Record<
 > = {
   profile: lazy(() => import('./profile-settings').then((m) => ({ default: m.ProfileSettings }))),
   display: lazy(() => import('./display-settings').then((m) => ({ default: m.DisplaySettings }))),
-  notifications: lazy(() =>
-    import('./notification-settings').then((m) => ({ default: m.NotificationSettings })),
-  ),
   data: lazy(() => import('./data-settings').then((m) => ({ default: m.DataSettings }))),
   billing: lazy(() => import('./billing-settings').then((m) => ({ default: m.BillingSettings }))),
   account: lazy(() => import('./account-settings').then((m) => ({ default: m.AccountSettings }))),
 };
 
-const VALID_CATEGORIES = new Set<string>([
-  'profile',
-  'display',
-  'notifications',
-  'data',
-  'billing',
-  'account',
-]);
+const VALID_CATEGORIES = new Set<string>(['profile', 'display', 'data', 'billing', 'account']);
 
 /**
  * 文字列が有効な設定カテゴリかチェックする型ガード

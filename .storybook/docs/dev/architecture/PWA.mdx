@@ -5,7 +5,7 @@ import { Mermaid } from '../../../decorators/Mermaid';
 
 # PWA（Progressive Web App）
 
-Dayoptのオフライン対応・インストール体験・プッシュ通知の技術アーキテクチャ。
+Dayoptのオフライン対応・インストール体験の技術アーキテクチャ。
 
 ---
 
@@ -58,7 +58,6 @@ Dayoptのオフライン対応・インストール体験・プッシュ通知�
 | **Storage Adapter** | \`src/lib/zustand/storage.ts\`                | Zustand persistのプラットフォーム抽象化                           |
 | **Install Prompt**  | \`src/lib/pwa/install-prompt.ts\`             | PWAインストール促進                                               |
 | **iOS Workarounds** | \`src/lib/pwa/ios-workarounds.ts\`            | iOS Safari固有の制約対応                                          |
-| **App Badge**       | \`src/lib/pwa/app-badge.ts\`                  | 通知未読数のアプリバッジ表示                                      |
 
 ---
 
@@ -217,22 +216,6 @@ standalone mode 検知済みの場合は非表示。
 
 ---
 
-## App Badge
-
-通知の未読数を PWA アプリアイコンのバッジに反映。
-
-```typescript
-// useNotificationBadge.ts（ServiceWorkerProvider内で呼び出し）
-const { data: unreadCount } = useUnreadCount();
-useEffect(() => {
-  if (unreadCount !== undefined) setAppBadge(unreadCount);
-}, [unreadCount]);
-```
-
-対応ブラウザ: Chrome 81+、Edge 81+（iOS Safari非対応）
-
----
-
 ## ファイル構成
 
 ```
@@ -241,7 +224,6 @@ src/lib/pwa/
 ├── sync-queue.ts         # IndexedDB同期キュー + dedup
 ├── sync-processor.ts     # キュー処理 + online/SWメッセージ連携
 ├── offline-mutation.ts   # MutationCache.onError → キュー永続化
-├── app-badge.ts          # App Badging API ラッパー
 ├── install-prompt.ts     # beforeinstallprompt イベント管理
 ├── ios-workarounds.ts    # iOS Safari固有対策
 └── __tests__/

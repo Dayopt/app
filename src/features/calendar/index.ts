@@ -42,13 +42,12 @@ export {
 // Hooks
 // =============================================================================
 
-// Stores: Cross-feature (used by composition layer in app/)
-export { useCalendarFilterStore } from './stores/useCalendarFilterStore';
-export type { CalendarFilterActions, CalendarFilterState } from './stores/useCalendarFilterStore';
+// Stores: calendar hub 内部で共有
 export { useInlineCreateStore } from './stores/useInlineCreateStore';
 
-// Note: useCalendarSettingsStore / useCalendarNavigationStore / 型 CalendarSettings, DateFormatType は
-// cross-cutting UI state として @/lib/stores/ に移動済み。直接 `@/lib/stores/useCalendar...Store` から import すること。
+// Note: useCalendarSettingsStore / useCalendarNavigationStore / useCalendarFilterStore /
+// 型 CalendarSettings, DateFormatType は cross-cutting UI state として @/lib/stores/ に移動済み。
+// 直接 `@/lib/stores/useCalendar...Store` から import すること。
 
 // Hooks: Cross-feature (used by composition layer in app/)
 export { useCalendarData } from './components/controller/hooks/useCalendarData';

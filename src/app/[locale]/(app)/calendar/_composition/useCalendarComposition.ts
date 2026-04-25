@@ -4,7 +4,7 @@
  * Calendar Composition Hook
  *
  * CalendarControllerに必要な全データ・コールバックを集約する薄いオーケストレーター。
- * 実ロジックは専用サブフックに委譲し、副作用（タイムゾーン初期化・通知・Inspector連動等）のみ保持する。
+ * 実ロジックは専用サブフックに委譲し、副作用（タイムゾーン初期化・Inspector連動等）のみ保持する。
  *
  * Sub-hooks:
  * - useCalendarDataLayer: データ取得・フィルタリング
@@ -19,7 +19,6 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 // Feature barrel imports（side-effect用）
 import type { CalendarViewType } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
-import { useNotifications } from '@/features/notifications';
 import { logger } from '@/lib/logger';
 import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
 import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
@@ -107,21 +106,6 @@ export function useCalendarComposition({
       closeInspector();
     }
   }, [currentDate, closeInspector]);
-
-  // =========================================================================
-  // Side Effects: Notification permission request
-  // =========================================================================
-  const {
-    permission: notificationPermission,
-    hasRequested: hasRequestedNotification,
-    requestPermission: requestNotificationPermission,
-  } = useNotifications();
-
-  useEffect(() => {
-    if (!hasRequestedNotification && (notificationPermission as string) === 'default') {
-      requestNotificationPermission();
-    }
-  }, [hasRequestedNotification, notificationPermission, requestNotificationPermission]);
 
   // =========================================================================
   // Side Effects: External navigation sync (search → calendar)

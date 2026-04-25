@@ -13,9 +13,11 @@
 
 import { useCallback } from 'react';
 
-import { openTagMergeModal as openTagMerge } from '@/lib/hooks/useModalStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 export function useTagModalNavigation() {
+  const open = useShellStore.use.openTagMergeModal();
+
   /**
    * タグマージモーダルを開く
    *
@@ -23,9 +25,9 @@ export function useTagModalNavigation() {
    */
   const openTagMergeModal = useCallback(
     (sourceTag: { id: string; name: string; color?: string | null }) => {
-      openTagMerge(sourceTag);
+      open(sourceTag);
     },
-    [],
+    [open],
   );
 
   return { openTagMergeModal };

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Sparkles, Target, Timer } from 'lucide-react';
+import { ArrowLeftRight, Clock, Flame, Gauge, Ratio, Star, Target, Timer } from 'lucide-react';
 
 import { MetricCard } from './MetricCard';
 
@@ -121,7 +121,7 @@ export const FulfillmentValue: Story = {
   args: {
     label: 'Avg Fulfillment',
     valueParts: { primary: '3.8', unit: '' },
-    icon: Sparkles,
+    icon: Star,
     trend: { direction: 'up', delta: 0.1, isPositive: true },
   },
 };
@@ -165,7 +165,7 @@ export const GridPreview: Story = {
       <MetricCard
         label="Avg Fulfillment"
         valueParts={{ primary: '3.8', unit: '' }}
-        icon={Sparkles}
+        icon={Star}
         trend={{ direction: 'up', delta: 0.1, isPositive: true }}
       />
       <MetricCard
@@ -337,7 +337,7 @@ export const AllPatterns: Story = {
         <MetricCard
           label="Avg Fulfillment"
           valueParts={{ primary: '3.8', unit: '' }}
-          icon={Sparkles}
+          icon={Star}
           trend={{ direction: 'up', delta: 0.1, isPositive: true }}
         />
       </div>
@@ -373,7 +373,7 @@ export const AllPatterns: Story = {
           <MetricCard
             label="Avg Fulfillment"
             valueParts={{ primary: '3.8', unit: '' }}
-            icon={Sparkles}
+            icon={Star}
             trend={{ direction: 'up', delta: 0.1, isPositive: true }}
           />
           <MetricCard

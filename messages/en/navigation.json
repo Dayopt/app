@@ -21,14 +21,12 @@
         "tags": "Tags",
         "stats": "Stats",
         "settings": "Settings",
-        "search": "Search",
-        "notifications": "Notifications"
+        "search": "Search"
       }
     },
     "bottomTab": {
       "calendar": "Calendar",
       "stats": "Stats",
-      "notifications": "Notifications",
       "account": "Account"
     },
     "navUser": {
@@ -36,7 +34,6 @@
       "account": "Account",
       "upgradePlan": "Upgrade Plan",
       "personalize": "Personalize",
-      "notifications": "Notifications",
       "settings": "Settings",
       "help": "Help",
       "helpSubmenu": {
