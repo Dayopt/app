@@ -634,3 +634,25 @@ src/ 内 195 件（test 除外後）の `as` キャスト。多くは `import * 
 - 2026-04-26 14:00 C-001 完了 (commit: abc1234, est=-120 actual=-118)
 - 2026-04-26 14:05 C-004 skip 理由: 参照あり (i18n request handler は next-intl が動的 import)
 -->
+
+### 2026-04-26 Phase 2 開始時 skip ログ
+
+- **C-001 skip**: `src/features/ai/lib/anthropic-client.ts` は AI feature scaffolding として意図的配置。`.storybook/docs/product/projects/ai-feature-scaffolding/summary.md` で「factory pattern wrapper を先行配置、後続 project watching-ai-implementation の前段」と明記。削除すると後続 project の前提が壊れる。**Phase 2 では削除しない**
+- **C-002 skip**: `src/features/ai/types.ts` のファイル先頭に `// Type definitions for ai feature. Intentionally empty — populated in watching-ai-implementation.` と明記。意図的に空のまま残す scaffolding。**削除しない**
+- **C-003 skip**: `src/features/contact/index.ts` は barrel として `ContactDialog` 等を export しているが、実利用は `src/app/.../GlobalOverlays.tsx` で `import('@/features/contact/components/ContactDialog')` 形式の deep dynamic import。barrel が「未使用」なのは正しいが、CLAUDE.md feature-boundaries.md は barrel 経由 import を規約とするため、**正しい修正は GlobalOverlays.tsx を barrel 経由に直すこと**（plan の change「barrel 削除」と方向性が逆）。plan 外の変更が必要のため skip
+- **C-004 skip**: `src/lib/i18n/request.ts` は `next.config.mjs` の `createNextIntlPlugin('./src/lib/i18n/request.ts')` から動的読み込み。knip は next.config を解析しない false positive。削除すると i18n の getRequestConfig が消えて build 破綻
+
+### 停止判定
+
+連続 4 entry で skip 発生。stop条件「連続 2 項目で skip 発生」を超えたため Phase 2 を停止。
+
+knip 由来の C-001〜C-004 はすべて「knip false positive または scaffolding 意図」であり、Phase 1 監査時点で `.knipignore` 設定と next.config 解析の前提を確認すべきだった。今後の対応案:
+
+1. `.knipignore` を整備して `src/features/ai/**` / `src/lib/i18n/request.ts` を除外
+2. C-005 以降の barrel re-export 削減は false positive リスクが C-001〜C-004 より低い（実体ファイルではなく re-export 行のみ削除）。next run で C-005 から再開する案を検討
+3. C-003 の「barrel 経由 import 規約」違反は別 plan で feature-sliced refactor として起票（C-040 と同系統）
+
+次 run の起動条件:
+
+- `.knipignore` 整備、または C-001〜C-004 を plan から外す合意
+- C-005 の barrel re-export 削減から再開（risk: med、grep 再 verify 必須）
