@@ -41,9 +41,6 @@ const config: StorybookConfig = {
       },
     },
   ],
-  features: {
-    experimentalComponentsManifest: true,
-  },
   framework: {
     name: '@storybook/nextjs-vite',
     options: {},
