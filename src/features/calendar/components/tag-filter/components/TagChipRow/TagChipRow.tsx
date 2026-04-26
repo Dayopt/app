@@ -1,18 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import {
-  CreateTagPopover,
-  TagIcon,
-  useCreateTag,
-  useTags,
-  type CreateTagPopoverSubmitInput,
-  type Tag,
-} from '@/features/tags';
+import { TagIcon, useTags, type Tag } from '@/features/tags';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
 
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
@@ -36,7 +30,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  *
  * - タイムライン下部・タブバー上に横一列で並ぶ（親タグ・葉タグ混在）
  * - タップで bottom sheet の `TagEntryCreatePopover` を開き、時刻指定してエントリ作成
- * - 行末に「+」ボタンを置き `CreateTagPopover` で新規タグ作成
+ * - 行末に「+」ボタンを置き `useShellStore.openTagCreateModal()` で新規タグ作成
  * - データソース: `useTags()`（sidebar と同じ cache を参照、追加 fetch ゼロ）
  * - 並び順: `sort_order` 昇順（PC sidebar と完全一致）
  * - 葉タグは suffix のみ表示（icon + color で親を識別）
@@ -51,31 +45,13 @@ export function TagChipRow({
   const t = useTranslations();
   const { data: tags } = useTags();
   const [openTagId, setOpenTagId] = useState<string | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const createTagMutation = useCreateTag();
+  const openTagCreateModal = useShellStore.use.openTagCreateModal();
 
   const sortedTags = useMemo(() => sortActiveTags(tags), [tags]);
   const openTag = useMemo(
     () => sortedTags.find((tag) => tag.id === openTagId) ?? null,
     [sortedTags, openTagId],
-  );
-
-  const handleCreateSubmit = useCallback(
-    async (input: CreateTagPopoverSubmitInput) => {
-      try {
-        await createTagMutation.mutateAsync({
-          name: input.name,
-          color: input.color,
-          parentId: input.parentId,
-          ...(input.icon ? { icon: input.icon } : {}),
-        });
-        setIsCreateOpen(false);
-      } catch {
-        // mutation hook 側で toast 済み。Popover は閉じない
-      }
-    },
-    [createTagMutation],
   );
 
   if (sortedTags.length === 0) return null;
@@ -113,23 +89,16 @@ export function TagChipRow({
         );
       })}
 
-      <CreateTagPopover
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        existingTags={sortedTags}
-        onSubmit={handleCreateSubmit}
-        isMobile
+      <button
+        type="button"
+        role="listitem"
+        aria-label={t('calendar.filter.createTag')}
+        onClick={() => openTagCreateModal()}
+        className="hover:bg-state-hover text-muted-foreground flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
       >
-        <button
-          type="button"
-          role="listitem"
-          aria-label={t('calendar.filter.createTag')}
-          className="hover:bg-state-hover text-muted-foreground flex h-12 min-w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-lg px-2 transition-colors duration-150"
-        >
-          <Plus className="size-5" />
-          <span className="max-w-16 truncate text-xs">{t('common.actions.add')}</span>
-        </button>
-      </CreateTagPopover>
+        <Plus className="size-5" />
+        <span className="max-w-16 truncate text-xs">{t('common.actions.add')}</span>
+      </button>
 
       {openTag && (
         <TagEntryCreatePopover

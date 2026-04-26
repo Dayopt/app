@@ -42,6 +42,7 @@ import { useTags } from '../hooks/useTagsQuery';
 import { CURATED_ICONS, DEFAULT_TAG_ICON, kebabToPascal } from '../lib/curated-icons';
 import { TagIcon } from './TagIcon';
 
+import type { CreatedTagPayload } from '@/lib/stores/useShellStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import type { Tag } from '../types';
 
@@ -57,7 +58,7 @@ interface TagCreateModalProps {
   onClose: () => void;
   initialParentId?: string | null;
   /** 作成成功時に呼ばれる。selection 反映等に使う */
-  onCreated?: (tag: Tag) => void;
+  onCreated?: (tag: CreatedTagPayload) => void;
 }
 
 export function TagCreateModal({ open, onClose, initialParentId, onCreated }: TagCreateModalProps) {
@@ -143,7 +144,13 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
         ...(icon ? { icon } : {}),
         ...(parentId ? { parentId } : {}),
       });
-      onCreated?.(created);
+      onCreated?.({
+        id: created.id,
+        name: created.name,
+        color: created.color,
+        icon: created.icon,
+        parent_id: created.parent_id,
+      });
       onClose();
     } catch {
       // mutation hook 側で toast 済み。閉じない

@@ -23,6 +23,15 @@ export interface TagRenameTarget {
   parent_id: string | null;
 }
 
+/** タグ新規作成 modal の onCreated に渡される最小限の tag 情報（feature 依存を避ける plain shape） */
+export interface CreatedTagPayload {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  parent_id: string | null;
+}
+
 /**
  * タグ新規作成モーダルの context。
  * `onCreated` は serializable ではないため persist には乗せない（partialize で除外済）。
@@ -32,9 +41,8 @@ export interface TagCreateContext {
   initialParentId: string | null;
   /**
    * 作成成功時のコールバック。caller が selection 反映や後続処理を行うのに使う。
-   * 渡された tag は新規作成された Tag。
    */
-  onCreated?: (tag: { id: string; name: string; parent_id: string | null }) => void;
+  onCreated?: (tag: CreatedTagPayload) => void;
 }
 
 /**

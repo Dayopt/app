@@ -3,21 +3,25 @@
 /**
  * タグモーダルナビゲーション Hook
  *
- * Zustand ストアベースのタグモーダル（マージ / リネーム）を開くユーティリティ。
+ * Zustand ストアベースのタグモーダル（マージ / リネーム / 新規作成）を開くユーティリティ。
  *
  * @example
- * const { openTagMergeModal, openTagRenameModal } = useTagModalNavigation();
+ * const { openTagMergeModal, openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
  * openTagMergeModal({ id, name, color });
  * openTagRenameModal({ id, name, parent_id });
+ * openTagCreateModal({ initialParentId, onCreated });
  */
 
 import { useCallback } from 'react';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
 
+import type { TagCreateContext } from '@/lib/stores/useShellStore';
+
 export function useTagModalNavigation() {
   const openMerge = useShellStore.use.openTagMergeModal();
   const openRename = useShellStore.use.openTagRenameModal();
+  const openCreate = useShellStore.use.openTagCreateModal();
 
   /**
    * タグマージモーダルを開く
@@ -43,5 +47,17 @@ export function useTagModalNavigation() {
     [openRename],
   );
 
-  return { openTagMergeModal, openTagRenameModal };
+  /**
+   * タグ新規作成モーダルを開く
+   *
+   * @param context - 任意。initialParentId / onCreated を渡せる
+   */
+  const openTagCreateModal = useCallback(
+    (context?: Partial<TagCreateContext>) => {
+      openCreate(context);
+    },
+    [openCreate],
+  );
+
+  return { openTagMergeModal, openTagRenameModal, openTagCreateModal };
 }
