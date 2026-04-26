@@ -656,3 +656,45 @@ knip 由来の C-001〜C-004 はすべて「knip false positive または scaffo
 
 - `.knipignore` 整備、または C-001〜C-004 を plan から外す合意
 - C-005 の barrel re-export 削減から再開（risk: med、grep 再 verify 必須）
+
+### 2026-04-26 Phase 2 続行ログ（C-005 再開以降）
+
+barrel re-export 削減 14 件を完了:
+
+- C-005 完了: `src/lib/date/index.ts`、約 60 件の未使用 re-export 削除（commit 5d569944c）
+- C-006 完了: `src/features/calendar/components/views/shared/index.ts`、44 件削除（commit 44ea3e0cf）
+- C-007 完了: `src/features/calendar/interaction/index.ts`、35 件削除（commit deb5432a5）
+- C-008 完了: `src/features/entry/index.ts`、18 件削除（layout.ts が NO_OVERLAY/ActualTimeDiffOverlay を barrel 経由で参照していたため当該 2 件は保持、commit 2dcd9f8ee）
+- C-009 完了: `src/features/tags/index.ts`、10 件削除（commit bc1b5dec7）
+- C-010 完了: `src/lib/sentry/index.ts`、9 件削除（commit db4fc124f）
+- C-011 完了: `src/features/tags/hooks/index.ts`、9 件削除（commit 97dea9e1e）
+- C-012 完了: `src/features/auth/index.ts`、7 件削除（commit ed0d1b759）
+- C-013 完了: `src/features/stats/index.ts`、7 件削除（commit c273ababf）
+- C-014 完了: `src/features/chronotype/index.ts`、6 件削除（commit c99dee5ca）
+- C-015 完了: `src/features/tour/index.ts`、5 件削除（commit c3d9c8cc6）
+- C-016 完了: `src/features/calendar/components/views/shared/components/index.ts`、4 件削除（commit 5d6610ad9）
+- C-017 完了: `src/lib/components/shell/sidebar/index.ts`、4 件削除（commit 12016ebfb）
+- C-018 完了: 小規模 barrel 6 件一括（entry/inspector/fields, entry/card, entry/hooks, onboarding, settings, lib/i18n、commit 0caa36bec）
+
+storybook-gap 1 件を完了:
+
+- C-041 完了: `TourOrchestrator.stories.tsx` 新規作成（minimal Default + AllPatterns、commit fa395fdc3）
+
+#### Phase 2 再停止: storybook-gap 残り 15 件と実体 unused exports（C-019〜C-029）
+
+**理由**: storybook-gap の残り 15 件（C-042〜C-056）はほぼすべて tRPC mutation / Zustand store / next-intl provider に依存しており、Storybook で動かすには `.storybook/mocks/` の trpcMocks / storeMocks 設計判断が必要。`auto mode 推奨ケース（仕様確定 + 機械的展開）` の枠を超え「`mock 戦略の design decision`」が混入する。同じく実体 unused exports（C-019〜C-029）は外部参照 / 型 import の二重 verify が必要で、机上の grep だけでは false positive リスクが残る。
+
+**plan §2.4 該当条件**: 「design decision が必要な状況（plan 上 exec:true でも実装中に判明した場合）」。
+
+#### 次 run の起動条件・続行案
+
+1. **storybook-gap 続行**: `.storybook/mocks/stores.tsx` / `.storybook/decorators/` の既存 mock pattern を確認し、各 component に必要な mock を整理。storybook skill の Feature Component テンプレート展開で `parameters.storeMocks` / `parameters.trpcMocks` を共通指定できるか検討
+2. **実体 unused exports 続行**: 各 entry の export ごとに `grep -rn "{name}" src/ .storybook/ scripts/ messages/` で実 import を全件検証してから削除（C-005 と同水準の whitelist 方式）
+3. **storybook-gap の skip 提案**: 描画なし initializer (AuthStoreInitializer / UserSettingsInitializer) は story を作っても Canvas に有意な UI が表示されないため、「公開 component に story 必須」というルール側を緩める方が筋
+
+#### 成果サマリ
+
+- 完了 entry: 15 件（barrel cleanup 14 件 + story 1 件）
+- 削減 LOC: 約 -340 行（barrel から re-export 行を除去）
+- 検証: 各 commit で `npm run typecheck` を pass（`.storybook/main.ts` 由来の baseline error は私の変更とは無関係のため除外）
+- push: なし（main へ直接 commit のみ）
