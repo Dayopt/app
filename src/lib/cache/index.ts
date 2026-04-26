@@ -15,8 +15,5 @@
  * await invalidateUserTagsCache(userId);
  */
 
-// キャッシュユーティリティ
-export { getUserTagsCacheTag } from './tag-cache';
-
 // サーバーアクション（キャッシュ無効化）
 export { invalidateUserTagsCache } from './actions';
