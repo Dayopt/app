@@ -766,3 +766,130 @@ storybook-gap 1 件を完了:
 | **合計**         | —                                            | **18 entry**      | **21 commit** |
 
 LOC 削減: 約 -340（barrel cleanup） / 追加: 約 +260（docs 系） / story 追加: 38 行
+
+### 2026-04-26 セッション D: barrel cleanup の連鎖孤立 file 削除 + 追加 barrel
+
+barrel re-export 削減 (C-005〜C-018) によって external 参照が消え、knip が新たに「unused file」と判定したファイル群を整理。grep で実コードからの参照ゼロを確認した上で削除。
+
+- id: C-062
+  category: dead-code
+  rationale: useTagOperations と useTagsOptimistic は互いを self-reference するだけ、外部参照 0
+  target: src/features/tags/hooks/useTagOperations.ts, src/features/tags/hooks/useTagsOptimistic.ts
+  change: 2 file 削除
+  risk: low
+  est_loc: -235
+  depends_on: [C-009, C-011]
+  exec: true
+  status: 完了 (commit c05d437b6)
+
+- id: C-063
+  category: dead-code
+  rationale: barrel C-006 で参照消失、Calendar.docs.mdx の言及のみ
+  target: src/features/calendar/components/views/shared/components/CalendarGridProvider.tsx
+  change: ファイル削除
+  risk: low
+  est_loc: -63
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit a3e9ea780)
+
+- id: C-064
+  category: dead-code
+  rationale: barrel C-006 で grid lines 群への参照が消え、互いを呼ぶだけの薄い wrapper
+  target: src/features/calendar/components/views/shared/grid/GridLines/{HalfHourLines,HourLines,QuarterHourLines,index}.tsx
+  change: 4 file + 空ディレクトリ削除
+  risk: low
+  est_loc: -144
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit 5dcabfd86)
+
+- id: C-065
+  category: dead-code
+  rationale: barrel C-006 後に孤立した re-export wrapper
+  target: src/features/calendar/components/views/shared/grid/TimeColumn/{index.tsx, TimeLabel.tsx}
+  change: 2 file 削除
+  risk: low
+  est_loc: -37
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit 6a05bcac6)
+
+- id: C-066
+  category: dead-code
+  rationale: DayColumn/index.tsx は re-export wrapper、useTimeGrid は GridLines 削除で孤立
+  target: src/features/calendar/components/views/shared/components/DayColumn/index.tsx, src/features/calendar/components/views/shared/hooks/useTimeGrid.ts
+  change: 2 file 削除
+  risk: low
+  est_loc: -58
+  depends_on: [C-006, C-064]
+  exec: true
+  status: 完了 (commit f54c2493b)
+
+- id: C-067
+  category: dead-code
+  rationale: barrel C-008/C-018 後に entry 経由参照が消え、実コード参照 0（コメント・docs 言及のみ）
+  target: src/features/entry/hooks/useBlockPlace.ts
+  change: ファイル削除
+  risk: low
+  est_loc: -191
+  depends_on: [C-008, C-018]
+  exec: true
+  status: 完了 (commit fdab927da)
+
+- id: C-068
+  category: dead-code
+  rationale: deep import で全 hook が参照されており、barrel 経由 re-export は誰も使っていない
+  target: src/features/entry/components/inspector/hooks/index.ts
+  change: useDebouncedSave / useEntryForm / useTagField / useTimeFields の re-export を削除、useInspectorNavigation と feature 経由 useInspectorKeyboard のみ残す
+  risk: low
+  est_loc: -4
+  depends_on: []
+  exec: true
+  status: 完了 (commit d8cfa01f2)
+
+- id: C-069
+  category: dead-code
+  rationale: DateNavigator / DateRangeDisplay / ViewSwitcher は実体 path から deep import されている
+  target: src/features/calendar/components/views/shared/DateDisplay/index.tsx
+  change: 6 件の re-export を削除、DateDisplay と type wildcard のみ残す
+  risk: low
+  est_loc: -7
+  depends_on: []
+  exec: true
+  status: 完了 (commit d3a15ccb9)
+
+- id: C-070
+  category: dead-code
+  rationale: DragSelectionPreview / DRAG_CONSTANTS / useDragSelection / 各 type は deep import で参照されている
+  target: src/features/calendar/components/views/shared/components/CalendarDragSelection/index.ts
+  change: 6 件の re-export を削除、CalendarDragSelection / MobileTouchHint / DateTimeSelection のみ残す
+  risk: low
+  est_loc: -8
+  depends_on: []
+  exec: true
+  status: 完了 (commit d744ff9c7)
+
+#### 終了時 knip サマリ
+
+- unused files (src/): **5 件**（すべて意図的配置 / false positive）
+  - `src/features/ai/lib/anthropic-client.ts` — scaffolding (skip 永続)
+  - `src/features/ai/types.ts` — scaffolding (skip 永続)
+  - `src/features/contact/index.ts` — barrel 規約問題（別 plan で feature-sliced refactor として起票推奨）
+  - `src/lib/i18n/request.ts` — next.config 動的読込の knip false positive
+- unused exports (impl files): 多数残存。tags/types や date/constants 等の type alias / 定数。`feature 内部での未使用 type` カテゴリで、削除には feature 設計判断が必要なため別 plan へ。
+
+#### 全期間最終サマリ
+
+| セッション                            | 完了 entry          | commit        |
+| ------------------------------------- | ------------------- | ------------- |
+| Phase 1 監査                          | C-001〜C-057 列挙   | 1             |
+| Phase 2 stop log                      | C-001〜C-004 skip   | 1             |
+| Phase 2 続行                          | C-005〜C-018, C-041 | 15            |
+| セッション A (api/)                   | C-058 / C-059       | 2             |
+| セッション B/C (app routes docs)      | C-060 / C-061       | 2             |
+| セッション D (連鎖孤立 + 追加 barrel) | C-062〜C-070        | 9             |
+| plan 更新                             | —                   | 5             |
+| **合計**                              | **27 entry**        | **35 commit** |
+
+LOC: 約 -1,070（barrel cleanup + 孤立 file 削除）/ +260（docs 系）/ +38（story）
