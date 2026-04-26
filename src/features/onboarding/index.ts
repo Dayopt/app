@@ -9,8 +9,4 @@
 export { OnboardingWizard } from './components/OnboardingWizard';
 export type { QuizCallbacks } from './components/OnboardingWizard';
 
-// --- Types ---
-export { ONBOARDING_STEPS, ONBOARDING_STEP_COUNT } from './types';
-export type { OnboardingStep } from './types';
-
 // ここにないものはfeature内部専用

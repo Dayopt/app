@@ -2,7 +2,6 @@
  * i18nモジュールのエントリポイント
  */
 export { IntlProvider } from './IntlProvider';
-export { routing } from './routing';
 export type { Locale } from './routing';
 export * from './types';
 
