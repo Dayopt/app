@@ -8,34 +8,12 @@
 // =============================================================================
 // Types
 // =============================================================================
-export type {
-  CreateEntryInput,
-  Entry,
-  EntryOrigin,
-  EntryWithTags,
-  FulfillmentScore,
-  UpdateEntryInput,
-} from './types/entry';
-
-// =============================================================================
-// Schemas (Zod validation)
-// =============================================================================
-export {
-  bulkDeleteEntrySchema,
-  bulkUpdateEntrySchema,
-  createEntrySchema,
-  entryFilterSchema,
-  entryIdSchema,
-  entryOriginSchema,
-  fulfillmentScoreSchema,
-  getEntryByIdSchema,
-  updateEntrySchema,
-} from './schemas/entry';
+export type { EntryWithTags } from './types/entry';
 
 // =============================================================================
 // Hooks
 // =============================================================================
-export { useBlockPlace, useEntries, useEntryMutations } from './hooks';
+export { useEntries, useEntryMutations } from './hooks';
 
 // =============================================================================
 // Stores
@@ -67,18 +45,12 @@ export { isNewEntry } from './lib/new-entry-tracker';
 // Components (EntryCard)
 // =============================================================================
 export { EntryCard } from './components/card';
-export type { EntryCardPosition, EntryCardProps } from './components/card';
+export type { EntryCardPosition } from './components/card';
 
 // =============================================================================
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { DateRow } from './components/inspector/fields/DateRow';
 export { TimeRow } from './components/inspector/fields/TimeRow';
-export { TimeSelect } from './components/inspector/fields/TimeSelect';
-
-// =============================================================================
-// Server (Service layer — server-only ガードで保護済み)
-// =============================================================================
-export { EntryService } from './server/entry-service';
 
 // ここにないものはfeature内部専用
