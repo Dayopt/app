@@ -11,11 +11,8 @@ export {
   TagDeleteStrategyDialog,
 } from './components';
 export { CreateTagPopover } from './components/CreateTagPopover';
-export type {
-  CreateTagPopoverProps,
-  CreateTagPopoverSubmitInput,
-} from './components/CreateTagPopover';
-export { IconPicker, IconPickerDropdownItems } from './components/IconPicker';
+export type { CreateTagPopoverSubmitInput } from './components/CreateTagPopover';
+export { IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
 export type { HoveredTagInfo } from './components/TagQuickSelector';
@@ -24,26 +21,19 @@ export type { HoveredTagInfo } from './components/TagQuickSelector';
 export {
   tagKeys,
   useCreateTag,
-  useDeleteGroup,
   useDeleteTag,
   useMergeTag,
-  useRenameGroup,
   useReorderTags,
   useTag,
   // Tags CRUD
   useTags,
   useTagsHierarchy,
   useTagsMap,
-  useUngroupTags,
   useUpdateTag,
 } from './hooks';
 
 // Lib
-export { buildColonTagName, getTagDisplayLabel, parseColonTag } from './lib/tag-colon';
-export { buildTagHierarchyUpdates, buildTagTree, flattenTagTree } from './lib/tag-tree';
-
-// Server (Service layer — server-only ガードで保護済み)
-export { TagService } from './server/tag-service';
+export { buildTagHierarchyUpdates, flattenTagTree } from './lib/tag-tree';
 
 // Types
 export type { Tag, TagTreeNode } from './types';
