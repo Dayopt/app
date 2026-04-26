@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
-import { Eye, EyeOff, GripVertical, MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 
 import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
@@ -553,25 +553,13 @@ function SortableParentBlock({
       };
 
   return (
-    <div style={style} className={cn(!isMobile && isDragging && 'z-10 opacity-50')} role="listitem">
-      <div ref={setNodeRef} className="relative">
-        {!isMobile ? (
-          <div
-            className="absolute top-0 bottom-0 left-1 z-10 flex items-center"
-            {...attributes}
-            {...listeners}
-          >
-            <button
-              type="button"
-              aria-label="move"
-              className="text-muted-foreground hover:text-foreground flex size-6 items-center justify-center rounded-lg"
-            >
-              <GripVertical className="size-4" />
-            </button>
-          </div>
-        ) : null}
-
-        <div className="pl-6">
+    <div
+      style={style}
+      className={cn(!isMobile && isDragging && 'z-10 cursor-grabbing opacity-50')}
+      role="listitem"
+    >
+      <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
+        <div>
           <GroupHeader
             label={node.tag.name}
             checked={groupVisibility === 'all'}
@@ -783,10 +771,12 @@ function SortableTagItem({
           ref={setNodeRef}
           style={style}
           className={cn(!isMobile && isDragging && 'z-10 cursor-grabbing opacity-50')}
+          {...attributes}
+          {...listeners}
         >
           <div
             className={cn(
-              'group/item relative flex items-center rounded-lg text-sm',
+              'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
               dragKind === 'child' ? 'pl-4' : '',
               isMobile ? 'h-11' : 'h-8',
               'hover:bg-state-hover',
@@ -796,18 +786,6 @@ function SortableTagItem({
             )}
             onClick={() => onOpenPopover(tag.id)}
           >
-            {!isMobile ? (
-              <button
-                type="button"
-                aria-label={t('common.actions.move')}
-                className="text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg"
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="size-4" />
-              </button>
-            ) : null}
-
             <span className="ml-2 shrink-0">
               <TagIcon icon={tag.icon} color={displayColor} size="sm" />
             </span>
