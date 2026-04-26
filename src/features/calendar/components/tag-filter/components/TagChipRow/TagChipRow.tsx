@@ -41,7 +41,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  * - 並び順: `sort_order` 昇順（PC sidebar と完全一致）
  * - 葉タグは suffix のみ表示（icon + color で親を識別）
  * - `is_active === false` のタグは除外
- * - タグゼロでも + ボタンだけ表示（最初のタグ作成導線）
+ * - タグゼロなら null を返す（行ごと非表示。初回タグ作成は別導線）
  */
 export function TagChipRow({
   defaultDurationMinutes = 30,
@@ -77,6 +77,8 @@ export function TagChipRow({
     },
     [createTagMutation],
   );
+
+  if (sortedTags.length === 0) return null;
 
   return (
     <div
