@@ -15,7 +15,7 @@ import { Meta } from '@storybook/blocks';
 #### やったこと
 
 - **Phase 1 監査と plan 作成（2 commit）**: src/ 配下を 6 カテゴリ（dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap / jsdoc-drift）で機械監査し、57 entry を C-001〜C-057 で `docs/cleanup-plan-2026-04-26.md` に列挙
-- **Phase 2 barrel cleanup（14 commit + storybook 1 件）**: src/lib/date / src/features/{calendar, entry, tags, auth, stats, chronotype, tour, settings, onboarding} / src/lib/{sentry, components/shell/sidebar} / src/lib/i18n の barrel 13 file から約 250 件の未使用 re-export を削除。加えて C-041 で TourOrchestrator の minimal story 1 件
+- **Phase 2 barrel cleanup（14 commit + storybook 1 件）**: `src/lib/date` / `src/features/(calendar, entry, tags, auth, stats, chronotype, tour, settings, onboarding)` / `src/lib/(sentry, components/shell/sidebar)` / `src/lib/i18n` の barrel 13 file から約 250 件の未使用 re-export を削除。加えて C-041 で TourOrchestrator の minimal story 1 件
 - **セッション A — api/ docs 整備（2 commit）**: tRPC route handler のトップレベル JSDoc 追加 + `docs/api-overview.md` 新規作成（8 endpoints のテーブル + 共通方針）
 - **セッション B/C — app-routes-overview.md 新規作成（2 commit）**: `(app)` segment の Route Group 構造図 → `(auth)/(onboarding)/[locale]/root` を追記し、認証境界の ASCII 図で締め
 - **セッション D — 連鎖孤立 file 削除（9 commit）**: barrel cleanup の結果新たに unused 判定された 11 file（GridLines/\_、TimeColumn/index.tsx、DayColumn/index.tsx、CalendarGridProvider、useTimeGrid、useBlockPlace、useTagOperations 等）と追加 barrel（DragSelection / DateDisplay / inspector hooks）を整理
