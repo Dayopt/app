@@ -698,3 +698,31 @@ storybook-gap 1 件を完了:
 - 削減 LOC: 約 -340 行（barrel から re-export 行を除去）
 - 検証: 各 commit で `npm run typecheck` を pass（`.storybook/main.ts` 由来の baseline error は私の変更とは無関係のため除外）
 - push: なし（main へ直接 commit のみ）
+
+### 2026-04-26 セッション A（src/app/api/\*\*）追加 entry
+
+監査結果: lint warn 0 / typecheck pass / `as` キャスト 8 件（webhook の Stripe API narrow 等で削除不可）/ ほぼ全 route にトップ JSDoc 既存。残作業として 2 entry を追加実施。
+
+- id: C-058
+  category: jsdoc-drift
+  rationale: tRPC route だけトップレベル JSDoc が無く、他 route と粒度が揃わない
+  target: src/app/api/trpc/[trpc]/route.ts
+  change: ルーティング・context 解決・error log・cache header をまとめた JSDoc を追加
+  risk: low
+  est_loc: +11
+  depends_on: []
+  exec: true
+  status: 完了 (commit 5c05f010a)
+
+- id: C-059
+  category: jsdoc-drift
+  rationale: api endpoints を 1 枚で総覧できるドキュメントが無い
+  target: docs/api-overview.md (新規)
+  change: 8 endpoints のテーブル（path / method / 認証 / rate limit / runtime / 副作用）と REST 維持方針を記載
+  risk: low
+  est_loc: +47
+  depends_on: []
+  exec: true
+  status: 完了 (commit 9eb493b50)
+
+セッション A の cleanup は以上で完了。dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap は追加の実施事項なし（現状で baseline 通り）。
