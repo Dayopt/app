@@ -127,8 +127,7 @@ const buttonVariants = cva(
 type ButtonSize = 'sm' | 'default' | 'lg';
 
 export interface ButtonProps
-  extends React.ComponentProps<'button'>,
-    Omit<VariantProps<typeof buttonVariants>, 'size'> {
+  extends React.ComponentProps<'button'>, Omit<VariantProps<typeof buttonVariants>, 'size'> {
   /** ボタンのサイズ */
   size?: ButtonSize | null;
   /** アイコン専用ボタンにする（サイズは size prop と共有） */

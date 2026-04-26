@@ -99,9 +99,8 @@ export function useMFA(): UseMFAReturn {
   // リカバリーコード生成・保存（Server Action経由）
   const generateAndSaveRecoveryCodes = useCallback(async (): Promise<string[] | null> => {
     try {
-      const { generateAndSaveRecoveryCodesAction } = await import(
-        '@/features/settings/server/recovery-code-actions'
-      );
+      const { generateAndSaveRecoveryCodesAction } =
+        await import('@/features/settings/server/recovery-code-actions');
       const { codes, error } = await generateAndSaveRecoveryCodesAction();
       if (error) {
         logger.error('Failed to generate recovery codes:', error);
