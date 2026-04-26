@@ -9,8 +9,8 @@ updates:
       time: '09:00'
       timezone: 'Asia/Tokyo'
 
-    # PR数の制限（3件まで並列処理）
-    open-pull-requests-limit: 3
+    # PR数の制限（grouping を細分化したため少し増やす）
+    open-pull-requests-limit: 6
 
     # ラベル設定（securityは自動付与に任せる）
     labels:
@@ -29,7 +29,10 @@ updates:
       prefix: 'chore'
       include: 'scope'
 
-    # グループ化設定（minor/patchをまとめる）
+    # グループ化設定
+    # development を 1 グループにまとめると 30+ 件の bundle になり、storybook /
+    # playwright / tailwindcss など互いに無関係な breaking が混ざって blast radius
+    # を読めなくなるため、エコシステム単位で細分化する。
     groups:
       production:
         dependency-type: 'production'
@@ -37,8 +40,76 @@ updates:
           - 'minor'
           - 'patch'
 
-      development:
+      # storybook は addon 同士の version を揃える必要があるためまとめる
+      development-storybook:
+        patterns:
+          - '@storybook/*'
+          - 'storybook'
+          - 'eslint-plugin-storybook'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # テストランナー / E2E ツールは互いに依存があるためまとめる
+      development-testing:
+        patterns:
+          - '@playwright/*'
+          - 'playwright'
+          - '@axe-core/*'
+          - 'vitest'
+          - '@vitest/*'
+          - 'happy-dom'
+          - '@testing-library/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # lint / format / type ツール群
+      development-linting:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
+          - 'prettier'
+          - 'prettier-plugin-*'
+          - '@commitlint/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # @types/* は受け身の型更新で blast radius が小さい
+      development-types:
+        patterns:
+          - '@types/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # 上記グループに属さない残りの dev deps
+      development-other:
         dependency-type: 'development'
+        exclude-patterns:
+          - '@storybook/*'
+          - 'storybook'
+          - 'eslint-plugin-storybook'
+          - '@playwright/*'
+          - 'playwright'
+          - '@axe-core/*'
+          - 'vitest'
+          - '@vitest/*'
+          - 'happy-dom'
+          - '@testing-library/*'
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
+          - 'prettier'
+          - 'prettier-plugin-*'
+          - '@commitlint/*'
+          - '@types/*'
         update-types:
           - 'minor'
           - 'patch'
