@@ -69,6 +69,7 @@ function TagQuickSelectorContent({
   onSelect,
   onCreateAndSelect,
   onTagHover,
+  isMobile = false,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
   onCreateAndSelect: (
@@ -78,6 +79,8 @@ function TagQuickSelectorContent({
     parentId?: string | null,
   ) => void;
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
+  /** モバイル時は CreateTagPopover を Drawer (vaul nested) で表示 */
+  isMobile?: boolean;
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
@@ -150,13 +153,15 @@ function TagQuickSelectorContent({
             onOpenChange={setIsCreatePopoverOpen}
             existingTags={sortedTags}
             onSubmit={handleEditorSubmit}
+            isMobile={isMobile}
+            nestedDrawer={isMobile}
           />
         </div>
       </div>
     );
   }
 
-  // メイン: タグ badge 一覧 + 作成 Popover
+  // メイン: タグ badge 一覧 + 作成 UI（モバイル=nested Drawer / PC=Popover）
   return (
     <div className="relative overflow-y-auto" style={{ maxHeight: '50vh' }}>
       <TagBadgeList
@@ -171,6 +176,8 @@ function TagQuickSelectorContent({
         onOpenChange={setIsCreatePopoverOpen}
         existingTags={sortedTags}
         onSubmit={handleEditorSubmit}
+        isMobile={isMobile}
+        nestedDrawer={isMobile}
       />
     </div>
   );
@@ -305,6 +312,7 @@ export function TagQuickSelector({
             onSelect={onSelect}
             onCreateAndSelect={onCreateAndSelect}
             onTagHover={onTagHover}
+            isMobile={isMobile}
           />
         </DrawerContent>
       </Drawer>
@@ -353,6 +361,7 @@ export function TagQuickSelector({
           onSelect={onSelect}
           onCreateAndSelect={onCreateAndSelect}
           onTagHover={onTagHover}
+          isMobile={isMobile}
         />
       </div>
     </div>

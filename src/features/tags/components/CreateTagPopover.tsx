@@ -48,12 +48,18 @@ export interface CreateTagPopoverProps {
   onSubmit: (input: CreateTagPopoverSubmitInput) => void | Promise<void>;
   /**
    * モバイル時は bottom sheet (vaul Drawer)、PC 時は Popover。指定なしは PC 扱い。
-   * モバイル時は anchor モードを使えず、children を必ず渡す必要がある（DrawerTrigger 経由）。
+   * モバイル時の anchor モード: children 省略可（コントロール only で開閉する）。
    */
   isMobile?: boolean;
   /**
+   * 親 Drawer の中で開く場合 true。vaul の nested mode を有効化し、親 Drawer をスケールさせる。
+   * `isMobile` と組み合わせる時のみ意味を持つ。
+   */
+  nestedDrawer?: boolean;
+  /**
    * PopoverTrigger / DrawerTrigger として使う要素。渡すとこの element がクリックで開く。
-   * 省略時（PC のみ）は anchor モード: 親要素（`relative`）の中に PopoverAnchor を `absolute inset-0` で敷く。
+   * 省略時は anchor モード: PC は親要素（`relative`）の中に PopoverAnchor を敷く。
+   * モバイル時は controlled open のみで開閉する。
    */
   children?: React.ReactNode;
 }
@@ -82,6 +88,7 @@ export function CreateTagPopover({
   initialParentId,
   onSubmit,
   isMobile,
+  nestedDrawer,
   children,
 }: CreateTagPopoverProps) {
   const t = useTranslations('calendar.filter.createDialog');
@@ -387,7 +394,13 @@ export function CreateTagPopover({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} handleOnly repositionInputs={false}>
+      <Drawer
+        open={open}
+        onOpenChange={onOpenChange}
+        handleOnly
+        repositionInputs={false}
+        nested={nestedDrawer ?? false}
+      >
         {children ? <DrawerTrigger asChild>{children}</DrawerTrigger> : null}
         <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
           <DrawerTitle className="sr-only">{t('title')}</DrawerTitle>
