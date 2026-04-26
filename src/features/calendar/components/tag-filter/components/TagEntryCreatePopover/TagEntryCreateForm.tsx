@@ -85,7 +85,6 @@ export function TagEntryCreateForm({
             onStartChange={onStartTimeChange}
             onEndChange={onEndTimeChange}
             hasError={hasError}
-            forceSingleRow
           />
         </div>
       </div>

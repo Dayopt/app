@@ -271,7 +271,6 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
             onEndChange={onPlannedEndChange}
             hasError={timeConflictError}
             disabled={isUnplanned}
-            forceSingleRow
           />
 
           {/* 記録行 */}
@@ -321,7 +320,6 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
                 handleActualEndChange(time);
               }
             }}
-            forceSingleRow
           />
 
           {/* 予定 vs 記録 差分バー */}
