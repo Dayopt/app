@@ -2,33 +2,43 @@
 
 `src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview.md](./api-overview.md) を参照。
 
-策定日: 2026-04-26
-スコープ（このドキュメントの本体）: `src/app/[locale]/(app)/**` 配下の認証必須ページ群。`(auth)` / `(public)` / ルート直下は次セッションで追記。
+策定日: 2026-04-26（最終更新: 2026-04-26 セッション C で `(auth)` / `(onboarding)` / ルート直下を追記）
+スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview.md](./api-overview.md) 参照）。`(public)` Route Group は現時点で存在しない。
 
 ## Route Group 構造
 
 ```
 src/app/
-├── layout.tsx                  ← ルート layout（テーマ・font・globals.css）
-├── globals.css
-├── error.tsx, not-found.tsx
-├── opengraph-image.tsx
-├── icon.* / manifest.ts / robots.ts / sitemap.ts
+├── layout.tsx                  ← ルート layout（HTML / theme / font / globals.css）
+├── error.tsx, global-error.tsx ← root-level error boundaries
+├── not-found.tsx               ← root-level 404
+├── sitemap.ts                  ← 多言語 sitemap（app 側の最小公開 URL のみ）
+├── opengraph-image.tsx         ← OG image generator (edge runtime)
+├── maintenance/route.ts        ← /maintenance（locale プレフィックスなし、Provider バイパス）
+├── offline/page.tsx            ← /offline（PWA フォールバック）
+├── api/                        ← REST / Webhook（api-overview.md 参照）
 └── [locale]/
-    ├── (app)/                  ← 認証必須グループ（このセッションの対象）
+    ├── layout.tsx              ← locale-scoped HTML lang / dir / metadata
+    ├── page.tsx                ← / → /{locale}/calendar/day へ redirect
+    ├── error.tsx               ← locale-scoped error boundary
+    ├── (app)/                  ← 認証必須グループ
     │   ├── layout.tsx          ← IntlProvider + Providers + BaseLayout
     │   ├── error.tsx, not-found.tsx
-    │   ├── (modes)/            ← メインモード（calendar / stats / ai）
-    │   │   ├── calendar/
-    │   │   ├── stats/
-    │   │   └── ai/
+    │   ├── (modes)/            ← calendar / stats / ai
     │   ├── settings/
     │   ├── playground/
     │   ├── _providers/         ← Providers ツリー
     │   ├── _shell/             ← Shell layout components
     │   └── _overlays/          ← グローバルダイアログ群
-    ├── (auth)/                 ← 認証フロー（次セッション）
-    └── (public)/               ← 公開ページ（次セッション）
+    ├── (auth)/                 ← 認証フロー（login / signup / reset / mfa-verify）
+    │   ├── layout.tsx          ← IntlProvider (auth namespace) + AuthClientLayout
+    │   ├── loading.tsx
+    │   └── auth/{login,signup,password,reset-password,mfa-verify}/page.tsx
+    ├── (onboarding)/           ← 認証済み + onboarding 未完了ユーザー向け
+    │   ├── layout.tsx          ← IntlProvider (onboarding namespace) + OnboardingProviders
+    │   └── onboarding/page.tsx ← OnboardingWizard 合成
+    ├── playground/             ← dev playground（locale 直下）
+    └── test-email/             ← email template preview
 ```
 
 ## (app) Group: 認証必須ページ
@@ -101,7 +111,79 @@ src/app/
 
 - `(app)` 配下の page で auth check は **layout 経由で間接的に行われる**（Providers 内の `AuthStoreInitializer` で session 取得 → 未認証なら `/login` へ redirect）
 - ページ単体での auth ガードは不要。新規 page を追加するときは `(app)` 配下に置けば自動的に認証必須となる
-- 認証スキップしたい page は `(public)/` か `(auth)/` に置く（次セッション参照）
+- 認証スキップしたい page は `(auth)/` に置く（下記参照）
+
+## (auth) Group: 認証フロー
+
+未認証ユーザー向けの login / signup / reset 系ページ。`AuthClientLayout` で軽量な `PublicProviders`（Theme + Tooltip のみ）を注入し、`AuthLayout` で UI を組み立てる。tRPC / TanStack Query などのデータ層は持たない（Supabase Auth Client SDK を直接利用）。
+
+### Layout 系
+
+| Path                                                             | Type            | 責務                                                                                                       |
+| ---------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| [`(auth)/layout.tsx`](<../src/app/[locale]/(auth)/layout.tsx>)   | layout (server) | IntlProvider（`common` / `auth` / `error` namespace のみ）+ `AuthClientLayout`。`metadata.robots: noindex` |
+| [`(auth)/loading.tsx`](<../src/app/[locale]/(auth)/loading.tsx>) | loading         | 認証フロー共通のローディング表示                                                                           |
+
+### Pages
+
+| Path                                                                                               | Type          | 責務                                                           |
+| -------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
+| [`(auth)/auth/page.tsx`](<../src/app/[locale]/(auth)/auth/page.tsx>)                               | page (server) | `/auth` ルートへの直接アクセス時の入口（リダイレクト or 案内） |
+| [`(auth)/auth/login/page.tsx`](<../src/app/[locale]/(auth)/auth/login/page.tsx>)                   | page (server) | `LoginForm` を中央配置で render                                |
+| [`(auth)/auth/signup/page.tsx`](<../src/app/[locale]/(auth)/auth/signup/page.tsx>)                 | page (server) | `SignupForm`                                                   |
+| [`(auth)/auth/password/page.tsx`](<../src/app/[locale]/(auth)/auth/password/page.tsx>)             | page (server) | `PasswordResetForm`（リセットメール送信）                      |
+| [`(auth)/auth/reset-password/page.tsx`](<../src/app/[locale]/(auth)/auth/reset-password/page.tsx>) | page (server) | `ResetPasswordForm`（リセットリンク経由の新パスワード設定）    |
+| [`(auth)/auth/mfa-verify/page.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/page.tsx>)         | page (server) | MFA TOTP コード検証                                            |
+| [`(auth)/auth/mfa-verify/layout.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/layout.tsx>)     | layout        | MFA 専用 wrapper                                               |
+
+## (onboarding) Group: 認証済み + 未完了ユーザー
+
+ログイン済みだがプロフィール / chronotype 未設定のユーザー向け。`/calendar` 等のメイン UI を出す前に通る。`OnboardingProviders` は `(app)` 用 Providers より軽量（tRPC + Auth Store + Theme のみ）。
+
+| Path                                                                                               | Type            | 責務                                                                                                          |
+| -------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
+| [`(onboarding)/layout.tsx`](<../src/app/[locale]/(onboarding)/layout.tsx>)                         | layout (server) | IntlProvider（`common` / `onboarding` / `tour` / `error`）+ `OnboardingProviders`。`metadata.robots: noindex` |
+| [`(onboarding)/onboarding/page.tsx`](<../src/app/[locale]/(onboarding)/onboarding/page.tsx>)       | page (client)   | `OnboardingWizard` に `ChronotypeQuiz` / 完了時 mutation を接続する composition layer                         |
+| [`(onboarding)/onboarding/loading.tsx`](<../src/app/[locale]/(onboarding)/onboarding/loading.tsx>) | loading         | onboarding 共通ローディング                                                                                   |
+
+## [locale] 直下
+
+locale ルーティングの境界。HTML lang / dir、metadata、redirect を担う。
+
+| Path                                                                                              | Type            | 責務                                                                                          |
+| ------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------- |
+| [`[locale]/layout.tsx`](../src/app/[locale]/layout.tsx)                                           | layout (server) | `<html lang dir>` の確定、`generateMetadata` で多言語 OG / canonical、未対応 locale を 404 に |
+| [`[locale]/page.tsx`](../src/app/[locale]/page.tsx)                                               | page (server)   | `/{locale}` → `/{locale}/calendar/day` redirect。`force-dynamic`                              |
+| [`[locale]/error.tsx`](../src/app/[locale]/error.tsx)                                             | error boundary  | locale 全体のエラー（IntlProvider 未マウントケース含む）                                      |
+| [`[locale]/playground/dnd-multi-container/`](../src/app/[locale]/playground/dnd-multi-container/) | dev             | dnd-kit Multiple Containers の検証用                                                          |
+| [`[locale]/test-email/`](../src/app/[locale]/test-email/)                                         | dev             | email template の preview ページ                                                              |
+
+## ルート直下（src/app/）
+
+locale プレフィックスを持たない routing と Next.js metadata route 群。
+
+| Path                                                      | Type                | 責務                                                                                                                 |
+| --------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [`layout.tsx`](../src/app/layout.tsx)                     | root layout         | HTML 骨格 / theme provider / font / `globals.css` の読み込み。**この layout は触らない** が原則（影響範囲が全 page） |
+| [`error.tsx`](../src/app/error.tsx)                       | root error boundary | App router の最上位エラー                                                                                            |
+| [`global-error.tsx`](../src/app/global-error.tsx)         | global error        | layout も含めた致命エラー時の最終手段（`<html>` から自前で組む）                                                     |
+| [`not-found.tsx`](../src/app/not-found.tsx)               | root 404            | 全 path 共通の 404                                                                                                   |
+| [`sitemap.ts`](../src/app/sitemap.ts)                     | metadata route      | 多言語 sitemap。app 側は SaaS のため公開 URL 最小（マーケは web/ 側）                                                |
+| [`opengraph-image.tsx`](../src/app/opengraph-image.tsx)   | metadata route      | edge runtime で動的 OG 画像生成。`@/lib/og-colors` で色固定                                                          |
+| [`maintenance/route.ts`](../src/app/maintenance/route.ts) | route handler       | `/maintenance`。Route Handler で raw HTML を返し、Provider ツリーをバイパスして CSP を回避                           |
+| [`offline/page.tsx`](../src/app/offline/page.tsx)         | page (client)       | PWA オフラインフォールバック。`navigator.language` で ja/en を切替                                                   |
+
+## 認証境界の全体像
+
+```
+未認証 → (auth)            : login / signup / reset / mfa
+認証済み + onboarding 未完 → (onboarding)
+認証済み + onboarding 完了 → (app)
+locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-found.tsx
+致命エラー                 → global-error.tsx
+オフライン (PWA)           → /offline
+メンテナンス時             → /maintenance
+```
 
 ## 関連ドキュメント
 
