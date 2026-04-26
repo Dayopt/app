@@ -11,8 +11,7 @@ import { MIN_EVENT_HEIGHT } from './grid';
 
 // 予定 vs 記録 差分オーバーレイは Entry ドメインのロジック
 // canonical source: @/features/entry
-export { computeActualTimeDiffOverlay, NO_OVERLAY } from '@/features/entry';
-export type { ActualTimeDiffOverlay } from '@/features/entry';
+export { computeActualTimeDiffOverlay } from '@/features/entry';
 
 // ========================================
 // 型定義
