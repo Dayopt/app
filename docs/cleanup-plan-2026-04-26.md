@@ -893,3 +893,85 @@ barrel re-export 削減 (C-005〜C-018) によって external 参照が消え、
 | **合計**                              | **27 entry**        | **35 commit** |
 
 LOC: 約 -1,070（barrel cleanup + 孤立 file 削除）/ +260（docs 系）/ +38（story）
+
+### 2026-04-27 セッション E: 残り barrel cleanup の追加消化
+
+`docs/cleanup-plan-2026-04-26.md` の追加 entry として、再 knip 監査で残っていた小規模 barrel と service-index aggregator を整理。
+
+- id: C-071
+  category: dead-code
+  rationale: lib/calendar 配下の小規模 barrel 5 件で 1 件ずつの未使用 re-export
+  target: src/lib/cache/index.ts, src/lib/errors/index.ts, src/lib/turnstile/index.ts, src/features/calendar/components/controller/components/index.ts, src/features/calendar/components/controller/utils/index.ts
+  change: 各 barrel から未使用 re-export 1 件ずつ削除（getUserTagsCacheTag / handleMutationError / TURNSTILE_CONFIG / CalendarViewSkeleton / preloadCalendarViews）
+  risk: low
+  est_loc: -5
+  depends_on: []
+  exec: true
+  status: 完了 (commit 357529ed9)
+
+- id: C-072
+  category: dead-code
+  rationale: calendar views barrel に hooks の re-export が残存
+  target: src/features/calendar/components/views/{DayView, WeekView, MultiDayView}/index.tsx
+  change: useDayEntries / useDayView / useWeekEntries / useWeekView / WeekGrid / useMultiDayView の re-export を削除、各 view 本体と type wildcard のみ残す
+  risk: low
+  est_loc: -14
+  depends_on: []
+  exec: true
+  status: 完了 (commit 386219f75)
+
+- id: C-073/C-074
+  category: dead-code
+  rationale: CurrentTimeLine barrel と tag-filter サブ component barrel に未使用 re-export
+  target: src/features/calendar/components/views/shared/grid/CurrentTimeLine/index.tsx, src/features/calendar/components/tag-filter/components/{TagChipRow, TagEntryCreatePopover}/index.ts
+  change: CurrentTimeLineForColumn / NowBadge / TagChipRowProps / TagEntryCreatePopoverProps の re-export を削除
+  risk: low
+  est_loc: -4
+  depends_on: []
+  exec: true
+  status: 完了 (commit 538c3ca69、コミットメッセージ上は C-074 表記で 2 entry まとめ)
+
+- id: C-075
+  category: dead-code
+  rationale: C-008 で entry barrel に保持していた NO_OVERLAY と ActualTimeDiffOverlay 型は、再 knip 監査で誰も import していないことが確認できた
+  target: src/features/entry/index.ts, src/features/calendar/lib/layout.ts
+  change: 両 file から NO_OVERLAY / ActualTimeDiffOverlay の re-export を削除。computeActualTimeDiffOverlay は両方から残す（layout.test.ts と EntryRenderer.tsx で参照）
+  risk: low
+  est_loc: -4
+  depends_on: [C-008]
+  exec: true
+  status: 完了 (commit 8e03244f3)
+
+- id: C-076
+  category: dead-code
+  rationale: service-index.ts は createEntryService factory のみが使われており、他の re-export は誰も barrel 経由で参照していない。useInlineCreateStore も同様に hub 内部 deep import のみ
+  target: src/features/entry/server/service-index.ts, src/features/calendar/index.ts
+  change: service-index から EntryService / EntryServiceError / 各 type を削除し createEntryService のみ残す。calendar barrel から useInlineCreateStore を外し deep import 専用に
+  risk: low
+  est_loc: -16
+  depends_on: []
+  exec: true
+  status: 完了 (commit 328e9638a)
+
+#### 2026-04-27 終了時 knip サマリ
+
+- unused files (src/): 4 件（すべて意図的配置 / false positive）
+  - ai/types.ts, ai/lib/anthropic-client.ts (scaffolding 永続 skip)
+  - contact/index.ts (barrel 規約問題、別 plan 推奨)
+  - lib/i18n/request.ts (next-intl plugin の knip false positive)
+
+#### 全期間最終サマリ（更新版）
+
+| セッション                      | 完了 entry          | commit        |
+| ------------------------------- | ------------------- | ------------- |
+| Phase 1 監査                    | C-001〜C-057 列挙   | 1             |
+| Phase 2 stop log                | C-001〜C-004 skip   | 1             |
+| Phase 2 続行                    | C-005〜C-018, C-041 | 15            |
+| A (api/)                        | C-058 / C-059       | 2             |
+| B/C (app routes docs)           | C-060 / C-061       | 2             |
+| D (連鎖孤立 + 追加 barrel)      | C-062〜C-070        | 9             |
+| E (残り barrel + service-index) | C-071〜C-076        | 5             |
+| plan 更新                       | —                   | 6             |
+| **合計**                        | **33 entry**        | **41 commit** |
+
+LOC 純減: **-1,116**（cleanup） + **+260**（docs） + **+38**（story）
