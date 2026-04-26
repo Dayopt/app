@@ -726,3 +726,43 @@ storybook-gap 1 件を完了:
   status: 完了 (commit 9eb493b50)
 
 セッション A の cleanup は以上で完了。dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap は追加の実施事項なし（現状で baseline 通り）。
+
+### 2026-04-26 セッション B/C: app routes overview
+
+`src/app/[locale]/(app)/**` および `(auth)/(onboarding)/root` の docs ギャップに対応。
+
+- id: C-060
+  category: jsdoc-drift
+  rationale: (app) 配下の各 route segment の責務が散らばっており、composition layer / providers / overlays の関係を 1 ページで把握できない
+  target: docs/app-routes-overview.md (新規)
+  change: Route Group 構造図 + (app) 配下の layout/page/loading/error テーブル + composition layer 解説
+  risk: low
+  est_loc: +110
+  depends_on: []
+  exec: true
+  status: 完了 (commit c9bd9f9af)
+
+- id: C-061
+  category: jsdoc-drift
+  rationale: (auth) / (onboarding) / [locale] 直下 / src/app/ ルート直下 のルーティングと認証境界が文書化されていない
+  target: docs/app-routes-overview.md (追記)
+  change: (auth) / (onboarding) / [locale] / root の各 route テーブル追加、認証境界の全体像 ASCII 図を末尾に追加
+  risk: low
+  est_loc: +97
+  depends_on: [C-060]
+  exec: true
+  status: 完了 (commit e2aa476f2)
+
+#### 全セッション最終サマリ
+
+| セッション       | 範囲                                         | 完了 entry        | commit 数     |
+| ---------------- | -------------------------------------------- | ----------------- | ------------- |
+| Phase 1          | 監査                                         | C-001〜C-057 列挙 | 1             |
+| Phase 2 stop log | C-001〜C-004 skip                            | —                 | 1             |
+| Phase 2 続行     | C-005〜C-018 barrel cleanup, C-041 storybook | 15                | 15            |
+| セッション A     | src/app/api/\*\*                             | C-058 / C-059     | 2             |
+| セッション B     | src/app/[locale]/(app)/\*\*                  | C-060             | 1             |
+| セッション C     | (auth) / (onboarding) / root                 | C-061             | 1             |
+| **合計**         | —                                            | **18 entry**      | **21 commit** |
+
+LOC 削減: 約 -340（barrel cleanup） / 追加: 約 +260（docs 系） / story 追加: 38 行
