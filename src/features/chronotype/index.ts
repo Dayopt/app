@@ -6,12 +6,7 @@
  */
 
 // --- Types ---
-export type {
-  ChronotypeSettings,
-  ChronotypeType,
-  PresetChronotypeType,
-  ProductivityZone,
-} from '@/lib/types/chronotype';
+export type { ChronotypeType } from '@/lib/types/chronotype';
 
 // --- Components ---
 export { ChronotypeQuiz } from './components/chronotype-quiz';
@@ -21,12 +16,7 @@ export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chro
 export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';
 
 // --- Lib ---
-export {
-  getChronotypeProfile,
-  getDeepHours,
-  getEaseHours,
-  getProductivityZoneForHour,
-} from './lib/chronotype-profile';
+export { getChronotypeProfile } from './lib/chronotype-profile';
 export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';
 export { chronotypeTypeSchema } from './lib/schemas';
 
