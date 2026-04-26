@@ -82,6 +82,15 @@ const GlobalTagRenameModal = dynamic(
   { ssr: false },
 );
 
+// GlobalTagCreateModalを遅延ロード
+const GlobalTagCreateModal = dynamic(
+  () =>
+    import('@/features/tags/components/GlobalTagCreateModal').then(
+      (mod) => mod.GlobalTagCreateModal,
+    ),
+  { ssr: false },
+);
+
 interface ProvidersProps {
   children: React.ReactNode;
 }
@@ -219,6 +228,7 @@ export function Providers({ children }: ProvidersProps) {
               <UserSettingsInitializer>{children}</UserSettingsInitializer>
               <GlobalTagMergeModal />
               <GlobalTagRenameModal />
+              <GlobalTagCreateModal />
             </ServiceWorkerProvider>
           </SessionMonitorProvider>
         </ThemeProvider>
