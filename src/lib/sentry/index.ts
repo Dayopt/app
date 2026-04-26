@@ -5,17 +5,5 @@
  * このモジュールはヘルパー関数のみを提供します。
  */
 
-// メイン統合機能
-export {
-  SentryErrorHandler,
-  addUserActionBreadcrumb,
-  captureBusinessEvent,
-  handleApiError,
-  handleReactError,
-  isSentryInitialized,
-  reportToSentry,
-  setUserPlanTag,
-} from './integration';
-
-// パフォーマンストレースヘルパー
-export { traceApiCall, traceDbQuery, traceServerComponent, withTrace } from './trace';
+// メイン統合機能（実利用 API のみ）
+export { SentryErrorHandler, captureBusinessEvent, handleReactError } from './integration';
