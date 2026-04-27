@@ -66,7 +66,14 @@ const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transf
 };
 
 const preferSmallestCollision: CollisionDetection = (args) => {
-  const pointerCollisions = pointerWithin(args);
+  // active 自身の children container は drop 先にできない（self-parent 防止）。
+  // expanded parent をドラッグした際、自身の子コンテナが cursor を遮って
+  // ROOT 末尾に落とせない問題を防ぐため collision 段階で除外する。
+  const activeId = args.active?.id;
+  const ownChildContainerId = typeof activeId === 'string' ? childContainerId(activeId) : null;
+  const exclude = (id: unknown) => ownChildContainerId !== null && id === ownChildContainerId;
+
+  const pointerCollisions = pointerWithin(args).filter((c) => !exclude(c.id));
   if (pointerCollisions.length > 0) {
     return [...pointerCollisions].sort((a, b) => {
       const aRect = args.droppableRects.get(a.id);
@@ -76,7 +83,7 @@ const preferSmallestCollision: CollisionDetection = (args) => {
     });
   }
 
-  return closestCorners(args);
+  return closestCorners(args).filter((c) => !exclude(c.id));
 };
 
 interface TagFlatListProps {
