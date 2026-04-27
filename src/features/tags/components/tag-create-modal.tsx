@@ -119,23 +119,36 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
   );
 
   const trimmedDebounced = debouncedName.trim();
-
-  const duplicate = useMemo(() => {
-    if (!trimmedDebounced) return false;
-    const lower = trimmedDebounced.toLowerCase();
-    return allTags.some(
-      (tag) =>
-        tag.is_active !== false && tag.parent_id === parentId && tag.name.toLowerCase() === lower,
-    );
-  }, [allTags, parentId, trimmedDebounced]);
-
   const trimmedLive = name.trim();
+
+  const checkDuplicate = useCallback(
+    (value: string) => {
+      if (!value) return false;
+      const lower = value.toLowerCase();
+      return allTags.some(
+        (tag) =>
+          tag.is_active !== false && tag.parent_id === parentId && tag.name.toLowerCase() === lower,
+      );
+    },
+    [allTags, parentId],
+  );
+
+  const duplicate = useMemo(
+    () => checkDuplicate(trimmedDebounced),
+    [checkDuplicate, trimmedDebounced],
+  );
+
   const canSubmit = trimmedLive.length > 0 && !duplicate && !submitting;
 
   const errorMessage = duplicate ? t('duplicateName') : null;
 
   const handleSubmit = useCallback(async () => {
-    if (!canSubmit) return;
+    if (submitting || trimmedLive.length === 0) return;
+    // debounce (200ms) より早く submit された場合に備え、live name で同期再チェック
+    if (checkDuplicate(trimmedLive)) {
+      setDebouncedName(trimmedLive);
+      return;
+    }
     setSubmitting(true);
     try {
       const created = await createTagMutation.mutateAsync({
@@ -157,7 +170,17 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, createTagMutation, trimmedLive, color, icon, parentId, onCreated, onClose]);
+  }, [
+    submitting,
+    trimmedLive,
+    checkDuplicate,
+    createTagMutation,
+    color,
+    icon,
+    parentId,
+    onCreated,
+    onClose,
+  ]);
 
   const handleNameKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

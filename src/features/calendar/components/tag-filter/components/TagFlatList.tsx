@@ -529,9 +529,10 @@ function SortableParentBlock({
   const groupVisibility = getGroupVisibility(groupTagIds);
   const headerIcon = node.tag.icon ?? node.children[0]?.icon ?? null;
   const isPopoverOpen = openPopoverTagId === node.tag.id;
-  const shouldShowChildContainer = !collapsed;
   const canDropChildHere =
     !!activeTreeTag && activeTreeTag.tag.id !== node.tag.id && canBecomeChild(activeTreeTag);
+  // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
+  const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
 
   const style = isMobile
     ? undefined
