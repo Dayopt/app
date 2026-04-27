@@ -546,13 +546,16 @@ function SortableParentBlock({
   // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
   const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
 
-  const showDropLine =
-    !isMobile && overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
-  const dropLineEdge: 'top' | 'bottom' | null = showDropLine
-    ? activeIndex < overIndex
-      ? 'bottom'
-      : 'top'
-    : null;
+  const isInternalDropHere = overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
+  const isForeignDropHere = overIndex === index && activeIndex < 0;
+  const showDropLine = !isMobile && (isInternalDropHere || isForeignDropHere);
+  const dropLineEdge: 'top' | 'bottom' | null = !showDropLine
+    ? null
+    : isForeignDropHere
+      ? 'top'
+      : activeIndex < overIndex
+        ? 'bottom'
+        : 'top';
 
   const style = isMobile
     ? undefined
@@ -750,13 +753,16 @@ function SortableTagItem({
         transition,
       };
 
-  const showDropLine =
-    !isMobile && overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
-  const dropLineEdge: 'top' | 'bottom' | null = showDropLine
-    ? activeIndex < overIndex
-      ? 'bottom'
-      : 'top'
-    : null;
+  const isInternalDropHere = overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
+  const isForeignDropHere = overIndex === index && activeIndex < 0;
+  const showDropLine = !isMobile && (isInternalDropHere || isForeignDropHere);
+  const dropLineEdge: 'top' | 'bottom' | null = !showDropLine
+    ? null
+    : isForeignDropHere
+      ? 'top'
+      : activeIndex < overIndex
+        ? 'bottom'
+        : 'top';
 
   const handleChangeParent = useCallback(
     (newParentId: string | null) => {
@@ -941,8 +947,15 @@ function DroppableArea({
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
-    <div ref={setNodeRef} role={role} className={cn(className, isOver && 'border-primary/40')}>
+    <div ref={setNodeRef} role={role} className={cn('relative', className)}>
       {children}
+      {isOver ? (
+        <div
+          aria-hidden
+          className="bg-primary pointer-events-none absolute inset-x-0 bottom-0 z-10"
+          style={{ height: 'var(--border-indicator)' }}
+        />
+      ) : null}
     </div>
   );
 }
