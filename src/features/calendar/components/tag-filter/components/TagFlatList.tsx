@@ -43,8 +43,14 @@ import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
-
-const ROOT = '__root__';
+import {
+  ROOT,
+  type TreeTag,
+  canBecomeChild,
+  childContainerId,
+  findTreeTag,
+  moveTagTree,
+} from './move-tag-tree';
 
 // drag 中に他 item を動かさず、drop indicator 線だけで挿入位置を示す
 const noopSortingStrategy: SortingStrategy = () => null;
@@ -60,161 +66,6 @@ const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transf
     y: transform.y + coords.y - draggingNodeRect.top - draggingNodeRect.height / 2,
   };
 };
-
-function childContainerId(parentId: string) {
-  return `children:${parentId}`;
-}
-
-type TreeTag =
-  | {
-      kind: 'root';
-      tag: Tag;
-      children: Tag[];
-    }
-  | {
-      kind: 'child';
-      tag: Tag;
-      parentId: string;
-    };
-
-function cloneNodes(nodes: TagTreeNode[]): TagTreeNode[] {
-  return nodes.map((node) => ({
-    tag: { ...node.tag },
-    children: node.children.map((child) => ({ ...child })),
-  }));
-}
-
-function findRootIndex(nodes: TagTreeNode[], tagId: string): number {
-  return nodes.findIndex((node) => node.tag.id === tagId);
-}
-
-function findChildLocation(
-  nodes: TagTreeNode[],
-  tagId: string,
-): { rootIndex: number; childIndex: number } | null {
-  for (let rootIndex = 0; rootIndex < nodes.length; rootIndex += 1) {
-    const childIndex = nodes[rootIndex]?.children.findIndex((child) => child.id === tagId) ?? -1;
-    if (childIndex >= 0) {
-      return { rootIndex, childIndex };
-    }
-  }
-  return null;
-}
-
-function findTreeTag(nodes: TagTreeNode[], tagId: string): TreeTag | null {
-  const rootIndex = findRootIndex(nodes, tagId);
-  if (rootIndex >= 0) {
-    const root = nodes[rootIndex]!;
-    return { kind: 'root', tag: root.tag, children: root.children };
-  }
-
-  const childLocation = findChildLocation(nodes, tagId);
-  if (!childLocation) return null;
-
-  const parent = nodes[childLocation.rootIndex]!;
-  const child = parent.children[childLocation.childIndex]!;
-  return {
-    kind: 'child',
-    tag: child,
-    parentId: parent.tag.id,
-  };
-}
-
-function findContainer(nodes: TagTreeNode[], id: string): string | null {
-  if (id === ROOT) return ROOT;
-  if (id.startsWith('children:')) return id;
-  if (findRootIndex(nodes, id) >= 0) return ROOT;
-
-  const childLocation = findChildLocation(nodes, id);
-  return childLocation ? childContainerId(nodes[childLocation.rootIndex]!.tag.id) : null;
-}
-
-function canBecomeChild(treeTag: TreeTag): boolean {
-  return treeTag.kind === 'child' || treeTag.children.length === 0;
-}
-
-function insertAt<T>(items: T[], index: number, item: T): T[] {
-  return [...items.slice(0, index), item, ...items.slice(index)];
-}
-
-function moveTagTree(nodes: TagTreeNode[], activeId: string, overId: string): TagTreeNode[] | null {
-  const active = findTreeTag(nodes, activeId);
-  if (!active) return null;
-
-  const destinationContainer = findContainer(nodes, overId);
-  if (!destinationContainer) return null;
-
-  const nextNodes = cloneNodes(nodes);
-  const rootIndex = findRootIndex(nextNodes, activeId);
-  const childLocation = findChildLocation(nextNodes, activeId);
-
-  let movingRoot: TagTreeNode | null = null;
-  let movingChild: Tag | null = null;
-
-  if (rootIndex >= 0) {
-    movingRoot = nextNodes[rootIndex]!;
-    nextNodes.splice(rootIndex, 1);
-  } else if (childLocation) {
-    movingChild = nextNodes[childLocation.rootIndex]!.children[childLocation.childIndex]!;
-    nextNodes[childLocation.rootIndex]!.children.splice(childLocation.childIndex, 1);
-  } else {
-    return null;
-  }
-
-  if (destinationContainer === ROOT) {
-    const rawIndex =
-      overId === ROOT
-        ? nextNodes.length
-        : findRootIndex(nextNodes, overId) >= 0
-          ? findRootIndex(nextNodes, overId)
-          : nextNodes.length;
-
-    if (movingRoot) {
-      nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, movingRoot);
-      return nextNodes;
-    }
-
-    if (!movingChild) return null;
-    nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, {
-      tag: { ...movingChild, parent_id: null },
-      children: [],
-    });
-    return nextNodes;
-  }
-
-  const targetParentId = destinationContainer.replace(/^children:/, '');
-  if (activeId === targetParentId) return null;
-
-  const targetRootIndex = findRootIndex(nextNodes, targetParentId);
-  if (targetRootIndex < 0) return null;
-
-  if (movingRoot && movingRoot.children.length > 0) {
-    return null;
-  }
-
-  const targetNode = nextNodes[targetRootIndex]!;
-  const baseChildren = targetNode.children.slice();
-  const rawIndex =
-    overId === destinationContainer
-      ? baseChildren.length
-      : baseChildren.findIndex((child) => child.id === overId);
-  const insertIndex = rawIndex >= 0 ? rawIndex : baseChildren.length;
-
-  if (movingRoot) {
-    targetNode.children = insertAt(baseChildren, insertIndex, {
-      ...movingRoot.tag,
-      parent_id: targetParentId,
-    });
-    return nextNodes;
-  }
-
-  if (!movingChild) return null;
-  targetNode.children = insertAt(baseChildren, insertIndex, {
-    ...movingChild,
-    parent_id: targetParentId,
-  });
-  return nextNodes;
-}
 
 const preferSmallestCollision: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
