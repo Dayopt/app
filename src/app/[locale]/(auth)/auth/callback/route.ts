@@ -15,6 +15,7 @@
 
 import { NextResponse } from 'next/server';
 
+import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { createClient } from '@/lib/supabase/server';
 
@@ -34,10 +35,13 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(next, request.url));
     }
 
-    // エラーが発生した場合はログインページへリダイレクト
+    logger.warn({ message: error.message }, '[auth/callback] exchangeCodeForSession failed');
     return NextResponse.redirect(new URL('/auth/login?error=auth_callback_error', request.url));
   }
 
-  // コードがない場合はログインページへリダイレクト
-  return NextResponse.redirect(new URL('/auth/login', request.url));
+  // コードがない場合はログインページへリダイレクト（理由をユーザーに通知）
+  logger.warn('[auth/callback] missing code parameter');
+  return NextResponse.redirect(
+    new URL('/auth/login?error=auth_callback_missing_code', request.url),
+  );
 }
