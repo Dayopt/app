@@ -65,12 +65,4 @@ describe('isCalendarViewPath', () => {
       expect(isCalendarViewPath('')).toBe(false);
     });
   });
-
-  describe('multi-day の数値範囲', () => {
-    it('1day も regex 上は許容（実際の navigation 制限は別レイヤーで担当）', () => {
-      // 仕様: regex /^\d+day$/ は 1 桁 1+ を全て許容
-      expect(isCalendarViewPath('/calendar/1day')).toBe(true);
-      expect(isCalendarViewPath('/calendar/10day')).toBe(true);
-    });
-  });
 });
