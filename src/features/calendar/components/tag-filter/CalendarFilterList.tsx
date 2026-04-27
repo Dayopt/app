@@ -149,7 +149,6 @@ export function CalendarFilterList() {
               nodes={nodes}
               allTags={tags}
               visibleTagIds={visibleTagIds}
-              tagCounts={tagPlanCounts ?? {}}
               onToggleTag={toggleTag}
               onDeleteTag={handleDeleteTag}
               onShowOnlyTag={showOnlyTag}
