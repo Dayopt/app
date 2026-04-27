@@ -6,6 +6,7 @@ import { Folder, icons as lucideIcons } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/lib/components/ui/button';
+import { Drawer, DrawerContent, DrawerTitle, DrawerTrigger } from '@/lib/components/ui/drawer';
 import { FieldError } from '@/lib/components/ui/field';
 import { Input } from '@/lib/components/ui/input';
 import {
@@ -46,8 +47,19 @@ export interface CreateTagPopoverProps {
   /** 送信。成功時に呼び出し側が close する */
   onSubmit: (input: CreateTagPopoverSubmitInput) => void | Promise<void>;
   /**
-   * PopoverTrigger として使う要素。渡すとこの element がクリックで popover を開く。
-   * 省略時は anchor モード: 親要素（`relative`）の中に PopoverAnchor を `absolute inset-0` で敷く。
+   * モバイル時は bottom sheet (vaul Drawer)、PC 時は Popover。指定なしは PC 扱い。
+   * モバイル時の anchor モード: children 省略可（コントロール only で開閉する）。
+   */
+  isMobile?: boolean;
+  /**
+   * 親 Drawer の中で開く場合 true。vaul の nested mode を有効化し、親 Drawer をスケールさせる。
+   * `isMobile` と組み合わせる時のみ意味を持つ。
+   */
+  nestedDrawer?: boolean;
+  /**
+   * PopoverTrigger / DrawerTrigger として使う要素。渡すとこの element がクリックで開く。
+   * 省略時は anchor モード: PC は親要素（`relative`）の中に PopoverAnchor を敷く。
+   * モバイル時は controlled open のみで開閉する。
    */
   children?: React.ReactNode;
 }
@@ -60,13 +72,14 @@ interface GroupOption {
 }
 
 /**
- * タグ新規作成 Popover（属性行 + 名前入力）。
+ * タグ新規作成 UI（属性行 + 名前入力）。
  *
  * - 色 / アイコン / グループ / 名前の 4 つを 1 画面で指定して作成
  * - 名前は同一親内で重複不可（200ms debounce でクライアント検証）
  * - Enter 送信 / Esc で close（属性 Popover 内の Esc は内側だけ閉じる）
  * - Trigger モード（children あり）: + ボタン等をラップ
- * - Anchor モード（children なし）: 親要素を `position: relative` にして中に置く
+ * - Anchor モード（children なし、PC のみ）: 親要素を `position: relative` にして中に置く
+ * - レスポンシブ: `isMobile` 指定で bottom sheet (vaul Drawer)、未指定は Popover
  */
 export function CreateTagPopover({
   open,
@@ -74,6 +87,8 @@ export function CreateTagPopover({
   existingTags,
   initialParentId,
   onSubmit,
+  isMobile,
+  nestedDrawer,
   children,
 }: CreateTagPopoverProps) {
   const t = useTranslations('calendar.filter.createDialog');
@@ -376,6 +391,26 @@ export function CreateTagPopover({
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <Drawer
+        open={open}
+        onOpenChange={onOpenChange}
+        handleOnly
+        repositionInputs={false}
+        nested={nestedDrawer ?? false}
+      >
+        {children ? <DrawerTrigger asChild>{children}</DrawerTrigger> : null}
+        <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
+          <DrawerTitle className="sr-only">{t('title')}</DrawerTitle>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="mx-auto w-full max-w-lg">{formBody}</div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>

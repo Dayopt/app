@@ -6,16 +6,14 @@ import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { useIsFetching } from '@tanstack/react-query';
 
-import type { CreateTagPopoverSubmitInput } from '@/features/tags';
 import {
-  CreateTagPopover,
   flattenTagTree,
   TagDeleteStrategyDialog,
   tagKeys,
-  useCreateTag,
   useDeleteTag,
   useTagsHierarchy,
 } from '@/features/tags';
@@ -34,7 +32,7 @@ import { TagFlatList } from './components/TagFlatList';
  * Googleカレンダーの「マイカレンダー」のようなUI
  * - タグ: 親子2階層でグルーピング表示
  * - チェックボックスで表示/非表示を切替
- * - `+` 押下で Popover 新規作成フォームを展開（PC/モバイル共通）
+ * - `+` 押下で `useShellStore.openTagCreateModal()` で新規作成 modal を開く（PC=Dialog / モバイル=Drawer）
  */
 export function CalendarFilterList() {
   const t = useTranslations();
@@ -49,8 +47,9 @@ export function CalendarFilterList() {
     [tagStats?.counts, isTagStatsError],
   );
 
-  const createTagMutation = useCreateTag();
   const deleteTagMutation = useDeleteTag();
+
+  const openTagCreateModal = useShellStore.use.openTagCreateModal();
 
   // セレクタで必要な状態のみ購読
   const visibleTagIds = useCalendarFilterStore((s) => s.visibleTagIds);
@@ -74,25 +73,6 @@ export function CalendarFilterList() {
   }, [tags, initializeWithTags, isTagsFetching]);
 
   const isLoading = tagsLoading;
-
-  const [isCreatePopoverOpen, setIsCreatePopoverOpen] = useState(false);
-
-  const handlePopoverSubmit = useCallback(
-    async (input: CreateTagPopoverSubmitInput) => {
-      try {
-        await createTagMutation.mutateAsync({
-          name: input.name,
-          color: input.color,
-          parentId: input.parentId,
-          ...(input.icon ? { icon: input.icon } : {}),
-        });
-        setIsCreatePopoverOpen(false);
-      } catch {
-        // mutation フック側で toast 済み。Popover は閉じない
-      }
-    },
-    [createTagMutation],
-  );
 
   // 削除確認ダイアログの状態
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -146,21 +126,15 @@ export function CalendarFilterList() {
           className="py-1"
           action={
             <HoverTooltip content={t('calendar.filter.createTag')} side="top">
-              <CreateTagPopover
-                open={isCreatePopoverOpen}
-                onOpenChange={setIsCreatePopoverOpen}
-                existingTags={tags ?? []}
-                onSubmit={handlePopoverSubmit}
+              <Button
+                variant="ghost"
+                icon
+                className="size-6"
+                aria-label={t('calendar.filter.createTag')}
+                onClick={() => openTagCreateModal()}
               >
-                <Button
-                  variant="ghost"
-                  icon
-                  className="size-6"
-                  aria-label={t('calendar.filter.createTag')}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </CreateTagPopover>
+                <Plus className="size-4" />
+              </Button>
             </HoverTooltip>
           }
         >
@@ -175,7 +149,6 @@ export function CalendarFilterList() {
               nodes={nodes}
               allTags={tags}
               visibleTagIds={visibleTagIds}
-              tagCounts={tagPlanCounts ?? {}}
               onToggleTag={toggleTag}
               onDeleteTag={handleDeleteTag}
               onShowOnlyTag={showOnlyTag}

@@ -43,10 +43,9 @@ export {
 // Hooks
 // =============================================================================
 
-// Stores: calendar hub 内部で共有
-export { useInlineCreateStore } from './stores/useInlineCreateStore';
-
-// Note: useCalendarSettingsStore / useCalendarNavigationStore / useCalendarFilterStore /
+// Note: useInlineCreateStore は calendar hub 内部のみで使用。barrel 公開せず
+// deep import (`./stores/useInlineCreateStore`) で参照する。
+// useCalendarSettingsStore / useCalendarNavigationStore / useCalendarFilterStore /
 // 型 CalendarSettings, DateFormatType は cross-cutting UI state として @/lib/stores/ に移動済み。
 // 直接 `@/lib/stores/useCalendar...Store` から import すること。
 

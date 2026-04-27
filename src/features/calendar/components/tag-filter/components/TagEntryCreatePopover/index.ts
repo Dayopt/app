@@ -1,1 +1,1 @@
-export { TagEntryCreatePopover, type TagEntryCreatePopoverProps } from './TagEntryCreatePopover';
+export { TagEntryCreatePopover } from './TagEntryCreatePopover';

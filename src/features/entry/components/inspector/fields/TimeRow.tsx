@@ -25,11 +25,9 @@ interface TimeRowProps {
   hasError?: boolean;
   /** true で記録行（実績）を視覚的に強調 */
   isPrimary?: boolean;
-  /** true で breakpoint に関係なく常に 1 行表示（popover / bottom sheet 等、十分な横幅がある場合） */
-  forceSingleRow?: boolean;
 }
 
-/** Inspectorの時間入力行（開始・終了のTimeSelect × 2、予定行・記録行共用） */
+/** Inspectorの時間入力行（開始・終了のTimeSelect × 2、予定行・記録行共用、常に 1 行表示） */
 export function TimeRow({
   label,
   icon: Icon,
@@ -40,17 +38,9 @@ export function TimeRow({
   disabled = false,
   hasError = false,
   isPrimary = false,
-  forceSingleRow = false,
 }: TimeRowProps) {
   return (
-    <div
-      className={cn(
-        'flex min-h-11',
-        forceSingleRow
-          ? 'flex-row items-center justify-between gap-0'
-          : 'flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-0',
-      )}
-    >
+    <div className="flex min-h-11 flex-row items-center justify-between gap-0">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span
@@ -98,7 +88,7 @@ export function TimeRowPlaceholder({
   muted = false,
 }: TimeRowPlaceholderProps) {
   return (
-    <div className="flex min-h-11 flex-col gap-1 md:flex-row md:items-center md:justify-between md:gap-0">
+    <div className="flex min-h-11 flex-row items-center justify-between gap-0">
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span className="text-muted-foreground text-sm">{label}</span>

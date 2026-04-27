@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
-import { Eye, EyeOff, GripVertical, MoreHorizontal } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 
 import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
@@ -25,7 +25,6 @@ import {
   CreateTagPopover,
   TagIcon,
   buildTagHierarchyUpdates,
-  flattenTagTree,
   useCreateTag,
   useMergeTag,
   useReorderTags,
@@ -219,7 +218,6 @@ interface TagFlatListProps {
   nodes: TagTreeNode[];
   allTags: Tag[];
   visibleTagIds: Set<string>;
-  tagCounts: Record<string, number>;
   onToggleTag: (tagId: string) => void;
   onDeleteTag: (tagId: string, tagName: string) => void;
   onShowOnlyTag: (tagId: string) => void;
@@ -233,7 +231,6 @@ export function TagFlatList({
   nodes,
   allTags,
   visibleTagIds,
-  tagCounts,
   onToggleTag,
   onDeleteTag,
   onShowOnlyTag,
@@ -248,15 +245,10 @@ export function TagFlatList({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const displayedNodes = localNodes ?? nodes;
-  const displayedTags = useMemo(() => flattenTagTree(displayedNodes), [displayedNodes]);
   const rootIds = useMemo(() => displayedNodes.map((node) => node.tag.id), [displayedNodes]);
   const activeTreeTag = useMemo(
     () => (activeId ? findTreeTag(displayedNodes, activeId) : null),
     [activeId, displayedNodes],
-  );
-  const activeTag = useMemo(
-    () => (activeId ? (displayedTags.find((tag) => tag.id === activeId) ?? null) : null),
-    [activeId, displayedTags],
   );
 
   const groupOptions = useMemo<GroupOption[]>(
@@ -327,7 +319,6 @@ export function TagFlatList({
             node={node}
             allTags={allTags}
             visibleTagIds={visibleTagIds}
-            tagCounts={tagCounts}
             groupOptions={groupOptions}
             collapsed={collapsedGroups.has(node.tag.id)}
             activeTreeTag={null}
@@ -364,7 +355,6 @@ export function TagFlatList({
               node={node}
               allTags={allTags}
               visibleTagIds={visibleTagIds}
-              tagCounts={tagCounts}
               groupOptions={groupOptions}
               collapsed={collapsedGroups.has(node.tag.id)}
               activeTreeTag={activeTreeTag}
@@ -384,7 +374,16 @@ export function TagFlatList({
         </DroppableArea>
       </SortableContext>
 
-      <DragOverlay>{activeTag ? <TagOverlayCard tag={activeTag} /> : null}</DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeTreeTag ? (
+          <TagOverlayCard
+            treeTag={activeTreeTag}
+            showChildren={
+              activeTreeTag.kind === 'root' && !collapsedGroups.has(activeTreeTag.tag.id)
+            }
+          />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -393,7 +392,6 @@ interface TagTreeItemProps {
   node: TagTreeNode;
   allTags: Tag[];
   visibleTagIds: Set<string>;
-  tagCounts: Record<string, number>;
   groupOptions: GroupOption[];
   collapsed: boolean;
   activeTreeTag: TreeTag | null;
@@ -414,7 +412,6 @@ function TagTreeItem({
   node,
   allTags,
   visibleTagIds,
-  tagCounts,
   groupOptions,
   collapsed,
   activeTreeTag,
@@ -441,12 +438,6 @@ function TagTreeItem({
         isMobile={isMobile}
         dragKind="root"
         activeDragId={activeDragId}
-        canAcceptChildren={
-          !isMobile &&
-          !!activeTreeTag &&
-          activeTreeTag.tag.id !== node.tag.id &&
-          canBecomeChild(activeTreeTag)
-        }
         onToggle={() => onToggleTag(node.tag.id)}
         onDeleteTag={() => onDeleteTag(node.tag.id, node.tag.name)}
         onShowOnlyTag={() => onShowOnlyTag(node.tag.id)}
@@ -461,7 +452,6 @@ function TagTreeItem({
       node={node}
       allTags={allTags}
       visibleTagIds={visibleTagIds}
-      tagCounts={tagCounts}
       groupOptions={groupOptions}
       collapsed={collapsed}
       activeTreeTag={activeTreeTag}
@@ -483,7 +473,6 @@ interface SortableParentBlockProps {
   node: TagTreeNode;
   allTags: Tag[];
   visibleTagIds: Set<string>;
-  tagCounts: Record<string, number>;
   groupOptions: GroupOption[];
   collapsed: boolean;
   activeTreeTag: TreeTag | null;
@@ -503,7 +492,6 @@ function SortableParentBlock({
   node,
   allTags,
   visibleTagIds,
-  tagCounts,
   groupOptions,
   collapsed,
   activeTreeTag,
@@ -541,7 +529,7 @@ function SortableParentBlock({
   const groupVisibility = getGroupVisibility(groupTagIds);
   const headerIcon = node.tag.icon ?? node.children[0]?.icon ?? null;
   const isPopoverOpen = openPopoverTagId === node.tag.id;
-  const shouldShowChildContainer = !collapsed || activeDragId !== null;
+  const shouldShowChildContainer = !collapsed;
   const canDropChildHere =
     !!activeTreeTag && activeTreeTag.tag.id !== node.tag.id && canBecomeChild(activeTreeTag);
 
@@ -553,25 +541,13 @@ function SortableParentBlock({
       };
 
   return (
-    <div style={style} className={cn(!isMobile && isDragging && 'z-10 opacity-50')} role="listitem">
-      <div ref={setNodeRef} className="relative">
-        {!isMobile ? (
-          <div
-            className="absolute top-0 bottom-0 left-1 z-10 flex items-center"
-            {...attributes}
-            {...listeners}
-          >
-            <button
-              type="button"
-              aria-label="move"
-              className="text-muted-foreground hover:text-foreground flex size-6 items-center justify-center rounded-lg"
-            >
-              <GripVertical className="size-4" />
-            </button>
-          </div>
-        ) : null}
-
-        <div className="pl-6">
+    <div
+      style={style}
+      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+      role="listitem"
+    >
+      <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
+        <div>
           <GroupHeader
             label={node.tag.name}
             checked={groupVisibility === 'all'}
@@ -644,7 +620,7 @@ function SortableParentBlock({
           <DroppableArea
             id={childContainerId(node.tag.id)}
             className={cn(
-              'ml-10 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
+              'ml-4 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
               activeDragId && canDropChildHere && 'bg-muted/30',
             )}
           >
@@ -660,7 +636,6 @@ function SortableParentBlock({
                     isMobile={isMobile}
                     dragKind="child"
                     activeDragId={activeDragId}
-                    canAcceptChildren={false}
                     onToggle={() => onToggleTag(child.id)}
                     onDeleteTag={() => onDeleteTag(child.id, child.name)}
                     onShowOnlyTag={() => onShowOnlyGroupTags([child.id])}
@@ -671,10 +646,6 @@ function SortableParentBlock({
               : null}
           </DroppableArea>
         </SortableContext>
-      ) : null}
-
-      {tagCounts[node.tag.id] ? (
-        <div className="text-muted-foreground mt-1 ml-10 text-xs">{tagCounts[node.tag.id]}</div>
       ) : null}
     </div>
   );
@@ -689,7 +660,6 @@ interface SortableTagItemProps {
   isMobile: boolean;
   dragKind: 'root' | 'child';
   activeDragId: string | null;
-  canAcceptChildren: boolean;
   onToggle: () => void;
   onDeleteTag: () => void;
   onShowOnlyTag: () => void;
@@ -704,9 +674,6 @@ function SortableTagItem({
   groupOptions,
   currentParentId,
   isMobile,
-  dragKind,
-  activeDragId,
-  canAcceptChildren,
   onToggle,
   onDeleteTag,
   onShowOnlyTag,
@@ -782,12 +749,13 @@ function SortableTagItem({
         <div
           ref={setNodeRef}
           style={style}
-          className={cn(!isMobile && isDragging && 'z-10 cursor-grabbing opacity-50')}
+          className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+          {...attributes}
+          {...listeners}
         >
           <div
             className={cn(
-              'group/item relative flex items-center rounded-lg text-sm',
-              dragKind === 'child' ? 'pl-4' : '',
+              'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
               isMobile ? 'h-11' : 'h-8',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
@@ -796,18 +764,6 @@ function SortableTagItem({
             )}
             onClick={() => onOpenPopover(tag.id)}
           >
-            {!isMobile ? (
-              <button
-                type="button"
-                aria-label={t('common.actions.move')}
-                className="text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg"
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="size-4" />
-              </button>
-            ) : null}
-
             <span className="ml-2 shrink-0">
               <TagIcon icon={tag.icon} color={displayColor} size="sm" />
             </span>
@@ -890,16 +846,6 @@ function SortableTagItem({
             ) : null}
           </div>
         </div>
-
-        {!isMobile && dragKind === 'root' && activeDragId !== null ? (
-          <DroppableArea
-            id={childContainerId(tag.id)}
-            className={cn(
-              'ml-10 h-4 rounded-xl border border-dashed border-transparent',
-              canAcceptChildren ? 'text-muted-foreground' : 'hidden',
-            )}
-          />
-        ) : null}
       </div>
 
       <ConfirmDialog
@@ -936,23 +882,33 @@ function DroppableArea({
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
-    <div
-      ref={setNodeRef}
-      role={role}
-      className={cn(className, isOver && 'border-primary/40 bg-primary/5')}
-    >
+    <div ref={setNodeRef} role={role} className={cn(className, isOver && 'border-primary/40')}>
       {children}
     </div>
   );
 }
 
-function TagOverlayCard({ tag }: { tag: Tag }) {
+function TagOverlayCard({ treeTag, showChildren }: { treeTag: TreeTag; showChildren: boolean }) {
+  const { tag } = treeTag;
   const color = resolveTagColor(tag.color);
+  const children = showChildren && treeTag.kind === 'root' ? treeTag.children : [];
 
   return (
-    <div className="bg-card shadow-card flex cursor-grabbing items-center gap-2 rounded-lg border p-2 text-sm">
-      <TagIcon icon={tag.icon} color={color} size="sm" />
-      <span className="truncate">{tag.name}</span>
+    <div className="bg-card shadow-card cursor-grabbing rounded-lg border p-2 text-sm">
+      <div className="flex items-center gap-2">
+        <TagIcon icon={tag.icon} color={color} size="sm" />
+        <span className="truncate">{tag.name}</span>
+      </div>
+      {children.length > 0 ? (
+        <div className="mt-1 ml-4 space-y-1">
+          {children.map((child) => (
+            <div key={child.id} className="flex items-center gap-2">
+              <TagIcon icon={child.icon} color={resolveTagColor(child.color)} size="sm" />
+              <span className="truncate">{child.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

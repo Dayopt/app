@@ -656,3 +656,322 @@ knip 由来の C-001〜C-004 はすべて「knip false positive または scaffo
 
 - `.knipignore` 整備、または C-001〜C-004 を plan から外す合意
 - C-005 の barrel re-export 削減から再開（risk: med、grep 再 verify 必須）
+
+### 2026-04-26 Phase 2 続行ログ（C-005 再開以降）
+
+barrel re-export 削減 14 件を完了:
+
+- C-005 完了: `src/lib/date/index.ts`、約 60 件の未使用 re-export 削除（commit 5d569944c）
+- C-006 完了: `src/features/calendar/components/views/shared/index.ts`、44 件削除（commit 44ea3e0cf）
+- C-007 完了: `src/features/calendar/interaction/index.ts`、35 件削除（commit deb5432a5）
+- C-008 完了: `src/features/entry/index.ts`、18 件削除（layout.ts が NO_OVERLAY/ActualTimeDiffOverlay を barrel 経由で参照していたため当該 2 件は保持、commit 2dcd9f8ee）
+- C-009 完了: `src/features/tags/index.ts`、10 件削除（commit bc1b5dec7）
+- C-010 完了: `src/lib/sentry/index.ts`、9 件削除（commit db4fc124f）
+- C-011 完了: `src/features/tags/hooks/index.ts`、9 件削除（commit 97dea9e1e）
+- C-012 完了: `src/features/auth/index.ts`、7 件削除（commit ed0d1b759）
+- C-013 完了: `src/features/stats/index.ts`、7 件削除（commit c273ababf）
+- C-014 完了: `src/features/chronotype/index.ts`、6 件削除（commit c99dee5ca）
+- C-015 完了: `src/features/tour/index.ts`、5 件削除（commit c3d9c8cc6）
+- C-016 完了: `src/features/calendar/components/views/shared/components/index.ts`、4 件削除（commit 5d6610ad9）
+- C-017 完了: `src/lib/components/shell/sidebar/index.ts`、4 件削除（commit 12016ebfb）
+- C-018 完了: 小規模 barrel 6 件一括（entry/inspector/fields, entry/card, entry/hooks, onboarding, settings, lib/i18n、commit 0caa36bec）
+
+storybook-gap 1 件を完了:
+
+- C-041 完了: `TourOrchestrator.stories.tsx` 新規作成（minimal Default + AllPatterns、commit fa395fdc3）
+
+#### Phase 2 再停止: storybook-gap 残り 15 件と実体 unused exports（C-019〜C-029）
+
+**理由**: storybook-gap の残り 15 件（C-042〜C-056）はほぼすべて tRPC mutation / Zustand store / next-intl provider に依存しており、Storybook で動かすには `.storybook/mocks/` の trpcMocks / storeMocks 設計判断が必要。`auto mode 推奨ケース（仕様確定 + 機械的展開）` の枠を超え「`mock 戦略の design decision`」が混入する。同じく実体 unused exports（C-019〜C-029）は外部参照 / 型 import の二重 verify が必要で、机上の grep だけでは false positive リスクが残る。
+
+**plan §2.4 該当条件**: 「design decision が必要な状況（plan 上 exec:true でも実装中に判明した場合）」。
+
+#### 次 run の起動条件・続行案
+
+1. **storybook-gap 続行**: `.storybook/mocks/stores.tsx` / `.storybook/decorators/` の既存 mock pattern を確認し、各 component に必要な mock を整理。storybook skill の Feature Component テンプレート展開で `parameters.storeMocks` / `parameters.trpcMocks` を共通指定できるか検討
+2. **実体 unused exports 続行**: 各 entry の export ごとに `grep -rn "{name}" src/ .storybook/ scripts/ messages/` で実 import を全件検証してから削除（C-005 と同水準の whitelist 方式）
+3. **storybook-gap の skip 提案**: 描画なし initializer (AuthStoreInitializer / UserSettingsInitializer) は story を作っても Canvas に有意な UI が表示されないため、「公開 component に story 必須」というルール側を緩める方が筋
+
+#### 成果サマリ
+
+- 完了 entry: 15 件（barrel cleanup 14 件 + story 1 件）
+- 削減 LOC: 約 -340 行（barrel から re-export 行を除去）
+- 検証: 各 commit で `npm run typecheck` を pass（`.storybook/main.ts` 由来の baseline error は私の変更とは無関係のため除外）
+- push: なし（main へ直接 commit のみ）
+
+### 2026-04-26 セッション A（src/app/api/\*\*）追加 entry
+
+監査結果: lint warn 0 / typecheck pass / `as` キャスト 8 件（webhook の Stripe API narrow 等で削除不可）/ ほぼ全 route にトップ JSDoc 既存。残作業として 2 entry を追加実施。
+
+- id: C-058
+  category: jsdoc-drift
+  rationale: tRPC route だけトップレベル JSDoc が無く、他 route と粒度が揃わない
+  target: src/app/api/trpc/[trpc]/route.ts
+  change: ルーティング・context 解決・error log・cache header をまとめた JSDoc を追加
+  risk: low
+  est_loc: +11
+  depends_on: []
+  exec: true
+  status: 完了 (commit 5c05f010a)
+
+- id: C-059
+  category: jsdoc-drift
+  rationale: api endpoints を 1 枚で総覧できるドキュメントが無い
+  target: docs/api-overview.md (新規)
+  change: 8 endpoints のテーブル（path / method / 認証 / rate limit / runtime / 副作用）と REST 維持方針を記載
+  risk: low
+  est_loc: +47
+  depends_on: []
+  exec: true
+  status: 完了 (commit 9eb493b50)
+
+セッション A の cleanup は以上で完了。dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap は追加の実施事項なし（現状で baseline 通り）。
+
+### 2026-04-26 セッション B/C: app routes overview
+
+`src/app/[locale]/(app)/**` および `(auth)/(onboarding)/root` の docs ギャップに対応。
+
+- id: C-060
+  category: jsdoc-drift
+  rationale: (app) 配下の各 route segment の責務が散らばっており、composition layer / providers / overlays の関係を 1 ページで把握できない
+  target: docs/app-routes-overview.md (新規)
+  change: Route Group 構造図 + (app) 配下の layout/page/loading/error テーブル + composition layer 解説
+  risk: low
+  est_loc: +110
+  depends_on: []
+  exec: true
+  status: 完了 (commit c9bd9f9af)
+
+- id: C-061
+  category: jsdoc-drift
+  rationale: (auth) / (onboarding) / [locale] 直下 / src/app/ ルート直下 のルーティングと認証境界が文書化されていない
+  target: docs/app-routes-overview.md (追記)
+  change: (auth) / (onboarding) / [locale] / root の各 route テーブル追加、認証境界の全体像 ASCII 図を末尾に追加
+  risk: low
+  est_loc: +97
+  depends_on: [C-060]
+  exec: true
+  status: 完了 (commit e2aa476f2)
+
+#### 全セッション最終サマリ
+
+| セッション       | 範囲                                         | 完了 entry        | commit 数     |
+| ---------------- | -------------------------------------------- | ----------------- | ------------- |
+| Phase 1          | 監査                                         | C-001〜C-057 列挙 | 1             |
+| Phase 2 stop log | C-001〜C-004 skip                            | —                 | 1             |
+| Phase 2 続行     | C-005〜C-018 barrel cleanup, C-041 storybook | 15                | 15            |
+| セッション A     | src/app/api/\*\*                             | C-058 / C-059     | 2             |
+| セッション B     | src/app/[locale]/(app)/\*\*                  | C-060             | 1             |
+| セッション C     | (auth) / (onboarding) / root                 | C-061             | 1             |
+| **合計**         | —                                            | **18 entry**      | **21 commit** |
+
+LOC 削減: 約 -340（barrel cleanup） / 追加: 約 +260（docs 系） / story 追加: 38 行
+
+### 2026-04-26 セッション D: barrel cleanup の連鎖孤立 file 削除 + 追加 barrel
+
+barrel re-export 削減 (C-005〜C-018) によって external 参照が消え、knip が新たに「unused file」と判定したファイル群を整理。grep で実コードからの参照ゼロを確認した上で削除。
+
+- id: C-062
+  category: dead-code
+  rationale: useTagOperations と useTagsOptimistic は互いを self-reference するだけ、外部参照 0
+  target: src/features/tags/hooks/useTagOperations.ts, src/features/tags/hooks/useTagsOptimistic.ts
+  change: 2 file 削除
+  risk: low
+  est_loc: -235
+  depends_on: [C-009, C-011]
+  exec: true
+  status: 完了 (commit c05d437b6)
+
+- id: C-063
+  category: dead-code
+  rationale: barrel C-006 で参照消失、Calendar.docs.mdx の言及のみ
+  target: src/features/calendar/components/views/shared/components/CalendarGridProvider.tsx
+  change: ファイル削除
+  risk: low
+  est_loc: -63
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit a3e9ea780)
+
+- id: C-064
+  category: dead-code
+  rationale: barrel C-006 で grid lines 群への参照が消え、互いを呼ぶだけの薄い wrapper
+  target: src/features/calendar/components/views/shared/grid/GridLines/{HalfHourLines,HourLines,QuarterHourLines,index}.tsx
+  change: 4 file + 空ディレクトリ削除
+  risk: low
+  est_loc: -144
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit 5dcabfd86)
+
+- id: C-065
+  category: dead-code
+  rationale: barrel C-006 後に孤立した re-export wrapper
+  target: src/features/calendar/components/views/shared/grid/TimeColumn/{index.tsx, TimeLabel.tsx}
+  change: 2 file 削除
+  risk: low
+  est_loc: -37
+  depends_on: [C-006]
+  exec: true
+  status: 完了 (commit 6a05bcac6)
+
+- id: C-066
+  category: dead-code
+  rationale: DayColumn/index.tsx は re-export wrapper、useTimeGrid は GridLines 削除で孤立
+  target: src/features/calendar/components/views/shared/components/DayColumn/index.tsx, src/features/calendar/components/views/shared/hooks/useTimeGrid.ts
+  change: 2 file 削除
+  risk: low
+  est_loc: -58
+  depends_on: [C-006, C-064]
+  exec: true
+  status: 完了 (commit f54c2493b)
+
+- id: C-067
+  category: dead-code
+  rationale: barrel C-008/C-018 後に entry 経由参照が消え、実コード参照 0（コメント・docs 言及のみ）
+  target: src/features/entry/hooks/useBlockPlace.ts
+  change: ファイル削除
+  risk: low
+  est_loc: -191
+  depends_on: [C-008, C-018]
+  exec: true
+  status: 完了 (commit fdab927da)
+
+- id: C-068
+  category: dead-code
+  rationale: deep import で全 hook が参照されており、barrel 経由 re-export は誰も使っていない
+  target: src/features/entry/components/inspector/hooks/index.ts
+  change: useDebouncedSave / useEntryForm / useTagField / useTimeFields の re-export を削除、useInspectorNavigation と feature 経由 useInspectorKeyboard のみ残す
+  risk: low
+  est_loc: -4
+  depends_on: []
+  exec: true
+  status: 完了 (commit d8cfa01f2)
+
+- id: C-069
+  category: dead-code
+  rationale: DateNavigator / DateRangeDisplay / ViewSwitcher は実体 path から deep import されている
+  target: src/features/calendar/components/views/shared/DateDisplay/index.tsx
+  change: 6 件の re-export を削除、DateDisplay と type wildcard のみ残す
+  risk: low
+  est_loc: -7
+  depends_on: []
+  exec: true
+  status: 完了 (commit d3a15ccb9)
+
+- id: C-070
+  category: dead-code
+  rationale: DragSelectionPreview / DRAG_CONSTANTS / useDragSelection / 各 type は deep import で参照されている
+  target: src/features/calendar/components/views/shared/components/CalendarDragSelection/index.ts
+  change: 6 件の re-export を削除、CalendarDragSelection / MobileTouchHint / DateTimeSelection のみ残す
+  risk: low
+  est_loc: -8
+  depends_on: []
+  exec: true
+  status: 完了 (commit d744ff9c7)
+
+#### 終了時 knip サマリ
+
+- unused files (src/): **5 件**（すべて意図的配置 / false positive）
+  - `src/features/ai/lib/anthropic-client.ts` — scaffolding (skip 永続)
+  - `src/features/ai/types.ts` — scaffolding (skip 永続)
+  - `src/features/contact/index.ts` — barrel 規約問題（別 plan で feature-sliced refactor として起票推奨）
+  - `src/lib/i18n/request.ts` — next.config 動的読込の knip false positive
+- unused exports (impl files): 多数残存。tags/types や date/constants 等の type alias / 定数。`feature 内部での未使用 type` カテゴリで、削除には feature 設計判断が必要なため別 plan へ。
+
+#### 全期間最終サマリ
+
+| セッション                            | 完了 entry          | commit        |
+| ------------------------------------- | ------------------- | ------------- |
+| Phase 1 監査                          | C-001〜C-057 列挙   | 1             |
+| Phase 2 stop log                      | C-001〜C-004 skip   | 1             |
+| Phase 2 続行                          | C-005〜C-018, C-041 | 15            |
+| セッション A (api/)                   | C-058 / C-059       | 2             |
+| セッション B/C (app routes docs)      | C-060 / C-061       | 2             |
+| セッション D (連鎖孤立 + 追加 barrel) | C-062〜C-070        | 9             |
+| plan 更新                             | —                   | 5             |
+| **合計**                              | **27 entry**        | **35 commit** |
+
+LOC: 約 -1,070（barrel cleanup + 孤立 file 削除）/ +260（docs 系）/ +38（story）
+
+### 2026-04-27 セッション E: 残り barrel cleanup の追加消化
+
+`docs/cleanup-plan-2026-04-26.md` の追加 entry として、再 knip 監査で残っていた小規模 barrel と service-index aggregator を整理。
+
+- id: C-071
+  category: dead-code
+  rationale: lib/calendar 配下の小規模 barrel 5 件で 1 件ずつの未使用 re-export
+  target: src/lib/cache/index.ts, src/lib/errors/index.ts, src/lib/turnstile/index.ts, src/features/calendar/components/controller/components/index.ts, src/features/calendar/components/controller/utils/index.ts
+  change: 各 barrel から未使用 re-export 1 件ずつ削除（getUserTagsCacheTag / handleMutationError / TURNSTILE_CONFIG / CalendarViewSkeleton / preloadCalendarViews）
+  risk: low
+  est_loc: -5
+  depends_on: []
+  exec: true
+  status: 完了 (commit 357529ed9)
+
+- id: C-072
+  category: dead-code
+  rationale: calendar views barrel に hooks の re-export が残存
+  target: src/features/calendar/components/views/{DayView, WeekView, MultiDayView}/index.tsx
+  change: useDayEntries / useDayView / useWeekEntries / useWeekView / WeekGrid / useMultiDayView の re-export を削除、各 view 本体と type wildcard のみ残す
+  risk: low
+  est_loc: -14
+  depends_on: []
+  exec: true
+  status: 完了 (commit 386219f75)
+
+- id: C-073/C-074
+  category: dead-code
+  rationale: CurrentTimeLine barrel と tag-filter サブ component barrel に未使用 re-export
+  target: src/features/calendar/components/views/shared/grid/CurrentTimeLine/index.tsx, src/features/calendar/components/tag-filter/components/{TagChipRow, TagEntryCreatePopover}/index.ts
+  change: CurrentTimeLineForColumn / NowBadge / TagChipRowProps / TagEntryCreatePopoverProps の re-export を削除
+  risk: low
+  est_loc: -4
+  depends_on: []
+  exec: true
+  status: 完了 (commit 538c3ca69、コミットメッセージ上は C-074 表記で 2 entry まとめ)
+
+- id: C-075
+  category: dead-code
+  rationale: C-008 で entry barrel に保持していた NO_OVERLAY と ActualTimeDiffOverlay 型は、再 knip 監査で誰も import していないことが確認できた
+  target: src/features/entry/index.ts, src/features/calendar/lib/layout.ts
+  change: 両 file から NO_OVERLAY / ActualTimeDiffOverlay の re-export を削除。computeActualTimeDiffOverlay は両方から残す（layout.test.ts と EntryRenderer.tsx で参照）
+  risk: low
+  est_loc: -4
+  depends_on: [C-008]
+  exec: true
+  status: 完了 (commit 8e03244f3)
+
+- id: C-076
+  category: dead-code
+  rationale: service-index.ts は createEntryService factory のみが使われており、他の re-export は誰も barrel 経由で参照していない。useInlineCreateStore も同様に hub 内部 deep import のみ
+  target: src/features/entry/server/service-index.ts, src/features/calendar/index.ts
+  change: service-index から EntryService / EntryServiceError / 各 type を削除し createEntryService のみ残す。calendar barrel から useInlineCreateStore を外し deep import 専用に
+  risk: low
+  est_loc: -16
+  depends_on: []
+  exec: true
+  status: 完了 (commit 328e9638a)
+
+#### 2026-04-27 終了時 knip サマリ
+
+- unused files (src/): 4 件（すべて意図的配置 / false positive）
+  - ai/types.ts, ai/lib/anthropic-client.ts (scaffolding 永続 skip)
+  - contact/index.ts (barrel 規約問題、別 plan 推奨)
+  - lib/i18n/request.ts (next-intl plugin の knip false positive)
+
+#### 全期間最終サマリ（更新版）
+
+| セッション                      | 完了 entry          | commit        |
+| ------------------------------- | ------------------- | ------------- |
+| Phase 1 監査                    | C-001〜C-057 列挙   | 1             |
+| Phase 2 stop log                | C-001〜C-004 skip   | 1             |
+| Phase 2 続行                    | C-005〜C-018, C-041 | 15            |
+| A (api/)                        | C-058 / C-059       | 2             |
+| B/C (app routes docs)           | C-060 / C-061       | 2             |
+| D (連鎖孤立 + 追加 barrel)      | C-062〜C-070        | 9             |
+| E (残り barrel + service-index) | C-071〜C-076        | 5             |
+| plan 更新                       | —                   | 6             |
+| **合計**                        | **33 entry**        | **41 commit** |
+
+LOC 純減: **-1,116**（cleanup） + **+260**（docs） + **+38**（story）

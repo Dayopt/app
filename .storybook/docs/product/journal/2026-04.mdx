@@ -6,6 +6,39 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-26
+
+### auto mode で knip ベースの barrel cleanup を Plan → Phase 2 → docs 整備まで一気通貫した日
+
+34 コミット、約 -1,070 LOC（cleanup） / +260（docs） / +38（story）。一日を通して `docs/cleanup-plan-2026-04-26.md` の C-XXX 連番を auto mode に投げ続け、Phase 1（監査）→ Phase 2（barrel re-export 削減 + 連鎖孤立 file 削除）→ セッション A〜D（api / app routes / 追加 barrel）まで段階的に消化。途中 4 件連続 skip による停止条件発動と、ブランチ自動切替による orphaned commit を経て cherry-pick で main に集約した。最後に api-overview / app-routes-overview の総覧 docs を新規作成し、後続作業の起点として固定した。
+
+#### やったこと
+
+- **Phase 1 監査と plan 作成（2 commit）**: src/ 配下を 6 カテゴリ（dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap / jsdoc-drift）で機械監査し、57 entry を C-001〜C-057 で `docs/cleanup-plan-2026-04-26.md` に列挙
+- **Phase 2 barrel cleanup（14 commit + storybook 1 件）**: `src/lib/date` / `src/features/(calendar, entry, tags, auth, stats, chronotype, tour, settings, onboarding)` / `src/lib/(sentry, components/shell/sidebar)` / `src/lib/i18n` の barrel 13 file から約 250 件の未使用 re-export を削除。加えて C-041 で TourOrchestrator の minimal story 1 件
+- **セッション A — api/ docs 整備（2 commit）**: tRPC route handler のトップレベル JSDoc 追加 + `docs/api-overview.md` 新規作成（8 endpoints のテーブル + 共通方針）
+- **セッション B/C — app-routes-overview.md 新規作成（2 commit）**: `(app)` segment の Route Group 構造図 → `(auth)/(onboarding)/[locale]/root` を追記し、認証境界の ASCII 図で締め
+- **セッション D — 連鎖孤立 file 削除（9 commit）**: barrel cleanup の結果新たに unused 判定された 11 file（GridLines/\_、TimeColumn/index.tsx、DayColumn/index.tsx、CalendarGridProvider、useTimeGrid、useBlockPlace、useTagOperations 等）と追加 barrel（DragSelection / DateDisplay / inspector hooks）を整理
+- **plan 実行ログ整備（5 commit）**: 各セッション境界で `cleanup-plan-2026-04-26.md` の末尾に進捗・skip 理由・最終サマリを追記、再現可能な形で残した
+
+#### なぜ今日この作業をしたか
+
+releases 直前ではない安定期にあって、knip / lint:tokens / 公開 component story / JSDoc drift などの「クリティカルではないが片付けると後で楽」な作業がまとまって溜まっていた。これを auto mode に長時間任せたかったので、まず人間判断が要らないように Phase 1 で全件 entry 化 → exec:true / false を機械的に判定 → Phase 2 で id 順に消化する運用設計を最初に確定させた。
+
+C-001〜C-004 で停止が起きたのは、knip が `next.config.mjs` の動的 path や AI scaffolding 設計を理解しないことに起因する false positive。これは Phase 1 監査時点で `.knipignore` の前提を確認していれば避けられた失敗で、停止条件「連続 2 skip」を素直に踏んで Phase 2 を一旦中断 → 状況報告 → cherry-pick 再開、という流れで safety を担保した。同じ袋小路に二度入らないように skip 理由を plan 末尾に書き残してある。
+
+セッション A〜C を docs 中心に振り直したのは、barrel cleanup ではコードの「どこが何をしているか」のメンタルマップが磨耗するのを補完するため。`api-overview.md` と `app-routes-overview.md` は今日まで存在しなかったが、新規 endpoint や route segment を追加する時の最初の参照先になる。コードベースの cleanup 自体より、こうした overview docs を残しておくことの方が長期的には効く。
+
+#### Claudeの所感
+
+**knip は judge ではなく detector として使うのが正しい**: 4 件連続 skip でわかったのは、knip の出力をそのまま削除候補リストにすると false positive で確実に火傷するということ。`createNextIntlPlugin('./src/lib/i18n/request.ts')` のような動的 path は静的解析に乗らないし、`src/features/ai/types.ts` のように「Intentionally empty」と明記された scaffolding を区別する判定もない。今日の運用では「knip = 候補リスト、grep -rn で実 import を必ず再 verify」のフローを Phase 2 全体で徹底し、これが false positive を踏まずに 250 件の re-export を消せた直接の理由。`.knipignore` 整備で knip 側の精度を上げる next も投げてあるが、それでも detector / judge の分離は維持する方が良い。
+
+**barrel cleanup は連鎖を観察するだけでだいたい片付く**: 最初は「barrel から re-export を消す」作業だったのが、再 knip するとそれまで隠れていた「barrel 経由でしか参照されていなかった impl file」が unused に変わって出てきた（GridLines/\_、TimeColumn/index.tsx、useBlockPlace 等）。これを順次削除すると今度は「使われなくなった hook」（useTimeGrid）が浮上する 2 段連鎖まで観察できた。最初に impl 全部を見ようとせず、barrel だけ手を入れて再 knip → 連鎖を辿る、という二段運用が結果として最も効率良く dead code を剥がせた。最初から完璧な dependency graph を作ろうとしないこと。
+
+**auto mode の出力は plan ファイルが第一の成果物**: 35 commit のうち 6 commit は plan ファイルへの追記。これは無駄ではなく、auto mode が「何をして何を skip したか」の実行ログを plan 内に蓄積することで、次 run の起動条件と「触らない方がよい領域」を明示できる構造になっている。コードの diff だけ見ても auto mode の判断は再現できないが、plan 末尾の skip 理由 + 全期間サマリを読むと「contact/index.ts に手を出さなかった理由」「storybook-gap が後送りになった理由」が後追いできる。これは auto mode を運用する上での副産物としてかなり大きい。
+
+---
+
 ## 2026-04-24
 
 ### sidebar-redesign umbrella を close-out しつつ、TagFlatList の DnD を公式パターンで作り直した日

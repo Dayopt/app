@@ -6,11 +6,6 @@
  */
 
 // =============================================================================
-// Types
-// =============================================================================
-export type { SettingsCategory } from './types';
-
-// =============================================================================
 // Constants
 // =============================================================================
 export { SETTINGS_CATEGORIES } from './constants';
@@ -19,8 +14,6 @@ export { SETTINGS_CATEGORIES } from './constants';
 // Components (for Composition Layer / routing pages)
 // =============================================================================
 export { SettingsContent, isValidCategory } from './components/SettingsContent';
-export { SettingsDialog } from './components/SettingsDialog';
-export { SettingsSidebar } from './components/SettingsSidebar';
 export { UserSettingsInitializer } from './components/UserSettingsInitializer';
 
 // =============================================================================

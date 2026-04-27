@@ -3,4 +3,3 @@
  */
 
 export { getErrorMessage } from './get-error-message';
-export { handleMutationError } from './handle-mutation-error';

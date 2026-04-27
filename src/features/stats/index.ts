@@ -22,21 +22,9 @@ export { useStatsFilterStore } from './stores/useStatsFilterStore';
 export type { StatsGranularity } from './stores/useStatsFilterStore';
 
 // =============================================================================
-// Types
-// =============================================================================
-export type { StatsViewProps } from './types/stats.types';
-
-// =============================================================================
 // Lib
 // =============================================================================
 export { TagDetailPage } from './components/tag-detail/TagDetailPage';
-export { METRIC_DEFINITIONS, METRIC_ORDER } from './lib/metricDefinitions';
-export {
-  calculateDeepUtilization,
-  formatMetricValue,
-  formatMetricValueParts,
-  getMetricTrend,
-} from './lib/metrics';
 // prefetchStatsData / prefetchTagDetailData はサーバー専用（next/headers使用）。
 // 各ファイルに import 'server-only' ガード済み。
 export { prefetchBadgesData, prefetchStatsData } from './lib/prefetch';

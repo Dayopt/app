@@ -4,9 +4,12 @@
  * TagQuickSelector
  *
  * タグ選択用フローティングパネル。
- * ラジオボタン型の単一選択 + 新規作成（inline）。
+ * ラジオボタン型の単一選択 + 新規作成（グローバル TagCreateModal 経由）。
  * overlayなし — 背景コンテンツが見える状態を維持。
  * モバイル: Vaul Drawer（スワイプで閉じる）、PC: アンカー横フローティング。
+ *
+ * 「+」押下時は自身を一旦閉じてからグローバル TagCreateModal を開く（vaul nested
+ * Drawer 問題を避けるため）。modal の onCreated callback で selection を反映する。
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,16 +21,14 @@ import { useTranslations } from 'next-intl';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/lib/components/ui/drawer';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { cn } from '@/lib/utils';
 import { useTags } from '../hooks/useTagsQuery';
-import { CreateTagPopover } from './CreateTagPopover';
 import { TagBadgeList } from './TagBadgeList';
 import { TagIcon } from './TagIcon';
 
-import type { TagColorName } from '@/lib/tag-colors';
-
 /** タグが0件のときにユーザーへ表示するサンプルタグ候補一覧 */
-const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: TagColorName; icon: string }> = [
+const SAMPLE_TAG_CHIPS: Array<{ nameKey: string; color: string; icon: string }> = [
   { nameKey: 'work', color: 'blue', icon: 'briefcase' },
   { nameKey: 'study', color: 'indigo', icon: 'book-open' },
   { nameKey: 'exercise', color: 'green', icon: 'dumbbell' },
@@ -63,12 +64,14 @@ interface TagQuickSelectorProps {
 /**
  * タグ選択コンテンツ
  *
- * 通常はタグ一覧（TagBadgeList）を表示。末尾の「+」押下で inline 作成フォームが展開する。
+ * 通常はタグ一覧（TagBadgeList）を表示。末尾の「+」押下で自身を閉じ、
+ * グローバル TagCreateModal を `openTagCreateModal({ onCreated })` で開く。
  */
 function TagQuickSelectorContent({
   onSelect,
   onCreateAndSelect,
   onTagHover,
+  closeSelf,
 }: {
   onSelect: (tagId: string, tagName: string) => void;
   onCreateAndSelect: (
@@ -78,11 +81,13 @@ function TagQuickSelectorContent({
     parentId?: string | null,
   ) => void;
   onTagHover?: ((tag: HoveredTagInfo | null) => void) | undefined;
+  /** 自身（TagQuickSelector）を閉じる関数。modal を開く前に呼んで nest を回避 */
+  closeSelf: () => void;
 }) {
   const t = useTranslations('calendar');
   const { data: tags } = useTags();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isCreatePopoverOpen, setIsCreatePopoverOpen] = useState(false);
+  const openTagCreateModal = useShellStore.use.openTagCreateModal();
 
   const sortedTags = useMemo(() => (tags ?? []).filter((tag) => tag.is_active !== false), [tags]);
 
@@ -94,22 +99,18 @@ function TagQuickSelectorContent({
     [onSelect],
   );
 
-  const handleEditorSubmit = useCallback(
-    async (input: {
-      name: string;
-      color: TagColorName;
-      icon: string | null;
-      parentId: string | null;
-    }) => {
-      onCreateAndSelect(input.name, input.color, input.icon, input.parentId);
-      setIsCreatePopoverOpen(false);
-    },
-    [onCreateAndSelect],
-  );
+  const handleOpenCreate = useCallback(() => {
+    closeSelf();
+    openTagCreateModal({
+      onCreated: (tag) => {
+        onCreateAndSelect(tag.name, tag.color, tag.icon, tag.parent_id);
+      },
+    });
+  }, [closeSelf, openTagCreateModal, onCreateAndSelect]);
 
   const isTagZero = sortedTags.length === 0;
 
-  // タグゼロ時: サンプルタグ候補チップ + inline 作成
+  // タグゼロ時: サンプルタグ候補チップ + 新規作成導線
   if (isTagZero) {
     return (
       <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
@@ -137,40 +138,26 @@ function TagQuickSelectorContent({
             })}
           </div>
         </div>
-        <div className="relative">
-          <TagBadgeList
-            tags={sortedTags}
-            selectedId={selectedId}
-            onSelect={handleSelect}
-            onCreate={() => setIsCreatePopoverOpen(true)}
-            onTagHover={onTagHover}
-          />
-          <CreateTagPopover
-            open={isCreatePopoverOpen}
-            onOpenChange={setIsCreatePopoverOpen}
-            existingTags={sortedTags}
-            onSubmit={handleEditorSubmit}
-          />
-        </div>
+        <TagBadgeList
+          tags={sortedTags}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+          onCreate={handleOpenCreate}
+          onTagHover={onTagHover}
+        />
       </div>
     );
   }
 
-  // メイン: タグ badge 一覧 + 作成 Popover
+  // メイン: タグ badge 一覧 + 「+」で global modal を開く
   return (
-    <div className="relative overflow-y-auto" style={{ maxHeight: '50vh' }}>
+    <div className="overflow-y-auto" style={{ maxHeight: '50vh' }}>
       <TagBadgeList
         tags={sortedTags}
         selectedId={selectedId}
         onSelect={handleSelect}
-        onCreate={() => setIsCreatePopoverOpen(true)}
+        onCreate={handleOpenCreate}
         onTagHover={onTagHover}
-      />
-      <CreateTagPopover
-        open={isCreatePopoverOpen}
-        onOpenChange={setIsCreatePopoverOpen}
-        existingTags={sortedTags}
-        onSubmit={handleEditorSubmit}
       />
     </div>
   );
@@ -289,6 +276,10 @@ export function TagQuickSelector({
     [onOpenChange],
   );
 
+  const closeSelf = useCallback(() => {
+    onOpenChange(false);
+  }, [onOpenChange]);
+
   if (!mounted) return null;
 
   // モバイル: Vaul Drawer（スワイプで閉じる）
@@ -305,6 +296,7 @@ export function TagQuickSelector({
             onSelect={onSelect}
             onCreateAndSelect={onCreateAndSelect}
             onTagHover={onTagHover}
+            closeSelf={closeSelf}
           />
         </DrawerContent>
       </Drawer>
@@ -353,6 +345,7 @@ export function TagQuickSelector({
           onSelect={onSelect}
           onCreateAndSelect={onCreateAndSelect}
           onTagHover={onTagHover}
+          closeSelf={closeSelf}
         />
       </div>
     </div>

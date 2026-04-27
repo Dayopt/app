@@ -1,1 +1,1 @@
-export { TagChipRow, type TagChipRowProps } from './TagChipRow';
+export { TagChipRow } from './TagChipRow';

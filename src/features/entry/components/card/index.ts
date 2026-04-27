@@ -1,3 +1,2 @@
 export { EntryCard } from './EntryCard';
-export type { EntryCardPosition, EntryCardProps } from './EntryCard.types';
-export { EntryCardContent } from './EntryCardContent';
+export type { EntryCardPosition } from './EntryCard.types';

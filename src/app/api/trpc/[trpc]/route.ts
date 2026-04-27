@@ -1,3 +1,14 @@
+/**
+ * tRPC HTTP エンドポイント
+ *
+ * すべての tRPC procedure (`@/lib/trpc/root` の appRouter) をこのルート 1 本で受ける。
+ * - ルーティング: `/api/trpc/{procedure-path}` → router 経由で対応する procedure を呼出
+ * - context: `createFetchTRPCContext` で Supabase auth から userId を解決
+ * - エラー: error をログに記録（input は dev のみ展開、prod は REDACTED）
+ * - cache: 認証済みは `private, no-store`、未認証は `no-cache` を返す
+ *
+ * @see https://trpc.io/docs/server/adapters/fetch
+ */
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 
 import { logger } from '@/lib/logger';

@@ -23,10 +23,32 @@ export interface TagRenameTarget {
   parent_id: string | null;
 }
 
+/** タグ新規作成 modal の onCreated に渡される最小限の tag 情報（feature 依存を避ける plain shape） */
+export interface CreatedTagPayload {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  parent_id: string | null;
+}
+
+/**
+ * タグ新規作成モーダルの context。
+ * `onCreated` は serializable ではないため persist には乗せない（partialize で除外済）。
+ */
+export interface TagCreateContext {
+  /** 初期選択親タグ（null = ルート） */
+  initialParentId: string | null;
+  /**
+   * 作成成功時のコールバック。caller が selection 反映や後続処理を行うのに使う。
+   */
+  onCreated?: (tag: CreatedTagPayload) => void;
+}
+
 /**
  * シェルレベルのシート/ダイアログ（排他: 1つしか開かない）
  *
- * `contact` / `settings` は Sheet 系、`tagMerge` / `tagRename` は Modal 系だが、
+ * `contact` / `settings` は Sheet 系、`tagMerge` / `tagRename` / `tagCreate` は Modal 系だが、
  * shell 全体で「1 つしか開かない overlay」として統一管理する（旧 useModalStore
  * を統合、P2-2）。
  */
@@ -34,7 +56,8 @@ export type SheetType =
   | { type: 'contact' }
   | { type: 'settings'; category: SettingsCategory }
   | { type: 'tagMerge'; sourceTag: TagMergeSourceTag }
-  | { type: 'tagRename'; tag: TagRenameTarget };
+  | { type: 'tagRename'; tag: TagRenameTarget }
+  | { type: 'tagCreate'; context: TagCreateContext };
 
 // ── State ──
 
@@ -83,6 +106,10 @@ interface ShellStoreActions {
   // Tag rename modal convenience
   openTagRenameModal: (tag: TagRenameTarget) => void;
   closeTagRenameModal: () => void;
+
+  // Tag create modal convenience
+  openTagCreateModal: (context?: Partial<TagCreateContext>) => void;
+  closeTagCreateModal: () => void;
 }
 
 // ── Store ──
@@ -156,6 +183,28 @@ const useShellStoreBase = create<ShellStoreState & ShellStoreActions>()(
           const { activeSheet } = get();
           if (activeSheet?.type === 'tagRename') {
             set({ activeSheet: null }, false, 'closeTagRenameModal');
+          }
+        },
+
+        // ── Tag Create Modal Convenience ──
+        openTagCreateModal: (context) =>
+          set(
+            {
+              activeSheet: {
+                type: 'tagCreate',
+                context: {
+                  initialParentId: context?.initialParentId ?? null,
+                  ...(context?.onCreated ? { onCreated: context.onCreated } : {}),
+                },
+              },
+            },
+            false,
+            'openTagCreateModal',
+          ),
+        closeTagCreateModal: () => {
+          const { activeSheet } = get();
+          if (activeSheet?.type === 'tagCreate') {
+            set({ activeSheet: null }, false, 'closeTagCreateModal');
           }
         },
       }),

@@ -17,17 +17,6 @@ export { SignupForm } from './components/SignupForm';
 
 // --- Stores ---
 export { AuthStoreInitializer } from './stores/AuthStoreInitializer';
-export {
-  selectError,
-  selectIsAuthenticated,
-  selectLoading,
-  selectSession,
-  selectSessionExpired,
-  selectUser,
-  useAuthStore,
-} from './stores/useAuthStore';
-
-// --- Hooks ---
-export { useSessionMonitor } from './hooks/useSessionMonitor';
+export { useAuthStore } from './stores/useAuthStore';
 
 // ここにないものはfeature内部専用
