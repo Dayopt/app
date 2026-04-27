@@ -9,8 +9,8 @@ const idle: InteractionState = { mode: 'idle' };
 const dragging: InteractionState = {
   mode: 'dragging',
   entryId: 'plan-1',
-  startPoint: { x: 0, y: 0 },
-  currentPoint: { x: 100, y: 200 },
+  startPoint: { clientX: 0, clientY: 0 },
+  currentPoint: { clientX: 100, clientY: 200 },
   originalPosition: { top: 0, height: 60, left: 0, width: 100 },
   dateIndex: 0,
   targetDateIndex: 0,
@@ -22,18 +22,19 @@ const dragging: InteractionState = {
   isOverlapping: false,
 };
 
-const resizing: InteractionState = {
+const resizingPreviewTime = {
+  start: new Date('2026-04-27T01:00:00.000Z'),
+  end: new Date('2026-04-27T03:00:00.000Z'),
+};
+const resizing: Extract<InteractionState, { mode: 'resizing' }> = {
   mode: 'resizing',
   entryId: 'plan-1',
-  startPoint: { x: 0, y: 0 },
-  currentPoint: { x: 0, y: 100 },
+  startPoint: { clientX: 0, clientY: 0 },
+  currentPoint: { clientX: 0, clientY: 100 },
   originalPosition: { top: 0, height: 60, left: 0, width: 100 },
   direction: 'bottom',
   snappedHeight: 120,
-  previewTime: {
-    start: new Date('2026-04-27T01:00:00.000Z'),
-    end: new Date('2026-04-27T03:00:00.000Z'),
-  },
+  previewTime: resizingPreviewTime,
   isOverlapping: false,
 };
 
