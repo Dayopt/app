@@ -15,7 +15,9 @@ import { useEntryPosition } from '../../hooks/useEntryPosition';
 import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
@@ -34,6 +36,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   // この日のエントリをフィルタリング
   const dayEntries = useMemo(() => {
@@ -125,12 +128,9 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               onClick={(e) => {
                 e.stopPropagation();
                 if (onTimeClick) {
-                  // 現在時刻 or 9:00 付近にクリックイベントを発火
+                  // 「今日」判定はユーザー TZ に揃える（OS TZ と calendar TZ がズレる場合の崩れを防ぐ）
                   const now = new Date();
-                  const isDateToday =
-                    date.getFullYear() === now.getFullYear() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getDate() === now.getDate();
+                  const isDateToday = isTodayInTimezone(date, timezone, now);
                   const hour = isDateToday ? Math.max(now.getHours(), 9) : 9;
                   onTimeClick(date, hour, 0);
                 }

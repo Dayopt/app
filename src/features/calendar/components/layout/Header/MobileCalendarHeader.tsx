@@ -1,6 +1,6 @@
 'use client';
 
-import { format, getWeek, isSameMonth, isToday } from 'date-fns';
+import { format, getWeek, isSameMonth } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -8,6 +8,7 @@ import { memo, useCallback, useState } from 'react';
 
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Button } from '@/lib/components/ui/button';
+import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cn } from '@/lib/utils';
 
@@ -64,13 +65,14 @@ export const MobileCalendarHeader = memo<MobileCalendarHeaderProps>(
     // ヘッダー: 月部分・日番号・接尾辞を分離して今日バッジ + 週数を1行に統合
     const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
     const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+    const timezone = useCalendarSettingsStore((s) => s.timezone);
     const monthPart = format(currentDate, locale === 'ja' ? 'M月' : 'MMM ', {
       locale: dateFnsLocale,
     });
     const dayNumber = format(currentDate, 'd');
     const daySuffix = locale === 'ja' ? '日' : '';
     const weekdayShort = format(currentDate, 'EEE', { locale: enUS });
-    const today = isToday(currentDate);
+    const today = isTodayInTimezone(currentDate, timezone);
     const weekNumber = getWeek(currentDate, { weekStartsOn });
 
     const handleToggle = useCallback(() => {

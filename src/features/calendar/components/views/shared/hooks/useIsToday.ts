@@ -1,14 +1,17 @@
 import { useMemo } from 'react';
 
-import { isToday as dateFnsIsToday } from 'date-fns';
+import { isTodayInTimezone } from '@/lib/date/timezone';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 /**
- * 指定された日付が今日かどうかを判定するフック
- * 全カレンダービューで共通利用可能
+ * 指定された日付が「ユーザーの calendar timezone での今日」かどうかを判定するフック
  *
- * @param date 判定対象の日付
- * @returns 今日の場合true、それ以外はfalse
+ * date-fns の `isToday` はブラウザのローカル TZ で判定するため、ユーザーが
+ * OS TZ と異なる timezone を設定している場合に highlight が 1 日ずれる。
+ * カレンダーは取得・表示の両方を `useCalendarSettingsStore.timezone` で揃えるため、
+ * このフックも同じ timezone を参照する。
  */
 export function useIsToday(date: Date): boolean {
-  return useMemo(() => dateFnsIsToday(date), [date]);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  return useMemo(() => isTodayInTimezone(date, timezone), [date, timezone]);
 }
