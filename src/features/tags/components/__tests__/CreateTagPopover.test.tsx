@@ -67,6 +67,13 @@ describe('CreateTagPopover', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
+  afterEach(() => {
+    // radix-ui FocusScope が schedule する pending timer を破棄してから real timer に戻す。
+    // 残ると Vitest 終了時に dispatchEvent が stale element に発火して unhandled error になる。
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
   it('有効なタグ名で Enter 送信 → onSubmit が呼ばれる', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onSubmit } = renderPopover();
