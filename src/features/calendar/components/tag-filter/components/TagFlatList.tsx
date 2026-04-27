@@ -674,8 +674,6 @@ function SortableTagItem({
   groupOptions,
   currentParentId,
   isMobile,
-  dragKind,
-  activeDragId,
   onToggle,
   onDeleteTag,
   onShowOnlyTag,
