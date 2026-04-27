@@ -16,6 +16,7 @@ import { getTagColorClasses } from '@/lib/tag-colors';
 
 import { TagIcon } from '@/features/tags';
 
+import { withWrapper } from '../../../../../.storybook/decorators';
 import { BlockItem } from './BlockItem';
 import { SidebarSection } from './SidebarSection';
 
@@ -185,13 +186,7 @@ export const Default: Story = {
       </div>
     ),
   },
-  decorators: [
-    (Story) => (
-      <div className="w-64 px-2">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-64 px-2')],
 };
 
 /** action スロット付き（+ボタン）。 */
@@ -216,13 +211,7 @@ export const WithAction: Story = {
       </div>
     ),
   },
-  decorators: [
-    (Story) => (
-      <div className="w-64 px-2">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-64 px-2')],
 };
 
 /** サイドバー全体再現 — ヘッダー + カレンダー + タグ + パレット + 履歴 + テーマ + フッター。 */

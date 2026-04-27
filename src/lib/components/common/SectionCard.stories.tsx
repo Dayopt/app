@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Button } from '@/lib/components/ui/button';
 import { Switch } from '@/lib/components/ui/switch';
+import { withWrapper } from '../../../../.storybook/decorators';
 
 import { LabeledRow } from './LabeledRow';
 import { SectionCard } from './SectionCard';
@@ -10,13 +11,7 @@ const meta = {
   title: 'Components/Common/SectionCard',
   component: SectionCard,
   tags: ['autodocs'],
-  decorators: [
-    (Story) => (
-      <div className="w-[500px]">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-[500px]')],
 } satisfies Meta<typeof SectionCard>;
 
 export default meta;

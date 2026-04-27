@@ -9,6 +9,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { TagIcon } from '@/features/tags';
+import { withWrapper } from '../../../../../.storybook/decorators';
 
 import { BlockItem } from './BlockItem';
 
@@ -19,13 +20,7 @@ const meta = {
   args: {
     onClick: fn(),
   },
-  decorators: [
-    (Story) => (
-      <div className="w-64">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-64')],
   tags: ['autodocs'],
 } satisfies Meta<typeof BlockItem>;
 

@@ -16,6 +16,22 @@ import { StoryTRPCProvider } from '../mocks/trpc';
 
 export { storeMockDecorator } from '../mocks/stores';
 
+/**
+ * Story を任意の className でラップする decorator factory
+ *
+ * よくある「固定幅で Story をプレビューする」パターンをまとめる:
+ * `withWrapper('w-[500px]')` で `<div className="w-[500px]"><Story /></div>` 相当。
+ * 既存の inline decorator と完全に同じ JSX を返すため見た目に影響しない。
+ */
+export const withWrapper = (className: string): Decorator => {
+  const WrappedStory: Decorator = (Story) => (
+    <div className={className}>
+      <Story />
+    </div>
+  );
+  return WrappedStory;
+};
+
 // メッセージファイルを自動収集（namespace追加時に変更不要）
 const messageModules = import.meta.glob<Record<string, string>>('../../messages/ja/*.json', {
   eager: true,
