@@ -45,8 +45,7 @@ const avatarVariants = cva('relative flex shrink-0 overflow-hidden rounded-full'
 });
 
 interface AvatarProps
-  extends React.ComponentProps<typeof AvatarPrimitive.Root>,
-    VariantProps<typeof avatarVariants> {}
+  extends React.ComponentProps<typeof AvatarPrimitive.Root>, VariantProps<typeof avatarVariants> {}
 
 function Avatar({ className, size, ...props }: AvatarProps) {
   return (
