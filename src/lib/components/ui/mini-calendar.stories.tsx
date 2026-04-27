@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/lib/components/ui/button';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
+import { withWrapper } from '../../../../.storybook/decorators';
 
 const meta = {
   title: 'Components/UI/MiniCalendar',
@@ -25,13 +26,7 @@ const meta = {
       description: '「日付なし」ボタンを表示するか',
     },
   },
-  decorators: [
-    (Story) => (
-      <div className="w-72">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-72')],
 } satisfies Meta<typeof MiniCalendar>;
 
 export default meta;

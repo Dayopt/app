@@ -49,13 +49,7 @@ export const Default: Story = {
 
 /** テーブル内（size="sm" + centered + actions）。実使用: TableEmptyState, PlanTableEmptyState */
 export const TableEmpty: Story = {
-  decorators: [
-    (Story) => (
-      <div className="border-border h-[300px] w-[400px] rounded-2xl border">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('border-border h-[300px] w-[400px] rounded-2xl border')],
   args: {
     icon: Inbox,
     title: 'アイテムがありません',
