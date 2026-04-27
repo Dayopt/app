@@ -103,10 +103,12 @@ function TagQuickSelectorContent({
     closeSelf();
     openTagCreateModal({
       onCreated: (tag) => {
-        onCreateAndSelect(tag.name, tag.color, tag.icon, tag.parent_id);
+        // tag は modal 側で作成済み。caller の onCreateAndSelect は再度 mutation
+        // を呼んで duplicate-name で fail するので、id を直接 onSelect に渡す。
+        onSelect(tag.id, tag.name);
       },
     });
-  }, [closeSelf, openTagCreateModal, onCreateAndSelect]);
+  }, [closeSelf, openTagCreateModal, onSelect]);
 
   const isTagZero = sortedTags.length === 0;
 
