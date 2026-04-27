@@ -5,9 +5,10 @@ import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 
-import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { CollisionDetection, DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCorners,
   pointerWithin,
@@ -17,7 +18,7 @@ import {
 } from '@dnd-kit/core';
 import type { SortingStrategy } from '@dnd-kit/sortable';
 import { SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { CSS, getEventCoordinates } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { Tag, TagTreeNode } from '@/features/tags';
@@ -33,6 +34,7 @@ import {
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
+import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -46,6 +48,18 @@ const ROOT = '__root__';
 
 // drag 中に他 item を動かさず、drop indicator 線だけで挿入位置を示す
 const noopSortingStrategy: SortingStrategy = () => null;
+
+// chip の中心をカーソルに吸い付ける（行頭固定だと chip が左に寄る）
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (!activatorEvent || !draggingNodeRect) return transform;
+  const coords = getEventCoordinates(activatorEvent);
+  if (!coords) return transform;
+  return {
+    ...transform,
+    x: transform.x + coords.x - draggingNodeRect.left - draggingNodeRect.width / 2,
+    y: transform.y + coords.y - draggingNodeRect.top - draggingNodeRect.height / 2,
+  };
+};
 
 function childContainerId(parentId: string) {
   return `children:${parentId}`;
@@ -375,6 +389,19 @@ export function TagFlatList({
           ))}
         </DroppableArea>
       </SortableContext>
+
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
+        {activeTreeTag ? (
+          <div className="bg-card text-foreground border-border-subtle shadow-card inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-sm">
+            <TagIcon
+              icon={activeTreeTag.tag.icon}
+              color={resolveTagColor(activeTreeTag.tag.color)}
+              size="sm"
+            />
+            <span className="truncate">{activeTreeTag.tag.name}</span>
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -538,10 +565,12 @@ function SortableParentBlock({
   // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
   const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
+  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
+  // （EntryCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
-        transform: CSS.Translate.toString(transform),
+        transform: isDragging ? undefined : CSS.Translate.toString(transform),
         transition,
       };
 
@@ -724,10 +753,12 @@ function SortableTagItem({
   } | null>(null);
 
   const isPopoverOpen = openPopoverTagId === tag.id;
+  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
+  // （EntryCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
-        transform: CSS.Translate.toString(transform),
+        transform: isDragging ? undefined : CSS.Translate.toString(transform),
         transition,
       };
 
@@ -778,13 +809,10 @@ function SortableTagItem({
           {...attributes}
           {...listeners}
         >
-          {dropLineEdge ? (
+          {showDropLine ? (
             <div
               aria-hidden
-              className={cn(
-                'bg-primary pointer-events-none absolute inset-x-0 z-10',
-                dropLineEdge === 'top' ? 'top-0' : 'bottom-0',
-              )}
+              className="bg-primary pointer-events-none absolute inset-x-0 top-0 z-10"
               style={{ height: 'var(--border-indicator)' }}
             />
           ) : null}

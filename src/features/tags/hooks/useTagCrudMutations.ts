@@ -14,6 +14,7 @@ import {
 } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/lib/trpc/client';
 
+import { buildTagTree, flattenTagTree } from '../lib/tag-tree';
 import type { Tag } from '../types';
 
 // 新しい入力型（tRPC形式）
@@ -450,32 +451,36 @@ export function useReorderTags() {
 
   return trpc.tags.reorder.useMutation({
     onMutate: async ({ updates }) => {
-      await utils.tags.list.cancel();
+      await Promise.all([utils.tags.list.cancel(), utils.tags.listHierarchy.cancel()]);
 
-      const previousData = utils.tags.list.getData();
+      const previousList = utils.tags.list.getData();
+      const previousHierarchy = utils.tags.listHierarchy.getData();
+
+      const applyUpdate = (tag: Tag): Tag => {
+        const update = updates.find((u) => u.id === tag.id);
+        if (!update) return tag;
+        return { ...tag, parent_id: update.parent_id, sort_order: update.sort_order };
+      };
 
       utils.tags.list.setData(undefined, (oldData) => {
         if (!oldData) return oldData;
-
-        const newData = oldData.data.map((tag) => {
-          const update = updates.find((u) => u.id === tag.id);
-          if (update) {
-            return {
-              ...tag,
-              parent_id: update.parent_id,
-              sort_order: update.sort_order,
-            };
-          }
-          return tag;
-        });
-
-        return { ...oldData, data: newData };
+        return { ...oldData, data: oldData.data.map(applyUpdate) };
       });
 
-      return { previousData };
+      // listHierarchy も楽観更新しないと、onSettled の invalidate → refetch で
+      // 一瞬だけ古い順序が描画され reload のようなチラつきになる
+      utils.tags.listHierarchy.setData(undefined, (oldData) => {
+        if (!oldData) return oldData;
+        const flat = flattenTagTree(oldData).map(applyUpdate);
+        return buildTagTree(flat);
+      });
+
+      return { previousList, previousHierarchy };
     },
     onError: (_err, _variables, context) => {
-      if (context?.previousData) utils.tags.list.setData(undefined, context.previousData);
+      if (context?.previousList) utils.tags.list.setData(undefined, context.previousList);
+      if (context?.previousHierarchy)
+        utils.tags.listHierarchy.setData(undefined, context.previousHierarchy);
       toast.error(t('errors.updateFailed'));
     },
     onSettled: () => {
