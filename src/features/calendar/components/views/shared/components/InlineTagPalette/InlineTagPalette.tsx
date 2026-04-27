@@ -144,19 +144,25 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [pendingSelection, isCreating, createTagMutation, handleCreate, t],
   );
 
-  // TagQuickSelector が「+」押下で modal に遷移する間、自身を閉じてしまう。
-  // close = ユーザー dismiss と扱うと pendingSelection が消えて modal 完了後の
-  // entry 作成ができないため、modal が開いたかを microtask 後に判定する。
-  const waitingForModalRef = useRef(false);
+  // selector の open は pendingSelection と分離する。
+  // 「+」で modal に遷移する時は selector を閉じつつ pendingSelection を保持する必要がある
+  // (open={!!pendingSelection} だと selector が閉じず modal と nest してしまう)。
+  const [waitingForModal, setWaitingForModal] = useState(false);
   const activeSheetType = useShellStore((s) => s.activeSheet?.type ?? null);
+  const isTagCreateModalOpen = activeSheetType === 'tagCreate';
+
+  // 派生 state: pending あり && modal が前にも後にもいない時だけ open
+  const selectorOpen = !!pendingSelection && !isTagCreateModalOpen && !waitingForModal;
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (open) return;
       queueMicrotask(() => {
         if (useShellStore.getState().activeSheet?.type === 'tagCreate') {
-          waitingForModalRef.current = true;
+          // modal 遷移中: pendingSelection を保持し、selector を非表示にする flag を立てる
+          setWaitingForModal(true);
         } else {
+          // 通常 dismiss: pendingSelection を解放
           clearPendingSelection();
         }
       });
@@ -166,12 +172,14 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   // modal を待っていた状態で modal が閉じたら（成功/cancel どちらでも）pending を確定処理。
   // 成功時は handleCreate が先に clearPendingSelection を呼ぶので、ここは実質 cancel 用。
+  // 外部 store (Zustand activeSheet) の変化に追随する subscribe 相当の useEffect。
   useEffect(() => {
-    if (!waitingForModalRef.current) return;
-    if (activeSheetType === 'tagCreate') return;
-    waitingForModalRef.current = false;
+    if (!waitingForModal) return;
+    if (isTagCreateModalOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync cleanup
+    setWaitingForModal(false);
     clearPendingSelection();
-  }, [activeSheetType, clearPendingSelection]);
+  }, [waitingForModal, isTagCreateModalOpen, clearPendingSelection]);
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
@@ -257,7 +265,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
       {/* タグ選択パネル */}
       <TagQuickSelector
-        open={!!pendingSelection}
+        open={selectorOpen}
         onOpenChange={handleOpenChange}
         onSelect={handleCreate}
         onCreateAndSelect={handleCreateAndSelect}
