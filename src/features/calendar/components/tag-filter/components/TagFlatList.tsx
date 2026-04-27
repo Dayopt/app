@@ -23,10 +23,8 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
-  CreateTagPopover,
   TagIcon,
   buildTagHierarchyUpdates,
-  useCreateTag,
   useMergeTag,
   useReorderTags,
   useUpdateTag,
@@ -378,8 +376,7 @@ function SortableParentBlock({
   const locale = useLocale();
   const router = useRouter();
   const updateTagMutation = useUpdateTag();
-  const createTagMutation = useCreateTag();
-  const { openTagRenameModal } = useTagModalNavigation();
+  const { openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
   const {
     attributes,
     listeners,
@@ -398,8 +395,6 @@ function SortableParentBlock({
     tagId: node.tag.id,
     initialColor: node.tag.color ?? undefined,
   });
-
-  const [isCreatingChild, setIsCreatingChild] = useState(false);
 
   const groupTagIds = useMemo(
     () => [node.tag.id, ...node.children.map((child) => child.id)],
@@ -457,7 +452,7 @@ function SortableParentBlock({
             }}
             onIconChange={(icon) => updateTagMutation.mutate({ id: node.tag.id, icon })}
             currentIcon={headerIcon}
-            onAddTagToGroup={() => setIsCreatingChild(true)}
+            onAddTagToGroup={() => openTagCreateModal({ initialParentId: node.tag.id })}
             onRenameGroup={() =>
               openTagRenameModal({
                 id: node.tag.id,
@@ -485,22 +480,6 @@ function SortableParentBlock({
               isMobile={isMobile}
             />
           ) : null}
-
-          <CreateTagPopover
-            open={isCreatingChild}
-            onOpenChange={setIsCreatingChild}
-            initialParentId={node.tag.id}
-            existingTags={allTags}
-            onSubmit={async (input) => {
-              await createTagMutation.mutateAsync({
-                name: input.name,
-                color: input.color,
-                parentId: input.parentId,
-                ...(input.icon ? { icon: input.icon } : {}),
-              });
-              setIsCreatingChild(false);
-            }}
-          />
         </div>
       </div>
 

@@ -10,8 +10,6 @@ export {
   // Modals & Dialogs
   TagDeleteStrategyDialog,
 } from './components';
-export { CreateTagPopover } from './components/CreateTagPopover';
-export type { CreateTagPopoverSubmitInput } from './components/CreateTagPopover';
 export { IconPickerDropdownItems } from './components/IconPicker';
 export { TagIcon } from './components/TagIcon';
 export { TagQuickSelector } from './components/TagQuickSelector';
