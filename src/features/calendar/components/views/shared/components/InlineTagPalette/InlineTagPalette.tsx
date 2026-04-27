@@ -8,7 +8,7 @@
  * TagQuickSelector（Drawer/Dialog）でタグ選択 → エントリ作成。
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { format, isSameDay } from 'date-fns';
@@ -22,6 +22,7 @@ import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { formatTimeString } from '../../../../../interaction/time-math';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
@@ -143,14 +144,48 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [pendingSelection, isCreating, createTagMutation, handleCreate, t],
   );
 
+  // selector の open は pendingSelection と分離する。
+  // 「+」で modal に遷移する時は selector を閉じつつ pendingSelection を保持する必要がある
+  // (open={!!pendingSelection} だと selector が閉じず modal と nest してしまう)。
+  const [waitingForModal, setWaitingForModal] = useState(false);
+  const activeSheetType = useShellStore((s) => s.activeSheet?.type ?? null);
+  const isTagCreateModalOpen = activeSheetType === 'tagCreate';
+
+  // 派生 state: pending あり && modal が前にも後にもいない時だけ open
+  const selectorOpen = !!pendingSelection && !isTagCreateModalOpen && !waitingForModal;
+
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open) {
-        clearPendingSelection();
-      }
+      if (open) return;
+      queueMicrotask(() => {
+        if (useShellStore.getState().activeSheet?.type === 'tagCreate') {
+          // modal 遷移中: pendingSelection を保持し、selector を非表示にする flag を立てる
+          setWaitingForModal(true);
+        } else {
+          // 通常 dismiss: pendingSelection を解放
+          clearPendingSelection();
+        }
+      });
     },
     [clearPendingSelection],
   );
+
+  // modal close 検知: activeSheet が tagCreate から離れたら waitingForModal を解除する。
+  // 外部 store (Zustand) の変化に追随する subscribe 相当のため setState を許可する。
+  useEffect(() => {
+    if (!waitingForModal) return;
+    if (isTagCreateModalOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync
+    setWaitingForModal(false);
+  }, [waitingForModal, isTagCreateModalOpen]);
+
+  // pending を modal-pending 状態で抱えている間、unmount または waitingForModal の解除で
+  // 必ず pending を解放する (calendar 離脱で stale selection が残らないように)。
+  // 成功 path は handleCreate が先に clearPendingSelection を呼ぶため idempotent。
+  useEffect(() => {
+    if (!waitingForModal) return;
+    return () => clearPendingSelection();
+  }, [waitingForModal, clearPendingSelection]);
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
@@ -236,7 +271,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
       {/* タグ選択パネル */}
       <TagQuickSelector
-        open={!!pendingSelection}
+        open={selectorOpen}
         onOpenChange={handleOpenChange}
         onSelect={handleCreate}
         onCreateAndSelect={handleCreateAndSelect}

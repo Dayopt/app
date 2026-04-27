@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CreateTagPopover, type CreateTagPopoverProps } from '../CreateTagPopover';
 
@@ -65,6 +65,13 @@ function renderPopover(
 describe('CreateTagPopover', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    // radix-ui FocusScope が schedule する pending timer を破棄してから real timer に戻す。
+    // 残ると Vitest 終了時に dispatchEvent が stale element に発火して unhandled error になる。
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it('有効なタグ名で Enter 送信 → onSubmit が呼ばれる', async () => {
