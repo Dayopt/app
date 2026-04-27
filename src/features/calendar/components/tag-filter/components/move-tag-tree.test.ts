@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import type { Tag, TagTreeNode } from '@/features/tags';
 
-import { ROOT, canBecomeChild, childContainerId, findTreeTag, moveTagTree } from './move-tag-tree';
+import {
+  END_OF_ROOT,
+  ROOT,
+  canBecomeChild,
+  childContainerId,
+  findTreeTag,
+  moveTagTree,
+} from './move-tag-tree';
 
 function makeTag(overrides: Partial<Tag> & { id: string }): Tag {
   return {
@@ -83,6 +90,32 @@ describe('moveTagTree — root reorder', () => {
     const next = moveTagTree(nodes, 'r1', ROOT);
     expect(next).not.toBeNull();
     expect(snapshot(next!).map((s) => s.id)).toEqual(['r2', 'r3', 'r1']);
+  });
+
+  it('END_OF_ROOT zone に drop すると ROOT 末尾に挿入される', () => {
+    const nodes = [makeNode('r1', ['c1', 'c2']), makeNode('r2'), makeNode('r3')];
+    // expanded parent r1 を end zone に drop
+    const next = moveTagTree(nodes, 'r1', END_OF_ROOT);
+    expect(next).not.toBeNull();
+    expect(snapshot(next!)).toEqual([
+      { id: 'r2', parent: null },
+      { id: 'r3', parent: null },
+      { id: 'r1', parent: null },
+      { id: 'c1', parent: 'r1' },
+      { id: 'c2', parent: 'r1' },
+    ]);
+  });
+
+  it('child を END_OF_ROOT に drop すると root 末尾に昇格する', () => {
+    const nodes = [makeNode('r1', ['c1', 'c2']), makeNode('r2')];
+    const next = moveTagTree(nodes, 'c1', END_OF_ROOT);
+    expect(next).not.toBeNull();
+    expect(snapshot(next!)).toEqual([
+      { id: 'r1', parent: null },
+      { id: 'c2', parent: 'r1' },
+      { id: 'r2', parent: null },
+      { id: 'c1', parent: null },
+    ]);
   });
 
   it('root reorder 後も children は保持される', () => {

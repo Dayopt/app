@@ -1,6 +1,9 @@
 import type { Tag, TagTreeNode } from '@/features/tags';
 
 export const ROOT = '__root__';
+// 最終アイテムの下に置く明示的 drop zone。ROOT bbox は items 合計に一致するため、
+// この zone がないと cursor が「末尾より下」に届かず、root tag を末尾に置けない
+export const END_OF_ROOT = '__root_end__';
 
 export function childContainerId(parentId: string): string {
   return `children:${parentId}`;
@@ -62,7 +65,7 @@ export function findTreeTag(nodes: TagTreeNode[], tagId: string): TreeTag | null
 }
 
 function findContainer(nodes: TagTreeNode[], id: string): string | null {
-  if (id === ROOT) return ROOT;
+  if (id === ROOT || id === END_OF_ROOT) return ROOT;
   if (id.startsWith('children:')) return id;
   if (findRootIndex(nodes, id) >= 0) return ROOT;
 
@@ -121,8 +124,9 @@ export function moveTagTree(
   }
 
   if (destinationContainer === ROOT) {
-    const overRootIndex = overId === ROOT ? -1 : findRootIndex(nextNodes, overId);
-    const rawIndex = overId === ROOT || overRootIndex < 0 ? nextNodes.length : overRootIndex;
+    const isRootContainer = overId === ROOT || overId === END_OF_ROOT;
+    const overRootIndex = isRootContainer ? -1 : findRootIndex(nextNodes, overId);
+    const rawIndex = isRootContainer || overRootIndex < 0 ? nextNodes.length : overRootIndex;
     const safeIndex = Math.max(0, Math.min(rawIndex, nextNodes.length));
 
     if (movingRoot) {

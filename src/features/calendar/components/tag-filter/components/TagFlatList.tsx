@@ -42,6 +42,7 @@ import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 import {
+  END_OF_ROOT,
   ROOT,
   type TreeTag,
   canBecomeChild,
@@ -243,6 +244,9 @@ export function TagFlatList({
               onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
             />
           ))}
+          {/* drag 中のみ末尾 drop zone を出現させる。常時表示すると静止時に
+              余白が広がって見えるため、active 時のみで十分 */}
+          {activeId ? <EndOfRootDropZone /> : null}
         </DroppableArea>
       </SortableContext>
 
@@ -790,6 +794,22 @@ function DroppableArea({
         <div
           aria-hidden
           className="bg-primary pointer-events-none absolute inset-x-0 bottom-0 z-10"
+          style={{ height: 'var(--border-indicator)' }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+// 末尾 drop zone。ROOT bbox が items 合計と一致するため、これがないと「最後のアイテムより下」
+// に cursor を置けず、root tag を末尾に並べ替えられない
+function EndOfRootDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: END_OF_ROOT });
+  return (
+    <div ref={setNodeRef} className="relative h-3" aria-hidden>
+      {isOver ? (
+        <div
+          className="bg-primary pointer-events-none absolute inset-x-0 top-1 z-10"
           style={{ height: 'var(--border-indicator)' }}
         />
       ) : null}
