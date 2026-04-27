@@ -4,6 +4,7 @@
 
 'use client';
 
+import { formatInTimeZone } from 'date-fns-tz';
 import { Plus } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import React, { memo, useMemo } from 'react';
@@ -128,10 +129,13 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               onClick={(e) => {
                 e.stopPropagation();
                 if (onTimeClick) {
-                  // 「今日」判定はユーザー TZ に揃える（OS TZ と calendar TZ がズレる場合の崩れを防ぐ）
+                  // 「今日」判定 / 現在時 hour の両方をユーザー TZ で評価する。
+                  // `now.getHours()` は OS TZ ベースなので、calendar TZ と乖離していると
+                  // 「今日の今の時刻」を意図したつもりが UTC 深夜などで埋まり得る。
                   const now = new Date();
                   const isDateToday = isTodayInTimezone(date, timezone, now);
-                  const hour = isDateToday ? Math.max(now.getHours(), 9) : 9;
+                  const tzHour = Number(formatInTimeZone(now, timezone, 'H'));
+                  const hour = isDateToday ? Math.max(tzHour, 9) : 9;
                   onTimeClick(date, hour, 0);
                 }
               }}
