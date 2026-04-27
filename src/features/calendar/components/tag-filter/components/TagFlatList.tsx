@@ -5,7 +5,7 @@ import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 
-import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { CollisionDetection, DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core';
 import {
   DndContext,
   DragOverlay,
@@ -16,16 +16,15 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import type { SortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable } from '@dnd-kit/sortable';
+import { CSS, getEventCoordinates } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
 import type { Tag, TagTreeNode } from '@/features/tags';
 import {
-  CreateTagPopover,
   TagIcon,
   buildTagHierarchyUpdates,
-  useCreateTag,
   useMergeTag,
   useReorderTags,
   useUpdateTag,
@@ -42,166 +41,40 @@ import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
+import {
+  END_OF_ROOT,
+  ROOT,
+  type TreeTag,
+  canBecomeChild,
+  childContainerId,
+  findTreeTag,
+  moveTagTree,
+} from './move-tag-tree';
 
-const ROOT = '__root__';
+// drag 中に他 item を動かさず、drop indicator 線だけで挿入位置を示す
+const noopSortingStrategy: SortingStrategy = () => null;
 
-function childContainerId(parentId: string) {
-  return `children:${parentId}`;
-}
-
-type TreeTag =
-  | {
-      kind: 'root';
-      tag: Tag;
-      children: Tag[];
-    }
-  | {
-      kind: 'child';
-      tag: Tag;
-      parentId: string;
-    };
-
-function cloneNodes(nodes: TagTreeNode[]): TagTreeNode[] {
-  return nodes.map((node) => ({
-    tag: { ...node.tag },
-    children: node.children.map((child) => ({ ...child })),
-  }));
-}
-
-function findRootIndex(nodes: TagTreeNode[], tagId: string): number {
-  return nodes.findIndex((node) => node.tag.id === tagId);
-}
-
-function findChildLocation(
-  nodes: TagTreeNode[],
-  tagId: string,
-): { rootIndex: number; childIndex: number } | null {
-  for (let rootIndex = 0; rootIndex < nodes.length; rootIndex += 1) {
-    const childIndex = nodes[rootIndex]?.children.findIndex((child) => child.id === tagId) ?? -1;
-    if (childIndex >= 0) {
-      return { rootIndex, childIndex };
-    }
-  }
-  return null;
-}
-
-function findTreeTag(nodes: TagTreeNode[], tagId: string): TreeTag | null {
-  const rootIndex = findRootIndex(nodes, tagId);
-  if (rootIndex >= 0) {
-    const root = nodes[rootIndex]!;
-    return { kind: 'root', tag: root.tag, children: root.children };
-  }
-
-  const childLocation = findChildLocation(nodes, tagId);
-  if (!childLocation) return null;
-
-  const parent = nodes[childLocation.rootIndex]!;
-  const child = parent.children[childLocation.childIndex]!;
+// chip の中心をカーソルに吸い付ける（行頭固定だと chip が左に寄る）
+const snapCenterToCursor: Modifier = ({ activatorEvent, draggingNodeRect, transform }) => {
+  if (!activatorEvent || !draggingNodeRect) return transform;
+  const coords = getEventCoordinates(activatorEvent);
+  if (!coords) return transform;
   return {
-    kind: 'child',
-    tag: child,
-    parentId: parent.tag.id,
+    ...transform,
+    x: transform.x + coords.x - draggingNodeRect.left - draggingNodeRect.width / 2,
+    y: transform.y + coords.y - draggingNodeRect.top - draggingNodeRect.height / 2,
   };
-}
-
-function findContainer(nodes: TagTreeNode[], id: string): string | null {
-  if (id === ROOT) return ROOT;
-  if (id.startsWith('children:')) return id;
-  if (findRootIndex(nodes, id) >= 0) return ROOT;
-
-  const childLocation = findChildLocation(nodes, id);
-  return childLocation ? childContainerId(nodes[childLocation.rootIndex]!.tag.id) : null;
-}
-
-function canBecomeChild(treeTag: TreeTag): boolean {
-  return treeTag.kind === 'child' || treeTag.children.length === 0;
-}
-
-function insertAt<T>(items: T[], index: number, item: T): T[] {
-  return [...items.slice(0, index), item, ...items.slice(index)];
-}
-
-function moveTagTree(nodes: TagTreeNode[], activeId: string, overId: string): TagTreeNode[] | null {
-  const active = findTreeTag(nodes, activeId);
-  if (!active) return null;
-
-  const destinationContainer = findContainer(nodes, overId);
-  if (!destinationContainer) return null;
-
-  const nextNodes = cloneNodes(nodes);
-  const rootIndex = findRootIndex(nextNodes, activeId);
-  const childLocation = findChildLocation(nextNodes, activeId);
-
-  let movingRoot: TagTreeNode | null = null;
-  let movingChild: Tag | null = null;
-
-  if (rootIndex >= 0) {
-    movingRoot = nextNodes[rootIndex]!;
-    nextNodes.splice(rootIndex, 1);
-  } else if (childLocation) {
-    movingChild = nextNodes[childLocation.rootIndex]!.children[childLocation.childIndex]!;
-    nextNodes[childLocation.rootIndex]!.children.splice(childLocation.childIndex, 1);
-  } else {
-    return null;
-  }
-
-  if (destinationContainer === ROOT) {
-    const rawIndex =
-      overId === ROOT
-        ? nextNodes.length
-        : findRootIndex(nextNodes, overId) >= 0
-          ? findRootIndex(nextNodes, overId)
-          : nextNodes.length;
-
-    if (movingRoot) {
-      nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, movingRoot);
-      return nextNodes;
-    }
-
-    if (!movingChild) return null;
-    nextNodes.splice(Math.max(0, Math.min(rawIndex, nextNodes.length)), 0, {
-      tag: { ...movingChild, parent_id: null },
-      children: [],
-    });
-    return nextNodes;
-  }
-
-  const targetParentId = destinationContainer.replace(/^children:/, '');
-  if (activeId === targetParentId) return null;
-
-  const targetRootIndex = findRootIndex(nextNodes, targetParentId);
-  if (targetRootIndex < 0) return null;
-
-  if (movingRoot && movingRoot.children.length > 0) {
-    return null;
-  }
-
-  const targetNode = nextNodes[targetRootIndex]!;
-  const baseChildren = targetNode.children.slice();
-  const rawIndex =
-    overId === destinationContainer
-      ? baseChildren.length
-      : baseChildren.findIndex((child) => child.id === overId);
-  const insertIndex = rawIndex >= 0 ? rawIndex : baseChildren.length;
-
-  if (movingRoot) {
-    targetNode.children = insertAt(baseChildren, insertIndex, {
-      ...movingRoot.tag,
-      parent_id: targetParentId,
-    });
-    return nextNodes;
-  }
-
-  if (!movingChild) return null;
-  targetNode.children = insertAt(baseChildren, insertIndex, {
-    ...movingChild,
-    parent_id: targetParentId,
-  });
-  return nextNodes;
-}
+};
 
 const preferSmallestCollision: CollisionDetection = (args) => {
-  const pointerCollisions = pointerWithin(args);
+  // active 自身の children container は drop 先にできない（self-parent 防止）。
+  // expanded parent をドラッグした際、自身の子コンテナが cursor を遮って
+  // ROOT 末尾に落とせない問題を防ぐため collision 段階で除外する。
+  const activeId = args.active?.id;
+  const ownChildContainerId = typeof activeId === 'string' ? childContainerId(activeId) : null;
+  const exclude = (id: unknown) => ownChildContainerId !== null && id === ownChildContainerId;
+
+  const pointerCollisions = pointerWithin(args).filter((c) => !exclude(c.id));
   if (pointerCollisions.length > 0) {
     return [...pointerCollisions].sort((a, b) => {
       const aRect = args.droppableRects.get(a.id);
@@ -211,7 +84,7 @@ const preferSmallestCollision: CollisionDetection = (args) => {
     });
   }
 
-  return closestCorners(args);
+  return closestCorners(args).filter((c) => !exclude(c.id));
 };
 
 interface TagFlatListProps {
@@ -347,7 +220,7 @@ export function TagFlatList({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
+      <SortableContext items={rootIds} strategy={noopSortingStrategy}>
         <DroppableArea id={ROOT} role="list" className="space-y-1 rounded-xl">
           {displayedNodes.map((node) => (
             <TagTreeItem
@@ -371,17 +244,22 @@ export function TagFlatList({
               onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
             />
           ))}
+          {/* drag 中のみ末尾 drop zone を出現させる。常時表示すると静止時に
+              余白が広がって見えるため、active 時のみで十分 */}
+          {activeId ? <EndOfRootDropZone /> : null}
         </DroppableArea>
       </SortableContext>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {activeTreeTag ? (
-          <TagOverlayCard
-            treeTag={activeTreeTag}
-            showChildren={
-              activeTreeTag.kind === 'root' && !collapsedGroups.has(activeTreeTag.tag.id)
-            }
-          />
+          <div className="bg-card text-foreground border-border-subtle shadow-card inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-sm">
+            <TagIcon
+              icon={activeTreeTag.tag.icon}
+              color={resolveTagColor(activeTreeTag.tag.color)}
+              size="sm"
+            />
+            <span className="truncate">{activeTreeTag.tag.name}</span>
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>
@@ -509,9 +387,18 @@ function SortableParentBlock({
   const locale = useLocale();
   const router = useRouter();
   const updateTagMutation = useUpdateTag();
-  const createTagMutation = useCreateTag();
-  const { openTagRenameModal } = useTagModalNavigation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { openTagRenameModal, openTagCreateModal } = useTagModalNavigation();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    index,
+    activeIndex,
+    overIndex,
+  } = useSortable({
     id: node.tag.id,
     disabled: isMobile,
   });
@@ -519,8 +406,6 @@ function SortableParentBlock({
     tagId: node.tag.id,
     initialColor: node.tag.color ?? undefined,
   });
-
-  const [isCreatingChild, setIsCreatingChild] = useState(false);
 
   const groupTagIds = useMemo(
     () => [node.tag.id, ...node.children.map((child) => child.id)],
@@ -534,20 +419,32 @@ function SortableParentBlock({
   // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
   const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
 
+  // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
+  const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
+
+  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
+  // （EntryCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
-        transform: CSS.Translate.toString(transform),
+        transform: isDragging ? undefined : CSS.Translate.toString(transform),
         transition,
       };
 
   return (
     <div
       style={style}
-      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-30')}
       role="listitem"
     >
       <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
+        {showDropLine ? (
+          <div
+            aria-hidden
+            className="bg-primary pointer-events-none absolute inset-x-0 top-0 z-10"
+            style={{ height: 'var(--border-indicator)' }}
+          />
+        ) : null}
         <div>
           <GroupHeader
             label={node.tag.name}
@@ -566,7 +463,7 @@ function SortableParentBlock({
             }}
             onIconChange={(icon) => updateTagMutation.mutate({ id: node.tag.id, icon })}
             currentIcon={headerIcon}
-            onAddTagToGroup={() => setIsCreatingChild(true)}
+            onAddTagToGroup={() => openTagCreateModal({ initialParentId: node.tag.id })}
             onRenameGroup={() =>
               openTagRenameModal({
                 id: node.tag.id,
@@ -594,29 +491,13 @@ function SortableParentBlock({
               isMobile={isMobile}
             />
           ) : null}
-
-          <CreateTagPopover
-            open={isCreatingChild}
-            onOpenChange={setIsCreatingChild}
-            initialParentId={node.tag.id}
-            existingTags={allTags}
-            onSubmit={async (input) => {
-              await createTagMutation.mutateAsync({
-                name: input.name,
-                color: input.color,
-                parentId: input.parentId,
-                ...(input.icon ? { icon: input.icon } : {}),
-              });
-              setIsCreatingChild(false);
-            }}
-          />
         </div>
       </div>
 
       {shouldShowChildContainer ? (
         <SortableContext
           items={node.children.map((child) => child.id)}
-          strategy={verticalListSortingStrategy}
+          strategy={noopSortingStrategy}
         >
           <DroppableArea
             id={childContainerId(node.tag.id)}
@@ -684,7 +565,17 @@ function SortableTagItem({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    index,
+    activeIndex,
+    overIndex,
+  } = useSortable({
     id: tag.id,
     disabled: isMobile,
   });
@@ -703,12 +594,17 @@ function SortableTagItem({
   } | null>(null);
 
   const isPopoverOpen = openPopoverTagId === tag.id;
+  // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
+  // （EntryCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
     ? undefined
     : {
-        transform: CSS.Translate.toString(transform),
+        transform: isDragging ? undefined : CSS.Translate.toString(transform),
         transition,
       };
+
+  // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
+  const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
   const handleChangeParent = useCallback(
     (newParentId: string | null) => {
@@ -750,10 +646,17 @@ function SortableTagItem({
         <div
           ref={setNodeRef}
           style={style}
-          className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+          className={cn('relative', !isMobile && isDragging && 'pointer-events-none opacity-30')}
           {...attributes}
           {...listeners}
         >
+          {showDropLine ? (
+            <div
+              aria-hidden
+              className="bg-primary pointer-events-none absolute inset-x-0 top-0 z-10"
+              style={{ height: 'var(--border-indicator)' }}
+            />
+          ) : null}
           <div
             className={cn(
               'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
@@ -881,34 +784,34 @@ function DroppableArea({
   children?: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  // ROOT は list 全体の bbox。cursor が item 間の gap に入るたび isOver になり line が画面下端に飛ぶため抑制
+  const showContainerLine = isOver && id !== ROOT;
 
   return (
-    <div ref={setNodeRef} role={role} className={cn(className, isOver && 'border-primary/40')}>
+    <div ref={setNodeRef} role={role} className={cn('relative', className)}>
       {children}
+      {showContainerLine ? (
+        <div
+          aria-hidden
+          className="bg-primary pointer-events-none absolute inset-x-0 bottom-0 z-10"
+          style={{ height: 'var(--border-indicator)' }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function TagOverlayCard({ treeTag, showChildren }: { treeTag: TreeTag; showChildren: boolean }) {
-  const { tag } = treeTag;
-  const color = resolveTagColor(tag.color);
-  const children = showChildren && treeTag.kind === 'root' ? treeTag.children : [];
-
+// 末尾 drop zone。ROOT bbox が items 合計と一致するため、これがないと「最後のアイテムより下」
+// に cursor を置けず、root tag を末尾に並べ替えられない
+function EndOfRootDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: END_OF_ROOT });
   return (
-    <div className="bg-card shadow-card cursor-grabbing rounded-lg border p-2 text-sm">
-      <div className="flex items-center gap-2">
-        <TagIcon icon={tag.icon} color={color} size="sm" />
-        <span className="truncate">{tag.name}</span>
-      </div>
-      {children.length > 0 ? (
-        <div className="mt-1 ml-4 space-y-1">
-          {children.map((child) => (
-            <div key={child.id} className="flex items-center gap-2">
-              <TagIcon icon={child.icon} color={resolveTagColor(child.color)} size="sm" />
-              <span className="truncate">{child.name}</span>
-            </div>
-          ))}
-        </div>
+    <div ref={setNodeRef} className="relative h-3" aria-hidden>
+      {isOver ? (
+        <div
+          className="bg-primary pointer-events-none absolute inset-x-0 top-1 z-10"
+          style={{ height: 'var(--border-indicator)' }}
+        />
       ) : null}
     </div>
   );

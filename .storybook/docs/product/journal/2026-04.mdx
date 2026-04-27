@@ -6,6 +6,39 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-27
+
+### v0.27.0 をリリースしつつ、Codex 自動レビューで露わになった既知バグ群を当日中に follow-up で潰し切った日
+
+9 commit (main)、9 PR merge (#1081–#1089)。午前は v0.26.0 から 12 日分・77 commits・26 PRs を集約した v0.27.0 リリース PR の作成 → admin merge → tag → 詳細リリースノート反映までを一気に通した。リリース PR の Codex 自動レビューが指摘した P1（TagQuickSelector の double-create）+ P2 x2 をいったん「v0.27.1 で対応」と Known Issues に記載したが、merge 直後にユーザーから「今対応する」の judgement で予定変更し、follow-up 2 PR (#1082 / #1083) を当日中に main に入れて Known Issues を実質ゼロにした。並行してユーザー側でタグドラッグの drop indicator 線実装、複数の回帰テスト追加、storybook decorator 共通化が進み、main は安定方向に大きく動いた。
+
+#### やったこと
+
+- **v0.27.0 release PR (#1081)**: 既存ローカル main が origin/main から 52 ahead / 9 behind の状態を `release/v0.27.0` ブランチで `-X ours` merge により統合、`package.json` を 0.26.0 → 0.27.0 に bump、TagFlatList の pre-existing TS6133（unused destructured props）を最小修正、admin override で squash merge → tag push → GitHub Actions による自動デプロイ + Release 作成 → 詳細リリースノートを `gh release edit` で反映
+- **Codex P1+P2 x2 follow-up (#1082)**: TagQuickSelector の `onCreated` を `onCreateAndSelect` から `onSelect(tag.id, tag.name)` に切り替え、tag-create-modal の duplicate check を `checkDuplicate(value)` 関数化して submit 時に live name で同期再検査、collapsed group への drop が ungroup と誤認される regression を `shouldShowChildContainer = !collapsed || (activeDragId && canDropChildHere)` で修正
+- **InlineTagPalette pendingSelection 保持 + Codex P1 + P2 (#1083)**: 「+」→ modal 遷移時に `pendingSelection` を保持する microtask 判定 + selector の open を派生 state に分離 + modal cancel/unmount 時の pending leak を cleanup useEffect で解放。`react-hooks/set-state-in-effect` rule との折り合いを 1 行 disable + 2 effect 構成で取り、CreateTagPopover.test.tsx の fake timer leak（vitest 終了時に radix FocusScope の dispatchEvent が unhandled error）を `afterEach` で `vi.clearAllTimers + useRealTimers` のペアで解消
+- **タグドラッグ drop indicator 線 (4 commit)**: grip icon を廃止し行全体を drag handle にした上で、cross-container drop を line 表示にして dashed border を撤去、drag 中は reflow を停止して line だけが挿入位置を示す形に変更、最後に line の位置ずれと DragOverlay 撤去で完成形に近づけた
+- **回帰テスト 4 PR (#1084–#1087)**: calendar の pure logic / interaction / cache hook / CRUD 橋渡し / route-utils / time-math、entry の new-entry-tracker / time-diff / entry-to-ical / useUpdateEntityTagsInCache / useEntryMutations、tags の tag-service / tag-tree util、statistics / tag-statistics router の createCaller ベース回帰テストを順次追加
+- **Storybook decorator 共通化 (#1088, #1089)**: width-only decorator を `withWrapper` factory に共通化、取り逃がし 3 箇所も round 2 で吸収
+
+#### なぜ今日この作業をしたか
+
+リリースは 12 日溜めるとレビュー対象が分厚くなる、というのが今日の主軸。実際 v0.27.0 は 77 commits / 26 PRs を内包しており、Codex 自動レビューがリリース PR でまとめて 3 件指摘した。これを「v0.27.1 で対応予定」と Known Issues に書いて先送りするか、当日 follow-up で潰し切るかは明確にトレードオフがあって、最初は前者を選択した。リリース blocker ではない（バグは既に main にいる）ので、リリース自体を止めるべきではないという判断。
+
+ユーザーの「今対応するでもいいかな？」で方針を変えたのは、3 件のうち P1 が「ユーザーが新規タグ作成すると duplicate-name エラー + 未選択」という user-facing severity の高さで、24h 以内のパッチが望ましいと判断したため。リリース直後 1 時間以内に当日中の follow-up に切り替え、Codex 指摘 → 修正 → 同 PR 内で再レビュー → P1 (selector が closable でない) + P2 (unmount で leak) を芋づる式に検出 → 都度修正、を 4 ラウンド回した。最終的に Known Issues セクションが空のまま v0.27.0 + #1082 + #1083 の 3 commit が main に揃った状態でクローズできた。
+
+並行して回帰テスト 4 PR (#1084–#1087) と decorator 共通化 2 PR (#1088, #1089) が main に入っており、これは「リリース直後の安定期に普段触りにくい test / storybook 周りを集中的に進める」という運用に近い。リリースが master ブランチをいじる集中タイミングなので、その前後で test 追加が捗るのは合理的。
+
+#### Claudeの所感
+
+**Codex 自動レビューは「リリース直前」と「リリース直後」の 2 回かけるのが効く**: 今日の運用では、リリース PR (#1081) で 3 件、follow-up PR (#1082) で 0 件、follow-up PR (#1083) で計 3 件（P1 + P2 + P2）が出た。前者は v0.27.0 期間中に蓄積した複数 PR の境界跨ぎバグ、後者は #1082 の修正で induce された secondary bug（pendingSelection を保持したことで selector が閉じなくなる、unmount で pending が leak する）。secondary bug は単独 PR レビューでは検出しづらく、修正パッチに対する再レビューでようやく浮上する。今日は 4 ラウンド回したことで「修正 → secondary bug 検出 → 修正 → tertiary なし」を確認できたが、これは Codex 側のコストが薄いから許される運用。手動レビューでは絶対に回せない。
+
+**「リリース blocker か否か」を Known Issues に切り出す権限は人間に残すべき**: 当初は P1 を Known Issues に記載してリリースを通したが、ユーザーの user-facing severity 判断で当日 follow-up に切り替わった。これは AI が独断で「P1 だから即修正」とすると、リリース cadence が崩れて溜まり続ける逆効果になる可能性があった。逆に「Known Issues として先送り」を AI が独断で選ぶと、user-facing バグが見逃される。**Codex の severity ラベル + AI が選択肢提示 + 人間が判断**の三層で動かすのが今日の知見。`releasing` skill の中で「Codex 指摘を Known Issues に入れる」「follow-up PR を当日中に出す」の選択肢提示プロンプトを明示的に組み込む価値がある。
+
+**ESLint の `react-hooks/set-state-in-effect` ルールは「外部 store sync」だけ眼を瞑る運用が現実解**: InlineTagPalette の cleanup でこのルールに 1 行 disable を入れざるを得なかった。理由は「Zustand activeSheet が tagCreate から離れた時に setWaitingForModal(false) する」のが「外部 store の transition に応じた internal state cleanup」で、ルールが想定する「props/state からの derived state を effect で setState」とは違うパターンだから。今後 useShellStore のような external store を subscribe する component が増えるなら、`useSyncExternalStore` の派生で type-safe に書き直す検討も視野に入る。当面は `// eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync cleanup` のコメント文言を統一して「同じ理由で disable している」が grep できる形にしておくと、ルール撤廃 / hook 統合のタイミングで一括対応できる。
+
+---
+
 ## 2026-04-26
 
 ### auto mode で knip ベースの barrel cleanup を Plan → Phase 2 → docs 整備まで一気通貫した日

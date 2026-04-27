@@ -277,6 +277,43 @@ describe('EntryService.delete', () => {
 });
 
 // ============================================================================
+// restore (Undo 用)
+// ============================================================================
+
+describe('EntryService.restore', () => {
+  it('restore_entry RPC を userId / entryId で呼び成功を返す', async () => {
+    const { service, mockSupabase } = createService();
+
+    mockSupabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await service.restore({ userId: USER_ID, entryId: 'entry-1' });
+
+    expect(result.success).toBe(true);
+    expect(mockSupabase.rpc).toHaveBeenCalledWith('restore_entry', {
+      p_entry_id: 'entry-1',
+      p_user_id: USER_ID,
+    });
+  });
+
+  it('restore 失敗時に RESTORE_FAILED を返す', async () => {
+    const { service, mockSupabase } = createService();
+
+    mockSupabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'restore failed', code: 'PGRST301' },
+    });
+
+    try {
+      await service.restore({ userId: USER_ID, entryId: 'entry-1' });
+      expect.unreachable('should have thrown');
+    } catch (e) {
+      expect(e).toBeInstanceOf(EntryServiceError);
+      expect((e as EntryServiceError).code).toBe('RESTORE_FAILED');
+    }
+  });
+});
+
+// ============================================================================
 // list (検索サニタイズ)
 // ============================================================================
 

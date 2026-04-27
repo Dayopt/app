@@ -9,7 +9,7 @@
  * - 任意で検索ボックス、新規作成 badge を末尾に表示
  *
  * 外枠（Drawer / Popover / Dialog）は呼び出し側が用意し、中身として差し込む。
- * 新規作成は `onCreate` コールバックで呼び出し側が `CreateTagPopover` 等を開く。
+ * 新規作成は `onCreate` コールバックで呼び出し側が `TagCreateModal` 等を開く。
  */
 
 import { useMemo, useState } from 'react';
