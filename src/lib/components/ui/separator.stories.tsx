@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { withWrapper } from '../../../../.storybook/decorators';
 import { Separator } from './separator';
 
 const meta = {
@@ -24,13 +25,7 @@ export const Vertical: Story = {
   args: {
     orientation: 'vertical',
   },
-  decorators: [
-    (Story) => (
-      <div className="flex h-8 items-center">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('flex h-8 items-center')],
 };
 
 /** 全パターン一覧。 */
