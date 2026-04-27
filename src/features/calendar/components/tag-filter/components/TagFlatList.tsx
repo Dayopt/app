@@ -16,7 +16,8 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { SortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -44,6 +45,9 @@ import { GroupHeader } from './GroupHeader';
 import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 
 const ROOT = '__root__';
+
+// drag 中に他 item を動かさず、drop indicator 線だけで挿入位置を示す
+const noopSortingStrategy: SortingStrategy = () => null;
 
 function childContainerId(parentId: string) {
   return `children:${parentId}`;
@@ -347,7 +351,7 @@ export function TagFlatList({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <SortableContext items={rootIds} strategy={verticalListSortingStrategy}>
+      <SortableContext items={rootIds} strategy={noopSortingStrategy}>
         <DroppableArea id={ROOT} role="list" className="space-y-1 rounded-xl">
           {displayedNodes.map((node) => (
             <TagTreeItem
@@ -649,7 +653,7 @@ function SortableParentBlock({
       {shouldShowChildContainer ? (
         <SortableContext
           items={node.children.map((child) => child.id)}
-          strategy={verticalListSortingStrategy}
+          strategy={noopSortingStrategy}
         >
           <DroppableArea
             id={childContainerId(node.tag.id)}
