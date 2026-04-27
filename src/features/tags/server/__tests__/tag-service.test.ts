@@ -419,6 +419,176 @@ describe('TagService', () => {
         expect((error as TagServiceError).code).toBe('SAME_TAG_MERGE');
       }
     });
+
+    it('should call merge_tags_with_hierarchy RPC and propagate migrated count', async () => {
+      const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
+      const targetTag = { id: 'tgt', name: 'Target', user_id: userId, parent_id: null };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 0,
+      });
+      mockSupabase.rpc.mockResolvedValueOnce({
+        data: { migrated: 5, children_reparented: 0 },
+        error: null,
+      });
+
+      const result = await service.merge({
+        userId,
+        sourceTagId: 'src',
+        targetTagId: 'tgt',
+      });
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('merge_tags_with_hierarchy', {
+        p_user_id: userId,
+        p_source_tag_id: 'src',
+        p_target_tag_id: 'tgt',
+      });
+      expect(result.success).toBe(true);
+      expect(result.mergedAssociations).toBe(5);
+      expect(result.targetTag).toMatchObject(targetTag);
+    });
+
+    it('should throw INVALID_INPUT when source has children and target is a child', async () => {
+      const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
+      // target.parent_id !== null = target は child タグ
+      const targetTag = { id: 'tgt', name: 'Target', user_id: userId, parent_id: 'other' };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 2, // source に children あり
+      });
+
+      await expect(
+        service.merge({ userId, sourceTagId: 'src', targetTagId: 'tgt' }),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+
+      // RPC は呼ばれない（早期 throw）
+      expect(mockSupabase.rpc).not.toHaveBeenCalled();
+    });
+
+    it('should throw MERGE_FAILED on RPC error', async () => {
+      const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
+      const targetTag = { id: 'tgt', name: 'Target', user_id: userId, parent_id: null };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 0,
+      });
+      mockSupabase.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { message: 'rpc failed' },
+      });
+
+      await expect(
+        service.merge({ userId, sourceTagId: 'src', targetTagId: 'tgt' }),
+      ).rejects.toMatchObject({ code: 'MERGE_FAILED' });
+    });
+
+    it('should default mergedAssociations to 0 when RPC returns null', async () => {
+      const sourceTag = { id: 'src', name: 'Source', user_id: userId, parent_id: null };
+      const targetTag = { id: 'tgt', name: 'Target', user_id: userId, parent_id: null };
+
+      setupMockMergeQueries(mockSupabase.from, {
+        sourceTag,
+        targetTag,
+        sourceChildrenCount: 0,
+      });
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await service.merge({
+        userId,
+        sourceTagId: 'src',
+        targetTagId: 'tgt',
+      });
+
+      expect(result.mergedAssociations).toBe(0);
+    });
+  });
+
+  describe('delete (with strategy)', () => {
+    const existingTag = { id: 'tag-1', name: 'To Delete', user_id: userId, parent_id: null };
+
+    it('should throw INVALID_INPUT when tag has entries and no strategy is given', async () => {
+      // 1: getById(tagId) → existingTag
+      // 2: select children → []
+      // 3: select entries count → 3
+      mockSupabase.from
+        .mockReturnValueOnce(mockSingleResponse(existingTag))
+        .mockReturnValueOnce(mockArrayResponse([]))
+        .mockReturnValueOnce(mockCountResponse(3));
+
+      await expect(service.delete({ userId, tagId: 'tag-1' })).rejects.toMatchObject({
+        code: 'INVALID_INPUT',
+      });
+    });
+
+    it('should throw INVALID_INPUT when reassign strategy lacks targetTagId', async () => {
+      mockSupabase.from
+        .mockReturnValueOnce(mockSingleResponse(existingTag))
+        .mockReturnValueOnce(mockArrayResponse([]));
+
+      await expect(
+        service.delete({ userId, tagId: 'tag-1', strategy: 'reassign' }),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    });
+
+    it('reassign strategy: should update entries.tag_id to targetTagId', async () => {
+      const targetTag = { id: 'tag-2', name: 'Target', user_id: userId, parent_id: null };
+
+      // 1: getById(tagId)
+      // 2: select children
+      // 3: getById(targetTagId)
+      // 4: update entries (set tag_id=targetTagId)
+      // 5: delete tags
+      const updateMock = createChainableMock(null);
+      const deleteMock = createChainableMock(null);
+
+      mockSupabase.from
+        .mockReturnValueOnce(mockSingleResponse(existingTag))
+        .mockReturnValueOnce(mockArrayResponse([]))
+        .mockReturnValueOnce(mockSingleResponse(targetTag))
+        .mockReturnValueOnce(updateMock)
+        .mockReturnValueOnce(deleteMock);
+
+      const result = await service.delete({
+        userId,
+        tagId: 'tag-1',
+        strategy: 'reassign',
+        targetTagId: 'tag-2',
+      });
+
+      expect(updateMock.update).toHaveBeenCalledWith({ tag_id: 'tag-2' });
+      expect(deleteMock.delete).toHaveBeenCalled();
+      expect(result).toMatchObject(existingTag);
+    });
+
+    it('delete_entries strategy: should delete entries before deleting the tag', async () => {
+      // 1: getById(tagId)
+      // 2: select children
+      // 3: delete entries
+      // 4: delete tag
+      const entriesDeleteMock = createChainableMock(null);
+      const tagDeleteMock = createChainableMock(null);
+
+      mockSupabase.from
+        .mockReturnValueOnce(mockSingleResponse(existingTag))
+        .mockReturnValueOnce(mockArrayResponse([]))
+        .mockReturnValueOnce(entriesDeleteMock)
+        .mockReturnValueOnce(tagDeleteMock);
+
+      await service.delete({
+        userId,
+        tagId: 'tag-1',
+        strategy: 'delete_entries',
+      });
+
+      expect(entriesDeleteMock.delete).toHaveBeenCalled();
+      expect(tagDeleteMock.delete).toHaveBeenCalled();
+    });
   });
 });
 
@@ -490,4 +660,47 @@ function setupMockDeleteQuery(mockFrom: ReturnType<typeof vi.fn>, existingData: 
 
     return mock;
   });
+}
+
+/** `await ...single()` 経由で 1 件返すモック */
+function mockSingleResponse(data: unknown) {
+  const mock = createChainableMock(data);
+  mock.single = vi.fn().mockResolvedValue({ data, error: null });
+  return mock;
+}
+
+/** await chain で配列を返すモック（select 結果の list） */
+function mockArrayResponse(data: unknown[]) {
+  const mock = createChainableMock(data);
+  mock.then = vi
+    .fn()
+    .mockImplementation((resolve: (v: unknown) => void) => resolve({ data, error: null }));
+  return mock;
+}
+
+/** `await ...select(.., { count, head: true })` で count を返すモック */
+function mockCountResponse(count: number) {
+  const mock = createChainableMock(null);
+  mock.then = vi
+    .fn()
+    .mockImplementation((resolve: (v: unknown) => void) => resolve({ count, error: null }));
+  return mock;
+}
+
+/** merge() 用: getById x2 + children-count 用の sequence をまとめてセット */
+function setupMockMergeQueries(
+  mockFrom: ReturnType<typeof vi.fn>,
+  options: {
+    sourceTag: unknown;
+    targetTag: unknown;
+    sourceChildrenCount: number;
+  },
+) {
+  // 1: getById(source)  → single
+  // 2: getById(target)  → single
+  // 3: select children count → count
+  mockFrom
+    .mockReturnValueOnce(mockSingleResponse(options.sourceTag))
+    .mockReturnValueOnce(mockSingleResponse(options.targetTag))
+    .mockReturnValueOnce(mockCountResponse(options.sourceChildrenCount));
 }
