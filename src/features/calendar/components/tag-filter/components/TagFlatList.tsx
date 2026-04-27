@@ -8,7 +8,6 @@ import { Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
   DndContext,
-  DragOverlay,
   PointerSensor,
   closestCorners,
   pointerWithin,
@@ -34,7 +33,6 @@ import {
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
@@ -377,19 +375,6 @@ export function TagFlatList({
           ))}
         </DroppableArea>
       </SortableContext>
-
-      <DragOverlay dropAnimation={null}>
-        {activeTreeTag ? (
-          <div className="bg-card/90 text-foreground inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm">
-            <TagIcon
-              icon={activeTreeTag.tag.icon}
-              color={resolveTagColor(activeTreeTag.tag.color)}
-              size="sm"
-            />
-            <span className="truncate">{activeTreeTag.tag.name}</span>
-          </div>
-        ) : null}
-      </DragOverlay>
     </DndContext>
   );
 }
@@ -550,16 +535,8 @@ function SortableParentBlock({
   // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
   const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
 
-  const isInternalDropHere = overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
-  const isForeignDropHere = overIndex === index && activeIndex < 0;
-  const showDropLine = !isMobile && (isInternalDropHere || isForeignDropHere);
-  const dropLineEdge: 'top' | 'bottom' | null = !showDropLine
-    ? null
-    : isForeignDropHere
-      ? 'top'
-      : activeIndex < overIndex
-        ? 'bottom'
-        : 'top';
+  // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
+  const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
   const style = isMobile
     ? undefined
@@ -571,17 +548,14 @@ function SortableParentBlock({
   return (
     <div
       style={style}
-      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+      className={cn(!isMobile && isDragging && 'pointer-events-none opacity-30')}
       role="listitem"
     >
       <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
-        {dropLineEdge ? (
+        {showDropLine ? (
           <div
             aria-hidden
-            className={cn(
-              'bg-primary pointer-events-none absolute inset-x-0 z-10',
-              dropLineEdge === 'top' ? 'top-0' : 'bottom-0',
-            )}
+            className="bg-primary pointer-events-none absolute inset-x-0 top-0 z-10"
             style={{ height: 'var(--border-indicator)' }}
           />
         ) : null}
@@ -757,16 +731,8 @@ function SortableTagItem({
         transition,
       };
 
-  const isInternalDropHere = overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
-  const isForeignDropHere = overIndex === index && activeIndex < 0;
-  const showDropLine = !isMobile && (isInternalDropHere || isForeignDropHere);
-  const dropLineEdge: 'top' | 'bottom' | null = !showDropLine
-    ? null
-    : isForeignDropHere
-      ? 'top'
-      : activeIndex < overIndex
-        ? 'bottom'
-        : 'top';
+  // moveTagTree は常に over item の直前に挿入するため、line は常に top edge
+  const showDropLine = !isMobile && overIndex === index && activeIndex !== overIndex;
 
   const handleChangeParent = useCallback(
     (newParentId: string | null) => {
@@ -808,7 +774,7 @@ function SortableTagItem({
         <div
           ref={setNodeRef}
           style={style}
-          className={cn('relative', !isMobile && isDragging && 'pointer-events-none opacity-0')}
+          className={cn('relative', !isMobile && isDragging && 'pointer-events-none opacity-30')}
           {...attributes}
           {...listeners}
         >
@@ -949,11 +915,13 @@ function DroppableArea({
   children?: ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  // ROOT は list 全体の bbox。cursor が item 間の gap に入るたび isOver になり line が画面下端に飛ぶため抑制
+  const showContainerLine = isOver && id !== ROOT;
 
   return (
     <div ref={setNodeRef} role={role} className={cn('relative', className)}>
       {children}
-      {isOver ? (
+      {showContainerLine ? (
         <div
           aria-hidden
           className="bg-primary pointer-events-none absolute inset-x-0 bottom-0 z-10"
