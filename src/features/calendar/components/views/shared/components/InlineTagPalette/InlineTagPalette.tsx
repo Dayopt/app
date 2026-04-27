@@ -170,16 +170,22 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [clearPendingSelection],
   );
 
-  // modal を待っていた状態で modal が閉じたら（成功/cancel どちらでも）pending を確定処理。
-  // 成功時は handleCreate が先に clearPendingSelection を呼ぶので、ここは実質 cancel 用。
-  // 外部 store (Zustand activeSheet) の変化に追随する subscribe 相当の useEffect。
+  // modal close 検知: activeSheet が tagCreate から離れたら waitingForModal を解除する。
+  // 外部 store (Zustand) の変化に追随する subscribe 相当のため setState を許可する。
   useEffect(() => {
     if (!waitingForModal) return;
     if (isTagCreateModalOpen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync cleanup
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync
     setWaitingForModal(false);
-    clearPendingSelection();
-  }, [waitingForModal, isTagCreateModalOpen, clearPendingSelection]);
+  }, [waitingForModal, isTagCreateModalOpen]);
+
+  // pending を modal-pending 状態で抱えている間、unmount または waitingForModal の解除で
+  // 必ず pending を解放する (calendar 離脱で stale selection が残らないように)。
+  // 成功 path は handleCreate が先に clearPendingSelection を呼ぶため idempotent。
+  useEffect(() => {
+    if (!waitingForModal) return;
+    return () => clearPendingSelection();
+  }, [waitingForModal, clearPendingSelection]);
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
