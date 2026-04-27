@@ -8,7 +8,7 @@
  * TagQuickSelector（Drawer/Dialog）でタグ選択 → エントリ作成。
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { format, isSameDay } from 'date-fns';
@@ -22,6 +22,7 @@ import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { formatTimeString } from '../../../../../interaction/time-math';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
@@ -143,14 +144,34 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     [pendingSelection, isCreating, createTagMutation, handleCreate, t],
   );
 
+  // TagQuickSelector が「+」押下で modal に遷移する間、自身を閉じてしまう。
+  // close = ユーザー dismiss と扱うと pendingSelection が消えて modal 完了後の
+  // entry 作成ができないため、modal が開いたかを microtask 後に判定する。
+  const waitingForModalRef = useRef(false);
+  const activeSheetType = useShellStore((s) => s.activeSheet?.type ?? null);
+
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open) {
-        clearPendingSelection();
-      }
+      if (open) return;
+      queueMicrotask(() => {
+        if (useShellStore.getState().activeSheet?.type === 'tagCreate') {
+          waitingForModalRef.current = true;
+        } else {
+          clearPendingSelection();
+        }
+      });
     },
     [clearPendingSelection],
   );
+
+  // modal を待っていた状態で modal が閉じたら（成功/cancel どちらでも）pending を確定処理。
+  // 成功時は handleCreate が先に clearPendingSelection を呼ぶので、ここは実質 cancel 用。
+  useEffect(() => {
+    if (!waitingForModalRef.current) return;
+    if (activeSheetType === 'tagCreate') return;
+    waitingForModalRef.current = false;
+    clearPendingSelection();
+  }, [activeSheetType, clearPendingSelection]);
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
