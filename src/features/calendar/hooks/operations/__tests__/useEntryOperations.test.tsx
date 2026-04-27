@@ -1,0 +1,215 @@
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { CalendarEvent } from '@/lib/types/calendar-event';
+
+const updateMutate = vi.fn();
+const deleteMutate = vi.fn();
+const getByIdGetData = vi.fn();
+const toastSuccess = vi.fn();
+const loggerError = vi.fn();
+
+vi.mock('@/features/entry', () => ({
+  useEntryMutations: () => ({
+    updateEntry: { mutate: updateMutate },
+    deleteEntry: { mutate: deleteMutate },
+  }),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  api: {
+    useUtils: () => ({
+      entries: {
+        getById: { getData: getByIdGetData },
+      },
+    }),
+  },
+}));
+
+vi.mock('@/lib/toast', () => ({
+  toast: {
+    success: (msg: string, opts: unknown) => toastSuccess(msg, opts),
+  },
+}));
+
+vi.mock('@/lib/logger', () => ({
+  logger: { error: loggerError, info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
+const { useEntryOperations } = await import('../useEntryOperations');
+
+function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): CalendarEvent {
+  const start = new Date('2026-04-27T01:00:00.000Z');
+  const end = new Date('2026-04-27T02:00:00.000Z');
+  return {
+    title: 'Sample',
+    startDate: start,
+    endDate: end,
+    status: 'open',
+    color: '',
+    createdAt: start,
+    updatedAt: start,
+    displayStartDate: start,
+    displayEndDate: end,
+    duration: 60,
+    isMultiDay: false,
+    ...overrides,
+  };
+}
+
+describe('useEntryOperations', () => {
+  beforeEach(() => {
+    updateMutate.mockReset();
+    deleteMutate.mockReset();
+    getByIdGetData.mockReset();
+    toastSuccess.mockReset();
+    loggerError.mockReset();
+  });
+
+  describe('handleEntryDelete', () => {
+    it('deleteEntry.mutate を {id} で呼ぶ', async () => {
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleEntryDelete('entry-1');
+
+      expect(deleteMutate).toHaveBeenCalledWith({ id: 'entry-1' });
+    });
+  });
+
+  describe('handleUpdateEntry: string overload', () => {
+    it('id + updates から start_time / end_time を ISO で渡す', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-27T01:00:00.000Z'),
+        endTime: new Date('2026-04-27T02:00:00.000Z'),
+      });
+
+      expect(updateMutate).toHaveBeenCalledWith(
+        {
+          id: 'entry-1',
+          data: {
+            start_time: '2026-04-27T01:00:00.000Z',
+            end_time: '2026-04-27T02:00:00.000Z',
+          },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
+
+    it('resetActualTime=true なら actual_start_time / actual_end_time も null で送る', async () => {
+      getByIdGetData.mockReturnValue(null);
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-27T01:00:00.000Z'),
+        endTime: new Date('2026-04-27T02:00:00.000Z'),
+        resetActualTime: true,
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).toMatchObject({
+        actual_start_time: null,
+        actual_end_time: null,
+      });
+    });
+
+    it('resetActualTime 未指定なら actual_* フィールドを送らない', async () => {
+      getByIdGetData.mockReturnValue(null);
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-27T01:00:00.000Z'),
+        endTime: new Date('2026-04-27T02:00:00.000Z'),
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).not.toHaveProperty('actual_start_time');
+      expect(callArgs.data).not.toHaveProperty('actual_end_time');
+    });
+
+    it('onSuccess で showTimeChangeUndoToast が呼ばれ、Undo 用に prev 時間が toast.action に格納される', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T00:30:00.000Z',
+      });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-27T01:00:00.000Z'),
+        endTime: new Date('2026-04-27T02:00:00.000Z'),
+      });
+
+      // mutate に渡された onSuccess を呼んで toast 発火を再現
+      const onSuccess = updateMutate.mock.calls[0]?.[1].onSuccess as () => void;
+      onSuccess();
+
+      expect(toastSuccess).toHaveBeenCalledTimes(1);
+      const [, opts] = toastSuccess.mock.calls[0] as [string, { action: { onClick: () => void } }];
+      // Undo クリックで prev 時間が mutate される
+      opts.action.onClick();
+      expect(updateMutate).toHaveBeenLastCalledWith({
+        id: 'entry-1',
+        data: {
+          start_time: '2026-04-27T00:00:00.000Z',
+          end_time: '2026-04-27T00:30:00.000Z',
+        },
+      });
+    });
+  });
+
+  describe('handleUpdateEntry: object overload (CalendarEvent)', () => {
+    it('startDate が null なら logger.error を出して mutate を呼ばない', async () => {
+      const event = makeEvent({ id: 'e1', startDate: null });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry(event);
+
+      expect(loggerError).toHaveBeenCalled();
+      expect(updateMutate).not.toHaveBeenCalled();
+    });
+
+    it('CalendarEvent の startDate / endDate を ISO で送り Undo toast を仕込む', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'e1',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      });
+      const event = makeEvent({ id: 'e1' });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry(event);
+
+      expect(updateMutate).toHaveBeenCalledWith(
+        {
+          id: 'e1',
+          data: {
+            start_time: '2026-04-27T01:00:00.000Z',
+            end_time: '2026-04-27T02:00:00.000Z',
+          },
+        },
+        expect.objectContaining({ onSuccess: expect.any(Function) }),
+      );
+    });
+
+    it('endDate が undefined でも data.end_time は undefined で問題なし', async () => {
+      getByIdGetData.mockReturnValue(null);
+      const event = makeEvent({ id: 'e1', endDate: null });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry(event);
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data.end_time).toBeUndefined();
+    });
+  });
+});
