@@ -59,7 +59,7 @@ npm run quality:deadcode # 未使用コード検出（knip）
 ## ワークフロー
 
 1. **Explore**: 既存コードを検索、影響範囲を把握
-2. **Plan**: 実装戦略を策定（`think hard`〜`ultrathink`で検討）
+2. **Plan**: 実装戦略を策定（`think hard`〜`ultrathink`で検討）。出力 format は [`rules/plan-format.md`](.claude/rules/plan-format.md)。承認前に `/plan-review` で fact-checker + critic に並列レビューさせる
 3. **Code**: CLAUDE.md + rules/ 準拠で実装
 4. **Commit**: typecheck → lint → lint:boundaries → コミット
    - トークン変更時: `lint:tokens` も実行
@@ -95,6 +95,7 @@ npm run quality:deadcode # 未使用コード検出（knip）
 | `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                     |
 | `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他）                                                                                                                            |
 | `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                                                                                                                                                   |
+| `plan-format.md`          | 実装 plan の必須セクション（Goal / Minimum Viable / Reversibility / Reuse / Not Doing）                                                                                                    |
 
 ## スキル
 
