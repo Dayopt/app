@@ -376,12 +376,14 @@ export function TagFlatList({
 
       <DragOverlay dropAnimation={null}>
         {activeTreeTag ? (
-          <TagOverlayCard
-            treeTag={activeTreeTag}
-            showChildren={
-              activeTreeTag.kind === 'root' && !collapsedGroups.has(activeTreeTag.tag.id)
-            }
-          />
+          <div className="bg-card/90 text-foreground inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm">
+            <TagIcon
+              icon={activeTreeTag.tag.icon}
+              color={resolveTagColor(activeTreeTag.tag.color)}
+              size="sm"
+            />
+            <span className="truncate">{activeTreeTag.tag.name}</span>
+          </div>
         ) : null}
       </DragOverlay>
     </DndContext>
@@ -511,7 +513,17 @@ function SortableParentBlock({
   const updateTagMutation = useUpdateTag();
   const createTagMutation = useCreateTag();
   const { openTagRenameModal } = useTagModalNavigation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    index,
+    activeIndex,
+    overIndex,
+  } = useSortable({
     id: node.tag.id,
     disabled: isMobile,
   });
@@ -534,6 +546,14 @@ function SortableParentBlock({
   // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
   const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
 
+  const showDropLine =
+    !isMobile && overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
+  const dropLineEdge: 'top' | 'bottom' | null = showDropLine
+    ? activeIndex < overIndex
+      ? 'bottom'
+      : 'top'
+    : null;
+
   const style = isMobile
     ? undefined
     : {
@@ -548,6 +568,16 @@ function SortableParentBlock({
       role="listitem"
     >
       <div ref={setNodeRef} className="relative" {...attributes} {...listeners}>
+        {dropLineEdge ? (
+          <div
+            aria-hidden
+            className={cn(
+              'bg-primary pointer-events-none absolute inset-x-0 z-10',
+              dropLineEdge === 'top' ? 'top-0' : 'bottom-0',
+            )}
+            style={{ height: 'var(--border-indicator)' }}
+          />
+        ) : null}
         <div>
           <GroupHeader
             label={node.tag.name}
@@ -684,7 +714,17 @@ function SortableTagItem({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    index,
+    activeIndex,
+    overIndex,
+  } = useSortable({
     id: tag.id,
     disabled: isMobile,
   });
@@ -709,6 +749,14 @@ function SortableTagItem({
         transform: CSS.Translate.toString(transform),
         transition,
       };
+
+  const showDropLine =
+    !isMobile && overIndex === index && activeIndex !== overIndex && activeIndex >= 0;
+  const dropLineEdge: 'top' | 'bottom' | null = showDropLine
+    ? activeIndex < overIndex
+      ? 'bottom'
+      : 'top'
+    : null;
 
   const handleChangeParent = useCallback(
     (newParentId: string | null) => {
@@ -750,10 +798,20 @@ function SortableTagItem({
         <div
           ref={setNodeRef}
           style={style}
-          className={cn(!isMobile && isDragging && 'pointer-events-none opacity-0')}
+          className={cn('relative', !isMobile && isDragging && 'pointer-events-none opacity-0')}
           {...attributes}
           {...listeners}
         >
+          {dropLineEdge ? (
+            <div
+              aria-hidden
+              className={cn(
+                'bg-primary pointer-events-none absolute inset-x-0 z-10',
+                dropLineEdge === 'top' ? 'top-0' : 'bottom-0',
+              )}
+              style={{ height: 'var(--border-indicator)' }}
+            />
+          ) : null}
           <div
             className={cn(
               'group/item relative flex cursor-pointer items-center rounded-lg text-sm',
@@ -885,31 +943,6 @@ function DroppableArea({
   return (
     <div ref={setNodeRef} role={role} className={cn(className, isOver && 'border-primary/40')}>
       {children}
-    </div>
-  );
-}
-
-function TagOverlayCard({ treeTag, showChildren }: { treeTag: TreeTag; showChildren: boolean }) {
-  const { tag } = treeTag;
-  const color = resolveTagColor(tag.color);
-  const children = showChildren && treeTag.kind === 'root' ? treeTag.children : [];
-
-  return (
-    <div className="bg-card shadow-card cursor-grabbing rounded-lg border p-2 text-sm">
-      <div className="flex items-center gap-2">
-        <TagIcon icon={tag.icon} color={color} size="sm" />
-        <span className="truncate">{tag.name}</span>
-      </div>
-      {children.length > 0 ? (
-        <div className="mt-1 ml-4 space-y-1">
-          {children.map((child) => (
-            <div key={child.id} className="flex items-center gap-2">
-              <TagIcon icon={child.icon} color={resolveTagColor(child.color)} size="sm" />
-              <span className="truncate">{child.name}</span>
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
