@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Switch } from '@/lib/components/ui/switch';
+import { withWrapper } from '../../../../.storybook/decorators';
 
 import { LabeledRow } from './LabeledRow';
 
@@ -8,13 +9,7 @@ const meta = {
   title: 'Components/Common/LabeledRow',
   component: LabeledRow,
   tags: ['autodocs'],
-  decorators: [
-    (Story) => (
-      <div className="w-[500px]">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-[500px]')],
 } satisfies Meta<typeof LabeledRow>;
 
 export default meta;

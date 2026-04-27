@@ -6,7 +6,9 @@ import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
+import { withWrapper } from '../../../../../.storybook/decorators';
 import { PRESET_AUTH } from '../../../../../.storybook/mocks/presets';
+
 import { Sidebar } from './Sidebar';
 
 // ── Mock: サイドバーコンテンツ（SidebarContent の簡易版） ──
@@ -116,13 +118,7 @@ export const Default: Story = {
   args: {
     children: <MockSidebarContent />,
   },
-  decorators: [
-    (Story) => (
-      <div className="h-[500px] w-64">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('h-[500px] w-64')],
 };
 
 /** コンテンツなし。children スロットが空の状態。 */
@@ -134,13 +130,7 @@ export const Empty: Story = {
       </div>
     ),
   },
-  decorators: [
-    (Story) => (
-      <div className="h-[400px] w-64">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('h-[400px] w-64')],
 };
 
 /**

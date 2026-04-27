@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { CalendarDays, Inbox } from 'lucide-react';
 
 import { Button } from '@/lib/components/ui/button';
+
+import { withWrapper } from '../../../../.storybook/decorators';
 import { EmptyState } from './EmptyState';
 
 const meta = {
@@ -30,13 +32,7 @@ const meta = {
       description: '親要素内で中央配置',
     },
   },
-  decorators: [
-    (Story) => (
-      <div className="w-[400px]">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [withWrapper('w-[400px]')],
 } satisfies Meta<typeof EmptyState>;
 
 export default meta;
