@@ -175,9 +175,9 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
   const handEnd = posOnCircle(handAngle, handRadius);
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 pt-6 pb-4">
+    <div className="flex flex-col items-center px-4 pt-6 pb-4">
       {/* 時刻表示ヘッダー */}
-      <div className="flex items-baseline gap-1 text-5xl tabular-nums">
+      <div className="mb-6 flex items-baseline gap-1 text-5xl tabular-nums">
         <button
           type="button"
           onClick={() => setMode('hour')}
@@ -330,7 +330,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
       </div>
 
       {/* アクションボタン */}
-      <div className="flex w-full flex-col items-stretch gap-2">
+      <div className="mt-2 flex w-full flex-col items-stretch gap-2">
         <div className="flex justify-end">
           <Button variant="ghost" size="sm" onClick={handleSetNow}>
             {t('actions.now')}
