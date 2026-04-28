@@ -70,7 +70,7 @@ describe('タイムゾーンエッジケース', () => {
       const end = new Date('2026-03-30T10:15:00');
 
       const pos = layoutEntryToVerticalPosition(start, end, 72);
-      expect(pos.height).toBeGreaterThanOrEqual(20); // MIN_EVENT_HEIGHT
+      expect(pos.height).toBeGreaterThanOrEqual(14); // MIN_EVENT_HEIGHT
     });
   });
 });

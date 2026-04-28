@@ -10,8 +10,8 @@ import { MS_PER_MINUTE } from '@/lib/date';
 /** SSRフォールバック用デフォルトの1時間高さ(px) */
 export const DEFAULT_HOUR_HEIGHT = 72;
 
-/** イベントの最小高さ(px) */
-export const MIN_EVENT_HEIGHT = 20;
+/** イベントの最小高さ(px) — 1 分粒度 entry でも視認できる程度に低く設定 */
+export const MIN_EVENT_HEIGHT = 14;
 
 /** イベントスタイルの戻り値型（React.CSSProperties互換だがReact非依存） */
 export interface EventStyle {

@@ -27,8 +27,8 @@ import { EntryCardContent } from './EntryCardContent';
 /** SSRフォールバック用デフォルトの1時間高さ(px) */
 const DEFAULT_HOUR_HEIGHT = 72;
 
-/** イベントの最小高さ(px) */
-const MIN_EVENT_HEIGHT = 20;
+/** イベントの最小高さ(px) — 1 分粒度 entry でも視認できる程度に低く設定（PC のみ。mobile は touch target で底上げ） */
+const MIN_EVENT_HEIGHT = 14;
 
 /**
  * モバイル時のイベント最小高さ(px)。

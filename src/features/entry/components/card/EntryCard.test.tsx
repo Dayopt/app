@@ -196,7 +196,7 @@ describe('EntryCard', () => {
       const eventBlock = screen.getByLabelText(/entry: テストイベント/i);
       const heightMatch = eventBlock.style.height.match(/(\d+)px/);
       const height = heightMatch ? parseInt(heightMatch[1]!, 10) : 0;
-      expect(height).toBeGreaterThanOrEqual(20);
+      expect(height).toBeGreaterThanOrEqual(14);
     });
   });
 
