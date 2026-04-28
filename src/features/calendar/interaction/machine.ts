@@ -5,7 +5,12 @@
  * テスト: expect(interactionReducer(state, action, ctx)).toEqual(...)
  */
 
-import { DEFAULT_SNAP_INTERVAL, snapToGrid } from './time-math';
+import {
+  DEFAULT_SNAP_INTERVAL,
+  pixelsToTimeUnsnapped,
+  snapDeltaToGrid,
+  snapToGrid,
+} from './time-math';
 import type {
   InteractionAction,
   InteractionContext,
@@ -153,11 +158,9 @@ export function interactionReducer(
     case 'LONGPRESS_FIRED': {
       if (state.mode !== 'longpress-pending') return { state, effects };
 
-      const { snappedTop, hour, minute } = snapToGrid(
-        state.originalPosition.top,
-        ctx.hourHeight,
-        interval,
-      );
+      // 移動前なので元の位置をそのまま使う（snap で 10:07 → 10:00 に潰さない）
+      const { hour, minute } = pixelsToTimeUnsnapped(state.originalPosition.top, ctx.hourHeight);
+      const snappedTop = state.originalPosition.top;
       const targetDate = resolveTargetDate(ctx, state.dateIndex);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
       const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
@@ -191,13 +194,13 @@ export function interactionReducer(
     case 'RESIZE_START': {
       if (state.mode !== 'idle') return { state, effects };
 
-      const { hour: sH, minute: sM } = snapToGrid(
+      // resize 開始時はまだ移動していないので、元の位置をそのまま preview にする
+      const { hour: sH, minute: sM } = pixelsToTimeUnsnapped(
         action.originalPosition.top,
         ctx.hourHeight,
-        interval,
       );
       const endTop = action.originalPosition.top + action.originalPosition.height;
-      const { hour: eH, minute: eM } = snapToGrid(endTop, ctx.hourHeight, interval);
+      const { hour: eH, minute: eM } = pixelsToTimeUnsnapped(endTop, ctx.hourHeight);
 
       const start = new Date(ctx.date);
       start.setHours(sH, sM, 0, 0);
@@ -337,9 +340,11 @@ function handlePointerMove(
         return { state, effects };
       }
       // Threshold crossed → transition to dragging
+      // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const newTop = state.originalPosition.top + deltaY;
-      const { snappedTop, hour, minute } = snapToGrid(newTop, ctx.hourHeight, interval);
+      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
+      const snappedTop = state.originalPosition.top + snappedDeltaY;
+      const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
       const targetDateIndex = action.targetDateIndex ?? state.dateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
@@ -378,9 +383,11 @@ function handlePointerMove(
     }
 
     case 'dragging': {
+      // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const newTop = state.originalPosition.top + deltaY;
-      const { snappedTop, hour, minute } = snapToGrid(newTop, ctx.hourHeight, interval);
+      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
+      const snappedTop = state.originalPosition.top + snappedDeltaY;
+      const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
       const targetDateIndex = action.targetDateIndex ?? state.targetDateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
@@ -406,24 +413,23 @@ function handlePointerMove(
     }
 
     case 'resizing': {
+      // relative offset snap: 開始位置は元の値を保持、resize の delta だけを snap する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const snapSize = (ctx.hourHeight / 60) * interval;
-      const newHeight = Math.max(
-        snapSize,
-        Math.round((state.originalPosition.height + deltaY) / snapSize) * snapSize,
-      );
+      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
+      const minHeight = (ctx.hourHeight / 60) * interval;
+      const newHeight = Math.max(minHeight, state.originalPosition.height + snappedDeltaY);
 
       if (newHeight !== state.snappedHeight) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
       }
 
-      const { hour: sH, minute: sM } = snapToGrid(
+      // start は元の位置をそのまま使い、:07 などを保持
+      const { hour: sH, minute: sM } = pixelsToTimeUnsnapped(
         state.originalPosition.top,
         ctx.hourHeight,
-        interval,
       );
       const endTop = state.originalPosition.top + newHeight;
-      const { hour: eH, minute: eM } = snapToGrid(endTop, ctx.hourHeight, interval);
+      const { hour: eH, minute: eM } = pixelsToTimeUnsnapped(endTop, ctx.hourHeight);
 
       const start = new Date(ctx.date);
       start.setHours(sH, sM, 0, 0);

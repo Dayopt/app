@@ -602,6 +602,129 @@ describe('POINTER_UP while resizing', () => {
 });
 
 // ========================================
+// Precision regression — relative offset snap (Project A-2 / D-7)
+// ========================================
+
+describe('precision regression: relative offset snap preserves :07 minutes', () => {
+  // 10:07 entry を表す originalPosition: top=607（hourHeight=60 で 10*60+7=607）
+  const off607: EntryRect = { top: 607, left: 0, width: 200, height: 60 };
+
+  it('LONGPRESS_FIRED on 10:07 entry → preview start stays 10:07 (not snapped to 10:00)', () => {
+    const longpressState: InteractionState = {
+      mode: 'longpress-pending',
+      entryId: 'a',
+      startPoint: origin,
+      originalPosition: off607,
+      dateIndex: 0,
+    };
+    const { state } = dispatch(longpressState, { type: 'LONGPRESS_FIRED' });
+
+    expect(state.mode).toBe('dragging');
+    if (state.mode === 'dragging') {
+      expect(state.snappedTop).toBe(607);
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
+    }
+  });
+
+  it('drag 10:07 → +30min → 10:37 (precision preserved, NOT snapped to 10:30)', () => {
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off607,
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 607,
+      previewTime: {
+        start: new Date('2026-01-15T10:07:00'),
+        end: new Date('2026-01-15T11:07:00'),
+      },
+      isOverlapping: false,
+    };
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY + 30 };
+    const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
+
+    if (state.mode === 'dragging') {
+      // deltaY=30 は 15 分 snap で 30 のまま、original top=607 に加えて 637 → 10:37
+      expect(state.snappedTop).toBe(637);
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(37);
+    }
+  });
+
+  it('drag 10:07 → +7px (snap interval 未満) → 動かない (start stays 10:07)', () => {
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off607,
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 607,
+      previewTime: {
+        start: new Date('2026-01-15T10:07:00'),
+        end: new Date('2026-01-15T11:07:00'),
+      },
+      isOverlapping: false,
+    };
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY + 7 };
+    const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
+
+    if (state.mode === 'dragging') {
+      expect(state.snappedTop).toBe(607);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
+    }
+  });
+
+  it('RESIZE_START on 10:07 entry → preview start stays 10:07', () => {
+    const { state } = dispatch(IDLE, {
+      type: 'RESIZE_START',
+      entryId: 'a',
+      direction: 'bottom',
+      point: origin,
+      originalPosition: off607,
+    });
+
+    if (state.mode === 'resizing') {
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.previewTime.end.getHours()).toBe(11);
+      expect(state.previewTime.end.getMinutes()).toBe(7);
+    }
+  });
+
+  it('resize 10:07-11:07 entry を +15min → 10:07-11:22 (start stays, end shifts by snap delta)', () => {
+    const resizingState: InteractionState = {
+      mode: 'resizing',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off607,
+      direction: 'bottom',
+      snappedHeight: 60,
+      previewTime: {
+        start: new Date('2026-01-15T10:07:00'),
+        end: new Date('2026-01-15T11:07:00'),
+      },
+      isOverlapping: false,
+    };
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY + 15 };
+    const { state } = dispatch(resizingState, { type: 'POINTER_MOVE', point: movedPoint });
+
+    if (state.mode === 'resizing') {
+      expect(state.snappedHeight).toBe(75);
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.previewTime.end.getHours()).toBe(11);
+      expect(state.previewTime.end.getMinutes()).toBe(22);
+    }
+  });
+});
+
+// ========================================
 // Grid selection (GRID_POINTER_DOWN → POINTER_MOVE → POINTER_UP)
 // ========================================
 

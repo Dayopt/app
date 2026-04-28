@@ -78,3 +78,44 @@ export function addMinutesToTime(
   const endMinute = totalMinutes % 60;
   return { hour: endHour, minute: endMinute };
 }
+
+/**
+ * Y 座標 → 時刻（snap せず、float 誤差だけ吸収）
+ *
+ * relative offset snap で「originalPosition.top をそのまま時刻に戻す」
+ * 用途。ここで snap してしまうと 10:07 のような非グリッド時刻を保持できない。
+ *
+ * @see docs/design/timeline-precision-redesign/overview.md § 4 A-2
+ */
+export function pixelsToTimeUnsnapped(
+  yPx: number,
+  hourHeight: number,
+): { hour: number; minute: number } {
+  const clampedY = Math.max(0, yPx);
+  const totalMinutes = Math.round((clampedY / hourHeight) * 60);
+  const dayMaxMinutes = 23 * 60 + 59;
+  const clamped = Math.min(dayMaxMinutes, totalMinutes);
+  return {
+    hour: Math.floor(clamped / 60),
+    minute: clamped % 60,
+  };
+}
+
+/**
+ * deltaY のみを snap する（絶対位置は snap しない）
+ *
+ * relative offset snap の核となる関数。drag 開始時の `originalPosition.top` を
+ * source of truth として保ち、移動量 (deltaY) だけを snap interval で量子化する。
+ * これにより 10:07 entry を 30 分動かすと 10:37 になる（10:00 / 10:15 に潰れない）。
+ *
+ * @see docs/design/timeline-precision-redesign/overview.md § 4 A-2 / D-7
+ */
+export function snapDeltaToGrid(
+  deltaPx: number,
+  hourHeight: number,
+  intervalMin: number = DEFAULT_SNAP_INTERVAL,
+): number {
+  const pxPerInterval = (hourHeight / 60) * intervalMin;
+  if (pxPerInterval <= 0) return 0;
+  return Math.round(deltaPx / pxPerInterval) * pxPerInterval;
+}

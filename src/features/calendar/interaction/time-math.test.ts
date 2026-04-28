@@ -6,6 +6,8 @@ import {
   formatTimeString,
   parseTimeString,
   pixelsToTime,
+  pixelsToTimeUnsnapped,
+  snapDeltaToGrid,
   snapToGrid,
   timeToPixels,
 } from './time-math';
@@ -146,5 +148,64 @@ describe('addMinutesToTime', () => {
 
   it('24 時を跨ぐと % 24 で 0 時に戻る（翌日扱いはしない）', () => {
     expect(addMinutesToTime(23, 30, 60)).toEqual({ hour: 0, minute: 30 });
+  });
+});
+
+describe('pixelsToTimeUnsnapped', () => {
+  it('0px → 00:00', () => {
+    expect(pixelsToTimeUnsnapped(0, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 0 });
+  });
+
+  it('snap せず 1 分粒度を保持する（10:07 を保持）', () => {
+    // 1px = 1 分なので 607px → 10:07
+    expect(pixelsToTimeUnsnapped(607, HOUR_HEIGHT)).toEqual({ hour: 10, minute: 7 });
+    // 8px → 0:08（pixelsToTime なら 0:15 にスナップされる位置）
+    expect(pixelsToTimeUnsnapped(8, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 8 });
+  });
+
+  it('float 誤差を Math.round で吸収する', () => {
+    // hourHeight=72 で 10:07 相当 → (607/60)*72 = 728.4
+    expect(pixelsToTimeUnsnapped(728.4, 72)).toEqual({ hour: 10, minute: 7 });
+  });
+
+  it('負の Y は 0 にクランプ、最大 23:59 にクランプ', () => {
+    expect(pixelsToTimeUnsnapped(-50, HOUR_HEIGHT)).toEqual({ hour: 0, minute: 0 });
+    expect(pixelsToTimeUnsnapped(100 * HOUR_HEIGHT, HOUR_HEIGHT)).toEqual({
+      hour: 23,
+      minute: 59,
+    });
+  });
+});
+
+describe('snapDeltaToGrid', () => {
+  it('deltaY=60 (1 hour) で snap interval=15 → 60 を返す（量子化済）', () => {
+    expect(snapDeltaToGrid(60, HOUR_HEIGHT, 15)).toBe(60);
+  });
+
+  it('deltaY=22 → 15 に量子化（22/15=1.46 → round=1）', () => {
+    expect(snapDeltaToGrid(22, HOUR_HEIGHT, 15)).toBe(15);
+  });
+
+  it('deltaY=7 → 0 に量子化（snap interval 未満）', () => {
+    expect(snapDeltaToGrid(7, HOUR_HEIGHT, 15)).toBe(0);
+  });
+
+  it('deltaY=-30 → -30（負方向もそのまま量子化）', () => {
+    expect(snapDeltaToGrid(-30, HOUR_HEIGHT, 15)).toBe(-30);
+  });
+
+  it('snap interval=5 で細かく量子化', () => {
+    expect(snapDeltaToGrid(7, HOUR_HEIGHT, 5)).toBe(5);
+    expect(snapDeltaToGrid(8, HOUR_HEIGHT, 5)).toBe(10);
+  });
+
+  it('precision regression: 10:07 entry を 30 分動かしても :07 が保持される', () => {
+    // originalTop = 607（10:07）、deltaY = 30（30 分）
+    const originalTop = 607;
+    const deltaY = 30;
+    const snappedDelta = snapDeltaToGrid(deltaY, HOUR_HEIGHT, 15);
+    expect(snappedDelta).toBe(30);
+    const newTop = originalTop + snappedDelta;
+    expect(pixelsToTimeUnsnapped(newTop, HOUR_HEIGHT)).toEqual({ hour: 10, minute: 37 });
   });
 });
