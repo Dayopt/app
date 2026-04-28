@@ -175,7 +175,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
   const handEnd = posOnCircle(handAngle, handRadius);
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 pb-4">
+    <div className="flex flex-col items-center gap-6 px-4 pt-6 pb-4">
       {/* 時刻表示ヘッダー */}
       <div className="flex items-baseline gap-1 text-5xl tabular-nums">
         <button
