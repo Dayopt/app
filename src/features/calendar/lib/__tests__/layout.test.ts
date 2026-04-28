@@ -364,7 +364,7 @@ describe('calculateEntryPosition', () => {
     expect(pos.width).toBe(100);
   });
 
-  it('最小高さ20pxを保証', () => {
+  it('最小高さ14pxを保証', () => {
     const entry = createTimedEntry({
       start: new Date('2026-01-15T10:00:00'),
       end: new Date('2026-01-15T10:05:00'), // 5分 = 6px
@@ -372,7 +372,7 @@ describe('calculateEntryPosition', () => {
     const column = { entries: [], columnIndex: 0, totalColumns: 1 };
     const pos = calculateEntryPosition(entry, column, 72);
 
-    expect(pos.height).toBe(20);
+    expect(pos.height).toBe(14);
   });
 
   it('2カラム中の2番目を正しく配置', () => {

@@ -96,12 +96,12 @@ describe('getEventStyle', () => {
     expect(parseFloat(style.left as string)).toBeCloseTo(33.33, 1);
   });
 
-  it('最小高さ20pxが保証される', () => {
+  it('最小高さ14pxが保証される', () => {
     const start = new Date('2026-01-15T10:00:00');
-    const end = new Date('2026-01-15T10:05:00'); // 5分 = 6px (< 20px)
+    const end = new Date('2026-01-15T10:05:00'); // 5分 = 6px (< 14px)
     const style = getEventStyle(start, end, 0, 1, 72);
 
-    expect(style.height).toBe('20px');
+    expect(style.height).toBe('14px');
   });
 });
 

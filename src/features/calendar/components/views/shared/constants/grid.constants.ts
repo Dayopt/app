@@ -13,8 +13,8 @@ export const MINUTE_HEIGHT = HOUR_HEIGHT / 60; // 1分の高さ(px)
 export { HOUR_HEIGHT_DENSITIES } from '@/lib/calendar-constants';
 export type { HourHeightDensity } from '@/lib/calendar-constants';
 
-/** イベントの最小高さ（px） */
-export const MIN_EVENT_HEIGHT = 20; // イベントの最小高さ(px)
+/** イベントの最小高さ（px） — 1 分粒度 entry でも視認できる程度に低く設定 */
+export const MIN_EVENT_HEIGHT = 14; // イベントの最小高さ(px)
 /** イベントの左右パディング（px） */
 export const EVENT_HORIZONTAL_PADDING = 4; // イベントの左右パディング(px)
 /** イベントの上下パディング（px） */
