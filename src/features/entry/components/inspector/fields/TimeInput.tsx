@@ -57,7 +57,10 @@ export function TimeInput({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
-    setDraft(value);
+    // 上流から不正値（NaN:NaN 等）が来た時に input が崩れるのを防ぐ防御層。
+    // 空文字 or 妥当な HH:mm の場合のみそのまま反映、不正なら "" にフォールバック
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 上流の不正値からの recovery
+    setDraft(value === '' || parseTimeString(value) ? value : '');
   }, [value]);
 
   const baseClasses = cn(
