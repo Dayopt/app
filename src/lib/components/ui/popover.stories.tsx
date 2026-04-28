@@ -159,7 +159,7 @@ export const Alignment: Story = {
   ),
 };
 
-/** PopoverAnchor を使った Combobox 風パターン。Input をアンカーにしてドロップダウンを表示、TimeSelect などで使用。 */
+/** PopoverAnchor を使った Combobox 風パターン。Input をアンカーにしてドロップダウンを表示する用途。 */
 export const WithAnchor: Story = {
   render: function WithAnchorStory() {
     const [isOpen, setIsOpen] = useState(false);

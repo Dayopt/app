@@ -68,7 +68,7 @@ function defaultStartHHMM(forDate: Date): string {
  *              [キャンセル] [作成]
  *
  * - 日付行 `DateRow`: 既存 DatePickerPopover を内包（Inspector と同じ UX）
- * - 予定行 `TimeRow`: 開始 → 終了 の 2 TimeSelect（15 分刻み）、duration は自動算出
+ * - 予定行 `TimeRow`: 開始 → 終了 の 2 TimeInput（1 分粒度）、duration は自動算出
  * - 既定 end = 既定 start + `defaultDurationMinutes`
  * - 作成成功で popover close + 5s undo トースト、失敗時は popover 維持
  */

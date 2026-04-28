@@ -3,7 +3,7 @@
 /**
  * 汎用の時間入力行
  *
- * ラベル + TimeSelect × 2（開始→終了）+ Duration表示
+ * ラベル + TimeInput × 2（開始→終了）。
  * 予定行にも記録行にも使える。
  */
 
@@ -12,7 +12,7 @@ import { ArrowRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-import { TimeSelect } from './TimeSelect';
+import { TimeInput } from './TimeInput';
 
 interface TimeRowProps {
   label: string;
@@ -27,7 +27,7 @@ interface TimeRowProps {
   isPrimary?: boolean;
 }
 
-/** Inspectorの時間入力行（開始・終了のTimeSelect × 2、予定行・記録行共用、常に 1 行表示） */
+/** Inspectorの時間入力行（開始・終了のTimeInput × 2、予定行・記録行共用、常に 1 行表示） */
 export function TimeRow({
   label,
   icon: Icon,
@@ -53,19 +53,18 @@ export function TimeRow({
         </span>
       </div>
       <div className="-mr-2 flex items-center gap-1">
-        <TimeSelect
+        <TimeInput
           value={startTime}
           onChange={onStartChange}
           disabled={disabled}
           hasError={hasError}
         />
         <ArrowRight className="text-muted-foreground size-3.5 flex-shrink-0" />
-        <TimeSelect
+        <TimeInput
           value={endTime}
           onChange={onEndChange}
           disabled={disabled || !startTime}
           minTime={startTime}
-          showDurationInMenu
           hasError={hasError}
         />
       </div>
@@ -80,7 +79,7 @@ interface TimeRowPlaceholderProps {
   muted?: boolean;
 }
 
-/** 時間未設定時のプレースホルダー表示行（メッセージのみ、TimeSelectなし） */
+/** 時間未設定時のプレースホルダー表示行（メッセージのみ、TimeInputなし） */
 export function TimeRowPlaceholder({
   label,
   icon: Icon,
