@@ -144,7 +144,7 @@ describe('EntryCard', () => {
       const resizeHandle = screen.getByRole('slider');
       expect(resizeHandle).toHaveAttribute('aria-orientation', 'vertical');
       expect(resizeHandle).toHaveAttribute('aria-valuenow', '60');
-      expect(resizeHandle).toHaveAttribute('aria-valuemin', '20');
+      expect(resizeHandle).toHaveAttribute('aria-valuemin', '14');
       expect(resizeHandle).toHaveAttribute('aria-valuemax', '480');
     });
 
