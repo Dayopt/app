@@ -66,6 +66,7 @@
     },
     "actions": {
       "save": "Save",
+      "now": "Now",
       "cancel": "Cancel",
       "close": "Close",
       "delete": "Delete",

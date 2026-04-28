@@ -66,6 +66,7 @@
     },
     "actions": {
       "save": "保存",
+      "now": "今",
       "cancel": "キャンセル",
       "close": "閉じる",
       "delete": "削除",

@@ -150,6 +150,12 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
     isPointerDownRef.current = false;
   }, []);
 
+  const handleSetNow = useCallback(() => {
+    const now = new Date();
+    setSelectedHour(now.getHours());
+    setSelectedMinute(now.getMinutes());
+  }, []);
+
   const handleConfirm = useCallback(() => {
     const hh = selectedHour.toString().padStart(2, '0');
     const mm = selectedMinute.toString().padStart(2, '0');
@@ -324,13 +330,20 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
       </div>
 
       {/* アクションボタン */}
-      <div className="flex w-full justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          {t('actions.cancel')}
-        </Button>
-        <Button variant="primary" size="sm" onClick={handleConfirm}>
-          OK
-        </Button>
+      <div className="flex w-full flex-col items-stretch gap-2">
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" onClick={handleSetNow}>
+            {t('actions.now')}
+          </Button>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            {t('actions.cancel')}
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleConfirm}>
+            OK
+          </Button>
+        </div>
       </div>
     </div>
   );
