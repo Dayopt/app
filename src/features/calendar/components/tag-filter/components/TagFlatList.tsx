@@ -40,7 +40,6 @@ import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';
 import { FilterItemMenu, type GroupOption } from './FilterItem/FilterItemMenu';
 import { useFilterItemEdit } from './FilterItem/useFilterItemEdit';
 import { GroupHeader } from './GroupHeader';
-import { TagEntryCreatePopover } from './TagEntryCreatePopover';
 import {
   END_OF_ROOT,
   ROOT,
@@ -50,6 +49,7 @@ import {
   findTreeTag,
   moveTagTree,
 } from './move-tag-tree';
+import { useInstantTagTap } from './useInstantTagTap';
 
 // drag 中に他 item を動かさず、drop indicator 線だけで挿入位置を示す
 const noopSortingStrategy: SortingStrategy = () => null;
@@ -113,9 +113,9 @@ export function TagFlatList({
   isMobile,
 }: TagFlatListProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [openPopoverTagId, setOpenPopoverTagId] = useState<string | null>(null);
   const [localNodes, setLocalNodes] = useState<TagTreeNode[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const handleTagTap = useInstantTagTap();
 
   const displayedNodes = localNodes ?? nodes;
   const rootIds = useMemo(() => displayedNodes.map((node) => node.tag.id), [displayedNodes]);
@@ -153,7 +153,6 @@ export function TagFlatList({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
-    setOpenPopoverTagId(null);
   }, []);
 
   const handleDragEnd = useCallback(
@@ -203,8 +202,7 @@ export function TagFlatList({
             onToggleGroupTags={onToggleGroupTags}
             onShowOnlyGroupTags={onShowOnlyGroupTags}
             getGroupVisibility={getGroupVisibility}
-            openPopoverTagId={openPopoverTagId}
-            onOpenPopover={setOpenPopoverTagId}
+            onTagTap={handleTagTap}
             onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
           />
         ))}
@@ -239,8 +237,7 @@ export function TagFlatList({
               onToggleGroupTags={onToggleGroupTags}
               onShowOnlyGroupTags={onShowOnlyGroupTags}
               getGroupVisibility={getGroupVisibility}
-              openPopoverTagId={openPopoverTagId}
-              onOpenPopover={setOpenPopoverTagId}
+              onTagTap={handleTagTap}
               onToggleCollapse={() => toggleGroupCollapse(node.tag.id)}
             />
           ))}
@@ -281,8 +278,7 @@ interface TagTreeItemProps {
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
-  openPopoverTagId: string | null;
-  onOpenPopover: (tagId: string | null) => void;
+  onTagTap: (tag: { id: string; name: string }) => void;
   onToggleCollapse: () => void;
 }
 
@@ -301,8 +297,7 @@ function TagTreeItem({
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
-  openPopoverTagId,
-  onOpenPopover,
+  onTagTap,
   onToggleCollapse,
 }: TagTreeItemProps) {
   if (node.children.length === 0) {
@@ -319,8 +314,7 @@ function TagTreeItem({
         onToggle={() => onToggleTag(node.tag.id)}
         onDeleteTag={() => onDeleteTag(node.tag.id, node.tag.name)}
         onShowOnlyTag={() => onShowOnlyTag(node.tag.id)}
-        openPopoverTagId={openPopoverTagId}
-        onOpenPopover={onOpenPopover}
+        onTagTap={onTagTap}
       />
     );
   }
@@ -340,8 +334,7 @@ function TagTreeItem({
       onToggleGroupTags={onToggleGroupTags}
       onShowOnlyGroupTags={onShowOnlyGroupTags}
       getGroupVisibility={getGroupVisibility}
-      openPopoverTagId={openPopoverTagId}
-      onOpenPopover={onOpenPopover}
+      onTagTap={onTagTap}
       onToggleCollapse={onToggleCollapse}
     />
   );
@@ -361,8 +354,7 @@ interface SortableParentBlockProps {
   onToggleGroupTags: (tagIds: string[]) => void;
   onShowOnlyGroupTags: (tagIds: string[]) => void;
   getGroupVisibility: (tagIds: string[]) => 'all' | 'none' | 'some';
-  openPopoverTagId: string | null;
-  onOpenPopover: (tagId: string | null) => void;
+  onTagTap: (tag: { id: string; name: string }) => void;
   onToggleCollapse: () => void;
 }
 
@@ -380,8 +372,7 @@ function SortableParentBlock({
   onToggleGroupTags,
   onShowOnlyGroupTags,
   getGroupVisibility,
-  openPopoverTagId,
-  onOpenPopover,
+  onTagTap,
   onToggleCollapse,
 }: SortableParentBlockProps) {
   const locale = useLocale();
@@ -413,7 +404,6 @@ function SortableParentBlock({
   );
   const groupVisibility = getGroupVisibility(groupTagIds);
   const headerIcon = node.tag.icon ?? node.children[0]?.icon ?? null;
-  const isPopoverOpen = openPopoverTagId === node.tag.id;
   const canDropChildHere =
     !!activeTreeTag && activeTreeTag.tag.id !== node.tag.id && canBecomeChild(activeTreeTag);
   // collapsed でも drag 中は drop 先として残す（reparent を ungroup と誤認させない）
@@ -473,24 +463,8 @@ function SortableParentBlock({
             }
             onViewStats={() => router.push(`/${locale}/stats/tags/${node.tag.id}`)}
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
-            onRowClick={() => onOpenPopover(node.tag.id)}
-            highlighted={isPopoverOpen}
+            onRowClick={() => onTagTap({ id: node.tag.id, name: node.tag.name })}
           />
-
-          {isPopoverOpen ? (
-            <TagEntryCreatePopover
-              open
-              onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? node.tag.id : null)}
-              tag={{
-                id: node.tag.id,
-                name: node.tag.name,
-                color: displayColor,
-                icon: node.tag.icon ?? headerIcon,
-              }}
-              defaultDurationMinutes={30}
-              isMobile={isMobile}
-            />
-          ) : null}
         </div>
       </div>
 
@@ -521,8 +495,7 @@ function SortableParentBlock({
                     onToggle={() => onToggleTag(child.id)}
                     onDeleteTag={() => onDeleteTag(child.id, child.name)}
                     onShowOnlyTag={() => onShowOnlyGroupTags([child.id])}
-                    openPopoverTagId={openPopoverTagId}
-                    onOpenPopover={onOpenPopover}
+                    onTagTap={onTagTap}
                   />
                 ))
               : null}
@@ -545,8 +518,7 @@ interface SortableTagItemProps {
   onToggle: () => void;
   onDeleteTag: () => void;
   onShowOnlyTag: () => void;
-  openPopoverTagId: string | null;
-  onOpenPopover: (tagId: string | null) => void;
+  onTagTap: (tag: { id: string; name: string }) => void;
 }
 
 function SortableTagItem({
@@ -559,8 +531,7 @@ function SortableTagItem({
   onToggle,
   onDeleteTag,
   onShowOnlyTag,
-  openPopoverTagId,
-  onOpenPopover,
+  onTagTap,
 }: SortableTagItemProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -593,7 +564,6 @@ function SortableTagItem({
     targetName: string;
   } | null>(null);
 
-  const isPopoverOpen = openPopoverTagId === tag.id;
   // ドラッグ中は transform を打ち消し、source を原位置に opacity-30 で残す
   // （EntryCard と同じ「後ろに薄く残る」見え方）
   const style = isMobile
@@ -663,10 +633,9 @@ function SortableTagItem({
               isMobile ? 'h-11' : 'h-8',
               'hover:bg-state-hover',
               menuOpen && 'bg-state-selected',
-              isPopoverOpen && 'bg-state-selected',
               !checked && 'opacity-50',
             )}
-            onClick={() => onOpenPopover(tag.id)}
+            onClick={() => onTagTap({ id: tag.id, name: tag.name })}
           >
             <span className="ml-2 shrink-0">
               <TagIcon icon={tag.icon} color={displayColor} size="sm" />
@@ -738,16 +707,6 @@ function SortableTagItem({
                 onDeleteTag={onDeleteTag}
               />
             </DropdownMenu>
-
-            {isPopoverOpen ? (
-              <TagEntryCreatePopover
-                open
-                onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
-                tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
-                defaultDurationMinutes={30}
-                isMobile={isMobile}
-              />
-            ) : null}
           </div>
         </div>
       </div>
