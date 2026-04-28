@@ -28,7 +28,7 @@ function DrawerHandle({
   return (
     <DrawerPrimitive.Handle
       data-slot="drawer-handle"
-      className={cn('shrink-0', className)}
+      className={cn('mt-2 shrink-0', className)}
       {...props}
     />
   );
