@@ -39,6 +39,11 @@ export { formatDateShort, formatDurationMinutes, formatTime, formatTimeRange } f
 export { localTimeToUTCISO, parseISOToUserTimezone } from './timezone';
 
 // ========================================
+// TimeString - "HH:mm" パース / フォーマット
+// ========================================
+export { formatHHmm, parseTimeString } from './timeString';
+
+// ========================================
 // Filter - 日付範囲フィルター（type のみ）
 // ========================================
 export type { DateRangeFilter } from './filter';

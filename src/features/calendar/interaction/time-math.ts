@@ -57,16 +57,6 @@ export function formatTimeString(
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-/** "HH:mm" パース */
-export function parseTimeString(time: string): { hour: number; minute: number } | null {
-  const match = time.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  const hour = parseInt(match[1]!, 10);
-  const minute = parseInt(match[2]!, 10);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
-  return { hour, minute };
-}
-
 /** 時刻 + duration → 終了時刻 */
 export function addMinutesToTime(
   hour: number,
