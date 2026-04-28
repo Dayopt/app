@@ -174,16 +174,19 @@ export function TimeInput({
     return true;
   };
 
+  /** 上流の value が不正なら "" にフォールバック（useEffect の sanitizer と整合） */
+  const safeValue = parseTimeString(value) ? value : '';
+
   const commitDraft = () => {
     if (draft === value) return;
     const parsed = parseTimeString(draft);
     if (!parsed) {
-      setDraft(value);
+      setDraft(safeValue);
       return;
     }
     const formatted = formatHHmm(parsed.hour, parsed.minute);
     if (!tryCommit(formatted)) {
-      setDraft(value);
+      setDraft(safeValue);
     }
   };
 
