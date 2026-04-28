@@ -76,6 +76,11 @@ export function TimeInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
+  /**
+   * preset 選択 / Enter+highlight で明示的に commit した直後の blur 時に
+   * commitDraft が古い draft で再 commit するのを防ぐ（Codex P1）
+   */
+  const skipBlurCommitRef = useRef(false);
 
   useEffect(() => {
     // 上流から不正値（NaN:NaN 等）が来た時に input が崩れるのを防ぐ防御層
@@ -201,6 +206,12 @@ export function TimeInput({
     // popover 内クリック中は blur をスルー（PopoverContent が次フォーカス先）
     const next = e.relatedTarget as HTMLElement | null;
     if (next && listRef.current?.contains(next)) return;
+    // preset 選択直後は draft が stale で再 commit すると古い値で上書きされるため skip
+    if (skipBlurCommitRef.current) {
+      skipBlurCommitRef.current = false;
+      handleOpenChange(false);
+      return;
+    }
     commitDraft();
     handleOpenChange(false);
   };
@@ -210,6 +221,7 @@ export function TimeInput({
       e.preventDefault();
       if (popoverOpen && highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
         const picked = filteredOptions[highlightedIndex]!;
+        skipBlurCommitRef.current = true;
         tryCommit(picked);
         handleOpenChange(false);
       }
@@ -229,6 +241,7 @@ export function TimeInput({
   };
 
   const handlePresetSelect = (option: string) => {
+    skipBlurCommitRef.current = true;
     tryCommit(option);
     handleOpenChange(false);
     inputRef.current?.blur();
