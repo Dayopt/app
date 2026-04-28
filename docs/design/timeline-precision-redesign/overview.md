@@ -98,17 +98,18 @@ A-4 の対象として固定する path:
 | `src/features/entry/components/inspector/hooks/useTimeFields.ts`       | scheduleDate / startTime / endTime 状態管理                                             |
 | `src/lib/date/timezone.ts` の `localTimeToUTCISO`                      | HH:mm + base date → ISO 8601 変換、秒は `:00` 自動 padding                              |
 
-**A-4 への含意**:
+**A-4 確定方針（D-9, 2026-04-28）**:
 
 - 入力形式は HH:mm 文字列のみ（秒は `localTimeToUTCISO` が `:00` padding）
 - `parseTimeString`（`^\d{1,2}:\d{2}$`）を流用、regex 拡張不要
 - mutation shape は ISO 8601、変更不要
-- `<input type="text" readOnly>` で手入力 disabled なので、1 分粒度を実現する方法は次の 3 択（**A-4 着手時に決定する OD**）:
-  - **(a) dropdown 全 1440 オプション化** — 重い、UX 悪化、不採用候補
-  - **(b) dropdown は 15 分プリセット維持、`readOnly` を外して手入力で 1 分粒度可** — Toggl 風、推奨
-  - **(c) dropdown はそのまま、増減ボタン（±1 / ±5 / ±15）で 1 分粒度可** — Outlook 風、UI 面積大きい
-
-→ **OD-2** (A-4 着手前): Inspector 1 分粒度入力の UX 方式（a/b/c）
+- **PC: `<input type="text">` 単一 input** — `readOnly` を外して直接タイプ。`parseTimeString` で validation、不正入力は border 赤 + `aria-invalid`。GCal も free-text を許容しているのと整合
+- **Mobile: `<input type="time" step="60">` 単一 input** — OS 標準 picker（1 分粒度）に委譲。タップ操作の自然さを優先
+- **dropdown / popover / drawer は全廃**:
+  - `TimeSelect.tsx` の `<input type="text" readOnly>` + Popover/Drawer 構造を削除
+  - `ClockTimePicker.tsx`（モバイル時計盤）を削除
+  - `useTimeCombobox.ts` の `SNAP_MINUTES = 15` も含めて削除
+- 新設 component は `TimeInput.tsx`（PC/Mobile 分岐は `useMediaQuery` または `matchMedia` で判定、既存の breakpoint 規約に従う）
 
 ### Minimum Viable Approach
 
@@ -118,7 +119,7 @@ A-4 の対象として固定する path:
 | A-1  | `src/features/calendar/lib/precision.ts` を新設し上記 3 定数を export。`useCalendarSettingsStore.snapInterval` の union は触らない                                                                                                                                                                                                                                                                                                                                                                                            | minutes            | none                                                            |
 | A-2  | drag / resize / longpress 3 経路を **relative offset snap** に統一。**source of truth は drag 開始時の `originalStartTime` / `originalEndTime`**（pixel から base time を再構成しない、DST / 丸め誤差を避ける）。pixel は `deltaY` の算出にのみ使う。helper の semantics: `newStart = originalStart + snapDuration(deltaMinutes, snapInterval)` / `newEnd = originalEnd + snapDuration(deltaMinutes, snapInterval)`。start/end の「分のズレ」は維持される。`machine.ts` の `snapToGrid` 呼び出し 8 箇所を新 helper 経由に置換 | minutes            | **irreversible: drag 後も 1 分粒度のオフセットが永続化される**  |
 | A-3  | `entry-adapter.ts` の `snapMinutes` を **削除**する前に、`rg "snapMinutes\|roundToQuarterHour" src` で全 caller を列挙し、UI snap 目的で依存している caller が無いことを確認（コメント通り「TZ 丸め誤差吸収」だけが用途であることを実証）。確認後、責務分離した `truncateToMinute(date)`（秒・ms のみ 0 化）に置換。`tzIsSameDay` / `duration_minutes` 計算で秒以下のずれが日跨ぎ判定をフリップしないことを test で固定                                                                                                       | minutes            | none                                                            |
-| A-4  | A-0 で確定した path の Inspector 時刻入力 component を 1 分粒度に。`parseTimeString`（`^\d{1,2}:\d{2}$`）を流用、HH:mm 入力で seconds 0 padding。`INSPECTOR_TIME_PRECISION_MINUTES` を直接参照                                                                                                                                                                                                                                                                                                                                | minutes            | **irreversible: ユーザーが任意の分粒度 timestamp を作成可能に** |
+| A-4  | Inspector 時刻入力を新 component `TimeInput.tsx` に置換。PC は `<input type="text">` + `parseTimeString` validation、Mobile は `<input type="time" step="60">`。旧 `TimeSelect.tsx` / `ClockTimePicker.tsx` / `useTimeCombobox.ts` を削除（callsite は `TimeRow.tsx` のみ）。`parseTimeString`（`^\d{1,2}:\d{2}$`）を流用、HH:mm 入力で seconds 0 padding。`INSPECTOR_TIME_PRECISION_MINUTES` を直接参照                                                                                                                      | minutes            | **irreversible: ユーザーが任意の分粒度 timestamp を作成可能に** |
 | A-5  | regression 自動 test 追加。`time-math.test.ts` に `snapInterval` 任意値ケース、`machine` test で「10:07 entry を drag で +30 分 → 10:37」の precision 維持ケース、`entry-adapter.test.ts`（新規）に DST 境界の `truncateToMinute` ケース                                                                                                                                                                                                                                                                                      | minutes            | none                                                            |
 
 ### Reversibility Note
@@ -291,16 +292,17 @@ GCal も非対応、Dayopt の個人 timeboxing target で需要なし。YAGNI�
 
 ## 10. 確定済み Decisions（2026-04-28）
 
-| #   | Decision                            | 採用案                                                                                                                          |
-| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| D-1 | Elastic Timeline                    | 不採用、固定グリッド維持                                                                                                        |
-| D-2 | Sidebar / Mobile footer tag tap     | 時刻編集 UI を出さない、即作成                                                                                                  |
-| D-3 | entry と tag の関係                 | **現行の単一 tag model（`entry_tags` UNIQUE 制約）を維持**。複数 tag entry は導入しない。Watching AI 設計時に再検討             |
-| D-4 | density indicator / overflow バッジ | 却下、Watching AI / Insights の責務                                                                                             |
-| D-5 | plan の単位                         | 3 project に分割（A: precision、B: instant-tap、C: min-height chore）                                                           |
-| D-6 | precision policy の置き場           | `src/features/calendar/lib/precision.ts` の constant + ADR。store union には `1` を入れない                                     |
-| D-7 | drag の base time の source         | `originalStartTime` / `originalEndTime`（pixel から再構成しない、DST/丸め誤差回避）                                             |
-| D-8 | 14px の意味                         | block 内 label を読ませる目的ではない。**短い entry の存在を視認** することが目的。可読性は hover / Inspector / selected で補完 |
+| #   | Decision                            | 採用案                                                                                                                                                         |
+| --- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1 | Elastic Timeline                    | 不採用、固定グリッド維持                                                                                                                                       |
+| D-2 | Sidebar / Mobile footer tag tap     | 時刻編集 UI を出さない、即作成                                                                                                                                 |
+| D-3 | entry と tag の関係                 | **現行の単一 tag model（`entry_tags` UNIQUE 制約）を維持**。複数 tag entry は導入しない。Watching AI 設計時に再検討                                            |
+| D-4 | density indicator / overflow バッジ | 却下、Watching AI / Insights の責務                                                                                                                            |
+| D-5 | plan の単位                         | 3 project に分割（A: precision、B: instant-tap、C: min-height chore）                                                                                          |
+| D-6 | precision policy の置き場           | `src/features/calendar/lib/precision.ts` の constant + ADR。store union には `1` を入れない                                                                    |
+| D-7 | drag の base time の source         | `originalStartTime` / `originalEndTime`（pixel から再構成しない、DST/丸め誤差回避）                                                                            |
+| D-8 | 14px の意味                         | block 内 label を読ませる目的ではない。**短い entry の存在を視認** することが目的。可読性は hover / Inspector / selected で補完                                |
+| D-9 | Inspector 1 分粒度入力の UX 方式    | **PC = `<input type="text">` + `parseTimeString` validation / Mobile = `<input type="time" step="60">` で OS 標準 picker**。dropdown / popover / drawer は全廃 |
 
 未確定 Open Decisions:
 
@@ -308,8 +310,6 @@ GCal も非対応、Dayopt の個人 timeboxing target で需要なし。YAGNI�
   - 推奨 MVP: **β（次の 15 分境界）**。grid clean、past/active 制約と相性良、誤作成時の修正コスト最小
   - 「Start now」が user にとって core 体験なら α を採用し、明示ボタンとして別経路化
   - 詳細比較は § 5 の OD 表参照
-- **OD-2** (Project A-4 着手前): Inspector 1 分粒度入力の UX 方式（§ 4.1 参照）
-  - (a) dropdown 全 1440 オプション化 / (b) dropdown は 15 分維持 + 手入力で 1 分（推奨、Toggl 風）/ (c) 増減ボタン（Outlook 風）
 
 ---
 
