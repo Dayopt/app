@@ -142,6 +142,8 @@
       "timeNotSelected": "時刻選択: 未選択",
       "startTime": "開始時刻",
       "endTime": "終了時刻",
+      "switchToKeyboardInput": "キーボード入力に切替",
+      "switchToClockInput": "時計に切替",
       "addPlan": "タップして追加",
       "navigationMenu": "ナビゲーションメニュー",
       "pageNavigation": "ページナビゲーション",
