@@ -2,9 +2,12 @@
 
 import { type FocusEventHandler, type KeyboardEventHandler, useEffect, useState } from 'react';
 
+import { Drawer, DrawerContent } from '@/lib/components/ui/drawer';
 import { formatHHmm, parseTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
+
+import { ClockTimePicker } from './ClockTimePicker';
 
 interface TimeInputProps {
   /** HH:mm 文字列。空文字は未設定。 */
@@ -17,19 +20,28 @@ interface TimeInputProps {
   minTime?: string;
 }
 
+const ARROW_STEP_MINUTES = 15;
+
 function timeToMinutes(time: string): number {
   const parsed = parseTimeString(time);
   return parsed ? parsed.hour * 60 + parsed.minute : -1;
 }
 
+function shiftTime(time: string, deltaMinutes: number): string | null {
+  const parsed = parseTimeString(time);
+  if (!parsed) return null;
+  const total = (parsed.hour * 60 + parsed.minute + deltaMinutes + 24 * 60) % (24 * 60);
+  return formatHHmm(Math.floor(total / 60), total % 60);
+}
+
 /**
  * 時刻入力（1 分粒度）
  *
- * - **PC**: `<input type="text">` で `HH:mm` を直接タイプ。`parseTimeString` で validation
- * - **Mobile**: `<input type="time" step="60">` で OS 標準 picker（1 分粒度）
+ * - **PC**: `<input type="text">` で `HH:mm` を直接タイプ。`parseTimeString` で validation。
+ *   focus 中の `↑`/`↓` で ±15 分 step（GCal 風）
+ * - **Mobile**: タップで Drawer + 時計盤ピッカー（1 分粒度、drag で連続調整可）
  *
- * dropdown / popover / drawer は持たない。1 分粒度の policy は
- * `INSPECTOR_TIME_PRECISION_MINUTES` (= 1) に固定。
+ * 1 分粒度の policy は `INSPECTOR_TIME_PRECISION_MINUTES` (= 1) に固定。
  *
  * @see docs/design/timeline-precision-redesign/overview.md
  */
@@ -42,6 +54,7 @@ export function TimeInput({
 }: TimeInputProps) {
   const isMobile = useIsMobile();
   const [draft, setDraft] = useState(value);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     setDraft(value);
@@ -54,23 +67,48 @@ export function TimeInput({
   );
 
   if (isMobile) {
+    const triggerLabel = value || '--:--';
     return (
-      <input
-        type="time"
-        step={60}
-        value={value}
-        onChange={(e) => {
-          const next = e.target.value;
-          if (!next) return;
-          if (minTime && timeToMinutes(next) <= timeToMinutes(minTime)) return;
-          onChange(next);
-        }}
-        disabled={disabled}
-        aria-invalid={hasError}
-        className={cn(baseClasses, 'cursor-text')}
-      />
+      <>
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          disabled={disabled}
+          aria-label={value ? `${value} を編集` : '時刻を入力'}
+          className={cn(
+            baseClasses,
+            'cursor-pointer text-right',
+            value ? 'text-foreground' : 'text-muted-foreground',
+          )}
+        >
+          {triggerLabel}
+        </button>
+        {!disabled && (
+          <Drawer open={pickerOpen} onOpenChange={setPickerOpen}>
+            <DrawerContent className="z-overlay-popover" overlayClassName="z-overlay-popover">
+              <ClockTimePicker
+                value={value || '09:00'}
+                onChange={onChange}
+                onClose={() => setPickerOpen(false)}
+                minTime={minTime}
+              />
+            </DrawerContent>
+          </Drawer>
+        )}
+      </>
     );
   }
+
+  const tryCommit = (formatted: string): boolean => {
+    if (minTime && timeToMinutes(formatted) <= timeToMinutes(minTime)) {
+      return false;
+    }
+    setDraft(formatted);
+    if (formatted !== value) {
+      onChange(formatted);
+    }
+    return true;
+  };
 
   const commitDraft = () => {
     if (draft === value) return;
@@ -80,13 +118,8 @@ export function TimeInput({
       return;
     }
     const formatted = formatHHmm(parsed.hour, parsed.minute);
-    if (minTime && timeToMinutes(formatted) <= timeToMinutes(minTime)) {
+    if (!tryCommit(formatted)) {
       setDraft(value);
-      return;
-    }
-    setDraft(formatted);
-    if (formatted !== value) {
-      onChange(formatted);
     }
   };
 
@@ -102,6 +135,12 @@ export function TimeInput({
       e.preventDefault();
       setDraft(value);
       e.currentTarget.blur();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const base = parseTimeString(draft) ? draft : value;
+      if (!base) return;
+      const next = shiftTime(base, e.key === 'ArrowUp' ? ARROW_STEP_MINUTES : -ARROW_STEP_MINUTES);
+      if (next) tryCommit(next);
     }
   };
 
