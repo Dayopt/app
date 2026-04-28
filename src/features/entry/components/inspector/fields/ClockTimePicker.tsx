@@ -209,9 +209,15 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
         minute = parsed.minute;
       }
     }
+    // minTime guard: clock mode の「今」や初期値が minTime 以下のまま保存されるのを防ぐ
+    if (minMins !== undefined && hour * 60 + minute <= minMins) {
+      // 保存しない（end <= start 防止）。onClose のみ。
+      onClose();
+      return;
+    }
     onChange(formatHHmm(hour, minute));
     onClose();
-  }, [inputMode, selectedHour, selectedMinute, commitKeyboardDraft, onChange, onClose]);
+  }, [inputMode, selectedHour, selectedMinute, minMins, commitKeyboardDraft, onChange, onClose]);
 
   // ─── 針の計算 ─────────────────────────────────────
 

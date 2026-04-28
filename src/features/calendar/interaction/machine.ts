@@ -31,6 +31,16 @@ export { snapToGrid } from './time-math';
 /** マウスドラッグ起動閾値（px） */
 export const DRAG_THRESHOLD_PX = 5;
 
+/**
+ * snappedTop を当日範囲内 [0, 24h - durationPx] に clamp する。
+ * pixelsToTimeUnsnapped が時刻を 23:59 でクランプするため、ピクセルも合わせないと
+ * ghost が画面外へずれる（Codex P2 指摘）。
+ */
+function clampSnappedTopToDay(snappedTop: number, hourHeight: number, durationPx = 0): number {
+  const dayMaxPx = 24 * hourHeight - durationPx;
+  return Math.max(0, Math.min(snappedTop, Math.max(0, dayMaxPx)));
+}
+
 /** タッチ移動でロングプレスをキャンセルする閾値（px） — スクロール許容のため */
 export const TOUCH_SCROLL_THRESHOLD_PX = 10;
 
@@ -343,11 +353,16 @@ function handlePointerMove(
       // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
-      const snappedTop = state.originalPosition.top + snappedDeltaY;
+      const durationMs = ctx.getEntryDurationMs(state.entryId);
+      const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
+      const snappedTop = clampSnappedTopToDay(
+        state.originalPosition.top + snappedDeltaY,
+        ctx.hourHeight,
+        durationPx,
+      );
       const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
       const targetDateIndex = action.targetDateIndex ?? state.dateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
-      const durationMs = ctx.getEntryDurationMs(state.entryId);
       const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
       const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
@@ -386,11 +401,16 @@ function handlePointerMove(
       // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
-      const snappedTop = state.originalPosition.top + snappedDeltaY;
+      const durationMs = ctx.getEntryDurationMs(state.entryId);
+      const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
+      const snappedTop = clampSnappedTopToDay(
+        state.originalPosition.top + snappedDeltaY,
+        ctx.hourHeight,
+        durationPx,
+      );
       const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
       const targetDateIndex = action.targetDateIndex ?? state.targetDateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
-      const durationMs = ctx.getEntryDurationMs(state.entryId);
       const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
       const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
@@ -417,7 +437,12 @@ function handlePointerMove(
       const deltaY = action.point.clientY - state.startPoint.clientY;
       const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
       const minHeight = (ctx.hourHeight / 60) * interval;
-      const newHeight = Math.max(minHeight, state.originalPosition.height + snappedDeltaY);
+      // upper cap: end が当日内に収まる範囲（pixelsToTimeUnsnapped が 23:59 で clamp する分と整合）
+      const maxHeight = Math.max(minHeight, 24 * ctx.hourHeight - state.originalPosition.top);
+      const newHeight = Math.min(
+        maxHeight,
+        Math.max(minHeight, state.originalPosition.height + snappedDeltaY),
+      );
 
       if (newHeight !== state.snappedHeight) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
