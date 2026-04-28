@@ -59,8 +59,12 @@ interface UseCalendarDataResult {
   entriesData: ReturnType<typeof useEntries>['data'];
   /** エントリ取得エラー */
   entriesError: ReturnType<typeof useEntries>['error'];
-  /** エントリ取得中かどうか */
+  /** エントリ取得中かどうか（初回のみ true） */
   isEntriesLoading: boolean;
+  /** バックグラウンド再取得中も含めて取得中かどうか */
+  isEntriesFetching: boolean;
+  /** エントリ取得を手動で再試行する */
+  refetchEntries: ReturnType<typeof useEntries>['refetch'];
   /** ナビゲーション方向に対応する日付範囲を事前取得する */
   prefetchDirection: (direction: 'prev' | 'next' | 'today') => void;
   /** ビュー切り替え先の日付範囲を即座に事前取得する */
@@ -100,6 +104,8 @@ export function useCalendarData({
     data: entriesData,
     error: entriesError,
     isLoading: isEntriesLoading,
+    isFetching: isEntriesFetching,
+    refetch: refetchEntries,
   } = useEntries(dateFilter);
 
   // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ初期化）
@@ -286,6 +292,8 @@ export function useCalendarData({
     entriesData,
     entriesError,
     isEntriesLoading,
+    isEntriesFetching,
+    refetchEntries,
     prefetchDirection,
     prefetchForView,
   };

@@ -2,11 +2,11 @@
 
 import React from 'react';
 
-import { getWeek, isToday } from 'date-fns';
+import { getWeek } from 'date-fns';
 
-import { cn } from '@/lib/utils';
-
+import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { cn } from '@/lib/utils';
 
 import {
   CalendarDateHeader,
@@ -122,7 +122,7 @@ export const WeekGrid = ({
             showMonthYear={false}
             dayNameFormat="short"
             dateFormat="d"
-            isToday={isToday(date)}
+            isToday={isTodayInTimezone(date, timezone)}
             isSelected={false}
           />
         </div>

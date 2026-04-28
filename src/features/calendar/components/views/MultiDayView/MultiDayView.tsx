@@ -2,11 +2,11 @@
 
 import React, { useMemo } from 'react';
 
-import { format, getWeek, isToday } from 'date-fns';
+import { format, getWeek } from 'date-fns';
 
-import { cn } from '@/lib/utils';
-
+import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { cn } from '@/lib/utils';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import {
@@ -111,7 +111,7 @@ export function MultiDayView({
             showMonthYear={false}
             dayNameFormat="short"
             dateFormat="d"
-            isToday={isToday(date)}
+            isToday={isTodayInTimezone(date, timezone)}
             isSelected={false}
           />
         </div>

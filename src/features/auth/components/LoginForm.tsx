@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
@@ -51,7 +51,21 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   const redirectPath = getSafeRedirectPath(searchParams?.get('redirect'));
 
   const [showPassword, setShowPassword] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // OAuth/メール確認 callback 失敗時、callback route が ?error= を付けて redirect する。
+  // ユーザーに無言バウンスさせず、対応するメッセージを表示する。
+  const queryError = useMemo(() => {
+    const errorParam = searchParams?.get('error');
+    if (!errorParam) return null;
+    const errorKeyMap: Record<string, string> = {
+      auth_callback_error: 'auth.errors.oauthCallbackError',
+      auth_callback_missing_code: 'auth.errors.oauthCallbackMissingCode',
+    };
+    return t(errorKeyMap[errorParam] ?? 'auth.errors.unexpectedError');
+  }, [searchParams, t]);
+
+  const serverError = submitError ?? queryError;
 
   const {
     register,
@@ -66,7 +80,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setServerError(null);
+    setSubmitError(null);
 
     try {
       // ステップ1: ログイン試行（最小依存で実行）
@@ -75,7 +89,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       if (signInError) {
         // ログイン失敗時: OWASP準拠でサニタイズ済みメッセージを表示
         const errorKey = getAuthErrorKey(signInError.message, 'login');
-        setServerError(t(errorKey));
+        setSubmitError(t(errorKey));
       } else if (signInData) {
         // ログイン成功
 
@@ -114,7 +128,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       }
     } catch (err) {
       logger.error('[LoginForm] Unexpected error:', err);
-      setServerError(t('auth.errors.unexpectedError') || 'An unexpected error occurred');
+      setSubmitError(t('auth.errors.unexpectedError') || 'An unexpected error occurred');
     }
   };
 

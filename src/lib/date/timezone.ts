@@ -368,6 +368,23 @@ export function tzIsSameDay(a: Date, b: Date, timezone: string): boolean {
 }
 
 /**
+ * 指定 Date がユーザー TZ における「今日」かどうか
+ *
+ * date-fns の `isToday` はブラウザのローカル TZ を基準とするため、
+ * ユーザーが設定した calendar timezone と OS TZ が異なる場合に
+ * 「今日」のハイライトが 1 日ずれる問題が発生する。
+ * カレンダー UI からはこの helper を使うこと。
+ *
+ * @param date - 判定対象（UTC Date）
+ * @param timezone - ユーザーのタイムゾーン
+ * @param now - 比較基準（テスト用）。省略時は現在時刻
+ * @returns ユーザー TZ で今日と同じ日付なら true
+ */
+export function isTodayInTimezone(date: Date, timezone: string, now: Date = new Date()): boolean {
+  return tzIsSameDay(date, now, timezone);
+}
+
+/**
  * ユーザーTZでの日付キー (YYYY-MM-DD)
  *
  * @param date - 対象日時

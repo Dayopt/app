@@ -7,7 +7,6 @@ import {
   endOfWeek,
   format,
   getWeek,
-  isSameDay,
   isSameMonth,
   startOfMonth,
   startOfWeek,
@@ -16,6 +15,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useMemo } from 'react';
 
+import { isTodayInTimezone, tzIsSameDay } from '@/lib/date/timezone';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { cn } from '@/lib/utils';
@@ -82,17 +82,18 @@ export const MobileMonthGrid = memo<MobileMonthGridProps>(
 
     const { handlers, ref } = useSwipeGesture(handleSwipeLeft, handleSwipeRight);
 
-    // 日付の状態を判定
+    const timezone = useCalendarSettingsStore((state) => state.timezone);
+
+    // 日付の状態を判定（ユーザー TZ ベース）
     const getDayState = useCallback(
       (date: Date) => {
-        const today = new Date();
-        const isToday = isSameDay(date, today);
-        const isSelected = isSameDay(date, selectedDate);
+        const isToday = isTodayInTimezone(date, timezone);
+        const isSelected = tzIsSameDay(date, selectedDate, timezone);
         const isCurrentMonth = isSameMonth(date, viewMonth);
 
         return { isToday, isSelected, isCurrentMonth };
       },
-      [selectedDate, viewMonth],
+      [selectedDate, viewMonth, timezone],
     );
 
     const handleDateClick = useCallback(

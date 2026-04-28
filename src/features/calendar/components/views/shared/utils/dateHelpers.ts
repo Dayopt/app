@@ -5,6 +5,8 @@
  * このファイルにはカレンダービュー固有のユーティリティのみ含まれます。
  */
 
+import { tzIsSameDay } from '@/lib/date/timezone';
+
 /**
  * 日付をフォーマット（カレンダービュー用・ロケール対応）
  */
@@ -44,8 +46,17 @@ export function isValidEvent<T extends { startDate?: Date | string | null }>(eve
 
 /**
  * 今日のインデックスを取得（日付配列内での位置）
+ *
+ * timezone を渡した場合はユーザー TZ で「今日」を判定する。
+ * カレンダーは settings の timezone を基準にしているので、
+ * 呼び出し側はできるだけ timezone を渡すこと。省略時はブラウザローカル TZ。
  */
-export function getTodayIndex(dates: Date[]): number {
-  const today = new Date();
-  return dates.findIndex((date) => date.toDateString() === today.toDateString());
+export function getTodayIndex(dates: Date[], timezone?: string): number {
+  const now = new Date();
+
+  if (timezone) {
+    return dates.findIndex((date) => tzIsSameDay(date, now, timezone));
+  }
+
+  return dates.findIndex((date) => date.toDateString() === now.toDateString());
 }

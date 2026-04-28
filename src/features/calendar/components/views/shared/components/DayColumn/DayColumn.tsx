@@ -4,6 +4,7 @@
 
 'use client';
 
+import { formatInTimeZone } from 'date-fns-tz';
 import { Plus } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import React, { memo, useMemo } from 'react';
@@ -15,7 +16,9 @@ import { useEntryPosition } from '../../hooks/useEntryPosition';
 import { EntryCard, isNewEntry, useEntryInspectorStore } from '@/features/entry';
 import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
+import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
@@ -34,6 +37,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
+  const timezone = useCalendarSettingsStore((state) => state.timezone);
 
   // この日のエントリをフィルタリング
   const dayEntries = useMemo(() => {
@@ -125,13 +129,13 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
               onClick={(e) => {
                 e.stopPropagation();
                 if (onTimeClick) {
-                  // 現在時刻 or 9:00 付近にクリックイベントを発火
+                  // 「今日」判定 / 現在時 hour の両方をユーザー TZ で評価する。
+                  // `now.getHours()` は OS TZ ベースなので、calendar TZ と乖離していると
+                  // 「今日の今の時刻」を意図したつもりが UTC 深夜などで埋まり得る。
                   const now = new Date();
-                  const isDateToday =
-                    date.getFullYear() === now.getFullYear() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getDate() === now.getDate();
-                  const hour = isDateToday ? Math.max(now.getHours(), 9) : 9;
+                  const isDateToday = isTodayInTimezone(date, timezone, now);
+                  const tzHour = Number(formatInTimeZone(now, timezone, 'H'));
+                  const hour = isDateToday ? Math.max(tzHour, 9) : 9;
                   onTimeClick(date, hour, 0);
                 }
               }}
