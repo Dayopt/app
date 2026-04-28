@@ -19,12 +19,13 @@ import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import { TagQuickSelector, useCreateTag } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
+import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
-import { formatTimeString } from '../../../../../interaction/time-math';
+
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';

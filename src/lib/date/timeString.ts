@@ -19,3 +19,17 @@ export function parseTimeString(time: string): { hour: number; minute: number } 
 export function formatHHmm(hour: number, minute: number): string {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
+
+/** 時刻フォーマット（24h: "14:30" / 12h: "2:30 PM"） */
+export function formatTimeString(
+  hour: number,
+  minute: number,
+  format: '24h' | '12h' = '24h',
+): string {
+  if (format === '12h') {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${h12}:${String(minute).padStart(2, '0')} ${period}`;
+  }
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}

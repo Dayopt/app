@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseTimeString } from '@/lib/date';
+import { formatTimeString, parseTimeString } from '@/lib/date';
 
 import {
   addMinutesToTime,
   DEFAULT_SNAP_INTERVAL,
-  formatTimeString,
   pixelsToTime,
   pixelsToTimeUnsnapped,
   snapDeltaToGrid,

@@ -11,13 +11,11 @@
 
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 
+import { formatTimeString } from '@/lib/date';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import {
-  formatTimeString,
-  pixelsToTime as pixelsToTimeRaw,
-} from '../../../../../interaction/time-math';
+import { pixelsToTime as pixelsToTimeRaw } from '../../../../../interaction/time-math';
 import { checkClientSideOverlap } from '../../../../../lib/overlap';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 

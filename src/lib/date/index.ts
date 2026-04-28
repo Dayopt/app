@@ -41,7 +41,7 @@ export { localTimeToUTCISO, parseISOToUserTimezone } from './timezone';
 // ========================================
 // TimeString - "HH:mm" パース / フォーマット
 // ========================================
-export { formatHHmm, parseTimeString } from './timeString';
+export { formatHHmm, formatTimeString, parseTimeString } from './timeString';
 
 // ========================================
 // Filter - 日付範囲フィルター（type のみ）
