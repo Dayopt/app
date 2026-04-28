@@ -1,14 +1,13 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
-import { useHideOnScroll } from '@/lib/hooks/useHideOnScroll';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { BottomTabBar } from './BottomTabBar';
@@ -27,7 +26,7 @@ interface MobileLayoutProps {
  * **構成**:
  * - AppHeader（ナビゲーション）
  * - MainContent（pb-16でBottomTabBar分の余白確保）
- * - BottomTabBar（固定ボトムタブ、スクロール連動 auto-hide）
+ * - BottomTabBar（固定ボトムタブ、常時表示）
  */
 export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const t = useTranslations('common.inlineBanner');
@@ -35,12 +34,6 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const banner = useAppInlineBanner();
 
   const pathname = usePathname();
-  const { hidden, reset } = useHideOnScroll();
-
-  // ページ遷移時にボトムバーを再表示
-  useEffect(() => {
-    reset();
-  }, [pathname, reset]);
 
   // localePrefix: 'as-needed' により default locale の URL は prefix なし
   // (例: /calendar/day) の場合もあるため、prop の locale ではなく実際の
@@ -94,10 +87,10 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
       </div>
 
       {/* calendar view のみ: タグクイック作成 chip 行（TabBar 直上に固定） */}
-      {isCalendarView && <TagChipRow hidden={hidden} />}
+      {isCalendarView && <TagChipRow />}
 
       {/* ボトムタブナビゲーション */}
-      <BottomTabBar hidden={hidden} />
+      <BottomTabBar />
     </>
   );
 }

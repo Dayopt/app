@@ -5,15 +5,20 @@
  *
  * - 時 → 分の2ステップ選択
  * - 24時間対応（外側リング: 1-12 / 内側リング: 0,13-23）
- * - 分は15分刻み固定（00, 15, 30, 45）
+ * - 分は 1 分粒度（角度ベース 0-59）。表示ラベルは 5 分刻み（00, 05, ..., 55）
  * - 時選択後に自動で分ステップへ遷移
+ * - drag（pointermove）で連続調整可
+ *
+ * @see docs/design/timeline-precision-redesign/overview.md § 4 D-9
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { Clock, Keyboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Button } from '@/lib/components/ui/button';
+import { formatHHmm, parseTimeString } from '@/lib/date';
 import { cn } from '@/lib/utils';
 
 // ─── 定数 ────────────────────────────────────────────
@@ -27,9 +32,11 @@ const INDICATOR_R = 18;
 const OUTER_HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 const INNER_HOURS = [0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] as const;
 const INNER_HOUR_SET = new Set<number>(INNER_HOURS);
-const SNAP_MINUTES = [0, 15, 30, 45] as const;
+/** 視覚ガイド用の 5 分刻みラベル。実際の選択値は 1 分粒度（角度ベース） */
+const MINUTE_LABELS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55] as const;
 
 type Mode = 'hour' | 'minute';
+type InputMode = 'clock' | 'keyboard';
 
 // ─── ユーティリティ ──────────────────────────────────
 
@@ -62,8 +69,21 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
 
   const [h, m] = (value || '09:00').split(':').map(Number);
   const [mode, setMode] = useState<Mode>('hour');
+  const [inputMode, setInputMode] = useState<InputMode>('clock');
   const [selectedHour, setSelectedHour] = useState(h ?? 9);
-  const [selectedMinute, setSelectedMinute] = useState((Math.round((m ?? 0) / 15) * 15) % 60);
+  const [selectedMinute, setSelectedMinute] = useState(m ?? 0);
+  const [draftHHmm, setDraftHHmm] = useState(formatHHmm(h ?? 9, m ?? 0));
+  const isPointerDownRef = useRef(false);
+  const keyboardInputRef = useRef<HTMLInputElement>(null);
+
+  // keyboard mode 切替時に focus を入力欄へ
+  useEffect(() => {
+    if (inputMode === 'keyboard') {
+      const id = setTimeout(() => keyboardInputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, [inputMode]);
 
   const minMins = minTime ? timeToMinutes(minTime) : undefined;
 
@@ -87,7 +107,7 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
   // ─── タッチ / クリック処理 ───────────────────────
 
   const handleInteraction = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
+    (e: React.MouseEvent | React.TouchEvent, options: { advanceMode?: boolean } = {}) => {
       const el = clockRef.current;
       if (!el) return;
 
@@ -108,11 +128,13 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
         const hour = isInner ? INNER_HOURS[idx]! : OUTER_HOURS[idx]!;
         if (!isHourDisabled(hour)) {
           setSelectedHour(hour);
-          setTimeout(() => setMode('minute'), 300);
+          if (options.advanceMode) {
+            setTimeout(() => setMode('minute'), 300);
+          }
         }
       } else {
-        const idx = Math.round(angle / 90) % 4;
-        const minute = SNAP_MINUTES[idx]!;
+        // 1 分粒度: 360° / 60 = 6° per minute
+        const minute = Math.round(angle / 6) % 60;
         if (!isMinuteDisabled(minute)) {
           setSelectedMinute(minute);
         }
@@ -121,16 +143,85 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
     [mode, isHourDisabled, isMinuteDisabled],
   );
 
+  const handlePointerDown = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      isPointerDownRef.current = true;
+      // tap で即時選択（hour mode は drag せずに tap で確定 → minute へ遷移）
+      handleInteraction(e, { advanceMode: mode === 'hour' });
+    },
+    [handleInteraction, mode],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      if (!isPointerDownRef.current) return;
+      // drag 中は mode 遷移しない（minute mode で 1 分粒度連続調整するため）
+      handleInteraction(e);
+    },
+    [handleInteraction],
+  );
+
+  const handlePointerUp = useCallback(() => {
+    isPointerDownRef.current = false;
+  }, []);
+
+  const handleSetNow = useCallback(() => {
+    const now = new Date();
+    const nowH = now.getHours();
+    const nowM = now.getMinutes();
+    setSelectedHour(nowH);
+    setSelectedMinute(nowM);
+    setDraftHHmm(formatHHmm(nowH, nowM));
+  }, []);
+
+  /** keyboard mode の draft を soft-validate して selectedHour / selectedMinute へ反映 */
+  const commitKeyboardDraft = useCallback((): { hour: number; minute: number } | null => {
+    const parsed = parseTimeString(draftHHmm);
+    if (!parsed) return null;
+    const total = parsed.hour * 60 + parsed.minute;
+    if (minMins !== undefined && total <= minMins) return null;
+    return parsed;
+  }, [draftHHmm, minMins]);
+
+  const handleToggleInputMode = useCallback(() => {
+    if (inputMode === 'clock') {
+      setDraftHHmm(formatHHmm(selectedHour, selectedMinute));
+      setInputMode('keyboard');
+    } else {
+      const parsed = commitKeyboardDraft();
+      if (parsed) {
+        setSelectedHour(parsed.hour);
+        setSelectedMinute(parsed.minute);
+      } else {
+        setDraftHHmm(formatHHmm(selectedHour, selectedMinute));
+      }
+      setInputMode('clock');
+    }
+  }, [inputMode, selectedHour, selectedMinute, commitKeyboardDraft]);
+
   const handleConfirm = useCallback(() => {
-    const hh = selectedHour.toString().padStart(2, '0');
-    const mm = selectedMinute.toString().padStart(2, '0');
-    onChange(`${hh}:${mm}`);
+    let hour = selectedHour;
+    let minute = selectedMinute;
+    if (inputMode === 'keyboard') {
+      const parsed = commitKeyboardDraft();
+      if (parsed) {
+        hour = parsed.hour;
+        minute = parsed.minute;
+      }
+    }
+    // minTime guard: clock mode の「今」や初期値が minTime 以下のまま保存されるのを防ぐ
+    if (minMins !== undefined && hour * 60 + minute <= minMins) {
+      // 保存しない（end <= start 防止）。onClose のみ。
+      onClose();
+      return;
+    }
+    onChange(formatHHmm(hour, minute));
     onClose();
-  }, [selectedHour, selectedMinute, onChange, onClose]);
+  }, [inputMode, selectedHour, selectedMinute, minMins, commitKeyboardDraft, onChange, onClose]);
 
   // ─── 針の計算 ─────────────────────────────────────
 
-  const handAngle = mode === 'hour' ? (selectedHour % 12) * 30 : (selectedMinute / 15) * 90;
+  const handAngle = mode === 'hour' ? (selectedHour % 12) * 30 : selectedMinute * 6;
   const handRadius =
     mode === 'hour'
       ? INNER_HOUR_SET.has(selectedHour)
@@ -140,9 +231,9 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
   const handEnd = posOnCircle(handAngle, handRadius);
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 pb-4">
+    <div className="flex flex-col items-center px-4 pt-6 pb-4">
       {/* 時刻表示ヘッダー */}
-      <div className="flex items-baseline gap-1 text-5xl tabular-nums">
+      <div className="mb-6 flex items-baseline gap-1 text-5xl tabular-nums">
         <button
           type="button"
           onClick={() => setMode('hour')}
@@ -170,131 +261,183 @@ export function ClockTimePicker({ value, onChange, onClose, minTime }: ClockTime
         </button>
       </div>
 
-      {/* 時計盤 */}
-      <div
-        ref={clockRef}
-        className="bg-muted relative touch-none rounded-full select-none"
-        style={{ width: SIZE, height: SIZE }}
-        onClick={handleInteraction}
-        onTouchStart={handleInteraction}
-        role="group"
-        aria-label={mode === 'hour' ? t('aria.startTime') : t('aria.endTime')}
-      >
-        {/* 針（中心→選択位置） */}
+      {inputMode === 'keyboard' ? (
+        /* キーボード入力 mode: 時計盤の代わりに HH:mm 直接入力 */
+        <div className="flex items-center justify-center" style={{ width: SIZE, height: SIZE }}>
+          <input
+            ref={keyboardInputRef}
+            type="text"
+            inputMode="numeric"
+            value={draftHHmm}
+            onChange={(e) => setDraftHHmm(e.target.value)}
+            onBlur={() => {
+              const parsed = commitKeyboardDraft();
+              if (parsed) {
+                setSelectedHour(parsed.hour);
+                setSelectedMinute(parsed.minute);
+                setDraftHHmm(formatHHmm(parsed.hour, parsed.minute));
+              } else {
+                setDraftHHmm(formatHHmm(selectedHour, selectedMinute));
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleConfirm();
+              }
+            }}
+            placeholder="--:--"
+            maxLength={5}
+            aria-label={t('aria.startTime')}
+            className="bg-card ring-border focus:ring-primary w-32 rounded-lg px-2 py-3 text-center text-4xl tabular-nums shadow-xs ring-1 outline-none focus:ring-2"
+          />
+        </div>
+      ) : (
+        /* 時計盤 */
         <div
-          className="bg-primary absolute left-1/2 origin-bottom"
-          style={{
-            width: 2,
-            height: handRadius,
-            bottom: '50%',
-            transform: `translateX(-50%) rotate(${handAngle}deg)`,
-            transition: 'transform 200ms, height 200ms',
-          }}
-        />
-        {/* 中心ドット */}
-        <div
-          className="bg-primary absolute top-1/2 left-1/2 rounded-full"
-          style={{ width: 8, height: 8, transform: 'translate(-50%, -50%)' }}
-        />
-        {/* 選択インジケーター */}
-        <div
-          className="bg-primary absolute rounded-full"
-          style={{
-            width: INDICATOR_R * 2,
-            height: INDICATOR_R * 2,
-            left: handEnd.x - INDICATOR_R,
-            top: handEnd.y - INDICATOR_R,
-            transition: 'left 200ms, top 200ms',
-          }}
-        />
+          ref={clockRef}
+          className="bg-muted relative touch-none rounded-full select-none"
+          style={{ width: SIZE, height: SIZE }}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+          onTouchEnd={handlePointerUp}
+          onTouchCancel={handlePointerUp}
+          role="group"
+          aria-label={mode === 'hour' ? t('aria.startTime') : t('aria.endTime')}
+        >
+          {/* 針（中心→選択位置） */}
+          <div
+            className="bg-primary absolute left-1/2 origin-bottom"
+            style={{
+              width: 2,
+              height: handRadius,
+              bottom: '50%',
+              transform: `translateX(-50%) rotate(${handAngle}deg)`,
+              transition: 'transform 200ms, height 200ms',
+            }}
+          />
+          {/* 中心ドット */}
+          <div
+            className="bg-primary absolute top-1/2 left-1/2 rounded-full"
+            style={{ width: 8, height: 8, transform: 'translate(-50%, -50%)' }}
+          />
+          {/* 選択インジケーター */}
+          <div
+            className="bg-primary absolute rounded-full"
+            style={{
+              width: INDICATOR_R * 2,
+              height: INDICATOR_R * 2,
+              left: handEnd.x - INDICATOR_R,
+              top: handEnd.y - INDICATOR_R,
+              transition: 'left 200ms, top 200ms',
+            }}
+          />
 
-        {/* 数字ラベル */}
-        {mode === 'hour' ? (
-          <>
-            {/* 外側リング: 12, 1-11 */}
-            {OUTER_HOURS.map((hour, i) => {
+          {/* 数字ラベル */}
+          {mode === 'hour' ? (
+            <>
+              {/* 外側リング: 12, 1-11 */}
+              {OUTER_HOURS.map((hour, i) => {
+                const pos = posOnCircle(toAngleDeg(i, 12), OUTER_RADIUS);
+                const disabled = isHourDisabled(hour);
+                const selected = selectedHour === hour;
+                return (
+                  <span
+                    key={`o${hour}`}
+                    className={cn(
+                      'absolute flex items-center justify-center text-sm transition-colors duration-150',
+                      disabled && 'opacity-30',
+                      selected ? 'text-primary-foreground font-medium' : 'text-foreground',
+                    )}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      left: pos.x - 18,
+                      top: pos.y - 18,
+                    }}
+                  >
+                    {hour}
+                  </span>
+                );
+              })}
+              {/* 内側リング: 0, 13-23 */}
+              {INNER_HOURS.map((hour, i) => {
+                const pos = posOnCircle(toAngleDeg(i, 12), INNER_RADIUS);
+                const disabled = isHourDisabled(hour);
+                const selected = selectedHour === hour;
+                return (
+                  <span
+                    key={`i${hour}`}
+                    className={cn(
+                      'absolute flex items-center justify-center text-xs transition-colors duration-150',
+                      disabled && 'opacity-30',
+                      selected ? 'text-primary-foreground' : 'text-muted-foreground',
+                    )}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      left: pos.x - 18,
+                      top: pos.y - 18,
+                    }}
+                  >
+                    {hour}
+                  </span>
+                );
+              })}
+            </>
+          ) : (
+            /* 分: 5 分刻みラベル（00, 05, 10, ..., 55）。実際の選択値は 1 分粒度 */
+            MINUTE_LABELS.map((minute, i) => {
               const pos = posOnCircle(toAngleDeg(i, 12), OUTER_RADIUS);
-              const disabled = isHourDisabled(hour);
-              const selected = selectedHour === hour;
+              const disabled = isMinuteDisabled(minute);
+              const selected = selectedMinute === minute;
               return (
                 <span
-                  key={`o${hour}`}
+                  key={`m${minute}`}
                   className={cn(
                     'absolute flex items-center justify-center text-sm transition-colors duration-150',
                     disabled && 'opacity-30',
                     selected ? 'text-primary-foreground font-medium' : 'text-foreground',
                   )}
                   style={{
-                    width: 36,
-                    height: 36,
-                    left: pos.x - 18,
-                    top: pos.y - 18,
+                    width: 32,
+                    height: 32,
+                    left: pos.x - 16,
+                    top: pos.y - 16,
                   }}
                 >
-                  {hour}
+                  {minute.toString().padStart(2, '0')}
                 </span>
               );
-            })}
-            {/* 内側リング: 0, 13-23 */}
-            {INNER_HOURS.map((hour, i) => {
-              const pos = posOnCircle(toAngleDeg(i, 12), INNER_RADIUS);
-              const disabled = isHourDisabled(hour);
-              const selected = selectedHour === hour;
-              return (
-                <span
-                  key={`i${hour}`}
-                  className={cn(
-                    'absolute flex items-center justify-center text-xs transition-colors duration-150',
-                    disabled && 'opacity-30',
-                    selected ? 'text-primary-foreground' : 'text-muted-foreground',
-                  )}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    left: pos.x - 18,
-                    top: pos.y - 18,
-                  }}
-                >
-                  {hour}
-                </span>
-              );
-            })}
-          </>
-        ) : (
-          /* 分: 00, 15, 30, 45 */
-          SNAP_MINUTES.map((minute, i) => {
-            const pos = posOnCircle(toAngleDeg(i, 4), OUTER_RADIUS);
-            const disabled = isMinuteDisabled(minute);
-            const selected = selectedMinute === minute;
-            return (
-              <span
-                key={`m${minute}`}
-                className={cn(
-                  'absolute flex items-center justify-center text-base font-medium transition-colors duration-150',
-                  disabled && 'opacity-30',
-                  selected ? 'text-primary-foreground font-medium' : 'text-foreground',
-                )}
-                style={{
-                  width: 40,
-                  height: 40,
-                  left: pos.x - 20,
-                  top: pos.y - 20,
-                }}
-              >
-                {minute.toString().padStart(2, '0')}
-              </span>
-            );
-          })
-        )}
-      </div>
+            })
+          )}
+        </div>
+      )}
 
       {/* アクションボタン */}
-      <div className="flex w-full justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          {t('actions.cancel')}
-        </Button>
-        <Button variant="primary" size="sm" onClick={handleConfirm}>
-          OK
+      <div className="mt-2 flex w-full flex-col items-stretch gap-2">
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
+            onClick={handleToggleInputMode}
+            aria-label={
+              inputMode === 'clock' ? t('aria.switchToKeyboardInput') : t('aria.switchToClockInput')
+            }
+          >
+            {inputMode === 'clock' ? <Keyboard /> : <Clock />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleSetNow}>
+            {t('actions.now')}
+          </Button>
+        </div>
+        <Button variant="primary" size="lg" className="w-full" onClick={handleConfirm}>
+          {t('actions.save')}
         </Button>
       </div>
     </div>

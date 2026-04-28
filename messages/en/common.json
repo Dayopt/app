@@ -66,6 +66,7 @@
     },
     "actions": {
       "save": "Save",
+      "now": "Now",
       "cancel": "Cancel",
       "close": "Close",
       "delete": "Delete",
@@ -141,6 +142,8 @@
       "timeNotSelected": "Select time: not selected",
       "startTime": "Start time",
       "endTime": "End time",
+      "switchToKeyboardInput": "Switch to keyboard input",
+      "switchToClockInput": "Switch to clock input",
       "addPlan": "Tap to add entry",
       "navigationMenu": "Navigation menu",
       "pageNavigation": "Page navigation",

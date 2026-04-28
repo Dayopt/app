@@ -8,7 +8,7 @@ import { TimeRow, TimeRowPlaceholder } from './TimeRow';
 /**
  * TimeRow — 時間入力行
  *
- * ラベル + TimeSelect × 2（開始→終了）の構成。
+ * ラベル + TimeInput × 2（開始→終了）の構成。
  * 予定行にも記録行にも使用される汎用コンポーネント。
  * `isPrimary` が true のときは記録行として視覚的に強調される。
  */
@@ -73,7 +73,7 @@ export const Primary: Story = {
   render: () => <TimeRowDemo isPrimary />,
 };
 
-/** エラー状態。TimeSelect がエラーカラーで表示される。 */
+/** エラー状態。TimeInput がエラーカラーで表示される。 */
 export const WithError: Story = {
   render: () => <TimeRowDemo hasError />,
 };

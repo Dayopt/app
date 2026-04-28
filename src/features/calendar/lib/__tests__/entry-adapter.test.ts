@@ -84,20 +84,69 @@ describe('entryToCalendarEvent', () => {
     expect(event!.endDate!.toISOString()).toBe('2026-04-27T02:00:00.000Z');
   });
 
-  it('分は 15 分単位にスナップされる（30 秒以上で繰り上げ）', () => {
+  it('秒・ミリ秒は 0 化されるが、分は保持される（1 分粒度許容）', () => {
     const event = entryToCalendarEvent(
       makeEntry({
         id: 'e1',
-        // JST 10:07:45 → 10:08 → 15 分単位で 10:15
-        start_time: '2026-04-27T01:07:45.000Z',
-        end_time: '2026-04-27T02:00:00.000Z',
+        // 01:07:45.500 → 01:07:00.000（分は 7 のまま、15 分には丸めない）
+        start_time: '2026-04-27T01:07:45.500Z',
+        end_time: '2026-04-27T02:53:30.250Z',
       }),
       TZ,
     );
 
-    expect(event!.startDate!.getUTCMinutes()).toBe(15);
+    expect(event!.startDate!.getUTCMinutes()).toBe(7);
     expect(event!.startDate!.getUTCSeconds()).toBe(0);
     expect(event!.startDate!.getUTCMilliseconds()).toBe(0);
+    expect(event!.endDate!.getUTCMinutes()).toBe(53);
+    expect(event!.endDate!.getUTCSeconds()).toBe(0);
+    expect(event!.endDate!.getUTCMilliseconds()).toBe(0);
+  });
+
+  it('truncate 後も day boundary を跨がない（同日判定が安定）', () => {
+    // JST で 23:59:59.999 → 23:59:00.000、同日のはず
+    const event = entryToCalendarEvent(
+      makeEntry({
+        id: 'e1',
+        start_time: '2026-04-27T14:59:59.999Z', // JST 23:59:59.999 (4/27)
+        end_time: '2026-04-27T14:59:59.999Z',
+      }),
+      TZ,
+    );
+
+    expect(event!.isMultiDay).toBe(false);
+  });
+
+  it('DST 境界（America/Los_Angeles 春の進み）でも秒以下 truncate が day を動かさない', () => {
+    // 2026-03-08 02:00 LA で 02:00 → 03:00 に進む
+    // 1 分粒度の入力（秒以下にずれが残る）でも、UTC instant の同日性は維持されるべき
+    const event = entryToCalendarEvent(
+      makeEntry({
+        id: 'e1',
+        start_time: '2026-03-08T09:30:45.500Z', // LA 01:30:45.500 (DST 前)
+        end_time: '2026-03-08T11:15:30.250Z', // LA 04:15:30.250 (DST 後、同日)
+      }),
+      'America/Los_Angeles',
+    );
+
+    expect(event!.isMultiDay).toBe(false);
+    expect(event!.startDate!.getUTCSeconds()).toBe(0);
+    expect(event!.endDate!.getUTCSeconds()).toBe(0);
+  });
+
+  it('duration は秒切り捨て後の差分から算出される（秒以下の漏れがない）', () => {
+    const event = entryToCalendarEvent(
+      makeEntry({
+        id: 'e1',
+        // 01:00:30 → 02:00:30 は秒切り捨てで 01:00 → 02:00、duration = 60 分
+        start_time: '2026-04-27T01:00:30.000Z',
+        end_time: '2026-04-27T02:00:30.000Z',
+        duration_minutes: null,
+      }),
+      TZ,
+    );
+
+    expect(event!.duration).toBe(60);
   });
 
   it('duration_minutes が指定されていればそれを優先する', () => {

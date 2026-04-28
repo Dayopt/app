@@ -10,16 +10,21 @@ import { getEntryState } from '@/features/entry';
 import { tzIsSameDay } from '@/lib/date/timezone';
 import type { CalendarEvent } from '../types/calendar.types';
 
-/** 分を15分単位に丸め、秒・ミリ秒を0にする（TZ変換の丸め誤差を吸収） */
-function snapMinutes(date: Date): Date {
+/**
+ * Date の秒・ミリ秒を 0 にする（分単位以下の精度を切り捨て）
+ *
+ * TZ 変換や DB から読み出した秒以下のずれが、duration_minutes 計算 /
+ * tzIsSameDay 判定にノイズを混ぜないようにする。
+ *
+ * 旧 `snapMinutes` は 15 分単位スナップも兼ねていたが、これは UI policy を
+ * adapter に持ち込む形だった。Project A で 1 分粒度を許す方針になったため、
+ * 責務を「秒以下の truncate」だけに分離する。
+ *
+ * @see docs/design/timeline-precision-redesign/overview.md § 4 A-3
+ */
+function truncateToMinute(date: Date): Date {
   const d = new Date(date);
-  const minutes = d.getMinutes();
-  const seconds = d.getSeconds();
-  // 30秒以上なら繰り上げ
-  const rounded = seconds >= 30 ? minutes + 1 : minutes;
-  // 15分単位にスナップ
-  const snapped = Math.round(rounded / 15) * 15;
-  d.setMinutes(snapped, 0, 0);
+  d.setSeconds(0, 0);
   return d;
 }
 
@@ -39,12 +44,12 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
   // 計画外エントリは actual 時間を表示位置に使用（start_time = end_time で duration=0 のため）
   const startDate =
     isUnplanned && entry.actual_start_time
-      ? snapMinutes(new Date(entry.actual_start_time))
-      : snapMinutes(new Date(entry.start_time));
+      ? truncateToMinute(new Date(entry.actual_start_time))
+      : truncateToMinute(new Date(entry.start_time));
   const endDate =
     isUnplanned && entry.actual_end_time
-      ? snapMinutes(new Date(entry.actual_end_time))
-      : snapMinutes(new Date(entry.end_time));
+      ? truncateToMinute(new Date(entry.actual_end_time))
+      : truncateToMinute(new Date(entry.end_time));
 
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
