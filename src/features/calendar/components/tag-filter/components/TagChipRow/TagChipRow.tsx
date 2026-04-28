@@ -14,8 +14,6 @@ import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 export interface TagChipRowProps {
   /** 既定の duration（分）。popover の end time 初期値 = start + this */
   defaultDurationMinutes?: number;
-  /** BottomTabBar auto-hide と同期して隠す */
-  hidden?: boolean;
   className?: string;
 }
 
@@ -37,11 +35,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  * - `is_active === false` のタグは除外
  * - タグゼロなら null を返す（行ごと非表示。初回タグ作成は別導線）
  */
-export function TagChipRow({
-  defaultDurationMinutes = 30,
-  hidden = false,
-  className,
-}: TagChipRowProps) {
+export function TagChipRow({ defaultDurationMinutes = 30, className }: TagChipRowProps) {
   const t = useTranslations();
   const { data: tags } = useTags();
   const [openTagId, setOpenTagId] = useState<string | null>(null);
@@ -59,16 +53,13 @@ export function TagChipRow({
   return (
     <div
       className={cn(
-        'bg-surface-container border-border-subtle z-bottom-tab fixed inset-x-0 flex h-14 items-center gap-1 overflow-x-auto border-t px-2 transition-transform duration-300',
-        // タップ領域を広く保ちつつ、横スクロール時のバウンスを抑える
-        'overscroll-x-contain',
+        'bg-surface-container border-border-subtle z-bottom-tab fixed inset-x-0 flex h-14 items-center gap-1 overflow-x-auto border-t px-2',
+        // タップ領域を広く保ちつつ、横スクロール時のバウンスを抑える + スクロールバー非表示
+        'scrollbar-hide overscroll-x-contain',
         className,
       )}
       style={{
         bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))',
-        transform: hidden
-          ? 'translateY(calc(100% + 3.5rem + env(safe-area-inset-bottom, 0px)))'
-          : 'translateY(0)',
       }}
       role="list"
       aria-label="タグクイック作成"
