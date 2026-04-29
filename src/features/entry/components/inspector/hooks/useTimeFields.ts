@@ -11,10 +11,23 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
-import { api } from '@/lib/trpc';
 import type { EntryWithTags } from '../../../types/entry';
+
+/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
+function isEntriesListQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) &&
+    key.length >= 1 &&
+    Array.isArray(key[0]) &&
+    key[0][0] === 'entries' &&
+    key[0][1] === 'list'
+  );
+}
 
 interface UseTimeFieldsOptions {
   entry: EntryWithTags | null;
@@ -36,7 +49,7 @@ function toHHMM(date: Date): string {
  */
 export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFieldsOptions) {
   const timezone = useCalendarSettingsStore((state) => state.timezone);
-  const utils = api.useUtils();
+  const queryClient = useQueryClient();
 
   // UI refs
   const titleRef = useRef<HTMLInputElement>(null);
@@ -125,24 +138,36 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     const startISO = localTimeToUTCISO(scheduleDate, startH ?? 0, startM ?? 0, timezone);
     const endISO = localTimeToUTCISO(scheduleDate, endH ?? 0, endM ?? 0, timezone);
 
-    const entries = utils.entries.list.getData();
-    if (!entries) {
+    // calendar は date-filtered key (`entries.list({ startDate, endDate })`) を使うため、
+    // input なしの `getData()` では永遠に undefined。全 entries.list cache を予測子で集める。
+    const cachedLists = queryClient.getQueriesData<
+      Array<{ id: string; start_time: string | null; end_time: string | null }>
+    >({ predicate: isEntriesListQuery });
+
+    const seen = new Set<string>();
+    const collected: Array<{ id: string; start_time: string | null; end_time: string | null }> = [];
+    for (const [, data] of cachedLists) {
+      if (!data) continue;
+      for (const e of data) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        collected.push(e);
+      }
+    }
+
+    if (collected.length === 0) {
       setTimeConflictError(false);
       return;
     }
 
-    const hasOverlap = entries.some(
-      (e: { id: string; start_time: string | null; end_time: string | null }) => {
-        if (e.id === entryId) return false;
-        if (!e.start_time || !e.end_time) return false;
-        return (
-          new Date(e.start_time) < new Date(endISO) && new Date(e.end_time) > new Date(startISO)
-        );
-      },
-    );
+    const hasOverlap = collected.some((e) => {
+      if (e.id === entryId) return false;
+      if (!e.start_time || !e.end_time) return false;
+      return new Date(e.start_time) < new Date(endISO) && new Date(e.end_time) > new Date(startISO);
+    });
 
     setTimeConflictError(hasOverlap);
-  }, [scheduleDate, startTime, endTime, entryId, timezone, utils.entries.list]);
+  }, [scheduleDate, startTime, endTime, entryId, timezone, queryClient]);
 
   // --- ハンドラー ---
 
