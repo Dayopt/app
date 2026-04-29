@@ -2,8 +2,7 @@
   "sidebar": {
     "pageNav": {
       "calendar": "Calendar",
-      "stats": "Stats",
-      "ai": "AI"
+      "stats": "Stats"
     },
     "navBadge": {
       "new": "NEW",

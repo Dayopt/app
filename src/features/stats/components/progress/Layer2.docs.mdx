@@ -29,12 +29,12 @@ Layer 3 (LLMインサイト) — 自然言語の気づき生成
 
 ## 実装済みチャート
 
-| チャート | コンポーネント | tRPC Endpoint | DB関数 | 説明 |
-|---------|--------------|---------------|--------|------|
-| **年間ヒートマップ** | `YearlyHeatmap` | `getDailyHours` | `get_daily_hours` | GitHub風アクティビティグリッド。年単位のナビゲーション付き |
-| **月次トレンド** | `MonthlyTrendChart` | `getMonthlyTrend` | `get_monthly_hours` | エリアチャート。MoM変化率 + 年間合計を表示 |
-| **曜日別分布** | `DayOfWeekChart` | `getDayOfWeekDistribution` | `get_dow_distribution` | 棒グラフ。平日/週末の合計比較付き |
-| **時間帯分布** | `HourlyDistributionChart` | `getHourlyDistribution` | `get_hourly_distribution` | 横棒グラフ。2時間スロット、ピーク時間帯を表示 |
+| チャート             | コンポーネント            | tRPC Endpoint              | DB関数                    | 説明                                                       |
+| -------------------- | ------------------------- | -------------------------- | ------------------------- | ---------------------------------------------------------- |
+| **年間ヒートマップ** | `YearlyHeatmap`           | `getDailyHours`            | `get_daily_hours`         | GitHub風アクティビティグリッド。年単位のナビゲーション付き |
+| **月次トレンド**     | `MonthlyTrendChart`       | `getMonthlyTrend`          | `get_monthly_hours`       | エリアチャート。MoM変化率 + 年間合計を表示                 |
+| **曜日別分布**       | `DayOfWeekChart`          | `getDayOfWeekDistribution` | `get_dow_distribution`    | 棒グラフ。平日/週末の合計比較付き                          |
+| **時間帯分布**       | `HourlyDistributionChart` | `getHourlyDistribution`    | `get_hourly_distribution` | 横棒グラフ。2時間スロット、ピーク時間帯を表示              |
 
 ### レイアウト
 
@@ -60,12 +60,13 @@ PostgreSQL RPC関数
 
 チャートは `useStatsFilterStore` の `currentDate` と `granularity` から日付範囲を算出:
 
-| ユーティリティ | 用途 | 使用チャート |
-|-------------|------|------------|
+| ユーティリティ            | 用途             | 使用チャート                  |
+| ------------------------- | ---------------- | ----------------------------- |
 | `computeStatsDateRange()` | 粒度→開始/終了日 | DayOfWeek, HourlyDistribution |
-| `computeMonthCount()` | 粒度→取得月数 | MonthlyTrend |
+| `computeMonthCount()`     | 粒度→取得月数    | MonthlyTrend                  |
 
 **粒度と月数の対応:**
+
 - `day` → 1ヶ月 / `week` → 3ヶ月 / `month` → 12ヶ月 / `year` → 全期間
 
 YearlyHeatmap は独自の年ナビゲーション（`useState`）で年を指定。
@@ -97,13 +98,13 @@ src/features/stats/
 
 MetricsCatalog.docs.mdx で Layer 2 向きと判定されたもの:
 
-| チャート | データソース | 表現方式 | 優先度 |
-|---------|------------|---------|--------|
-| **充実度×時間帯** | `getEnergyMap` | 2Dヒートマップ（hour × dow） | ★★★ |
-| **見積もりバイアス推移** | `getEstimationAccuracy` 時系列化 | 折れ線グラフ（月次） | ★★☆ |
-| **曜日×充実度クロス** | `getEnergyMap` | 棒グラフ + 充実度オーバーレイ | ★★☆ |
-| **タグ間遷移パターン** | 新規RPC | Sankey or マトリクス | ★☆☆ |
-| **ルーティン遵守率** | 新規RPC（繰り返し検出） | リスト + 達成率 | ★☆☆ |
+| チャート                 | データソース                     | 表現方式                      | 優先度 |
+| ------------------------ | -------------------------------- | ----------------------------- | ------ |
+| **充実度×時間帯**        | `getEnergyMap`                   | 2Dヒートマップ（hour × dow）  | ★★★    |
+| **見積もりバイアス推移** | `getEstimationAccuracy` 時系列化 | 折れ線グラフ（月次）          | ★★☆    |
+| **曜日×充実度クロス**    | `getEnergyMap`                   | 棒グラフ + 充実度オーバーレイ | ★★☆    |
+| **タグ間遷移パターン**   | 新規RPC                          | Sankey or マトリクス          | ★☆☆    |
+| **ルーティン遵守率**     | 新規RPC（繰り返し検出）          | リスト + 達成率               | ★☆☆    |
 
 ### 充実度×時間帯ヒートマップ（推奨次期実装）
 
@@ -117,27 +118,12 @@ Deep Utilization と連動した体験になる。
 
 Layer 1 の KPI メトリクスが提供するデータを、Layer 2 でパターンとして可視化:
 
-| Layer 1 メトリクス | Layer 2 での展開 |
-|------------------|----------------|
-| Plan Rate | 計画習慣の週次/月次トレンドライン |
-| Estimation Accuracy | タグ別の見積もりバイアス推移 |
-| Energy Map (Deep Util) | 充実度×時間帯の2Dヒートマップ |
-| Context Switches | 曜日パターンによる集中日/分散日の検出 |
-
----
-
-## Layer 3 への接続点
-
-Layer 2 のチャートデータは `get_insights_data()` DB関数経由で LLM のプロンプトに渡される。
-
-| Layer 2 データ | プロンプトでの活用 |
-|---------------|-----------------|
-| 時間帯分布 | ピーク時間帯の特定と活用提案 |
-| 曜日分布 | 曜日パターンの指摘（平日/週末の違い） |
-| タグ内訳 | 時間配分と価値観の整合性チェック |
-| 月次トレンド | トレンド方向性（上昇/下降/横ばい）の分析 |
-
-詳細: [L3 LLM Insights](?path=/docs/features-stats-layers-l3-llm-insights--docs)
+| Layer 1 メトリクス     | Layer 2 での展開                      |
+| ---------------------- | ------------------------------------- |
+| Plan Rate              | 計画習慣の週次/月次トレンドライン     |
+| Estimation Accuracy    | タグ別の見積もりバイアス推移          |
+| Energy Map (Deep Util) | 充実度×時間帯の2Dヒートマップ         |
+| Context Switches       | 曜日パターンによる集中日/分散日の検出 |
 
 ---
 

@@ -5,10 +5,12 @@ import { useMemo } from 'react';
 
 import { PanelLeft } from 'lucide-react';
 
+import { useAuthStore } from '@/features/auth';
 import { isCalendarViewPath } from '@/features/calendar';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { Sidebar } from '@/lib/components/shell/sidebar';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
+import { getAvatarUrl, getDisplayName } from '@/lib/user';
 import { cn } from '@/lib/utils';
 
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -37,6 +39,12 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   const banner = useAppInlineBanner();
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const title = useShellStore.use.pageTitle();
+  const authUser = useAuthStore((s) => s.user);
+  const sidebarUser = {
+    name: getDisplayName(authUser, 'User'),
+    email: authUser?.email || '',
+    avatar: getAvatarUrl(authUser),
+  };
 
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
@@ -67,7 +75,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
           )}
         >
           <div className="h-full w-64">
-            <Sidebar pageNav={<SidebarPageNav />}>
+            <Sidebar pageNav={<SidebarPageNav />} user={sidebarUser}>
               <SidebarContent />
             </Sidebar>
           </div>

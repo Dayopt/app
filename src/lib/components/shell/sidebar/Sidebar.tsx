@@ -4,12 +4,9 @@ import { PanelLeft } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
-// eslint-disable-next-line no-restricted-imports -- TODO: auth storeをlib層に抽出
-import { useAuthStore } from '@/features/auth';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import { getAvatarUrl, getDisplayName } from '@/lib/user';
 import { useTranslations } from 'next-intl';
 
 import { UserMenu } from './UserMenu';
@@ -17,6 +14,8 @@ import { UserMenu } from './UserMenu';
 interface SidebarProps {
   /** Sidebarのコンテンツ（composition layerから注入） */
   children: ReactNode;
+  /** UserMenu に表示するユーザー情報（composition layerから注入） */
+  user: { name: string; email: string; avatar: string | null };
   /** Sidebar ヘッダー（ロゴ行）直下に配置する PageNav スロット */
   pageNav?: ReactNode;
   /** フッターに配置するアクション（通知アイコン等） */
@@ -28,19 +27,13 @@ interface SidebarProps {
 /** サイドバーコンテナ（ヘッダー + PageNav + スクロール領域 + フッター） */
 export function Sidebar({
   children,
+  user,
   pageNav,
   footerActions,
   'aria-label': ariaLabel,
 }: SidebarProps) {
-  const user = useAuthStore((state) => state.user);
   const closeSidebar = useShellStore.use.closeSidebar();
   const t = useTranslations();
-
-  const userData = {
-    name: getDisplayName(user, 'User'),
-    email: user?.email || '',
-    avatar: getAvatarUrl(user),
-  };
 
   return (
     <aside
@@ -88,7 +81,7 @@ export function Sidebar({
       {/* Footer - UserMenu + Actions */}
       <div className="shrink-0 px-2 py-2">
         <div className="flex items-center justify-between">
-          <UserMenu user={userData} />
+          <UserMenu user={user} />
           <div className="flex items-center">{footerActions}</div>
         </div>
       </div>

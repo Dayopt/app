@@ -7,9 +7,10 @@ import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { withWrapper } from '../../../../../.storybook/decorators';
-import { PRESET_AUTH } from '../../../../../.storybook/mocks/presets';
 
 import { Sidebar } from './Sidebar';
+
+const MOCK_USER = { name: 'Demo User', email: 'demo@example.com', avatar: null };
 
 // ── Mock: サイドバーコンテンツ（SidebarContent の簡易版） ──
 
@@ -41,9 +42,12 @@ const meta = {
   component: Sidebar,
   parameters: {
     layout: 'fullscreen',
-    storeMocks: {
-      useAuthStore: PRESET_AUTH.authenticated,
-    },
+  },
+  args: {
+    user: MOCK_USER,
+  },
+  argTypes: {
+    user: { control: false },
   },
   tags: ['autodocs'],
 } satisfies Meta<typeof Sidebar>;
@@ -75,7 +79,7 @@ function InteractiveDemo({ sidebarLabel }: { sidebarLabel?: string }) {
         style={{ width: isOpen ? 256 : 0 }}
       >
         <div className="h-full w-64">
-          <Sidebar {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}>
+          <Sidebar user={MOCK_USER} {...(sidebarLabel ? { 'aria-label': sidebarLabel } : {})}>
             <MockSidebarContent />
           </Sidebar>
         </div>
@@ -157,7 +161,7 @@ export const AllPatterns: Story = {
           デフォルト状態（コンテンツスロット付き）
         </p>
         <div className="h-[500px] w-64">
-          <Sidebar aria-label="サイドバー（デフォルト）">
+          <Sidebar user={MOCK_USER} aria-label="サイドバー（デフォルト）">
             <MockSidebarContent />
           </Sidebar>
         </div>
@@ -167,7 +171,7 @@ export const AllPatterns: Story = {
           コンテンツなし（children スロットが空の状態）
         </p>
         <div className="h-[400px] w-64">
-          <Sidebar aria-label="サイドバー（空）">
+          <Sidebar user={MOCK_USER} aria-label="サイドバー（空）">
             <div className="flex flex-1 items-center justify-center p-4">
               <span className="text-muted-foreground text-sm">No content</span>
             </div>

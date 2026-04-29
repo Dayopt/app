@@ -5,7 +5,6 @@
 
 import 'server-only';
 
-import { aiRouter } from '@/features/ai';
 import { userRouter } from '@/features/auth/server/router';
 import { contactRouter } from '@/features/contact/server/router';
 import { entriesRouter } from '@/features/entry/server/router-index';
@@ -21,7 +20,6 @@ import { createTRPCRouter } from '@/lib/trpc/procedures';
  * メインAPIルーター
  */
 export const appRouter = createTRPCRouter({
-  ai: aiRouter,
   badges: badgesRouter,
   billing: billingRouter,
   contact: contactRouter,

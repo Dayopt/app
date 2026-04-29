@@ -6,6 +6,42 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-28
+
+### 4 つの Project (A / B / C + 既知バグ束) を 1 日で main に揃えつつ、UI primitive 系の負債（footer auto-hide / drawer grabber / reminder dead code）も同時に剥がした日
+
+41 commit、PR 5 件 merge (#1108–#1112)。早朝の tag DnD UX 整流化（Notion 風 drop indicator + 末尾 drop zone）と calendar の TZ ベース今日判定 / fetch retry / OAuth 失敗 i18n を立て続けに main に入れたあと、午前は **Project A**（timeline precision asymmetry — drag/resize/longpress を相対 offset snap に統一）と **Project A-4 〜 A-6**（inspector の 1 分粒度 TimeInput と ClockTimePicker）を並行で進め、午後は **Project C**（min_event_height 20→14px）と **Project B**（tag タップで即作成、α アルゴリズム）の 2 本を立て続けに ship。途中で UI primitive の負債整理として、未使用 Reminder UI 削除、vaul drawer grabber の上余白追加、モバイル footer の auto-hide 撤廃 + tag chip row の scrollbar 非表示も挟んだ。
+
+#### やったこと
+
+- **Tag DnD UX (#1108)**: `moveTagTree` を pure module に切り出し、`EndOfRootDropZone` を drag 中だけ出現させる構成に変更、collision detection で `children:${activeId}` を除外して expanded parent の ROOT 末尾 drop を可能化、Sidebar に `scrollbar-stable` を付与してドラッグ中の reflow を構造的に抑止
+- **Calendar 既知バグ束 (#1109)**: ユーザー TZ ベースの今日判定（Intl.DateTimeFormat resolved timezone）、entry fetch 失敗時 toast に再試行 action、空状態 CTA の click hour も TZ で評価、空状態コピー (en) を pre-suasion 形式に統一、OAuth callback 失敗を i18n key で通知
+- **Project A: timeline precision asymmetry (#1110)**: A-1 で `precision-policy.ts` に snap 単位 / min event size 定数を内部隔離（export せず interaction 内部だけで参照）、A-3 で `snapMinutes` を `truncateToMinute` に責務分離、A-2+A-5 で drag/resize/longpress を **press 開始位置からの相対 offset snap** で統一、A-6 で codex p1/p2 (mintime guard と drag clamp) を吸収
+- **Project A-4: inspector TimeInput 1 分粒度化 (#1110 内)**: モバイルは ClockTimePicker (drawer 内 column UI) で 1 分粒度入力、PC は入力欄 + popover dropdown (15 分 preset) で矢印 step 撤廃、ClockTimePicker に「今」ボタン + keyboard input mode toggle、アクションを「保存」1 つに統合、NaN 等の不正値防御層を TimeInput に追加
+- **Project C: min_event_height 14px (#1111)**: 20px → 14px に下げて短時間エントリの視認性向上、resize slider の `aria-valuemin` を min_event_height に追従させて a11y 整合
+- **Project B: tag タップで即作成 (#1112)**: tag chip tap で直近 1 時間以内の history から次の predicted start / duration を推定し直接 entry 作成（α アルゴリズム）、useInstantTagTap hook で history 集計を pure 化、codex p1/p2 で history 集計のエッジケース修正
+- **UI primitive 負債整理 (3 commit)**: vaul DrawerHandle に `mt-2` で grabber 上余白追加、未使用 Reminder UI (3 ファイル) 削除、モバイル `BottomTabBar` の auto-hide (`useHideOnScroll`) 全廃 + TagChipRow に `scrollbar-hide` 適用 + dead hook と test を撤去
+
+#### なぜ今日この作業をしたか
+
+午前一発目に v0.27.0 リリース直後の既知バグ群を main に流し込み、土台を安定させてから 3 本の project を並行で開始したのが今日の構造。**Project A** は timeline 精度を 5 分粒度（drag/resize）と 1 分粒度（inspector 入力）で**意図的に非対称**にする設計で、A-1/A-3 の責務分離 → A-2/A-5 の動作統一 → A-4 の inspector 入力経路 → A-6 の keyboard mode と段階的に積み上げた。1 日でここまで進められたのは **precision policy を内部隔離した A-1 の判断**が効いていて、外から policy を弄れないので「snap が drag/resize/longpress で一貫しているか」だけを確認すればよかった。
+
+**Project C**（min_event_height 14px）は Project A の試運転で「短時間 entry がほぼ見えない」が露わになったことを受けた即対応。視覚密度の調整は通常後追いで議論が長引くが、A の codex review が p2 として「resize の最小値が 20px hardcode で詰まる」を検出してくれたので、その修正と同時に運用値変更まで含めて 1 commit で詰めた。
+
+**Project B**（tag タップで即作成）は別観点。Project A が「精度を上げる方向」なのに対し、B は「精度を要求しない高速入力経路」を作る試み。直近 1 時間以内の history から次の予定時刻を推定する α アルゴリズムは単純 fallback だが、history が無い場合の「今 + 30 分」と組み合わせて十分実用になる。β は曜日 / 時間帯パターン考慮で別タスク。
+
+UI primitive 負債整理 3 件は session 中盤に「既存 UI を弄る前に dead code / 余白の歪みを片付けないと plan の trade-off 判断が濁る」という判断で挟んだもの。Reminder UI は通知 backend が無いまま UI だけ残っていた dead code、drawer grabber は vaul default の margin 0 が放置されていた個所、モバイル footer auto-hide は `ScrollableCalendarLayout` の内部スクロールで誤発火していたバグ。特に footer の件は最初「pb を動的切替する」案で実装したが、scroll position の clamp が `useHideOnScroll` を逆方向に誤検知して無限ループに陥り、即撤回。最終的に「auto-hide 自体を撤廃する」という大きな判断に切り替わった。
+
+#### Claudeの所感
+
+**「動的 padding + scroll-listening UI」は本質的に相性が悪い**: モバイル footer の auto-hide で pb を `hidden` 状態に追従させた瞬間、scroll position の clamp が scroll listener から「上方向の scroll」と観測され、`hidden` 状態が振動する。これは特定の bug ではなく、**scrollHeight が動的に変化する layout に scroll-delta listener を被せると、layout 自身が scroll event を生成する循環**が起きる構造問題。今日はこれに 1 度ハマって即撤回したが、今後 sticky header の auto-hide や bottom sheet の半開き / 全開き transition でも同じ罠を踏みうる。**「scrollHeight を変える transition は scroll listener が無効化されている期間に限る」「scroll listener と layout transition は phase を分ける」**を convention として明文化しておくべき。
+
+**document scroll と内部スクロールを区別しない hook は「便利だが弊害が出る」典型**: `useHideOnScroll` が capture phase で全 scroll を拾う実装は、document scroll しか発生しない page では完璧に動くが、`overflow-y-auto` の内部スクロールを持つ calendar 系 page では UX 利益のない誤発火を起こす。これを **「calendar だけ disable する」option と「全 page で disable する」option** で plan を提示してユーザー判断に委ねた結果、後者が選ばれた。`useHideOnScroll` 自体は Stats / Settings 等で auto-hide が有用な場面では再導入する余地があるが、その時は **「内部スクロールを除外する判定」**（capture phase で event.target が document.scrollingElement かどうか）が前提条件になる。今日の撤廃は「再導入の前に正しい判定を入れる」までの猶予期間として位置付けるべき。
+
+**「project」を 3 本並行で 1 日に ship する運用は、precision policy のような内部隔離が前提**: Project A / B / C を並行で進められたのは、A-1 で `precision-policy.ts` を内部隔離して「外から触らせない / interaction 内部だけで完結する」と決めたのが効いている。逆に B（tag タップ即作成）は新規 hook `useInstantTagTap` を独立 module として切り出したのが効いていて、α アルゴリズムの実装と test が「他 component の挙動に依存しない pure function」として完結した。**並行で進められる project の本数 = 互いに干渉しない API 境界が引けている数**、という当たり前の関係が今日の進捗で実証された形。今後 Project D（inspector 入力経路）を A と並行で動かす場合も、同じ「内部隔離 + pure logic 切り出し」の規律が前提になる。
+
+---
+
 ## 2026-04-27
 
 ### v0.27.0 をリリースしつつ、Codex 自動レビューで露わになった既知バグ群を当日中に follow-up で潰し切った日

@@ -1,7 +1,7 @@
 import type { CalendarViewType } from '@/features/calendar';
 import { formatCalendarDateParam } from '@/features/calendar';
 
-export type AppMode = 'calendar' | 'stats' | 'ai' | 'other';
+export type AppMode = 'calendar' | 'stats' | 'other';
 
 /**
  * pathname から現在の app モードを判定する。
@@ -14,7 +14,6 @@ export function getModeFromPath(pathname: string | null | undefined): AppMode {
   if (!pathname) return 'other';
   if (pathname.includes('/calendar/') || pathname.endsWith('/calendar')) return 'calendar';
   if (pathname.includes('/stats/') || pathname.endsWith('/stats')) return 'stats';
-  if (pathname.includes('/ai/') || pathname.endsWith('/ai')) return 'ai';
   return 'other';
 }
 

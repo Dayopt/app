@@ -91,37 +91,4 @@ describe('BottomTabBar', () => {
 
     expect(calendarLink).toHaveAttribute('href', '/ja/calendar/week?date=2026-03-25');
   });
-
-  it('renders the ai tab with a static href', () => {
-    render(<BottomTabBar />);
-
-    const aiLink = screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ });
-
-    expect(aiLink).toHaveAttribute('href', '/ja/ai');
-  });
-
-  it('marks the ai tab as current for /ja/ai', () => {
-    mockPathname = '/ja/ai';
-
-    render(<BottomTabBar />);
-
-    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(
-      screen.getByRole('link', { name: /navigation\.bottomTab\.calendar/ }),
-    ).not.toHaveAttribute('aria-current');
-  });
-
-  it('marks the ai tab as current for thread detail routes', () => {
-    mockPathname = '/ja/ai/threads/abc123';
-
-    render(<BottomTabBar />);
-
-    expect(screen.getByRole('link', { name: /navigation\.bottomTab\.ai/ })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-  });
 });
