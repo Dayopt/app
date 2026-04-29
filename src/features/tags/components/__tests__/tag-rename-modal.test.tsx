@@ -70,6 +70,10 @@ describe('TagRenameModal', () => {
     mockMutateAsync.mockClear();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('初期値として tag.name が Input に入る', () => {
     renderModal();
     const input = screen.getByRole('textbox', { name: LABELS.name }) as HTMLInputElement;
