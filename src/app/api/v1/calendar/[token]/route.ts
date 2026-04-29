@@ -60,6 +60,7 @@ async function getEntriesForFeed(userId: string) {
     `,
     )
     .eq('user_id', userId)
+    .is('deleted_at', null)
     .not('start_time', 'is', null)
     .not('end_time', 'is', null)
     .gte('start_time', past)
