@@ -62,14 +62,6 @@ describe('getModeFromPath', () => {
     expect(getModeFromPath('/ja/stats/tags/abc123')).toBe('stats');
   });
 
-  it('returns ai for /ja/ai (Step C-3 で活用)', () => {
-    expect(getModeFromPath('/ja/ai')).toBe('ai');
-  });
-
-  it('returns ai for /ja/ai/threads/xxx', () => {
-    expect(getModeFromPath('/ja/ai/threads/xxx')).toBe('ai');
-  });
-
   it('returns other for /ja/settings (fallback)', () => {
     expect(getModeFromPath('/ja/settings')).toBe('other');
   });
@@ -95,12 +87,10 @@ describe('getModeFromPath', () => {
   it('treats trailing slash equivalently', () => {
     expect(getModeFromPath('/ja/calendar/')).toBe('calendar');
     expect(getModeFromPath('/ja/stats/')).toBe('stats');
-    expect(getModeFromPath('/ja/ai/')).toBe('ai');
   });
 
   it('handles exact-match route endings', () => {
     // Next.js App Router の usePathname は通常 query を含まないが defensive に
     expect(getModeFromPath('/ja/stats')).toBe('stats');
-    expect(getModeFromPath('/ja/ai')).toBe('ai');
   });
 });

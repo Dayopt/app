@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, CalendarDays, Sparkles, type LucideIcon } from 'lucide-react';
+import { BarChart3, CalendarDays, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
@@ -11,14 +11,12 @@ import { cn } from '@/lib/utils';
 
 import { NavBadge, type NavBadgeVariant } from './NavBadge';
 
-type ActivePage = 'calendar' | 'stats' | 'ai';
+type ActivePage = 'calendar' | 'stats';
 
 interface PageNavProps {
   activePage: ActivePage;
   calendarHref: string;
   statsHref: string;
-  aiHref: string;
-  aiBadge?: NavBadgeVariant | null;
   className?: string;
 }
 
@@ -30,15 +28,8 @@ type NavTab = {
   badge?: NavBadgeVariant | null;
 };
 
-/** ページナビゲーション（Calendar / Stats / AI セグメントコントロール） */
-export function PageNav({
-  activePage,
-  calendarHref,
-  statsHref,
-  aiHref,
-  aiBadge,
-  className,
-}: PageNavProps) {
+/** ページナビゲーション（Calendar / Stats セグメントコントロール） */
+export function PageNav({ activePage, calendarHref, statsHref, className }: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
@@ -63,7 +54,6 @@ export function PageNav({
   const tabs: NavTab[] = [
     { id: 'calendar', label: t('calendar'), icon: CalendarDays, href: calendarHref },
     { id: 'stats', label: t('stats'), icon: BarChart3, href: statsHref },
-    { id: 'ai', label: t('ai'), icon: Sparkles, href: aiHref, badge: aiBadge ?? null },
   ];
 
   return (

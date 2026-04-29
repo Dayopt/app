@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, CalendarDays, Sparkles, UserCircle } from 'lucide-react';
+import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
 
-type TabId = 'calendar' | 'stats' | 'ai' | 'account';
+type TabId = 'calendar' | 'stats' | 'account';
 
 function getActiveTabFromPath(pathname: string): TabId {
   const segments = pathname.split('/');
@@ -27,11 +27,10 @@ function getActiveTabFromPath(pathname: string): TabId {
 
   if (pathWithoutLocale.startsWith('/settings')) return 'account';
   if (pathWithoutLocale.startsWith('/stats')) return 'stats';
-  if (pathWithoutLocale.startsWith('/ai')) return 'ai';
   return 'calendar';
 }
 
-/** モバイル用ボトムタブナビゲーション（Calendar / Stats / AI / Account） */
+/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Account） */
 export function BottomTabBar() {
   const t = useTranslations();
   const pathname = usePathname();
@@ -65,7 +64,6 @@ export function BottomTabBar() {
   );
 
   const accountHref = `/${locale}/settings`;
-  const aiHref = `/${locale}/ai`;
 
   const tabs: Array<{
     id: TabId;
@@ -88,20 +86,13 @@ export function BottomTabBar() {
         href: statsHref,
       },
       {
-        id: 'ai',
-        label: t('navigation.bottomTab.ai'),
-        icon: Sparkles,
-        href: aiHref,
-        badge: 'beta',
-      },
-      {
         id: 'account',
         label: t('navigation.bottomTab.account'),
         icon: UserCircle,
         href: accountHref,
       },
     ],
-    [t, calendarHref, statsHref, aiHref, accountHref],
+    [t, calendarHref, statsHref, accountHref],
   );
 
   return (

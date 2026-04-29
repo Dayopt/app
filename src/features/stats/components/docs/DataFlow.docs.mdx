@@ -18,15 +18,12 @@ PostgreSQL RPC 関数
         → UI コンポーネント
 ```
 
-Layer 3 のみ異なるパス:
+Insights タブはルールベースで client-side 評価:
 
 ```
-PostgreSQL RPC 関数
-  → Edge Function (pg_cron 定期実行)
-    → Anthropic API
-      → reflections テーブルに保存
-        → tRPC (insights ルーター)
-          → UI コンポーネント
+TanStack Query (Layer 1/2 と同じ pageData)
+  → useDiscoveries (純粋関数で発見リストを評価)
+    → DiscoveryList (UI コンポーネント)
 ```
 
 ---
@@ -58,15 +55,9 @@ PostgreSQL RPC 関数
 | `getDayOfWeekDistribution` | dateRange?    | 曜日別分布             |
 | `getHourlyDistribution`    | dateRange?    | 時間帯分布             |
 
-### Layer 3: インサイト
+### Insights タブ（ルールベース）
 
-**ルーター**: `src/features/stats/server/insights-router.ts`（新規）
-
-| エンドポイント          | Input                              | 説明                     |
-| ----------------------- | ---------------------------------- | ------------------------ |
-| `insights.getInsight`   | `{ periodType, periodStart }`      | 特定期間のインサイト取得 |
-| `insights.listInsights` | `{ periodType?, limit?, cursor? }` | インサイト一覧           |
-| `insights.updateNote`   | `{ insightId, userNote }`          | ユーザーメモ更新         |
+サーバー endpoint なし。Layer 1/2 と同じ `getStatsPageData` の結果を `useDiscoveries` で評価する。
 
 ---
 
@@ -88,30 +79,7 @@ URL がソース・オブ・トゥルース（`/stats/review`, `/stats/progress`
 ## キャッシュ戦略
 
 - Layer 1/2: TanStack Query の staleTime でキャッシュ。粒度・日付の組み合わせがキャッシュキー
-- Layer 3: reflections テーブルに永続保存済み。tRPC 経由で取得、staleTime: Infinity（期間のインサイトは不変）
-
----
-
-## DB 集約関数
-
-### get_insights_data()
-
-Layer 3 の Edge Function 用。1 回の呼び出しで L1 + L2 の全データを返す。
-
-```
-返却データ:
-├── Layer 1 KPIs (totalMinutes, avgFulfillment, planRate, ...)
-├── Layer 2 Patterns (hourly/dayOfWeek distribution, tagBreakdown)
-├── Chronotype 分析 (phaseBreakdown)
-├── 前期間比較 (prev_totalMinutes, prev_avgFulfillment, ...)
-└── メタ (daysWithEntries, daysInPeriod, fulfillmentCoverage)
-```
-
-### get_user_settings_for_insights()
-
-ユーザー設定から LLM プロンプトに必要な情報を取得。
-
-→ chronotype_settings, timezone
+- Insights タブ: 同じ pageData を共有し、`useDiscoveries` で再計算（メモ化）
 
 ---
 

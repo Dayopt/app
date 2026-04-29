@@ -25,9 +25,6 @@ const serverSchema = z
     RESEND_WEBHOOK_SECRET: z.string().optional(),
     RESEND_FROM_EMAIL: z.string().email().optional(),
 
-    // Anthropic
-    ANTHROPIC_API_KEY: z.string().optional(),
-
     // GitHub
     GITHUB_TOKEN: z.string().optional(),
     GITHUB_CONTACT_REPO: z.string().optional(),
