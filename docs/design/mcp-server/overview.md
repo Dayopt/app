@@ -16,11 +16,11 @@
 
 ## Context
 
-Dayopt は Pro 課金ユーザー向けに **read-only Remote MCP server** を提供する。Pro user が `https://mcp.dayopt.com/mcp` を Claude.ai / ChatGPT / Cursor の Custom Connector に貼る → OAuth flow → 各 AI から Dayopt の entries / tags / stats を read できる、という体験を狙う。**ユーザーがコピペするのは URL であって API key ではない**（OAuth 設計のため）。
+Dayopt は Pro 課金ユーザー向けに **read-only Remote MCP server** を提供する。Pro user が `https://mcp.dayopt.app/mcp` を Claude.ai / ChatGPT / Cursor の Custom Connector に貼る → OAuth flow → 各 AI から Dayopt の entries / tags / stats を read できる、という体験を狙う。**ユーザーがコピペするのは URL であって API key ではない**（OAuth 設計のため）。
 
 `feedd7641 chore(ai): サービス内 AI 機能を撤去し MCP の受け皿のみ残す`（2026-04-29）でサービス内 LLM 統合は撤去され、**MCP の受け皿のみ温存** された状態。受け皿は 4 レイヤに散在:
 
-- **UI**: [`src/features/settings/components/data-settings.tsx:251-347`](../../../src/features/settings/components/data-settings.tsx) の `McpApiSection`（Pro gate 込み、URL ハードコード `https://mcp.dayopt.com/v1/sse`、API key 表示スケルトンは vestige）
+- **UI**: [`src/features/settings/components/data-settings.tsx:251-347`](../../../src/features/settings/components/data-settings.tsx) の `McpApiSection`（Pro gate 込み、URL ハードコード `https://mcp.dayopt.app/v1/sse`、API key 表示スケルトンは vestige）
 - **Auth**: [`src/lib/trpc/procedures.ts:102-125`](../../../src/lib/trpc/procedures.ts) の `oauth` モード分岐 + [`src/lib/supabase/oauth.ts:76-149`](../../../src/lib/supabase/oauth.ts) の `extractBearerToken` / `verifyOAuthToken`
 - **課金 gate**: [`src/lib/trpc/procedures.ts:357-393`](../../../src/lib/trpc/procedures.ts) の `proProcedure`
 - **DB**: `api_keys` テーブル（[`src/lib/database.types.ts:11-37`](../../../src/lib/database.types.ts)）+ [`supabase/migrations/20260317120000_add_stripe_billing_columns.sql`](../../../supabase/migrations/20260317120000_add_stripe_billing_columns.sql) の `profiles.subscription_status`
@@ -66,17 +66,17 @@ Pro 解約直後 → 既存 access_token は最長 5 分で expire。その間�
 
 ### Authorization flow（Phase 1）
 
-1. Client → `https://dayopt.com/oauth/authorize?response_type=code&client_id=claude-ai&redirect_uri=...&code_challenge=...&scope=read:entries`
+1. Client → `https://app.dayopt.app/oauth/authorize?response_type=code&client_id=claude-ai&redirect_uri=...&code_challenge=...&scope=read:entries`
 2. User が Dayopt にログイン済みなら（Supabase cookie 検査） → consent UI 表示
 3. ユーザー approve → authorization code 発行（TTL 60 秒、single use）→ `redirect_uri` に `?code=...&state=...`
-4. Client → `https://dayopt.com/oauth/token` POST with `grant_type=authorization_code&code=...&code_verifier=...` → `{access_token, refresh_token, token_type:"Bearer", expires_in:300, scope:"..."}`
-5. Client → `https://mcp.dayopt.com/mcp` with `Authorization: Bearer dop_at_...`
+4. Client → `https://app.dayopt.app/oauth/token` POST with `grant_type=authorization_code&code=...&code_verifier=...` → `{access_token, refresh_token, token_type:"Bearer", expires_in:300, scope:"..."}`
+5. Client → `https://mcp.dayopt.app/mcp` with `Authorization: Bearer dop_at_...`
 
 ### 含意
 
-- `/oauth/authorize`, `/oauth/token` の **公開 URL は `dayopt.com/oauth/*`**（mcp subdomain ではない、AS は main domain に置く）
-- `/.well-known/oauth-authorization-server` も dayopt.com 直下
-- `/.well-known/oauth-protected-resource` は mcp.dayopt.com 直下、`{authorization_servers: ["https://dayopt.com"]}` を返す（RFC 9728）
+- `/oauth/authorize`, `/oauth/token` の **公開 URL は `app.dayopt.app/oauth/*`**（mcp subdomain ではない、AS は main domain に置く）
+- `/.well-known/oauth-authorization-server` も app.dayopt.app 直下
+- `/.well-known/oauth-protected-resource` は mcp.dayopt.app 直下、`{authorization_servers: ["https://app.dayopt.app"]}` を返す（RFC 9728）
 - `/oauth/register` (DCR) は Phase 1 では実装しない（Phase 2）
 
 ---
@@ -85,7 +85,7 @@ Pro 解約直後 → 既存 access_token は最長 5 分で expire。その間�
 
 ### 採用: Streamable HTTP（単一 endpoint）
 
-`/v1/sse` → **`https://mcp.dayopt.com/mcp`**（v1 を path から削除）
+`/v1/sse` → **`https://mcp.dayopt.app/mcp`**（v1 を path から削除）
 
 **根拠**: SSE は MCP 公式 SDK で deprecated。Streamable HTTP は backward-compat で同 URL に SSE response も流せる。`/v1/` を path に焼き付けると MCP の version negotiation（`server_info.version` + `Mcp-Protocol-Version` header）と二重化する。Breaking 変更時は別 path（`/mcp/v2`）を切ればよい。
 
@@ -93,19 +93,19 @@ Pro 解約直後 → 既存 access_token は最長 5 分で expire。その間�
 
 ---
 
-## Decision 3: Hosting topology — AS は dayopt.com、RS は mcp.dayopt.com
+## Decision 3: Hosting topology — AS は app.dayopt.app、RS は mcp.dayopt.app
 
 ### 採用
 
-- **AS (Authorization Server)**: `dayopt.com` 直下
+- **AS (Authorization Server)**: `app.dayopt.app` 直下
   - `/oauth/authorize`, `/oauth/token`
   - `/.well-known/oauth-authorization-server`
-  - consent UI: `dayopt.com/[locale]/oauth/consent`（既存 i18n / shell / Supabase cookie をそのまま使える）
-- **RS (Resource Server)**: `mcp.dayopt.com` 直下
+  - consent UI: `app.dayopt.app/[locale]/oauth/consent`（既存 i18n / shell / Supabase cookie をそのまま使える）
+- **RS (Resource Server)**: `mcp.dayopt.app` 直下
   - `/mcp`（単一 MCP endpoint）
   - `/.well-known/oauth-protected-resource`
 
-`mcp.dayopt.com` は Vercel rewrite で main app に proxy。
+`mcp.dayopt.app` は Vercel rewrite で main app に proxy。
 
 **根拠**: User 認証は Supabase cookie に依存し、cookie domain 切り替えはバグの温床。Consent UI を main domain に置けば cookie 問題ゼロ。MCP RS は subdomain に隔離することで CORS / 専用 monitoring / 将来の独立 deploy 余地を残す。
 
@@ -119,7 +119,7 @@ src/app/api/mcp/
 └── route.ts                    # POST (Streamable HTTP MCP)
 src/app/.well-known/
 ├── oauth-authorization-server/route.ts
-├── oauth-protected-resource/route.ts  # mcp.dayopt.com 経由でアクセス
+├── oauth-protected-resource/route.ts  # mcp.dayopt.app 経由でアクセス
 src/app/[locale]/oauth/consent/page.tsx
 ```
 
@@ -132,17 +132,17 @@ src/app/[locale]/oauth/consent/page.tsx
     {
       "source": "/mcp",
       "destination": "/api/mcp",
-      "has": [{ "type": "host", "value": "mcp.dayopt.com" }],
+      "has": [{ "type": "host", "value": "mcp.dayopt.app" }],
     },
     {
       "source": "/.well-known/oauth-protected-resource",
       "destination": "/api/well-known/oauth-protected-resource",
-      "has": [{ "type": "host", "value": "mcp.dayopt.com" }],
+      "has": [{ "type": "host", "value": "mcp.dayopt.app" }],
     },
     {
       "source": "/oauth/:path*",
       "destination": "/api/oauth/:path*",
-      "has": [{ "type": "host", "value": "dayopt.com" }],
+      "has": [{ "type": "host", "value": "app.dayopt.app" }],
     },
   ],
 }
@@ -335,11 +335,11 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 
 含むもの:
 
-- `mcp.dayopt.com` subdomain + Vercel rewrite（3 つ）
+- `mcp.dayopt.app` subdomain + Vercel rewrite（3 つ）
 - schema migration: `oauth_tokens` rename + 拡張（`revoked_at` カラム含む）+ `oauth_authorization_codes` 新設
 - OAuth flow: `/oauth/authorize`（PKCE S256）+ `/oauth/token`（authorization_code + refresh_token grant）
-- `.well-known/oauth-authorization-server`（dayopt.com）+ `.well-known/oauth-protected-resource`（mcp.dayopt.com）
-- versionless URL `https://mcp.dayopt.com/mcp`
+- `.well-known/oauth-authorization-server`（app.dayopt.app）+ `.well-known/oauth-protected-resource`（mcp.dayopt.app）
+- versionless URL `https://mcp.dayopt.app/mcp`
 - scope 3 つ宣言（実装は `read:entries` のみ）
 - `entries.list(filter)` 1 tool
 - opaque token verify（`verify-opaque-token.ts`、毎リクエスト DB lookup）
@@ -394,9 +394,9 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 
 | Step                                                     | Reversibility    | 備考                                              |
 | -------------------------------------------------------- | ---------------- | ------------------------------------------------- |
-| `mcp.dayopt.com` subdomain + Vercel rewrite              | `[hours]`        | DNS + rewrite 削除                                |
-| **`mcp.dayopt.com/mcp` の URL path 公開**                | `[irreversible]` | 外部 client が永続記録                            |
-| **`dayopt.com/oauth/{authorize,token}` 公開 URL**        | `[irreversible]` | 後で client が `.well-known` から取得して永続記録 |
+| `mcp.dayopt.app` subdomain + Vercel rewrite              | `[hours]`        | DNS + rewrite 削除                                |
+| **`mcp.dayopt.app/mcp` の URL path 公開**                | `[irreversible]` | 外部 client が永続記録                            |
+| **`app.dayopt.app/oauth/{authorize,token}` 公開 URL**    | `[irreversible]` | 後で client が `.well-known` から取得して永続記録 |
 | **scope 文字列 `read:entries` `read:tags` `read:stats`** | `[irreversible]` | `scopes_supported` を client が永続記録           |
 | **server_info `name: 'dayopt'`**                         | `[irreversible]` | 一部 client が tool namespace prefix に使う       |
 | `/.well-known/*` metadata schema                         | `[hours]`        | client は都度取得する spec                        |
@@ -408,8 +408,8 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 
 `[irreversible]` 行の正当化:
 
-- **`mcp.dayopt.com/mcp` (versionless)**: MCP の version negotiation（header / metadata）と二重化させない
-- **`dayopt.com/oauth/*`**: spec 慣用に従う
+- **`mcp.dayopt.app/mcp` (versionless)**: MCP の version negotiation（header / metadata）と二重化させない
+- **`app.dayopt.app/oauth/*`**: spec 慣用に従う
 - **scope 粒度**: 最初から最小単位、`'read'` 単一だと後の分割が breaking change
 - **server_info name**: app 識別子はリリース後の変更が困難（client 側 cache）
 
@@ -476,9 +476,9 @@ MCP tool は tRPC service 層を**直接呼ばない**。`proProcedure` 経由�
 
 ### Step 1: subdomain + rewrite 設定 `[hours]`
 
-- Vercel project に `mcp.dayopt.com` を追加（TLS は Vercel 自動取得）
+- Vercel project に `mcp.dayopt.app` を追加（TLS は Vercel 自動取得）
 - `vercel.json` に Decision 3 の rewrite 3 つ追加
-- 動作確認: `curl https://mcp.dayopt.com/mcp` → 401（not 502）、`curl https://dayopt.com/oauth/authorize` → 400 missing params（not 502）
+- 動作確認: `curl https://mcp.dayopt.app/mcp` → 401（not 502）、`curl https://app.dayopt.app/oauth/authorize` → 400 missing params（not 502）
 
 ### Step 2: schema migration `[hours]`
 
@@ -521,11 +521,11 @@ MCP tool は tRPC service 層を**直接呼ばない**。`proProcedure` 経由�
 ### Step 6: `proProcedure` 修正 + `McpApiSection` URL 修正 `[minutes]`
 
 - [`procedures.ts:357-393`](../../../src/lib/trpc/procedures.ts) を修正: `authMode === 'oauth'` の時は JWT claim を読まず DB lookup を必ず行う
-- [`data-settings.tsx:262`](../../../src/features/settings/components/data-settings.tsx) のハードコード URL `https://mcp.dayopt.com/v1/sse` → `https://mcp.dayopt.com/mcp` に修正
+- [`data-settings.tsx:262`](../../../src/features/settings/components/data-settings.tsx) のハードコード URL `https://mcp.dayopt.app/v1/sse` → `https://mcp.dayopt.app/mcp` に修正
 
 ### Step 7: 接続テスト `[hours]`
 
-- Claude.ai → Settings → Connectors → "Add custom connector" → `https://mcp.dayopt.com/mcp` → static client `claude-ai` の handshake
+- Claude.ai → Settings → Connectors → "Add custom connector" → `https://mcp.dayopt.app/mcp` → static client `claude-ai` の handshake
 - OAuth flow → consent（en） → `entries.list` 呼び出し成功
 - error response shape 確認:
   - 401 with `WWW-Authenticate: Bearer realm="...", error="invalid_token"`
@@ -545,9 +545,9 @@ MCP tool は tRPC service 層を**直接呼ばない**。`proProcedure` 経由�
 - [ ] `entries.list` 呼び出し成功（自分の entries が JSON で返る、ISO 8601 + tz、`duration_minutes` 含む）
 - [ ] `/oauth/token` に 11 req/min を投げると 11 req 目が 429
 - [ ] OAuth `/token` error が RFC 6749 形式（`{"error":"invalid_grant","error_description":"..."}`）
-- [ ] `mcp.dayopt.com/.well-known/oauth-protected-resource` が `authorization_servers: ["https://dayopt.com"]` を返す
-- [ ] `dayopt.com/.well-known/oauth-authorization-server` が `scopes_supported: ["read:entries","read:tags","read:stats"]` を含む
-- [ ] `mcp.dayopt.com` の TLS cert が Vercel から自動取得され `curl --verbose` で valid
+- [ ] `mcp.dayopt.app/.well-known/oauth-protected-resource` が `authorization_servers: ["https://app.dayopt.app"]` を返す
+- [ ] `app.dayopt.app/.well-known/oauth-authorization-server` が `scopes_supported: ["read:entries","read:tags","read:stats"]` を含む
+- [ ] `mcp.dayopt.app` の TLS cert が Vercel から自動取得され `curl --verbose` で valid
 
 技術基準:
 

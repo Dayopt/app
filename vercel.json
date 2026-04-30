@@ -12,17 +12,17 @@
     {
       "source": "/mcp",
       "destination": "/api/mcp",
-      "has": [{ "type": "host", "value": "mcp.dayopt.com" }]
+      "has": [{ "type": "host", "value": "mcp.dayopt.app" }]
     },
     {
       "source": "/.well-known/oauth-protected-resource",
       "destination": "/api/well-known/oauth-protected-resource",
-      "has": [{ "type": "host", "value": "mcp.dayopt.com" }]
+      "has": [{ "type": "host", "value": "mcp.dayopt.app" }]
     },
     {
       "source": "/oauth/:path*",
       "destination": "/api/oauth/:path*",
-      "has": [{ "type": "host", "value": "dayopt.com" }]
+      "has": [{ "type": "host", "value": "app.dayopt.app" }]
     }
   ]
 }
