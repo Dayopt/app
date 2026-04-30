@@ -25,8 +25,8 @@
       "has": [{ "type": "host", "value": "app.dayopt.app" }]
     },
     {
-      "source": "/oauth/:path*",
-      "destination": "/api/oauth/:path*",
+      "source": "/oauth/token",
+      "destination": "/api/oauth/token",
       "has": [{ "type": "host", "value": "app.dayopt.app" }]
     }
   ]

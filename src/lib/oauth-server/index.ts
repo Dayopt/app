@@ -6,6 +6,12 @@
  */
 
 export {
+  validateAuthorizeInput,
+  type AuthorizeInput,
+  type AuthorizeValidationError,
+  type AuthorizeValidationResult,
+} from './authorize-validation';
+export {
   isAllowedRedirectUri,
   resolveClient,
   type OAuthClient,
