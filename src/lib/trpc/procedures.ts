@@ -16,7 +16,9 @@ import { z } from 'zod';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
-import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
+// 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
+// feature router → procedures.ts と辿るため、ここでは auth.ts を直 import する。
+import { extractBearerToken, verifyAccessToken } from '@/lib/mcp/auth';
 import { OAuthServerError } from '@/lib/oauth-server';
 import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';

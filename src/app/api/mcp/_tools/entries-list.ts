@@ -3,7 +3,7 @@ import 'server-only';
 import { z } from 'zod';
 
 import { logger } from '@/lib/logger';
-import { createMcpTrpcCaller } from '@/lib/mcp';
+import { createMcpTrpcCaller } from '@/lib/mcp/trpc-bridge';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
