@@ -11,6 +11,7 @@
  * content の重複なし: EntryInspectorForm を一度だけ描画。
  */
 
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Suspense, useCallback } from 'react';
 
@@ -117,9 +118,19 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
           onOpenChange={(open) => !open && handleClose()}
           handleOnly
           repositionInputs={false}
+          modal={false}
         >
           <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
+            {/* 閉じるボタン — Drawer pill と同じ top 行に配置（modal={false} で外側タップ閉じが無効なため明示的に提供） */}
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label={t('common.actions.close')}
+              className="text-muted-foreground hover:text-foreground absolute top-0 right-0 z-10 inline-flex size-11 items-center justify-center transition-colors duration-150"
+            >
+              <X className="size-4" />
+            </button>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-lg">{content}</div>
             </div>
