@@ -1,6 +1,9 @@
 'use client';
 
 import * as React from 'react';
+
+import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Drawer as DrawerPrimitive } from 'vaul';
 
 import { cn } from '@/lib/utils';
@@ -53,8 +56,13 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  hideCloseButton = false,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  /** true で右上の close × button を非表示にする（Confirm 等で Cancel button が別にある場合） */
+  hideCloseButton?: boolean;
+}) {
+  const t = useTranslations();
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerPrimitive.Content
@@ -71,6 +79,16 @@ function DrawerContent({
       >
         {/* ドラッグハンドル（vaul Handle: handleOnly 時にスワイプ閉じを有効化） */}
         <DrawerHandle className="hidden group-data-[vaul-drawer-direction=bottom]/drawer-content:flex" />
+        {/* close × button — 全 Drawer 共通。hideCloseButton で opt-out 可 */}
+        {!hideCloseButton && (
+          <DrawerPrimitive.Close
+            data-slot="drawer-close-button"
+            aria-label={t('common.actions.close')}
+            className="text-muted-foreground hover:text-foreground hover:bg-state-hover absolute top-2 right-2 z-10 inline-flex size-10 items-center justify-center rounded-lg transition-colors"
+          >
+            <X className="size-5" />
+          </DrawerPrimitive.Close>
+        )}
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

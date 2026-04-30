@@ -3,7 +3,6 @@
 import { useCallback, useEffect } from 'react';
 
 import { isSameDay, startOfDay } from 'date-fns';
-import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useEntryMutations } from '@/features/entry';
@@ -209,15 +208,6 @@ export function TagEntryCreatePopover({
       >
         <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
           <DrawerTitle className="sr-only">{tag.name}</DrawerTitle>
-          {/* 閉じる button — modal={false} で外側タップ閉じが無効なため明示的に提供 */}
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label={t('common.actions.close')}
-            className="text-muted-foreground hover:text-foreground absolute top-0 right-0 z-10 inline-flex size-11 items-center justify-center transition-colors duration-150"
-          >
-            <X className="size-4" />
-          </button>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-lg">{formNode}</div>
           </div>

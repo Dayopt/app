@@ -95,12 +95,7 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
       </div>
     );
   } else {
-    content = (
-      <EntryInspectorForm
-        onViewStats={onViewStats}
-        onCloseInspector={isMobile ? handleClose : undefined}
-      />
-    );
+    content = <EntryInspectorForm onViewStats={onViewStats} />;
   }
 
   // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
@@ -126,8 +121,6 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
         >
           <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>
-            {/* 閉じる × は EntryInspectorForm 経由で TagRow 右端に表示（modal={false} で
-                外側タップ閉じが無効なため明示的に提供） */}
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-lg">{content}</div>
             </div>

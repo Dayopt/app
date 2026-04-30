@@ -18,7 +18,6 @@ import {
   MoreHorizontal,
   RotateCcw,
   Trash2,
-  X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -61,8 +60,6 @@ interface TagRowProps {
   onMarkUnplanned?: (() => void) | undefined;
   /** 計画に戻すコールバック */
   onRestorePlanned?: (() => void) | undefined;
-  /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す。set されたら「…」の右に × を出す） */
-  onCloseInspector?: (() => void) | undefined;
 }
 
 /** Inspectorのタグ選択行（カラードット + タグ名、クリックでQuickSelector表示） */
@@ -79,7 +76,6 @@ export function TagRow({
   isUnplanned,
   onMarkUnplanned,
   onRestorePlanned,
-  onCloseInspector,
 }: TagRowProps) {
   const t = useTranslations();
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -123,62 +119,50 @@ export function TagRow({
           <ChevronDown className="text-muted-foreground size-4 flex-shrink-0" aria-hidden />
         </button>
 
-        {/* 右側: … メニュー + close button（Mobile Drawer のみ） */}
-        <div className="-mr-2 flex items-center">
-          {hasMenuItems && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-10 items-center justify-center rounded-lg transition-colors"
-                  aria-label={t('common.actions.more')}
-                >
-                  <MoreHorizontal className="size-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onViewStats && (
-                  <DropdownMenuItem onClick={onViewStats}>
-                    <BarChart3 className="mr-2 size-4" />
-                    {t('calendar.filter.viewStats')}
-                  </DropdownMenuItem>
-                )}
-                {isUnplanned
-                  ? onRestorePlanned && (
-                      <DropdownMenuItem onClick={onRestorePlanned}>
-                        <RotateCcw className="mr-2 size-4" />
-                        {t('entry.inspector.restorePlanned')}
-                      </DropdownMenuItem>
-                    )
-                  : onMarkUnplanned && (
-                      <DropdownMenuItem onClick={onMarkUnplanned}>
-                        <CalendarOff className="mr-2 size-4" />
-                        {t('entry.inspector.markUnplanned')}
-                      </DropdownMenuItem>
-                    )}
-                {onDelete && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onDelete} variant="destructive">
-                      <Trash2 className="mr-2 size-4" />
-                      {t('common.actions.delete')}
+        {/* 右側: … メニュー */}
+        {hasMenuItems && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
+                aria-label={t('common.actions.more')}
+              >
+                <MoreHorizontal className="size-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onViewStats && (
+                <DropdownMenuItem onClick={onViewStats}>
+                  <BarChart3 className="mr-2 size-4" />
+                  {t('calendar.filter.viewStats')}
+                </DropdownMenuItem>
+              )}
+              {isUnplanned
+                ? onRestorePlanned && (
+                    <DropdownMenuItem onClick={onRestorePlanned}>
+                      <RotateCcw className="mr-2 size-4" />
+                      {t('entry.inspector.restorePlanned')}
                     </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {onCloseInspector && (
-            <button
-              type="button"
-              onClick={onCloseInspector}
-              className="text-muted-foreground hover:text-foreground hover:bg-state-hover flex size-10 items-center justify-center rounded-lg transition-colors"
-              aria-label={t('common.actions.close')}
-            >
-              <X className="size-5" />
-            </button>
-          )}
-        </div>
+                  )
+                : onMarkUnplanned && (
+                    <DropdownMenuItem onClick={onMarkUnplanned}>
+                      <CalendarOff className="mr-2 size-4" />
+                      {t('entry.inspector.markUnplanned')}
+                    </DropdownMenuItem>
+                  )}
+              {onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} variant="destructive">
+                    <Trash2 className="mr-2 size-4" />
+                    {t('common.actions.delete')}
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <TagQuickSelector
