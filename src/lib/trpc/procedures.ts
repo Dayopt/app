@@ -16,15 +16,10 @@ import { z } from 'zod';
 
 import { env } from '@/env';
 import { logger } from '@/lib/logger';
+import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
+import { OAuthServerError } from '@/lib/oauth-server';
 import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
-import {
-  AuthMode,
-  createServiceRoleClient,
-  detectAuthMode,
-  extractBearerToken,
-  OAuthError,
-  verifyOAuthToken,
-} from '@/lib/supabase/oauth';
+import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
 import type { Database } from '@/lib/database.types';
@@ -99,26 +94,26 @@ export async function createTRPCContext(opts: {
   let accessToken: string | undefined;
   let supabase: SupabaseClient<Database>;
 
-  // 1. OAuth 2.1トークン認証（MCP用）
+  // 1. OAuth 2.1トークン認証（MCP用） — Dayopt 発行の opaque token を oauth_tokens 検証
   if (authMode === 'oauth') {
     try {
       const authHeader =
         typeof req.headers['authorization'] === 'string' ? req.headers['authorization'] : null;
       const token = extractBearerToken(authHeader);
+      const verified = await verifyAccessToken(token);
 
-      const verificationResult = await verifyOAuthToken(token);
-
-      userId = verificationResult.userId;
-      accessToken = verificationResult.accessToken;
-      sessionId = verificationResult.accessToken;
-      supabase = verificationResult.client;
+      userId = verified.userId;
+      accessToken = token;
+      // Opaque token は JWT ではないため subscription_status は proProcedure 側で
+      // 必ず DB lookup する (Decision 1)。supabase は service-role client。
+      supabase = createServiceRoleClient();
     } catch (error) {
-      if (error instanceof OAuthError) {
+      if (error instanceof OAuthServerError) {
         logger.error('OAuth token verification failed', { message: error.message });
       }
       throw new TRPCError({
         code: 'UNAUTHORIZED',
-        message: error instanceof OAuthError ? error.message : 'OAuth authentication failed',
+        message: error instanceof OAuthServerError ? error.message : 'OAuth authentication failed',
         cause: error,
       });
     }
@@ -350,14 +345,17 @@ export const protectedProcedure = t.procedure
 /**
  * Pro プラン以上が必要なプロシージャ
  *
- * JWTカスタムクレーム（custom_access_token hook）から subscription_status を読み取り。
- * クレーム未設定時はDBフォールバック（hook未適用の既存セッション対応）。
+ * - session 認証時: JWTカスタムクレーム（custom_access_token hook）→ DB fallback
+ * - oauth 認証時: 必ず DB lookup (opaque token は JWT claim を持たないため)。
+ *   毎リクエスト DB を引くことで、Pro 解約直後の暴露窓を access_token TTL = 5min に抑える
+ *   (docs/design/mcp-server/overview.md Decision 1)
+ *
  * past_due: Stripe dunning（回収リトライ）期間中はアクセス維持。
  */
 export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async ({ ctx, next }) => {
-  let status = ctx.subscriptionStatus;
+  // OAuth 経路は claim cache を信用せず、毎リクエスト DB lookup を強制する
+  let status = ctx.authMode === 'oauth' ? undefined : ctx.subscriptionStatus;
 
-  // JWTクレームが未設定の場合のみDBフォールバック（hook適用前の既存トークン対応）
   if (!status) {
     const { data, error } = await ctx.supabase
       .from('profiles')

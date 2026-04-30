@@ -259,7 +259,9 @@ function McpApiSection() {
   // TODO: Replace with actual API key from backend
   const apiKey: string | null = null;
 
-  const mcpServerUrl = 'https://mcp.dayopt.com/v1/sse';
+  // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
+  // API key 入力欄は Phase 1.5 で「接続済み client 一覧」に置換する vestige。
+  const mcpServerUrl = 'https://mcp.dayopt.app/mcp';
 
   const handleCopy = useCallback(
     (text: string, type: 'url' | 'key') => {

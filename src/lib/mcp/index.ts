@@ -9,3 +9,4 @@
  */
 
 export { extractBearerToken, verifyAccessToken, type VerifiedAccessToken } from './auth';
+export { createMcpTrpcCaller, type McpTrpcContextInput } from './trpc-bridge';

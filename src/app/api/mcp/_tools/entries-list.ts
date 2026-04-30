@@ -2,10 +2,8 @@ import 'server-only';
 
 import { z } from 'zod';
 
-import { createEntryService } from '@/features/entry/server/service-index';
-import type { EntryWithTags } from '@/features/entry/server/types';
 import { logger } from '@/lib/logger';
-import { createServiceRoleClient } from '@/lib/supabase/oauth';
+import { createMcpTrpcCaller } from '@/lib/mcp';
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -14,9 +12,9 @@ import type { McpRequestContext } from '../_server';
 /**
  * `entries.list` tool — Dayopt entries (timeboxes / records) を取得する。
  *
- * Phase 1 の唯一の tool。read-only で、認証された user 自身のデータのみを返す。
- * Service-role client を使うが service.list が `eq('user_id', userId)` を必ず付ける
- * ため、cross-tenant leak は起きない。
+ * Phase 1 の唯一の tool。read-only。`createMcpTrpcCaller` 経由で `entries.list`
+ * tRPC procedure を呼び、`proProcedure` の Pro gate と `protectedProcedure` の
+ * userId 注入を再利用する (docs/design/mcp-server/overview.md Decision 9)。
  */
 
 const inputSchema = {
@@ -40,6 +38,38 @@ const inputSchema = {
     .describe('Max entries to return. Defaults to 50, max 100.'),
 };
 
+interface NormalizedEntry {
+  id: string;
+  title: string;
+  description: string | null;
+  origin: string;
+  startTime: string | null;
+  endTime: string | null;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  durationMinutes: number | null;
+  fulfillmentScore: number | null;
+  tagId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface EntryRowLike {
+  id: string;
+  title: string;
+  description: string | null;
+  origin: string;
+  start_time: string | null;
+  end_time: string | null;
+  actual_start_time: string | null;
+  actual_end_time: string | null;
+  duration_minutes: number | null;
+  fulfillment_score: number | null;
+  tag_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export function registerEntriesListTool(server: McpServer, ctx: McpRequestContext) {
   server.registerTool(
     'entries.list',
@@ -49,11 +79,13 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
       inputSchema,
     },
     async ({ startDate, endDate, tagId, limit }) => {
-      const supabase = createServiceRoleClient();
-      const service = createEntryService(supabase);
       try {
-        const entries = await service.list({
+        const trpc = createMcpTrpcCaller({
           userId: ctx.userId,
+          clientId: ctx.clientId,
+          scopes: ctx.scopes,
+        });
+        const entries = await trpc.entries.list({
           limit: limit ?? 50,
           sortBy: 'start_time',
           sortOrder: 'desc',
@@ -61,7 +93,8 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
           ...(endDate ? { endDate } : {}),
           ...(tagId ? { tagId } : {}),
         });
-        const normalized = entries.map(normalizeEntry);
+
+        const normalized = (entries as EntryRowLike[]).map(normalizeEntry);
         return {
           content: [
             {
@@ -81,23 +114,7 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
   );
 }
 
-interface NormalizedEntry {
-  id: string;
-  title: string;
-  description: string | null;
-  origin: string;
-  startTime: string | null;
-  endTime: string | null;
-  actualStartTime: string | null;
-  actualEndTime: string | null;
-  durationMinutes: number | null;
-  fulfillmentScore: number | null;
-  tagId: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-}
-
-function normalizeEntry(e: EntryWithTags): NormalizedEntry {
+function normalizeEntry(e: EntryRowLike): NormalizedEntry {
   return {
     id: e.id,
     title: e.title,
