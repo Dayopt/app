@@ -363,21 +363,6 @@
       "legendActivity": "Active",
       "settingsSaved": "Sleep schedule saved"
     },
-    "aiStyle": {
-      "title": "AI Communication Style",
-      "description": "Choose how AI communicates with you in the chat panel.",
-      "settingsSaved": "AI style saved",
-      "coach": "Coach",
-      "coachDesc": "Asks reflective questions to help you notice patterns. Non-judgmental.",
-      "analyst": "Analyst",
-      "analystDesc": "Data-driven objective insights with numbers and trends.",
-      "friendly": "Friendly",
-      "friendlyDesc": "Casual and supportive. Encouraging tone.",
-      "custom": "Custom",
-      "customDesc": "Write your own style instructions.",
-      "customPromptLabel": "Custom style instructions",
-      "customPromptPlaceholder": "Describe how you want AI to communicate with you..."
-    },
     "preferences": {
       "settingsSaved": "Preferences saved successfully",
       "languageAndTheme": "Language & Theme",

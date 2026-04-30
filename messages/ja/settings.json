@@ -363,21 +363,6 @@
       "legendActivity": "活動",
       "settingsSaved": "睡眠スケジュールを保存しました"
     },
-    "aiStyle": {
-      "title": "AIコミュニケーションスタイル",
-      "description": "チャットパネルでAIがどのようにコミュニケーションするかを選んでください。",
-      "settingsSaved": "AIスタイルを保存しました",
-      "coach": "コーチ",
-      "coachDesc": "気づきを促す質問をしてくれる。押し付けない。",
-      "analyst": "アナリスト",
-      "analystDesc": "データに基づく客観的な分析。数値やトレンドで説明。",
-      "friendly": "フレンドリー",
-      "friendlyDesc": "カジュアルで親しみやすい。励ましベース。",
-      "custom": "カスタム",
-      "customDesc": "自分でスタイルの指示を書く。",
-      "customPromptLabel": "カスタムスタイルの指示",
-      "customPromptPlaceholder": "例: 箇条書きで簡潔に、絵文字は使わず"
-    },
     "preferences": {
       "settingsSaved": "環境設定を保存しました",
       "languageAndTheme": "言語とテーマ",
