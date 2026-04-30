@@ -59,7 +59,12 @@ export function TagEntryCreateForm({
   const t = useTranslations();
 
   return (
-    <div className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}>
+    // 親 row の onClick (onOpenPopover) が portal から bubble してきた click で再発火し
+    // popover の close と競合するため、form 内の click は止める。
+    <div
+      className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Row 0: タグ名ヘッダー（Inspector の TagRow 相当） */}
       <div className="flex min-h-9 items-center gap-2">
         <TagIcon icon={tag.icon} color={tag.color} size="sm" />
