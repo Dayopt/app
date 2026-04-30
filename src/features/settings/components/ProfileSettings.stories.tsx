@@ -2,8 +2,7 @@
  * ProfileSettings Stories
  *
  * useAuthStore のモックでプロフィール設定パネルを再現する。
- * ChronotypeSettings / ValuesSettings 等の子コンポーネントは
- * 各自が tRPC を使うため、tRPC モックプロバイダーも用意する。
+ * ChronotypeSettings は tRPC を使うため、モックプロバイダーも用意する。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -46,8 +45,6 @@ export const Default: Story = {
     trpcMocks: {
       'userSettings.get': PRESET_USER_SETTINGS.default,
       'chronotype.get': PRESET_USER_SETTINGS.default.chronotype,
-      'values.list': [],
-      'valueRanking.get': { rankings: [] },
     },
   },
 };

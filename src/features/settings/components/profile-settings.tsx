@@ -14,13 +14,11 @@ import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';
 import { DisplayNameDialog } from './display-name-dialog';
-import { ValueRankingSettings } from './value-ranking-settings';
-import { ValuesSettings } from './values-settings';
 
 /**
  * プロフィール設定コンポーネント
  *
- * アバター、表示名、クロノタイプ、価値観キーワード、価値評定スケール
+ * アバター、表示名、クロノタイプ
  */
 export function ProfileSettings() {
   const t = useTranslations();
@@ -64,12 +62,6 @@ export function ProfileSettings() {
 
       {/* クロノタイプ */}
       <ChronotypeSettings />
-
-      {/* 価値観キーワードランキング */}
-      <ValueRankingSettings />
-
-      {/* 価値評定スケール */}
-      <ValuesSettings />
 
       {/* Dialogs */}
       <AvatarChangeDialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog} />

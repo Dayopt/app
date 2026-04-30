@@ -138,14 +138,14 @@ grep -n "icon:.*IconName\|icon: 'IconName'" src/features/stats/
 
 ---
 
-## カテゴリアイコン（values-category-config）例外
+## カテゴリアイコン例外
 
-`src/features/settings/components/values-category-config.ts` の values カテゴリアイコンは、**individual な specific アイコン**優先で選ぶ。セット全体の視覚重量統一より、個別の識別性を優先する（Dumbbell / Baby / Leaf / Briefcase など）。
+複数カテゴリを並べる UI（例: チャート凡例、設定タブのアイコン）では、**individual な specific アイコン**優先で選ぶ。セット全体の視覚重量統一より、個別の識別性を優先する（Dumbbell / Baby / Leaf / Briefcase など）。
 
 ただし以下の縛りは適用する:
 
 - **同一アイコンの無印 / `2` 変種の混在禁止** — 例: `Building` と `Building2` を同一画面 / 同一セットで併用しない。どちらか 1 つに寄せる
-- 他の意味論ルール（Pro = Crown、AI = Sparkles 等）と**競合するアイコンは選ばない** — values カテゴリに `Crown` / `Sparkles` を割り当てない
+- 他の意味論ルール（Pro = Crown、AI = Sparkles 等）と**競合するアイコンは選ばない**
 
 ---
 

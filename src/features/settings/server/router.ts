@@ -46,18 +46,6 @@ const userSettingsSchema = z.object({
   // テーマ設定
   theme: z.enum(['light', 'dark', 'system']).optional(),
 
-  // パーソナライゼーション（JSONB 一括更新）
-  personalizationValues: z
-    .record(
-      z.string(),
-      z.object({
-        text: z.string().max(500),
-        importance: z.number().min(1).max(10),
-      }),
-    )
-    .optional(),
-  rankedValues: z.array(z.string().max(50)).max(5).optional(),
-
   // ダイアログ表示済みフラグ
   dismissedTrialEndedDialog: z.literal(true).optional(),
   paymentErrorDialogLastShownAt: z.string().datetime().optional(),
@@ -134,8 +122,6 @@ export const userSettingsRouter = createTRPCRouter({
               unknown
             > | null;
             return {
-              values: (p?.values ?? {}) as Record<string, { text: string; importance: number }>,
-              rankedValues: (p?.rankedValues ?? []) as string[],
               dismissedTrialEndedDialog: (p?.dismissedTrialEndedDialog ?? false) as boolean,
               paymentErrorDialogLastShownAt: (p?.paymentErrorDialogLastShownAt ?? null) as
                 | string
@@ -210,26 +196,6 @@ export const userSettingsRouter = createTRPCRouter({
         }
 
         // personalization は RPC で atomic に部分更新（並行保存の競合を回避）
-        if (input.personalizationValues !== undefined) {
-          await ctx.supabase.rpc(
-            'update_personalization' as never,
-            {
-              p_user_id: userId,
-              p_path: 'values',
-              p_value: input.personalizationValues,
-            } as never,
-          );
-        }
-        if (input.rankedValues !== undefined) {
-          await ctx.supabase.rpc(
-            'update_personalization' as never,
-            {
-              p_user_id: userId,
-              p_path: 'rankedValues',
-              p_value: input.rankedValues,
-            } as never,
-          );
-        }
         if (input.dismissedTrialEndedDialog !== undefined) {
           await ctx.supabase.rpc(
             'update_personalization' as never,
