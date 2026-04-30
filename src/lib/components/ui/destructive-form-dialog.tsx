@@ -131,7 +131,7 @@ export function DestructiveFormDialog({
   if (responsive && isMobile) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent className={cn('max-h-[80vh]', contentClassName)} hideCloseButton>
+        <DrawerContent className={cn('max-h-[80vh]', contentClassName)}>
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
             {description && <DrawerDescription>{description}</DrawerDescription>}

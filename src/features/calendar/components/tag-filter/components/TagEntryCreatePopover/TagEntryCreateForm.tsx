@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { DateRow, TimeRow } from '@/features/entry';
@@ -65,10 +65,20 @@ export function TagEntryCreateForm({
       className={cn('px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6', className)}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Row 0: タグ名ヘッダー（Inspector の TagRow 相当） */}
-      <div className="flex min-h-9 items-center gap-2">
-        <TagIcon icon={tag.icon} color={tag.color} size="sm" />
-        <ColonTagLabel name={tag.name} variant="separator" className="text-base font-medium" />
+      {/* Row 0: タグ名ヘッダー（Inspector の TagRow 相当） + 右端に close × */}
+      <div className="flex min-h-9 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <TagIcon icon={tag.icon} color={tag.color} size="sm" />
+          <ColonTagLabel name={tag.name} variant="separator" className="text-base font-medium" />
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label={t('common.actions.close')}
+          className="text-muted-foreground hover:text-foreground hover:bg-state-hover -mr-2 flex size-10 items-center justify-center rounded-lg transition-colors"
+        >
+          <X className="size-5" />
+        </button>
       </div>
 
       {/* スケジュールカード (Inspector と同じ bg-muted rounded-2xl) */}

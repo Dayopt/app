@@ -95,7 +95,12 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
       </div>
     );
   } else {
-    content = <EntryInspectorForm onViewStats={onViewStats} />;
+    content = (
+      <EntryInspectorForm
+        onViewStats={onViewStats}
+        onCloseInspector={isMobile ? handleClose : undefined}
+      />
+    );
   }
 
   // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
