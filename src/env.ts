@@ -74,8 +74,12 @@ const serverSchema = z
   )
   .refine(
     (data) =>
+      // Vercel preview deployment は NODE_ENV=production だが VERCEL_ENV=preview。
+      // preview は手動アクセスのみで rate limit 不要なので、VERCEL_ENV='production'
+      // (= production deployment) のときだけ Upstash を必須にする。
       !(
         data.NODE_ENV === 'production' &&
+        process.env.VERCEL_ENV === 'production' &&
         (!data.UPSTASH_REDIS_REST_URL || !data.UPSTASH_REDIS_REST_TOKEN)
       ),
     {
