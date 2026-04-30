@@ -8,11 +8,7 @@
 // =============================================================================
 // Components
 // =============================================================================
-export { BadgeSection } from './components/badges/BadgeSection';
-export { InsightsView } from './components/insights/InsightsView';
-export { ProgressView } from './components/progress/ProgressView';
-export { StatsLayout } from './components/StatsLayout';
-export type { TagTabInfo } from './components/StatsLayout';
+export { ReviewLayout } from './components/ReviewLayout';
 export { StatsView } from './components/StatsView';
 
 // =============================================================================
@@ -27,7 +23,7 @@ export type { StatsGranularity } from './stores/useStatsFilterStore';
 export { TagDetailPage } from './components/tag-detail/TagDetailPage';
 // prefetchStatsData / prefetchTagDetailData はサーバー専用（next/headers使用）。
 // 各ファイルに import 'server-only' ガード済み。
-export { prefetchBadgesData, prefetchStatsData } from './lib/prefetch';
+export { prefetchStatsData } from './lib/prefetch';
 export { prefetchTagDetailData } from './lib/prefetchTagDetail';
 
 // ここにないものはfeature内部専用

@@ -4,12 +4,11 @@ import { useStatsFilterStore } from '@/features/stats';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 
 /**
- * Stats モード Sidebar 中身
+ * Review モード Sidebar 中身
  *
- * Phase 2-A 確定事項: MiniCalendar のみ表示 (Stats 独自タグフィルタは scope 外)。
- * date は useStatsFilterStore と連動。
+ * MiniCalendar のみ表示。date は useStatsFilterStore と連動。
  */
-export function StatsSidebar() {
+export function ReviewSidebar() {
   const currentDate = useStatsFilterStore((s) => s.currentDate);
   const setCurrentDate = useStatsFilterStore((s) => s.setCurrentDate);
 

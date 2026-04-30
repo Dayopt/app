@@ -70,9 +70,9 @@ TanStack Query (Layer 1/2 と同じ pageData)
 | `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度             |
 | `currentDate` | `Date`                                 | ナビゲーション基準日 |
 
-### タブ状態
+### URL 状態
 
-URL がソース・オブ・トゥルース（`/stats/review`, `/stats/progress`, `/stats/insights`）。`pushState` によるクライアントサイド遷移。
+`/review` 単一ページ。期間 / 粒度は `?g=`, `?d=` の searchParams で表現し、`pushState` で更新する。
 
 ---
 

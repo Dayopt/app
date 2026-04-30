@@ -69,7 +69,7 @@ describe('BottomTabBar', () => {
   });
 
   it('marks the route derived from pathname as current', () => {
-    mockPathname = '/ja/stats/review';
+    mockPathname = '/ja/review';
 
     render(<BottomTabBar />);
 
@@ -83,7 +83,7 @@ describe('BottomTabBar', () => {
   });
 
   it('keeps the local calendar day when generating the return URL', () => {
-    mockPathname = '/ja/stats/review';
+    mockPathname = '/ja/review';
 
     render(<BottomTabBar />);
 

@@ -47,7 +47,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const hasOwnHeader = useMemo(
     () =>
       isCalendarViewPath(pathWithoutLocale) ||
-      pathWithoutLocale.startsWith('/stats') ||
+      pathWithoutLocale.startsWith('/review') ||
       pathWithoutLocale === '/settings' ||
       pathWithoutLocale.startsWith('/settings/'),
     [pathWithoutLocale],
@@ -55,11 +55,11 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
 
-  // calendar / stats 系はモバイルでは編集機能が制限される (P0-6 Option B)
+  // calendar / review 系はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
   // 詳細操作は PC 限定のため、情報として明示する
   const isDesktopOnlyEditPage = useMemo(
-    () => isCalendarView || pathWithoutLocale.startsWith('/stats'),
+    () => isCalendarView || pathWithoutLocale.startsWith('/review'),
     [isCalendarView, pathWithoutLocale],
   );
 
@@ -77,7 +77,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
 
-        {/* モバイル閲覧専用の告知（calendar / stats） */}
+        {/* モバイル閲覧専用の告知（calendar / review） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
         {/* Main Content（calendar view では TagChipRow + BottomTabBar 分の余白を確保） */}

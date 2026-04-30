@@ -60,12 +60,12 @@ export function StatsView({ className }: StatsViewProps) {
   );
   useEffect(() => {
     for (const id of tagIds) {
-      router.prefetch(`/${locale}/stats/tags/${id}`);
+      router.prefetch(`/${locale}/review/tags/${id}`);
     }
   }, [router, locale, tagIds]);
 
   const handleTagClick = (tagId: string) => {
-    router.push(`/${locale}/stats/tags/${tagId}`);
+    router.push(`/${locale}/review/tags/${tagId}`);
   };
 
   const ruleInsights = useMemo(() => {

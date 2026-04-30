@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test';
  * ClientPageRouter 撤去後、基本ルートへの deep link が SSR で正常描画され
  * Sidebar が初回レンダリングから表示されることを検証。
  *
- * /stats/tags/[tagId] の tagId 動的取得は Phase 2-C 以降の tag feature E2E で対応。
+ * /review/tags/[tagId] の tagId 動的取得は tag feature E2E で対応。
  */
 
 const SKIP_AUTH_TESTS = !process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD;
@@ -24,29 +24,29 @@ async function loginAndNavigate(page: import('@playwright/test').Page) {
   await passwordInput.fill(process.env.TEST_USER_PASSWORD!);
   await submitButton.click();
 
-  await page.waitForURL(/\/(calendar|stats)/i, { timeout: 15000 });
+  await page.waitForURL(/\/(calendar|review)/i, { timeout: 15000 });
 }
 
 test.describe('Deep Link: SSR rendering of app routes', () => {
   test.skip(SKIP_AUTH_TESTS, 'TEST_USER_EMAIL / TEST_USER_PASSWORD が未設定');
 
-  test('stats review renders with sidebar on direct access', async ({ page }, testInfo) => {
+  test('review renders with sidebar on direct access', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('Mobile'), 'desktop-only');
 
     await loginAndNavigate(page);
 
-    // 直接 /stats/review に遷移
-    await page.goto('/ja/stats/review');
+    // 直接 /review に遷移
+    await page.goto('/ja/review');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/ja\/stats\/review/);
+    await expect(page).toHaveURL(/\/ja\/review/);
 
     // Sidebar が SSR から表示されている
     const sidebar = page.locator('[role="navigation"]').first();
     await expect(sidebar).toBeVisible();
 
-    // Stats link が aria-current="page"
-    const statsLink = page.getByRole('link', { name: /統計|Stats/i }).first();
-    await expect(statsLink).toHaveAttribute('aria-current', 'page');
+    // Review link が aria-current="page"
+    const reviewLink = page.getByRole('link', { name: /振り返り|Review/i }).first();
+    await expect(reviewLink).toHaveAttribute('aria-current', 'page');
   });
 
   test('calendar week renders with sidebar on direct access', async ({ page }, testInfo) => {

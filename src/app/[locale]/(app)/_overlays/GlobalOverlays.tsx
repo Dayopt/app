@@ -96,7 +96,7 @@ export function GlobalOverlays() {
   // Inspector → タグ詳細ページナビゲーション
   const handleViewStats = useCallback(
     (tagId: string) => {
-      router.push(`/${locale}/stats/tags/${tagId}`);
+      router.push(`/${locale}/review/tags/${tagId}`);
     },
     [router, locale],
   );

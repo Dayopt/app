@@ -29,7 +29,6 @@ export async function generateMetadata({
   };
 }
 
-/** データプリフェッチ + ハイドレーション */
 async function TagDetailContent({
   tagId,
   granularity,

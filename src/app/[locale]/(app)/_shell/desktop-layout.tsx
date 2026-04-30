@@ -49,7 +49,7 @@ export function DesktopLayout({ children, locale }: DesktopLayoutProps) {
   // ページ判定: 独自ヘッダーを持つページかどうか（AppHeader表示制御用）
   const hasOwnHeader = useMemo(() => {
     const pathWithoutLocale = pathname?.replace(new RegExp(`^/${locale}`), '') ?? '';
-    return isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/stats');
+    return isCalendarViewPath(pathWithoutLocale) || pathWithoutLocale.startsWith('/review');
   }, [pathname, locale]);
 
   // サイドバーが閉じているときに表示するトグルボタン

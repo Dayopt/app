@@ -42,7 +42,7 @@ function parseDateParam(value: string): Date {
 /**
  * タグ詳細ページ コンテンツ
  *
- * ヘッダーとタブバーは StatsLayout（layout.tsx）が提供。
+ * ヘッダーは ReviewLayout（/review/layout.tsx）が提供。
  * このコンポーネントはナラティブ構造のコンテンツのみ。
  */
 export function TagDetailPage({ tagId, initialGranularity, initialDateStr }: TagDetailPageProps) {

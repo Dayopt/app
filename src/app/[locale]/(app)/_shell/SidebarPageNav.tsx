@@ -7,9 +7,9 @@ import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
 import { useStatsFilterStore } from '@/features/stats';
 import { PageNav } from '@/lib/components/shell/sidebar';
 
-import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
+import { buildCalendarPath, buildReviewPath, getLocaleFromPathname } from './navigation-paths';
 
-function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
+function getActivePageFromPath(pathname: string): 'calendar' | 'review' {
   const segments = pathname.split('/');
   const pathWithoutLocale =
     segments.length >= 2 && (segments[1] === 'ja' || segments[1] === 'en')
@@ -17,7 +17,7 @@ function getActivePageFromPath(pathname: string): 'calendar' | 'stats' {
       : pathname;
 
   if (isCalendarViewPath(pathWithoutLocale)) return 'calendar';
-  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  if (pathWithoutLocale.startsWith('/review')) return 'review';
   return 'calendar';
 }
 
@@ -41,14 +41,14 @@ export function SidebarPageNav() {
     [locale, calendarNav?.viewType, calendarNav?.currentDate],
   );
 
-  const statsHref = useMemo(
+  const reviewHref = useMemo(
     () =>
-      buildStatsPath(locale, 'review', {
+      buildReviewPath(locale, {
         granularity: statsGranularity,
         date: statsDate,
       }),
     [locale, statsGranularity, statsDate],
   );
 
-  return <PageNav activePage={activePage} calendarHref={calendarHref} statsHref={statsHref} />;
+  return <PageNav activePage={activePage} calendarHref={calendarHref} reviewHref={reviewHref} />;
 }

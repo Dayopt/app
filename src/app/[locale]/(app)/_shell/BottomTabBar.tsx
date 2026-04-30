@@ -14,9 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar'
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 
-import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
+import { buildCalendarPath, buildReviewPath, getLocaleFromPathname } from './navigation-paths';
 
-type TabId = 'calendar' | 'stats' | 'account';
+type TabId = 'calendar' | 'review' | 'account';
 
 function getActiveTabFromPath(pathname: string): TabId {
   const segments = pathname.split('/');
@@ -26,11 +26,11 @@ function getActiveTabFromPath(pathname: string): TabId {
       : pathname;
 
   if (pathWithoutLocale.startsWith('/settings')) return 'account';
-  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  if (pathWithoutLocale.startsWith('/review')) return 'review';
   return 'calendar';
 }
 
-/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Account） */
+/** モバイル用ボトムタブナビゲーション（Calendar / Review / Account） */
 export function BottomTabBar() {
   const t = useTranslations();
   const pathname = usePathname();
@@ -54,9 +54,9 @@ export function BottomTabBar() {
     [locale, calendarNav?.viewType, calendarNav?.currentDate],
   );
 
-  const statsHref = useMemo(
+  const reviewHref = useMemo(
     () =>
-      buildStatsPath(locale, 'review', {
+      buildReviewPath(locale, {
         granularity: statsGranularity,
         date: statsDate,
       }),
@@ -80,10 +80,10 @@ export function BottomTabBar() {
         href: calendarHref,
       },
       {
-        id: 'stats',
+        id: 'review',
         label: t('navigation.bottomTab.stats'),
         icon: BarChart3,
-        href: statsHref,
+        href: reviewHref,
       },
       {
         id: 'account',
@@ -92,7 +92,7 @@ export function BottomTabBar() {
         href: accountHref,
       },
     ],
-    [t, calendarHref, statsHref, accountHref],
+    [t, calendarHref, reviewHref, accountHref],
   );
 
   return (

@@ -28,7 +28,7 @@
       "density_default": "標準",
       "density_spacious": "ゆったり",
       "generalSettings": "一般設定",
-      "stats": "統計"
+      "stats": "振り返り"
     },
     "event": {
       "title": "イベント",
@@ -147,7 +147,7 @@
       "changeGroup": "グループを変更",
       "merge": "他のタグに統合",
       "showOnlyThis": "このタグだけ表示",
-      "viewStats": "統計を見る",
+      "viewStats": "振り返りを見る",
       "hide": "カレンダーから非表示",
       "show": "カレンダーに表示",
       "expandGroup": "グループを展開",
@@ -240,7 +240,7 @@
       "review": {
         "emptyTitle": "新しい1週間が始まりました",
         "emptyDescription": "エントリーを記録すると、ここに振り返りが表示されます",
-        "errorTitle": "統計データを読み込めませんでした",
+        "errorTitle": "振り返りデータを読み込めませんでした",
         "errorDescription": "しばらくしてからもう一度お試しください"
       },
       "progress": {
@@ -256,9 +256,6 @@
       "periodAll": "全期間",
       "thisYear": "今年",
       "tabReview": "振り返り",
-      "tabProgress": "進捗",
-      "tabBadges": "バッジ",
-      "tabInsights": "発見",
       "charts": {
         "monthlyTrend": "月次トレンド",
         "monthlyTrendDesc": "過去12ヶ月",

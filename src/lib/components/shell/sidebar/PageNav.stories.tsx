@@ -1,7 +1,7 @@
 /**
  * PageNav Stories
  *
- * ヘッダー右端のページナビゲーション（Calendar / Stats セグメントコントロール）。
+ * ヘッダー右端のページナビゲーション（Calendar / Review セグメントコントロール）。
  * 実装は nav + Link + aria-current ベース。
  * mock も Link ベース (aria-current) に揃える。
  */
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 // PageNav は usePathname / useCalendarNavigation 等に依存するため、
 // ストーリーでは同じ見た目の静的モックを使用する。
 
-type ActivePage = 'calendar' | 'stats';
+type ActivePage = 'calendar' | 'review';
 
 function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
   const tabs: Array<{
@@ -25,7 +25,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
     href: string;
   }> = [
     { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
-    { id: 'stats', label: '統計', icon: BarChart3, href: '/ja/stats/review' },
+    { id: 'review', label: '振り返り', icon: BarChart3, href: '/ja/review' },
   ];
 
   return (
@@ -65,7 +65,7 @@ function MockPageNav({ activePage = 'calendar' }: { activePage?: ActivePage }) {
   );
 }
 
-/** PageNav — ヘッダー右端のページナビゲーション。Calendar / Stats のセグメントコントロール。 */
+/** PageNav — ヘッダー右端のページナビゲーション。Calendar / Review のセグメントコントロール。 */
 const meta = {
   title: 'Components/Shell/Sidebar/PageNav',
   component: MockPageNav,
@@ -85,10 +85,10 @@ export const CalendarActive: Story = {
   },
 };
 
-/** 統計がアクティブ。 */
-export const StatsActive: Story = {
+/** 振り返りがアクティブ。 */
+export const ReviewActive: Story = {
   args: {
-    activePage: 'stats',
+    activePage: 'review',
   },
 };
 
@@ -101,8 +101,8 @@ export const AllPatterns: Story = {
         <MockPageNav activePage="calendar" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 text-xs">Stats Active</p>
-        <MockPageNav activePage="stats" />
+        <p className="text-muted-foreground mb-2 text-xs">Review Active</p>
+        <MockPageNav activePage="review" />
       </div>
     </div>
   ),

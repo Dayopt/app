@@ -2,7 +2,7 @@
  * 認証必須ページ用レイアウト
  *
  * @description
- * 認証が必要なページ（/calendar, /stats, /settings等）で使用。
+ * 認証が必要なページ（/calendar, /review, /settings等）で使用。
  * IntlProvider でアプリ用namespace のみクライアントに配信。
  *
  * 責務分離:
@@ -31,7 +31,6 @@ import { GlobalOverlays } from './_overlays/GlobalOverlays';
 /** アプリページで必要なnamespace */
 const APP_NAMESPACES = [
   'auth',
-  'badges',
   'common',
   'calendar',
   'entry',

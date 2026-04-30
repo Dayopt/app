@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { prefetchStatsData, ProgressView } from '@/features/stats';
+import { prefetchStatsData, StatsView } from '@/features/stats';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
@@ -18,11 +18,11 @@ export async function generateMetadata({
   const { locale = 'ja' } = await params;
   const t = await getTranslations({ locale, namespace: 'calendar' });
   return {
-    title: `${t('views.stats')} - ${t('stats.progress')}`,
+    title: t('views.stats'),
   };
 }
 
-function ProgressSkeleton() {
+function ReviewSkeleton() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
       <Skeleton className="h-8 w-48" />
@@ -32,24 +32,24 @@ function ProgressSkeleton() {
   );
 }
 
-async function ProgressContent() {
+async function ReviewContent() {
   const { dehydratedState } = await prefetchStatsData();
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <FeatureErrorBoundary featureName="stats-progress">
-        <ProgressView />
+      <FeatureErrorBoundary featureName="review">
+        <StatsView />
       </FeatureErrorBoundary>
     </HydrationBoundary>
   );
 }
 
-const ProgressPage = () => {
+const ReviewPage = () => {
   return (
-    <Suspense fallback={<ProgressSkeleton />}>
-      <ProgressContent />
+    <Suspense fallback={<ReviewSkeleton />}>
+      <ReviewContent />
     </Suspense>
   );
 };
 
-export default ProgressPage;
+export default ReviewPage;
