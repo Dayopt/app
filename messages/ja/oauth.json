@@ -1,0 +1,27 @@
+{
+  "oauth": {
+    "consent": {
+      "pageTitle": "接続の許可",
+      "heading": "{clientName} を Dayopt に接続",
+      "description": "{clientName} があなたの Dayopt の記録を読み取れるようになります。",
+      "scopesLabel": "アクセス範囲",
+      "scope": {
+        "read:entries": "記録の閲覧",
+        "read:tags": "タグの閲覧",
+        "read:stats": "統計の閲覧"
+      },
+      "readOnlyNotice": "読み取りのみです。{clientName} があなたの記録を変更することはできません。",
+      "approve": "接続を許可",
+      "deny": "キャンセル",
+      "userLabel": "{email} として接続します"
+    },
+    "error": {
+      "invalidRequest": "不正なリクエストです。接続元に戻ってもう一度お試しください。",
+      "invalidClient": "このクライアントは登録されていません。",
+      "invalidRedirectUri": "redirect_uri が許可されていません。",
+      "missingPkce": "PKCE パラメータが不足しています。",
+      "unsupportedResponseType": "response_type は code のみ対応しています。",
+      "consentDenied": "接続を許可しませんでした。"
+    }
+  }
+}

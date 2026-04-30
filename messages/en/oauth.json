@@ -1,0 +1,27 @@
+{
+  "oauth": {
+    "consent": {
+      "pageTitle": "Authorize connection",
+      "heading": "Connect {clientName} to Dayopt",
+      "description": "{clientName} will be able to read your Dayopt records.",
+      "scopesLabel": "Access scope",
+      "scope": {
+        "read:entries": "Read entries",
+        "read:tags": "Read tags",
+        "read:stats": "Read stats"
+      },
+      "readOnlyNotice": "Read-only. {clientName} cannot modify your records.",
+      "approve": "Authorize",
+      "deny": "Cancel",
+      "userLabel": "Connecting as {email}"
+    },
+    "error": {
+      "invalidRequest": "Invalid request. Return to the originating client and try again.",
+      "invalidClient": "This client is not registered.",
+      "invalidRedirectUri": "redirect_uri is not allowed.",
+      "missingPkce": "PKCE parameters are missing.",
+      "unsupportedResponseType": "Only response_type=code is supported.",
+      "consentDenied": "Authorization was not granted."
+    }
+  }
+}

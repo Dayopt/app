@@ -22,6 +22,7 @@ const protectedPaths = [
   '/review',
   '/add',
   '/tags',
+  '/oauth',
 ];
 
 // オンボーディング完了Cookie名
