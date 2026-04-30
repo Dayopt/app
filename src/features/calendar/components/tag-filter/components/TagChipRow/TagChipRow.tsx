@@ -12,8 +12,6 @@ import { cn } from '@/lib/utils';
 import { TagEntryCreatePopover } from '../TagEntryCreatePopover';
 
 export interface TagChipRowProps {
-  /** 既定の duration（分）。popover の end time 初期値 = start + this */
-  defaultDurationMinutes?: number;
   className?: string;
 }
 
@@ -35,7 +33,7 @@ function sortActiveTags(tags: Tag[] | undefined): Tag[] {
  * - `is_active === false` のタグは除外
  * - タグゼロなら null を返す（行ごと非表示。初回タグ作成は別導線）
  */
-export function TagChipRow({ defaultDurationMinutes = 30, className }: TagChipRowProps) {
+export function TagChipRow({ className }: TagChipRowProps) {
   const t = useTranslations();
   const { data: tags } = useTags();
   const [openTagId, setOpenTagId] = useState<string | null>(null);
@@ -98,7 +96,6 @@ export function TagChipRow({ defaultDurationMinutes = 30, className }: TagChipRo
             if (!o) setOpenTagId(null);
           }}
           tag={openTag}
-          defaultDurationMinutes={defaultDurationMinutes}
           isMobile
         />
       )}

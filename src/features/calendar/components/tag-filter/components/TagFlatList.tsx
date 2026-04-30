@@ -487,7 +487,6 @@ function SortableParentBlock({
                 color: displayColor,
                 icon: node.tag.icon ?? headerIcon,
               }}
-              defaultDurationMinutes={30}
               isMobile={isMobile}
             />
           ) : null}
@@ -744,7 +743,6 @@ function SortableTagItem({
                 open
                 onOpenChange={(nextOpen) => onOpenPopover(nextOpen ? tag.id : null)}
                 tag={{ id: tag.id, name: tag.name, color: displayColor, icon: tag.icon }}
-                defaultDurationMinutes={30}
                 isMobile={isMobile}
               />
             ) : null}

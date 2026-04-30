@@ -299,6 +299,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   return (
     <div
       data-entry-card
+      data-entry-id={entry.id}
       className={entryCardClasses}
       style={dynamicStyle}
       onClick={handleClick}
@@ -458,18 +459,21 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
         {/* /カード本体 */}
 
-        {/* 下端リサイズハンドル（PC専用、Draft/Past は非表示）
-           モバイルは「tap=Inspector / longpress=ドラッグ」の二耳モデルに統一するため
-           ハンドル自体を出さない。リサイズは Inspector の時間編集 UI から行う。
+        {/* 下端リサイズハンドル（Draft/Past は非表示）
+           PC: 常時 render、hover で pill 出現。
+           Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
            短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に張り出す。
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
-        {!isDraft && !isPast && !isMobile && (
+        {!isDraft && !isPast && (!isMobile || isActive) && (
           <>
-            {/* hover で出現する drawer pill 風 affordance — card 実体の下端中央に配置。
+            {/* drawer pill 風 affordance — PC は hover で出現、Mobile は isActive のとき常時 visible。
                 pointer-events-none で click は下にある handle が拾う。 */}
             <span
               aria-hidden
-              className="bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full opacity-0 transition-opacity duration-150 group-hover/entry:opacity-100"
+              className={cn(
+                'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
+                isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
+              )}
               style={{ zIndex: 11 }}
             />
             <div
@@ -485,8 +489,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               onTouchStart={handleBottomResizeTouchStart}
               onKeyDown={handleResizeKeyDown}
               style={{
-                height: safePosition.height < 40 ? '44px' : '32px',
-                bottom: safePosition.height < 40 ? '-40px' : '-12px',
+                // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
+                // PC は短い card のときのみ 44px、通常 32px。
+                height: isMobile || safePosition.height < 40 ? '44px' : '32px',
+                bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}

@@ -47,7 +47,6 @@ const meta = {
     open: true,
     onOpenChange: fn(),
     tag: MOCK_TAG,
-    defaultDurationMinutes: 30,
   },
 } satisfies Meta<typeof TagEntryCreatePopover>;
 
@@ -78,7 +77,6 @@ function renderPopover(opts: { isMobile?: boolean } = {}) {
             open={open}
             onOpenChange={setOpen}
             tag={MOCK_TAG}
-            defaultDurationMinutes={30}
             isMobile={opts.isMobile ?? false}
           />
         </div>

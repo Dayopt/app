@@ -45,6 +45,8 @@ export interface UseInteractionProps {
   viewMode?: 'day' | '3day' | '5day' | 'week';
   /** Plan ID to disable dragging (e.g. Inspector-open plan) */
   disabledPlanId?: string | null;
+  /** Plan ID to disable resize（move とは独立に制御するため）。Mobile では Inspector 開いている entry も resize 可にしたい場合 null を渡す */
+  resizeDisabledPlanId?: string | null;
   /** Pixels per hour */
   hourHeight: number;
   /** Callback when an event is moved or resized */
@@ -122,6 +124,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',
     disabledPlanId: props.disabledPlanId,
+    resizeDisabledPlanId: props.resizeDisabledPlanId,
     onEventClick: props.onEventClick,
     onEventUpdate: props.onEventUpdate,
     onTimeRangeSelect: props.onTimeRangeSelect,
@@ -138,6 +141,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
     displayDates: props.displayDates,
     viewMode: props.viewMode ?? 'day',
     disabledPlanId: props.disabledPlanId,
+    resizeDisabledPlanId: props.resizeDisabledPlanId,
     onEventClick: props.onEventClick,
     onEventUpdate: props.onEventUpdate,
     onTimeRangeSelect: props.onTimeRangeSelect,
@@ -441,7 +445,7 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
       // マウスイベントの場合は左クリックのみ許可
       if ('button' in e && e.button !== 0) return;
       const r = latestRef.current;
-      if (r.disabledPlanId && entryId === r.disabledPlanId) return;
+      if (r.resizeDisabledPlanId && entryId === r.resizeDisabledPlanId) return;
       e.preventDefault();
       e.stopPropagation();
       dispatch({

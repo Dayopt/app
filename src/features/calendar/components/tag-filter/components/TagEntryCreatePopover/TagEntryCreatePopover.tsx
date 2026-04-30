@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { isSameDay, startOfDay } from 'date-fns';
+import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useEntryMutations } from '@/features/entry';
@@ -10,23 +11,28 @@ import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { toast } from '@/lib/toast';
 
+import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import { TagEntryCreateForm, type TagEntryCreateFormProps } from './TagEntryCreateForm';
+
+/** 開始時刻の default: today なら現在時刻を次の 15 分境界に ceil、それ以外は 09:00 */
+function defaultStartHHMM(forDate: Date): string {
+  const now = new Date();
+  if (isSameDay(forDate, now)) {
+    const FIFTEEN_MIN_MS = 15 * 60 * 1000;
+    const ceiled = new Date(Math.ceil(now.getTime() / FIFTEEN_MIN_MS) * FIFTEEN_MIN_MS);
+    const h = String(ceiled.getHours()).padStart(2, '0');
+    const m = String(ceiled.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  }
+  return '09:00';
+}
 
 export interface TagEntryCreatePopoverProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tag: TagEntryCreateFormProps['tag'];
-  /** 既定の duration（分）。end time の初期値 = start + this */
-  defaultDurationMinutes: number;
   /** モバイル時は bottom sheet (vaul Drawer)、PC 時は Popover。指定なしは PC 扱い */
   isMobile?: boolean;
-}
-
-/** Date を HH:MM 文字列に */
-function toHHMM(d: Date): string {
-  const h = String(d.getHours()).padStart(2, '0');
-  const m = String(d.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
 }
 
 /** 選択日 + HH:MM → Date */
@@ -47,73 +53,90 @@ function addMinutesToHHMM(hhmm: string, minutesToAdd: number): string {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
-/** 開始時刻の default: today なら現在時刻を次の 15 分境界に ceil、それ以外は 09:00 */
-function defaultStartHHMM(forDate: Date): string {
-  const now = new Date();
-  if (isSameDay(forDate, now)) {
-    const FIFTEEN_MIN_MS = 15 * 60 * 1000;
-    const ceiled = new Date(Math.ceil(now.getTime() / FIFTEEN_MIN_MS) * FIFTEEN_MIN_MS);
-    return toHHMM(ceiled);
-  }
-  return '09:00';
-}
+const FALLBACK_DURATION_MINUTES = 60;
 
 /**
  * sidebar タグ行クリック → エントリ作成ポップアップ。
  *
- * Inspector 流用のミニマル構成:
- *   [icon] タグ名
- *   📅 日付    04/22/2026
- *   🕐 予定    07:15 → 08:45
- *              [キャンセル] [作成]
+ * state は {@link useTagDraftStore} に持つため、calendar 上の draft block の resize と
+ * popover の time input の双方が同じ store を経由して相互反映する。
  *
- * - 日付行 `DateRow`: 既存 DatePickerPopover を内包（Inspector と同じ UX）
- * - 予定行 `TimeRow`: 開始 → 終了 の 2 TimeInput（1 分粒度）、duration は自動算出
- * - 既定 end = 既定 start + `defaultDurationMinutes`
- * - 作成成功で popover close + 5s undo トースト、失敗時は popover 維持
+ * - tap 時に TagFlatList 側が `openDraft({ tag, date, startTime, endTime })` を call
+ * - popover はその draft を read/write
+ * - 作成成功で `closeDraft()` + 5s undo トースト、失敗時は popover 維持
  */
 export function TagEntryCreatePopover({
   open,
   onOpenChange,
   tag,
-  defaultDurationMinutes,
   isMobile,
 }: TagEntryCreatePopoverProps) {
   const t = useTranslations();
   const { createEntry, deleteEntry } = useEntryMutations({ suppressCreateToast: true });
 
-  const [selectedDate, setSelectedDate] = useState<Date>(() => startOfDay(new Date()));
-  const [startTime, setStartTime] = useState<string>(() => defaultStartHHMM(selectedDate));
-  const [endTime, setEndTime] = useState<string>(() =>
-    addMinutesToHHMM(defaultStartHHMM(selectedDate), defaultDurationMinutes),
-  );
+  const draft = useTagDraftStore((s) => s.draft);
+  const openDraft = useTagDraftStore((s) => s.openDraft);
+  const updateTimes = useTagDraftStore((s) => s.updateTimes);
+  const closeDraft = useTagDraftStore((s) => s.closeDraft);
+
+  const isThisTag = draft?.tag.id === tag.id;
+  const selectedDate = isThisTag ? draft.date : startOfDay(new Date());
+  const startTime = isThisTag ? draft.startTime : '09:00';
+  const endTime = isThisTag ? draft.endTime : '10:00';
+
+  // open=true & store に対応する draft が無いとき seed する（tap 時に TagFlatList 側で
+  // call する代替。row 側の handler を変更しなくて済む）
+  useEffect(() => {
+    if (!open) return;
+    if (draft?.tag.id === tag.id) return;
+    const date = startOfDay(new Date());
+    const seedStart = defaultStartHHMM(date);
+    openDraft({
+      tag,
+      date,
+      startTime: seedStart,
+      endTime: addMinutesToHHMM(seedStart, FALLBACK_DURATION_MINUTES),
+    });
+  }, [open, draft?.tag.id, tag, openDraft]);
 
   const handleDateSelect = useCallback(
     (next: Date) => {
       const normalized = startOfDay(next);
-      setSelectedDate(normalized);
-      const nextStart = defaultStartHHMM(normalized);
-      setStartTime(nextStart);
-      setEndTime(addMinutesToHHMM(nextStart, defaultDurationMinutes));
+      updateTimes({ date: normalized });
     },
-    [defaultDurationMinutes],
+    [updateTimes],
   );
 
   const handleStartChange = useCallback(
     (nextStart: string) => {
-      setStartTime(nextStart);
-      // 開始を変えたら、既存 duration を維持する形で終了も追従
       const [sh, sm] = nextStart.split(':').map(Number);
       const [eh, em] = endTime.split(':').map(Number);
       const startMin = (sh ?? 0) * 60 + (sm ?? 0);
       const endMin = (eh ?? 0) * 60 + (em ?? 0);
       if (endMin <= startMin) {
         // 終了が開始より早い/同じになったら default duration で付け直し
-        setEndTime(addMinutesToHHMM(nextStart, defaultDurationMinutes));
+        updateTimes({
+          startTime: nextStart,
+          endTime: addMinutesToHHMM(nextStart, FALLBACK_DURATION_MINUTES),
+        });
+      } else {
+        updateTimes({ startTime: nextStart });
       }
     },
-    [endTime, defaultDurationMinutes],
+    [endTime, updateTimes],
   );
+
+  const handleEndChange = useCallback(
+    (nextEnd: string) => {
+      updateTimes({ endTime: nextEnd });
+    },
+    [updateTimes],
+  );
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false);
+    closeDraft();
+  }, [closeDraft, onOpenChange]);
 
   const handleSubmit = useCallback(() => {
     const startDate = combineDateAndHHMM(selectedDate, startTime);
@@ -140,7 +163,7 @@ export function TagEntryCreatePopover({
           } else {
             toast.success(t('entry.toast.created', { title: displayTitle }));
           }
-          onOpenChange(false);
+          handleClose();
         },
         // onError: useEntryMutations 側でエラートースト + 楽観的更新ロールバック。
         // popover は閉じない（意図的）。time overlap 時はユーザーが時刻を調整して再試行できる。
@@ -150,7 +173,7 @@ export function TagEntryCreatePopover({
     createEntry,
     deleteEntry,
     endTime,
-    onOpenChange,
+    handleClose,
     selectedDate,
     startTime,
     t,
@@ -166,18 +189,35 @@ export function TagEntryCreatePopover({
       startTime={startTime}
       onStartTimeChange={handleStartChange}
       endTime={endTime}
-      onEndTimeChange={setEndTime}
+      onEndTimeChange={handleEndChange}
       onSubmit={handleSubmit}
-      onCancel={() => onOpenChange(false)}
+      onCancel={handleClose}
       isSubmitting={createEntry.isPending}
     />
   );
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange} handleOnly repositionInputs={false}>
+      <Drawer
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) handleClose();
+        }}
+        handleOnly
+        repositionInputs={false}
+        modal={false}
+      >
         <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
           <DrawerTitle className="sr-only">{tag.name}</DrawerTitle>
+          {/* 閉じる button — modal={false} で外側タップ閉じが無効なため明示的に提供 */}
+          <button
+            type="button"
+            onClick={handleClose}
+            aria-label={t('common.actions.close')}
+            className="text-muted-foreground hover:text-foreground absolute top-0 right-0 z-10 inline-flex size-11 items-center justify-center transition-colors duration-150"
+          >
+            <X className="size-4" />
+          </button>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-lg">{formNode}</div>
           </div>
@@ -187,7 +227,12 @@ export function TagEntryCreatePopover({
   }
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) handleClose();
+      }}
+    >
       <PopoverAnchor aria-hidden className="pointer-events-none absolute inset-0" />
       <PopoverContent
         side="right"
