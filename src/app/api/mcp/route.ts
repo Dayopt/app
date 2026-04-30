@@ -3,8 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { logger } from '@/lib/logger';
-import { createMcpServer, extractBearerToken, verifyAccessToken } from '@/lib/mcp';
+import { extractBearerToken, verifyAccessToken } from '@/lib/mcp';
 import { OAuthServerError } from '@/lib/oauth-server';
+
+import { createMcpServer } from './_server';
 
 /**
  * MCP Streamable HTTP endpoint.
