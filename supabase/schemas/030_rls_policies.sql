@@ -15,6 +15,7 @@
 
 -- ■ mfa_recovery_codes: SELECT/INSERT/DELETE は user_id = auth.uid()、UPDATE不可
 -- ■ reports: SELECT/DELETE は user_id = auth.uid()、INSERT は service_role のみ
--- ■ api_keys: SELECT/INSERT/DELETE は user_id = auth.uid()、UPDATE不可
+-- ■ oauth_tokens: SELECT/UPDATE は user_id = auth.uid()、INSERT/DELETE 不可 (service-role のみ)
+-- ■ oauth_authorization_codes: 全 user-facing policy 無し (service-role のみ)
 
 -- 詳細は baseline.sql の RLS Policies セクションを参照
