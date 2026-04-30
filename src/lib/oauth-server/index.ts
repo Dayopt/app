@@ -17,6 +17,15 @@ export {
   type OAuthClient,
   type OAuthClientId,
 } from './clients';
+export {
+  ACCESS_TOKEN_TTL_SEC,
+  REFRESH_TOKEN_TTL_SEC,
+  exchangeAuthorizationCode,
+  refreshAccessToken,
+  type ExchangeAuthorizationCodeInput,
+  type RefreshAccessTokenInput,
+  type TokenResponse,
+} from './code-exchange';
 export { createOAuthDbClient, type OAuthSupabaseClient } from './db';
 export { OAuthServerError, type OAuthErrorCode } from './errors';
 export { buildAuthorizationServerMetadata, buildProtectedResourceMetadata } from './metadata';
