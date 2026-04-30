@@ -55,12 +55,14 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
 
+  const isStatsView = useMemo(() => pathWithoutLocale.startsWith('/stats'), [pathWithoutLocale]);
+
   // calendar / stats 系はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
   // 詳細操作は PC 限定のため、情報として明示する
   const isDesktopOnlyEditPage = useMemo(
-    () => isCalendarView || pathWithoutLocale.startsWith('/stats'),
-    [isCalendarView, pathWithoutLocale],
+    () => isCalendarView || isStatsView,
+    [isCalendarView, isStatsView],
   );
 
   return (
@@ -80,14 +82,15 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* モバイル閲覧専用の告知（calendar / stats） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（calendar view では TagChipRow + BottomTabBar 分の余白を確保） */}
-        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
+        {/* Main Content（calendar / stats view では TagChipRow + BottomTabBar 分の余白を確保） */}
+        <MainContentWrapper className={isCalendarView || isStatsView ? 'pb-32' : 'pb-16'}>
           {children}
         </MainContentWrapper>
       </div>
 
-      {/* calendar view のみ: タグクイック作成 chip 行（TabBar 直上に固定） */}
+      {/* calendar: タグタップで予定作成 popover / stats: タップでタグ統計詳細へ遷移 */}
       {isCalendarView && <TagChipRow />}
+      {isStatsView && <TagChipRow mode="stats-link" />}
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />
