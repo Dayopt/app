@@ -20,6 +20,7 @@
       "invalidClient": "このクライアントは登録されていません。",
       "invalidRedirectUri": "redirect_uri が許可されていません。",
       "missingPkce": "PKCE パラメータが不足しています。",
+      "invalidScope": "リクエストされた scope は対応していません。",
       "unsupportedResponseType": "response_type は code のみ対応しています。",
       "consentDenied": "接続を許可しませんでした。"
     }

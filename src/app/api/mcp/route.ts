@@ -76,9 +76,17 @@ async function handle(request: NextRequest): Promise<Response> {
 
 function authErrorResponse(err: unknown): Response {
   const isOAuthErr = err instanceof OAuthServerError;
-  const status = isOAuthErr ? 401 : 500;
+  // OAuthServerError は err.httpStatus を尊重 (auth failure=401 / server_error=500 を保つ)。
+  // 5xx を 401 に丸めると client が再認証ループに入って真の障害が観測できない。
+  const status = isOAuthErr ? err.httpStatus : 500;
   if (!isOAuthErr) {
     logger.error({ err }, '[mcp] auth unexpected error');
+  }
+
+  // WWW-Authenticate は client が再認証へ進めるサインなので 401 のときだけ付ける。
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (status === 401) {
+    headers['www-authenticate'] = `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`;
   }
 
   return new Response(
@@ -88,10 +96,7 @@ function authErrorResponse(err: unknown): Response {
     }),
     {
       status,
-      headers: {
-        'content-type': 'application/json',
-        'www-authenticate': `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`,
-      },
+      headers,
     },
   );
 }

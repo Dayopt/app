@@ -27,6 +27,7 @@ const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
   invalid_client: 'invalidClient',
   invalid_redirect_uri: 'invalidRedirectUri',
   missing_pkce: 'missingPkce',
+  invalid_scope: 'invalidScope',
 };
 
 export default async function ConsentPage({ searchParams }: ConsentPageProps) {

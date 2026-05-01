@@ -23,7 +23,8 @@ export type AuthorizeValidationError =
   | 'unsupported_response_type'
   | 'invalid_client'
   | 'invalid_redirect_uri'
-  | 'missing_pkce';
+  | 'missing_pkce'
+  | 'invalid_scope';
 
 export type AuthorizeValidationResult =
   | {
@@ -50,10 +51,14 @@ export function validateAuthorizeInput(input: AuthorizeInput): AuthorizeValidati
   if (!input.code_challenge || input.code_challenge_method !== 'S256') {
     return { ok: false, error: 'missing_pkce' };
   }
+  const scopes = parseRequestedScope(input.scope);
+  if (scopes === null) {
+    return { ok: false, error: 'invalid_scope' };
+  }
   return {
     ok: true,
     client,
-    scopes: parseRequestedScope(input.scope),
+    scopes,
     redirectUri: input.redirect_uri,
     codeChallenge: input.code_challenge,
     state: input.state ?? null,
