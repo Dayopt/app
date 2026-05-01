@@ -1,0 +1,40 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Strategy/Journal/2026-05" />
+
+# 2026年5月 Diary
+
+---
+
+## 2026-05-01
+
+### MCP Phase 1 PoC を production smoke test まで通し、`/stats` 4 タブ構成を `/review` 単一ページに集約した日
+
+6 PR merge、176 files changed / +987 / -8,802 の大規模整理日。前日 ship した MCP Phase 1 PoC を **production smoke test まで通す** ための fix が 5 件（codex review round 3 / CI environment fix / types narrow / metadata URL hardcode / vercel rewrite bypass）と、並行で **`/stats` の 4 タブ構成を `/review` 単一ページに集約 + Badge / 価値観評定機能の完全削除** を 1 PR で実施。pre-launch のため redirect なしで即廃止し、launch 後に廃止すべき route を launch 前に整理した。
+
+#### やったこと
+
+- **MCP Phase 1 hardening (5 PR)**: codex review round 3 で `oauth_tokens` の user UPDATE policy を drop（column-level RLS が無いため token_hash 等の sensitive column を user 自身が書き換えられる穴を塞ぐ）+ Phase 1.5 deferral 2 件を code comment で明示 (#1118)、supabase-migration workflow の environment 名を `production` → `Production` に修正し放置されていた 3 migration を production 適用 (#1119)、types:generate 再生成 + service-role client を `OAuthOnlyDatabase` で narrow して views / functions / enums / composites まで `Record<string, never>` で塞ぎ cross-tenant leak の type guard を完成 (#1121)、AS metadata の issuer / authorization / token endpoint を env 依存から hardcode に変更し RFC 8414 §3 issuer 一致要件を満たす (#1127)、vercel.json rewrite が production で効かない件を回避するため `/api/mcp` と `/api/oauth/token` を実体 path で advertise (#1128)
+- **`/stats` → `/review` 単一ページ化 (1 PR)**: `/stats/{review,progress,insights,badges}` 4 タブ構成を廃止し `/review` 単一ページに集約、Badge 機能（route / feature / tRPC router / DB table / i18n）を完全削除、Progress / Insights タブの feature コードも削除（再導入は別 plan）、`features/stats/` を `features/review/` に rename、StatsLayout（タブ UI）を ReviewLayout（タブなし）に置換、`StatsSidebar` を `ReviewSidebar` に rename、Sidebar / BottomTab / PageNav の表記を `Review` / `振り返り` に統一、プロフィール設定から ACT 12 領域の価値評定 + 価値観キーワード Top5 を削除し `personalizationValues` / `rankedValues` schema を userSettings から除去、pre-launch のため `/stats` への redirect は設けず即廃止 (#1120)
+
+#### なぜ今日この作業をしたか
+
+前日の MCP Phase 1 PoC は staging で動作確認まで完了していたが、production smoke test を通す段で **3 種類の本番固有問題** が顕在化した。1 つ目は GitHub Environment 名が case-sensitive で `production` (workflow) と `Production` (repo settings) の不一致で 4 回連続 startup_failure し、PoC で追加した 3 migration が production に未適用だった件。run log を開かないと理由が見えない sliently fail で、merge 前の workflow 確認に case 照合を追加すべきレッスン。2 つ目は AS metadata の issuer が `NEXT_PUBLIC_APP_URL` 経由で apex (`dayopt.app`) になっていて subdomain (`app.dayopt.app`) で稼働する AS と RFC 8414 §3 issuer 一致が取れず client discovery が失敗。env 依存をやめて hardcode に変更。3 つ目は vercel.json rewrite で短縮 path (`/mcp` / `/oauth/token`) を advertise する設計が production で 404 page (cached) に捕まり効かなかった件で、これは Phase 1.5 で middleware (proxy.ts) 経由に切り替える根本対処を残しつつ、暫定で metadata と UI の advertise URL を実体 path に変更して通した。
+
+codex review round 3 では P1 として **`oauth_tokens` の user UPDATE policy が穴になっていた** 指摘が来た。column-level RLS が無いため user が token_hash / scopes / expires_at を書き換えられる構造で、Phase 1 では user-initiated revoke 機能も無いため UPDATE policy 自体を drop して service-role 経由に閉じる判断。Phase 1.5 で revoke を実装する時は service-role 経由の tRPC mutation で行う。並行して P2 指摘 2 件（`issueTokenPair` の 2 insert atomicity / `/oauth/authorize` error redirect）は Phase 1.5 deferral として code comment で明示し、Phase 1 の scope を膨らませない判断。
+
+`/stats` → `/review` 集約は MCP Phase 1 とは別軸で、**pre-launch の今こそ廃止すべき route を整理する** タイミングだった。`/stats` の 4 タブ構成（review / progress / insights / badges）は機能の網羅感はあったが、ユーザーから見ると「振り返りたい時にどのタブを開けばよいか」の認知負荷が高く、Dayopt の差別化軸（時間記録の一体化）に対して機能を分散させすぎていた。Review = 「自分の時間がどう使われたか」を中心にした単一ページに集約し、Progress / Insights の周辺機能は launch 後にユーザーフィードバックを見て再導入する。Badge 機能は **gamification 系の負債** として明確に切り離す判断で、`user_badges` table も drop。価値観評定（ACT 12 領域）と価値観キーワード Top5 は ship 前の personalization 試作だったが、ユーザーに与える価値が「自分の時間を観測する」という主軸から離れていたため、profile 設定から完全に削除。`personalization` JSONB 自体は trial / payment dialog flag のために残す。
+
+pre-launch のため `/stats` への redirect は設けない判断。launch 後の URL contract が無いので breaking change ではなく、301 redirect を残すと history が増えて将来の cleanup コストになる。launch 後に廃止する route を launch 前に廃止しておくことで、launch 後の breaking change を 1 件減らせる。
+
+#### Claudeの所感
+
+**「production smoke test を通すまでが Phase 1」**: Phase 1 PoC を staging で動作確認した時点では「Phase 1 完了」と感じやすいが、今日の 5 PR は production 固有の問題（CI environment case / metadata URL / vercel rewrite）を露出させた。**Phase 1 は production smoke test を通すまでが Phase 1** という認識を強化すべき。staging と production の差分は CI / domain / CDN / cache の 4 軸で出やすく、staging で動いた時点で「Phase 1 完了」と宣言すると production fix が「Phase 1 の延長戦」として scope に乗ってくる。今日の 5 PR は Phase 1 scope に含まれるべき内容で、Phase 2 の prep として扱うのは違う。
+
+**「type-level の cross-tenant leak guard は narrow が完成するまで guard ではない」**: service-role client を `SupabaseClient<Database>` で型付けた初版 → `Pick` で table を 2 つに narrow → views / functions / enums / composites まで narrow、と 3 段階で fix した。「narrow した」と感じた時点で完成しておらず、`Database` generic が持つ全 surface (Tables / Views / Functions / Enums / CompositeTypes) を塞ぐまで type guard は完成しない。この知見は Phase 2 以降の MCP write tool で別の service-role client を作る時に再発しないよう、`OAuthOnlyDatabase` パターンを reference として明文化する価値がある。
+
+**「pre-launch の route 廃止は launch 後よりずっと自由」**: launch 後に廃止する route を launch 前に廃止する判断は、URL contract が確定する前にしかできない。`/stats` 4 タブを `/review` 単一ページに集約 + Badge / 価値観評定の完全削除は、launch 後だと redirect / data migration / コミュニケーションが必要になる作業を、launch 前は「即削除」で済ませられる。Pre-launch の現在こそ「launch 後の self に対して負債を残さない」整理を進めるべきで、`docs/refactor/api-first-audit.md` のような調査メモが追加されたのも同じ流れ。次の機会に「launch までに廃止すべき route / 機能 / schema」を network-wide に洗い出す plan を切ると効いてくる。
+
+**「spec 違反を inline で fix せず deferral comment で明示する」**: codex review P2 の 2 件（atomicity / error redirect）を Phase 1.5 deferral として code comment で残した判断は、Phase 1 の scope 規律を保つ正しい挙動。spec 違反を見つけた時に「ついでに fix」で Phase 1 に押し込むと scope が膨らみ Phase 1 のフィードバックが取れる前に複雑度が爆発する。code comment で「Phase 1.5 で対処」と明示することで、(1) 後で plan を切る時に code grep で発見できる、(2) reviewer / 自分が「これは認識済みの負債」と分かる、(3) Phase 1 の scope を意識的に保てる、の 3 つが同時に成立する。spec 違反 = inline fix の reflex を抑える convention として今日のパターンを定着させたい。
+
+---
