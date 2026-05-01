@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
@@ -27,6 +27,7 @@ import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { logger } from '@/lib/logger';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 import { createClient } from '@/lib/supabase/client';
+import { Turnstile, isTurnstileEnabled, type TurnstileInstance } from '@/lib/turnstile';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
 
@@ -52,6 +53,11 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
 
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const turnstileEnabled = isTurnstileEnabled();
+  const turnstileLocale: 'ja' | 'en' | 'auto' =
+    locale === 'ja' ? 'ja' : locale === 'en' ? 'en' : 'auto';
 
   // OAuth/メール確認 callback 失敗時、callback route が ?error= を付けて redirect する。
   // ユーザーに無言バウンスさせず、対応するメッセージを表示する。
@@ -84,12 +90,18 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
 
     try {
       // ステップ1: ログイン試行（最小依存で実行）
-      const { error: signInError, data: signInData } = await signIn(data.email, data.password);
+      const { error: signInError, data: signInData } = turnstileToken
+        ? await signIn(data.email, data.password, { captchaToken: turnstileToken })
+        : await signIn(data.email, data.password);
 
       if (signInError) {
         // ログイン失敗時: OWASP準拠でサニタイズ済みメッセージを表示
         const errorKey = getAuthErrorKey(signInError.message, 'login');
         setSubmitError(t(errorKey));
+        // Turnstile token は single-use / short-lived。失敗時は widget を reset して
+        // 次の retry で新しい challenge token を取得させる
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
       } else if (signInData) {
         // ログイン成功
 
@@ -129,6 +141,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     } catch (err) {
       logger.error('[LoginForm] Unexpected error:', err);
       setSubmitError(t('auth.errors.unexpectedError') || 'An unexpected error occurred');
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
   };
 
@@ -136,6 +150,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
+          {/* onSubmit は event handler として submit 時にのみ turnstileRef.current を読む。
+              react-hooks/refs が handleSubmit(onSubmit) の closure 解析で誤検知するため disable */}
+          {/* eslint-disable-next-line react-hooks/refs */}
           <form className="p-6 md:p-8" onSubmit={handleSubmit(onSubmit)}>
             <FieldGroup>
               <div className="flex flex-col items-center text-center">
@@ -267,8 +284,27 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                 )}
               </Field>
 
+              {turnstileEnabled && (
+                <Field>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      onError={() => setTurnstileToken(null)}
+                      onExpire={() => setTurnstileToken(null)}
+                      locale={turnstileLocale}
+                    />
+                  </div>
+                </Field>
+              )}
+
               <Field>
-                <Button type="submit" loading={isSubmitting} className="w-full">
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={turnstileEnabled && !turnstileToken}
+                  className="w-full"
+                >
                   {t('auth.loginForm.loginButton')}
                 </Button>
               </Field>
