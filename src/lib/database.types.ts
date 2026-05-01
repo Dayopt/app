@@ -8,33 +8,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      api_keys: {
-        Row: {
-          created_at: string;
-          id: string;
-          key_hash: string;
-          last_used_at: string | null;
-          name: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          key_hash: string;
-          last_used_at?: string | null;
-          name: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          key_hash?: string;
-          last_used_at?: string | null;
-          name?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
       email_suppressions: {
         Row: {
           created_at: string;
@@ -144,6 +117,95 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      oauth_authorization_codes: {
+        Row: {
+          client_id: string;
+          code_challenge: string;
+          code_challenge_method: string;
+          code_hash: string;
+          consumed_at: string | null;
+          created_at: string;
+          expires_at: string;
+          redirect_uri: string;
+          scopes: string[];
+          user_id: string;
+        };
+        Insert: {
+          client_id: string;
+          code_challenge: string;
+          code_challenge_method: string;
+          code_hash: string;
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          redirect_uri: string;
+          scopes: string[];
+          user_id: string;
+        };
+        Update: {
+          client_id?: string;
+          code_challenge?: string;
+          code_challenge_method?: string;
+          code_hash?: string;
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          redirect_uri?: string;
+          scopes?: string[];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      oauth_tokens: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          last_used_at: string | null;
+          parent_token_id: string | null;
+          revoked_at: string | null;
+          scopes: string[];
+          token_hash: string;
+          token_type: string;
+          user_id: string;
+        };
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          last_used_at?: string | null;
+          parent_token_id?: string | null;
+          revoked_at?: string | null;
+          scopes?: string[];
+          token_hash: string;
+          token_type: string;
+          user_id: string;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          last_used_at?: string | null;
+          parent_token_id?: string | null;
+          revoked_at?: string | null;
+          scopes?: string[];
+          token_hash?: string;
+          token_type?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'oauth_tokens_parent_token_id_fkey';
+            columns: ['parent_token_id'];
+            isOneToOne: false;
+            referencedRelation: 'oauth_tokens';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -284,33 +346,6 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
-      };
-      user_badges: {
-        Row: {
-          badge_id: string;
-          created_at: string;
-          earned_at: string;
-          id: string;
-          rank: string | null;
-          user_id: string;
-        };
-        Insert: {
-          badge_id: string;
-          created_at?: string;
-          earned_at?: string;
-          id?: string;
-          rank?: string | null;
-          user_id: string;
-        };
-        Update: {
-          badge_id?: string;
-          created_at?: string;
-          earned_at?: string;
-          id?: string;
-          rank?: string | null;
-          user_id?: string;
-        };
-        Relationships: [];
       };
       user_settings: {
         Row: {
