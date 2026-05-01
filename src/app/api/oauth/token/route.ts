@@ -34,13 +34,14 @@ export async function POST(request: NextRequest) {
       const redirectUri = required(get('redirect_uri'), 'redirect_uri');
       const codeVerifier = required(get('code_verifier'), 'code_verifier');
 
-      if (!resolveClient(clientId)) {
+      const client = resolveClient(clientId);
+      if (!client) {
         throw new OAuthServerError('invalid_client', `Unknown client_id: ${clientId}`);
       }
 
       const tokens = await exchangeAuthorizationCode({
         code,
-        client_id: clientId,
+        client_id: client.id,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
       });
@@ -51,13 +52,14 @@ export async function POST(request: NextRequest) {
       const refreshToken = required(get('refresh_token'), 'refresh_token');
       const clientId = required(get('client_id'), 'client_id');
 
-      if (!resolveClient(clientId)) {
+      const client = resolveClient(clientId);
+      if (!client) {
         throw new OAuthServerError('invalid_client', `Unknown client_id: ${clientId}`);
       }
 
       const tokens = await refreshAccessToken({
         refresh_token: refreshToken,
-        client_id: clientId,
+        client_id: client.id,
       });
       return tokenResponse(tokens);
     }

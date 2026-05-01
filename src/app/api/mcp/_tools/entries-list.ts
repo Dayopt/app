@@ -79,6 +79,18 @@ export function registerEntriesListTool(server: McpServer, ctx: McpRequestContex
       inputSchema,
     },
     async ({ startDate, endDate, tagId, limit }) => {
+      // Scope enforcement: token が read:entries を持たない場合は実行しない
+      if (!ctx.scopes.includes('read:entries')) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Access denied: this token does not have the read:entries scope.',
+            },
+          ],
+          isError: true,
+        };
+      }
       try {
         const trpc = createMcpTrpcCaller({
           userId: ctx.userId,

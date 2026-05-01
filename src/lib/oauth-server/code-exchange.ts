@@ -1,7 +1,9 @@
 import 'server-only';
 
+import type { OAuthClientId } from './clients';
 import { createOAuthDbClient } from './db';
 import { OAuthServerError } from './errors';
+import type { SupportedScope } from './scopes';
 import { generateOpaqueToken, hashToken, verifyPkceS256 } from './tokens';
 
 /** Phase 1 token TTLs (Decision 1). */
@@ -18,7 +20,8 @@ export interface TokenResponse {
 
 export interface ExchangeAuthorizationCodeInput {
   code: string;
-  client_id: string;
+  /** 呼び出し元 (token route) で resolveClient による allowlist 照合済みである前提。 */
+  client_id: OAuthClientId;
   redirect_uri: string;
   code_verifier: string;
 }
@@ -26,51 +29,42 @@ export interface ExchangeAuthorizationCodeInput {
 /**
  * authorization_code grant の交換処理。
  *
- * 1. code_hash で oauth_authorization_codes を引く
- * 2. consumed / expired / client_id / redirect_uri / PKCE を検証
- * 3. consumed_at を立てて single-use にする
- * 4. access + refresh を発行 (refresh の id を access の parent_token_id に保持)
+ * **原子的 consume-or-fail**:
+ * 1. UPDATE consumed_at = now WHERE code_hash AND consumed_at IS NULL AND expires_at > now
+ *    AND client_id AND redirect_uri (CAS で同時実行を 1 件だけ通す)
+ * 2. 0 件なら invalid (consumed / expired / mismatch)
+ * 3. PKCE 検証 (DB ではできないので post-CAS)
+ * 4. access + refresh を発行
  */
 export async function exchangeAuthorizationCode(
   input: ExchangeAuthorizationCodeInput,
 ): Promise<TokenResponse> {
   const codeHash = hashToken(input.code);
+  const now = new Date().toISOString();
   const db = createOAuthDbClient();
 
-  const { data: row, error: lookupError } = await db
+  const { data: rows, error: consumeError } = await db
     .from('oauth_authorization_codes')
-    .select('*')
+    .update({ consumed_at: now })
     .eq('code_hash', codeHash)
-    .maybeSingle();
+    .is('consumed_at', null)
+    .gt('expires_at', now)
+    .eq('client_id', input.client_id)
+    .eq('redirect_uri', input.redirect_uri)
+    .select('user_id, client_id, code_challenge, scopes');
 
-  if (lookupError) {
-    throw new OAuthServerError('server_error', lookupError.message, 500);
-  }
-  if (!row) {
-    throw new OAuthServerError('invalid_grant', 'Authorization code not found');
-  }
-  if (row.consumed_at) {
-    throw new OAuthServerError('invalid_grant', 'Authorization code already used');
-  }
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    throw new OAuthServerError('invalid_grant', 'Authorization code expired');
-  }
-  if (row.client_id !== input.client_id) {
-    throw new OAuthServerError('invalid_grant', 'client_id mismatch');
-  }
-  if (row.redirect_uri !== input.redirect_uri) {
-    throw new OAuthServerError('invalid_grant', 'redirect_uri mismatch');
-  }
-  if (!verifyPkceS256(input.code_verifier, row.code_challenge)) {
-    throw new OAuthServerError('invalid_grant', 'PKCE verification failed');
-  }
-
-  const { error: consumeError } = await db
-    .from('oauth_authorization_codes')
-    .update({ consumed_at: new Date().toISOString() })
-    .eq('code_hash', codeHash);
   if (consumeError) {
     throw new OAuthServerError('server_error', consumeError.message, 500);
+  }
+  if (!rows || rows.length !== 1) {
+    throw new OAuthServerError('invalid_grant', 'Invalid or expired authorization code');
+  }
+  const row = rows[0]!;
+
+  // PKCE は SQL でハッシュできないので CAS の後に検証する。失敗時 code は既に consumed
+  // にマークされているので replay は不可能。
+  if (!verifyPkceS256(input.code_verifier, row.code_challenge)) {
+    throw new OAuthServerError('invalid_grant', 'PKCE verification failed');
   }
 
   return issueTokenPair({
@@ -83,51 +77,41 @@ export async function exchangeAuthorizationCode(
 
 export interface RefreshAccessTokenInput {
   refresh_token: string;
-  client_id: string;
+  /** 呼び出し元 (token route) で resolveClient による allowlist 照合済みである前提。 */
+  client_id: OAuthClientId;
 }
 
 /**
  * refresh_token grant 処理 (rotation あり)。
  *
- * 1. hash で oauth_tokens を引く (token_type = 'refresh')
- * 2. revoked / expired / client_id を検証
- * 3. 旧 refresh を revoke (revoked_at)
- * 4. 新しい access + refresh を発行 (新 refresh.parent_token_id = 旧 refresh.id)
+ * **原子的 revoke-or-fail**:
+ * 1. UPDATE revoked_at = now WHERE token_hash AND token_type='refresh' AND revoked_at IS NULL
+ *    AND expires_at > now AND client_id (CAS)
+ * 2. 0 件なら invalid (revoked / expired / mismatch)
+ * 3. 新 access + refresh を発行 (parent_token_id = 旧 refresh.id)
  */
 export async function refreshAccessToken(input: RefreshAccessTokenInput): Promise<TokenResponse> {
   const refreshHash = hashToken(input.refresh_token);
+  const now = new Date().toISOString();
   const db = createOAuthDbClient();
 
-  const { data: row, error: lookupError } = await db
+  const { data: rows, error: revokeError } = await db
     .from('oauth_tokens')
-    .select('*')
+    .update({ revoked_at: now })
     .eq('token_hash', refreshHash)
     .eq('token_type', 'refresh')
-    .maybeSingle();
+    .is('revoked_at', null)
+    .gt('expires_at', now)
+    .eq('client_id', input.client_id)
+    .select('id, user_id, client_id, scopes');
 
-  if (lookupError) {
-    throw new OAuthServerError('server_error', lookupError.message, 500);
-  }
-  if (!row) {
-    throw new OAuthServerError('invalid_grant', 'Refresh token not found');
-  }
-  if (row.revoked_at) {
-    throw new OAuthServerError('invalid_grant', 'Refresh token revoked');
-  }
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    throw new OAuthServerError('invalid_grant', 'Refresh token expired');
-  }
-  if (row.client_id !== input.client_id) {
-    throw new OAuthServerError('invalid_grant', 'client_id mismatch');
-  }
-
-  const { error: revokeError } = await db
-    .from('oauth_tokens')
-    .update({ revoked_at: new Date().toISOString() })
-    .eq('id', row.id);
   if (revokeError) {
     throw new OAuthServerError('server_error', revokeError.message, 500);
   }
+  if (!rows || rows.length !== 1) {
+    throw new OAuthServerError('invalid_grant', 'Invalid or expired refresh token');
+  }
+  const row = rows[0]!;
 
   return issueTokenPair({
     userId: row.user_id,
@@ -139,8 +123,8 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
 
 interface IssueTokenPairInput {
   userId: string;
-  clientId: 'claude-ai' | 'chatgpt' | 'cursor' | 'unknown';
-  scopes: ('read:entries' | 'read:tags' | 'read:stats')[];
+  clientId: OAuthClientId;
+  scopes: SupportedScope[];
   /** 旧 refresh の id (rotation chain 追跡用)。authorization_code grant 時は null。 */
   parentRefreshTokenId: string | null;
 }
