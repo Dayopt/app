@@ -2,6 +2,7 @@
 
 import React, { useCallback, useState } from 'react';
 
+import { isSameDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import { EntryCard } from '@/features/entry';
@@ -14,10 +15,12 @@ import { cn } from '@/lib/utils';
 import { useInteraction } from '../../../../interaction';
 import { GhostRenderer } from '../../../../interaction/GhostRenderer';
 import { useCalendarDragStore } from '../../../../stores/useCalendarDragStore';
+import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import type { DateTimeSelection } from './CalendarDragSelection';
 import { CalendarDragSelection } from './CalendarDragSelection';
+import { DraftEntryBlock } from './DraftEntryBlock';
 import { EntryRenderer } from './EntryRenderer';
 import { InlineTagPalette } from './InlineTagPalette';
 
@@ -89,6 +92,9 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const HOUR_HEIGHT = useResponsiveHourHeight();
   const gridHeight = 24 * HOUR_HEIGHT;
 
+  // Tag タップで開いている draft entry（同日のときだけ block を描画）
+  const tagDraft = useTagDraftStore((s) => s.draft);
+
   // 日付間ドラッグ（day以外のビューで使用）
   const enableCrossDayDrag = viewMode !== 'day';
 
@@ -140,7 +146,13 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
     hourHeight: HOUR_HEIGHT,
     ...(onEventUpdate ? { onEventUpdate: wrappedOnEventUpdate } : {}),
     ...(onEntryClick ? { onEventClick: onEntryClick } : {}),
-    ...(disabledEntryId != null ? { disabledPlanId: disabledEntryId } : {}),
+    ...(disabledEntryId != null
+      ? {
+          disabledPlanId: disabledEntryId,
+          // Mobile では Inspector 開いている entry も resize 可（PC は Phase 1 と同じ block 維持）
+          resizeDisabledPlanId: isMobile ? null : disabledEntryId,
+        }
+      : {}),
   });
 
   const isActive = state.mode !== 'idle';
@@ -244,6 +256,11 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
         })}
 
         <InlineTagPalette hourHeight={HOUR_HEIGHT} {...(enableCrossDayDrag ? { date } : {})} />
+
+        {/* Tag タップで作成中の draft entry を該当日に描画 */}
+        {tagDraft && isSameDay(tagDraft.date, date) && (
+          <DraftEntryBlock draft={tagDraft} hourHeight={HOUR_HEIGHT} />
+        )}
       </div>
 
       {/* React Portal ゴースト（DOM clone廃止） */}

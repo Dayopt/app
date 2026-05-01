@@ -25,6 +25,7 @@ import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
+import { useScrollEntryIntoView } from '../hooks/useScrollEntryIntoView';
 import { useSleepHoursLayout } from '../hooks/useSleepHoursLayout';
 import { TimezoneOffset } from './TimezoneOffset';
 
@@ -133,6 +134,9 @@ export const ScrollableCalendarLayout = ({
     enableKeyboardNavigation,
     onScrollPositionChange,
   });
+
+  // Mobile + Inspector open / Tag draft open のとき、対象が Drawer に隠れないよう自動スクロール
+  useScrollEntryIntoView({ scrollContainerRef, hourHeight: HOUR_HEIGHT });
 
   // 現在時刻線ロジック（フック利用）
   const { currentTime, currentTimePosition } = useCurrentTimeLine({

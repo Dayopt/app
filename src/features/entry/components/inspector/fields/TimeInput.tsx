@@ -147,7 +147,7 @@ export function TimeInput({
         </button>
         {!disabled && (
           <Drawer open={pickerOpen} onOpenChange={setPickerOpen}>
-            <DrawerContent className="z-overlay-popover" overlayClassName="z-overlay-popover">
+            <DrawerContent className="z-overlay-popover">
               <ClockTimePicker
                 value={value || '09:00'}
                 onChange={onChange}

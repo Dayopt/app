@@ -22,6 +22,8 @@ const protectedPaths = [
   '/review',
   '/add',
   '/tags',
+  '/oauth/authorize',
+  '/oauth/consent',
 ];
 
 // オンボーディング完了Cookie名
@@ -152,7 +154,9 @@ export async function proxy(request: NextRequest) {
     // 未認証でprotectedPathにアクセスした場合
     if (!user && isProtectedPath) {
       const loginUrl = new URL(getLocalizedPath('/auth/login', currentLocale), request.url);
-      loginUrl.searchParams.set('redirect', pathWithoutLocale);
+      // OAuth flow 等で query string が必要なため search も含めて redirect 先に保持する
+      const search = request.nextUrl.search;
+      loginUrl.searchParams.set('redirect', pathWithoutLocale + search);
       return NextResponse.redirect(loginUrl);
     }
 

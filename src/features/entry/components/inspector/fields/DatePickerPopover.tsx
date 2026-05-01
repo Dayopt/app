@@ -79,7 +79,7 @@ export function DatePickerPopover({
       <>
         {triggerButton}
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <DrawerContent className="z-overlay-popover" overlayClassName="z-overlay-popover">
+          <DrawerContent className="z-overlay-popover">
             <DrawerTitle className="sr-only">{resolvedPlaceholder}</DrawerTitle>
             <div className="pb-safe px-4">
               <MiniCalendar
