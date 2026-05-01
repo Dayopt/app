@@ -129,6 +129,12 @@ interface IssueTokenPairInput {
   parentRefreshTokenId: string | null;
 }
 
+/**
+ * NOTE (Phase 1.5): refresh + access の 2 つの insert が atomic ではないため、
+ * 第二の insert が失敗すると orphan refresh が DB に残る。client は token を
+ * 受け取らないので security 的な漏洩はないが衛生面で気持ち悪い。Phase 1.5 で
+ * `issue_oauth_token_pair(...)` という Postgres RPC (1 transaction) に置換する。
+ */
 async function issueTokenPair(input: IssueTokenPairInput): Promise<TokenResponse> {
   const db = createOAuthDbClient();
   const access = generateOpaqueToken('access');
