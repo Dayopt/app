@@ -53,7 +53,7 @@ Dayopt のアイコン運用ルール。lucide-react を単一セットとして
 同一 metric セット（`metricDefinitions.ts`）/ 同一 badge セット（`badge-definitions.ts`）内で、**異なる指標に同じアイコンを割り当てない**。追加時は既存使用を必ず `grep` で確認する:
 
 ```bash
-grep -n "icon:.*IconName\|icon: 'IconName'" src/features/stats/
+grep -n "icon:.*IconName\|icon: 'IconName'" src/features/review/
 ```
 
 重複すると、ユーザーは同じアイコンで別指標を区別できなくなる（例: `Gauge` が deepUtilization と avgFulfillment の両方に付くと判別不能）。1 アイコン = 1 指標の対応を保つ。

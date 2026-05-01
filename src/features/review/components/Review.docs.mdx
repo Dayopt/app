@@ -1,0 +1,60 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Features/Stats/Guide/Overview" />
+
+# Review
+
+時間記録の振り返りビュー。タグ別内訳・KPI メトリクス・閾値ベースの気づきで「実際に何が起きたか」を提示する。
+
+---
+
+## 概要
+
+独立 Feature（`@/features/review`）として実装。`/review` 単一ページで、期間ベースに記録を俯瞰する。
+
+タブはなく、ページ上部の粒度セレクタ（日 / 週 / 月 / 年）で対象期間を切り替える。
+
+---
+
+## 表示要素
+
+上から順に:
+
+- **TagBreakdownBar** — タグ別の時間内訳バー。クリックで `/review/tags/[tagId]` のタグ詳細へ
+- **TimePLContainer** — 時間損益計算書（Time P/L 形式の集計）
+- **ReviewMetricsGrid** — KPI カード（Total Time / Plan Rate / Deep Utilization / Context Switches 等）
+- **RuleInsightList** — 閾値ベースの自動気づき（条件を満たすときのみ表示）
+
+---
+
+## ヘッダーコントロール
+
+- **DateNavigator** — 前後・今日ナビゲーション
+- **GranularitySelector** — 粒度切替（日 / 週 / 月 / 年）
+
+---
+
+## コンポーネント構成
+
+```
+ReviewLayout                       ヘッダー（日付ナビ + 粒度セレクタ）
+└── ReviewView                      Review メインビュー
+    ├── TagBreakdownBar            タグ別時間内訳
+    ├── TimePLContainer            時間損益計算書
+    ├── ReviewMetricsGrid           KPI グリッド
+    │   └── MetricCard             単一 KPI カード
+    └── RuleInsightList            閾値ベースの気づき
+
+/review/tags/[tagId]
+└── TagDetailPage                  タグ詳細
+    ├── TagDetailHero              タグの主要指標
+    ├── TagFulfillmentDistribution 充足度分布
+    └── TagRecentBlocks            最近の記録
+```
+
+---
+
+## 技術詳細
+
+- [Layer Architecture](?path=/docs/features-stats-docs-layer-architecture--docs) — 技術設計
+- [Data Flow](?path=/docs/features-stats-docs-data-flow--docs) — データ取得パイプライン

@@ -1,16 +1,16 @@
 'use client';
 
-import { useStatsFilterStore } from '@/features/stats';
+import { useReviewFilterStore } from '@/features/review';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 
 /**
  * Review モード Sidebar 中身
  *
- * MiniCalendar のみ表示。date は useStatsFilterStore と連動。
+ * MiniCalendar のみ表示。date は useReviewFilterStore と連動。
  */
 export function ReviewSidebar() {
-  const currentDate = useStatsFilterStore((s) => s.currentDate);
-  const setCurrentDate = useStatsFilterStore((s) => s.setCurrentDate);
+  const currentDate = useReviewFilterStore((s) => s.currentDate);
+  const setCurrentDate = useReviewFilterStore((s) => s.setCurrentDate);
 
   return (
     <div className="hidden px-2 md:block">

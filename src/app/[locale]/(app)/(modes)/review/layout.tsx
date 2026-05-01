@@ -1,6 +1,6 @@
 'use client';
 
-import { ReviewLayout } from '@/features/stats';
+import { ReviewLayout } from '@/features/review';
 
 /**
  * Review 共通レイアウト

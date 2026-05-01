@@ -1,0 +1,86 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Features/Stats/Guide/Data Flow" />
+
+# Data Flow
+
+Stats feature のデータ取得・変換・表示のパイプライン。
+
+---
+
+## 全体像
+
+```
+PostgreSQL RPC 関数
+  → tRPC ルーター (entry/stats feature)
+    → TanStack Query (並列取得・自動キャッシュ)
+      → 純粋計算関数 / Recharts
+        → UI コンポーネント
+```
+
+Insights タブはルールベースで client-side 評価:
+
+```
+TanStack Query (Layer 1/2 と同じ pageData)
+  → useDiscoveries (純粋関数で発見リストを評価)
+    → DiscoveryList (UI コンポーネント)
+```
+
+---
+
+## tRPC エンドポイント
+
+### Layer 1: KPI メトリクス
+
+**ルーター**: `src/features/entry/server/statistics.ts`
+
+| エンドポイント          | Input                  | 説明                      |
+| ----------------------- | ---------------------- | ------------------------- |
+| `getCumulativeTime`     | dateRange              | 期間内の記録時間合計      |
+| `getStreak`             | —                      | 連続アクティビティ日数    |
+| `getPlanRate`           | dateRange              | 計画率                    |
+| `getEstimationAccuracy` | dateRange              | タグ別見積もり精度        |
+| `getEnergyMap`          | dateRange              | 時間帯×曜日エネルギー分布 |
+| `getContextSwitches`    | dateRange              | タスク切替回数            |
+| `getBlankRate`          | dateRange + wake/sleep | 空白時間率                |
+
+### Layer 2: チャート
+
+**ルーター**: `src/features/entry/server/statistics.ts`
+
+| エンドポイント             | Input         | 説明                   |
+| -------------------------- | ------------- | ---------------------- |
+| `getDailyHours`            | `{ year }`    | ヒートマップ用日次集計 |
+| `getMonthlyTrend`          | `{ months? }` | 月次推移               |
+| `getDayOfWeekDistribution` | dateRange?    | 曜日別分布             |
+| `getHourlyDistribution`    | dateRange?    | 時間帯分布             |
+
+### Insights タブ（ルールベース）
+
+サーバー endpoint なし。Layer 1/2 と同じ `getStatsPageData` の結果を `useDiscoveries` で評価する。
+
+---
+
+## 状態管理
+
+### useReviewFilterStore (Zustand)
+
+| State         | 型                                     | 説明                 |
+| ------------- | -------------------------------------- | -------------------- |
+| `granularity` | `'day' \| 'week' \| 'month' \| 'year'` | 表示粒度             |
+| `currentDate` | `Date`                                 | ナビゲーション基準日 |
+
+### URL 状態
+
+`/review` 単一ページ。期間 / 粒度は `?g=`, `?d=` の searchParams で表現し、`pushState` で更新する。
+
+---
+
+## キャッシュ戦略
+
+- Layer 1/2: TanStack Query の staleTime でキャッシュ。粒度・日付の組み合わせがキャッシュキー
+- Insights タブ: 同じ pageData を共有し、`useDiscoveries` で再計算（メモ化）
+
+---
+
+**最終更新**: 2026-03-16

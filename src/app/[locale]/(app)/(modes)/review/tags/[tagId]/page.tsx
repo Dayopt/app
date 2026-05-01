@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import type { StatsGranularity } from '@/features/stats';
-import { prefetchTagDetailData, TagDetailPage } from '@/features/stats';
+import type { ReviewGranularity } from '@/features/review';
+import { prefetchTagDetailData, TagDetailPage } from '@/features/review';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
 import { HydrationBoundary } from '@/lib/trpc/server';
@@ -35,7 +35,7 @@ async function TagDetailContent({
   dateStr,
 }: {
   tagId: string;
-  granularity: StatsGranularity;
+  granularity: ReviewGranularity;
   dateStr: string;
 }) {
   const { dehydratedState } = await prefetchTagDetailData(tagId, granularity);
@@ -61,8 +61,8 @@ const TagDetailRoute = async ({
     notFound();
   }
 
-  const granularity: StatsGranularity =
-    g && VALID_GRANULARITIES.has(g) ? (g as StatsGranularity) : 'week';
+  const granularity: ReviewGranularity =
+    g && VALID_GRANULARITIES.has(g) ? (g as ReviewGranularity) : 'week';
   const dateStr = d ?? formatDateParam(new Date());
 
   return (

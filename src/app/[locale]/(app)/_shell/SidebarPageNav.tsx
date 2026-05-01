@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { isCalendarViewPath, useCalendarNavigation } from '@/features/calendar';
-import { useStatsFilterStore } from '@/features/stats';
+import { useReviewFilterStore } from '@/features/review';
 import { PageNav } from '@/lib/components/shell/sidebar';
 
 import { buildCalendarPath, buildReviewPath, getLocaleFromPathname } from './navigation-paths';
@@ -25,8 +25,8 @@ function getActivePageFromPath(pathname: string): 'calendar' | 'review' {
 export function SidebarPageNav() {
   const pathname = usePathname();
   const calendarNav = useCalendarNavigation();
-  const statsGranularity = useStatsFilterStore((s) => s.granularity);
-  const statsDate = useStatsFilterStore((s) => s.currentDate);
+  const statsGranularity = useReviewFilterStore((s) => s.granularity);
+  const statsDate = useReviewFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
   const activePage = getActivePageFromPath(pathname ?? '/');

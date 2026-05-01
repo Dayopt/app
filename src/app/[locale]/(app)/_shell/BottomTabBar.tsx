@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
-import { useStatsFilterStore } from '@/features/stats';
+import { useReviewFilterStore } from '@/features/review';
 import { NavBadge, type NavBadgeVariant } from '@/lib/components/shell/sidebar/NavBadge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
@@ -38,8 +38,8 @@ export function BottomTabBar() {
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
-  const statsGranularity = useStatsFilterStore((s) => s.granularity);
-  const statsDate = useStatsFilterStore((s) => s.currentDate);
+  const statsGranularity = useReviewFilterStore((s) => s.granularity);
+  const statsDate = useReviewFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
   const activeTab: TabId = getActiveTabFromPath(pathname ?? '/');

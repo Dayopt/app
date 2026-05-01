@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 
-import { prefetchStatsData, StatsView } from '@/features/stats';
+import { prefetchReviewData, ReviewView } from '@/features/review';
 import { FeatureErrorBoundary } from '@/lib/components/common/error-boundary';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import type { Locale } from '@/lib/i18n/routing';
@@ -33,12 +33,12 @@ function ReviewSkeleton() {
 }
 
 async function ReviewContent() {
-  const { dehydratedState } = await prefetchStatsData();
+  const { dehydratedState } = await prefetchReviewData();
 
   return (
     <HydrationBoundary state={dehydratedState}>
       <FeatureErrorBoundary featureName="review">
-        <StatsView />
+        <ReviewView />
       </FeatureErrorBoundary>
     </HydrationBoundary>
   );
