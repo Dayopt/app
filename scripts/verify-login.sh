@@ -72,10 +72,19 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   echo ""
   echo "→ UI 経由で login 失敗するなら、CSP / form / browser cache 側の問題"
 else
+  ERROR_CODE=$(jq -r '.error_code // empty' /tmp/verify-login-response.json)
   echo "❌ login 失敗"
   echo "Response body:"
   cat /tmp/verify-login-response.json
   echo ""
   echo ""
-  echo "→ password が期待値と違う or user 状態が壊れている"
+  # captcha protection が enabled だと curl 経由では captcha_token を生成できないため
+  # 必ず captcha_failed が返る。この場合は password の正誤を判定できない (false negative)
+  if [[ "$ERROR_CODE" == "captcha_failed" ]]; then
+    echo "→ captcha protection が enabled のため、このスクリプトでは password 検証不可"
+    echo "   (Supabase が captcha_token 無しの password grant を弾いているだけで、password の正誤は不明)"
+    echo "   切り分けには Supabase Auth captcha を一時 off にするか、UI 経由で確認すること"
+  else
+    echo "→ password が期待値と違う or user 状態が壊れている (error_code: ${ERROR_CODE:-unknown})"
+  fi
 fi

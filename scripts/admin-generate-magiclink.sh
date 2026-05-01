@@ -64,16 +64,24 @@ if [[ "$HTTP_STATUS" -ge 200 && "$HTTP_STATUS" -lt 300 ]]; then
   # next param で login 後の遷移先を指定。
   CONFIRM_URL="${APP_BASE_URL}/ja/auth/confirm?token_hash=${HASHED_TOKEN}&type=magiclink&next=${NEXT_PATH}"
 
-  # op run の stdout masking を回避するため、URL を表示せず open(1) で直接ブラウザ起動。
   echo ""
   echo "=== 完了 ==="
   echo ""
-  echo "ブラウザで /auth/confirm を開きます..."
-  echo "→ ${APP_BASE_URL}/ja/auth/confirm?token_hash=...&type=magiclink&next=${NEXT_PATH}"
-  open "$CONFIRM_URL"
+  echo "下記 URL をブラウザで開けば自動的に login します:"
+  echo ""
+  echo "$CONFIRM_URL"
+  echo ""
+  # macOS なら open(1) で自動起動を試みる。non-macOS / headless 環境では best-effort
+  # で諦め、上に出力した URL を operator が手で開けるようにする (set -e を踏まないよう
+  # || true でガード)。
+  if command -v open >/dev/null 2>&1; then
+    open "$CONFIRM_URL" 2>/dev/null || echo "(open コマンドで自動起動できませんでした。上記 URL を手動で開いてください)"
+  fi
   echo ""
   echo "※ token は短命 (デフォルト 1 時間)、single-use です"
   echo "※ APP_BASE_URL=${APP_BASE_URL} / NEXT_PATH=${NEXT_PATH} (env で override 可)"
+  echo "※ op run 配下では URL の一部が <concealed by 1Password> で masking される"
+  echo "   ことがあります。その場合は op run を外して同じ env で再実行してください。"
 else
   echo "エラー: magic link 生成に失敗しました (HTTP $HTTP_STATUS)" >&2
   cat /tmp/admin-generate-magiclink-response.json >&2
