@@ -11,7 +11,6 @@ import { entriesRouter } from '@/features/entry/server/router-index';
 import { onboardingRouter } from '@/features/onboarding/server/router';
 import { billingRouter } from '@/features/settings/server/billing-router';
 import { userSettingsRouter } from '@/features/settings/server/router';
-import { badgesRouter } from '@/features/stats/server/badges-router';
 import { tagsRouter } from '@/features/tags/server/router';
 import { emailRouter } from '@/lib/email/router';
 import { createTRPCRouter } from '@/lib/trpc/procedures';
@@ -20,7 +19,6 @@ import { createTRPCRouter } from '@/lib/trpc/procedures';
  * メインAPIルーター
  */
 export const appRouter = createTRPCRouter({
-  badges: badgesRouter,
   billing: billingRouter,
   contact: contactRouter,
   email: emailRouter,

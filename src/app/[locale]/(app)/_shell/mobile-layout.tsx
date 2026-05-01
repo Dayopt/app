@@ -47,7 +47,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   const hasOwnHeader = useMemo(
     () =>
       isCalendarViewPath(pathWithoutLocale) ||
-      pathWithoutLocale.startsWith('/stats') ||
+      pathWithoutLocale.startsWith('/review') ||
       pathWithoutLocale === '/settings' ||
       pathWithoutLocale.startsWith('/settings/'),
     [pathWithoutLocale],
@@ -55,21 +55,19 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
 
-  const isStatsView = useMemo(() => pathWithoutLocale.startsWith('/stats'), [pathWithoutLocale]);
-
-  // calendar / stats 系はモバイルでは編集機能が制限される (P0-6 Option B)
+  // calendar / review 系はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
   // 詳細操作は PC 限定のため、情報として明示する
   const isDesktopOnlyEditPage = useMemo(
-    () => isCalendarView || isStatsView,
-    [isCalendarView, isStatsView],
+    () => isCalendarView || pathWithoutLocale.startsWith('/review'),
+    [isCalendarView, pathWithoutLocale],
   );
 
   return (
     <>
       {/* AppHeader + Main Content */}
       <div className="flex h-full flex-1 flex-col">
-        {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
+        {/* AppHeader（Calendar/Reviewは独自ヘッダーを持つため非表示） */}
         {!hasOwnHeader && (
           <AppHeader>
             {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
@@ -79,18 +77,17 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* インラインバナー（独自ヘッダーを持つページは自前で配置） */}
         {!hasOwnHeader && <InlineBanner {...banner} />}
 
-        {/* モバイル閲覧専用の告知（calendar / stats） */}
+        {/* モバイル閲覧専用の告知（calendar / review） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（calendar / stats view では TagChipRow + BottomTabBar 分の余白を確保） */}
-        <MainContentWrapper className={isCalendarView || isStatsView ? 'pb-32' : 'pb-16'}>
+        {/* Main Content（calendar view では TagChipRow + BottomTabBar 分の余白を確保） */}
+        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
           {children}
         </MainContentWrapper>
       </div>
 
-      {/* calendar: タグタップで予定作成 popover / stats: タップでタグ統計詳細へ遷移 */}
+      {/* calendar: タグタップで予定作成 popover */}
       {isCalendarView && <TagChipRow />}
-      {isStatsView && <TagChipRow mode="stats-link" />}
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />

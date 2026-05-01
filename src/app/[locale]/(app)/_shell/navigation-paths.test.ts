@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildCalendarPath,
-  buildStatsPath,
+  buildReviewPath,
   getLocaleFromPathname,
   getModeFromPath,
 } from './navigation-paths';
@@ -32,9 +32,9 @@ describe('navigation-paths', () => {
     ).toBe('/en/calendar/day?date=2026-03-25');
   });
 
-  it('builds a localized stats path', () => {
-    expect(buildStatsPath('ja')).toBe('/ja/stats/review');
-    expect(buildStatsPath('en', 'insights')).toBe('/en/stats/insights');
+  it('builds a localized review path', () => {
+    expect(buildReviewPath('ja')).toBe('/ja/review');
+    expect(buildReviewPath('en', { granularity: 'week' })).toBe('/en/review?g=week');
   });
 
   it('extracts locale from pathname with fallback', () => {
@@ -45,7 +45,6 @@ describe('navigation-paths', () => {
 });
 
 describe('getModeFromPath', () => {
-  // 必須 10 ケース (Step C-2 設計書準拠)
   it('returns calendar for /ja/calendar/day', () => {
     expect(getModeFromPath('/ja/calendar/day')).toBe('calendar');
   });
@@ -54,12 +53,12 @@ describe('getModeFromPath', () => {
     expect(getModeFromPath('/en/calendar/week')).toBe('calendar');
   });
 
-  it('returns stats for /ja/stats/review', () => {
-    expect(getModeFromPath('/ja/stats/review')).toBe('stats');
+  it('returns review for /ja/review', () => {
+    expect(getModeFromPath('/ja/review')).toBe('review');
   });
 
-  it('returns stats for /ja/stats/tags/abc123 (深い pathname)', () => {
-    expect(getModeFromPath('/ja/stats/tags/abc123')).toBe('stats');
+  it('returns review for /ja/review/tags/abc123 (深い pathname)', () => {
+    expect(getModeFromPath('/ja/review/tags/abc123')).toBe('review');
   });
 
   it('returns other for /ja/settings (fallback)', () => {
@@ -78,7 +77,6 @@ describe('getModeFromPath', () => {
     expect(getModeFromPath('')).toBe('other');
   });
 
-  // 追加の defensive ケース
   it('returns other for null / undefined (defensive)', () => {
     expect(getModeFromPath(null)).toBe('other');
     expect(getModeFromPath(undefined)).toBe('other');
@@ -86,11 +84,10 @@ describe('getModeFromPath', () => {
 
   it('treats trailing slash equivalently', () => {
     expect(getModeFromPath('/ja/calendar/')).toBe('calendar');
-    expect(getModeFromPath('/ja/stats/')).toBe('stats');
+    expect(getModeFromPath('/ja/review/')).toBe('review');
   });
 
   it('handles exact-match route endings', () => {
-    // Next.js App Router の usePathname は通常 query を含まないが defensive に
-    expect(getModeFromPath('/ja/stats')).toBe('stats');
+    expect(getModeFromPath('/ja/review')).toBe('review');
   });
 });

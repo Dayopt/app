@@ -19,14 +19,14 @@
         "plan": "Entry",
         "record": "Entry",
         "tags": "Tags",
-        "stats": "Stats",
+        "stats": "Review",
         "settings": "Settings",
         "search": "Search"
       }
     },
     "bottomTab": {
       "calendar": "Calendar",
-      "stats": "Stats",
+      "stats": "Review",
       "account": "Account"
     },
     "navUser": {

@@ -64,14 +64,10 @@ src/app/
 | `(modes)/calendar/{day,week,[nday]}/error.tsx`                                                                 | error boundary | calendar segment 専用エラー                                                                                          |
 | [`(modes)/calendar/_composition/`](<../src/app/[locale]/(app)/(modes)/calendar/_composition/>)                 | —              | `CalendarViewClient` ほか、各 view の合成 layer                                                                      |
 | [`(modes)/calendar/_server/`](<../src/app/[locale]/(app)/(modes)/calendar/_server/>)                           | —              | `prefetchCalendarData` / `parseDateParam` / `CalendarSkeleton` 等の server-only ヘルパ                               |
-| [`(modes)/stats/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/page.tsx>)                                 | page (server)  | `/stats` → `/stats/review` への redirect のみ                                                                        |
-| [`(modes)/stats/layout.tsx`](<../src/app/[locale]/(app)/(modes)/stats/layout.tsx>)                             | layout         | `StatsLayoutShell`（ヘッダー + タブバー）。子 page は children のみ差替                                              |
-| [`(modes)/stats/review/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/review/page.tsx>)                   | page (server)  | レビュー（週間/月間サマリ）                                                                                          |
-| [`(modes)/stats/insights/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/insights/page.tsx>)               | page (server)  | AI インサイト                                                                                                        |
-| [`(modes)/stats/progress/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/progress/page.tsx>)               | page (server)  | 進捗ダッシュボード                                                                                                   |
-| [`(modes)/stats/badges/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/badges/page.tsx>)                   | page (server)  | バッジ獲得状況                                                                                                       |
-| [`(modes)/stats/tags/[tagId]/page.tsx`](<../src/app/[locale]/(app)/(modes)/stats/tags/[tagId]/page.tsx>)       | page (server)  | タグ詳細（特定 tag の statistics）                                                                                   |
-| [`(modes)/stats/error.tsx`](<../src/app/[locale]/(app)/(modes)/stats/error.tsx>)                               | error boundary | stats segment 専用エラー                                                                                             |
+| [`(modes)/review/page.tsx`](<../src/app/[locale]/(app)/(modes)/review/page.tsx>)                               | page (server)  | 振り返り単一ページ（`ReviewView` を render）                                                                         |
+| [`(modes)/review/layout.tsx`](<../src/app/[locale]/(app)/(modes)/review/layout.tsx>)                           | layout         | `ReviewLayout`（日付ナビ + 粒度セレクタヘッダー）                                                                    |
+| [`(modes)/review/tags/[tagId]/page.tsx`](<../src/app/[locale]/(app)/(modes)/review/tags/[tagId]/page.tsx>)     | page (server)  | タグ詳細（特定 tag のサマリ）                                                                                        |
+| [`(modes)/review/error.tsx`](<../src/app/[locale]/(app)/(modes)/review/error.tsx>)                             | error boundary | review segment 専用エラー                                                                                            |
 | [`(modes)/ai/page.tsx`](<../src/app/[locale]/(app)/(modes)/ai/page.tsx>)                                       | page (server)  | AI モード ルート（`AiMainContent` を render）                                                                        |
 | [`(modes)/ai/threads/[threadId]/page.tsx`](<../src/app/[locale]/(app)/(modes)/ai/threads/[threadId]/page.tsx>) | page (server)  | AI スレッド詳細                                                                                                      |
 
@@ -94,7 +90,7 @@ src/app/
 各 mode の `_composition/` には「ページから見た合成 hub」を集める:
 
 - 入力: `params` / `searchParams` / `prefetched data`
-- 合成対象: feature barrel (`@/features/calendar`, `@/features/stats`, `@/features/entry` 等)
+- 合成対象: feature barrel (`@/features/calendar`, `@/features/review`, `@/features/entry` 等)
 - 出力: 1 つの client component ツリー
 
 `page.tsx` 自体は薄く保つ（prefetch + Suspense + 合成 component の呼出）。view の差し替えやデータ取得方式の変更は composition layer 内で完結させる。詳細は [.claude/rules/feature-boundaries.md](../.claude/rules/feature-boundaries.md) の Composition Layer / Composition Hub を参照。

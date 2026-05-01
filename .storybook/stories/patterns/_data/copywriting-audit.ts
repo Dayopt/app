@@ -514,24 +514,6 @@ export const keigoEntries: AuditEntry[] = [
   },
   {
     file: 'settings.json',
-    key: 'settings.values.ranking.description',
-    category: 'keigo',
-    current: '共感するキーワードを選び、大事な順にトップ5を並べてください。',
-    proposed: '共感するキーワードを選び、大事な順にトップ5を並べる',
-    rule: 'てください→体言止め',
-  },
-  {
-    file: 'settings.json',
-    key: 'settings.values.ranking.idleDescription',
-    category: 'keigo',
-    current:
-      'あなたが大切にしたい価値観を5つ選び、優先順に並べてください。AIがあなたの時間の使い方を分析する際の基準になります。',
-    proposed:
-      '大切にしたい価値観を5つ選び、優先順に並べる。AIが時間の使い方を分析する際の基準になる',
-    rule: 'あなた省略＋てください＋ます→体言止め',
-  },
-  {
-    file: 'settings.json',
     key: 'settings.aiStyle.description',
     category: 'keigo',
     current: 'チャットパネルでAIがどのようにコミュニケーションするかを選んでください。',
@@ -1028,14 +1010,6 @@ export const vaguePlaceholders: AuditEntry[] = [
   },
   {
     file: 'settings.json',
-    key: 'settings.values.placeholder',
-    category: 'vague-placeholder',
-    current: 'この分野で大切にしていることを書いてください...',
-    proposed: '例: 子どもとの時間を毎日確保する',
-    rule: '入力例を示す',
-  },
-  {
-    file: 'settings.json',
     key: 'settings.aiStyle.customPromptPlaceholder',
     category: 'vague-placeholder',
     current: 'AIにどのようにコミュニケーションしてほしいか書いてください...',
@@ -1094,22 +1068,6 @@ export const buttonSuru: AuditEntry[] = [
     category: 'button-suru',
     current: '削除する',
     proposed: '削除',
-    rule: '「する」省略',
-  },
-  {
-    file: 'settings.json',
-    key: 'settings.values.ranking.select',
-    category: 'button-suru',
-    current: '選択する',
-    proposed: '選択',
-    rule: '「する」省略',
-  },
-  {
-    file: 'settings.json',
-    key: 'settings.values.ranking.edit',
-    category: 'button-suru',
-    current: '編集する',
-    proposed: '編集',
     rule: '「する」省略',
   },
 ];

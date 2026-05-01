@@ -1,7 +1,7 @@
 /**
  * BottomTabBar Stories
  *
- * モバイル用ボトムタブナビゲーション（Calendar / Stats / Account）。
+ * モバイル用ボトムタブナビゲーション（Calendar / Review / Account）。
  * usePathname / useRouter 等に依存するため、同じ見た目の静的モックを使用。
  * 実装は <Link> ベースで、mock も link 形式で実装と整合させる。
  */
@@ -11,7 +11,7 @@ import { BarChart3, CalendarDays, UserCircle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-type TabId = 'calendar' | 'stats' | 'account';
+type TabId = 'calendar' | 'review' | 'account';
 
 function MockBottomTabBar({
   activeTab = 'calendar',
@@ -27,7 +27,7 @@ function MockBottomTabBar({
     href: string;
   }> = [
     { id: 'calendar', label: 'カレンダー', icon: CalendarDays, href: '/ja/calendar/day' },
-    { id: 'stats', label: '統計', icon: BarChart3, href: '/ja/stats/review' },
+    { id: 'review', label: '振り返り', icon: BarChart3, href: '/ja/review' },
     { id: 'account', label: 'アカウント', icon: UserCircle, href: '/ja/settings' },
   ];
 
@@ -97,9 +97,9 @@ export const CalendarActive: Story = {
   args: { activeTab: 'calendar' },
 };
 
-/** 統計タブがアクティブ。 */
-export const StatsActive: Story = {
-  args: { activeTab: 'stats' },
+/** 振り返りタブがアクティブ。 */
+export const ReviewActive: Story = {
+  args: { activeTab: 'review' },
 };
 
 /** アカウントタブがアクティブ。 */
@@ -128,8 +128,8 @@ export const AllPatterns: Story = {
         <MockBottomTabBar activeTab="calendar" />
       </div>
       <div>
-        <p className="text-muted-foreground mb-2 px-4 text-xs">Stats Active</p>
-        <MockBottomTabBar activeTab="stats" />
+        <p className="text-muted-foreground mb-2 px-4 text-xs">Review Active</p>
+        <MockBottomTabBar activeTab="review" />
       </div>
       <div>
         <p className="text-muted-foreground mb-2 px-4 text-xs">Account Active</p>

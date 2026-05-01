@@ -42,9 +42,10 @@ vi.mock('@/features/auth', () => ({
     }),
 }));
 
-vi.mock('@/features/stats', () => ({
-  useStatsFilterStore: (selector: (state: { granularity: string; currentDate: Date }) => unknown) =>
-    selector({ granularity: 'week', currentDate: new Date(2026, 2, 25) }),
+vi.mock('@/features/review', () => ({
+  useReviewFilterStore: (
+    selector: (state: { granularity: string; currentDate: Date }) => unknown,
+  ) => selector({ granularity: 'week', currentDate: new Date(2026, 2, 25) }),
 }));
 
 import { BottomTabBar } from './BottomTabBar';
@@ -69,7 +70,7 @@ describe('BottomTabBar', () => {
   });
 
   it('marks the route derived from pathname as current', () => {
-    mockPathname = '/ja/stats/review';
+    mockPathname = '/ja/review';
 
     render(<BottomTabBar />);
 
@@ -83,7 +84,7 @@ describe('BottomTabBar', () => {
   });
 
   it('keeps the local calendar day when generating the return URL', () => {
-    mockPathname = '/ja/stats/review';
+    mockPathname = '/ja/review';
 
     render(<BottomTabBar />);
 

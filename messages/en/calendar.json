@@ -28,7 +28,7 @@
       "density_default": "Default",
       "density_spacious": "Spacious",
       "generalSettings": "General settings",
-      "stats": "Stats"
+      "stats": "Review"
     },
     "event": {
       "title": "Event",
@@ -147,7 +147,7 @@
       "changeGroup": "Change group",
       "merge": "Merge into another tag",
       "showOnlyThis": "Show only this",
-      "viewStats": "View statistics",
+      "viewStats": "View review",
       "hide": "Hide from calendar",
       "show": "Show in calendar",
       "expandGroup": "Expand group",
@@ -223,7 +223,6 @@
       }
     },
     "stats": {
-      "progress": "Progress",
       "today": "Today",
       "vsLastWeek": "vs Last Week",
       "previousWeek": "Last week",
@@ -240,13 +239,7 @@
       "review": {
         "emptyTitle": "No review data yet",
         "emptyDescription": "Record entries to review your week",
-        "errorTitle": "Failed to load statistics",
-        "errorDescription": "Please try again later"
-      },
-      "progress": {
-        "emptyTitle": "No progress data yet",
-        "emptyDescription": "Trends will appear as you add more entries",
-        "errorTitle": "Failed to load progress data",
+        "errorTitle": "Failed to load review data",
         "errorDescription": "Please try again later"
       },
       "periodDay": "Day",
@@ -255,47 +248,6 @@
       "periodYear": "Year",
       "periodAll": "All",
       "thisYear": "This year",
-      "tabReview": "Review",
-      "tabProgress": "Progress",
-      "tabBadges": "Badges",
-      "tabInsights": "Discoveries",
-      "charts": {
-        "monthlyTrend": "Monthly Trend",
-        "monthlyTrendDesc": "Past 12 months",
-        "monthlyAvg": "Avg: {avg}/mo",
-        "monthlyMoM": "(MoM {change})",
-        "annualTotal": "Annual total: {total}",
-        "dayOfWeek": "Day of Week",
-        "dayOfWeekDesc": "Activity by day",
-        "dayOfWeekBusiest": "Busiest: {day} ({hours})",
-        "weekdays": "Weekdays: {hours}",
-        "weekends": "Weekends: {hours}",
-        "hourlyDist": "Hourly Distribution",
-        "hourlyDistDesc": "When you work",
-        "hourlyDeep": "Deep: {slot} ({hours})",
-        "hourlyTotal": "Total {hours}",
-        "yearlyGrid": "Yearly Grid",
-        "yearlyTotal": "Total {hours}",
-        "yearlyLess": "Less",
-        "yearlyMore": "More",
-        "noData": "No data"
-      },
-      "energyMap": "Energy Map",
-      "energyMapDesc": "Activity by hour and day of week",
-      "energyMapMinutes": "Activity",
-      "energyMapFulfillment": "Fulfillment",
-      "energyMapScore": "Score",
-      "energyMapLess": "Less",
-      "energyMapMore": "More",
-      "dow": {
-        "mon": "Mon",
-        "tue": "Tue",
-        "wed": "Wed",
-        "thu": "Thu",
-        "fri": "Fri",
-        "sat": "Sat",
-        "sun": "Sun"
-      },
       "metrics": {
         "totalTime": "Total Time",
         "totalTimeDesc": "Total tracked time",
@@ -339,24 +291,6 @@
         "tagFulfillmentHigh": "This tag's avg fulfillment is {score} — above overall average",
         "tagFulfillmentLow": "This tag's avg fulfillment is {score} — below overall average",
         "deepHour": "This is a deep hour — great for focused work"
-      },
-      "discoveries": {
-        "loading": "Loading…",
-        "emptyTitle": "No discoveries yet",
-        "emptyDescription": "As more data accumulates, your patterns will start to emerge",
-        "errorTitle": "Failed to load insights",
-        "errorDescription": "Please try again later",
-        "timePatternHighFulfillment": "Your fulfillment tends to be higher around {hour}:00 on {day}s",
-        "bestEstimationTag": "Your most accurately estimated tag this period was \"{tagName}\" (avg {deviation}min off)",
-        "blankTimeIncrease": "Blank time increased by {minutes} minutes vs last period",
-        "blankTimeDecrease": "Blank time decreased by {minutes} minutes vs last period",
-        "topTagUsage": "You spent {percentage}% of your time on \"{tagName}\" this period ({hours}h)",
-        "consistentRecording": "You recorded entries on {rate}% of days this period",
-        "categoryTimePattern": "Time pattern",
-        "categoryPlanningAccuracy": "Planning accuracy",
-        "categoryTrendComparison": "Period comparison",
-        "categoryTagAffinity": "Tag affinity",
-        "categoryConsistency": "Consistency"
       },
       "tagDetail": {
         "backToReview": "Review",

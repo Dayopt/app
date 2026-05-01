@@ -8,15 +8,15 @@ import { useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth';
 import { useCalendarNavigation } from '@/features/calendar';
-import { useStatsFilterStore } from '@/features/stats';
+import { useReviewFilterStore } from '@/features/review';
 import { NavBadge, type NavBadgeVariant } from '@/lib/components/shell/sidebar/NavBadge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 import { cn } from '@/lib/utils';
 
-import { buildCalendarPath, buildStatsPath, getLocaleFromPathname } from './navigation-paths';
+import { buildCalendarPath, buildReviewPath, getLocaleFromPathname } from './navigation-paths';
 
-type TabId = 'calendar' | 'stats' | 'account';
+type TabId = 'calendar' | 'review' | 'account';
 
 function getActiveTabFromPath(pathname: string): TabId {
   const segments = pathname.split('/');
@@ -26,11 +26,11 @@ function getActiveTabFromPath(pathname: string): TabId {
       : pathname;
 
   if (pathWithoutLocale.startsWith('/settings')) return 'account';
-  if (pathWithoutLocale.startsWith('/stats')) return 'stats';
+  if (pathWithoutLocale.startsWith('/review')) return 'review';
   return 'calendar';
 }
 
-/** モバイル用ボトムタブナビゲーション（Calendar / Stats / Account） */
+/** モバイル用ボトムタブナビゲーション（Calendar / Review / Account） */
 export function BottomTabBar() {
   const t = useTranslations();
   const pathname = usePathname();
@@ -38,8 +38,8 @@ export function BottomTabBar() {
   const user = useAuthStore((s) => s.user);
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user, 'User');
-  const statsGranularity = useStatsFilterStore((s) => s.granularity);
-  const statsDate = useStatsFilterStore((s) => s.currentDate);
+  const statsGranularity = useReviewFilterStore((s) => s.granularity);
+  const statsDate = useReviewFilterStore((s) => s.currentDate);
 
   const locale = useMemo(() => getLocaleFromPathname(pathname), [pathname]);
   const activeTab: TabId = getActiveTabFromPath(pathname ?? '/');
@@ -54,9 +54,9 @@ export function BottomTabBar() {
     [locale, calendarNav?.viewType, calendarNav?.currentDate],
   );
 
-  const statsHref = useMemo(
+  const reviewHref = useMemo(
     () =>
-      buildStatsPath(locale, 'review', {
+      buildReviewPath(locale, {
         granularity: statsGranularity,
         date: statsDate,
       }),
@@ -80,10 +80,10 @@ export function BottomTabBar() {
         href: calendarHref,
       },
       {
-        id: 'stats',
+        id: 'review',
         label: t('navigation.bottomTab.stats'),
         icon: BarChart3,
-        href: statsHref,
+        href: reviewHref,
       },
       {
         id: 'account',
@@ -92,7 +92,7 @@ export function BottomTabBar() {
         href: accountHref,
       },
     ],
-    [t, calendarHref, statsHref, accountHref],
+    [t, calendarHref, reviewHref, accountHref],
   );
 
   return (

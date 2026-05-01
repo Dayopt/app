@@ -19,14 +19,14 @@
         "plan": "エントリー",
         "record": "エントリー",
         "tags": "タグ",
-        "stats": "統計",
+        "stats": "振り返り",
         "settings": "設定",
         "search": "検索"
       }
     },
     "bottomTab": {
       "calendar": "カレンダー",
-      "stats": "統計",
+      "stats": "振り返り",
       "account": "アカウント"
     },
     "navUser": {

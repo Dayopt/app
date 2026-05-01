@@ -1,7 +1,7 @@
 import type { CalendarViewType } from '@/features/calendar';
 import { formatCalendarDateParam } from '@/features/calendar';
 
-export type AppMode = 'calendar' | 'stats' | 'other';
+export type AppMode = 'calendar' | 'review' | 'other';
 
 /**
  * pathname から現在の app モードを判定する。
@@ -13,7 +13,7 @@ export type AppMode = 'calendar' | 'stats' | 'other';
 export function getModeFromPath(pathname: string | null | undefined): AppMode {
   if (!pathname) return 'other';
   if (pathname.includes('/calendar/') || pathname.endsWith('/calendar')) return 'calendar';
-  if (pathname.includes('/stats/') || pathname.endsWith('/stats')) return 'stats';
+  if (pathname.includes('/review/') || pathname.endsWith('/review')) return 'review';
   return 'other';
 }
 
@@ -39,12 +39,8 @@ export function buildCalendarPath(params: {
   return `/${params.locale}/calendar/${params.viewType}${query}`;
 }
 
-export function buildStatsPath(
-  locale: string,
-  tab: 'review' | 'progress' | 'insights' = 'review',
-  options?: { granularity?: string; date?: Date },
-) {
-  const basePath = `/${locale}/stats/${tab}`;
+export function buildReviewPath(locale: string, options?: { granularity?: string; date?: Date }) {
+  const basePath = `/${locale}/review`;
   if (!options?.granularity && !options?.date) return basePath;
 
   const params = new URLSearchParams();

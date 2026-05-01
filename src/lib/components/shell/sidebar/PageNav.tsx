@@ -11,12 +11,12 @@ import { cn } from '@/lib/utils';
 
 import { NavBadge, type NavBadgeVariant } from './NavBadge';
 
-type ActivePage = 'calendar' | 'stats';
+type ActivePage = 'calendar' | 'review';
 
 interface PageNavProps {
   activePage: ActivePage;
   calendarHref: string;
-  statsHref: string;
+  reviewHref: string;
   className?: string;
 }
 
@@ -28,8 +28,8 @@ type NavTab = {
   badge?: NavBadgeVariant | null;
 };
 
-/** ページナビゲーション（Calendar / Stats セグメントコントロール） */
-export function PageNav({ activePage, calendarHref, statsHref, className }: PageNavProps) {
+/** ページナビゲーション（Calendar / Review セグメントコントロール） */
+export function PageNav({ activePage, calendarHref, reviewHref, className }: PageNavProps) {
   const t = useTranslations('sidebar.pageNav');
   const tAria = useTranslations('common.aria');
 
@@ -53,7 +53,7 @@ export function PageNav({ activePage, calendarHref, statsHref, className }: Page
 
   const tabs: NavTab[] = [
     { id: 'calendar', label: t('calendar'), icon: CalendarDays, href: calendarHref },
-    { id: 'stats', label: t('stats'), icon: BarChart3, href: statsHref },
+    { id: 'review', label: t('stats'), icon: BarChart3, href: reviewHref },
   ];
 
   return (

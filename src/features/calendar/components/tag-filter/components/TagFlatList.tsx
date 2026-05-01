@@ -471,7 +471,7 @@ function SortableParentBlock({
                 parent_id: node.tag.parent_id ?? null,
               })
             }
-            onViewStats={() => router.push(`/${locale}/stats/tags/${node.tag.id}`)}
+            onViewStats={() => router.push(`/${locale}/review/tags/${node.tag.id}`)}
             onDeleteGroup={() => onDeleteTag(node.tag.id, node.tag.name)}
             onRowClick={() => onOpenPopover(node.tag.id)}
             highlighted={isPopoverOpen}

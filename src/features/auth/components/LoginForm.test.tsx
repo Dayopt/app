@@ -272,7 +272,7 @@ describe('LoginForm', () => {
 
   describe('redirectパラメータ対応', () => {
     it('redirectパラメータがある場合、ログイン後にそのパスへ遷移する', async () => {
-      mockSearchParams = new URLSearchParams('redirect=/stats/insights');
+      mockSearchParams = new URLSearchParams('redirect=/review');
       const user = userEvent.setup();
       mockSignIn.mockResolvedValue({
         data: { user: { id: '123' }, session: {} },
@@ -286,7 +286,7 @@ describe('LoginForm', () => {
       await user.click(screen.getByRole('button', { name: 'auth.loginForm.loginButton' }));
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith('/ja/stats/insights');
+        expect(mockPush).toHaveBeenCalledWith('/ja/review');
       });
     });
 

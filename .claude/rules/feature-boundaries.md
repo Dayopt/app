@@ -12,7 +12,7 @@ paths:
 ```
 Layer 0 (基盤):    tags, chronotype             ← 他featureに依存しない
 Layer 1 (中核):    entry                        ← Layer 0 の barrel を使える
-Layer 2 (体験):    calendar, stats, ai,         ← Layer 0+1 を使える
+Layer 2 (体験):    calendar, review, ai,        ← Layer 0+1 を使える
                    palette
 Cross-cutting:     settings                     ← 全feature の barrel を使える
 Independent:       auth, notifications,         ← 他featureに依存しない
