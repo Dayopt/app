@@ -6,22 +6,33 @@ import { env } from '@/env';
 import type { Database } from '@/lib/database.types';
 
 /**
- * OAuth runtime 用の service-role Supabase client。
+ * OAuth 用 service-role client が触れるテーブルだけに narrow した DB 型。
  *
- * 取り扱い注意: RLS bypass する。`oauth_tokens` / `oauth_authorization_codes` 以外
- * のテーブルには触らないこと (cross-tenant leak のリスク)。
- *
- * 型は `npm run types:generate` で生成された `Database` 型を使う。
- * client_id / scopes は string / string[] と緩い型になるため、読み出し側で
- * `OAuthClientId` / `SupportedScope[]` に narrow する責任を持つ。
+ * RLS bypass する client なので、他テーブル (entries / tags / etc.) を誤って
+ * 直 query すると cross-tenant leak になる。型レベルで `from('entries')` を
+ * compile error にして事故を防ぐ。
  */
-export type OAuthSupabaseClient = SupabaseClient<Database>;
+type OAuthOnlyDatabase = {
+  public: {
+    Tables: Pick<Database['public']['Tables'], 'oauth_tokens' | 'oauth_authorization_codes'>;
+    Views: Database['public']['Views'];
+    Functions: Database['public']['Functions'];
+    Enums: Database['public']['Enums'];
+    CompositeTypes: Database['public']['CompositeTypes'];
+  };
+};
+
+export type OAuthSupabaseClient = SupabaseClient<OAuthOnlyDatabase>;
 
 export function createOAuthDbClient(): OAuthSupabaseClient {
-  return createClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
+  return createClient<OAuthOnlyDatabase>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
     },
-  });
+  );
 }
