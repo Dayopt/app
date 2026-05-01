@@ -54,6 +54,10 @@ export default async function AuthorizePage({ searchParams }: AuthorizePageProps
   });
 
   if (!validation.ok) {
+    // NOTE (Phase 1.5): RFC 6749 §4.1.2.1 では client_id / redirect_uri が valid な
+    // ときは error params を query に乗せて redirect_uri へ redirect すべき
+    // (unsupported_response_type / invalid_scope / missing_pkce 等)。Phase 1 は安全側に
+    // 振って常時 inline render している。Phase 1.5 で trustedRedirect を判定して分岐する。
     const t = await getTranslations('oauth.error');
     return <OAuthErrorPanel message={t(ERROR_MESSAGE_KEY[validation.error])} />;
   }
