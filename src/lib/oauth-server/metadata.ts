@@ -1,9 +1,18 @@
 import 'server-only';
 
-import { getAppUrl } from '@/lib/app-url';
-
 import { SUPPORTED_SCOPES } from './scopes';
 
+/**
+ * AS / RS の URL は固定値で hardcode。
+ *
+ * RFC 8414 §3 では metadata の issuer はそれが提供されている URL と完全一致する
+ * 必要がある。`NEXT_PUBLIC_APP_URL` は marketing apex (`dayopt.app`) を指しており、
+ * AS は `app.dayopt.app` の subdomain で稼働する設計 (vercel.json rewrite が
+ * `/.well-known/oauth-authorization-server` を `app.dayopt.app` host filter で
+ * 拾う) のため、apex を返してしまうと `dayopt.app/oauth/authorize` のような
+ * 存在しない URL を client に伝えてしまう。
+ */
+const AUTHORIZATION_SERVER_URL = 'https://app.dayopt.app';
 const MCP_RESOURCE_URL = 'https://mcp.dayopt.app';
 
 /**
@@ -11,11 +20,10 @@ const MCP_RESOURCE_URL = 'https://mcp.dayopt.app';
  * https://datatracker.ietf.org/doc/html/rfc8414
  */
 export function buildAuthorizationServerMetadata() {
-  const issuer = getAppUrl();
   return {
-    issuer,
-    authorization_endpoint: `${issuer}/oauth/authorize`,
-    token_endpoint: `${issuer}/oauth/token`,
+    issuer: AUTHORIZATION_SERVER_URL,
+    authorization_endpoint: `${AUTHORIZATION_SERVER_URL}/oauth/authorize`,
+    token_endpoint: `${AUTHORIZATION_SERVER_URL}/oauth/token`,
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
@@ -32,7 +40,7 @@ export function buildAuthorizationServerMetadata() {
 export function buildProtectedResourceMetadata() {
   return {
     resource: MCP_RESOURCE_URL,
-    authorization_servers: [getAppUrl()],
+    authorization_servers: [AUTHORIZATION_SERVER_URL],
     bearer_methods_supported: ['header'],
     scopes_supported: [...SUPPORTED_SCOPES],
   } as const;
