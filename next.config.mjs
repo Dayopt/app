@@ -55,6 +55,8 @@ const nextConfig = {
       'wss://*.supabase.co',
       'https://vitals.vercel-insights.com',
       'https://api.pwnedpasswords.com', // Have I Been Pwned API
+      // Cloudflare Turnstile (captcha) - widget の siteverify / telemetry
+      'https://challenges.cloudflare.com',
       // Sentry エラー監視・パフォーマンス監視
       'https://*.sentry.io',
       'https://*.ingest.sentry.io',
@@ -81,14 +83,14 @@ const nextConfig = {
               "default-src 'self'",
               // 開発環境では'unsafe-eval'が必要、本番では可能な限り制限
               isDevelopment
-                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com"
-                : "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com",
+                ? "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com https://challenges.cloudflare.com"
+                : "script-src 'self' 'unsafe-inline' https://vercel.live https://va.vercel-scripts.com https://www.google.com https://www.gstatic.com https://challenges.cloudflare.com",
               // NOTE: 'unsafe-inline'はshadcn/ui, Radix UIで必要
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
               `connect-src ${connectSrc}`,
-              "frame-src 'self' https://vercel.live https://www.google.com https://recaptcha.google.com",
+              "frame-src 'self' https://vercel.live https://www.google.com https://recaptcha.google.com https://challenges.cloudflare.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",
