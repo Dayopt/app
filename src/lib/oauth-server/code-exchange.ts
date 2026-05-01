@@ -69,8 +69,9 @@ export async function exchangeAuthorizationCode(
 
   return issueTokenPair({
     userId: row.user_id,
-    clientId: row.client_id,
-    scopes: row.scopes,
+    // DB の client_id / scopes は CHECK 制約 + insert 側で narrow に保たれているため cast。
+    clientId: row.client_id as OAuthClientId,
+    scopes: row.scopes as SupportedScope[],
     parentRefreshTokenId: null,
   });
 }
@@ -115,8 +116,8 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
 
   return issueTokenPair({
     userId: row.user_id,
-    clientId: row.client_id,
-    scopes: row.scopes,
+    clientId: row.client_id as OAuthClientId,
+    scopes: row.scopes as SupportedScope[],
     parentRefreshTokenId: row.id,
   });
 }

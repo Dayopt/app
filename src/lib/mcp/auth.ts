@@ -70,8 +70,10 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
   return {
     tokenId: row.id,
     userId: row.user_id,
-    clientId: row.client_id,
-    scopes: row.scopes,
+    // DB の client_id / scopes は CHECK 制約と app 側 insert で narrow に保たれているため
+    // cast で narrow して返す (Phase 1 の `unknown` 廃止後は claude-ai/chatgpt/cursor のみ)
+    clientId: row.client_id as OAuthClientId,
+    scopes: row.scopes as SupportedScope[],
     expiresAt: Math.floor(expiresAtMs / 1000),
   };
 }
