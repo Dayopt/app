@@ -272,8 +272,9 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   }, [isDragging, onDragEnd, entry]);
 
   // CSSクラス（統一Entryデザイン: 左アクセント + 右角丸）
+  // `group/entry` は子の resize handle icon が hover 時に visible になるための trigger
   const entryCardClasses = cn(
-    'relative flex rounded-r-lg',
+    'group/entry relative flex rounded-r-lg',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     // Draft: state-selected オーバーレイ
     isDraft &&
@@ -298,6 +299,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   return (
     <div
       data-entry-card
+      data-entry-id={entry.id}
       className={entryCardClasses}
       style={dynamicStyle}
       onClick={handleClick}
@@ -454,14 +456,26 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               )}
             </div>
           )}
+        </div>
+        {/* /カード本体 */}
 
-          {/* 下端リサイズハンドル（PC専用、Draft/Past は非表示）
-             モバイルは「tap=Inspector / longpress=ドラッグ」の二耳モデルに統一するため
-             ハンドル自体を出さない。リサイズは Inspector の時間編集 UI から行う。
-             PC では短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に
-             最大限張り出し、ブロック内侵入を 4px に絞る。深く取り過ぎるとブロック下部で
-             ハンドルが stopPropagation してドラッグ起動に到達しなくなるため。*/}
-          {!isDraft && !isPast && !isMobile && (
+        {/* 下端リサイズハンドル（Draft/Past は非表示）
+           PC: 常時 render、hover で pill 出現。
+           Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
+           短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に張り出す。
+           card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
+        {!isDraft && !isPast && (!isMobile || isActive) && (
+          <>
+            {/* drawer pill 風 affordance — PC は hover で出現、Mobile は isActive のとき常時 visible。
+                pointer-events-none で click は下にある handle が拾う。 */}
+            <span
+              aria-hidden
+              className={cn(
+                'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
+                isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
+              )}
+              style={{ zIndex: 11 }}
+            />
             <div
               className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
               role="slider"
@@ -475,15 +489,16 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
               onTouchStart={handleBottomResizeTouchStart}
               onKeyDown={handleResizeKeyDown}
               style={{
-                height: safePosition.height < 40 ? '44px' : '32px',
-                bottom: safePosition.height < 40 ? '-40px' : '-12px',
+                // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
+                // PC は短い card のときのみ 44px、通常 32px。
+                height: isMobile || safePosition.height < 40 ? '44px' : '32px',
+                bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
                 zIndex: 10,
               }}
               title={t('calendar.event.adjustEndTime')}
             />
-          )}
-        </div>
-        {/* /カード本体 */}
+          </>
+        )}
       </div>
       {/* /カード実体ラッパー */}
     </div>

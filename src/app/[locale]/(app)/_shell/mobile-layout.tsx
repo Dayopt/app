@@ -67,7 +67,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
     <>
       {/* AppHeader + Main Content */}
       <div className="flex h-full flex-1 flex-col">
-        {/* AppHeader（Calendar/Statsは独自ヘッダーを持つため非表示） */}
+        {/* AppHeader（Calendar/Reviewは独自ヘッダーを持つため非表示） */}
         {!hasOwnHeader && (
           <AppHeader>
             {title && <h1 className="truncate text-lg leading-8 font-medium">{title}</h1>}
@@ -86,7 +86,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         </MainContentWrapper>
       </div>
 
-      {/* calendar view のみ: タグクイック作成 chip 行（TabBar 直上に固定） */}
+      {/* calendar: タグタップで予定作成 popover */}
       {isCalendarView && <TagChipRow />}
 
       {/* ボトムタブナビゲーション */}

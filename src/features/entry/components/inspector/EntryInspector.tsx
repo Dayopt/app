@@ -95,7 +95,12 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
       </div>
     );
   } else {
-    content = <EntryInspectorForm onViewStats={onViewStats} />;
+    content = (
+      <EntryInspectorForm
+        onViewStats={onViewStats}
+        onCloseInspector={isMobile ? handleClose : undefined}
+      />
+    );
   }
 
   // URL同期は常時有効（popstateリスナーをInspector閉じ中も維持するため）
@@ -117,6 +122,7 @@ export function EntryInspector({ onViewStats }: EntryInspectorProps) {
           onOpenChange={(open) => !open && handleClose()}
           handleOnly
           repositionInputs={false}
+          modal={false}
         >
           <DrawerContent className="bg-card z-modal shadow-card flex flex-col gap-0 overflow-hidden rounded-t-2xl p-0">
             <DrawerTitle className="sr-only">{title}</DrawerTitle>

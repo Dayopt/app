@@ -35,10 +35,12 @@ import { useEntryForm } from './hooks/useEntryForm';
 interface EntryInspectorFormProps {
   /** 統計を見るコールバック（Composition Layer から注入） */
   onViewStats?: ((tagId: string) => void) | undefined;
+  /** Inspector を閉じるコールバック（Mobile Drawer のみ渡す。set されたら TagRow 右端に × を出す） */
+  onCloseInspector?: (() => void) | undefined;
 }
 
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
-export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
+export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspectorFormProps) {
   const t = useTranslations();
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
@@ -237,6 +239,7 @@ export function EntryInspectorForm({ onViewStats }: EntryInspectorFormProps) {
         isUnplanned={isUnplanned}
         onMarkUnplanned={handleMarkUnplanned}
         onRestorePlanned={handleRestorePlanned}
+        onCloseInspector={onCloseInspector}
       />
 
       {/* アラート（時間重複エラー） — CLS 防止のため常に DOM に存在させる */}

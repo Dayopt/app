@@ -1,0 +1,112 @@
+import type { Metadata } from 'next';
+
+import { getTranslations } from 'next-intl/server';
+
+import { Button } from '@/lib/components/ui/button';
+import {
+  validateAuthorizeInput,
+  type AuthorizeValidationError,
+  type SupportedScope,
+} from '@/lib/oauth-server';
+import { createClient } from '@/lib/supabase/server';
+
+import { OAuthErrorPanel } from '../_components/OAuthErrorPanel';
+import { processConsent } from './actions';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('oauth.consent');
+  return { title: t('pageTitle') };
+}
+
+interface ConsentPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+const ERROR_MESSAGE_KEY: Record<AuthorizeValidationError, string> = {
+  unsupported_response_type: 'unsupportedResponseType',
+  invalid_client: 'invalidClient',
+  invalid_redirect_uri: 'invalidRedirectUri',
+  missing_pkce: 'missingPkce',
+  invalid_scope: 'invalidScope',
+};
+
+export default async function ConsentPage({ searchParams }: ConsentPageProps) {
+  const params = await searchParams;
+  const stringParam = (key: string): string | undefined => {
+    const v = params[key];
+    return typeof v === 'string' ? v : undefined;
+  };
+
+  // Defense in depth: re-validate even though /oauth/authorize already validated
+  const validation = validateAuthorizeInput({
+    response_type: 'code',
+    client_id: stringParam('client_id'),
+    redirect_uri: stringParam('redirect_uri'),
+    code_challenge: stringParam('code_challenge'),
+    code_challenge_method: 'S256',
+    scope: stringParam('scope'),
+    state: stringParam('state'),
+  });
+
+  if (!validation.ok) {
+    const tError = await getTranslations('oauth.error');
+    return <OAuthErrorPanel message={tError(ERROR_MESSAGE_KEY[validation.error])} />;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const t = await getTranslations('oauth.consent');
+  const clientName = validation.client.displayName;
+
+  return (
+    <div className="bg-card border-border-subtle w-full max-w-md rounded-lg border p-6 shadow-sm">
+      <h1 className="text-foreground mb-2 text-lg font-medium">{t('heading', { clientName })}</h1>
+      <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
+        {t('description', { clientName })}
+      </p>
+
+      <div className="border-border-subtle mb-4 rounded-lg border p-4">
+        <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
+          {t('scopesLabel')}
+        </p>
+        <ul className="text-foreground space-y-1 text-sm">
+          {validation.scopes.map((scope) => (
+            <li key={scope}>• {scopeLabel(t, scope)}</li>
+          ))}
+        </ul>
+      </div>
+
+      <p className="text-muted-foreground mb-6 text-xs leading-relaxed">
+        {t('readOnlyNotice', { clientName })}
+      </p>
+
+      {user?.email && (
+        <p className="text-muted-foreground mb-4 text-xs">
+          {t('userLabel', { email: user.email })}
+        </p>
+      )}
+
+      <form action={processConsent} className="flex gap-2">
+        <input type="hidden" name="client_id" value={validation.client.id} />
+        <input type="hidden" name="redirect_uri" value={validation.redirectUri} />
+        <input type="hidden" name="code_challenge" value={validation.codeChallenge} />
+        <input type="hidden" name="scope" value={validation.scopes.join(' ')} />
+        {validation.state && <input type="hidden" name="state" value={validation.state} />}
+
+        <Button type="submit" name="decision" value="deny" variant="outline" className="flex-1">
+          {t('deny')}
+        </Button>
+        <Button type="submit" name="decision" value="approve" className="flex-1">
+          {t('approve')}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function scopeLabel(t: (key: string) => string, scope: SupportedScope): string {
+  return t(`scope.${scope}`);
+}

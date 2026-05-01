@@ -6,6 +6,46 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-04-30
+
+### MCP server PoC (Phase 1) を OAuth 2.1 + Streamable HTTP + entries.list で立ち上げ、並行で Inspector 非モーダル化と drawer UX 整流化を進めた日
+
+26 commit、PR 1 件 merge (#1115)。早朝にローカル main のバッチ取り込み（calendar / supabase / sidebar / ai-cleanup / docs）と Project B revert で土台を整えたあと、午前は **MCP server PoC** を OAuth metadata → oauth-server helpers → /oauth/authorize/consent UI → /oauth/token endpoint → /api/mcp Streamable HTTP route → entries.list tool → proProcedure の OAuth DB lookup 強制まで一気通貫で実装。午後は **Inspector 非モーダル化**（overlay backdrop 廃止）と **モバイル calendar 上 resize 解禁**、drawer の close × 配置最適化、mobile stats フッターへの tag chip row 追加、最後に lib/mcp barrel の循環依存解消と preview deployment の Upstash validation skip で締めた。117 files changed / +4,291 / -3,274 の大規模日。
+
+#### やったこと
+
+- **MCP server PoC (Phase 1) — 12 commit**: 設計ドキュメント (`docs/design/mcp-server/overview.md`)、vercel.json rewrite 3 件、`src/lib/mcp` + `src/lib/oauth-server` skeleton、`oauth_tokens` / `oauth_authorization_codes` schema (api_keys 撤廃を兼ねる)、domain を `dayopt.app` に修正、entry resize handle に drawer pill 風 affordance、oauth i18n namespace + `/oauth` protected path、oauth-server helpers (clients / tokens / metadata / scopes)、`/.well-known/*` metadata endpoints、`/oauth/authorize` page + 独立 OAuth layout、`/oauth/consent` UI + Server Action、`/oauth/token` endpoint + code/refresh exchange、`/api/mcp` Streamable HTTP route + Bearer token 検証、`entries.list` tool、proProcedure を OAuth で DB lookup 強制 + entries.list を trpc-bridge 経由に
+- **Inspector / Drawer UX 整流化 — 4 commit**: drawer overlay backdrop を廃止し Inspector を非モーダル化、モバイル calendar で inspector / tag draft の entry を resize 可能に、close × を TagRow の「…」menu の隣に移動 → 全 drawer 共通化を試行 → 個別最適配置に戻す（3 段階の試行錯誤）
+- **Mobile stats フッター (1 commit)**: tag chip row を追加（chip タップで tag stats 詳細ページに遷移する版）
+- **既知バグ + 安定化 (5 commit)**: ローカル main のバッチ取り込み (#1115)、Project B (tag タップで即作成 α) revert、inspector 重複チェック復活、tag popup の cancel 反応しない問題修正、tags / user_settings UPDATE policy に WITH CHECK 追加
+- **整流化 (2 commit)**: lib/mcp barrel から trpc-bridge を外して循環依存を解消、preview deployment で upstash 必須 validation を skip
+
+#### なぜ今日この作業をしたか
+
+今日の主軸は **MCP server PoC を Phase 1 として立ち上げる** こと。Dayopt の差別化軸は「タイムボクシング × 時間記録 × タスク × カレンダーの一体化」だが、外部 AI client (Claude / ChatGPT) から Dayopt のデータを read できる経路が無いと、ユーザーが自分の記録を AI agent と組み合わせて活用する世界に届かない。Phase 1 を **「OAuth 2.1 (PKCE) + entries.list だけ」** に絞り込んだのは、write tool まで一気に作ると認可境界 / 楽観更新 / Realtime との競合まで Phase 1 で背負うことになり、PoC のフィードバックが取れる前に複雑度が爆発する判断。
+
+OAuth は 2.1 spec ベースで PKCE 必須、token endpoint と authorize / consent UI を分離。`(oauth)` route group を `(app)` から独立させたのは、consent 画面に Dayopt の sidebar / calendar が映り込むと「これから AI に渡す権限の重さ」が伝わりにくく、信頼感が落ちる判断。OAuth metadata は `/.well-known/*` の 2 endpoint（authorization-server + protected-resource）両方が必要で、これは MCP client が discovery する際の前提条件。vercel.json の rewrite で (locale) prefix を bypass させて spec 通りの path で返す形に決めた。
+
+`api_keys` → `oauth_tokens` の置換は、PoC のため過渡期を持たせない判断。schemas/ 側のファイルも rename して declarative state を更新しないと `db reset` で旧 table が再生されるので、migration とセットで schemas/017_tables_api_keys.sql を削除し oauth.sql を新設。proProcedure を **OAuth bearer token 提示時に必ず DB lookup する** 形にしたのは、解約直後の token が pro feature を呼ぶ race を塞ぐため。in-memory cache を信用しない方針は MCP のような長寿命 token では特に重要。
+
+Inspector 非モーダル化は MCP とは別軸の判断。「calendar を見ながら inspector で entry を編集する」ニーズが drawer の overlay backdrop で阻害されていた。vaul は backdrop opacity 0 でも focus trap は維持されるので、視覚的に下の content が見える + tab は drawer 内に閉じる、という ideal な non-modal が実現できる。並行してモバイル calendar 上の resize を draft entry にも解禁し、inspector で時刻を弄らずに直接 calendar 上で時間幅を調整できる経路を追加した。
+
+drawer の close × ボタンは「全 drawer 共通化 → 個別最適配置に戻す」と 1 日のうちに 2 度方針転換した。共通化を一度入れたが inspector / settings / picker で配置要件が違いすぎて違和感が出た（具体的には inspector の close × は TagRow の「…」menu の隣にあるのが自然、settings は header の右、picker は不要）。共通 wrapper で close × を提供する設計自体が UX 適合性に欠けると判断。
+
+Project B (tag タップで即作成 α アルゴリズム) の revert は、4/28 に α として ship した「直近 1h 履歴 fallback」が実運用で不安定だったため。inspector 重複チェック復活もこれと連動していて、即作成系の改善で外していた防御層を戻した。β アルゴリズム（曜日 / 時間帯パターン）は別タスクとして next に残す。
+
+#### Claudeの所感
+
+**「PoC の Phase 1 scope を future-proof 抜きで固定する」が今日の最大の規律**: MCP server を Phase 1 / 2 / 3 で plan を切ったあと、Phase 1 の scope を「動く最小 + 一切の future-proof を入れない」に固定したのが効いている。具体的には Phase 2 で必要になる write tool 用の hook 引数、未使用の column、想定される client 種別の場合分け等をすべて入れていない。`oauth_authorization_codes` を tokens と別 table に切り出したのも「TTL が違うものを将来同じ cleanup で扱おうとしない」という同じ規律の現れ。PoC で future-proof を入れる誘惑は強いが、Phase 1 のフィードバックが取れる前に複雑度が爆発するリスクの方が大きい。**「Phase N のフィードバックが Phase N+1 の scope を決める」** ことを徹底するなら、Phase 1 の prep を Phase 1 に入れるのは規律違反。
+
+**「barrel の re-export 戦略」は server-only と client-safe を分離するための第一防衛線**: `lib/mcp/index.ts` から `trpc-bridge` を一度 re-export してしまった結果、client component が誤って barrel 経由で import した瞬間に server-only deps（drizzle / supabase service-role client）が client bundle に混入する循環依存が顕在化した。barrel に含めない決定が結果として bundle 健全性を保つ、というのは convention として明文化すべきレッスン。**「barrel は client-safe な API のみを export する」「server-only module は barrel を介さず route handler から直 import」** を Dayopt の標準にする。同じ問題は今後 OAuth helpers / Edge Functions / supabase admin client でも発生しうる。
+
+**「個別最適に戻す」判断が共通化の罠から逃げる正しい挙動**: drawer の close × ボタンを共通化した PR を一度入れた後、個別最適配置に戻したのは 1 日 2 度の方針転換だが、これは「共通化の早すぎる適用」を巻き戻した正しい挙動。3 つの drawer (inspector / settings / picker) で配置要件が異なる場合、共通 wrapper で close × を提供する設計自体が UX に対して間違っている。CLAUDE.md の「3 似たコードがあっても premature abstraction にしない」が drawer wrapper レベルでも当てはまることが今日実証された。共通化の正当性は「呼び出し点が 3+ あり挙動も完全に一致する」が条件で、drawer の close × はそれを満たさなかった。
+
+**「動く最小経路で外部 AI に Dayopt を開く」が Phase 1 の意義**: Phase 1 で entries.list だけ ship したことは、機能としては小さいが「外部 AI client が Dayopt のデータを read できる」という質的な変化を生む。これは Dayopt の差別化軸（時間記録の一体化）を AI agent が活用する経路を開くもので、Phase 2 (write) / Phase 3 (subscribe / 双方向) と段階的に拡張できる土台。OAuth 2.1 + Streamable HTTP + trpc-bridge の三層が Phase 1 で実装済みなので、Phase 2 以降は tool を増やすだけになる。**「PoC の最小は機能の量ではなく interface の完成度で測る」** ことが今日の構造から見える。
+
+---
+
 ## 2026-04-28
 
 ### 4 つの Project (A / B / C + 既知バグ束) を 1 日で main に揃えつつ、UI primitive 系の負債（footer auto-hide / drawer grabber / reminder dead code）も同時に剥がした日
