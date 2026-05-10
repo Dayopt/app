@@ -261,9 +261,7 @@ function McpApiSection() {
 
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
   // API key 入力欄は Phase 1.5 で「接続済み client 一覧」に置換する vestige。
-  // 暫定: `/mcp` の vercel.json rewrite が Next.js 404 に捕まる挙動のため
-  // `/api/mcp` を直接 advertise。Phase 1.5 で rewrite を直して `/mcp` に戻す。
-  const mcpServerUrl = 'https://mcp.dayopt.app/api/mcp';
+  const mcpServerUrl = 'https://mcp.dayopt.app';
 
   const handleCopy = useCallback(
     (text: string, type: 'url' | 'key') => {
