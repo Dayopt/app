@@ -23,11 +23,7 @@ export function buildAuthorizationServerMetadata() {
   return {
     issuer: AUTHORIZATION_SERVER_URL,
     authorization_endpoint: `${AUTHORIZATION_SERVER_URL}/oauth/authorize`,
-    // NOTE: 設計上は `/oauth/token` (vercel.json rewrite で /api/oauth/token に飛ぶ予定)
-    // だが、Vercel rewrite が `/oauth/token` を Next.js 404 にキャッチされる挙動になっており
-    // 動かないため、暫定で `/api/oauth/token` (実体 path) を直接 advertise する。
-    // Phase 1.5 で rewrite の根本対処を試みる。
-    token_endpoint: `${AUTHORIZATION_SERVER_URL}/api/oauth/token`,
+    token_endpoint: `${AUTHORIZATION_SERVER_URL}/oauth/token`,
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
