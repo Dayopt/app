@@ -10,6 +10,11 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/api/mcp",
+      "has": [{ "type": "host", "value": "mcp.dayopt.app" }]
+    },
+    {
       "source": "/mcp",
       "destination": "/api/mcp",
       "has": [{ "type": "host", "value": "mcp.dayopt.app" }]

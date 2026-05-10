@@ -34,6 +34,10 @@ const authPaths = ['/login', '/signup', '/auth'];
 // 公開パス（認証チェック不要）- getUser() 呼び出しをスキップしてパフォーマンス向上
 const publicPaths = ['/', '/about', '/privacy', '/terms', '/contact', '/pricing'];
 
+// Vercel rewritesでAPI routeへ到達させる公開パス
+const publicRewritePaths = ['/mcp', '/oauth/token'];
+const MCP_HOST = 'mcp.dayopt.app';
+
 // 言語プレフィックスを除いたパスを取得
 // as-needed設定: デフォルト言語(en)はプレフィックスなし
 function getPathWithoutLocale(pathname: string): string {
@@ -76,6 +80,7 @@ function getLocalizedPath(path: string, locale: string): string {
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const hostname = request.nextUrl.hostname;
 
   // 静的ファイル、API、_nextファイルはスキップ
   // API routes は middleware 認証をスキップ — 各ルートが自前で認証:
@@ -84,7 +89,13 @@ export async function proxy(request: NextRequest) {
   // - /api/chat: 内部認証チェック
   // - /api/webhooks: Stripe/Resend署名検証
   // ⚠️ 新規APIルートは必ず自前の認証を実装すること
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.includes('.')) {
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    (hostname === MCP_HOST && pathname === '/') ||
+    publicRewritePaths.includes(pathname)
+  ) {
     return NextResponse.next();
   }
 
