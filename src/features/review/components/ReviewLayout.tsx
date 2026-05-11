@@ -53,7 +53,7 @@ export function ReviewLayout({
   const setGranularity = useReviewFilterStore((s) => s.setGranularity);
 
   const todayLabel = t(TODAY_LABEL_KEYS[granularity]);
-  const dateDisplayProps = useReviewDateDisplayProps(currentDate, granularity);
+  const dateDisplayProps = useReviewDateDisplayProps(currentDate);
 
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next' | 'today') => {

@@ -1,13 +1,15 @@
 'use client';
 
 import { CompactDateNavigator } from '@/lib/components/common/DateNavigator';
-import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDisplay';
+import {
+  CompactDateDisplay,
+  type DateRangeDisplayProps,
+} from '@/lib/components/common/DateRangeDisplay';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
 
 import type { ReviewGranularity } from '../../stores/useReviewFilterStore';
-import { ReviewDateDisplay } from './ReviewDateDisplay';
 import { ReviewGranularitySelector } from './ReviewGranularitySelector';
 
 interface MobileReviewHeaderProps {
@@ -44,7 +46,7 @@ export function MobileReviewHeader({
         }
       >
         <div className="flex items-center gap-2">
-          <ReviewDateDisplay {...dateDisplayProps} />
+          <CompactDateDisplay {...dateDisplayProps} />
           <CompactDateNavigator onNavigate={onNavigate} />
         </div>
       </AppHeader>
