@@ -222,3 +222,9 @@ skin agnostic 化の観点で実際に剥がす価値がある箇所:
 - `recovery-code-actions.ts`（Server Action）の責務範囲
 - `EntryService` の REST beacon 経由 method が tRPC 経由 method と同じか別か
 - `statistics.ts` / `tag-statistics.ts` の service 層分離（構造リファクタ、本 audit の軸とは別件）
+
+---
+
+## 後続
+
+target shape の decide は [api-shape.md](./api-shape.md) に分離。current vs target の delta もそこに集約。
