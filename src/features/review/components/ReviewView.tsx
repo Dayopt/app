@@ -1,32 +1,61 @@
 'use client';
 
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, CalendarClock, Clock3, Gauge, Trophy } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { useRouter } from 'next/navigation';
+import type { ComponentType, ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 
+import { TagIcon } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
+import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { resolveTagColor } from '@/lib/tag-colors';
+import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
 import { useReviewPageData } from '../hooks/useReviewPageData';
 import { useTimePLData } from '../hooks/useTimePLData';
-import { calculateDeepUtilization } from '../lib/metrics';
-import { evaluateRuleInsights } from '../lib/ruleInsights';
-import type { MetricId } from '../types/metrics.types';
 import type { ReviewViewProps } from '../types/review.types';
-import { ReviewMetricsGrid } from './insights/ReviewMetricsGrid';
-import { RuleInsightList } from './review/RuleInsightList';
 import { TagBreakdownBar } from './review/TagBreakdownBar';
-import { TimePLContainer } from './time-pl/TimePLContainer';
+import { deriveStatement, formatMinutesDuration } from './time-pl/data/timePL.derivers';
+import type { TimePLInput } from './time-pl/data/timePL.types';
+
+interface TagSummaryRow {
+  tagId: string;
+  tagName: string;
+  tagColor: ReturnType<typeof resolveTagColor>;
+  tagIcon: string | null;
+  minutes: number;
+  percentage: number;
+}
+
+interface PlanActualSummary {
+  plannedMinutes: number;
+  actualMinutes: number;
+  diffMinutes: number;
+  under: {
+    tagId: string;
+    tagName: string;
+    tagColor: ReturnType<typeof resolveTagColor>;
+    tagIcon: string | null;
+    diffMinutes: number;
+  } | null;
+  over: {
+    tagId: string;
+    tagName: string;
+    tagColor: ReturnType<typeof resolveTagColor>;
+    tagIcon: string | null;
+    diffMinutes: number;
+  } | null;
+}
 
 /**
  * ReviewView - 振り返りビュー（Review タブ）
  *
- * 統合クエリ getStatsPageData から全データを取得。
- * 上から: タグ別内訳 → KPIメトリクス → 気づき
+ * Review の入口として、期間内の時間の流れを要約する。
+ * 深掘りはタグ詳細や今後の詳細ページに委ね、ここでは判断材料だけを並べる。
  */
 export function ReviewView({ className }: ReviewViewProps) {
   const t = useTranslations('calendar.stats');
@@ -37,27 +66,77 @@ export function ReviewView({ className }: ReviewViewProps) {
     data: pageData,
     isPending,
     isFetching,
-    isError,
+    isError: isStatsError,
     dateRange,
-    prevDateRange,
   } = useReviewPageData();
 
-  const { data: timePLData, isPending: isTimePLPending } = useTimePLData();
+  const { data: timePLData, isPending: isTimePLPending, isError: isTimePLError } = useTimePLData();
+  const fallbackTimeByTagQuery = api.entries.getTimeByTag.useQuery(
+    {
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    },
+    {
+      enabled: isStatsError || !pageData?.timeByTag?.length,
+    },
+  );
 
-  const tagSegments = pageData?.timeByTag
-    ? pageData.timeByTag.map((tag) => ({
-        tagId: tag.tagId,
-        tagName: tag.name,
-        tagColor: resolveTagColor(tag.color),
-        minutes: Math.round(tag.hours * 60),
+  const planActualSummary = useMemo(() => derivePlanActualSummary(timePLData), [timePLData]);
+  const totalTrackedMinutes = pageData?.overview.totalMinutes ?? planActualSummary.actualMinutes;
+  const fallbackTimeByTag = fallbackTimeByTagQuery.data;
+  const timeByTag = pageData?.timeByTag?.length ? pageData.timeByTag : fallbackTimeByTag;
+  const tagRows = useMemo<TagSummaryRow[]>(() => {
+    if (!timeByTag && !timePLData) return [];
+
+    const rows = timeByTag
+      ? timeByTag.map((tag) => {
+          const minutes = Math.round(tag.hours * 60);
+          return {
+            tagId: tag.tagId,
+            tagName: tag.name,
+            tagColor: resolveTagColor(tag.color),
+            tagIcon: null,
+            minutes,
+          };
+        })
+      : (timePLData?.tags.map((tag) => ({
+          tagId: tag.tagId,
+          tagName: tag.tagName,
+          tagColor: tag.tagColor,
+          tagIcon: tag.tagIcon ?? null,
+          minutes: tag.actualMinutes,
+        })) ?? []);
+
+    return rows
+      .filter((tag) => tag.minutes > 0)
+      .map((tag) => ({
+        ...tag,
+        percentage:
+          totalTrackedMinutes > 0 ? Math.round((tag.minutes / totalTrackedMinutes) * 100) : 0,
       }))
-    : [];
+      .sort((a, b) => b.minutes - a.minutes);
+  }, [timeByTag, timePLData, totalTrackedMinutes]);
+
+  const tagSegments = tagRows.map((tag) => ({
+    tagId: tag.tagId,
+    tagName: tag.tagName,
+    tagColor: tag.tagColor,
+    tagIcon: tag.tagIcon,
+    minutes: tag.minutes,
+  }));
+  const topTag = tagRows[0] ?? null;
+  const blankMinutes = useMemo(() => {
+    if (timePLData) {
+      return Math.max(0, timePLData.availableMinutes - planActualSummary.actualMinutes);
+    }
+
+    const blankRate = pageData?.blankRate;
+    if (!blankRate) return 0;
+    return Math.max(0, blankRate.availableMinutes - blankRate.scheduledMinutes);
+  }, [timePLData, planActualSummary.actualMinutes, pageData?.blankRate]);
 
   // タグ詳細ルートをプリフェッチ（クリック前にRSCペイロードを準備）
-  const tagIds = useMemo(
-    () => pageData?.timeByTag?.map((tag) => tag.tagId) ?? [],
-    [pageData?.timeByTag],
-  );
+  const tagIds = useMemo(() => tagRows.map((tag) => tag.tagId), [tagRows]);
   useEffect(() => {
     for (const id of tagIds) {
       router.prefetch(`/${locale}/review/tags/${id}`);
@@ -68,45 +147,8 @@ export function ReviewView({ className }: ReviewViewProps) {
     router.push(`/${locale}/review/tags/${tagId}`);
   };
 
-  const ruleInsights = useMemo(() => {
-    if (!pageData) return [];
-    const current: Partial<Record<MetricId, number>> = {};
-
-    current.entryRate = pageData.overview.planRate;
-    current.contextSwitches = pageData.contextSwitches.avgPerDay;
-    current.blankRate = pageData.blankRate.blankRate;
-
-    // ピーク活用率
-    if (pageData.energyMap.length > 0 && dateRange.startDate && dateRange.endDate) {
-      const defaultDeepZones = [{ startHour: 9, endHour: 14 }];
-      const start = new Date(dateRange.startDate);
-      const end = new Date(dateRange.endDate);
-      const daysInRange = Math.max(
-        1,
-        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)),
-      );
-      const deep = calculateDeepUtilization(pageData.energyMap, defaultDeepZones, daysInRange);
-      if (deep) current.deepUtilization = deep.deepUtilization;
-    }
-
-    // 見積もり精度
-    if (pageData.estimationAccuracy.length > 0) {
-      const totalDev = pageData.estimationAccuracy.reduce(
-        (sum, item) => sum + item.avgDeviationMinutes * item.entryCount,
-        0,
-      );
-      const totalEntries = pageData.estimationAccuracy.reduce(
-        (sum, item) => sum + item.entryCount,
-        0,
-      );
-      if (totalEntries > 0) current.estimationAccuracy = totalDev / totalEntries;
-    }
-
-    return evaluateRuleInsights(current, null);
-  }, [pageData, dateRange.startDate, dateRange.endDate]);
-
   // エラー状態
-  if (isError) {
+  if (isStatsError && isTimePLError && fallbackTimeByTagQuery.isError) {
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         <ErrorState title={t('review.errorTitle')} description={t('review.errorDescription')} />
@@ -115,8 +157,9 @@ export function ReviewView({ className }: ReviewViewProps) {
   }
 
   // 空状態判定
-  const isAllLoaded = !isPending;
-  const hasNoData = isAllLoaded && !isFetching && tagSegments.length === 0;
+  const isAllLoaded = !isPending && !isTimePLPending && !fallbackTimeByTagQuery.isPending;
+  const hasNoData =
+    isAllLoaded && !isFetching && !fallbackTimeByTagQuery.isFetching && tagSegments.length === 0;
 
   if (hasNoData) {
     return (
@@ -136,23 +179,264 @@ export function ReviewView({ className }: ReviewViewProps) {
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="scrollbar-stable flex-1 overflow-y-auto">
         <div className="flex flex-col gap-4 p-4">
-          {/* タグ別時間内訳 */}
-          <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
+          <section className="grid gap-3 sm:grid-cols-3">
+            <SummaryCard
+              icon={Clock3}
+              label={t('overview.trackedTime')}
+              value={formatMinutesDuration(totalTrackedMinutes)}
+              description={t('overview.trackedTimeDesc')}
+            />
+            <SummaryCard
+              icon={Trophy}
+              label={t('overview.topTag')}
+              value={topTag ? topTag.tagName : t('metrics.noData')}
+              description={
+                topTag
+                  ? `${formatMinutesDuration(topTag.minutes)} / ${topTag.percentage}%`
+                  : t('noTagData')
+              }
+            />
+            <SummaryCard
+              icon={Gauge}
+              label={t('overview.planDiff')}
+              value={
+                isTimePLPending
+                  ? t('metrics.noData')
+                  : formatSignedDuration(planActualSummary.diffMinutes)
+              }
+              description={
+                planActualSummary.diffMinutes === 0
+                  ? t('overview.planDiffEven')
+                  : planActualSummary.diffMinutes > 0
+                    ? t('overview.planDiffOver')
+                    : t('overview.planDiffUnder')
+              }
+            />
+          </section>
 
-          {/* 時間損益計算書 */}
-          <TimePLContainer input={timePLData} view="statement" isLoading={isTimePLPending} />
+          <section className="grid gap-4 lg:grid-cols-3">
+            <OverviewPanel
+              title={t('overview.tagTime')}
+              description={t('overview.tagTimeDesc')}
+              icon={<BarChart3 className="size-4" />}
+              className="lg:col-span-2"
+            >
+              <TagBreakdownBar segments={tagSegments} onTagClick={handleTagClick} />
+              <div className="divide-border mt-3 divide-y">
+                {tagRows.map((tag) => (
+                  <button
+                    key={tag.tagId}
+                    type="button"
+                    className="hover:bg-state-hover flex min-h-11 w-full min-w-0 items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors"
+                    onClick={() => handleTagClick(tag.tagId)}
+                  >
+                    <TagIcon icon={tag.tagIcon ?? null} color={tag.tagColor} size="sm" />
+                    <ColonTagLabel
+                      name={tag.tagName}
+                      className="text-foreground min-w-0 flex-1 truncate text-sm"
+                    />
+                    <span className="text-foreground font-mono text-sm tabular-nums">
+                      {formatMinutesDuration(tag.minutes)}
+                    </span>
+                    <span className="text-muted-foreground w-10 text-right font-mono text-sm tabular-nums">
+                      {tag.percentage}%
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </OverviewPanel>
 
-          {/* KPI メトリクス */}
-          <ReviewMetricsGrid
-            pageData={pageData}
-            dateRange={dateRange}
-            prevDateRange={prevDateRange}
-          />
+            <div className="flex flex-col gap-4">
+              <OverviewPanel
+                title={t('overview.planActual')}
+                description={t('overview.planActualDesc')}
+                icon={<CalendarClock className="size-4" />}
+              >
+                <div className="space-y-3">
+                  <PlanActualRow
+                    label={t('overview.planned')}
+                    value={formatMinutesDuration(planActualSummary.plannedMinutes)}
+                  />
+                  <PlanActualRow
+                    label={t('overview.actual')}
+                    value={formatMinutesDuration(planActualSummary.actualMinutes)}
+                  />
+                  <PlanActualRow
+                    label={t('overview.diff')}
+                    value={formatSignedDuration(planActualSummary.diffMinutes)}
+                    emphasized
+                  />
+                  <VarianceHighlight
+                    label={t('overview.lessThanPlanned')}
+                    item={planActualSummary.under}
+                  />
+                  <VarianceHighlight
+                    label={t('overview.moreThanPlanned')}
+                    item={planActualSummary.over}
+                  />
+                </div>
+              </OverviewPanel>
 
-          {/* 閾値ベースの気づき */}
-          <RuleInsightList insights={ruleInsights} />
+              <OverviewPanel
+                title={t('overview.blankTime')}
+                description={t('overview.blankTimeDesc')}
+                icon={<Clock3 className="size-4" />}
+              >
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-foreground font-mono text-3xl font-medium tabular-nums">
+                      {formatMinutesDuration(blankMinutes)}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {t('overview.blankTimeNote')}
+                    </p>
+                  </div>
+                  <div className="text-muted-foreground text-right text-xs">
+                    {timePLData
+                      ? t('overview.availableTime', {
+                          time: formatMinutesDuration(timePLData.availableMinutes),
+                        })
+                      : t('metrics.noData')}
+                  </div>
+                </div>
+              </OverviewPanel>
+            </div>
+          </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function derivePlanActualSummary(input: TimePLInput | null | undefined): PlanActualSummary {
+  if (!input) {
+    return {
+      plannedMinutes: 0,
+      actualMinutes: 0,
+      diffMinutes: 0,
+      under: null,
+      over: null,
+    };
+  }
+
+  const statement = deriveStatement(input);
+  const rows = input.tags
+    .filter((tag) => tag.budgetMinutes > 0 || tag.actualMinutes > 0)
+    .map((tag) => ({
+      tagId: tag.tagId,
+      tagName: tag.tagName,
+      tagColor: tag.tagColor,
+      tagIcon: tag.tagIcon ?? null,
+      diffMinutes: tag.actualMinutes - tag.budgetMinutes,
+    }))
+    .sort((a, b) => Math.abs(b.diffMinutes) - Math.abs(a.diffMinutes));
+
+  return {
+    plannedMinutes: statement.budgetTotal,
+    actualMinutes: statement.actualTotal,
+    diffMinutes: statement.actualTotal - statement.budgetTotal,
+    under: rows.find((row) => row.diffMinutes < 0) ?? null,
+    over: rows.find((row) => row.diffMinutes > 0) ?? null,
+  };
+}
+
+function formatSignedDuration(minutes: number): string {
+  if (minutes === 0) return '±0';
+  const sign = minutes > 0 ? '+' : '-';
+  return `${sign}${formatMinutesDuration(minutes)}`;
+}
+
+function SummaryCard({
+  icon: Icon,
+  label,
+  value,
+  description,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className="border-border-subtle bg-card flex min-h-32 flex-col justify-between rounded-lg border p-4">
+      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Icon className="size-4" />
+        <span>{label}</span>
+      </div>
+      <div>
+        <div className="text-foreground truncate text-2xl font-medium">{value}</div>
+        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function OverviewPanel({
+  title,
+  description,
+  icon,
+  className,
+  children,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={cn('border-border-subtle bg-card rounded-lg border p-4', className)}>
+      <div className="mb-4 flex items-start gap-3">
+        <div className="bg-secondary text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-foreground text-base font-medium">{title}</h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function PlanActualRow({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <span
+        className={cn(
+          'font-mono text-sm tabular-nums',
+          emphasized ? 'text-foreground font-medium' : 'text-muted-foreground',
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function VarianceHighlight({ label, item }: { label: string; item: PlanActualSummary['under'] }) {
+  if (!item) return null;
+
+  return (
+    <div className="border-border-subtle flex min-w-0 items-center gap-2 rounded-lg border p-2">
+      <TagIcon icon={item.tagIcon ?? null} color={item.tagColor} size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="text-muted-foreground text-xs">{label}</div>
+        <ColonTagLabel name={item.tagName} className="text-foreground block truncate text-sm" />
+      </div>
+      <span className="text-muted-foreground font-mono text-sm tabular-nums">
+        {formatSignedDuration(item.diffMinutes)}
+      </span>
     </div>
   );
 }

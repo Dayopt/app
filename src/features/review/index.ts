@@ -8,8 +8,10 @@
 // =============================================================================
 // Components
 // =============================================================================
+export { ReviewTagChipRow } from './components/mobile/ReviewTagChipRow';
 export { ReviewLayout } from './components/ReviewLayout';
 export { ReviewView } from './components/ReviewView';
+export { ReviewTagList } from './components/sidebar/ReviewTagList';
 
 // =============================================================================
 // Stores

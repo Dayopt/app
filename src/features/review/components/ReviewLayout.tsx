@@ -105,6 +105,18 @@ export function ReviewLayout({
     [setGranularity, currentDate, pathname],
   );
 
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      useReviewFilterStore.getState().setCurrentDate(date);
+
+      const params = new URLSearchParams(window.location.search);
+      params.set('g', granularity);
+      params.set('d', formatDateParam(date));
+      window.history.replaceState(null, '', `${pathname}?${params.toString()}`);
+    },
+    [granularity, pathname],
+  );
+
   const sidebarOpen = useShellStore.use.sidebar().open;
   const toggleSidebar = useShellStore.use.toggleSidebar();
   const sidebarToggle = !sidebarOpen ? (
@@ -125,6 +137,7 @@ export function ReviewLayout({
         granularity={granularity}
         showGranularity={showGranularity}
         onNavigate={handleNavigate}
+        onDateSelect={handleDateSelect}
         onGranularityChange={handleGranularityChange}
       />
 
