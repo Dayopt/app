@@ -315,6 +315,18 @@
         "whenSection": "いつやっているか",
         "qualitySection": "どれだけうまくいっているか",
         "loadMore": "もっと見る",
+        "kpiTotal": "合計",
+        "kpiPlanned": "予定",
+        "kpiActual": "実績",
+        "kpiDiff": "差分",
+        "dailyActual": "日別の時間",
+        "planActual": "予定と実績",
+        "entryList": "期間内エントリ",
+        "date": "日付",
+        "time": "時間",
+        "tag": "タグ",
+        "content": "内容",
+        "memo": "メモ",
         "untitled": "無題"
       }
     },

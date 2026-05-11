@@ -315,6 +315,18 @@
         "whenSection": "When",
         "qualitySection": "Quality",
         "loadMore": "Load more",
+        "kpiTotal": "Total",
+        "kpiPlanned": "Planned",
+        "kpiActual": "Actual",
+        "kpiDiff": "Diff",
+        "dailyActual": "Daily time",
+        "planActual": "Planned vs actual",
+        "entryList": "Entries in period",
+        "date": "Date",
+        "time": "Time",
+        "tag": "Tag",
+        "content": "Content",
+        "memo": "Memo",
         "untitled": "Untitled"
       }
     },

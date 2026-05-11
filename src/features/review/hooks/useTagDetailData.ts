@@ -18,6 +18,7 @@ import type { ReviewGranularity } from '../stores/useReviewFilterStore';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 
 const TAG_ENTRIES_PAGE_SIZE = 10;
+const TAG_DASHBOARD_ENTRY_LIMIT = 50;
 
 function granularityToBucket(g: ReviewGranularity): 'week' | 'month' | 'day' {
   switch (g) {
@@ -70,6 +71,30 @@ export function useTagTimelineData(tagId: string) {
     recentLimit: 8,
     ...dateRange,
   });
+}
+
+export function useTagDashboardData(tagId: string) {
+  const granularity = useReviewFilterStore((s) => s.granularity);
+  const currentDate = useReviewFilterStore((s) => s.currentDate);
+  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+
+  const dateRange = useMemo(
+    () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
+    [currentDate, granularity, timezone, weekStartsOn],
+  );
+
+  return api.entries.getTagDashboard.useQuery(
+    {
+      tagId,
+      ...dateRange,
+      limit: TAG_DASHBOARD_ENTRY_LIMIT,
+    },
+    {
+      ...cacheStrategies.entries,
+      retry: 1,
+    },
+  );
 }
 
 /**
