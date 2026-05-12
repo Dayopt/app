@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 
 import { isCalendarViewPath, TagChipRow } from '@/features/calendar';
+import { ReviewTagChipRow } from '@/features/review';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -54,6 +55,7 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
   );
 
   const isCalendarView = useMemo(() => isCalendarViewPath(pathWithoutLocale), [pathWithoutLocale]);
+  const isReviewView = useMemo(() => pathWithoutLocale.startsWith('/review'), [pathWithoutLocale]);
 
   // calendar / review 系はモバイルでは編集機能が制限される (P0-6 Option B)
   // tap=Inspector / longpress=ドラッグ は calendar で機能するが、タグ並び替え等の
@@ -80,14 +82,17 @@ export function MobileLayout({ children, locale: _locale }: MobileLayoutProps) {
         {/* モバイル閲覧専用の告知（calendar / review） */}
         {isDesktopOnlyEditPage && <InlineBanner visible message={t('mobileReadOnly')} />}
 
-        {/* Main Content（calendar view では TagChipRow + BottomTabBar 分の余白を確保） */}
-        <MainContentWrapper className={isCalendarView ? 'pb-32' : 'pb-16'}>
+        {/* Main Content（calendar / review view ではタグ行 + BottomTabBar 分の余白を確保） */}
+        <MainContentWrapper className={isCalendarView || isReviewView ? 'pb-32' : 'pb-16'}>
           {children}
         </MainContentWrapper>
       </div>
 
       {/* calendar: タグタップで予定作成 popover */}
       {isCalendarView && <TagChipRow />}
+
+      {/* review: タグタップでタグ別 Review へ遷移 */}
+      {isReviewView && <ReviewTagChipRow />}
 
       {/* ボトムタブナビゲーション */}
       <BottomTabBar />

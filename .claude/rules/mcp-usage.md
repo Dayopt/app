@@ -2,7 +2,17 @@
 
 Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下の場面では積極的に MCP を呼ぶこと。推測より確認を優先する。
 
-接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / context7 / sentry）。Playwright / GitHub は未接続だが将来追加を想定して方針のみ記載する。
+接続済みサーバーは `.mcp.json` を参照（eagle / supabase-local / context7 / sentry）。`.claude/settings.local.json` の `enabledMcpjsonServers` でも4つすべてを明示的に有効化する。Playwright / GitHub は未接続だが将来追加を想定して方針のみ記載する。
+
+## 運用方針
+
+- **常時使う**: `context7` / `sentry`
+- **オンデマンドで使う**: `eagle` / `supabase-local`
+- `context7` はバージョン依存の判断では原則使う。Next.js 15 / React 19 / tRPC / Supabase client / TanStack Query / Zustand などは記憶だけで判断しない。
+- `sentry` は `SENTRY_ACCESS_TOKEN` を Claude 起動環境から渡す。`sentry-mcp auth login` の device cache には依存しない。token は repo に置かず、1Password / shell env / Claude 起動ラッパー側で管理する。
+- `supabase-local` は migration / RLS / schema 確認時だけ Docker Desktop と `supabase start` を起動する。通常のレビュー・実装ではローカル DB が落ちていても異常扱いしない。
+- `eagle` はローカル Eagle app が起動している時だけ使う。Eagle app が落ちている場合は MCP 接続失敗を異常扱いしない。
+- `~/.claude/settings.json` に残る未定義 MCP 権限（例: `storybook-mcp` / `lighthouse`）は過去の許可履歴として扱い、必要になった時に別途棚卸しする。
 
 ## 接続済み MCP サーバー
 
@@ -12,6 +22,9 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - ユーザーがエラーや予期しない挙動を報告したら、再現手順を聞く前にまず `list_issues` / `list_events` で該当イベントを検索する
   - デプロイ直後の不具合調査時は `find_releases` で最新リリースのエラー増加を確認する
   - スタックトレースから原因が曖昧なとき `analyze_issue_with_seer` で一次切り分けを行う
+- **Before use**:
+  - Claude 起動環境で `SENTRY_ACCESS_TOKEN` が空でないことを確認する
+  - 疎通確認は `auth status` ではなく、MCP tool の `whoami` または `find_organizations` で行う
 - **境界ケース**: 「再現できますか？」とユーザーに尋ねる前に Sentry で対象 issue を探す。ヒットすればスタックトレースから直接原因を特定できるので、ユーザーの手間を省ける。
 
 ### Supabase (`supabase-local` / HTTP)
@@ -20,6 +33,10 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - schema / RLS / migration を編集する前に、現在のスキーマ状態を取得して差分を確認する
   - `supabase/migrations/` に新 SQL を追加する前にローカル DB の既存テーブル・ポリシーを inspect する
   - Realtime 購読や RLS 挙動のデバッグ時に実データで挙動を確認する
+- **Before use**:
+  - Docker Desktop 起動後に `npx supabase status` で前提状態を確認する
+  - `nc -vz 127.0.0.1 54321` で HTTP endpoint の待ち受けを確認する
+  - MCP tool の `list_tables` が通れば利用可能と判断する
 - **境界ケース**: `npm run types:generate` を走らせる前に、MCP でスキーマ変更が DB に反映済みか確認する（未反映だと型生成しても差分が出ない）。現在は単一 project 運用のため dev / preview / production すべて同じ Production project を参照する。
 
 ### Context7 (`mcp__context7__*`)
@@ -28,6 +45,9 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - Next.js / React / tRPC / Supabase client / TanStack Query / Zustand などバージョン固有挙動が問題になりうるライブラリ API を扱う時
   - エラーメッセージが最新ドキュメントの API シグネチャと一致しているか確認したい時
   - 新規依存追加を検討する際、最新の推奨 API 設計を確認する時
+- **Before use**:
+  - CLI 側の生存確認は `npx -y @upstash/context7-mcp@latest --version` で行う
+  - Claude MCP 経由では `resolve-library-id` から `query-docs` の順に確認する
 - **境界ケース**: 「知っている」と思っても、Next.js 15 App Router や React 19 の新 hook など cutoff 付近のトピックは必ず `query-docs` で確認してから回答する。
 
 ### Eagle (`mcp__eagle__*`)
@@ -36,6 +56,9 @@ Opus 4.7 はツール呼び出しが控えめになる傾向がある。以下�
   - Storybook スナップショットを Eagle に同期する時（`eagle-dayopt` skill の領域）
   - デザインアセットの検索、タグ整理、Archive 管理を行う時
   - Figma 由来の参考デザインをローカルで横断検索したい時
+- **Before use**:
+  - `nc -vz 127.0.0.1 41596` で Eagle app 側の待ち受けを確認する
+  - `GET http://127.0.0.1:41596/mcp` が `405 Method Not Allowed` を返せば endpoint は生存している
 - **境界ケース**: スクリーンショット撮影は「タグごと」に行うルール（push ごとではない）。詳細は `eagle-dayopt` skill に従う。
 
 ## 未接続 MCP サーバー（将来追加予定）

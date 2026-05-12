@@ -14,7 +14,8 @@ import { createMcpServer } from './_server';
  * Bearer token を `oauth_tokens` で検証 → per-request stateless transport を立て、
  * MCP server に dispatch する。
  *
- * Vercel rewrite で `mcp.dayopt.app/mcp` から到達する (production)。
+ * Vercel rewrite で `mcp.dayopt.app/` から到達する (production)。
+ * `/mcp` も既存 client 向けの互換 alias として同じ handler に到達する。
  * 401 のときは `WWW-Authenticate` の `resource_metadata` で client が
  * `/.well-known/oauth-protected-resource` を辿れるようにする (MCP spec 2025-03)。
  */

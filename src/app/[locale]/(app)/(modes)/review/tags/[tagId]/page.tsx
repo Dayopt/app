@@ -38,7 +38,7 @@ async function TagDetailContent({
   granularity: ReviewGranularity;
   dateStr: string;
 }) {
-  const { dehydratedState } = await prefetchTagDetailData(tagId, granularity);
+  const { dehydratedState } = await prefetchTagDetailData(tagId, granularity, dateStr);
 
   return (
     <HydrationBoundary state={dehydratedState}>
