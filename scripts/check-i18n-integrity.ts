@@ -193,7 +193,7 @@ function discoverRouteGroups(): RouteGroup[] {
   const layoutPattern = 'src/app/[locale]';
   const groups: RouteGroup[] = [];
 
-  const groupDirs = ['(app)', '(auth)', '(onboarding)'];
+  const groupDirs = ['(app)', '(auth)'];
   for (const groupDir of groupDirs) {
     const layoutPath = join(SRC_DIR, 'app/[locale]', groupDir, 'layout.tsx');
     try {

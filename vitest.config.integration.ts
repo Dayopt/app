@@ -16,6 +16,7 @@ export default defineConfig({
     include: ['src/lib/test/integration/**/*.{test,spec}.ts'],
     testTimeout: 30000, // 統合テストは時間がかかる可能性があるため30秒
     hookTimeout: 30000,
+    setupFiles: ['src/lib/test/integration-setup.ts'],
   },
   resolve: {
     alias: {

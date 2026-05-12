@@ -1,11 +1,11 @@
 // Dayopt ESLint - Next.js 16 Flat Config
 // @see https://nextjs.org/docs/app/api-reference/config/eslint
 
-import { defineConfig, globalIgnores } from 'eslint/config'
-import nextVitals from 'eslint-config-next/core-web-vitals'
-import nextTs from 'eslint-config-next/typescript'
-import storybook from 'eslint-plugin-storybook'
-import tailwindcss from 'eslint-plugin-tailwindcss'
+import nextVitals from 'eslint-config-next/core-web-vitals';
+import nextTs from 'eslint-config-next/typescript';
+import storybook from 'eslint-plugin-storybook';
+import tailwindcss from 'eslint-plugin-tailwindcss';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 const eslintConfig = defineConfig([
   // Next.js公式推奨設定（React, React Hooks, Core Web Vitals）
@@ -73,7 +73,7 @@ const eslintConfig = defineConfig([
   // Layer 0 (Domain/基盤): tags, chronotype       — 他featureに依存しない
   // Layer 1 (Domain/中核): entry                  — L0 barrel のみ
   // Layer 2 (Feature/体験): calendar, stats — L0+L1 barrel のみ
-  // Independent:      auth, contact, notifications, onboarding, tour — 他featureに依存しない
+  // Independent:      auth, contact, notifications — 他featureに依存しない
   //
   // settings: featureから除外（app層compositionに移動済み）
   // palette:  featureから除外（廃止済み）
@@ -84,29 +84,31 @@ const eslintConfig = defineConfig([
 
   // ── 1. lib/ → features/, app/ のimport禁止 ──
   {
-    files: [
-      'src/lib/**/*.{ts,tsx}',
-    ],
+    files: ['src/lib/**/*.{ts,tsx}'],
     ignores: [
-      'src/lib/trpc/root.ts',             // Server Composition Layer (router aggregator)
-      'src/lib/hooks/useTheme.ts',         // Re-export from app/_providers/theme-provider
-      'src/lib/components/dnd/**',         // DnD (stories only)
-      'src/lib/**/*.stories.*',            // Storybook files
-      'src/lib/test/**',                   // Integration/E2E tests (deep imports are expected)
+      'src/lib/trpc/root.ts', // Server Composition Layer (router aggregator)
+      'src/lib/hooks/useTheme.ts', // Re-export from app/_providers/theme-provider
+      'src/lib/components/dnd/**', // DnD (stories only)
+      'src/lib/**/*.stories.*', // Storybook files
+      'src/lib/test/**', // Integration/E2E tests (deep imports are expected)
     ],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@/features/*', '@/features/**'],
-            message: '共有層→featureの逆依存は禁止。共有層に実体を移動するか、Composition Layerに配置。',
-          },
-          {
-            group: ['@/app/*', '@/app/**'],
-            message: '共有層→app層の逆依存は禁止。',
-          },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/**'],
+              message:
+                '共有層→featureの逆依存は禁止。共有層に実体を移動するか、Composition Layerに配置。',
+            },
+            {
+              group: ['@/app/*', '@/app/**'],
+              message: '共有層→app層の逆依存は禁止。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -114,19 +116,19 @@ const eslintConfig = defineConfig([
 
   // Layer 0 (tags, chronotype): 他featureへの依存ゼロ
   {
-    files: [
-      'src/features/tags/**/*.{ts,tsx}',
-      'src/features/chronotype/**/*.{ts,tsx}',
-    ],
+    files: ['src/features/tags/**/*.{ts,tsx}', 'src/features/chronotype/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@/features/*', '@/features/**'],
-            message: 'Layer 0（基盤feature）は他featureに依存不可。',
-          },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/**'],
+              message: 'Layer 0（基盤feature）は他featureに依存不可。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -134,21 +136,40 @@ const eslintConfig = defineConfig([
   {
     files: ['src/features/entry/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          // L2 禁止
-          { group: ['@/features/calendar', '@/features/calendar/**'], message: '上位層featureのimport禁止。' },
-          { group: ['@/features/stats', '@/features/stats/**'], message: '上位層featureのimport禁止。' },
-          // Independent 禁止
-          { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
-          // L0 deep import禁止（barrel のみ許可）
-          { group: ['@/features/tags/**'], message: 'barrel import（@/features/tags）のみ使用。' },
-          { group: ['@/features/chronotype/**'], message: 'barrel import（@/features/chronotype）のみ使用。' },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            // L2 禁止
+            {
+              group: ['@/features/calendar', '@/features/calendar/**'],
+              message: '上位層featureのimport禁止。',
+            },
+            {
+              group: ['@/features/stats', '@/features/stats/**'],
+              message: '上位層featureのimport禁止。',
+            },
+            // Independent 禁止
+            {
+              group: ['@/features/auth', '@/features/auth/**'],
+              message: '独立featureのimport禁止。',
+            },
+            {
+              group: ['@/features/contact', '@/features/contact/**'],
+              message: '独立featureのimport禁止。',
+            },
+            // L0 deep import禁止（barrel のみ許可）
+            {
+              group: ['@/features/tags/**'],
+              message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/chronotype/**'],
+              message: 'barrel import（@/features/chronotype）のみ使用。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -156,21 +177,40 @@ const eslintConfig = defineConfig([
   {
     files: ['src/features/calendar/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          // 同層間禁止（自分自身は含めない）
-          { group: ['@/features/stats', '@/features/stats/**'], message: '同層featureのimport禁止。' },
-          // Independent 禁止
-          { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
-          // L0+L1 deep import禁止（barrel のみ許可）
-          { group: ['@/features/tags/**'], message: 'barrel import（@/features/tags）のみ使用。' },
-          { group: ['@/features/chronotype/**'], message: 'barrel import（@/features/chronotype）のみ使用。' },
-          { group: ['@/features/entry/**'], message: 'barrel import（@/features/entry）のみ使用。' },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            // 同層間禁止（自分自身は含めない）
+            {
+              group: ['@/features/stats', '@/features/stats/**'],
+              message: '同層featureのimport禁止。',
+            },
+            // Independent 禁止
+            {
+              group: ['@/features/auth', '@/features/auth/**'],
+              message: '独立featureのimport禁止。',
+            },
+            {
+              group: ['@/features/contact', '@/features/contact/**'],
+              message: '独立featureのimport禁止。',
+            },
+            // L0+L1 deep import禁止（barrel のみ許可）
+            {
+              group: ['@/features/tags/**'],
+              message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/chronotype/**'],
+              message: 'barrel import（@/features/chronotype）のみ使用。',
+            },
+            {
+              group: ['@/features/entry/**'],
+              message: 'barrel import（@/features/entry）のみ使用。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -178,38 +218,55 @@ const eslintConfig = defineConfig([
   {
     files: ['src/features/stats/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          { group: ['@/features/calendar', '@/features/calendar/**'], message: '同層featureのimport禁止。' },
-          { group: ['@/features/auth', '@/features/auth/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/contact', '@/features/contact/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/onboarding', '@/features/onboarding/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tour', '@/features/tour/**'], message: '独立featureのimport禁止。' },
-          { group: ['@/features/tags/**'], message: 'barrel import（@/features/tags）のみ使用。' },
-          { group: ['@/features/chronotype/**'], message: 'barrel import（@/features/chronotype）のみ使用。' },
-          { group: ['@/features/entry/**'], message: 'barrel import（@/features/entry）のみ使用。' },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/calendar', '@/features/calendar/**'],
+              message: '同層featureのimport禁止。',
+            },
+            {
+              group: ['@/features/auth', '@/features/auth/**'],
+              message: '独立featureのimport禁止。',
+            },
+            {
+              group: ['@/features/contact', '@/features/contact/**'],
+              message: '独立featureのimport禁止。',
+            },
+            {
+              group: ['@/features/tags/**'],
+              message: 'barrel import（@/features/tags）のみ使用。',
+            },
+            {
+              group: ['@/features/chronotype/**'],
+              message: 'barrel import（@/features/chronotype）のみ使用。',
+            },
+            {
+              group: ['@/features/entry/**'],
+              message: 'barrel import（@/features/entry）のみ使用。',
+            },
+          ],
+        },
+      ],
     },
   },
 
-  // Independent (auth, contact, onboarding, tour): 他featureへの依存ゼロ
+  // Independent (auth, contact): 他featureへの依存ゼロ
   {
-    files: [
-      'src/features/auth/**/*.{ts,tsx}',
-      'src/features/contact/**/*.{ts,tsx}',
-      'src/features/onboarding/**/*.{ts,tsx}',
-      'src/features/tour/**/*.{ts,tsx}',
-    ],
+    files: ['src/features/auth/**/*.{ts,tsx}', 'src/features/contact/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: ['@/features/*', '@/features/**'],
-            message: '独立featureは他featureに依存不可。',
-          },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/**'],
+              message: '独立featureは他featureに依存不可。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -217,24 +274,27 @@ const eslintConfig = defineConfig([
   {
     files: ['src/app/**/*.{ts,tsx}'],
     rules: {
-      'no-restricted-imports': ['error', {
-        patterns: [
-          {
-            group: [
-              '@/features/*/components/*',
-              '@/features/*/hooks/*',
-              '@/features/*/stores/*',
-              '@/features/*/utils/*',
-              '@/features/*/types/*',
-              '@/features/*/lib/*',
-              '@/features/*/constants/*',
-              '@/features/*/contexts/*',
-              '@/features/*/adapters/*',
-            ],
-            message: 'barrel import (@/features/featureName) のみ使用。',
-          },
-        ],
-      }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@/features/*/components/*',
+                '@/features/*/hooks/*',
+                '@/features/*/stores/*',
+                '@/features/*/utils/*',
+                '@/features/*/types/*',
+                '@/features/*/lib/*',
+                '@/features/*/constants/*',
+                '@/features/*/contexts/*',
+                '@/features/*/adapters/*',
+              ],
+              message: 'barrel import (@/features/featureName) のみ使用。',
+            },
+          ],
+        },
+      ],
     },
   },
 
@@ -320,6 +380,6 @@ const eslintConfig = defineConfig([
 
   // Storybook
   ...storybook.configs['flat/recommended'],
-])
+]);
 
-export default eslintConfig
+export default eslintConfig;

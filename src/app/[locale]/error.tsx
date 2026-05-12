@@ -3,7 +3,7 @@
 /**
  * Locale レベル Error ページ
  *
- * [locale] 配下の全 Route Group（(app), (auth), (onboarding)）の
+ * [locale] 配下の全 Route Group（(app), (auth)）の
  * エラーをキャッチする共通フォールバック。
  *
  * layout.tsx 自体のエラーでも描画されるため、NextIntlClientProvider の

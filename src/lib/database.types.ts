@@ -214,7 +214,6 @@ export type Database = {
           email: string;
           full_name: string | null;
           id: string;
-          onboarding_completed_at: string | null;
           stripe_customer_id: string | null;
           subscription_id: string | null;
           subscription_status: string;
@@ -226,7 +225,6 @@ export type Database = {
           email: string;
           full_name?: string | null;
           id: string;
-          onboarding_completed_at?: string | null;
           stripe_customer_id?: string | null;
           subscription_id?: string | null;
           subscription_status?: string;
@@ -238,7 +236,6 @@ export type Database = {
           email?: string;
           full_name?: string | null;
           id?: string;
-          onboarding_completed_at?: string | null;
           stripe_customer_id?: string | null;
           subscription_id?: string | null;
           subscription_status?: string;

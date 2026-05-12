@@ -1,16 +1,13 @@
 'use client';
 
-import { toast } from '@/lib/toast';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { useEntryInspectorStore } from '@/features/entry';
 import { Toaster } from '@/lib/components/ui/toast';
 import { useShellStore } from '@/lib/stores/useShellStore';
-
-import type { StepValidationResult, StepValidators } from '@/features/tour';
 
 const ContactDialog = dynamic(
   () =>
@@ -36,14 +33,6 @@ const EntryInspector = dynamic(
   { ssr: false },
 );
 
-const TourOrchestrator = dynamic(
-  () =>
-    import('@/features/tour/components/TourOrchestrator').then((m) => ({
-      default: m.TourOrchestrator,
-    })),
-  { ssr: false },
-);
-
 /**
  * グローバルオーバーレイ群
  *
@@ -51,22 +40,9 @@ const TourOrchestrator = dynamic(
  * layout.tsx から分離し、追加/削除を一箇所で管理する。
  */
 export function GlobalOverlays() {
-  const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
-
-  // ツアー: ステップバリデーション（現在は空）
-  const stepValidators: StepValidators = useMemo(() => ({}), []);
-
-  const handleValidationFail = useCallback(
-    (result: StepValidationResult) => {
-      if (!result.valid && result.messageKey) {
-        toast.error(t(result.messageKey));
-      }
-    },
-    [t],
-  );
 
   const activeSheet = useShellStore.use.activeSheet();
   const closeSheet = useShellStore.use.closeSheet();
@@ -111,7 +87,6 @@ export function GlobalOverlays() {
       />
       <SettingsDialog />
       <EntryInspector onViewStats={handleViewStats} />
-      <TourOrchestrator stepValidators={stepValidators} onValidationFail={handleValidationFail} />
       <Toaster />
     </>
   );

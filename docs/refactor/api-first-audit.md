@@ -12,26 +12,25 @@ CLAUDE.md / `.claude/rules/architecture.md` は「Router → Service → Supabas
 規定するが、現状の `src/features/*/server/` には **service.ts と router.ts が分離していない
 file もある**。本 audit ではこれを混同しないため file ごとに layer を明記する:
 
-| File                                       | Layer                                              |
-| ------------------------------------------ | -------------------------------------------------- |
-| `entry/server/entry-service.ts`            | service                                            |
-| `entry/server/router.ts`                   | router                                             |
-| `entry/server/router-index.ts`             | barrel                                             |
-| `entry/server/service-index.ts`            | barrel（factory のみ export）                      |
-| `entry/server/types.ts`                    | 型                                                 |
-| `entry/server/statistics.ts`               | **router**（tRPC procedure を直接 export）         |
-| `entry/server/tag-statistics.ts`           | **router**（tRPC procedure を直接 export）         |
-| `tags/server/tag-service.ts`               | service                                            |
-| `tags/server/router.ts`                    | router                                             |
-| `settings/server/billing-service.ts`       | service                                            |
-| `settings/server/billing-router.ts`        | router                                             |
-| `settings/server/router.ts`                | router                                             |
-| `settings/server/recovery-code-actions.ts` | **Server Action**（tRPC ではない）                 |
-| `auth/server/user-service.ts`              | service                                            |
-| `auth/server/router.ts`                    | router                                             |
-| `contact/server/contact-service.ts`        | service                                            |
-| `contact/server/router.ts`                 | router                                             |
-| `onboarding/server/router.ts`              | router（service なし、procedure 内に直接ロジック） |
+| File                                       | Layer                                      |
+| ------------------------------------------ | ------------------------------------------ |
+| `entry/server/entry-service.ts`            | service                                    |
+| `entry/server/router.ts`                   | router                                     |
+| `entry/server/router-index.ts`             | barrel                                     |
+| `entry/server/service-index.ts`            | barrel（factory のみ export）              |
+| `entry/server/types.ts`                    | 型                                         |
+| `entry/server/statistics.ts`               | **router**（tRPC procedure を直接 export） |
+| `entry/server/tag-statistics.ts`           | **router**（tRPC procedure を直接 export） |
+| `tags/server/tag-service.ts`               | service                                    |
+| `tags/server/router.ts`                    | router                                     |
+| `settings/server/billing-service.ts`       | service                                    |
+| `settings/server/billing-router.ts`        | router                                     |
+| `settings/server/router.ts`                | router                                     |
+| `settings/server/recovery-code-actions.ts` | **Server Action**（tRPC ではない）         |
+| `auth/server/user-service.ts`              | service                                    |
+| `auth/server/router.ts`                    | router                                     |
+| `contact/server/contact-service.ts`        | service                                    |
+| `contact/server/router.ts`                 | router                                     |
 
 `statistics.ts` / `tag-statistics.ts` を「service の歪み」として扱うのは不正確。
 これらは **router file 内のロジック直書き** であり、軸 1 / 軸 2 の文脈が異なる。
@@ -103,7 +102,6 @@ commit `52ef53d77 refactor(review): /stats 廃止 → /review 単一ページ化
 - `entry/server/statistics.ts:56` — `handleStatsError` 内（**router**）
 - `entry/server/tag-statistics.ts:20` — `handleTagStatsError` 内（**router**）
 - `entry/server/tag-statistics.ts:26` — `handleTagStatsError` 内（**router**）
-- `onboarding/server/router.ts:119` — onboarding router 内（**router**）
 - `settings/server/billing-router.ts:76` — billing router 内（**router**）
 
 **観察**: Sentry capture は **すべて router 層の catch ハンドラ**。service 層内に Sentry capture は **検出ゼロ**。アーキテクチャ規約と整合しており、剥がす対象ではない。

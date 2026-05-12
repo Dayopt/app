@@ -2,7 +2,7 @@
 
 `src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview.md](./api-overview.md) を参照。
 
-策定日: 2026-04-26（最終更新: 2026-04-26 セッション C で `(auth)` / `(onboarding)` / ルート直下を追記）
+策定日: 2026-04-26（最終更新: 2026-05-12 に onboarding route group 削除を反映）
 スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview.md](./api-overview.md) 参照）。`(public)` Route Group は現時点で存在しない。
 
 ## Route Group 構造
@@ -34,9 +34,6 @@ src/app/
     │   ├── layout.tsx          ← IntlProvider (auth namespace) + AuthClientLayout
     │   ├── loading.tsx
     │   └── auth/{login,signup,password,reset-password,mfa-verify}/page.tsx
-    ├── (onboarding)/           ← 認証済み + onboarding 未完了ユーザー向け
-    │   ├── layout.tsx          ← IntlProvider (onboarding namespace) + OnboardingProviders
-    │   └── onboarding/page.tsx ← OnboardingWizard 合成
     ├── playground/             ← dev playground（locale 直下）
     └── test-email/             ← email template preview
 ```
@@ -132,16 +129,6 @@ src/app/
 | [`(auth)/auth/mfa-verify/page.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/page.tsx>)         | page (server) | MFA TOTP コード検証                                            |
 | [`(auth)/auth/mfa-verify/layout.tsx`](<../src/app/[locale]/(auth)/auth/mfa-verify/layout.tsx>)     | layout        | MFA 専用 wrapper                                               |
 
-## (onboarding) Group: 認証済み + 未完了ユーザー
-
-ログイン済みだがプロフィール / chronotype 未設定のユーザー向け。`/calendar` 等のメイン UI を出す前に通る。`OnboardingProviders` は `(app)` 用 Providers より軽量（tRPC + Auth Store + Theme のみ）。
-
-| Path                                                                                               | Type            | 責務                                                                                                          |
-| -------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| [`(onboarding)/layout.tsx`](<../src/app/[locale]/(onboarding)/layout.tsx>)                         | layout (server) | IntlProvider（`common` / `onboarding` / `tour` / `error`）+ `OnboardingProviders`。`metadata.robots: noindex` |
-| [`(onboarding)/onboarding/page.tsx`](<../src/app/[locale]/(onboarding)/onboarding/page.tsx>)       | page (client)   | `OnboardingWizard` に `ChronotypeQuiz` / 完了時 mutation を接続する composition layer                         |
-| [`(onboarding)/onboarding/loading.tsx`](<../src/app/[locale]/(onboarding)/onboarding/loading.tsx>) | loading         | onboarding 共通ローディング                                                                                   |
-
 ## [locale] 直下
 
 locale ルーティングの境界。HTML lang / dir、metadata、redirect を担う。
@@ -173,8 +160,7 @@ locale プレフィックスを持たない routing と Next.js metadata route �
 
 ```
 未認証 → (auth)            : login / signup / reset / mfa
-認証済み + onboarding 未完 → (onboarding)
-認証済み + onboarding 完了 → (app)
+認証済み → (app)
 locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-found.tsx
 致命エラー                 → global-error.tsx
 オフライン (PWA)           → /offline

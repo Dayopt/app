@@ -2,7 +2,7 @@
 -- 重複ペアのうち古い方(created_at)を残し、新しい方をsoft deleteする
 
 -- 重複エントリのうち後から作られた方をsoft delete
-WITH overlaps AS (
+WITH overlap_pairs AS (
   SELECT
     e1.id AS keep_id,
     e2.id AS delete_id
@@ -18,7 +18,7 @@ WITH overlaps AS (
 )
 UPDATE public.entries
 SET deleted_at = NOW()
-WHERE id IN (SELECT delete_id FROM overlaps)
+WHERE id IN (SELECT delete_id FROM overlap_pairs)
   AND deleted_at IS NULL;
 
 -- 制約を追加
