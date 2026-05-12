@@ -84,17 +84,17 @@ export function ChronotypeQuiz({ onComplete, onCancel }: ChronotypeQuizProps) {
       <div className="flex flex-col items-center gap-4 py-4 text-center">
         <span className="text-5xl">{CHRONOTYPE_EMOJI[resultType]}</span>
         <h3 className="text-foreground text-xl font-medium">
-          {t('onboarding.chronotype.quizResult.title', {
-            type: t(`onboarding.chronotype.${resultType}.name`),
+          {t('settings.chronotype.quiz.resultTitle', {
+            type: t(`settings.chronotype.typeName.${resultType}`),
           })}
         </h3>
         <p className="text-muted-foreground text-sm">
-          {t('onboarding.chronotype.quizResult.description', {
+          {t('settings.chronotype.quiz.resultDescription', {
             deepTime: deepTimeStr,
           })}
         </p>
         <Button variant="primary" onClick={handleConfirmResult} className="mt-2 w-full">
-          {t('onboarding.chronotype.quizResult.confirm')}
+          {t('settings.chronotype.quiz.confirm')}
         </Button>
       </div>
     );

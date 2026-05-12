@@ -162,6 +162,45 @@ export class TagService {
     return maxSortOrder + 1;
   }
 
+  private async makeRoomAtTop(userId: string, parentId: string | null): Promise<void> {
+    const query = this.supabase
+      .from('tags')
+      .select('id, sort_order')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (parentId) {
+      query.eq('parent_id', parentId);
+    } else {
+      query.is('parent_id', null);
+    }
+
+    const { data: siblings, error } = await query.order('sort_order', { ascending: true });
+
+    if (error) {
+      throw new TagServiceError(
+        'FETCH_FAILED',
+        `Failed to resolve sibling sort order: ${error.message}`,
+      );
+    }
+
+    if (!siblings || siblings.length === 0) return;
+
+    const { error: reorderError } = await this.supabase.rpc('batch_reorder_tags_hierarchy', {
+      p_user_id: userId,
+      p_tag_ids: siblings.map((tag) => tag.id),
+      p_parent_ids: siblings.map(() => parentId) as never,
+      p_sort_orders: siblings.map((tag) => tag.sort_order + 1),
+    });
+
+    if (reorderError) {
+      throw new TagServiceError(
+        'UPDATE_FAILED',
+        `Failed to shift tag sort orders: ${reorderError.message}`,
+      );
+    }
+  }
+
   async listHierarchy(options: { userId: string }): Promise<TagTreeNode[]> {
     const rows = await this.listRows(options.userId);
     return buildTagTree(rows.map(transformDbTag));
@@ -210,15 +249,20 @@ export class TagService {
    * @param options - userId と tagId
    * @returns タグ
    */
-  async getById(options: { userId: string; tagId: string }): Promise<Tag> {
-    const { userId, tagId } = options;
+  async getById(options: {
+    userId: string;
+    tagId: string;
+    includeInactive?: boolean;
+  }): Promise<Tag> {
+    const { userId, tagId, includeInactive = false } = options;
 
-    const { data, error } = await this.supabase
-      .from('tags')
-      .select('*')
-      .eq('id', tagId)
-      .eq('user_id', userId)
-      .single();
+    const query = this.supabase.from('tags').select('*').eq('id', tagId).eq('user_id', userId);
+
+    if (!includeInactive) {
+      query.eq('is_active', true);
+    }
+
+    const { data, error } = await query.single();
 
     if (error || !data) {
       throw new TagServiceError('NOT_FOUND', `Tag not found: ${tagId}`);
@@ -260,7 +304,7 @@ export class TagService {
       }
     }
 
-    const nextSortOrder = await this.getNextSortOrder(userId, parentId);
+    await this.makeRoomAtTop(userId, parentId);
 
     // タグデータ作成（sort_order = 0で先頭に追加）
     const tagData: Database['public']['Tables']['tags']['Insert'] = {
@@ -270,7 +314,7 @@ export class TagService {
       icon: input.icon ?? null,
       is_active: true,
       parent_id: parentId,
-      sort_order: nextSortOrder,
+      sort_order: 0,
     };
 
     const { data, error } = await this.supabase.from('tags').insert(tagData).select().single();

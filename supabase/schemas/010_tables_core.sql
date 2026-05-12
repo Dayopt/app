@@ -24,7 +24,6 @@ CREATE TABLE public.profiles (
   stripe_customer_id TEXT,       -- Stripe顧客ID
   subscription_id TEXT,          -- Stripeサブスクリプション ID
   subscription_status TEXT NOT NULL DEFAULT 'free', -- free / trialing / active / canceled / past_due
-  onboarding_completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

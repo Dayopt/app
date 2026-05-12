@@ -2710,100 +2710,6 @@
         "x-auth-level": "protected"
       }
     },
-    "/onboarding.getProfile": {
-      "get": {
-        "operationId": "onboarding.getProfile",
-        "tags": ["onboarding"],
-        "summary": "オンボーディング用プロフィール取得",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/onboarding.complete": {
-      "post": {
-        "operationId": "onboarding.complete",
-        "tags": ["onboarding"],
-        "summary": "オンボーディング完了（名前・クロノタイプ保存+サンプルプラン生成）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/onboarding_complete_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/onboarding.reset": {
-      "post": {
-        "operationId": "onboarding.reset",
-        "tags": ["onboarding"],
-        "summary": "オンボーディングリセット（再実行可能にする）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
     "/userSettings.get": {
       "get": {
         "operationId": "userSettings.get",
@@ -4212,22 +4118,6 @@
           }
         },
         "required": ["minutes"],
-        "additionalProperties": false
-      },
-      "onboarding_complete_input": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "chronotypeType": {
-            "type": "string",
-            "enum": ["lion", "bear", "wolf", "dolphin", "custom"]
-          }
-        },
-        "required": ["fullName"],
         "additionalProperties": false
       },
       "userSettings_update_input": {

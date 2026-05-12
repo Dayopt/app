@@ -277,6 +277,12 @@
         "wolf": "午後から夜に集中力が上がる",
         "dolphin": "午前過ぎに安定しやすい"
       },
+      "typeName": {
+        "lion": "ライオン",
+        "bear": "ベア",
+        "wolf": "ウルフ",
+        "dolphin": "ドルフィン"
+      },
       "learnMore": "クロノタイプについて詳しく知る",
       "levels": {
         "warmup": "ウォームアップ",
@@ -292,6 +298,9 @@
         "next": "次へ",
         "cancel": "キャンセル",
         "showResult": "結果を見る",
+        "resultTitle": "あなたは{type}タイプ",
+        "resultDescription": "集中しやすいピーク時間は{deepTime}です。カレンダーに表示します",
+        "confirm": "保存する",
         "questions": {
           "wakeTime": {
             "title": "目覚ましなしで自然に起きると、何時頃に目が覚めますか？",
@@ -495,16 +504,6 @@
         "confirmKeyword": "削除",
         "deleting": "削除中..."
       }
-    },
-    "tour": {
-      "title": "プロダクトツアー",
-      "replayDescription": "カレンダーの使い方を紹介するツアーをもう一度見る",
-      "replayButton": "ツアーをもう一度見る"
-    },
-    "gettingStarted": {
-      "title": "はじめに",
-      "replayOnboardingDescription": "名前やクロノタイプを変更するために初期設定をやり直す",
-      "replayOnboardingButton": "初期設定をやり直す"
     },
     "integrations": {
       "ai": {

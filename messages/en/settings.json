@@ -277,6 +277,12 @@
         "wolf": "Evening energy",
         "dolphin": "Late-morning stability"
       },
+      "typeName": {
+        "lion": "Lion",
+        "bear": "Bear",
+        "wolf": "Wolf",
+        "dolphin": "Dolphin"
+      },
       "learnMore": "Learn more about chronotypes",
       "levels": {
         "warmup": "Warm-up",
@@ -292,6 +298,9 @@
         "next": "Next",
         "cancel": "Cancel",
         "showResult": "See result",
+        "resultTitle": "You are a {type}",
+        "resultDescription": "Your strongest focus window is {deepTime}. We'll show it on your calendar.",
+        "confirm": "Save",
         "questions": {
           "wakeTime": {
             "title": "Without an alarm, what time do you naturally wake up?",
@@ -495,16 +504,6 @@
         "confirmKeyword": "DELETE",
         "deleting": "Deleting..."
       }
-    },
-    "tour": {
-      "title": "Product Tour",
-      "replayDescription": "Replay the introductory tour to learn how the calendar works",
-      "replayButton": "Replay tour"
-    },
-    "gettingStarted": {
-      "title": "Getting Started",
-      "replayOnboardingDescription": "Redo the initial setup to change your name or chronotype",
-      "replayOnboardingButton": "Redo setup"
     },
     "integrations": {
       "ai": {

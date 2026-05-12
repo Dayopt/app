@@ -2,13 +2,12 @@
  * DisplaySettings Stories
  *
  * tRPC の userSettings.get をモックして表示設定パネルを再現する。
- * useTourStore / useSettingsStore も decorator でセットアップする。
+ * useSettingsStore も decorator でセットアップする。
  */
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { ThemeProvider } from '@/app/[locale]/(app)/_providers/theme-provider';
-import { useTourStore } from '@/features/tour';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { PRESET_USER_SETTINGS } from '../../../../.storybook/mocks/presets';
 import { StoryTRPCProvider } from '../../../../.storybook/mocks/trpc';
@@ -29,10 +28,6 @@ const meta = {
   tags: ['autodocs'],
   decorators: [
     (Story) => {
-      useTourStore.setState({
-        machine: { completed: true },
-        send: () => {},
-      } as never);
       useShellStore.setState({ activeSheet: { type: 'settings', category: 'profile' } });
       return (
         <ThemeProvider>
@@ -62,22 +57,6 @@ export const Default: Story = {
 /** データ取得中（ローディング状態） */
 export const Loading: Story = {
   parameters: { trpcPending: true },
-};
-
-/** ツアーが未完了の状態（リプレイボタン非表示） */
-export const TourNotCompleted: Story = {
-  parameters: {
-    a11y: { test: 'todo' },
-  },
-  decorators: [
-    (Story) => {
-      useTourStore.setState({
-        machine: { completed: false },
-        send: () => {},
-      } as never);
-      return <Story />;
-    },
-  ],
 };
 
 /** 全パターン一覧 */

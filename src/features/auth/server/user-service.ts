@@ -60,6 +60,7 @@ export interface DeleteAccountResult {
 
 /** テーブル行型のエイリアス */
 type Row<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+type LegacyEmptyRows = Array<Record<string, never>>;
 
 /**
  * データエクスポートレスポンス
@@ -70,7 +71,11 @@ export interface ExportDataResult {
   data: {
     profile: Row<'profiles'> | null;
     entries: Row<'entries'>[];
+    plans: Row<'entries'>[];
     tags: Row<'tags'>[];
+    records: LegacyEmptyRows;
+    planTags: LegacyEmptyRows;
+    recordTags: LegacyEmptyRows;
     userSettings: Row<'user_settings'> | null;
   };
 }
@@ -262,13 +267,19 @@ export function createUserService(supabase: SupabaseClient<Database>) {
           `Tags fetch error: ${tagsResult.error.message}`,
         );
       }
+      const entries = entriesResult.data || [];
+
       return {
         exportedAt: new Date().toISOString(),
         userId,
         data: {
           profile: profileResult.data || null,
-          entries: entriesResult.data || [],
+          entries,
+          plans: entries,
           tags: tagsResult.data || [],
+          records: [],
+          planTags: [],
+          recordTags: [],
           userSettings: userSettingsResult.data || null,
         },
       };
