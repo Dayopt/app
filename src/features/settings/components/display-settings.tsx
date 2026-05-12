@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 
 import { useLocale, useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -18,10 +17,7 @@ import { useTheme } from '@/lib/hooks/useTheme';
 import { usePathname, useRouter } from '@/lib/i18n/navigation';
 import { routing, type Locale } from '@/lib/i18n/routing';
 
-import { useTourStore } from '@/features/tour';
-import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTimeZones } from '@/lib/timezone-utils';
-import { api } from '@/lib/trpc';
 import { useUserSettings } from '../hooks/useUserSettings';
 
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
@@ -113,27 +109,6 @@ export function DisplaySettings() {
     },
     [saveSettings],
   );
-
-  const tourMachine = useTourStore.use.machine();
-  const tourSend = useTourStore.use.send();
-  const tourCompleted = tourMachine.completed;
-  const closeSettings = useShellStore((s) => s.closeSettings);
-  const resetOnboarding = api.onboarding.reset.useMutation();
-
-  const handleReplayTour = useCallback(() => {
-    tourSend({ type: 'RESET' });
-    closeSettings();
-    router.push('/calendar/day');
-  }, [tourSend, closeSettings, router]);
-
-  const handleReplayOnboarding = useCallback(() => {
-    resetOnboarding.mutate(undefined, {
-      onSuccess: () => {
-        closeSettings();
-        router.push('/onboarding');
-      },
-    });
-  }, [resetOnboarding, closeSettings, router]);
 
   if (isPending) {
     return (
@@ -275,27 +250,6 @@ export function DisplaySettings() {
               <SelectItem value="spacious">{t('settings.calendar.densitySpacious')}</SelectItem>
             </SelectContent>
           </Select>
-        </LabeledRow>
-      </SectionCard>
-
-      {/* Getting Started — Tour & Onboarding replay */}
-      <SectionCard title={t('settings.gettingStarted.title')}>
-        {tourCompleted && (
-          <LabeledRow label={t('settings.tour.replayDescription')}>
-            <Button variant="outline" size="sm" onClick={handleReplayTour}>
-              {t('settings.tour.replayButton')}
-            </Button>
-          </LabeledRow>
-        )}
-        <LabeledRow label={t('settings.gettingStarted.replayOnboardingDescription')}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReplayOnboarding}
-            disabled={resetOnboarding.isPending}
-          >
-            {t('settings.gettingStarted.replayOnboardingButton')}
-          </Button>
         </LabeledRow>
       </SectionCard>
     </div>

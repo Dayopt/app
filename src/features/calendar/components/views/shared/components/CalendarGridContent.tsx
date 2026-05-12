@@ -59,8 +59,6 @@ export interface CalendarGridContentProps {
   onTimeRangeSelect?: ((selection: DateTimeSelection) => void) | undefined;
   /** DnDを無効化するエントリID */
   disabledEntryId?: string | null | undefined;
-  /** data-tour-target 属性（DayViewのみ） */
-  dataTourTarget?: string | undefined;
   className?: string | undefined;
 }
 
@@ -82,7 +80,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   onEventUpdate,
   onTimeRangeSelect,
   disabledEntryId,
-  dataTourTarget,
   className,
 }: CalendarGridContentProps) {
   const t = useTranslations();
@@ -205,7 +202,6 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       )}
       data-calendar-grid
       data-calendar-day-index={dayIndex}
-      {...(dataTourTarget ? { 'data-tour-target': dataTourTarget } : {})}
     >
       {/* CalendarDragSelection: グリッド選択 + dnd-kit droppable */}
       <CalendarDragSelection
