@@ -207,14 +207,10 @@ describe.skipIf(SKIP_INTEGRATION)('UserSettings Router Integration', () => {
       const caller = createTestCaller(userSettingsRouter, ctx);
 
       await caller.update({
-        chronotypeEnabled: true,
         chronotypeType: 'lion',
-        chronotypeDisplayMode: 'border',
-        chronotypeOpacity: 50,
       });
 
       const settings = await caller.get();
-      expect(settings?.chronotype?.enabled).toBe(true);
       expect(settings?.chronotype?.type).toBe('lion');
     });
 

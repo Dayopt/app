@@ -157,6 +157,7 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
 
       // エクスポートデータの構造を確認
       expect(result.data).toHaveProperty('profile');
+      expect(result.data).toHaveProperty('entries');
       expect(result.data).toHaveProperty('plans');
       expect(result.data).toHaveProperty('tags');
       expect(result.data).toHaveProperty('records');
@@ -165,17 +166,22 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       expect(result.data).toHaveProperty('userSettings');
     });
 
-    it('should include user plans in export', async () => {
+    it('should include user entries and legacy plans alias in export', async () => {
       const caller = createTestCaller(userRouter, ctx);
 
       const result = await caller.exportData();
 
+      expect(Array.isArray(result.data.entries)).toBe(true);
       expect(Array.isArray(result.data.plans)).toBe(true);
-      // テストで作成したプランが含まれている
-      const testPlan = result.data.plans.find(
-        (p: { title?: string }) => p.title === 'GDPR Test Plan',
+      // テストで作成したエントリが含まれている
+      const testEntry = result.data.entries.find(
+        (e: { title?: string }) => e.title === 'GDPR Test Entry',
       );
-      expect(testPlan).toBeDefined();
+      expect(testEntry).toBeDefined();
+      const testPlanAlias = result.data.plans.find(
+        (e: { title?: string }) => e.title === 'GDPR Test Entry',
+      );
+      expect(testPlanAlias).toBeDefined();
     });
 
     it('should include user tags in export', async () => {
