@@ -245,8 +245,6 @@ async function setupTagGroups(): Promise<void> {
         'entry',
         'auth',
         'tags',
-        'tour',
-        'onboarding',
         'chronotype',
         'notifications',
         'palette',

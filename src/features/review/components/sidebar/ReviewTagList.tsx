@@ -370,6 +370,9 @@ function TagGroup({
   const canDropChildHere =
     !!activeTreeTag && activeTreeTag.tag.id !== node.tag.id && canBecomeChild(activeTreeTag);
   const shouldShowChildContainer = !collapsed || (!!activeDragId && canDropChildHere);
+  const shouldRenderChildContainer = hasChildren
+    ? shouldShowChildContainer
+    : !!activeDragId && canDropChildHere;
   const showDropLine = overIndex === index && activeIndex !== overIndex;
   const style = {
     transform: isDragging ? undefined : CSS.Translate.toString(transform),
@@ -398,7 +401,7 @@ function TagGroup({
           onToggleCollapse={onToggleCollapse}
         />
       </div>
-      {hasChildren && shouldShowChildContainer ? (
+      {shouldRenderChildContainer ? (
         <SortableContext
           items={node.children.map((child) => child.id)}
           strategy={noopSortingStrategy}
@@ -407,7 +410,8 @@ function TagGroup({
             id={childContainerId(node.tag.id)}
             role="list"
             className={cn(
-              'mt-1 ml-4 space-y-1 rounded-xl border border-dashed border-transparent px-1 py-1',
+              'mt-1 ml-4 rounded-xl border border-dashed border-transparent',
+              hasChildren ? 'space-y-1 px-1 py-1' : 'h-4',
               activeDragId && canDropChildHere && 'bg-muted/30',
             )}
           >

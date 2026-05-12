@@ -101,11 +101,27 @@ describe('TagService', () => {
     it('should return tag by id', async () => {
       const mockTag = { id: 'tag-1', name: 'Tag 1', user_id: userId };
 
-      setupMockSingleQuery(mockSupabase.from, mockTag);
+      const mockQuery = setupMockSingleQuery(mockSupabase.from, mockTag);
 
       const result = await service.getById({ userId, tagId: 'tag-1' });
 
       expect(result).toMatchObject(mockTag);
+      expect(mockQuery.eq).toHaveBeenCalledWith('is_active', true);
+    });
+
+    it('should allow inactive tag lookup only when explicitly requested', async () => {
+      const mockTag = { id: 'tag-1', name: 'Tag 1', user_id: userId, is_active: false };
+
+      const mockQuery = setupMockSingleQuery(mockSupabase.from, mockTag);
+
+      const result = await service.getById({
+        userId,
+        tagId: 'tag-1',
+        includeInactive: true,
+      });
+
+      expect(result).toMatchObject(mockTag);
+      expect(mockQuery.eq).not.toHaveBeenCalledWith('is_active', true);
     });
 
     it('should throw NOT_FOUND when tag does not exist', async () => {
@@ -175,8 +191,34 @@ describe('TagService', () => {
       });
 
       expect(mockQuery.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Trimmed Name' }),
+        expect.objectContaining({ name: 'Trimmed Name', sort_order: 0 }),
       );
+    });
+
+    it('should shift existing siblings and create the new tag at sort_order 0', async () => {
+      const mockTag = {
+        id: 'new-tag-id',
+        name: 'New Tag',
+        user_id: userId,
+        sort_order: 0,
+      };
+      const mockQuery = setupMockInsertQuery(mockSupabase.from, mockTag, [
+        { id: 'tag-1', sort_order: 0 },
+        { id: 'tag-2', sort_order: 1 },
+      ]);
+
+      await service.create({
+        userId,
+        input: { name: 'New Tag' },
+      });
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('batch_reorder_tags_hierarchy', {
+        p_user_id: userId,
+        p_tag_ids: ['tag-1', 'tag-2'],
+        p_parent_ids: [null, null],
+        p_sort_orders: [1, 2],
+      });
+      expect(mockQuery.insert).toHaveBeenCalledWith(expect.objectContaining({ sort_order: 0 }));
     });
 
     it('should throw INVALID_INPUT for empty name', async () => {
@@ -614,10 +656,15 @@ function setupMockSingleQuery(mockFrom: ReturnType<typeof vi.fn>, data: unknown)
   return mock;
 }
 
-function setupMockInsertQuery(mockFrom: ReturnType<typeof vi.fn>, data: unknown) {
-  const mock = createChainableMock(data);
-  mockFrom.mockReturnValue(mock);
-  return mock;
+function setupMockInsertQuery(
+  mockFrom: ReturnType<typeof vi.fn>,
+  data: unknown,
+  siblings: unknown[] = [],
+) {
+  const siblingQuery = mockArrayResponse(siblings);
+  const insertQuery = createChainableMock(data);
+  mockFrom.mockReturnValueOnce(siblingQuery).mockReturnValueOnce(insertQuery);
+  return insertQuery;
 }
 
 function setupMockUpdateQuery(

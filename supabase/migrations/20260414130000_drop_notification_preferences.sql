@@ -6,7 +6,7 @@
 DROP TRIGGER IF EXISTS create_default_notification_preferences_trigger ON auth.users;
 
 -- 2. トリガー関数を削除
-DROP FUNCTION IF EXISTS public.create_default_notification_preferences();
+DROP FUNCTION IF EXISTS public.create_default_notification_preferences() CASCADE;
 
 -- 3. RLS ポリシーを削除
 DROP POLICY IF EXISTS "Users can view own notification preferences" ON public.notification_preferences;
