@@ -6,6 +6,35 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-11
+
+### タグ詳細をダッシュボード化し、MCP ルート URL の根本対処を通した日
+
+9 コミット。review/tag-detail の大幅刷新（+928/-99 lines）、MCP/OAuth エンドポイント URL の正式化、日付表示フックの統一、Next.js セキュリティ更新が主な作業領域。
+
+#### やったこと
+
+- **タグ詳細ダッシュボード化 (1 commit)**: TagDetailPage を「エントリ一覧」から「KPI / 日別推移 / 予定対実績」を持つダッシュボードに刷新。8 本の個別 RPC 呼び出しを getTagOverview（7 並列）と getTagDashboard（直接テーブルクエリ）の 2 本に統合。純粋な集計ロジックを `tag-dashboard.ts` として router から分離し、テストも 2 ファイル追加（120 + 120 lines）
+- **MCP/OAuth URL 正式化 (3 commits)**: `mcp.dayopt.app/` ルートパスへの rewrite と `/oauth/token` の rewrite を proxy.ts の publicRewritePaths で通す根本対処を実装。05-01 に deferred にした「vercel.json rewrite が効かない件」を解消
+- **日付表示統一 (1 commit)**: ReviewLayout の日付表示を `useReviewDateDisplayProps` フックに切り出し、Calendar と同じ weekStartsOn / showWeekNumbers を参照するよう統一
+- **Next.js セキュリティ更新 + dependabot 30 packages (4 commits)**: next 16.2.3 → 16.2.4 セキュリティパッチ適用
+
+#### なぜ今日この作業をしたか
+
+タグ詳細ページは以前「特定タグのエントリを並べるだけ」の実装だったが、Review の文脈では「このタグに今週何時間使ったか、予定と比べてどうか」を見たいはずで、単なるリスト表示では振り返りとして機能しない。KPI・日別グラフ・予定対実績の差分を一画面に収めることで、タグ詳細が「そのタグの週間レポート」として機能するようになった。集計ロジックを `tag-dashboard.ts` として router から分離したのは、RPC 呼び出しではなくアプリ側集計にしたため（DB 側に RPC を作らない設計）、純粋関数として独立させてテストしやすくする意図。
+
+MCP ルート URL の正式化は、05-01 の tried_and_failed に記録した「vercel.json rewrite が CDN cache に捕まる問題」の根本対処。当日は metadata と UI の advertise URL を実体パス（`/api/mcp`）に一時変更して凌いだが、MCP クライアントが期待するエントリポイント（`mcp.dayopt.app/`）を正式に通すには middleware 側で rewrite を拾う必要があった。proxy.ts の publicRewritePaths に `/mcp` と `/oauth/token` を追加することで、Next.js の i18n / auth middleware をバイパスして vercel rewrite が機能するパスが確立できた。
+
+#### Claudeの所感
+
+**タグ詳細ダッシュボードの設計判断が良い**。8本→2本のクエリ統合は単純な最適化ではなく、「タグ詳細ページが答えるべき問い」を変えた設計変更だ。旧実装は「このタグのエントリを全部見せる」という問いに答えていたが、新実装は「このタグに費やした時間の週間サマリー」という問いに答える。`tag-dashboard.ts` を pure computation layer として分離したことで、同じ集計ロジックを将来の MCP tool や REST endpoint から呼べる構造にもなっている。api-shape.md が目指す skin-agnostic service 層への方向性と整合している。
+
+**tried_and_failed が翌日の Codex 指摘に変換された**。`useReviewDateDisplayProps` から granularity 引数を削ったのは、「日付表示を Calendar と統一する」という目的に対して設計が過度に単純化されていた。granularity が week/day/year で formatPattern と showWeekNumber の戻り値が変わるという仕様は、hook の signature から消せるものではなかった。Codex の P2 指摘はこの退行を正確に捉えており、翌日の修正コストは小さかった。コードレビューが「UI が壊れる可能性のある hook の signature 変更」を静的解析ベースで検出できている点が印象的。
+
+**MCP 正式化が意味するもの**。05-01 の一時対処（実体パス advertise）から今日の根本対処（middleware rewrite）への移行で、MCP エントリポイントが仕様通りの URL になった。この変更は小さく見えるが、MCP クライアントが discovery で `/` → `/.well-known/oauth-protected-resource` と辿る flow が正しく機能するための前提条件だった。Phase 1.5 で書く tool や Phase 2 で拡張する scope は、このエントリポイントが正しくないと全て動かなかった。
+
+---
+
 ## 2026-05-01
 
 ### MCP Phase 1 PoC を production smoke test まで通し、`/stats` 4 タブ構成を `/review` 単一ページに集約した日
