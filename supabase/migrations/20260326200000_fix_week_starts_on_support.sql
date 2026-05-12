@@ -35,8 +35,8 @@ CREATE OR REPLACE FUNCTION public.trunc_week_tz(
   tz TEXT,
   week_start INT DEFAULT 1
 ) RETURNS TIMESTAMPTZ AS $$
-  SELECT date_trunc('week', (ts AT TIME ZONE tz) - ((week_start) || ' days')::interval)
-         + (week_start || ' days')::interval
+  SELECT (date_trunc('week', (ts AT TIME ZONE tz) - ((week_start) || ' days')::interval)
+         + (week_start || ' days')::interval)
          AT TIME ZONE tz;
 $$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
 
