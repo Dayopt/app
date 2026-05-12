@@ -316,6 +316,12 @@ function TagTreeItem({
         isMobile={isMobile}
         dragKind="root"
         activeDragId={activeDragId}
+        canAcceptChildren={
+          !isMobile &&
+          !!activeTreeTag &&
+          activeTreeTag.tag.id !== node.tag.id &&
+          canBecomeChild(activeTreeTag)
+        }
         onToggle={() => onToggleTag(node.tag.id)}
         onDeleteTag={() => onDeleteTag(node.tag.id, node.tag.name)}
         onShowOnlyTag={() => onShowOnlyTag(node.tag.id)}
@@ -517,6 +523,7 @@ function SortableParentBlock({
                     isMobile={isMobile}
                     dragKind="child"
                     activeDragId={activeDragId}
+                    canAcceptChildren={false}
                     onToggle={() => onToggleTag(child.id)}
                     onDeleteTag={() => onDeleteTag(child.id, child.name)}
                     onShowOnlyTag={() => onShowOnlyGroupTags([child.id])}
@@ -541,6 +548,7 @@ interface SortableTagItemProps {
   isMobile: boolean;
   dragKind: 'root' | 'child';
   activeDragId: string | null;
+  canAcceptChildren: boolean;
   onToggle: () => void;
   onDeleteTag: () => void;
   onShowOnlyTag: () => void;
@@ -555,6 +563,9 @@ function SortableTagItem({
   groupOptions,
   currentParentId,
   isMobile,
+  dragKind,
+  activeDragId,
+  canAcceptChildren,
   onToggle,
   onDeleteTag,
   onShowOnlyTag,
@@ -748,6 +759,16 @@ function SortableTagItem({
             ) : null}
           </div>
         </div>
+
+        {!isMobile && dragKind === 'root' && activeDragId !== null ? (
+          <DroppableArea
+            id={childContainerId(tag.id)}
+            className={cn(
+              'ml-4 h-4 rounded-xl border border-dashed border-transparent',
+              canAcceptChildren ? 'bg-muted/30' : 'hidden',
+            )}
+          />
+        ) : null}
       </div>
 
       <ConfirmDialog
