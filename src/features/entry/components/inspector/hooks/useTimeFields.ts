@@ -234,6 +234,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   // 記録時間: 即時保存（サーバー側で隣接auto-shrink）
   const handleActualStartChange = useCallback(
     (time: string | null) => {
+      localDirtyRef.current = true;
       setActualStartTime(time);
       if (!scheduleDate) return;
 
@@ -252,6 +253,7 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
 
   const handleActualEndChange = useCallback(
     (time: string | null) => {
+      localDirtyRef.current = true;
       setActualEndTime(time);
       if (!scheduleDate) return;
 
