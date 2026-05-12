@@ -20,7 +20,8 @@ export async function prefetchTagDetailData(
 ) {
   const helpers = await createServerHelpers();
 
-  const currentDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  const parsed = dateStr ? new Date(dateStr + 'T00:00:00') : null;
+  const currentDate = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
   const headersList = await headers();
   const serverTimezone = headersList.get('x-user-timezone') ?? 'UTC';
   const dateRange = computeStatsDateRange(currentDate, granularity, serverTimezone);
