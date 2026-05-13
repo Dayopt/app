@@ -27,7 +27,6 @@ import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import { snapDeltaToGrid } from '../../../../../interaction/time-math';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';
@@ -231,8 +230,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     let lastEndMin = baseEndMin;
 
     const onMove = (event: PointerEvent) => {
-      const snappedDelta = snapDeltaToGrid(event.clientY - clientY, hourHeight, 15);
-      const next = Math.max(minEndMin, Math.min(24 * 60, baseEndMin + snappedDelta));
+      const deltaMin = Math.round(((event.clientY - clientY) * 60) / hourHeight / 15) * 15;
+      const next = Math.max(minEndMin, Math.min(24 * 60, baseEndMin + deltaMin));
       if (next === lastEndMin) return;
       lastEndMin = next;
       updateSelectionTimes({ endHour: Math.floor(next / 60), endMinute: next % 60 });
@@ -285,8 +284,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         return;
       }
       // moving
-      const snappedDelta = snapDeltaToGrid(event.clientY - startClientY, hourHeight, 15);
-      const next = Math.max(0, Math.min(24 * 60 - duration, baseStartMin + snappedDelta));
+      const deltaMin = Math.round(((event.clientY - startClientY) * 60) / hourHeight / 15) * 15;
+      const next = Math.max(0, Math.min(24 * 60 - duration, baseStartMin + deltaMin));
       if (next === lastStartMin) return;
       lastStartMin = next;
       const nextEnd = next + duration;
