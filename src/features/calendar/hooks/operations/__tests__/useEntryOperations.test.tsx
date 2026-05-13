@@ -123,21 +123,51 @@ describe('useEntryOperations', () => {
     });
 
     it('resetActualTime=true でも actual_start_time / actual_end_time は新範囲で送る', async () => {
-      getByIdGetData.mockReturnValue(null);
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        origin: 'planned',
+        start_time: '2026-04-25T00:00:00.000Z',
+        end_time: '2026-04-25T01:00:00.000Z',
+        actual_start_time: '2026-04-25T00:15:00.000Z',
+        actual_end_time: '2026-04-25T00:45:00.000Z',
+      });
 
       const { result } = renderHook(() => useEntryOperations());
       await result.current.handleUpdateEntry('entry-1', {
-        startTime: new Date('2026-04-27T01:00:00.000Z'),
-        endTime: new Date('2026-04-27T02:00:00.000Z'),
+        startTime: new Date('2026-04-25T01:00:00.000Z'),
+        endTime: new Date('2026-04-25T02:00:00.000Z'),
         resetActualTime: true,
       });
 
       const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
       expect(callArgs.data).toMatchObject({
-        start_time: '2026-04-27T01:00:00.000Z',
-        end_time: '2026-04-27T02:00:00.000Z',
-        actual_start_time: '2026-04-27T01:00:00.000Z',
-        actual_end_time: '2026-04-27T02:00:00.000Z',
+        start_time: '2026-04-25T01:00:00.000Z',
+        end_time: '2026-04-25T02:00:00.000Z',
+        actual_start_time: '2026-04-25T01:00:00.000Z',
+        actual_end_time: '2026-04-25T02:00:00.000Z',
+      });
+    });
+
+    it('過去の planned は通常更新では actual range のみを送る', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        origin: 'planned',
+        start_time: '2026-04-25T00:00:00.000Z',
+        end_time: '2026-04-25T01:00:00.000Z',
+        actual_start_time: '2026-04-25T00:00:00.000Z',
+        actual_end_time: '2026-04-25T01:00:00.000Z',
+      });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-25T01:00:00.000Z'),
+        endTime: new Date('2026-04-25T02:00:00.000Z'),
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).toEqual({
+        actual_start_time: '2026-04-25T01:00:00.000Z',
+        actual_end_time: '2026-04-25T02:00:00.000Z',
       });
     });
 

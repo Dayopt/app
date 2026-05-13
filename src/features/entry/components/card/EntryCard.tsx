@@ -406,17 +406,38 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             previewTime={previewTime}
           />
 
-          {/* 予定 vs 記録: 上部 — 未実行はハッチング */}
+          {/* 予定 vs 記録: 上部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.topKind === 'unexecuted' && (
             <div
-              aria-hidden="true"
-              className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0 flex flex-col items-center justify-center"
+              aria-hidden={!onGapClick ? true : undefined}
+              className={cn(
+                'pattern-hatch absolute top-0 right-0 left-0 flex flex-col items-center justify-center',
+                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+              )}
               style={{ height: `${overlay.topHeight}px` }}
+              onMouseDown={onGapClick ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={onGapClick ? (e) => e.stopPropagation() : undefined}
+              onClick={
+                onGapClick && entry.startDate && entry.actualStartDate
+                  ? (e) => {
+                      e.stopPropagation();
+                      onGapClick(
+                        toMinutesOfDay(entry.startDate!),
+                        toMinutesOfDay(entry.actualStartDate!),
+                      );
+                    }
+                  : undefined
+              }
             >
-              {overlay.topHeight >= 16 && (
+              {overlay.topHeight >= 16 && !onGapClick && (
                 <span className="text-muted-foreground text-xs">
                   <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
                   <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
+                </span>
+              )}
+              {overlay.topHeight >= 32 && onGapClick && (
+                <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
+                  +
                 </span>
               )}
             </div>
@@ -431,6 +452,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
                 onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
               )}
               style={{ height: `${overlay.bottomHeight}px` }}
+              onMouseDown={onGapClick ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={onGapClick ? (e) => e.stopPropagation() : undefined}
               onClick={
                 onGapClick && entry.actualEndDate && entry.endDate
                   ? (e) => {

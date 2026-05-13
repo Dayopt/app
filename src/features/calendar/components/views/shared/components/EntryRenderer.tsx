@@ -55,6 +55,7 @@ interface EntryRendererProps {
     e: React.MouseEvent | React.TouchEvent,
     rect: { top: number; left: number; width: number; height: number },
   ) => void;
+  onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
   entries: CalendarEvent[];
 }
 
@@ -81,6 +82,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   onPointerDown,
   onTouchStart,
   onResizeStart,
+  onGapClick,
   entries,
 }: EntryRendererProps) {
   const t = useTranslations();
@@ -204,6 +206,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isActive={isInspectorOpen && inspectorEntryId === entry.id}
           previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
+          onGapClick={onGapClick}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',

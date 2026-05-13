@@ -20,6 +20,7 @@ function buildTimeUpdateData(
   entry: TimeUpdateEntry | null | undefined,
   startTime: Date,
   endTime: Date,
+  resetActualTime = false,
 ): {
   start_time?: string | null;
   end_time?: string | null;
@@ -28,6 +29,15 @@ function buildTimeUpdateData(
 } {
   const startISO = startTime.toISOString();
   const endISO = endTime.toISOString();
+
+  if (entry?.origin === 'planned' && resetActualTime) {
+    return {
+      start_time: startISO,
+      end_time: endISO,
+      actual_start_time: startISO,
+      actual_end_time: endISO,
+    };
+  }
 
   if (entry?.origin === 'unplanned') {
     return {
@@ -57,22 +67,58 @@ function buildTimeUpdateData(
   };
 }
 
-function getPreviousUpdateRange(
+function buildUndoTimeUpdateData(
   entry: TimeUpdateEntry | null | undefined,
-): { start: Date; end: Date } | null {
+  resetActualTime = false,
+): ReturnType<typeof buildTimeUpdateData> | null {
   if (!entry) return null;
+
+  if (entry.origin === 'unplanned') {
+    if (!entry.actual_start_time || !entry.actual_end_time) return null;
+    return {
+      actual_start_time: entry.actual_start_time,
+      actual_end_time: entry.actual_end_time,
+    };
+  }
 
   const isFuturePlanned =
     entry.origin === 'planned' &&
     entry.start_time !== null &&
     entry.start_time !== undefined &&
     new Date(entry.start_time).getTime() > Date.now();
-  const useActualRange = entry.origin === 'unplanned' || !isFuturePlanned;
-  const start = useActualRange ? entry.actual_start_time : entry.start_time;
-  const end = useActualRange ? entry.actual_end_time : entry.end_time;
 
-  if (!start || !end) return null;
-  return { start: new Date(start), end: new Date(end) };
+  if (resetActualTime) {
+    if (
+      !entry.start_time ||
+      !entry.end_time ||
+      !entry.actual_start_time ||
+      !entry.actual_end_time
+    ) {
+      return null;
+    }
+    return {
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      actual_start_time: entry.actual_start_time,
+      actual_end_time: entry.actual_end_time,
+    };
+  }
+
+  if (isFuturePlanned) {
+    if (!entry.start_time || !entry.end_time) return null;
+    return {
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      actual_start_time: entry.start_time,
+      actual_end_time: entry.end_time,
+    };
+  }
+
+  if (!entry.actual_start_time || !entry.actual_end_time) return null;
+  return {
+    actual_start_time: entry.actual_start_time,
+    actual_end_time: entry.actual_end_time,
+  };
 }
 
 function entryFromCalendarEvent(event: CalendarEvent): TimeUpdateEntry {
@@ -104,9 +150,13 @@ export const useEntryOperations = () => {
    * ドラッグ/リサイズで時間が変わった場合にのみ呼び出す
    */
   const showTimeChangeUndoToast = useCallback(
-    (entryId: string, previousEntry: TimeUpdateEntry | null | undefined) => {
-      const previousRange = getPreviousUpdateRange(previousEntry);
-      if (!previousRange) return;
+    (
+      entryId: string,
+      previousEntry: TimeUpdateEntry | null | undefined,
+      resetActualTime = false,
+    ) => {
+      const undoData = buildUndoTimeUpdateData(previousEntry, resetActualTime);
+      if (!undoData) return;
 
       toast.success(t('entry.toast.updated'), {
         duration: 6000,
@@ -115,7 +165,7 @@ export const useEntryOperations = () => {
           onClick: () => {
             updateEntry.mutate({
               id: entryId,
-              data: buildTimeUpdateData(previousEntry, previousRange.start, previousRange.end),
+              data: undoData,
             });
           },
         },
@@ -152,11 +202,16 @@ export const useEntryOperations = () => {
           updateEntry.mutate(
             {
               id: entryId,
-              data: buildTimeUpdateData(cachedEntry, updates.startTime, updates.endTime),
+              data: buildTimeUpdateData(
+                cachedEntry,
+                updates.startTime,
+                updates.endTime,
+                updates.resetActualTime,
+              ),
             },
             {
               onSuccess: () => {
-                showTimeChangeUndoToast(entryId, cachedEntry);
+                showTimeChangeUndoToast(entryId, cachedEntry, updates.resetActualTime);
               },
             },
           );
