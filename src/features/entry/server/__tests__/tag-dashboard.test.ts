@@ -17,15 +17,15 @@ function entry(overrides: Partial<TagDashboardEntryRow>): TagDashboardEntryRow {
     description: null,
     start_time: '2026-05-01T00:00:00.000Z',
     end_time: '2026-05-01T01:00:00.000Z',
-    actual_start_time: null,
-    actual_end_time: null,
+    actual_start_time: '2026-05-01T00:00:00.000Z',
+    actual_end_time: '2026-05-01T01:00:00.000Z',
     tag_id: TAG.id,
     ...overrides,
   };
 }
 
 describe('buildTagDashboard', () => {
-  it('実績未入力時は予定時間を実績として扱う', () => {
+  it('planned と actual を別々に集計する', () => {
     const result = buildTagDashboard({
       tag: TAG,
       rows: [entry({})],
@@ -63,7 +63,7 @@ describe('buildTagDashboard', () => {
     expect(result.summary.diffMinutes).toBe(30);
   });
 
-  it('実績の片側だけ未入力なら予定時刻へフォールバックする', () => {
+  it('実績の片側だけ未入力なら actual は 0 分として扱う', () => {
     const result = buildTagDashboard({
       tag: TAG,
       rows: [
@@ -77,8 +77,28 @@ describe('buildTagDashboard', () => {
     });
 
     expect(result.summary.plannedMinutes).toBe(60);
+    expect(result.summary.actualMinutes).toBe(0);
+    expect(result.summary.diffMinutes).toBe(-60);
+  });
+
+  it('unplanned は予定0分 / 実績ありとして扱う', () => {
+    const result = buildTagDashboard({
+      tag: TAG,
+      rows: [
+        entry({
+          start_time: null,
+          end_time: null,
+          actual_start_time: '2026-05-01T00:15:00.000Z',
+          actual_end_time: '2026-05-01T01:00:00.000Z',
+        }),
+      ],
+      limit: 50,
+      timezone: 'UTC',
+    });
+
+    expect(result.summary.plannedMinutes).toBe(0);
     expect(result.summary.actualMinutes).toBe(45);
-    expect(result.summary.diffMinutes).toBe(-15);
+    expect(result.summary.diffMinutes).toBe(45);
   });
 
   it('渡された期間内行だけを日別に集計する', () => {
@@ -92,6 +112,8 @@ describe('buildTagDashboard', () => {
         id: 'in-2',
         start_time: '2026-05-02T00:00:00.000Z',
         end_time: '2026-05-02T02:00:00.000Z',
+        actual_start_time: '2026-05-02T00:00:00.000Z',
+        actual_end_time: '2026-05-02T02:00:00.000Z',
       }),
     ];
 
@@ -108,8 +130,20 @@ describe('buildTagDashboard', () => {
       tag: TAG,
       rows: [
         entry({ id: 'old', start_time: '2026-05-01T00:00:00.000Z' }),
-        entry({ id: 'new', start_time: '2026-05-03T00:00:00.000Z' }),
-        entry({ id: 'mid', start_time: '2026-05-02T00:00:00.000Z' }),
+        entry({
+          id: 'new',
+          start_time: '2026-05-03T00:00:00.000Z',
+          end_time: '2026-05-03T01:00:00.000Z',
+          actual_start_time: '2026-05-03T00:00:00.000Z',
+          actual_end_time: '2026-05-03T01:00:00.000Z',
+        }),
+        entry({
+          id: 'mid',
+          start_time: '2026-05-02T00:00:00.000Z',
+          end_time: '2026-05-02T01:00:00.000Z',
+          actual_start_time: '2026-05-02T00:00:00.000Z',
+          actual_end_time: '2026-05-02T01:00:00.000Z',
+        }),
       ],
       limit: 2,
       timezone: 'UTC',

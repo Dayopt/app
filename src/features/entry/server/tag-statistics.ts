@@ -120,11 +120,11 @@ export const entriesTagStatisticsRouter = createTRPCRouter({
               .is('deleted_at', null)
               .or(
                 [
-                  `and(start_time.lte.${input.endDate},end_time.gte.${input.startDate})`,
-                  `and(actual_start_time.lte.${input.endDate},actual_end_time.gte.${input.startDate})`,
+                  `and(start_time.lt.${input.endDate},end_time.gt.${input.startDate})`,
+                  `and(actual_start_time.lt.${input.endDate},actual_end_time.gt.${input.startDate})`,
                 ].join(','),
               )
-              .order('start_time', { ascending: true }),
+              .order('actual_start_time', { ascending: true }),
           ]),
         );
 
