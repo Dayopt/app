@@ -6,6 +6,34 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-12
+
+### 前日の負債を全決済し、タグ操作 UI を専用コンポーネントとして確立した日
+
+1 コミット（PR merge）。37 files changed / +3,701 / -337。前日（05-11）の tried_and_failed と next に積み上げた 4 件の deferred item をすべて解消した。
+
+#### やったこと
+
+- **get_time_pl_data 修正 migration (1 migration)**: 20260415 で `entry_tags` を削除したにもかかわらず、20260416 の migration がその関数を古い `entry_tags` join で recreate していた。`/review` の Time P/L データが壊れていた根本原因。20260512 migration で `entries.tag_id` 参照に差し替えて解消
+- **タグ操作 UI の専用コンポーネント化 (3 components)**: `ReviewTagList`（サイドバー、765 lines）・`ReviewTagActionsMenu`（アクションメニュー、206 lines）・`ReviewTagChipRow`（モバイル行、218 lines）を新設。`ReviewView.tsx` の肥大化を解消し、タグ操作フローを独立させた
+- **アーキテクチャドキュメント追加**: `ServiceAudit.mdx`（Service 層の現状の歪みマップ）と `ServiceContracts.mdx`（target service 契約定義）を新規追加。`api-shape.md` も api-first 設計の指針文書として追加
+
+#### なぜ今日この作業をしたか
+
+05-11 の作業で TagDetailPage のダッシュボード化という大きな仕事が終わったが、同日に「翌日修正済み」と記録した 4 件が残っていた。`get_time_pl_data` のバグは `/review` の Time P/L 表示が完全に壊れる重大度で、放置できなかった。タグ操作 UI の DnD 復旧も同様で、Review の主要インタラクションが機能しない状態だった。
+
+ServiceAudit と ServiceContracts の追加は、api-shape.md（api-first refactor の設計文書）を書く過程で「現状の歪みを記録しておかないと目標との delta が見えない」と判断したため。実装 task ではなく観察の記録だが、今後の Service 層リファクタの起点として機能する。
+
+#### Claudeの所感
+
+**migration の再定義問題はプロジェクト固有の罠**。`entry_tags` を `entries.tag_id` にインライン化した 20260415 の migration は「削除」だった。しかし同日の別問題修正（available_minutes fix）が `get_time_pl_data` を全体ごと recreate し、その SQL がすでに存在しない `entry_tags` テーブルを JOIN していた。git 上は 2 つの migration が別日に分かれているため見つけにくく、症状は `/review` の Time P/L が空になるというサイレントな壊れ方だった。この種のバグは「削除 migration と recreate migration が別ファイルに分かれている」ことで発生する。今後 DB 関数を recreate する際は、関数内で参照しているテーブル・カラムがその時点のスキーマに存在するか確認するゲートが必要。
+
+**ReviewTagList の 765 lines は適切な分離**。ReviewView.tsx がタグ操作・エントリ表示・レイアウト制御を全部抱えていたのを、専用コンポーネントに切り出した。このサイズは「過剰な抽象化なしに機能をすべて内包した結果」であり、無理に分割する必要はない。タグリスト・アクションメニュー・モバイル行の 3 コンポーネントは UI の粒度として正しく、それぞれ独立してテスト・Story 化できる形になっている。
+
+**1 コミット / 37 files は「PR squash」の良い例**。前日の試行錯誤の途中経過ではなく、4 件の deferred item が全部揃った段階で 1 PR としてまとめた。この粒度のコミットは「何をしたか」が commit message 1 行で読めるため、git log での追跡コストが低い。
+
+---
+
 ## 2026-05-11
 
 ### タグ詳細をダッシュボード化し、MCP ルート URL の根本対処を通した日
