@@ -23,6 +23,10 @@ interface InlineCreateState {
   pendingSelection: PendingSelection | null;
   setPendingSelection: (selection: PendingSelection) => void;
   clearPendingSelection: () => void;
+  /** 既存 pendingSelection の時間フィールドを部分更新する（null 時 no-op） */
+  updateSelectionTimes: (
+    partial: Partial<Pick<PendingSelection, 'startHour' | 'startMinute' | 'endHour' | 'endMinute'>>,
+  ) => void;
 }
 
 const useInlineCreateStoreBase = create<InlineCreateState>()(
@@ -31,6 +35,12 @@ const useInlineCreateStoreBase = create<InlineCreateState>()(
       pendingSelection: null,
       setPendingSelection: (selection) => set({ pendingSelection: selection }),
       clearPendingSelection: () => set({ pendingSelection: null }),
+      updateSelectionTimes: (partial) =>
+        set((state) =>
+          state.pendingSelection
+            ? { pendingSelection: { ...state.pendingSelection, ...partial } }
+            : state,
+        ),
     }),
     { name: 'inline-create', enabled: process.env.NODE_ENV !== 'production' },
   ),
