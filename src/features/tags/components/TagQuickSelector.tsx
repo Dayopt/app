@@ -285,9 +285,12 @@ export function TagQuickSelector({
   if (!mounted) return null;
 
   // モバイル: Vaul Drawer（スワイプで閉じる）
+  // modal=false で背後の calendar grid（InlineTagPalette のハイライト block）を
+  // タッチ可能にし、resize / long-press 移動をサポートする。
+  // handleOnly でタグリスト内のスクロール・タップが drawer dismiss を誘発しない。
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={onOpenChange} modal={false} handleOnly>
         {/* eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit */}
         <DrawerContent className="max-h-[80vh]">
           <DrawerHeader>
