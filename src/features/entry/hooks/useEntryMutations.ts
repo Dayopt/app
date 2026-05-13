@@ -184,6 +184,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
       // 1. 進行中のクエリをキャンセル（競合回避）
       await utils.entries.list.cancel();
       await utils.entries.getById.cancel({ id });
+      await utils.entries.getById.cancel({ id, include: { tags: true } });
 
       // 2. 現在のデータをスナップショット（ロールバック用）
       type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
