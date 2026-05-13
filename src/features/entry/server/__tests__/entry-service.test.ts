@@ -274,6 +274,99 @@ describe('EntryService.update', () => {
 });
 
 // ============================================================================
+// convertPlannedToUnplanned
+// ============================================================================
+
+describe('EntryService.convertPlannedToUnplanned', () => {
+  it('past planned を unplanned に変換し planned range を null にする', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'planned',
+      start_time: '2026-03-17T09:00:00Z',
+      end_time: '2026-03-17T10:00:00Z',
+      actual_start_time: '2026-03-17T09:15:00Z',
+      actual_end_time: '2026-03-17T09:45:00Z',
+      duration_minutes: 60,
+    });
+    const updated = {
+      ...existing,
+      origin: 'unplanned' as const,
+      start_time: null,
+      end_time: null,
+      duration_minutes: null,
+    };
+
+    const { service, mockSupabase } = createService();
+    const updateMock = createChainableMock(updated);
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock(existing);
+      if (callCount === 2) return createChainableMock([]);
+      return updateMock;
+    });
+
+    const result = await service.convertPlannedToUnplanned({
+      userId: USER_ID,
+      entryId: 'entry-1',
+    });
+
+    expect(result.origin).toBe('unplanned');
+    expect(result.start_time).toBeNull();
+    expect(result.end_time).toBeNull();
+    expect(updateMock.update).toHaveBeenCalledWith({
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      duration_minutes: null,
+    });
+  });
+
+  it('future planned は UNPLANNED_IN_FUTURE で拒否する', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'planned',
+      start_time: '2030-03-17T09:00:00Z',
+      end_time: '2030-03-17T10:00:00Z',
+      actual_start_time: '2030-03-17T09:00:00Z',
+      actual_end_time: '2030-03-17T10:00:00Z',
+    });
+
+    const { service, mockSupabase } = createService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.convertPlannedToUnplanned({
+        userId: USER_ID,
+        entryId: 'entry-1',
+      }),
+    ).rejects.toMatchObject({ code: 'UNPLANNED_IN_FUTURE' });
+  });
+
+  it('unplanned は INVALID_ENTRY_SHAPE で拒否する', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      actual_start_time: '2026-03-17T09:00:00Z',
+      actual_end_time: '2026-03-17T10:00:00Z',
+    });
+
+    const { service, mockSupabase } = createService();
+    mockSupabase.from.mockReturnValue(createChainableMock(existing));
+
+    await expect(
+      service.convertPlannedToUnplanned({
+        userId: USER_ID,
+        entryId: 'entry-1',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ENTRY_SHAPE' });
+  });
+});
+
+// ============================================================================
 // delete
 // ============================================================================
 

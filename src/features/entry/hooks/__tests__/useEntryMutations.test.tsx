@@ -62,6 +62,7 @@ vi.mock('@/lib/trpc', () => {
       entries: {
         create: makeMutation('create'),
         update: makeMutation('update'),
+        convertPlannedToUnplanned: makeMutation('convertPlannedToUnplanned'),
         delete: makeMutation('delete'),
         restore: makeMutation('restore'),
         bulkUpdate: makeMutation('bulkUpdate'),

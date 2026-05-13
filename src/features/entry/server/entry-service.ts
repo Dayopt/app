@@ -12,6 +12,7 @@ import { ServiceError } from '@/lib/trpc/errors';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 
 import type {
+  ConvertPlannedToUnplannedOptions,
   CreateEntryOptions,
   DeleteEntryOptions,
   EntryRow,
@@ -326,6 +327,74 @@ export class EntryService {
     }
 
     return { ...data, adjustedEntries: [] };
+  }
+
+  /**
+   * planned entry を「予定外記録」に明示変換する
+   *
+   * origin は通常 update では変更不可。分類修正としての planned → unplanned だけを
+   * 専用操作に分離し、planned range を破棄して actual range のみを残す。
+   */
+  async convertPlannedToUnplanned(options: ConvertPlannedToUnplannedOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (oldData.origin !== 'planned') {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Only planned entries can be converted to unplanned.',
+      );
+    }
+
+    this.validateRange(oldData.start_time, oldData.end_time, 'INVALID_TIME_RANGE');
+    this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
+
+    if (
+      new Date(oldData.end_time!).getTime() > Date.now() ||
+      new Date(oldData.actual_end_time!).getTime() > Date.now()
+    ) {
+      throw new EntryServiceError(
+        'UNPLANNED_IN_FUTURE',
+        'Unplanned entries cannot end in the future.',
+      );
+    }
+
+    const finalEntry = {
+      ...oldData,
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      duration_minutes: null,
+    } as EntryRow;
+
+    this.validateEntryShape(finalEntry);
+    await this.ensureNoOverlaps(userId, finalEntry, entryId);
+
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+        duration_minutes: null,
+      })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
+      }
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to convert entry: ${error.message}`);
+    }
+
+    return data;
   }
 
   /**

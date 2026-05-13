@@ -34,10 +34,17 @@ export function useEntryForm() {
   // --- 内部 hook 合成 ---
 
   // 1. 統一保存パイプライン
-  const { save, saveImmediate, saveTag, cancelPending, updateEntry, deleteEntry } =
-    useDebouncedSave({
-      entryId,
-    });
+  const {
+    save,
+    saveImmediate,
+    saveTag,
+    cancelPending,
+    updateEntry,
+    convertPlannedToUnplanned,
+    deleteEntry,
+  } = useDebouncedSave({
+    entryId,
+  });
 
   // 2. タグフィールド
   const { selectedTagId, handleTagChange } = useTagField({
@@ -120,6 +127,7 @@ export function useEntryForm() {
 
     actions: {
       updateEntry,
+      convertPlannedToUnplanned,
       handleDelete,
       save,
       saveImmediate,
