@@ -10,8 +10,11 @@
 import type { EntryState } from '../types/entry';
 
 type EntryLike = {
-  start_time: string | null;
-  end_time: string | null;
+  origin?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  actual_start_time?: string | null;
+  actual_end_time?: string | null;
 };
 
 /**
@@ -23,13 +26,15 @@ type EntryLike = {
  */
 export function getEntryState(entry: EntryLike, now?: Date): EntryState {
   const currentTime = now ?? new Date();
+  const start = entry.origin === 'unplanned' ? entry.actual_start_time : entry.start_time;
+  const end = entry.origin === 'unplanned' ? entry.actual_end_time : entry.end_time;
 
-  if (!entry.start_time || !entry.end_time) {
+  if (!start || !end) {
     return 'upcoming';
   }
 
-  const startTime = new Date(entry.start_time);
-  const endTime = new Date(entry.end_time);
+  const startTime = new Date(start);
+  const endTime = new Date(end);
 
   if (startTime > currentTime) {
     return 'upcoming';

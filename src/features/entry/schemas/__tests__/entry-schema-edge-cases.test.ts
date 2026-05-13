@@ -21,14 +21,14 @@ describe('createEntrySchema — timeOrderRefine バリデーション', () => {
       expect(result.success).toBe(true);
     });
 
-    it('start_time === end_time は valid（等しいは許可）', () => {
+    it('start_time === end_time は invalid（半開区間のため0分不可）', () => {
       const result = createEntrySchema.safeParse(
         validEntry({
           start_time: '2025-03-15T09:00:00Z',
           end_time: '2025-03-15T09:00:00Z',
         }),
       );
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
 
     it('start_time と end_time が両方 null は valid', () => {
@@ -71,14 +71,14 @@ describe('createEntrySchema — timeOrderRefine バリデーション', () => {
       expect(result.success).toBe(true);
     });
 
-    it('actual_start_time === actual_end_time は valid', () => {
+    it('actual_start_time === actual_end_time は invalid（半開区間のため0分不可）', () => {
       const result = createEntrySchema.safeParse(
         validEntry({
           actual_start_time: '2025-03-15T09:00:00Z',
           actual_end_time: '2025-03-15T09:00:00Z',
         }),
       );
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 

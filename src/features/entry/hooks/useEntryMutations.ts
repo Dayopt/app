@@ -64,16 +64,19 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
 
       // 一時的なエントリを作成（IDは仮）
       const tempId = createTempId();
-      const origin = input.origin ?? 'planned';
+      const selectedStart = input.start_time ?? input.actual_start_time ?? null;
+      const selectedEnd = input.end_time ?? input.actual_end_time ?? null;
+      const origin =
+        selectedEnd && new Date(selectedEnd).getTime() <= Date.now() ? 'unplanned' : 'planned';
       const tempEntry: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         id: tempId,
         title: input.title,
         description: input.description ?? null,
         origin,
-        start_time: input.start_time ?? null,
-        end_time: input.end_time ?? null,
-        actual_start_time: null,
-        actual_end_time: null,
+        start_time: origin === 'planned' ? selectedStart : null,
+        end_time: origin === 'planned' ? selectedEnd : null,
+        actual_start_time: selectedStart,
+        actual_end_time: selectedEnd,
         duration_minutes: null,
         fulfillment_score: input.fulfillment_score ?? null,
         deleted_at: null,
@@ -435,6 +438,10 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
             ...(data.description !== undefined && { description: data.description }),
             ...(data.start_time !== undefined && { start_time: data.start_time }),
             ...(data.end_time !== undefined && { end_time: data.end_time }),
+            ...(data.actual_start_time !== undefined && {
+              actual_start_time: data.actual_start_time,
+            }),
+            ...(data.actual_end_time !== undefined && { actual_end_time: data.actual_end_time }),
             ...(data.fulfillment_score !== undefined && {
               fulfillment_score: data.fulfillment_score,
             }),

@@ -33,7 +33,11 @@ describe('EntryService.create', () => {
 
     const result = await service.create({
       userId: USER_ID,
-      input: { title: 'New Entry' },
+      input: {
+        title: 'New Entry',
+        start_time: '2030-03-17T10:00:00Z',
+        end_time: '2030-03-17T11:00:00Z',
+      },
     });
 
     expect(result.title).toBe('New Entry');
@@ -130,18 +134,49 @@ describe('EntryService.create', () => {
     }
   });
 
-  it('重複チェック無効かつ時間なしで制約チェックをスキップする', async () => {
-    const entry = createMockEntry({ title: 'No Time' });
+  it('時間なしの作成は INVALID_ENTRY_SHAPE を返す', async () => {
+    const { service } = createService();
+
+    await expect(
+      service.create({
+        userId: USER_ID,
+        input: { title: 'No Time' },
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_ENTRY_SHAPE' });
+  });
+
+  it('過去に完了する新規作成は unplanned として insert する', async () => {
+    const entry = createMockEntry({
+      title: 'Past Record',
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      actual_start_time: '2026-03-17T10:00:00.000Z',
+      actual_end_time: '2026-03-17T11:00:00.000Z',
+    });
     const mock = createChainableMock(entry);
     const { service, mockSupabase } = createService();
     mockSupabase.from.mockReturnValue(mock);
 
     const result = await service.create({
       userId: USER_ID,
-      input: { title: 'No Time' },
+      input: {
+        title: 'Past Record',
+        start_time: '2026-03-17T10:00:00Z',
+        end_time: '2026-03-17T11:00:00Z',
+      },
     });
 
-    expect(result.title).toBe('No Time');
+    expect(result.origin).toBe('unplanned');
+    expect(mock.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+        actual_start_time: '2026-03-17T10:00:00Z',
+        actual_end_time: '2026-03-17T11:00:00Z',
+      }),
+    );
   });
 });
 

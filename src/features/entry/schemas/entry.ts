@@ -17,7 +17,7 @@ const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
     actual_end_time?: string | null;
   };
   if (d.start_time && d.end_time) {
-    if (new Date(d.end_time) < new Date(d.start_time)) {
+    if (new Date(d.end_time) <= new Date(d.start_time)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'validation.time.endBeforeStart',
@@ -26,7 +26,7 @@ const timeOrderRefine = <T extends Record<string, unknown>>(data: T, ctx: z.Refi
     }
   }
   if (d.actual_start_time && d.actual_end_time) {
-    if (new Date(d.actual_end_time) < new Date(d.actual_start_time)) {
+    if (new Date(d.actual_end_time) <= new Date(d.actual_start_time)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'validation.time.endBeforeStart',
