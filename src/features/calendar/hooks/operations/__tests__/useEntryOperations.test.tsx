@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CalendarEvent } from '@/lib/types/calendar-event';
 
@@ -57,6 +57,12 @@ function makeEvent(overrides: Partial<CalendarEvent> & { id: string }): Calendar
     displayEndDate: end,
     duration: 60,
     isMultiDay: false,
+    origin: 'planned',
+    entryState: 'upcoming',
+    plannedStartDate: start,
+    plannedEndDate: end,
+    actualStartDate: start,
+    actualEndDate: end,
     ...overrides,
   };
 }
@@ -68,6 +74,12 @@ describe('useEntryOperations', () => {
     getByIdGetData.mockReset();
     toastSuccess.mockReset();
     loggerError.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-26T00:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('handleEntryDelete', () => {
@@ -83,8 +95,11 @@ describe('useEntryOperations', () => {
     it('id + updates から start_time / end_time を ISO で渡す', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
+        origin: 'planned',
         start_time: '2026-04-27T00:00:00.000Z',
         end_time: '2026-04-27T01:00:00.000Z',
+        actual_start_time: '2026-04-27T00:00:00.000Z',
+        actual_end_time: '2026-04-27T01:00:00.000Z',
       });
 
       const { result } = renderHook(() => useEntryOperations());
@@ -99,13 +114,15 @@ describe('useEntryOperations', () => {
           data: {
             start_time: '2026-04-27T01:00:00.000Z',
             end_time: '2026-04-27T02:00:00.000Z',
+            actual_start_time: '2026-04-27T01:00:00.000Z',
+            actual_end_time: '2026-04-27T02:00:00.000Z',
           },
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
     });
 
-    it('resetActualTime=true なら actual_start_time / actual_end_time も null で送る', async () => {
+    it('resetActualTime=true でも actual_start_time / actual_end_time は新範囲で送る', async () => {
       getByIdGetData.mockReturnValue(null);
 
       const { result } = renderHook(() => useEntryOperations());
@@ -117,12 +134,14 @@ describe('useEntryOperations', () => {
 
       const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
       expect(callArgs.data).toMatchObject({
-        actual_start_time: null,
-        actual_end_time: null,
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
       });
     });
 
-    it('resetActualTime 未指定なら actual_* フィールドを送らない', async () => {
+    it('キャッシュが無い場合は planned と actual を同じ範囲で送る', async () => {
       getByIdGetData.mockReturnValue(null);
 
       const { result } = renderHook(() => useEntryOperations());
@@ -132,15 +151,22 @@ describe('useEntryOperations', () => {
       });
 
       const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
-      expect(callArgs.data).not.toHaveProperty('actual_start_time');
-      expect(callArgs.data).not.toHaveProperty('actual_end_time');
+      expect(callArgs.data).toMatchObject({
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
+      });
     });
 
     it('onSuccess で showTimeChangeUndoToast が呼ばれ、Undo 用に prev 時間が toast.action に格納される', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
+        origin: 'planned',
         start_time: '2026-04-27T00:00:00.000Z',
         end_time: '2026-04-27T00:30:00.000Z',
+        actual_start_time: '2026-04-27T00:00:00.000Z',
+        actual_end_time: '2026-04-27T00:30:00.000Z',
       });
 
       const { result } = renderHook(() => useEntryOperations());
@@ -162,6 +188,8 @@ describe('useEntryOperations', () => {
         data: {
           start_time: '2026-04-27T00:00:00.000Z',
           end_time: '2026-04-27T00:30:00.000Z',
+          actual_start_time: '2026-04-27T00:00:00.000Z',
+          actual_end_time: '2026-04-27T00:30:00.000Z',
         },
       });
     });
@@ -181,8 +209,11 @@ describe('useEntryOperations', () => {
     it('CalendarEvent の startDate / endDate を ISO で送り Undo toast を仕込む', async () => {
       getByIdGetData.mockReturnValue({
         id: 'e1',
+        origin: 'planned',
         start_time: '2026-04-27T00:00:00.000Z',
         end_time: '2026-04-27T01:00:00.000Z',
+        actual_start_time: '2026-04-27T00:00:00.000Z',
+        actual_end_time: '2026-04-27T01:00:00.000Z',
       });
       const event = makeEvent({ id: 'e1' });
 
@@ -195,21 +226,23 @@ describe('useEntryOperations', () => {
           data: {
             start_time: '2026-04-27T01:00:00.000Z',
             end_time: '2026-04-27T02:00:00.000Z',
+            actual_start_time: '2026-04-27T01:00:00.000Z',
+            actual_end_time: '2026-04-27T02:00:00.000Z',
           },
         },
         expect.objectContaining({ onSuccess: expect.any(Function) }),
       );
     });
 
-    it('endDate が undefined でも data.end_time は undefined で問題なし', async () => {
+    it('endDate が null なら logger.error を出して mutate を呼ばない', async () => {
       getByIdGetData.mockReturnValue(null);
       const event = makeEvent({ id: 'e1', endDate: null });
 
       const { result } = renderHook(() => useEntryOperations());
       await result.current.handleUpdateEntry(event);
 
-      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
-      expect(callArgs.data.end_time).toBeUndefined();
+      expect(loggerError).toHaveBeenCalled();
+      expect(updateMutate).not.toHaveBeenCalled();
     });
   });
 });

@@ -369,7 +369,18 @@ export function useDragSelection({
         }
         lastSnapRef.current = { startMin, endMin };
 
-        dispatch({ type: 'MOUSE_MOVE', selection: sel, hasDragged, isOverlapping: false });
+        const startTime = new Date(propsRef.current.date);
+        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
+        const endTime = new Date(propsRef.current.date);
+        endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
+        const isOverlapping = checkClientSideOverlap(
+          propsRef.current.plans,
+          '',
+          startTime,
+          endTime,
+        );
+
+        dispatch({ type: 'MOUSE_MOVE', selection: sel, hasDragged, isOverlapping });
       });
     };
 
@@ -442,7 +453,18 @@ export function useDragSelection({
         }
         lastSnapRef.current = { startMin, endMin };
 
-        dispatch({ type: 'TOUCH_MOVE', selection: sel, hasDragged, isOverlapping: false });
+        const startTime = new Date(propsRef.current.date);
+        startTime.setHours(sel.startHour, sel.startMinute, 0, 0);
+        const endTime = new Date(propsRef.current.date);
+        endTime.setHours(sel.endHour, sel.endMinute, 0, 0);
+        const isOverlapping = checkClientSideOverlap(
+          propsRef.current.plans,
+          '',
+          startTime,
+          endTime,
+        );
+
+        dispatch({ type: 'TOUCH_MOVE', selection: sel, hasDragged, isOverlapping });
       });
     };
 

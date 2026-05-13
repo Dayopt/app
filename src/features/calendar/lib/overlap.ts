@@ -22,14 +22,44 @@ export function checkClientSideOverlap(
   previewStartTime: Date,
   previewEndTime: Date,
 ): boolean {
+  if (previewEndTime.getTime() <= previewStartTime.getTime()) {
+    return true;
+  }
+
+  const draggedEvent = events.find((event) => event.id === draggedEventId);
+  const isNewFutureEntry = draggedEventId === '' && previewEndTime.getTime() > Date.now();
+  const shouldCheckPlanned =
+    isNewFutureEntry ||
+    (draggedEvent?.origin === 'planned' && draggedEvent.entryState === 'upcoming');
+
+  if (draggedEvent?.origin === 'unplanned' && previewEndTime.getTime() > Date.now()) {
+    return true;
+  }
+
   return events.some((event) => {
     if (event.id === draggedEventId) return false;
-    if (!event.startDate || !event.endDate) return false;
 
-    // actual 時間が記録されている場合は実質的な占有範囲として使用
-    const effectiveStart = event.actualStartDate ?? event.startDate;
-    const effectiveEnd = event.actualEndDate ?? event.endDate;
+    const plannedStart =
+      event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
+    const plannedEnd = event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
+    const actualStart = event.actualStartDate ?? event.startDate;
+    const actualEnd = event.actualEndDate ?? event.endDate;
 
-    return effectiveStart < previewEndTime && effectiveEnd > previewStartTime;
+    if (
+      shouldCheckPlanned &&
+      plannedStart &&
+      plannedEnd &&
+      plannedStart < previewEndTime &&
+      plannedEnd > previewStartTime
+    ) {
+      return true;
+    }
+
+    return !!(
+      actualStart &&
+      actualEnd &&
+      actualStart < previewEndTime &&
+      actualEnd > previewStartTime
+    );
   });
 }

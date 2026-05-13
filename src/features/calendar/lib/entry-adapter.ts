@@ -35,21 +35,25 @@ function truncateToMinute(date: Date): Date {
  * - title が空の場合はカレンダー側で「(無題)」表示
  */
 export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): CalendarEvent | null {
-  if (!entry.start_time || !entry.end_time) {
+  if (!entry.actual_start_time || !entry.actual_end_time) {
     return null;
   }
 
   const isUnplanned = entry.origin === 'unplanned';
+  const isPlanned = entry.origin === 'planned';
 
-  // 計画外エントリは actual 時間を表示位置に使用（start_time = end_time で duration=0 のため）
-  const startDate =
-    isUnplanned && entry.actual_start_time
-      ? truncateToMinute(new Date(entry.actual_start_time))
-      : truncateToMinute(new Date(entry.start_time));
-  const endDate =
-    isUnplanned && entry.actual_end_time
-      ? truncateToMinute(new Date(entry.actual_end_time))
-      : truncateToMinute(new Date(entry.end_time));
+  if (isPlanned && (!entry.start_time || !entry.end_time)) {
+    return null;
+  }
+
+  const plannedStartDate = entry.start_time ? truncateToMinute(new Date(entry.start_time)) : null;
+  const plannedEndDate = entry.end_time ? truncateToMinute(new Date(entry.end_time)) : null;
+  const actualStartDate = truncateToMinute(new Date(entry.actual_start_time));
+  const actualEndDate = truncateToMinute(new Date(entry.actual_end_time));
+
+  // planned は予定位置、unplanned は実績位置をカレンダー上の表示位置に使う。
+  const startDate = isUnplanned ? actualStartDate : plannedStartDate!;
+  const endDate = isUnplanned ? actualEndDate : plannedEndDate!;
 
   const createdAt = entry.created_at ? new Date(entry.created_at) : new Date();
   const updatedAt = entry.updated_at ? new Date(entry.updated_at) : new Date();
@@ -79,8 +83,10 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     origin: entry.origin,
     entryState,
     fulfillmentScore: entry.fulfillment_score,
-    actualStartDate: entry.actual_start_time ? new Date(entry.actual_start_time) : null,
-    actualEndDate: entry.actual_end_time ? new Date(entry.actual_end_time) : null,
+    actualStartDate,
+    actualEndDate,
+    plannedStartDate,
+    plannedEndDate,
   };
 }
 
