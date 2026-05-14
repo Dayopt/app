@@ -9,6 +9,7 @@
  * - saveTag(): 即時（別 API）
  * - flush(): 強制送信（unmount / entry 切替時）
  * - prepareForStructuralMutation(): 変換前に stale な pending 保存を止める
+ * - finishStructuralMutation(): 変換後に保存エラーtoast抑制を解除する
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -32,6 +33,7 @@ interface UseDebouncedSaveOptions {
  */
 export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const suppressSaveErrorToastRef = useRef(false);
+  const suppressResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned, deleteEntry } =
     useEntryMutations({
       suppressUpdateErrorToast: () => suppressSaveErrorToastRef.current,
@@ -46,7 +48,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   // flush 用に最新の entryId を ref で保持（クリーンアップ時のstale closure対策）
   const entryIdRef = useRef(entryId);
   const lastSavePromiseRef = useRef<Promise<unknown> | null>(null);
-  entryIdRef.current = entryId;
+
+  useEffect(() => {
+    entryIdRef.current = entryId;
+  }, [entryId]);
 
   /** キャッシュからエントリの updated_at を取得（楽観的ロック用） */
   const getExpectedUpdatedAt = useCallback(
@@ -185,6 +190,12 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
    * すでに送信中の保存だけは完了を待ち、通常保存と変換の順序を揃える。
    */
   const prepareForStructuralMutation = useCallback(async () => {
+    if (suppressResetTimerRef.current) {
+      clearTimeout(suppressResetTimerRef.current);
+      suppressResetTimerRef.current = null;
+    }
+    suppressSaveErrorToastRef.current = true;
+
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -192,13 +203,18 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     pendingRef.current = {};
 
     if (lastSavePromiseRef.current) {
-      suppressSaveErrorToastRef.current = true;
-      try {
-        await lastSavePromiseRef.current.catch(() => undefined);
-      } finally {
-        suppressSaveErrorToastRef.current = false;
-      }
+      await lastSavePromiseRef.current.catch(() => undefined);
     }
+  }, []);
+
+  const finishStructuralMutation = useCallback(() => {
+    if (suppressResetTimerRef.current) {
+      clearTimeout(suppressResetTimerRef.current);
+    }
+    suppressResetTimerRef.current = setTimeout(() => {
+      suppressSaveErrorToastRef.current = false;
+      suppressResetTimerRef.current = null;
+    }, 1000);
   }, []);
 
   // entryId 変更時 or unmount 時に flush
@@ -243,6 +259,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (suppressResetTimerRef.current) {
+        clearTimeout(suppressResetTimerRef.current);
+        suppressResetTimerRef.current = null;
+      }
     };
   }, [flush]);
 
@@ -254,6 +274,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     flush,
     flushAsync,
     prepareForStructuralMutation,
+    finishStructuralMutation,
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,

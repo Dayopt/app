@@ -61,6 +61,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
     prepareForStructuralMutation,
+    finishStructuralMutation,
   } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
@@ -101,23 +102,41 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     if (!entryId || !isPlanned) return;
     void prepareForStructuralMutation()
       .then(() => {
-        convertPlannedToUnplanned.mutate({ id: entryId });
+        return convertPlannedToUnplanned.mutateAsync({ id: entryId });
       })
       .catch(() => {
         // 保存側で toast 済み。古いデータのまま変換しない。
+      })
+      .finally(() => {
+        finishStructuralMutation();
       });
-  }, [entryId, isPlanned, prepareForStructuralMutation, convertPlannedToUnplanned]);
+  }, [
+    entryId,
+    isPlanned,
+    prepareForStructuralMutation,
+    finishStructuralMutation,
+    convertPlannedToUnplanned,
+  ]);
 
   const handleRestorePlanned = useCallback(() => {
     if (!entryId || !isUnplanned) return;
     void prepareForStructuralMutation()
       .then(() => {
-        convertUnplannedToPlanned.mutate({ id: entryId });
+        return convertUnplannedToPlanned.mutateAsync({ id: entryId });
       })
       .catch(() => {
         // 保存側で toast 済み。古いデータのまま変換しない。
+      })
+      .finally(() => {
+        finishStructuralMutation();
       });
-  }, [entryId, isUnplanned, prepareForStructuralMutation, convertUnplannedToPlanned]);
+  }, [
+    entryId,
+    isUnplanned,
+    prepareForStructuralMutation,
+    finishStructuralMutation,
+    convertUnplannedToPlanned,
+  ]);
 
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {

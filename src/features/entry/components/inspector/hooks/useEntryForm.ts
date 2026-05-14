@@ -41,6 +41,7 @@ export function useEntryForm() {
     cancelPending,
     flushAsync,
     prepareForStructuralMutation,
+    finishStructuralMutation,
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
@@ -138,6 +139,7 @@ export function useEntryForm() {
       cancelPending,
       flushAsync,
       prepareForStructuralMutation,
+      finishStructuralMutation,
     },
   };
 }
