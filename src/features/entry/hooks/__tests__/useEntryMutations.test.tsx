@@ -129,7 +129,10 @@ function createWrapper() {
   };
 }
 
-function renderUseEntryMutations(options?: { suppressCreateToast?: boolean }) {
+function renderUseEntryMutations(options?: {
+  suppressCreateToast?: boolean;
+  suppressUpdateErrorToast?: () => boolean;
+}) {
   const { queryClient, wrapper } = createWrapper();
   const { result } = renderHook(() => useEntryMutations(options), { wrapper });
   return { queryClient, result };
@@ -296,6 +299,25 @@ describe('useEntryMutations.updateEntry', () => {
     opts.action.onClick();
     expect(utilsMock.entries.list.invalidate).toHaveBeenCalled();
     expect(utilsMock.entries.getById.invalidate).toHaveBeenCalledWith({ id: 'e1' });
+  });
+
+  it('onError: suppressUpdateErrorToast=true なら toast を出さず rollback する', () => {
+    const { queryClient } = renderUseEntryMutations({ suppressUpdateErrorToast: () => true });
+    const original = [{ id: 'e1', title: 'Old' }];
+    seedList(queryClient, [{ id: 'e1', title: 'Half-Updated' }]);
+
+    captured.update!.onError!(
+      { data: { code: 'CONFLICT' }, message: 'conflict' },
+      { id: 'e1', data: {} },
+      {
+        id: 'e1',
+        previousEntriesList: [[LIST_KEY, original]],
+        previousEntry: { id: 'e1', title: 'Old' },
+      },
+    );
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(LIST_KEY)).toEqual(original);
   });
 
   it('onError: TIME_OVERLAP も専用 toast を出す', () => {

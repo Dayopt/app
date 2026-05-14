@@ -40,6 +40,7 @@ export function useEntryForm() {
     saveTag,
     cancelPending,
     flushAsync,
+    prepareForStructuralMutation,
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
@@ -136,6 +137,7 @@ export function useEntryForm() {
       saveImmediate,
       cancelPending,
       flushAsync,
+      prepareForStructuralMutation,
     },
   };
 }

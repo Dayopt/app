@@ -85,6 +85,7 @@ export const ERROR_CODE_MAP: Record<string, TRPCErrorCode> = {
   // ===== Entry関連 =====
   TAG_FILTER_FAILED: 'INTERNAL_SERVER_ERROR',
   TIME_OVERLAP: 'BAD_REQUEST',
+  UNPLANNED_IN_FUTURE: 'BAD_REQUEST',
   CONFLICT: 'CONFLICT',
 
   // ===== Entry Transaction関連 =====

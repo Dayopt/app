@@ -8,7 +8,7 @@
  * - saveImmediate(): 即時（fulfillment, reminder）
  * - saveTag(): 即時（別 API）
  * - flush(): 強制送信（unmount / entry 切替時）
- * - flushAsync(): 変換など順序保証が必要な操作前に保存完了まで待つ
+ * - prepareForStructuralMutation(): 変換前に stale な pending 保存を止める
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -31,8 +31,11 @@ interface UseDebouncedSaveOptions {
  * @returns save, saveImmediate, saveTag, flush, updateEntry, deleteEntry, updateTagsInCache
  */
 export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
+  const suppressSaveErrorToastRef = useRef(false);
   const { updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned, deleteEntry } =
-    useEntryMutations();
+    useEntryMutations({
+      suppressUpdateErrorToast: () => suppressSaveErrorToastRef.current,
+    });
   const { setEntryTags } = useEntryTags();
   const updateTagsInCache = useUpdateEntityTagsInCache('entries');
   const utils = api.useUtils();
@@ -43,7 +46,6 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   // flush 用に最新の entryId を ref で保持（クリーンアップ時のstale closure対策）
   const entryIdRef = useRef(entryId);
   const lastSavePromiseRef = useRef<Promise<unknown> | null>(null);
-  // eslint-disable-next-line react-hooks/refs -- flush() で最新の entryId を参照するための ref 同期
   entryIdRef.current = entryId;
 
   /** キャッシュからエントリの updated_at を取得（楽観的ロック用） */
@@ -176,6 +178,29 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     }
   }, [runSave]);
 
+  /**
+   * planned/unplanned 変換など、entry の構造を変える操作の直前に呼ぶ。
+   *
+   * まだ発火していない debounce 保存は、変換後に古い形で entry を上書きし得るため破棄する。
+   * すでに送信中の保存だけは完了を待ち、通常保存と変換の順序を揃える。
+   */
+  const prepareForStructuralMutation = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingRef.current = {};
+
+    if (lastSavePromiseRef.current) {
+      suppressSaveErrorToastRef.current = true;
+      try {
+        await lastSavePromiseRef.current.catch(() => undefined);
+      } finally {
+        suppressSaveErrorToastRef.current = false;
+      }
+    }
+  }, []);
+
   // entryId 変更時 or unmount 時に flush
   useEffect(() => {
     return () => {
@@ -228,6 +253,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     cancelPending,
     flush,
     flushAsync,
+    prepareForStructuralMutation,
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,

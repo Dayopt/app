@@ -60,7 +60,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
-    flushAsync,
+    prepareForStructuralMutation,
   } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
@@ -99,25 +99,25 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
 
   const handleMarkUnplanned = useCallback(() => {
     if (!entryId || !isPlanned) return;
-    void flushAsync()
+    void prepareForStructuralMutation()
       .then(() => {
         convertPlannedToUnplanned.mutate({ id: entryId });
       })
       .catch(() => {
         // 保存側で toast 済み。古いデータのまま変換しない。
       });
-  }, [entryId, isPlanned, flushAsync, convertPlannedToUnplanned]);
+  }, [entryId, isPlanned, prepareForStructuralMutation, convertPlannedToUnplanned]);
 
   const handleRestorePlanned = useCallback(() => {
     if (!entryId || !isUnplanned) return;
-    void flushAsync()
+    void prepareForStructuralMutation()
       .then(() => {
         convertUnplannedToPlanned.mutate({ id: entryId });
       })
       .catch(() => {
         // 保存側で toast 済み。古いデータのまま変換しない。
       });
-  }, [entryId, isUnplanned, flushAsync, convertUnplannedToPlanned]);
+  }, [entryId, isUnplanned, prepareForStructuralMutation, convertUnplannedToPlanned]);
 
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {

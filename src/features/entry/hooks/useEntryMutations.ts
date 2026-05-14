@@ -41,8 +41,12 @@ const isEntriesListQuery = createListQueryPredicate('entries');
  * deleteEntry.mutate({ id: '123' })
  * ```
  */
-export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
+export function useEntryMutations(options?: {
+  suppressCreateToast?: boolean;
+  suppressUpdateErrorToast?: () => boolean;
+}) {
   const suppressCreateToast = options?.suppressCreateToast ?? false;
+  const suppressUpdateErrorToast = options?.suppressUpdateErrorToast;
   const t = useTranslations();
   const queryClient = useQueryClient();
   const utils = api.useUtils();
@@ -305,26 +309,28 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     onError: (err, _variables, context) => {
       logger.error('[mutation:update] onError', err);
 
-      // 競合検出（楽観的ロック）: 他タブ/デバイスで変更されたエントリ
-      if (err.data?.code === 'CONFLICT') {
-        toast.error(t('entry.toast.conflict'), {
-          action: {
-            label: t('common.reload'),
-            onClick: () => {
-              if (context?.id) {
-                void utils.entries.list.invalidate();
-                void utils.entries.getById.invalidate({ id: context.id });
-              }
+      if (!suppressUpdateErrorToast?.()) {
+        // 競合検出（楽観的ロック）: 他タブ/デバイスで変更されたエントリ
+        if (err.data?.code === 'CONFLICT') {
+          toast.error(t('entry.toast.conflict'), {
+            action: {
+              label: t('common.reload'),
+              onClick: () => {
+                if (context?.id) {
+                  void utils.entries.list.invalidate();
+                  void utils.entries.getById.invalidate({ id: context.id });
+                }
+              },
             },
-          },
-        });
-      } else if (
-        err.message.includes('既にエントリがあります') ||
-        err.message.includes('TIME_OVERLAP')
-      ) {
-        toast.error(t('entry.toast.timeOverlap'));
-      } else {
-        toast.error(t('entry.toast.updateFailed'));
+          });
+        } else if (
+          err.message.includes('既にエントリがあります') ||
+          err.message.includes('TIME_OVERLAP')
+        ) {
+          toast.error(t('entry.toast.timeOverlap'));
+        } else {
+          toast.error(t('entry.toast.updateFailed'));
+        }
       }
 
       // エラー時: 全ての entries.list キャッシュをロールバック

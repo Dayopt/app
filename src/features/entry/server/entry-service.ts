@@ -354,10 +354,7 @@ export class EntryService {
     this.validateRange(oldData.start_time, oldData.end_time, 'INVALID_TIME_RANGE');
     this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
 
-    if (
-      new Date(oldData.end_time!).getTime() > Date.now() ||
-      new Date(oldData.actual_end_time!).getTime() > Date.now()
-    ) {
+    if (new Date(oldData.actual_end_time!).getTime() > Date.now()) {
       throw new EntryServiceError(
         'UNPLANNED_IN_FUTURE',
         'Unplanned entries cannot end in the future.',
