@@ -56,6 +56,7 @@ export type { EntryCardPosition } from './components/card';
 // Components (Inspector fields — 他 feature から再利用可能な入力 row)
 // =============================================================================
 export { DateRow } from './components/inspector/fields/DateRow';
+export { TimeConflictAlert } from './components/inspector/fields/TimeConflictAlert';
 export { TimeRow } from './components/inspector/fields/TimeRow';
 
 // ここにないものはfeature内部専用

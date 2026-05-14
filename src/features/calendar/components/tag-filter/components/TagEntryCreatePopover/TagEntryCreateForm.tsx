@@ -3,7 +3,7 @@
 import { Calendar, Clock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { DateRow, TimeRow } from '@/features/entry';
+import { DateRow, TimeConflictAlert, TimeRow } from '@/features/entry';
 import { TagIcon } from '@/features/tags';
 import { Button } from '@/lib/components/ui/button';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
@@ -105,6 +105,17 @@ export function TagEntryCreateForm({
         </div>
       </div>
 
+      {/* 時間重複アラート（Inspector と同じパターン） */}
+      <div
+        // eslint-disable-next-line tailwindcss/no-arbitrary-value -- grid expand/collapse animation
+        className={`grid transition-[grid-template-rows] duration-200 ${hasError ? 'grid-rows-expanded mt-2' : 'grid-rows-collapsed'}`}
+        aria-hidden={!hasError}
+      >
+        <div className="overflow-hidden">
+          <TimeConflictAlert message={t('entry.errors.timeOverlap')} />
+        </div>
+      </div>
+
       {/* アクション（キャンセル / 作成） */}
       <div className="mt-4 flex items-center justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
@@ -114,7 +125,7 @@ export function TagEntryCreateForm({
           type="button"
           size="sm"
           onClick={onSubmit}
-          disabled={isSubmitting || !startTime || !endTime}
+          disabled={isSubmitting || !startTime || !endTime || hasError}
         >
           {t('common.actions.create')}
         </Button>
