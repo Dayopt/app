@@ -70,6 +70,19 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
   const prevStateRef = useRef(state);
   const [snapBack, setSnapBack] = useState<SnapBackInfo | null>(null);
 
+  // overlap 中は body の cursor を not-allowed にする（GAFA / Material DnD 規範）。
+  // ghost は pointer-events:none のため、cursor を変えるには body に直接当てる。
+  useEffect(() => {
+    const isOverlapping =
+      (state.mode === 'dragging' || state.mode === 'resizing') && state.isOverlapping;
+    if (!isOverlapping) return undefined;
+    const prev = document.body.style.cursor;
+    document.body.style.cursor = 'not-allowed';
+    return () => {
+      document.body.style.cursor = prev;
+    };
+  }, [state]);
+
   // ドラッグ中→idle に遷移した時、前回が overlap だったらスナップバック発動
   useEffect(() => {
     const prev = prevStateRef.current;
@@ -180,7 +193,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     <div
       className={cn(
         'shadow-card pointer-events-none rounded-lg opacity-85',
-        state.isOverlapping && 'ring-destructive ring-2',
+        state.isOverlapping && 'ring-destructive cursor-not-allowed ring-2',
       )}
       style={style}
     >

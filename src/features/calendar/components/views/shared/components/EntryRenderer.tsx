@@ -97,6 +97,13 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   const currentTop = parseFloat(style.top?.toString() || '0');
   const currentHeight = parseFloat(style.height?.toString() || '20');
 
+  // リサイズ中のこの entry が他とオーバーラップしている時、赤リング + not-allowed を表示する。
+  // drag は GhostRenderer 側で描くため、ここでは resize のみを担当する。
+  const isResizingOverlap =
+    interactionState.mode === 'resizing' &&
+    interactionState.entryId === entry.id &&
+    interactionState.isOverlapping;
+
   // ドラッグ中は元位置にファントム（半透明シルエット）を残す
   const adjustedStyle: React.CSSProperties = entryDragging
     ? { ...style, opacity: 0.65 }
@@ -140,7 +147,10 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   return (
     <div style={finalStyle} className="pointer-events-none absolute" data-entry-wrapper="true">
       <div
-        className="pointer-events-auto absolute inset-0 rounded-lg"
+        className={cn(
+          'pointer-events-auto absolute inset-0 rounded-lg',
+          isResizingOverlap && 'ring-destructive cursor-not-allowed ring-2',
+        )}
         data-entry-block="true"
         tabIndex={0}
         role="button"
