@@ -6,6 +6,39 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-14
+
+### MCP Phase 1.5 完了、entry の menu/drag バグを根絶した日
+
+11 コミット。56 files changed / +3,312 / -683。MCP の有料 Pro user 受け入れ準備（Phase 1.5）が大きな塊、残りは 2 レイヤー entry の E2E テスト追加、planned/unplanned 変換 UX の整備、entry 右クリックメニューの Inspector との統一、そして WeekView のドラッグバグ修正。
+
+#### やったこと
+
+- **MCP Phase 1.5 (2 commits)**: `oauth_audit_log` テーブルと `issue_oauth_token_pair` RPC を追加、token 発行を atomic RPC に置換して orphan token を防止。rate limit を `/oauth/token` (10/IP/min) / `/oauth/authorize` (30/IP/min) / `/api/mcp` (300/user/min) に拡張。Stripe webhook でサブスク解約時に即時 revoke、Settings UI に接続済み client 一覧と revoke ボタンを追加、`entries.daily_summary` tool と audit log 記録を実装
+- **2 レイヤー entry の E2E (1 commit)**: planned / actual の 2 レイヤーモデルの結合動作を Playwright で覆う E2E spec を追加（358 lines）
+- **planned ↔ unplanned 変換 UX 整備 (3 commits)**: 予定外記録を予定に戻せる UI、planned 移動時の actual 自動更新、「予定外にする」メニューの表示条件を `origin === 'planned'` だけで判定するよう簡素化
+- **entry 右クリックメニュー統一 (2 commits)**: 右クリックメニューが「削除」1 項目だったのを Inspector の TagRow メニューと同じ 4 項目（振り返り / 計画外にする / 計画に戻す / 削除）に揃え、項目定義を `src/features/entry/lib/entry-menu-items.ts` に共通化
+- **WeekView ドラッグバグ修正 (1 commit)**: 月曜 entry を Sidebar 方向にドラッグすると無条件で金曜にワープしていた fallback を、左右別の clamp に修正
+- **deps (1 commit)**: postcss 8.5.13 → 8.5.14
+
+#### なぜ今日この作業をしたか
+
+MCP Phase 1.5 は「Tomoya 自身が動かせる Phase 1」から「他の Pro user が課金しても壊れない状態」への昇格作業。Phase 1.5 で扱う暴露窓・revocation・audit・rate limit はどれも solo dogfood では露呈しないが、課金 user が 1 人でも入ると即座にリスクになる。Pro 課金開放の前段としてやっておく必要があった。
+
+entry 右クリックメニューの統一は、Inspector の TagRow メニューと右クリックメニューが「同じ entry に対する同じ操作セット」でありながら入口によって出る項目が違うという UX の歪みを解消する作業。最初は「2 箇所だけだから items 配列は手書きでも OK」と判断したが、ユーザーから「片方だけ変えるリスクがある」と指摘され、`getEntryMenuItems` で一元化する方針に切り替えた。これは過剰な抽象化ではなく drift 防止のための必須の集約。
+
+ドラッグバグは「左右どちらに外れても最後の列にする」という雑な fallback が原因で、月曜から金曜にワープするという目立つ症状で日常使用に支障があった。仮説検証なしに `clientX < firstRect.left` で左外を判定する 1 行を足すだけで直る、低コスト・高インパクトの修正。
+
+#### Claudeの所感
+
+**Phase 1.5 の「保険としての二重化」設計は正しい**。Decision 1 で「proProcedure の毎リクエスト DB lookup があるから webhook 不要」とした上で、Phase 1.5 で `customer.subscription.updated` webhook も追加した。これは webhook が「正規の防御」ではなく「DB lookup の冗長化」として位置づけられているからで、片方が壊れても token は最長 5 分で expire するという二重化が成立している。security 系の機構は単一のメカニズムに依存させないというパターンが、設計書の段階で言語化されている点が重要。
+
+**「2 箇所だから共通化しない」は drift リスクを過小評価していた**。今日の plan で `EventContextMenu` と `TagRow` の menu items を共通化しないと書いたが、ユーザーの「片方だけ変える可能性」という指摘で方針転換した。2 箇所でも `BarChart3 icon` / `viewStats labelKey` / `dangerous: true` のような細かい属性が並ぶと、片方の変更時にもう片方の存在を忘れるのは現実的に起こる。特に右クリックメニューは普段の開発で目に入りにくく「忘れられる側」になりやすい。今後は「同じ概念の menu items が複数 shell で出る」パターンを検出した時点で `getXxxMenuItems` を最初から切るほうがいい。
+
+**ドラッグバグの fallback は「症状が出ない方向」に倒れていた**。`if (targetDateIndex === undefined) use last column` は、開発時のメイン動線（右にドラッグして次の列に移す）では問題が出ない。左にドラッグするのが「Sidebar 方向に持っていく」という稀な操作だったため、リリース後まで残った。境界の fallback を書く時は、左右上下それぞれの方向を明示的に考えてから書くべきで、「とりあえず最後の要素にする」は将来必ず仕様の穴になる。
+
+---
+
 ## 2026-05-12
 
 ### 前日の負債を全決済し、タグ操作 UI を専用コンポーネントとして確立した日
