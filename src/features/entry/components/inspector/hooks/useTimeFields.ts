@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { EntryWithTags } from '../../../types/entry';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
@@ -47,16 +48,6 @@ function toISOForDate(date: Date, time: string, timezone: string): string | null
   if (!time) return null;
   const [hours, minutes] = time.split(':').map(Number);
   return localTimeToUTCISO(date, hours ?? 0, minutes ?? 0, timezone);
-}
-
-function rangesOverlap(
-  startA: string | null,
-  endA: string | null,
-  startB: string | null,
-  endB: string | null,
-): boolean {
-  if (!startA || !endA || !startB || !endB) return false;
-  return new Date(startA) < new Date(endB) && new Date(endA) > new Date(startB);
 }
 
 /** Inspectorの時間フィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
@@ -165,15 +156,6 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       return;
     }
 
-    if (
-      entry?.origin === 'unplanned' &&
-      actualEndISO &&
-      new Date(actualEndISO).getTime() > Date.now()
-    ) {
-      setTimeConflictError(true);
-      return;
-    }
-
     // calendar は date-filtered key (`entries.list({ startDate, endDate })`) を使うため、
     // input なしの `getData()` では永遠に undefined。全 entries.list cache を予測子で集める。
     const cachedLists = queryClient.getQueriesData<
@@ -205,21 +187,23 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       }
     }
 
-    if (collected.length === 0) {
-      setTimeConflictError(false);
-      return;
-    }
-
-    const hasOverlap = collected.some((e) => {
-      if (e.id === entryId) return false;
-      if (
-        entry?.origin === 'planned' &&
-        rangesOverlap(plannedStartISO, plannedEndISO, e.start_time, e.end_time)
-      ) {
-        return true;
-      }
-      return rangesOverlap(actualStartISO, actualEndISO, e.actual_start_time, e.actual_end_time);
-    });
+    const hasOverlap = hasTwoLayerTimeConflict(
+      collected.map((e) => ({
+        id: e.id,
+        plannedStart: e.start_time,
+        plannedEnd: e.end_time,
+        actualStart: e.actual_start_time,
+        actualEnd: e.actual_end_time,
+      })),
+      {
+        id: entryId,
+        plannedStart: entry?.origin === 'planned' ? plannedStartISO : null,
+        plannedEnd: entry?.origin === 'planned' ? plannedEndISO : null,
+        actualStart: actualStartISO,
+        actualEnd: actualEndISO,
+        forbidFutureActual: entry?.origin === 'unplanned',
+      },
+    );
 
     setTimeConflictError(hasOverlap);
   }, [

@@ -67,6 +67,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   hourHeight: hourHeightProp,
   overlayPositionApplied = false,
   onGapClick,
+  gapCreationCutoffMs,
 }) {
   const t = useTranslations();
 
@@ -87,6 +88,18 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
     [entry, hourHeightProp],
   );
+  const topGapClickEnabled =
+    !!onGapClick &&
+    !!entry.startDate &&
+    !!entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime() &&
+    (gapCreationCutoffMs == null || entry.actualStartDate.getTime() <= gapCreationCutoffMs);
+  const bottomGapClickEnabled =
+    !!onGapClick &&
+    !!entry.actualEndDate &&
+    !!entry.endDate &&
+    entry.actualEndDate.getTime() < entry.endDate.getTime() &&
+    (gapCreationCutoffMs == null || entry.endDate.getTime() <= gapCreationCutoffMs);
 
   // positionが未定義の場合のデフォルト値
   const safePosition = useMemo(
@@ -409,19 +422,19 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {/* 予定 vs 記録: 上部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.topKind === 'unexecuted' && (
             <div
-              aria-hidden={!onGapClick ? true : undefined}
+              aria-hidden={!topGapClickEnabled ? true : undefined}
               className={cn(
                 'pattern-hatch absolute top-0 right-0 left-0 flex flex-col items-center justify-center',
-                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+                topGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
               )}
               style={{ height: `${overlay.topHeight}px` }}
-              onMouseDown={onGapClick ? (e) => e.stopPropagation() : undefined}
-              onTouchStart={onGapClick ? (e) => e.stopPropagation() : undefined}
+              onMouseDown={topGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={topGapClickEnabled ? (e) => e.stopPropagation() : undefined}
               onClick={
-                onGapClick && entry.startDate && entry.actualStartDate
+                topGapClickEnabled
                   ? (e) => {
                       e.stopPropagation();
-                      onGapClick(
+                      onGapClick?.(
                         toMinutesOfDay(entry.startDate!),
                         toMinutesOfDay(entry.actualStartDate!),
                       );
@@ -429,13 +442,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
                   : undefined
               }
             >
-              {overlay.topHeight >= 16 && !onGapClick && (
+              {overlay.topHeight >= 16 && !topGapClickEnabled && (
                 <span className="text-muted-foreground text-xs">
                   <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
                   <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
                 </span>
               )}
-              {overlay.topHeight >= 32 && onGapClick && (
+              {overlay.topHeight >= 32 && topGapClickEnabled && (
                 <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
                   +
                 </span>
@@ -446,19 +459,21 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {/* 予定 vs 記録: 下部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.bottomKind === 'unexecuted' && (
             <div
-              aria-hidden={!onGapClick ? true : undefined}
+              aria-hidden={!bottomGapClickEnabled ? true : undefined}
               className={cn(
                 'pattern-hatch absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center',
-                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+                bottomGapClickEnabled
+                  ? 'pointer-events-auto cursor-pointer'
+                  : 'pointer-events-none',
               )}
               style={{ height: `${overlay.bottomHeight}px` }}
-              onMouseDown={onGapClick ? (e) => e.stopPropagation() : undefined}
-              onTouchStart={onGapClick ? (e) => e.stopPropagation() : undefined}
+              onMouseDown={bottomGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+              onTouchStart={bottomGapClickEnabled ? (e) => e.stopPropagation() : undefined}
               onClick={
-                onGapClick && entry.actualEndDate && entry.endDate
+                bottomGapClickEnabled
                   ? (e) => {
                       e.stopPropagation();
-                      onGapClick(
+                      onGapClick?.(
                         toMinutesOfDay(entry.actualEndDate!),
                         toMinutesOfDay(entry.endDate!),
                       );
@@ -466,13 +481,13 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
                   : undefined
               }
             >
-              {overlay.bottomHeight >= 16 && !onGapClick && (
+              {overlay.bottomHeight >= 16 && !bottomGapClickEnabled && (
                 <span className="text-muted-foreground text-xs">
                   <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
                   <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
                 </span>
               )}
-              {overlay.bottomHeight >= 32 && onGapClick && (
+              {overlay.bottomHeight >= 32 && bottomGapClickEnabled && (
                 <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
                   +
                 </span>

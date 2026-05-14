@@ -63,6 +63,13 @@ function minutesToSelection(
   };
 }
 
+function minutesToDate(date: Date, minutes: number): Date {
+  const normalizedMinutes = Math.max(0, Math.min(minutes, 24 * 60 - 1));
+  const result = new Date(date);
+  result.setHours(Math.floor(normalizedMinutes / 60), normalizedMinutes % 60, 0, 0);
+  return result;
+}
+
 /** CalendarGridContent コンポーネントのプロパティ */
 export interface CalendarGridContentProps {
   /** この列が担当する日付 */
@@ -118,6 +125,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   className,
 }: CalendarGridContentProps) {
   const t = useTranslations();
+  const [gapCreationCutoffMs] = useState(() => Date.now());
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -285,10 +293,14 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               onGapClick={
                 onTimeRangeSelect
                   ? (startMinutes, endMinutes) => {
+                      if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
+                        return;
+                      }
                       onTimeRangeSelect(minutesToSelection(date, startMinutes, endMinutes));
                     }
                   : undefined
               }
+              gapCreationCutoffMs={gapCreationCutoffMs}
             />
           );
         })}

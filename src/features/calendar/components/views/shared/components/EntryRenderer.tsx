@@ -56,6 +56,7 @@ interface EntryRendererProps {
     rect: { top: number; left: number; width: number; height: number },
   ) => void;
   onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
+  gapCreationCutoffMs?: number | undefined;
   entries: CalendarEvent[];
 }
 
@@ -83,6 +84,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   onTouchStart,
   onResizeStart,
   onGapClick,
+  gapCreationCutoffMs,
   entries,
 }: EntryRendererProps) {
   const t = useTranslations();
@@ -207,6 +209,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
           onGapClick={onGapClick}
+          gapCreationCutoffMs={gapCreationCutoffMs}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',

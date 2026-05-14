@@ -5,6 +5,7 @@
  * 全エントリ間で重複を禁止する。
  */
 
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { CalendarEvent } from '../types/calendar.types';
 
 /**
@@ -22,44 +23,38 @@ export function checkClientSideOverlap(
   previewStartTime: Date,
   previewEndTime: Date,
 ): boolean {
-  if (previewEndTime.getTime() <= previewStartTime.getTime()) {
-    return true;
-  }
-
+  const now = Date.now();
   const draggedEvent = events.find((event) => event.id === draggedEventId);
-  const isNewFutureEntry = draggedEventId === '' && previewEndTime.getTime() > Date.now();
+  const isNewFutureEntry = draggedEventId === '' && previewEndTime.getTime() > now;
   const shouldCheckPlanned =
     isNewFutureEntry ||
     (draggedEvent?.origin === 'planned' && draggedEvent.entryState === 'upcoming');
 
-  if (draggedEvent?.origin === 'unplanned' && previewEndTime.getTime() > Date.now()) {
-    return true;
-  }
+  return hasTwoLayerTimeConflict(
+    events.map((event) => {
+      const plannedStart =
+        event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
+      const plannedEnd =
+        event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
+      const actualStart = event.actualStartDate ?? event.startDate;
+      const actualEnd = event.actualEndDate ?? event.endDate;
 
-  return events.some((event) => {
-    if (event.id === draggedEventId) return false;
-
-    const plannedStart =
-      event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
-    const plannedEnd = event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
-    const actualStart = event.actualStartDate ?? event.startDate;
-    const actualEnd = event.actualEndDate ?? event.endDate;
-
-    if (
-      shouldCheckPlanned &&
-      plannedStart &&
-      plannedEnd &&
-      plannedStart < previewEndTime &&
-      plannedEnd > previewStartTime
-    ) {
-      return true;
-    }
-
-    return !!(
-      actualStart &&
-      actualEnd &&
-      actualStart < previewEndTime &&
-      actualEnd > previewStartTime
-    );
-  });
+      return {
+        id: event.id,
+        plannedStart,
+        plannedEnd,
+        actualStart,
+        actualEnd,
+      };
+    }),
+    {
+      id: draggedEventId,
+      plannedStart: shouldCheckPlanned ? previewStartTime : null,
+      plannedEnd: shouldCheckPlanned ? previewEndTime : null,
+      actualStart: previewStartTime,
+      actualEnd: previewEndTime,
+      forbidFutureActual: draggedEvent?.origin === 'unplanned',
+      now,
+    },
+  );
 }
