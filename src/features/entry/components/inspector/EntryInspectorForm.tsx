@@ -197,6 +197,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             onEndChange={onPlannedEndChange}
             hasError={timeConflictError}
             disabled={isUnplanned}
+            testId="entry-inspector-planned-time"
           />
 
           {/* 記録行 */}
@@ -211,6 +212,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             onEndChange={(time) => {
               handleActualEndChange(time);
             }}
+            testId="entry-inspector-actual-time"
           />
 
           {/* 予定 vs 記録 差分バー */}

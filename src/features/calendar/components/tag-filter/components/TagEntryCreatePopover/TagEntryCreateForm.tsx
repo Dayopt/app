@@ -100,6 +100,7 @@ export function TagEntryCreateForm({
             onStartChange={onStartTimeChange}
             onEndChange={onEndTimeChange}
             hasError={hasError}
+            testId="tag-entry-create-planned-time"
           />
         </div>
       </div>

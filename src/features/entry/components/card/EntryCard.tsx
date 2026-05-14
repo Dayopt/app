@@ -313,6 +313,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     <div
       data-entry-card
       data-entry-id={entry.id}
+      data-entry-origin={entry.origin}
       className={entryCardClasses}
       style={dynamicStyle}
       onClick={handleClick}
@@ -422,7 +423,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {/* 予定 vs 記録: 上部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.topKind === 'unexecuted' && (
             <div
+              data-entry-gap="top"
               aria-hidden={!topGapClickEnabled ? true : undefined}
+              role={topGapClickEnabled ? 'button' : undefined}
+              aria-label={topGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
               className={cn(
                 'pattern-hatch absolute top-0 right-0 left-0 flex flex-col items-center justify-center',
                 topGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
@@ -459,7 +463,12 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
           {/* 予定 vs 記録: 下部 — 未実行はハッチング + 空き枠「+」ボタン */}
           {overlay.bottomKind === 'unexecuted' && (
             <div
+              data-entry-gap="bottom"
               aria-hidden={!bottomGapClickEnabled ? true : undefined}
+              role={bottomGapClickEnabled ? 'button' : undefined}
+              aria-label={
+                bottomGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined
+              }
               className={cn(
                 'pattern-hatch absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center',
                 bottomGapClickEnabled

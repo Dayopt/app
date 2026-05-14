@@ -57,7 +57,8 @@
       },
       "diff": {
         "overtime": "超過",
-        "short": "短縮"
+        "short": "短縮",
+        "addRecordToGap": "空き時間に記録を追加"
       },
       "saved": "保存しました",
       "noEventsOnThisDay": "まっさらな1日です。最初のブロックを追加しましょう",
