@@ -22,22 +22,49 @@ type Story = StoryObj<typeof meta>;
 // サンプルデータ
 // ─────────────────────────────────────────────────────────
 
-const sampleEntry: CalendarEvent = {
+const past = new Date('2026-03-18T10:00:00');
+const pastEnd = new Date('2026-03-18T11:00:00');
+
+/** 完了済み planned entry（全項目表示の前提） */
+const completedPlannedEntry: CalendarEvent = {
   id: 'entry-1',
   title: 'デザインレビュー',
   description: '週次デザインシンク',
-  startDate: new Date('2026-03-18T10:00:00'),
-  endDate: new Date('2026-03-18T11:00:00'),
-  status: 'open',
+  startDate: past,
+  endDate: pastEnd,
+  status: 'closed',
   color: 'var(--primary)',
+  tagId: 'tag-1',
   createdAt: new Date(),
   updatedAt: new Date(),
-  displayStartDate: new Date('2026-03-18T10:00:00'),
-  displayEndDate: new Date('2026-03-18T11:00:00'),
+  displayStartDate: past,
+  displayEndDate: pastEnd,
   duration: 60,
   isMultiDay: false,
-
   origin: 'planned',
+  actualStartDate: past,
+  actualEndDate: pastEnd,
+};
+
+/** タグなし entry（振り返り非表示） */
+const noTagEntry: CalendarEvent = {
+  ...completedPlannedEntry,
+  id: 'entry-2',
+  tagId: null,
+};
+
+/** 未完了 entry（actualEnd 未確定、計画外にする非表示） */
+const inProgressEntry: CalendarEvent = {
+  ...completedPlannedEntry,
+  id: 'entry-3',
+  actualEndDate: null,
+};
+
+/** Unplanned entry（計画に戻す表示） */
+const unplannedEntry: CalendarEvent = {
+  ...completedPlannedEntry,
+  id: 'entry-4',
+  origin: 'unplanned',
 };
 
 // ─────────────────────────────────────────────────────────
@@ -75,15 +102,27 @@ function ContextMenuTrigger({
   );
 }
 
+const allHandlers = {
+  onDelete: fn(),
+  onViewStats: fn(),
+  onMarkUnplanned: fn(),
+  onRestorePlanned: fn(),
+};
+
 // ─────────────────────────────────────────────────────────
 // Stories
 // ─────────────────────────────────────────────────────────
 
-/** 削除アクション。 */
+/** デフォルト（全項目あり：完了済み planned entry）。 */
+export const Default: Story = {
+  render: () => <ContextMenuTrigger entry={completedPlannedEntry} menuProps={allHandlers} />,
+};
+
+/** 削除のみ。 */
 export const DeleteOnly: Story = {
   render: () => (
     <ContextMenuTrigger
-      entry={sampleEntry}
+      entry={completedPlannedEntry}
       menuProps={{
         onDelete: fn(),
       }}
@@ -96,10 +135,10 @@ export const DirectDisplay: Story = {
   render: () => (
     <div className="relative" style={{ height: 300 }}>
       <EventContextMenu
-        entry={sampleEntry}
+        entry={completedPlannedEntry}
         position={{ x: 20, y: 20 }}
         onClose={fn()}
-        onDelete={fn()}
+        {...allHandlers}
       />
     </div>
   ),
@@ -110,10 +149,54 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex flex-col items-start gap-6">
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">削除</span>
+        <span className="text-muted-foreground text-xs">完了済み planned（全項目）</span>
+        <div className="relative" style={{ height: 180 }}>
+          <EventContextMenu
+            entry={completedPlannedEntry}
+            position={{ x: 0, y: 0 }}
+            onClose={fn()}
+            {...allHandlers}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-xs">タグなし（振り返り非表示）</span>
+        <div className="relative" style={{ height: 140 }}>
+          <EventContextMenu
+            entry={noTagEntry}
+            position={{ x: 0, y: 0 }}
+            onClose={fn()}
+            {...allHandlers}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-xs">未完了（計画外にする非表示）</span>
+        <div className="relative" style={{ height: 140 }}>
+          <EventContextMenu
+            entry={inProgressEntry}
+            position={{ x: 0, y: 0 }}
+            onClose={fn()}
+            {...allHandlers}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-xs">Unplanned（計画に戻す表示）</span>
+        <div className="relative" style={{ height: 180 }}>
+          <EventContextMenu
+            entry={unplannedEntry}
+            position={{ x: 0, y: 0 }}
+            onClose={fn()}
+            {...allHandlers}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className="text-muted-foreground text-xs">削除のみ</span>
         <div className="relative" style={{ height: 80 }}>
           <EventContextMenu
-            entry={sampleEntry}
+            entry={completedPlannedEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
             onDelete={fn()}
