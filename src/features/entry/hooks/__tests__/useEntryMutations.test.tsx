@@ -352,6 +352,107 @@ describe('useEntryMutations.updateEntry', () => {
       { id: 'e1', title: 'Old' },
     );
   });
+
+  it('古い update 成功レスポンスは新しい楽観更新を上書きしない', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      },
+    ]);
+
+    const firstCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+      },
+    })) as { mutationSeq: number };
+    const secondCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+      },
+    })) as { mutationSeq: number };
+
+    captured.update!.onSuccess!(
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+        adjustedEntries: [],
+      },
+      { id: 'e1', data: {} },
+      firstCtx,
+    );
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+
+    captured.update!.onSuccess!(
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+        adjustedEntries: [],
+      },
+      { id: 'e1', data: {} },
+      secondCtx,
+    );
+
+    expect(queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)![0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+  });
+
+  it('古い update エラーは新しい楽観更新を rollback しない', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      },
+    ]);
+
+    const firstCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+      },
+    })) as { id: string; mutationSeq: number };
+    await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+      },
+    });
+
+    captured.update!.onError!(
+      { data: undefined, message: 'network' },
+      { id: 'e1', data: {} },
+      firstCtx,
+    );
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)![0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+  });
 });
 
 // =============================================================================

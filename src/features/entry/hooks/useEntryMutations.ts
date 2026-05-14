@@ -14,6 +14,7 @@ import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useRef } from 'react';
 import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -52,6 +53,13 @@ export function useEntryMutations(options?: {
   const utils = api.useUtils();
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
+  const updateMutationSeqRef = useRef(0);
+  const latestUpdateSeqByIdRef = useRef(new Map<string, number>());
+
+  const isLatestUpdateMutation = (id: string, mutationSeq?: number) => {
+    if (mutationSeq == null) return true;
+    return latestUpdateSeqByIdRef.current.get(id) === mutationSeq;
+  };
 
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
@@ -187,6 +195,9 @@ export function useEntryMutations(options?: {
   const updateEntry = api.entries.update.useMutation({
     onMutate: async ({ id, data }) => {
       logger.debug('[mutation:update] onMutate', { id, fields: Object.keys(data) });
+      const mutationSeq = updateMutationSeqRef.current + 1;
+      updateMutationSeqRef.current = mutationSeq;
+      latestUpdateSeqByIdRef.current.set(id, mutationSeq);
 
       // 1. 進行中のクエリをキャンセル（競合回避）
       await utils.entries.list.cancel();
@@ -254,10 +265,14 @@ export function useEntryMutations(options?: {
         return Object.assign({}, oldData, updateData);
       });
 
-      return { id, previousEntriesList, previousEntry };
+      return { id, previousEntriesList, previousEntry, mutationSeq };
     },
-    onSuccess: (result, variables) => {
+    onSuccess: (result, variables, context) => {
       logger.debug('[mutation:update] onSuccess', { id: variables.id });
+      if (!isLatestUpdateMutation(variables.id, context?.mutationSeq)) {
+        logger.debug('[mutation:update] stale onSuccess ignored', { id: variables.id });
+        return;
+      }
       // サーバーから返ってきた最新データでキャッシュを更新
       // adjustedEntries はキャッシュ操作用（リストに含めない）
       const { adjustedEntries, ...updatedEntry } = result;
@@ -308,6 +323,10 @@ export function useEntryMutations(options?: {
     },
     onError: (err, _variables, context) => {
       logger.error('[mutation:update] onError', err);
+      if (context?.id && !isLatestUpdateMutation(context.id, context.mutationSeq)) {
+        logger.debug('[mutation:update] stale onError ignored', { id: context.id });
+        return;
+      }
 
       if (!suppressUpdateErrorToast?.()) {
         // 競合検出（楽観的ロック）: 他タブ/デバイスで変更されたエントリ
@@ -343,7 +362,11 @@ export function useEntryMutations(options?: {
         utils.entries.getById.setData({ id: context.id }, context.previousEntry);
       }
     },
-    onSettled: async () => {
+    onSettled: async (_result, _error, variables, context) => {
+      if (variables?.id && !isLatestUpdateMutation(variables.id, context?.mutationSeq)) {
+        logger.debug('[mutation:update] stale onSettled ignored', { id: variables.id });
+        return;
+      }
       void utils.entries.list.invalidate();
     },
   });
