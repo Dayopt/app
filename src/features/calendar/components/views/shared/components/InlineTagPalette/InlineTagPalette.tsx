@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
@@ -25,12 +26,25 @@ import { logger } from '@/lib/logger';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
 
 import { Z_INDEX } from '../../constants/grid.constants';
 import { DRAG_CONSTANTS } from '../CalendarDragSelection/types';
+
+/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
+function isEntriesListQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) &&
+    key.length >= 1 &&
+    Array.isArray(key[0]) &&
+    key[0][0] === 'entries' &&
+    key[0][1] === 'list'
+  );
+}
 
 /** InlineTagPalette コンポーネントのプロパティ */
 interface InlineTagPaletteProps {
@@ -49,8 +63,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const locale = useLocale();
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
+  const tEntry = useTranslations('entry');
   const { tap, impact } = useHapticFeedback();
 
+  const queryClient = useQueryClient();
   const { createEntry } = useEntryMutations();
   const createTagMutation = useCreateTag({ showToast: false });
   const [isCreating, setIsCreating] = useState(false);
@@ -68,9 +84,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const handleCreate = useCallback(
     (tagId: string, tagName: string) => {
       if (!pendingSelection || isCreating) return;
-
-      lockedRef.current = true;
-      setIsCreating(true);
 
       const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
 
@@ -92,6 +105,55 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
       const utcStart = convertFromTimezone(localStart, timezone);
       const utcEnd = convertFromTimezone(localEnd, timezone);
+
+      // 事前 overlap 判定（TagSelector を開いている間の resize / 他クライアント更新による race を回避）
+      const cachedLists = queryClient.getQueriesData<
+        Array<{
+          id: string;
+          origin: string | null;
+          start_time: string | null;
+          end_time: string | null;
+          actual_start_time: string | null;
+          actual_end_time: string | null;
+        }>
+      >({ predicate: isEntriesListQuery });
+      const seen = new Set<string>();
+      const events: Array<{
+        id: string;
+        plannedStart: string | null;
+        plannedEnd: string | null;
+        actualStart: string | null;
+        actualEnd: string | null;
+      }> = [];
+      for (const [, data] of cachedLists) {
+        if (!data) continue;
+        for (const e of data) {
+          if (seen.has(e.id)) continue;
+          seen.add(e.id);
+          events.push({
+            id: e.id,
+            plannedStart: e.start_time,
+            plannedEnd: e.end_time,
+            actualStart: e.actual_start_time,
+            actualEnd: e.actual_end_time,
+          });
+        }
+      }
+      const hasOverlap = hasTwoLayerTimeConflict(events, {
+        id: '',
+        plannedStart: utcStart.toISOString(),
+        plannedEnd: utcEnd.toISOString(),
+        actualStart: null,
+        actualEnd: null,
+      });
+      if (hasOverlap) {
+        toast.error(tEntry('errors.timeOverlap'));
+        clearPendingSelection();
+        return;
+      }
+
+      lockedRef.current = true;
+      setIsCreating(true);
 
       logger.log('🏷️ InlineTagPalette: Creating entry', {
         start: utcStart.toISOString(),
@@ -116,7 +178,15 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
         },
       );
     },
-    [pendingSelection, isCreating, timezone, createEntry, clearPendingSelection],
+    [
+      pendingSelection,
+      isCreating,
+      timezone,
+      createEntry,
+      clearPendingSelection,
+      queryClient,
+      tEntry,
+    ],
   );
 
   // 新規タグ作成 → エントリ作成
