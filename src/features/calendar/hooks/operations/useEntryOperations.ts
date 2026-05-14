@@ -16,6 +16,25 @@ type TimeUpdateEntry = {
   actual_end_time?: string | null;
 };
 
+function rangesMatch(
+  firstStart: string | null | undefined,
+  firstEnd: string | null | undefined,
+  secondStart: string | null | undefined,
+  secondEnd: string | null | undefined,
+): boolean {
+  return firstStart === secondStart && firstEnd === secondEnd;
+}
+
+function hasActualDiff(entry: TimeUpdateEntry | null | undefined): boolean {
+  if (entry?.origin !== 'planned') return false;
+  return !rangesMatch(
+    entry.start_time,
+    entry.end_time,
+    entry.actual_start_time,
+    entry.actual_end_time,
+  );
+}
+
 function buildTimeUpdateData(
   entry: TimeUpdateEntry | null | undefined,
   startTime: Date,
@@ -46,13 +65,14 @@ function buildTimeUpdateData(
     };
   }
 
-  const isFuturePlanned =
-    entry?.origin === 'planned' &&
-    entry.start_time !== null &&
-    entry.start_time !== undefined &&
-    new Date(entry.start_time).getTime() > Date.now();
+  if (entry?.origin === 'planned' && hasActualDiff(entry) && !resetActualTime) {
+    return {
+      start_time: startISO,
+      end_time: endISO,
+    };
+  }
 
-  if (isFuturePlanned || !entry) {
+  if (entry?.origin === 'planned' || !entry) {
     return {
       start_time: startISO,
       end_time: endISO,
@@ -81,12 +101,6 @@ function buildUndoTimeUpdateData(
     };
   }
 
-  const isFuturePlanned =
-    entry.origin === 'planned' &&
-    entry.start_time !== null &&
-    entry.start_time !== undefined &&
-    new Date(entry.start_time).getTime() > Date.now();
-
   if (resetActualTime) {
     if (
       !entry.start_time ||
@@ -104,18 +118,20 @@ function buildUndoTimeUpdateData(
     };
   }
 
-  if (isFuturePlanned) {
+  if (entry.origin === 'planned' && hasActualDiff(entry)) {
     if (!entry.start_time || !entry.end_time) return null;
     return {
       start_time: entry.start_time,
       end_time: entry.end_time,
-      actual_start_time: entry.start_time,
-      actual_end_time: entry.end_time,
     };
   }
 
-  if (!entry.actual_start_time || !entry.actual_end_time) return null;
+  if (!entry.start_time || !entry.end_time || !entry.actual_start_time || !entry.actual_end_time) {
+    return null;
+  }
   return {
+    start_time: entry.start_time,
+    end_time: entry.end_time,
     actual_start_time: entry.actual_start_time,
     actual_end_time: entry.actual_end_time,
   };

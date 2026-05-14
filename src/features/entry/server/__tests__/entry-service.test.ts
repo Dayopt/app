@@ -271,6 +271,102 @@ describe('EntryService.update', () => {
 
     expect(result.fulfillment_score).toBe(2);
   });
+
+  it('future planned更新でactualが明示されていればサーバー側で上書きしない', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'planned',
+      start_time: '2030-03-17T09:00:00Z',
+      end_time: '2030-03-17T10:00:00Z',
+      actual_start_time: '2030-03-17T09:00:00Z',
+      actual_end_time: '2030-03-17T10:00:00Z',
+    });
+    const updated = {
+      ...existing,
+      start_time: '2030-03-17T11:00:00Z',
+      end_time: '2030-03-17T12:00:00Z',
+      actual_start_time: '2030-03-17T09:15:00Z',
+      actual_end_time: '2030-03-17T09:45:00Z',
+    };
+
+    const { service, mockSupabase } = createService();
+    const updateMock = createChainableMock(updated);
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock(existing);
+      return updateMock;
+    });
+
+    await service.update({
+      userId: USER_ID,
+      entryId: 'entry-1',
+      input: {
+        start_time: '2030-03-17T11:00:00Z',
+        end_time: '2030-03-17T12:00:00Z',
+        actual_start_time: '2030-03-17T09:15:00Z',
+        actual_end_time: '2030-03-17T09:45:00Z',
+      },
+      timezone: 'UTC',
+    });
+
+    expect(updateMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        start_time: '2030-03-17T11:00:00Z',
+        end_time: '2030-03-17T12:00:00Z',
+        actual_start_time: '2030-03-17T09:15:00Z',
+        actual_end_time: '2030-03-17T09:45:00Z',
+      }),
+    );
+  });
+
+  it('future planned更新でactual未指定ならplannedと同じ範囲で補完する', async () => {
+    const existing = createMockEntry({
+      id: 'entry-1',
+      origin: 'planned',
+      start_time: '2030-03-17T09:00:00Z',
+      end_time: '2030-03-17T10:00:00Z',
+      actual_start_time: '2030-03-17T09:00:00Z',
+      actual_end_time: '2030-03-17T10:00:00Z',
+    });
+    const updated = {
+      ...existing,
+      start_time: '2030-03-17T11:00:00Z',
+      end_time: '2030-03-17T12:00:00Z',
+      actual_start_time: '2030-03-17T11:00:00Z',
+      actual_end_time: '2030-03-17T12:00:00Z',
+    };
+
+    const { service, mockSupabase } = createService();
+    const updateMock = createChainableMock(updated);
+
+    let callCount = 0;
+    mockSupabase.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return createChainableMock(existing);
+      return updateMock;
+    });
+
+    await service.update({
+      userId: USER_ID,
+      entryId: 'entry-1',
+      input: {
+        start_time: '2030-03-17T11:00:00Z',
+        end_time: '2030-03-17T12:00:00Z',
+      },
+      timezone: 'UTC',
+    });
+
+    expect(updateMock.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        start_time: '2030-03-17T11:00:00Z',
+        end_time: '2030-03-17T12:00:00Z',
+        actual_start_time: '2030-03-17T11:00:00Z',
+        actual_end_time: '2030-03-17T12:00:00Z',
+      }),
+    );
+  });
 });
 
 // ============================================================================

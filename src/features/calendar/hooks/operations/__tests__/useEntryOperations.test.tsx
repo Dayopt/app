@@ -148,7 +148,7 @@ describe('useEntryOperations', () => {
       });
     });
 
-    it('過去の planned は通常更新では actual range のみを送る', async () => {
+    it('actual未変更のplannedは過去でもplannedとactualを同じ範囲で送る', async () => {
       getByIdGetData.mockReturnValue({
         id: 'entry-1',
         origin: 'planned',
@@ -166,8 +166,33 @@ describe('useEntryOperations', () => {
 
       const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
       expect(callArgs.data).toEqual({
+        start_time: '2026-04-25T01:00:00.000Z',
+        end_time: '2026-04-25T02:00:00.000Z',
         actual_start_time: '2026-04-25T01:00:00.000Z',
         actual_end_time: '2026-04-25T02:00:00.000Z',
+      });
+    });
+
+    it('actual差分があるplannedはresetなしならplanned rangeのみを送る', async () => {
+      getByIdGetData.mockReturnValue({
+        id: 'entry-1',
+        origin: 'planned',
+        start_time: '2026-04-25T00:00:00.000Z',
+        end_time: '2026-04-25T01:00:00.000Z',
+        actual_start_time: '2026-04-25T00:15:00.000Z',
+        actual_end_time: '2026-04-25T00:45:00.000Z',
+      });
+
+      const { result } = renderHook(() => useEntryOperations());
+      await result.current.handleUpdateEntry('entry-1', {
+        startTime: new Date('2026-04-25T01:00:00.000Z'),
+        endTime: new Date('2026-04-25T02:00:00.000Z'),
+      });
+
+      const callArgs = updateMutate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+      expect(callArgs.data).toEqual({
+        start_time: '2026-04-25T01:00:00.000Z',
+        end_time: '2026-04-25T02:00:00.000Z',
       });
     });
 
