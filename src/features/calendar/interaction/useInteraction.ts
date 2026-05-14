@@ -330,10 +330,12 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
             break;
           }
         }
-        // Fallback: rightmost column if mouse is beyond
+        // Fallback: clamp to nearest edge when pointer is outside the grid columns
         if (targetDateIndex === undefined && columns.length > 0) {
+          const first = columns[0]!;
           const last = columns[columns.length - 1]!;
-          targetDateIndex = parseInt(last.dataset.calendarDayIndex ?? '0', 10);
+          const edge = point.clientX < first.getBoundingClientRect().left ? first : last;
+          targetDateIndex = parseInt(edge.dataset.calendarDayIndex ?? '0', 10);
         }
       }
 
