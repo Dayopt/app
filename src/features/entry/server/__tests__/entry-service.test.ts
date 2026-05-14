@@ -415,7 +415,6 @@ describe('EntryService.convertPlannedToUnplanned', () => {
       origin: 'unplanned',
       start_time: null,
       end_time: null,
-      duration_minutes: null,
     });
   });
 

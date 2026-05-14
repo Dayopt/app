@@ -378,7 +378,6 @@ export class EntryService {
         origin: 'unplanned',
         start_time: null,
         end_time: null,
-        duration_minutes: null,
       })
       .eq('id', entryId)
       .eq('user_id', userId)
