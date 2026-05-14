@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { useCreateTag, useTagsMap } from '@/features/tags';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
+import { getEntryMenuItems } from '../../lib/entry-menu-items';
 import type { FulfillmentScore } from '../../types/entry';
 
 import {
@@ -147,6 +148,15 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
 
   if (!entry) return null;
 
+  const menuItems = getEntryMenuItems({
+    origin: entry.origin,
+    tagId: selectedTagId,
+    onViewStats: onViewStats && selectedTagId ? handleViewStats : undefined,
+    onMarkUnplanned: isPlanned ? handleMarkUnplanned : undefined,
+    onRestorePlanned: isUnplanned ? handleRestorePlanned : undefined,
+    onDelete: handleDelete,
+  });
+
   return (
     <div className="px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6">
       {/* Row 0: タグ + 削除ボタン */}
@@ -158,11 +168,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         tagColor={selectedTag?.color}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
-        onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
-        onDelete={handleDelete}
-        isUnplanned={isUnplanned}
-        onMarkUnplanned={isPlanned ? handleMarkUnplanned : undefined}
-        onRestorePlanned={isUnplanned ? handleRestorePlanned : undefined}
+        menuItems={menuItems}
         onCloseInspector={onCloseInspector}
       />
 

@@ -41,6 +41,12 @@ export { entriesToICal } from './lib/entry-to-ical';
 export { isNewEntry } from './lib/new-entry-tracker';
 
 // =============================================================================
+// Lib (entry menu items — 右クリック / Inspector メニュー共通の項目定義)
+// =============================================================================
+export { getEntryMenuItems } from './lib/entry-menu-items';
+export type { EntryMenuItem, EntryMenuItemKey } from './lib/entry-menu-items';
+
+// =============================================================================
 // Components (EntryCard)
 // =============================================================================
 export { EntryCard } from './components/card';
