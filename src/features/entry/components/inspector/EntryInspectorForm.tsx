@@ -55,8 +55,13 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     autoSave,
   } = handlers;
   const { timeConflictError } = state;
-  const { handleDelete, updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned } =
-    actions;
+  const {
+    handleDelete,
+    updateEntry,
+    convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
+    flushAsync,
+  } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -94,13 +99,25 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
 
   const handleMarkUnplanned = useCallback(() => {
     if (!entryId || !isPlanned) return;
-    convertPlannedToUnplanned.mutate({ id: entryId });
-  }, [entryId, isPlanned, convertPlannedToUnplanned]);
+    void flushAsync()
+      .then(() => {
+        convertPlannedToUnplanned.mutate({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み。古いデータのまま変換しない。
+      });
+  }, [entryId, isPlanned, flushAsync, convertPlannedToUnplanned]);
 
   const handleRestorePlanned = useCallback(() => {
     if (!entryId || !isUnplanned) return;
-    convertUnplannedToPlanned.mutate({ id: entryId });
-  }, [entryId, isUnplanned, convertUnplannedToPlanned]);
+    void flushAsync()
+      .then(() => {
+        convertUnplannedToPlanned.mutate({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み。古いデータのまま変換しない。
+      });
+  }, [entryId, isUnplanned, flushAsync, convertUnplannedToPlanned]);
 
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {

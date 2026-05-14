@@ -8,6 +8,7 @@
  * - saveImmediate(): 即時（fulfillment, reminder）
  * - saveTag(): 即時（別 API）
  * - flush(): 強制送信（unmount / entry 切替時）
+ * - flushAsync(): 変換など順序保証が必要な操作前に保存完了まで待つ
  */
 
 import { useCallback, useEffect, useRef } from 'react';
@@ -41,6 +42,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const pendingRef = useRef<SaveFields>({});
   // flush 用に最新の entryId を ref で保持（クリーンアップ時のstale closure対策）
   const entryIdRef = useRef(entryId);
+  const lastSavePromiseRef = useRef<Promise<unknown> | null>(null);
   // eslint-disable-next-line react-hooks/refs -- flush() で最新の entryId を参照するための ref 同期
   entryIdRef.current = entryId;
 
@@ -54,6 +56,26 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
       return cached?.updated_at ?? undefined;
     },
     [utils],
+  );
+
+  const runSave = useCallback(
+    (id: string, data: SaveFields) => {
+      const promise = updateEntry.mutateAsync({
+        id,
+        data,
+        expectedUpdatedAt: getExpectedUpdatedAt(id),
+      });
+      lastSavePromiseRef.current = promise;
+      void promise
+        .catch(() => undefined)
+        .finally(() => {
+          if (lastSavePromiseRef.current === promise) {
+            lastSavePromiseRef.current = null;
+          }
+        });
+      return promise;
+    },
+    [updateEntry, getExpectedUpdatedAt],
   );
 
   /**
@@ -73,14 +95,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
         const data = pendingRef.current;
         pendingRef.current = {};
         timerRef.current = null;
-        updateEntry.mutate({
-          id: entryId,
-          data,
-          expectedUpdatedAt: getExpectedUpdatedAt(entryId),
-        });
+        void runSave(entryId, data);
       }, 500);
     },
-    [entryId, updateEntry, getExpectedUpdatedAt],
+    [entryId, runSave],
   );
 
   /**
@@ -89,13 +107,9 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   const saveImmediate = useCallback(
     (fields: SaveFields) => {
       if (!entryId) return;
-      updateEntry.mutate({
-        id: entryId,
-        data: fields,
-        expectedUpdatedAt: getExpectedUpdatedAt(entryId),
-      });
+      void runSave(entryId, fields);
     },
-    [entryId, updateEntry, getExpectedUpdatedAt],
+    [entryId, runSave],
   );
 
   /**
@@ -133,13 +147,34 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     const id = entryIdRef.current;
     if (id && Object.keys(data).length > 0) {
       pendingRef.current = {};
-      updateEntry.mutate({
-        id,
-        data,
-        expectedUpdatedAt: getExpectedUpdatedAt(id),
-      });
+      void runSave(id, data);
     }
-  }, [updateEntry, getExpectedUpdatedAt]);
+  }, [runSave]);
+
+  /**
+   * 未送信・送信中の保存を完了させる。
+   *
+   * planned/unplanned 変換の直前に呼び、古い expectedUpdatedAt を持つ
+   * 通常 update と変換 mutation が競争しないようにする。
+   */
+  const flushAsync = useCallback(async () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const data = pendingRef.current;
+    const id = entryIdRef.current;
+    if (id && Object.keys(data).length > 0) {
+      pendingRef.current = {};
+      await runSave(id, data);
+      return;
+    }
+
+    if (lastSavePromiseRef.current) {
+      await lastSavePromiseRef.current;
+    }
+  }, [runSave]);
 
   // entryId 変更時 or unmount 時に flush
   useEffect(() => {
@@ -151,14 +186,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
       const data = pendingRef.current;
       if (entryId && Object.keys(data).length > 0) {
         pendingRef.current = {};
-        updateEntry.mutate({
-          id: entryId,
-          data,
-          expectedUpdatedAt: getExpectedUpdatedAt(entryId),
-        });
+        void runSave(entryId, data);
       }
     };
-  }, [entryId, updateEntry, getExpectedUpdatedAt]);
+  }, [entryId, runSave]);
 
   // ブラウザ閉じ・タブ切替時のデータ保護
   // visibilitychange: タブ非表示時に通常の flush（tRPC mutation）
@@ -196,6 +227,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     saveTag,
     cancelPending,
     flush,
+    flushAsync,
     updateEntry,
     convertPlannedToUnplanned,
     convertUnplannedToPlanned,
