@@ -63,6 +63,7 @@ vi.mock('@/lib/trpc', () => {
         create: makeMutation('create'),
         update: makeMutation('update'),
         convertPlannedToUnplanned: makeMutation('convertPlannedToUnplanned'),
+        convertUnplannedToPlanned: makeMutation('convertUnplannedToPlanned'),
         delete: makeMutation('delete'),
         restore: makeMutation('restore'),
         bulkUpdate: makeMutation('bulkUpdate'),
@@ -328,6 +329,62 @@ describe('useEntryMutations.updateEntry', () => {
       { id: 'e1' },
       { id: 'e1', title: 'Old' },
     );
+  });
+});
+
+// =============================================================================
+// convert planned/unplanned
+// =============================================================================
+
+describe('useEntryMutations.convertPlannedToUnplanned', () => {
+  it('onMutate: planned range を null にして optimistic update する', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        origin: 'planned',
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
+      },
+    ]);
+
+    await captured.convertPlannedToUnplanned!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+    });
+  });
+});
+
+describe('useEntryMutations.convertUnplannedToPlanned', () => {
+  it('onMutate: actual range を planned range にコピーして optimistic update する', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
+      },
+    ]);
+
+    await captured.convertUnplannedToPlanned!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      origin: 'planned',
+      start_time: '2026-04-27T01:00:00.000Z',
+      end_time: '2026-04-27T02:00:00.000Z',
+      actual_start_time: '2026-04-27T01:00:00.000Z',
+      actual_end_time: '2026-04-27T02:00:00.000Z',
+    });
   });
 });
 

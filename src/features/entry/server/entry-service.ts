@@ -13,6 +13,7 @@ import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entr
 
 import type {
   ConvertPlannedToUnplannedOptions,
+  ConvertUnplannedToPlannedOptions,
   CreateEntryOptions,
   DeleteEntryOptions,
   EntryRow,
@@ -381,6 +382,61 @@ export class EntryService {
         start_time: null,
         end_time: null,
         duration_minutes: null,
+      })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
+      }
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to convert entry: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * unplanned entry を「予定」に明示変換する
+   *
+   * 誤って予定外として作った過去記録を、同じ actual range の planned entry に戻す。
+   * future への自動変換ではなく、Inspector の明示操作からのみ呼ばれる。
+   */
+  async convertUnplannedToPlanned(options: ConvertUnplannedToPlannedOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (oldData.origin !== 'unplanned') {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Only unplanned entries can be converted to planned.',
+      );
+    }
+
+    this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
+
+    const finalEntry = {
+      ...oldData,
+      origin: 'planned',
+      start_time: oldData.actual_start_time,
+      end_time: oldData.actual_end_time,
+    } as EntryRow;
+
+    this.validateEntryShape(finalEntry);
+    await this.ensureNoOverlaps(userId, finalEntry, entryId);
+
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({
+        origin: 'planned',
+        start_time: oldData.actual_start_time,
+        end_time: oldData.actual_end_time,
       })
       .eq('id', entryId)
       .eq('user_id', userId)

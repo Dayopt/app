@@ -55,7 +55,8 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     autoSave,
   } = handlers;
   const { timeConflictError } = state;
-  const { handleDelete, updateEntry, convertPlannedToUnplanned } = actions;
+  const { handleDelete, updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned } =
+    actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -100,6 +101,11 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     if (!entryId || !canMarkUnplanned) return;
     convertPlannedToUnplanned.mutate({ id: entryId });
   }, [entryId, canMarkUnplanned, convertPlannedToUnplanned]);
+
+  const handleRestorePlanned = useCallback(() => {
+    if (!entryId || !isUnplanned) return;
+    convertUnplannedToPlanned.mutate({ id: entryId });
+  }, [entryId, isUnplanned, convertUnplannedToPlanned]);
 
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
@@ -162,6 +168,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         onDelete={handleDelete}
         isUnplanned={isUnplanned}
         onMarkUnplanned={canMarkUnplanned ? handleMarkUnplanned : undefined}
+        onRestorePlanned={isUnplanned ? handleRestorePlanned : undefined}
         onCloseInspector={onCloseInspector}
       />
 

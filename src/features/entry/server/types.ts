@@ -73,6 +73,14 @@ export interface ConvertPlannedToUnplannedOptions {
 }
 
 /**
+ * unplanned entry を planned entry に明示変換するオプション
+ */
+export interface ConvertUnplannedToPlannedOptions {
+  userId: string;
+  entryId: string;
+}
+
+/**
  * エントリ更新の結果（auto-shrink された隣接エントリを含む）
  */
 export interface UpdateEntryResult extends EntryRow {

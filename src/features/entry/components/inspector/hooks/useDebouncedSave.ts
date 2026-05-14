@@ -30,7 +30,8 @@ interface UseDebouncedSaveOptions {
  * @returns save, saveImmediate, saveTag, flush, updateEntry, deleteEntry, updateTagsInCache
  */
 export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
-  const { updateEntry, convertPlannedToUnplanned, deleteEntry } = useEntryMutations();
+  const { updateEntry, convertPlannedToUnplanned, convertUnplannedToPlanned, deleteEntry } =
+    useEntryMutations();
   const { setEntryTags } = useEntryTags();
   const updateTagsInCache = useUpdateEntityTagsInCache('entries');
   const utils = api.useUtils();
@@ -197,6 +198,7 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     flush,
     updateEntry,
     convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
     deleteEntry,
     updateTagsInCache,
   };

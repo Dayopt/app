@@ -189,6 +189,22 @@ export const entriesCoreRouter = createTRPCRouter({
       }
     }),
 
+  /** unplanned エントリを予定へ明示変換 */
+  convertUnplannedToPlanned: protectedProcedure
+    .meta({ description: 'unplanned エントリを予定へ変換' })
+    .input(entryIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const service = createEntryService(ctx.supabase);
+      try {
+        return await service.convertUnplannedToPlanned({
+          userId: ctx.userId,
+          entryId: input.id,
+        });
+      } catch (error) {
+        handleServiceError(error);
+      }
+    }),
+
   /** エントリ削除（soft-delete） */
   delete: protectedProcedure
     .meta({ description: 'エントリ削除（ソフトデリート、復元可能）' })
