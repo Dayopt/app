@@ -7,7 +7,7 @@
  * onViewStats は Composition Layer（GlobalOverlays）から注入される。
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
@@ -39,7 +39,6 @@ interface EntryInspectorFormProps {
 /** InspectorのフォームコンポーネントーuseEntryFormから全状態を取得し全フィールドをフラットに描画） */
 export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspectorFormProps) {
   const t = useTranslations();
-  const [now] = useState(() => Date.now());
   const { getTagById } = useTagsMap();
   const createTagMutation = useCreateTag({ showToast: false });
   const { entryId, entry, fields, handlers, state, actions } = useEntryForm();
@@ -90,17 +89,12 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   // 充実度（TanStack Query の楽観的更新で即座に反映）
   const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
   const isUnplanned = entry?.origin === 'unplanned';
-  const canMarkUnplanned =
-    entry?.origin === 'planned' &&
-    entry.end_time != null &&
-    entry.actual_end_time != null &&
-    new Date(entry.end_time).getTime() <= now &&
-    new Date(entry.actual_end_time).getTime() <= now;
+  const isPlanned = entry?.origin === 'planned';
 
   const handleMarkUnplanned = useCallback(() => {
-    if (!entryId || !canMarkUnplanned) return;
+    if (!entryId || !isPlanned) return;
     convertPlannedToUnplanned.mutate({ id: entryId });
-  }, [entryId, canMarkUnplanned, convertPlannedToUnplanned]);
+  }, [entryId, isPlanned, convertPlannedToUnplanned]);
 
   const handleRestorePlanned = useCallback(() => {
     if (!entryId || !isUnplanned) return;
@@ -167,7 +161,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
         onDelete={handleDelete}
         isUnplanned={isUnplanned}
-        onMarkUnplanned={canMarkUnplanned ? handleMarkUnplanned : undefined}
+        onMarkUnplanned={isPlanned ? handleMarkUnplanned : undefined}
         onRestorePlanned={isUnplanned ? handleRestorePlanned : undefined}
         onCloseInspector={onCloseInspector}
       />
