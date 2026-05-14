@@ -1,11 +1,13 @@
 {
   "entry": {
     "untitled": "無題",
+    "errors": {
+      "timeOverlap": "この時間帯には既に予定があります"
+    },
     "toast": {
       "created": "「{title}」を記録しました ✓",
       "createFailed": "作成できませんでした: {error}",
       "updated": "更新しました",
-      "timeOverlap": "この時間帯には既にエントリーがあります",
       "updateFailed": "更新できませんでした。もう一度お試しください",
       "deleted": "削除しました",
       "deleteFailed": "削除できませんでした: {error}",
@@ -74,7 +76,6 @@
       "timeConflict": "時間が重複しています",
       "toast": {
         "tagsSaveFailed": "タグを保存できませんでした。入力内容は保持されています。もう一度お試しください",
-        "timeOverlap": "時間が重複しています",
         "createFailed": "エントリーを作成できませんでした。もう一度お試しください",
         "saveFailed": "保存できませんでした。入力内容は保持されています。もう一度お試しください"
       },
@@ -126,7 +127,6 @@
       "recordCreate": {
         "titlePlaceholder": "何をした？",
         "titleLabel": "エントリータイトル",
-        "timeOverlap": "時間が重複しています",
         "failed": "エントリーを作成できませんでした。もう一度お試しください",
         "linkEntry": "エントリーに紐付け",
         "unlinkEntry": "エントリー紐付けを解除",

@@ -6,7 +6,6 @@
       "notFound": "Entry not found",
       "openEntry": "Open entry",
       "toast": {
-        "timeOverlap": "Time overlaps with existing entry",
         "saveFailed": "Failed to save",
         "tagsSaveFailed": "Failed to save tags"
       }

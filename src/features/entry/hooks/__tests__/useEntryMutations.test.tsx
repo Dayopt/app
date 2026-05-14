@@ -254,7 +254,7 @@ describe('useEntryMutations.createEntry', () => {
       {},
       { tempId: 'temp-x', previousEntriesList: [] },
     );
-    expect(toastError).toHaveBeenCalledWith('entry.toast.timeOverlap');
+    expect(toastError).toHaveBeenCalledWith('entry.errors.timeOverlap');
   });
 
   it('onSettled: list.invalidate を呼ぶ', () => {
@@ -327,7 +327,7 @@ describe('useEntryMutations.updateEntry', () => {
       { id: 'e1', data: {} },
       { id: 'e1', previousEntriesList: [], previousEntry: null },
     );
-    expect(toastError).toHaveBeenCalledWith('entry.toast.timeOverlap');
+    expect(toastError).toHaveBeenCalledWith('entry.errors.timeOverlap');
   });
 
   it('onError: 一般エラーは updateFailed toast を出し snapshot からロールバックする', () => {

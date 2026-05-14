@@ -1,11 +1,13 @@
 {
   "entry": {
     "untitled": "Untitled",
+    "errors": {
+      "timeOverlap": "This time slot is already taken"
+    },
     "toast": {
       "created": "\"{title}\" created",
       "createFailed": "Failed to create: {error}",
       "updated": "Updated",
-      "timeOverlap": "An entry already exists in this time slot",
       "updateFailed": "Failed to update",
       "deleted": "Deleted",
       "deleteFailed": "Failed to delete: {error}",
@@ -74,7 +76,6 @@
       "timeConflict": "Time overlaps",
       "toast": {
         "tagsSaveFailed": "Failed to save tags",
-        "timeOverlap": "Time overlaps with another event",
         "createFailed": "Failed to create entry",
         "saveFailed": "Failed to save"
       },
@@ -126,7 +127,6 @@
       "recordCreate": {
         "titlePlaceholder": "What did you do?",
         "titleLabel": "Entry title",
-        "timeOverlap": "Time overlaps with existing entry",
         "failed": "Failed to create entry",
         "linkEntry": "Link to entry",
         "unlinkEntry": "Unlink from entry",

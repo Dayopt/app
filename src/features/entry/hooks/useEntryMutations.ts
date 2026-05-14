@@ -177,7 +177,7 @@ export function useEntryMutations(options?: {
         error.message.includes('既にエントリがあります') ||
         error.message.includes('TIME_OVERLAP')
       ) {
-        toast.error(t('entry.toast.timeOverlap'));
+        toast.error(t('entry.errors.timeOverlap'));
         return;
       }
 
@@ -346,7 +346,7 @@ export function useEntryMutations(options?: {
           err.message.includes('既にエントリがあります') ||
           err.message.includes('TIME_OVERLAP')
         ) {
-          toast.error(t('entry.toast.timeOverlap'));
+          toast.error(t('entry.errors.timeOverlap'));
         } else {
           toast.error(t('entry.toast.updateFailed'));
         }
@@ -445,7 +445,7 @@ export function useEntryMutations(options?: {
       logger.error('[mutation:convertPlannedToUnplanned] onError', err);
 
       if (err.message.includes('既にエントリがあります') || err.message.includes('TIME_OVERLAP')) {
-        toast.error(t('entry.toast.timeOverlap'));
+        toast.error(t('entry.errors.timeOverlap'));
       } else {
         toast.error(t('entry.toast.updateFailed'));
       }
@@ -541,7 +541,7 @@ export function useEntryMutations(options?: {
       logger.error('[mutation:convertUnplannedToPlanned] onError', err);
 
       if (err.message.includes('既にエントリがあります') || err.message.includes('TIME_OVERLAP')) {
-        toast.error(t('entry.toast.timeOverlap'));
+        toast.error(t('entry.errors.timeOverlap'));
       } else {
         toast.error(t('entry.toast.updateFailed'));
       }

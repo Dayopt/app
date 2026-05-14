@@ -215,7 +215,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
-          <TimeConflictAlert message={t('calendar.toast.conflictDescription')} />
+          <TimeConflictAlert message={t('entry.errors.timeOverlap')} />
         </div>
       </div>
 
