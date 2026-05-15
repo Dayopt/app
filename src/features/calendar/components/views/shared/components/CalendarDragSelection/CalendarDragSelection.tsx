@@ -80,6 +80,7 @@ export const CalendarDragSelection = ({
       {showSelectionPreview && selection && (
         <DragSelectionPreview
           selection={selection}
+          date={date}
           formatTime={formatTime}
           isOverlapping={isOverlapping}
           hourHeight={hourHeight}

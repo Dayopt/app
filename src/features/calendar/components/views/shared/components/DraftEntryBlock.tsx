@@ -61,6 +61,14 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
 
   const timeLabel = `${formatTimeString(startH, startM, timeFormat)} – ${formatTimeString(endH, endM, timeFormat)}`;
 
+  // 過去の時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
+  // Date.now() を毎レンダー読むのは preview の存在中に past 境界を跨ぐ稀ケースに追随するため許容。
+  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
+  const nowForPastCheck = Date.now();
+  const isPastEndDate = new Date(draft.date);
+  isPastEndDate.setHours(endH, endM, 0, 0);
+  const isPast = isPastEndDate.getTime() <= nowForPastCheck;
+
   // 他 entry と時間が重なるか判定（drag ghost と同じく赤リングを描画する用）
   const hasConflict = useMemo(() => {
     if (endMinutes <= startMinutes) return false;
@@ -148,21 +156,35 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       style={{ zIndex: Z_INDEX.POPOVER }}
     >
       <div
-        className="animate-in fade-in-0 absolute right-0 left-0 flex rounded-r-lg motion-reduce:animate-none"
-        style={{ top, height }}
+        className={cn(
+          'animate-in fade-in-0 absolute right-0 left-0 flex motion-reduce:animate-none',
+          isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
+        )}
+        style={{
+          top,
+          height,
+          ...(isPast && !hasConflict
+            ? { border: `2px dashed ${accentColor}`, borderRadius: '8px' }
+            : {}),
+        }}
       >
-        {/* 左 accent strip — 重複時は destructive アクセントに切替 */}
-        <div
-          className={cn('shrink-0', hasConflict && 'bg-destructive')}
-          style={{ width: '3px', ...(hasConflict ? {} : { backgroundColor: accentColor }) }}
-        />
-        {/* card 本体 — 重複時は destructive-tint に切替し text-destructive で誘導 */}
+        {/* 左 accent strip — past unplanned 風の時は描画しない */}
+        {!(isPast && !hasConflict) && (
+          <div
+            className={cn('shrink-0', hasConflict && 'bg-destructive')}
+            style={{ width: '3px', ...(hasConflict ? {} : { backgroundColor: accentColor }) }}
+          />
+        )}
+        {/* card 本体 — 重複時は destructive-tint、past は透明背景（破線枠で囲うのみ） */}
         <div
           className={cn(
-            'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
+            'relative min-w-0 flex-1 overflow-hidden',
+            isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
             hasConflict && 'bg-destructive-tint',
           )}
-          style={hasConflict ? undefined : { backgroundColor: tintColor }}
+          style={
+            hasConflict || (isPast && !hasConflict) ? undefined : { backgroundColor: tintColor }
+          }
         >
           {height < 40 ? (
             <div className="flex h-full items-center px-2">

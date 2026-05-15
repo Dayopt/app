@@ -251,7 +251,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   useEffect(() => {
     if (!waitingForModal) return;
     if (isTagCreateModalOpen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync
     setWaitingForModal(false);
   }, [waitingForModal, isTagCreateModalOpen]);
 
@@ -266,6 +265,22 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
   // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
+  // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
+  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
+  const nowForPastCheck = Date.now();
+  const isPast = (() => {
+    if (!pendingSelection) return false;
+    const { date: selDate, endHour, endMinute } = pendingSelection;
+    const endLocal = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      endHour,
+      endMinute,
+    );
+    return endLocal.getTime() <= nowForPastCheck;
+  })();
+
   // hooks は早期 return より前で呼ぶ必要があるため、null セーフに書く。
   const hasConflict = useMemo(() => {
     if (!pendingSelection) return false;
@@ -460,32 +475,43 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       >
         <div
           ref={highlightRef}
-          className="animate-in fade-in-0 zoom-in-95 pointer-events-auto absolute right-0 left-0 flex rounded-r-lg transition-colors duration-150 motion-reduce:animate-none"
+          className={cn(
+            'animate-in fade-in-0 zoom-in-95 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
+            isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
+          )}
           style={{
             top: selectionTop,
             height: selectionHeight,
             touchAction: 'none',
+            ...(isPast && !hasConflict
+              ? { border: `2px dashed ${accentColor}`, borderRadius: '8px' }
+              : {}),
           }}
           onPointerDown={handleBodyPointerDown}
         >
-          {/* 左アクセントストリップ — 重複時は destructive */}
+          {/* 左アクセントストリップ — past unplanned 風の時は描画しない */}
+          {!(isPast && !hasConflict) && (
+            <div
+              className={cn(
+                'shrink-0 transition-colors duration-150',
+                hasConflict && 'bg-destructive',
+              )}
+              style={{
+                width: '3px',
+                ...(hasConflict ? {} : { backgroundColor: accentColor }),
+              }}
+            />
+          )}
+          {/* カード本体 — 重複時は destructive-tint、past は透明背景（破線枠で囲うのみ） */}
           <div
             className={cn(
-              'shrink-0 transition-colors duration-150',
-              hasConflict && 'bg-destructive',
-            )}
-            style={{
-              width: '3px',
-              ...(hasConflict ? {} : { backgroundColor: accentColor }),
-            }}
-          />
-          {/* カード本体 — 重複時は destructive-tint */}
-          <div
-            className={cn(
-              'min-w-0 flex-1 overflow-hidden rounded-r-lg transition-colors duration-150',
+              'min-w-0 flex-1 overflow-hidden transition-colors duration-150',
+              isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
               hasConflict && 'bg-destructive-tint',
             )}
-            style={hasConflict ? undefined : { backgroundColor: tintColor }}
+            style={
+              hasConflict || (isPast && !hasConflict) ? undefined : { backgroundColor: tintColor }
+            }
           >
             {selectionHeight < 40 ? (
               <div className="flex h-full items-center px-2">

@@ -225,6 +225,7 @@ export const TimeSelection: Story = {
       <Slot>
         <DragSelectionPreview
           selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+          date={new Date('2099-01-01T00:00:00')}
           formatTime={formatTime}
         />
       </Slot>
@@ -240,6 +241,7 @@ export const TimeSelectionOverlap: Story = {
       <Slot>
         <DragSelectionPreview
           selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+          date={new Date('2099-01-01T00:00:00')}
           formatTime={formatTime}
           isOverlapping
         />
@@ -290,6 +292,7 @@ export const AllStates: Story = {
         <Slot>
           <DragSelectionPreview
             selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+            date={new Date('2099-01-01T00:00:00')}
             formatTime={formatTime}
           />
         </Slot>
@@ -300,6 +303,7 @@ export const AllStates: Story = {
         <Slot>
           <DragSelectionPreview
             selection={{ startHour: 0, startMinute: 0, endHour: 1, endMinute: 0 }}
+            date={new Date('2099-01-01T00:00:00')}
             formatTime={formatTime}
             isOverlapping
           />

@@ -17,6 +17,8 @@ import type { TimeRange } from './types';
 
 interface DragSelectionPreviewProps {
   selection: TimeRange;
+  /** この列の日付（past 判定に使用） */
+  date: Date;
   formatTime: (hour: number, minute: number) => string;
   /** 既存プランと重複しているか */
   isOverlapping?: boolean;
@@ -31,6 +33,7 @@ interface DragSelectionPreviewProps {
  */
 export const DragSelectionPreview = memo(function DragSelectionPreview({
   selection,
+  date,
   formatTime,
   isOverlapping = false,
   hourHeight = HOUR_HEIGHT,
@@ -45,6 +48,13 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   const height = (endMinutes - startMinutes) * (hourHeight / 60);
 
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
+
+  // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
+  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
+  const nowForPastCheck = Date.now();
+  const endDateTime = new Date(date);
+  endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
+  const isPast = endDateTime.getTime() <= nowForPastCheck;
 
   // 重複時は全面 destructive 化（他の overlap visual と同じ規範）
   if (isOverlapping) {
@@ -71,7 +81,32 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   }
 
   // 通常時: EntryCardと同じデザイン（左アクセント + 右角丸 + タグ名 + 時間）
+  // 過去時間帯は unplanned 風（タグ色なしの破線枠）
   const isCompact = height < 40;
+
+  if (isPast) {
+    return (
+      <div
+        className="border-entry-default pointer-events-none absolute right-2 left-0 overflow-hidden rounded-lg border-2 border-dashed"
+        style={{ top, height, zIndex: 1000 }}
+      >
+        {isCompact ? (
+          <div className="flex h-full items-center px-2">
+            <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col gap-1 p-2">
+            <span className="text-muted-foreground text-sm leading-tight font-normal">
+              {tCalendar('event.selectTag')}
+            </span>
+            <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+              {timeLabel}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
