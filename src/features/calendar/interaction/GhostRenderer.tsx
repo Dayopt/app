@@ -10,8 +10,10 @@
  * 任意のビュー（Day/Week/MultiDay）で正しく描画。
  *
  * ドロップ拒否時は元位置へのスナップバックアニメーション（200ms）を表示。
+ * 重複検出中はゴースト全体を destructive-tint に切替え（all-red 規範）。
  */
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -60,11 +62,32 @@ const SNAP_BACK_DURATION = 200;
 const MIN_GHOST_HEIGHT_MOBILE = 40;
 
 // ========================================
+// Helpers
+// ========================================
+
+/** 重複時に表示する destructive 変種ゴースト */
+function ConflictGhost({ previewTime, message }: { previewTime: TimeRange; message: string }) {
+  const startH = previewTime.start.getHours();
+  const startM = String(previewTime.start.getMinutes()).padStart(2, '0');
+  const endH = previewTime.end.getHours();
+  const endM = String(previewTime.end.getMinutes()).padStart(2, '0');
+  return (
+    <div className="bg-destructive-tint text-destructive flex h-full flex-col gap-1 rounded-lg p-2">
+      <span className="text-sm leading-tight font-medium">{message}</span>
+      <span className="text-xs leading-tight tabular-nums">
+        {startH}:{startM} – {endH}:{endM}
+      </span>
+    </div>
+  );
+}
+
+// ========================================
 // Component
 // ========================================
 
 /** ドラッグ中のゴースト要素をReact Portalで描画するコンポーネント */
 export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
+  const t = useTranslations('entry');
   const isMobile = useIsMobile();
   const minGhostHeight = isMobile ? MIN_GHOST_HEIGHT_MOBILE : 0;
   const prevStateRef = useRef(state);
@@ -107,12 +130,10 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
       ? scrollRect.top + prev.originalPosition.top - scrollTop
       : columnRect.top + prev.originalPosition.top;
 
-    const content = renderGhost?.({
-      entryId: prev.entryId,
-      previewTime: prev.previewTime,
-      isOverlapping: true,
-      mode: 'dragging',
-    });
+    // スナップバック中は overlap 状態を視覚的に残す
+    const content = (
+      <ConflictGhost previewTime={prev.previewTime} message={t('errors.timeOverlap')} />
+    );
 
     setSnapBack({
       originalTop: origViewportTop,
@@ -124,7 +145,7 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
 
     const timer = setTimeout(() => setSnapBack(null), SNAP_BACK_DURATION);
     return () => clearTimeout(timer);
-  }, [state, renderGhost]);
+  }, [state, t]);
 
   // スナップバックアニメーション中
   if (snapBack) {
@@ -182,18 +203,23 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
     willChange: 'transform',
   };
 
-  const content = renderGhost?.({
-    entryId: state.entryId,
-    previewTime: state.previewTime,
-    isOverlapping: state.isOverlapping,
-    mode: 'dragging',
-  });
+  // 重複時は全面 destructive、そうでなければ通常 ghost を描画
+  const content = state.isOverlapping ? (
+    <ConflictGhost previewTime={state.previewTime} message={t('errors.timeOverlap')} />
+  ) : (
+    renderGhost?.({
+      entryId: state.entryId,
+      previewTime: state.previewTime,
+      isOverlapping: false,
+      mode: 'dragging',
+    })
+  );
 
   return createPortal(
     <div
       className={cn(
         'shadow-card pointer-events-none rounded-lg opacity-85',
-        state.isOverlapping && 'ring-destructive cursor-not-allowed ring-2',
+        state.isOverlapping && 'cursor-not-allowed',
       )}
       style={style}
     >

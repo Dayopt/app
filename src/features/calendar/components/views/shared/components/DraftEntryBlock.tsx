@@ -148,31 +148,57 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       style={{ zIndex: Z_INDEX.POPOVER }}
     >
       <div
-        className={cn(
-          'animate-in fade-in-0 absolute right-0 left-0 flex rounded-r-lg motion-reduce:animate-none',
-          hasConflict && 'ring-destructive ring-2',
-        )}
+        className="animate-in fade-in-0 absolute right-0 left-0 flex rounded-r-lg motion-reduce:animate-none"
         style={{ top, height }}
       >
-        {/* 左 accent strip */}
-        <div className="shrink-0" style={{ width: '3px', backgroundColor: accentColor }} />
-        {/* card 本体 */}
+        {/* 左 accent strip — 重複時は destructive アクセントに切替 */}
         <div
-          className="relative min-w-0 flex-1 overflow-hidden rounded-r-lg"
-          style={{ backgroundColor: tintColor }}
+          className={cn('shrink-0', hasConflict && 'bg-destructive')}
+          style={{ width: '3px', ...(hasConflict ? {} : { backgroundColor: accentColor }) }}
+        />
+        {/* card 本体 — 重複時は destructive-tint に切替し text-destructive で誘導 */}
+        <div
+          className={cn(
+            'relative min-w-0 flex-1 overflow-hidden rounded-r-lg',
+            hasConflict && 'bg-destructive-tint',
+          )}
+          style={hasConflict ? undefined : { backgroundColor: tintColor }}
         >
           {height < 40 ? (
             <div className="flex h-full items-center px-2">
-              <span className="text-foreground truncate text-xs font-normal">
-                <ColonTagLabel name={draft.tag.name} />
+              <span
+                className={cn(
+                  'truncate text-xs font-normal',
+                  hasConflict ? 'text-destructive' : 'text-foreground',
+                )}
+              >
+                {hasConflict ? (
+                  t('entry.errors.timeOverlap')
+                ) : (
+                  <ColonTagLabel name={draft.tag.name} />
+                )}
               </span>
             </div>
           ) : (
             <div className="flex h-full flex-col gap-1 p-2">
-              <span className="text-foreground text-sm leading-tight font-normal">
-                <ColonTagLabel name={draft.tag.name} />
+              <span
+                className={cn(
+                  'text-sm leading-tight font-normal',
+                  hasConflict ? 'text-destructive' : 'text-foreground',
+                )}
+              >
+                {hasConflict ? (
+                  t('entry.errors.timeOverlap')
+                ) : (
+                  <ColonTagLabel name={draft.tag.name} />
+                )}
               </span>
-              <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+              <span
+                className={cn(
+                  'text-xs leading-tight tabular-nums',
+                  hasConflict ? 'text-destructive' : 'text-muted-foreground',
+                )}
+              >
                 {timeLabel}
               </span>
             </div>

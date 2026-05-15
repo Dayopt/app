@@ -8,7 +8,7 @@
  * TagQuickSelector（Drawer/Dialog）でタグ選択 → エントリ作成。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,6 +27,7 @@ import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore'
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
+import { cn } from '@/lib/utils';
 
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
 import { useInlineCreateStore } from '../../../../../stores/useInlineCreateStore';
@@ -264,6 +265,73 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
 
+  // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
+  // hooks は早期 return より前で呼ぶ必要があるため、null セーフに書く。
+  const hasConflict = useMemo(() => {
+    if (!pendingSelection) return false;
+    const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
+    const startMin = startHour * 60 + startMinute;
+    const endMin = endHour * 60 + endMinute;
+    if (endMin <= startMin) return false;
+
+    const localStart = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      startHour,
+      startMinute,
+    );
+    const localEnd = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      endHour,
+      endMinute,
+    );
+    const utcStart = convertFromTimezone(localStart, timezone);
+    const utcEnd = convertFromTimezone(localEnd, timezone);
+
+    const cachedLists = queryClient.getQueriesData<
+      Array<{
+        id: string;
+        start_time: string | null;
+        end_time: string | null;
+        actual_start_time: string | null;
+        actual_end_time: string | null;
+      }>
+    >({ predicate: isEntriesListQuery });
+    const seen = new Set<string>();
+    const events: Array<{
+      id: string;
+      plannedStart: string | null;
+      plannedEnd: string | null;
+      actualStart: string | null;
+      actualEnd: string | null;
+    }> = [];
+    for (const [, data] of cachedLists) {
+      if (!data) continue;
+      for (const e of data) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        events.push({
+          id: e.id,
+          plannedStart: e.start_time,
+          plannedEnd: e.end_time,
+          actualStart: e.actual_start_time,
+          actualEnd: e.actual_end_time,
+        });
+      }
+    }
+
+    return hasTwoLayerTimeConflict(events, {
+      id: '',
+      plannedStart: utcStart.toISOString(),
+      plannedEnd: utcEnd.toISOString(),
+      actualStart: null,
+      actualEnd: null,
+    });
+  }, [queryClient, pendingSelection, timezone]);
+
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;
   if (date && !isSameDay(date, pendingSelection.date)) return null;
@@ -400,33 +468,64 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           }}
           onPointerDown={handleBodyPointerDown}
         >
-          {/* 左アクセントストリップ */}
+          {/* 左アクセントストリップ — 重複時は destructive */}
           <div
-            className="shrink-0 transition-colors duration-150"
+            className={cn(
+              'shrink-0 transition-colors duration-150',
+              hasConflict && 'bg-destructive',
+            )}
             style={{
               width: '3px',
-              backgroundColor: accentColor,
+              ...(hasConflict ? {} : { backgroundColor: accentColor }),
             }}
           />
-          {/* カード本体 */}
+          {/* カード本体 — 重複時は destructive-tint */}
           <div
-            className="min-w-0 flex-1 overflow-hidden rounded-r-lg transition-colors duration-150"
-            style={{
-              backgroundColor: tintColor,
-            }}
+            className={cn(
+              'min-w-0 flex-1 overflow-hidden rounded-r-lg transition-colors duration-150',
+              hasConflict && 'bg-destructive-tint',
+            )}
+            style={hasConflict ? undefined : { backgroundColor: tintColor }}
           >
             {selectionHeight < 40 ? (
               <div className="flex h-full items-center px-2">
-                <span className="text-foreground truncate text-xs font-normal">
-                  {hoveredTag ? <ColonTagLabel name={displayName} /> : timeLabel}
+                <span
+                  className={cn(
+                    'truncate text-xs font-normal',
+                    hasConflict ? 'text-destructive' : 'text-foreground',
+                  )}
+                >
+                  {hasConflict ? (
+                    tEntry('errors.timeOverlap')
+                  ) : hoveredTag ? (
+                    <ColonTagLabel name={displayName} />
+                  ) : (
+                    timeLabel
+                  )}
                 </span>
               </div>
             ) : (
               <div className="flex h-full flex-col gap-1 p-2">
-                <span className="text-foreground text-sm leading-tight font-normal">
-                  {hoveredTag ? <ColonTagLabel name={displayName} /> : displayName}
+                <span
+                  className={cn(
+                    'text-sm leading-tight font-normal',
+                    hasConflict ? 'text-destructive' : 'text-foreground',
+                  )}
+                >
+                  {hasConflict ? (
+                    tEntry('errors.timeOverlap')
+                  ) : hoveredTag ? (
+                    <ColonTagLabel name={displayName} />
+                  ) : (
+                    displayName
+                  )}
                 </span>
-                <span className="text-muted-foreground text-xs leading-tight tabular-nums">
+                <span
+                  className={cn(
+                    'text-xs leading-tight tabular-nums',
+                    hasConflict ? 'text-destructive' : 'text-muted-foreground',
+                  )}
+                >
                   {timeLabel}
                 </span>
               </div>

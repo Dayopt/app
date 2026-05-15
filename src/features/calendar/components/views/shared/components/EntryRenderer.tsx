@@ -149,7 +149,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
       <div
         className={cn(
           'pointer-events-auto absolute inset-0 rounded-lg',
-          isResizingOverlap && 'ring-destructive cursor-not-allowed ring-2',
+          isResizingOverlap && 'cursor-not-allowed',
         )}
         data-entry-block="true"
         tabIndex={0}
@@ -200,6 +200,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           onAnchorRect={setAnchorRect}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: finalHeight }}
+          plannedHeight={currentHeight}
           onContextMenu={handleContextMenu}
           onResizeStart={(
             p: CalendarEvent,
@@ -227,6 +228,14 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             isNewEntry(entry.id) && 'animate-entry-pop',
           )}
         />
+        {/* リサイズ中に重複していたら、destructive な「重複しています」表示で上書きする（all-red 規範） */}
+        {isResizingOverlap && (
+          <div className="bg-destructive-tint text-destructive pointer-events-none absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-lg p-2">
+            <span className="text-sm leading-tight font-medium">
+              {t('entry.errors.timeOverlap')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
