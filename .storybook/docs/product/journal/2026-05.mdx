@@ -6,6 +6,37 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-15
+
+### 重複でおけない時の UI を全経路で統一した日
+
+16 コミット。32 files changed / +1,304 / -267。朝は前日からの planned ↔ unplanned 変換 UX の fix-up（5 コミット）、本体は「重複でおけない時の UI 統一」プロジェクト（11 コミット）。drag / resize / 新規作成 / Inspector / palette / popover の 6 経路で散らかっていた重複検出のフィードバックを 1 つの canonical（全面 destructive 化）に揃え、文言も `entry.errors.timeOverlap` 1 キーに集約。最後に過去時間帯の preview を unplanned 風に切替えるところまで。
+
+#### やったこと
+
+- **planned ↔ unplanned 変換の fix-up (5 commits)**: 変換前に inspector 保存を同期 / 変換時の保存競合と予定外判定 / 生成列を更新しない / 予定復帰時の競合 toast 抑制 / 連続移動の古い更新結果を無視。前日の機能追加で見つかった race condition と表示崩れの掃除
+- **重複 UI 統一プロジェクト Phase 1: 集約と検出 (4 commits)**: i18n キーを `entry.errors.timeOverlap` 1 つに集約（5 キー → 1 キー）。drag / resize / 新規作成 / Inspector の 4 経路で silent fail を撲滅し、judgment locus を 1 本化、cursor not-allowed と resize 用赤リングを追加、Inspector 時刻編集の save race を同期再評価で解消
+- **重複 UI 統一プロジェクト Phase 2: visual refactor (4 commits)**: user fb を受けて赤リング廃止 → 全面 destructive (`bg-destructive-tint` + `text-destructive`) に置換。tag entry popover の inline alert + submit disabled、tag draft block と drag-create preview も同じ canonical に統一。drag ghost は重複時 `opacity-85` を外して不透明描画で文字を読みやすく
+- **過去時間帯 preview を unplanned 風に (2 commits)**: 終了時刻が past の preview は破線枠 + accent strip なしの unplanned 風表示に切替。事前 overlap 判定でも `willBeUnplanned = end_time <= now` を見て planned / actual を切替（直後に発覚した planned×planned 誤検知 bug を併せて修正）
+
+#### なぜ今日この作業をしたか
+
+朝の 5 コミットは前日の planned ↔ unplanned 変換機能の不具合潰し。inspector の debounced save と変換 mutation が衝突して古い data で上書きされる、生成列を直接 update に含めて Postgres エラー、変換成功直後に「他で変更されました」toast が誤発火、など 5-14 の最後の 30 分では追えていなかった race condition を朝のうちに片付けた。
+
+本体の重複 UI 統一は user 提案。「重複でおけない時の UI を全体で統一したい」というオープンな相談に対して、まず現状を整理したら 6 経路でフィードバックが散らかっていることがわかった。silent reject が 2 箇所、toast が 2 箇所、inline alert が 1 箇所、文言キーが 5 つに分裂、judgment locus は 1 本化済みだが visual layer がバラバラ。最初の plan では「GAFA デファクトに揃える」と framing したが、user に「100% の自信が出るまで自己レビューしてから再度プランを作って」と指摘され調べ直すと、Calendar 系の GAFA は overlap を hard-block しないため比較対象として誤りだったと判明。NN/g / Material Design 3 / Apple HIG が共通で推奨する「feedback channel matched to interaction modality」を一次根拠に置き直し、modality に応じて drag = 視覚 / フォーム = inline / 離散 = toast の 3 channel を使い分けながらメッセージ内容と判定ロジックは 1 本化、という形で着地。
+
+午後は user fb で大きく軌道修正。「赤リングじゃなくて全部赤くなる方が見やすい」と言われ、design-system.md に明文化していた `ring-destructive ring-2` をやめて Dayopt の destructive container 規範（`bg-destructive-tint` + `text-destructive`）に置き換え、文言「この時間帯には既に予定があります」が overlap 中の preview を全面で覆う形に refactor。さらに「過去に予定を立てるときは自動で unplanned になるのに preview は planned のまま」「作成しようとすると 'すでに予定があります' で作れない」と続けて指摘があり、preview の visual と client 側 overlap 判定の両方を `willBeUnplanned` で分岐させた。
+
+#### Claudeの所感
+
+**「統一」と「使い分け」を両立させる設計の難しさ**: 当初の plan ですべての channel を同じ visual に揃えようとして user fb で 2 回 refactor した。1 回目は「赤リング」、2 回目は「inline alert vs visual」の選択。最終的に NN/g の "feedback channel matched to interaction modality" 原則が腑に落ちると一気に整理がついた。統一すべきは「メッセージ内容と判定ロジック」、使い分けるべきは「channel」。これは design-system.md / copywriting.md に明文化される価値がある原則で、今後類似の UI 議論（成功 / 警告 / 進行中 / 完了など）にも応用できる。
+
+**Server と client の origin 判定を一致させる重要性**: 「過去時間帯の preview を unplanned 風に」という UI 修正で見落とした最後の落とし穴が、client 側 overlap 事前判定でも planned/actual の切替が必要だったこと。サーバーは `normalizeCreateInput` で `end_time <= Date.now()` なら `origin=unplanned` にしているのに、client は常に planned として `hasTwoLayerTimeConflict` を呼んでいたため近接 planned 予定と planned×planned 衝突を誤検知。「preview の見た目」と「判定ロジック」は同じ判断材料（end_time）で動くべきという当然の対称性が抜けていた。次に「未来 / 過去で挙動が違う UI」を作る時の checklist 項目。
+
+**プランの根拠は「事例」より「原則」で書く**: 最初の plan で「GAFA デファクト」と書いたら user に refactor 指示が入った。GAFA は事例の集合であって設計原則ではない。NN/g / Material Design 3 / Apple HIG の共通原則を一次根拠に据え直したら、その下に Google Calendar の挙動も Resource booking 系の挙動も「modality が違うから違って当然」と整理がついた。事例を根拠にすると例外に弱い。原則を根拠にすると事例は派生として説明できる。今後 plan を書く時はまず原則を 1-2 行で書き、事例は補強として並べる順序にする。
+
+---
+
 ## 2026-05-14
 
 ### MCP Phase 1.5 完了、entry の menu/drag バグを根絶した日
