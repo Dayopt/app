@@ -73,7 +73,6 @@
       "markIncomplete": "Mark incomplete",
       "completeOptions": "Complete options",
       "completeAndCreate": "Complete + Create Entry",
-      "timeConflict": "Time overlaps",
       "toast": {
         "tagsSaveFailed": "Failed to save tags",
         "createFailed": "Failed to create entry",

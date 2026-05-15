@@ -73,7 +73,6 @@
       "markIncomplete": "未完了に戻す",
       "completeOptions": "完了オプション",
       "completeAndCreate": "完了 + エントリー作成",
-      "timeConflict": "時間が重複しています",
       "toast": {
         "tagsSaveFailed": "タグを保存できませんでした。入力内容は保持されています。もう一度お試しください",
         "createFailed": "エントリーを作成できませんでした。もう一度お試しください",

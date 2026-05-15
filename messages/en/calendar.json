@@ -92,7 +92,6 @@
       "durationHours": "{hours}h",
       "durationMinutes": "{minutes}m",
       "duplicated": "{count} events duplicated",
-      "conflict": "Time conflict",
       "saving": "Saving...",
       "error": "Operation failed",
       "errorDescription": "Please try again later",

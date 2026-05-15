@@ -92,7 +92,6 @@
       "durationHours": "{hours}時間",
       "durationMinutes": "{minutes}分",
       "duplicated": "{count}件の予定を複製しました",
-      "conflict": "時間が重複しています",
       "saving": "保存中...",
       "error": "操作できませんでした。もう一度お試しください",
       "errorDescription": "しばらく時間を置いてから再度お試しください",

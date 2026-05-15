@@ -9,7 +9,6 @@
 
 import { memo } from 'react';
 
-import { Ban } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
@@ -36,7 +35,8 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   isOverlapping = false,
   hourHeight = HOUR_HEIGHT,
 }: DragSelectionPreviewProps) {
-  const t = useTranslations('calendar');
+  const tCalendar = useTranslations('calendar');
+  const tEntry = useTranslations('entry');
 
   // 選択範囲のスタイルを計算
   const startMinutes = selection.startHour * 60 + selection.startMinute;
@@ -46,17 +46,26 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
 
-  // 重複時は赤背景でエラー表示
+  // 重複時は全面 destructive 化（他の overlap visual と同じ規範）
   if (isOverlapping) {
+    const isCompact = height < 40;
     return (
       <div
-        className="bg-destructive border-destructive pointer-events-none absolute right-2 left-0 rounded-lg border"
+        className="bg-destructive-tint text-destructive pointer-events-none absolute right-2 left-0 overflow-hidden rounded-lg"
         style={{ top, height, zIndex: 1000 }}
       >
-        <div className="flex items-center gap-1 px-2 py-1">
-          <Ban className="text-destructive-foreground size-3.5 flex-shrink-0" />
-          <span className="text-destructive-foreground text-xs">{t('toast.conflict')}</span>
-        </div>
+        {isCompact ? (
+          <div className="flex h-full items-center px-2">
+            <span className="truncate text-xs font-normal">{tEntry('errors.timeOverlap')}</span>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col gap-1 p-2">
+            <span className="text-sm leading-tight font-medium">
+              {tEntry('errors.timeOverlap')}
+            </span>
+            <span className="text-xs leading-tight tabular-nums">{timeLabel}</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -84,7 +93,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
         ) : (
           <div className="flex h-full flex-col gap-1 p-2">
             <span className="text-muted-foreground text-sm leading-tight font-normal">
-              {t('event.selectTag')}
+              {tCalendar('event.selectTag')}
             </span>
             <span className="text-muted-foreground text-xs leading-tight tabular-nums">
               {timeLabel}
