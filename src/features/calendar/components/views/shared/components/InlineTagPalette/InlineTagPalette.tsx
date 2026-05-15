@@ -140,12 +140,14 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           });
         }
       }
+      // past 時間帯は保存時に unplanned になるため、overlap 判定も actual として渡す。
+      const createWillBeUnplanned = utcEnd.getTime() <= Date.now();
       const hasOverlap = hasTwoLayerTimeConflict(events, {
         id: '',
-        plannedStart: utcStart.toISOString(),
-        plannedEnd: utcEnd.toISOString(),
-        actualStart: null,
-        actualEnd: null,
+        plannedStart: createWillBeUnplanned ? null : utcStart.toISOString(),
+        plannedEnd: createWillBeUnplanned ? null : utcEnd.toISOString(),
+        actualStart: createWillBeUnplanned ? utcStart.toISOString() : null,
+        actualEnd: createWillBeUnplanned ? utcEnd.toISOString() : null,
       });
       if (hasOverlap) {
         toast.error(tEntry('errors.timeOverlap'));
@@ -338,14 +340,16 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       }
     }
 
+    // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
+    // isPast は render 上部で算出済み（Date.now() を useMemo の外に出す）
     return hasTwoLayerTimeConflict(events, {
       id: '',
-      plannedStart: utcStart.toISOString(),
-      plannedEnd: utcEnd.toISOString(),
-      actualStart: null,
-      actualEnd: null,
+      plannedStart: isPast ? null : utcStart.toISOString(),
+      plannedEnd: isPast ? null : utcEnd.toISOString(),
+      actualStart: isPast ? utcStart.toISOString() : null,
+      actualEnd: isPast ? utcEnd.toISOString() : null,
     });
-  }, [queryClient, pendingSelection, timezone]);
+  }, [queryClient, pendingSelection, timezone, isPast]);
 
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;

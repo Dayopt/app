@@ -152,6 +152,16 @@ export function TagEntryCreatePopover({
     closeDraft();
   }, [closeDraft, onOpenChange]);
 
+  // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
+  // useMemo の外で計算しないと react-hooks/purity に引っかかる。
+  // eslint-disable-next-line react-hooks/purity -- transient form, no observable side effect
+  const nowForPastCheck = Date.now();
+  const willBeUnplanned = (() => {
+    if (!startTime || !endTime) return false;
+    const endDate = combineDateAndHHMM(selectedDate, endTime);
+    return endDate.getTime() <= nowForPastCheck;
+  })();
+
   // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
   // 重複時は inline alert + submit disabled で hard-block し、mutation を発火させない。
   const hasConflict = useMemo(() => {
@@ -195,12 +205,12 @@ export function TagEntryCreatePopover({
 
     return hasTwoLayerTimeConflict(events, {
       id: '',
-      plannedStart: startDate.toISOString(),
-      plannedEnd: endDate.toISOString(),
-      actualStart: null,
-      actualEnd: null,
+      plannedStart: willBeUnplanned ? null : startDate.toISOString(),
+      plannedEnd: willBeUnplanned ? null : endDate.toISOString(),
+      actualStart: willBeUnplanned ? startDate.toISOString() : null,
+      actualEnd: willBeUnplanned ? endDate.toISOString() : null,
     });
-  }, [queryClient, selectedDate, startTime, endTime]);
+  }, [queryClient, selectedDate, startTime, endTime, willBeUnplanned]);
 
   const handleSubmit = useCallback(() => {
     if (hasConflict) return; // defensive: button is already disabled

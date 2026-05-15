@@ -110,14 +110,16 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       }
     }
 
+    // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
+    // isPast は render 上部で算出済み（Date.now() を useMemo の外に出す）
     return hasTwoLayerTimeConflict(events, {
       id: '',
-      plannedStart: startDate.toISOString(),
-      plannedEnd: endDate.toISOString(),
-      actualStart: null,
-      actualEnd: null,
+      plannedStart: isPast ? null : startDate.toISOString(),
+      plannedEnd: isPast ? null : endDate.toISOString(),
+      actualStart: isPast ? startDate.toISOString() : null,
+      actualEnd: isPast ? endDate.toISOString() : null,
     });
-  }, [queryClient, draft.date, startH, startM, endH, endM, startMinutes, endMinutes]);
+  }, [queryClient, draft.date, startH, startM, endH, endM, startMinutes, endMinutes, isPast]);
 
   const handleResizeStart = useCallback(
     (clientY: number) => {
