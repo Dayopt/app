@@ -218,8 +218,9 @@ export function GhostRenderer({ state, renderGhost }: GhostRendererProps) {
   return createPortal(
     <div
       className={cn(
-        'shadow-card pointer-events-none rounded-lg opacity-85',
-        state.isOverlapping && 'cursor-not-allowed',
+        'shadow-card pointer-events-none rounded-lg',
+        // 重複時は不透明で文字をくっきり読ませる。通常時のみ opacity-85 でゴースト感を出す。
+        state.isOverlapping ? 'cursor-not-allowed' : 'opacity-85',
       )}
       style={style}
     >
