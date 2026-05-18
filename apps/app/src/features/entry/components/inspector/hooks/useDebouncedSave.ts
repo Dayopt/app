@@ -186,8 +186,10 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
   /**
    * planned/unplanned 変換など、entry の構造を変える操作の直前に呼ぶ。
    *
-   * まだ発火していない debounce 保存は、変換後に古い形で entry を上書きし得るため破棄する。
-   * すでに送信中の保存だけは完了を待ち、通常保存と変換の順序を揃える。
+   * pending 中の構造フィールド（start_time / end_time / actual_*）は変換後の shape に
+   * 適合しないため破棄。title / description / note / tag_id / fulfillment_score などの
+   * 非構造フィールドは debounce 窓内のユーザー入力を失わせないよう先に flush する。
+   * すでに送信中の保存は完了を待ち、変換と順序を揃える。
    */
   const prepareForStructuralMutation = useCallback(async () => {
     if (suppressResetTimerRef.current) {
@@ -200,12 +202,31 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+
+    // 構造フィールドは破棄、非構造フィールドだけを先に保存する
+    const STRUCTURAL_FIELDS = new Set([
+      'start_time',
+      'end_time',
+      'actual_start_time',
+      'actual_end_time',
+      'origin',
+    ]);
+    const pending = pendingRef.current;
+    const nonStructural: SaveFields = {};
+    for (const [key, value] of Object.entries(pending)) {
+      if (!STRUCTURAL_FIELDS.has(key)) nonStructural[key] = value;
+    }
     pendingRef.current = {};
+
+    const id = entryIdRef.current;
+    if (id && Object.keys(nonStructural).length > 0) {
+      await runSave(id, nonStructural).catch(() => undefined);
+    }
 
     if (lastSavePromiseRef.current) {
       await lastSavePromiseRef.current.catch(() => undefined);
     }
-  }, []);
+  }, [runSave]);
 
   const finishStructuralMutation = useCallback(() => {
     if (suppressResetTimerRef.current) {
