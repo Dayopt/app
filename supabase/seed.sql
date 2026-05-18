@@ -109,39 +109,49 @@ BEGIN
 
     IF v_dow NOT IN (0, 6) THEN
       -- 平日: 朝の集中タイム (9:00-11:00) → dev:api
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'API開発',
+        (v_date || ' 09:00:00')::TIMESTAMPTZ,
+        (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 09:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         'planned', (ARRAY[2, 3, 3, 2, 3])[i % 5 + 1], v_tag_ids[1]);
 
       -- 午前ミーティング (11:00-12:00)
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'チームスタンドアップ',
+        (v_date || ' 11:00:00')::TIMESTAMPTZ,
+        (v_date || ' 11:30:00')::TIMESTAMPTZ,
         (v_date || ' 11:00:00')::TIMESTAMPTZ,
         (v_date || ' 11:30:00')::TIMESTAMPTZ,
         'planned', (ARRAY[2, 2, 1, 2, 2])[i % 5 + 1], v_tag_ids[3]);
 
       -- 午後のフロントエンド開発 (13:00-15:00)
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
       VALUES (gen_random_uuid(), v_user_id, 'UIコンポーネント実装',
+        (v_date || ' 13:00:00')::TIMESTAMPTZ,
+        (v_date || ' 15:00:00')::TIMESTAMPTZ,
         (v_date || ' 13:00:00')::TIMESTAMPTZ,
         (v_date || ' 15:00:00')::TIMESTAMPTZ,
         'planned', (ARRAY[3, 2, 3, 3, 2])[i % 5 + 1], v_tag_ids[2]);
 
       -- 午後の学習 (15:30-16:30) — 隔日
       IF i % 2 = 0 THEN
-        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+        INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
         VALUES (gen_random_uuid(), v_user_id, 'TypeScript勉強会',
+          (v_date || ' 15:30:00')::TIMESTAMPTZ,
+          (v_date || ' 16:30:00')::TIMESTAMPTZ,
           (v_date || ' 15:30:00')::TIMESTAMPTZ,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
           'planned', 3, v_tag_ids[4]);
       END IF;
 
-      -- 突発タスク（unplanned、一部の日のみ）
+      -- 突発タスク（unplanned、一部の日のみ）unplanned は planned 時間を持たない
       IF i % 3 = 0 THEN
-        INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+        INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
         VALUES (gen_random_uuid(), v_user_id, '緊急バグ対応',
+          NULL,
+          NULL,
           (v_date || ' 16:30:00')::TIMESTAMPTZ,
           (v_date || ' 17:30:00')::TIMESTAMPTZ,
           'unplanned', 1, v_tag_ids[1]);
@@ -149,8 +159,10 @@ BEGIN
 
     ELSE
       -- 週末: 個人タスク (10:00-12:00)
-      INSERT INTO public.entries (id, user_id, title, start_time, end_time, origin, fulfillment_score, tag_id)
+      INSERT INTO public.entries (id, user_id, title, start_time, end_time, actual_start_time, actual_end_time, origin, fulfillment_score, tag_id)
       VALUES (gen_random_uuid(), v_user_id, '個人プロジェクト',
+        (v_date || ' 10:00:00')::TIMESTAMPTZ,
+        (v_date || ' 12:00:00')::TIMESTAMPTZ,
         (v_date || ' 10:00:00')::TIMESTAMPTZ,
         (v_date || ' 12:00:00')::TIMESTAMPTZ,
         'planned', 3, v_tag_ids[5]);
