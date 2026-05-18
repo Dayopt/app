@@ -325,6 +325,12 @@ export function useEntryMutations(options?: {
       logger.error('[mutation:update] onError', err);
       if (context?.id && !isLatestUpdateMutation(context.id, context.mutationSeq)) {
         logger.debug('[mutation:update] stale onError ignored', { id: context.id });
+        // snapshot rollback は latest mutation の onSuccess を上書きしうるため使えない。
+        // 代わりに invalidate して server truth で cache を refetch する。
+        // (latest が success ならサーバーの新しい状態に揃う / latest も fail なら latest の
+        //  rollback 後の cache が stale optimistic を含むのでこれで真値に戻す)
+        void utils.entries.list.invalidate();
+        void utils.entries.getById.invalidate({ id: context.id });
         return;
       }
 
