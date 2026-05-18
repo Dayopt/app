@@ -26,9 +26,11 @@ export function checkClientSideOverlap(
   const now = Date.now();
   const draggedEvent = events.find((event) => event.id === draggedEventId);
   const isNewFutureEntry = draggedEventId === '' && previewEndTime.getTime() > now;
-  const shouldCheckPlanned =
-    isNewFutureEntry ||
-    (draggedEvent?.origin === 'planned' && draggedEvent.entryState === 'upcoming');
+  // planned entry は upcoming だけでなく active 状態でも planned 範囲を持つので
+  // 移動先の planned 範囲 overlap を check する。
+  // (サーバー側 ensureNoOverlaps も `origin === 'planned'` で planned 重複を検証する。
+  //  client 側で skip すると server 拒否で snap-back / TIME_OVERLAP toast が出るため UX が悪化する)
+  const shouldCheckPlanned = isNewFutureEntry || draggedEvent?.origin === 'planned';
 
   return hasTwoLayerTimeConflict(
     events.map((event) => {
