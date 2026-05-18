@@ -749,10 +749,17 @@ export class TagService {
     );
 
     if (rpcError) {
-      throw new TagServiceError(
-        'MERGE_FAILED',
-        `Failed to merge tags atomically: ${rpcError.message}`,
-      );
+      // PostgREST が返す 502 は message が generic ("invalid response from upstream") に
+      // なるため、code / details / hint を含めて debug できるようにする
+      const detail = [
+        rpcError.message,
+        rpcError.code ? `code=${rpcError.code}` : null,
+        rpcError.details ? `details=${rpcError.details}` : null,
+        rpcError.hint ? `hint=${rpcError.hint}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+      throw new TagServiceError('MERGE_FAILED', `Failed to merge tags atomically: ${detail}`);
     }
 
     const migrated =
