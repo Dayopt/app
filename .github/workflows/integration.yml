@@ -47,7 +47,8 @@ jobs:
 
       - uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # GitHub API anonymous rate limit で `latest` lookup が 404 になることがあるため version を pin
+          version: 2.99.0
 
       - name: Start Supabase
         run: supabase start
