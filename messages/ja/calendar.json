@@ -56,7 +56,6 @@
         "confirm": "移動"
       },
       "diff": {
-        "overtime": "超過",
         "short": "短縮",
         "addRecordToGap": "空き時間に記録を追加"
       },

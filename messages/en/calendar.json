@@ -56,7 +56,6 @@
         "confirm": "Move"
       },
       "diff": {
-        "overtime": "Over",
         "short": "Short",
         "addRecordToGap": "Add record to open time"
       },

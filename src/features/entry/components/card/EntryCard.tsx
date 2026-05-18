@@ -393,11 +393,11 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         />
       )}
 
-      {/* 超過オーバーレイ: 上部 — 従来どおり破線枠で表示。 */}
+      {/* 超過オーバーレイ: 上部 — 破線枠だけで overflow を視覚的に伝える。 */}
       {overlay.topKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center overflow-hidden"
+          className="pointer-events-none absolute right-0 left-0 overflow-hidden"
           style={{ top: 0, height: `${overlay.topHeight}px`, ...topOvertimeBorderStyle }}
         >
           <div
@@ -405,20 +405,14 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
           />
-          {overlay.topHeight >= 16 && (
-            <span className="text-muted-foreground text-xs">
-              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
-              <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
-            </span>
-          )}
         </div>
       )}
 
-      {/* 超過オーバーレイ: 下部 — 従来どおり破線枠で表示。 */}
+      {/* 超過オーバーレイ: 下部 — 破線枠だけで overflow を視覚的に伝える。 */}
       {overlay.bottomKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center overflow-hidden"
+          className="pointer-events-none absolute right-0 left-0 overflow-hidden"
           style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...bottomOvertimeBorderStyle }}
         >
           <div
@@ -426,12 +420,6 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
             className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
             style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
           />
-          {overlay.bottomHeight >= 16 && (
-            <span className="text-muted-foreground text-xs">
-              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
-              <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
-            </span>
-          )}
         </div>
       )}
 
