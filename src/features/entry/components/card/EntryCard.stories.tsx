@@ -176,7 +176,76 @@ export const DraggingState: Story = {
 // 予定 vs 記録の差分オーバーレイ
 // ---------------------------------------------------------------------------
 
-/** 未実行オーバーレイ。予定時間に対して実績が短かった区間に穏やかなフェードグラデーション。 */
+/** planned と actual が同じ範囲。actual が planned を覆うため通常カードとして見える。 */
+export const PlannedActualSame: Story = {
+  render: () => (
+    <Slot>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
+          actualStartDate: new Date('2024-01-15T10:00:00'),
+          actualEndDate: new Date('2024-01-15T11:00:00'),
+        }}
+        tagName="仕事"
+        tagColor="blue"
+        position={basePosition}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+/** actual が planned より短い。余った planned 時間は薄い背景として露出する。 */
+export const PlannedActualShorter: Story = {
+  render: () => (
+    <Slot height={142}>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
+          endDate: new Date('2024-01-15T12:00:00'),
+          displayEndDate: new Date('2024-01-15T12:00:00'),
+          duration: 120,
+          actualStartDate: new Date('2024-01-15T10:00:00'),
+          actualEndDate: new Date('2024-01-15T11:00:00'),
+        }}
+        tagName="Deep Work"
+        tagColor="blue"
+        position={{ ...basePosition, height: 142 }}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+/** actual が planned 内でズレた状態。planned 背景の上に actual カードが重なる。 */
+export const PlannedActualShifted: Story = {
+  render: () => (
+    <Slot height={142}>
+      <EntryCard
+        entry={{
+          ...baseEntry,
+          entryState: 'past',
+          origin: 'planned',
+          endDate: new Date('2024-01-15T12:00:00'),
+          displayEndDate: new Date('2024-01-15T12:00:00'),
+          duration: 120,
+          actualStartDate: new Date('2024-01-15T10:30:00'),
+          actualEndDate: new Date('2024-01-15T11:30:00'),
+        }}
+        tagName="Deep Work"
+        tagColor="blue"
+        position={{ ...basePosition, height: 142 }}
+        hourHeight={72}
+      />
+    </Slot>
+  ),
+};
+
+/** 未実行区間。予定時間に対して実績が短かった区間に planned 背景が露出する。 */
 export const OverlayUnexecuted: Story = {
   render: () => (
     <Slot height={142}>
@@ -198,7 +267,7 @@ export const OverlayUnexecuted: Story = {
   ),
 };
 
-/** 超過オーバーレイ。予定時間を超えて実施した区間にタグ色の破線枠（中は透明）。 */
+/** 実績が予定を超えた区間。超過部分は従来どおり破線オーバーレイで表示する。 */
 export const OverlayOvertime: Story = {
   render: () => (
     <Slot height={180}>
@@ -222,7 +291,7 @@ export const OverlayOvertime: Story = {
   ),
 };
 
-/** 超過オーバーレイ（グリッド罫線付き）。破線枠の透明度とグリッドとの整合を確認。 */
+/** 実績超過（グリッド罫線付き）。超過の破線オーバーレイとグリッドとの整合を確認。 */
 export const OverlayOvertimeOnGrid: Story = {
   render: () => {
     const HOUR_HEIGHT = 72;
