@@ -110,6 +110,10 @@ describe.skipIf(SKIP_INTEGRATION)('GDPR Router Integration', () => {
       user_id: TEST_USER_ID,
       title: 'GDPR Test Entry',
       origin: 'planned',
+      start_time: '2026-01-01T09:00:00Z',
+      end_time: '2026-01-01T10:00:00Z',
+      actual_start_time: '2026-01-01T09:00:00Z',
+      actual_end_time: '2026-01-01T10:00:00Z',
     });
   });
 
