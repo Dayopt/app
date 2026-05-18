@@ -4,7 +4,7 @@ test-results/
 coverage/
 
 # 開発ツール
-.storybook/
+apps/storybook/
 
 # Supabase（Edge Functions は Vercel では不要、ルートのsupabase/のみ除外）
 /supabase/

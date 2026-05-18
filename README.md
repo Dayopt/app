@@ -1,17 +1,17 @@
-# Dayopt App
+# Dayopt
 
-Next.js 15 + TypeScript で構築されたタスク管理アプリケーション
+Dayopt monorepo。現在のプロダクト本体は `apps/app`、Storybook は `apps/storybook` にあります。
 
 ## 🚀 クイックスタート
 
 ```bash
 # 依存関係のインストール
-npm install
+pnpm install
 
-# 環境変数の設定（.env.local を作成して必要な値を設定）
+# 環境変数の設定（apps/app/.env.local を作成して必要な値を設定）
 
 # 開発サーバー起動
-npm run dev
+pnpm dev
 ```
 
 開発サーバーが起動したら [http://localhost:3000](http://localhost:3000) にアクセスしてください。
@@ -22,7 +22,7 @@ npm run dev
 | ------------------ | ------------------------------------------------------------ |
 | **フレームワーク** | Next.js 15 (App Router), React 19, TypeScript 5              |
 | **UIライブラリ**   | shadcn/ui (Radix UI)                                         |
-| **スタイリング**   | Tailwind CSS v4, セマンティックトークン (src/styles/tokens/) |
+| **スタイリング**   | Tailwind CSS v4, セマンティックトークン (`apps/app/src/lib/styles/tokens/`) |
 | **状態管理**       | Zustand (グローバル), TanStack Query (サーバー状態)          |
 | **API**            | tRPC 11 (型安全なAPI)                                        |
 | **データベース**   | Supabase (PostgreSQL + Auth + Realtime)                      |
@@ -34,15 +34,15 @@ npm run dev
 ### 必須コマンド
 
 ```bash
-npm run typecheck   # 型チェック（コード変更後）
-npm run lint        # コード品質チェック（コミット前）
-npm run dev         # 開発サーバー起動
+pnpm typecheck   # 型チェック（コード変更後）
+pnpm lint        # コード品質チェック（コミット前）
+pnpm dev         # 開発サーバー起動
 ```
 
 ### コーディング規約
 
 1. **コンポーネント**: 関数宣言 + 名前付きエクスポート（`React.FC`禁止）
-2. **スタイリング**: セマンティックトークン使用（`bg-card`, `text-foreground`等、定義: `src/styles/tokens/`）
+2. **スタイリング**: セマンティックトークン使用（`bg-card`, `text-foreground`等、定義: `apps/app/src/lib/styles/tokens/`）
 3. **型定義**: `any`型禁止、厳密な型定義必須
 4. **UIコンポーネント選択**: shadcn/ui → カスタム実装
 
@@ -72,7 +72,7 @@ export const MyComponent: FC<Props> = ...  // React.FC非推奨
 
 | ドキュメント                                   | 内容                                 |
 | ---------------------------------------------- | ------------------------------------ |
-| Storybook（`npm run storybook`）               | デザインシステム（Tokens/_, Docs/_） |
+| Storybook（`pnpm storybook`）                  | デザインシステム（Tokens/_, Docs/_） |
 | Storybook → Docs/Architecture/State Management | 状態管理の判断基準                   |
 | Storybook → Docs/Architecture/Error Patterns   | エラーハンドリング                   |
 
@@ -103,16 +103,16 @@ Dayoptでは企業レベルの品質管理システムを採用：
 
 ```bash
 # 開発時
-npm run lint        # 全品質チェック
-npm run lint:fix    # 自動修正可能な問題を修正
-npm run typecheck   # TypeScript型チェック
+pnpm lint        # 全品質チェック
+pnpm lint:fix    # 自動修正可能な問題を修正
+pnpm typecheck   # TypeScript型チェック
 
 # テスト
-npm run test:unit          # ユニットテスト（happy-dom環境）
-npm run test:integration   # 統合テスト（要: supabase start）
-npm run test:e2e:smoke     # E2E smoke（ルーティング・認証フロー）
-npm run test:e2e:critical  # E2E critical-path（カレンダー・エントリ操作）
-npm run test:e2e           # E2E 全件
+pnpm test:run           # ユニットテスト（happy-dom環境）
+pnpm test:integration   # 統合テスト（要: supabase start）
+pnpm test:e2e:smoke     # E2E smoke（ルーティング・認証フロー）
+pnpm test:e2e:critical  # E2E critical-path（カレンダー・エントリ操作）
+pnpm test:e2e           # E2E 全件
 
 # コミット時（自動実行）
 # 1. ESLint全ルール適用

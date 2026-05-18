@@ -19,14 +19,16 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
+const APP_ROOT = path.join(ROOT, 'apps/app');
+const STORYBOOK_ROOT = path.join(ROOT, 'apps/storybook');
 
 // ─────────────────────────────────────────────────────────
 // Config
 // ─────────────────────────────────────────────────────────
 
 const SCAN_DIRS = [
-  { dir: path.join(ROOT, 'src/components/ui'), label: 'UI Components' },
-  { dir: path.join(ROOT, 'src/components/common'), label: 'Common Components' },
+  { dir: path.join(APP_ROOT, 'src/lib/components/ui'), label: 'UI Components' },
+  { dir: path.join(APP_ROOT, 'src/lib/components/common'), label: 'Common Components' },
 ];
 
 const isStrict = process.argv.includes('--strict');
@@ -168,7 +170,10 @@ function main(): void {
   }
 
   // Quality
-  const storyFiles = findAllStoryFiles(path.join(ROOT, 'src'));
+  const storyFiles = [
+    ...findAllStoryFiles(path.join(APP_ROOT, 'src')),
+    ...findAllStoryFiles(path.join(STORYBOOK_ROOT, '.storybook')),
+  ];
   const qualityResults = checkQuality(storyFiles);
 
   const missingAllPatterns = qualityResults.filter((r) => !r.hasAllPatterns);

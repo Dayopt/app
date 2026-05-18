@@ -13,15 +13,14 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import Module from 'module';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 import type { ZodType } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import { ERROR_CODE_MAP } from '../src/platform/trpc/errors';
-import type { ProcedureMeta } from '../src/platform/trpc/procedures';
-import { appRouter } from '../src/platform/trpc/root';
+import type { ProcedureMeta } from '../apps/app/src/lib/trpc/procedures';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -29,6 +28,44 @@ const DEFAULT_OUTPUT = resolve(ROOT, 'docs/api/openapi.json');
 const CHECK_MODE = process.argv.includes('--check');
 const OUTPUT_INDEX = process.argv.indexOf('--output');
 const OUTPUT_PATH = OUTPUT_INDEX !== -1 ? resolve(process.argv[OUTPUT_INDEX + 1]) : DEFAULT_OUTPUT;
+
+type AppRouterLike = { _def: { record: Record<string, unknown> } };
+
+function installServerOnlyShim(): void {
+  const moduleWithLoad = Module as unknown as {
+    _load: (request: string, parent: unknown, isMain: boolean) => unknown;
+  };
+  const originalLoad = moduleWithLoad._load;
+
+  moduleWithLoad._load = function patchedLoad(
+    request: string,
+    parent: unknown,
+    isMain: boolean,
+  ): unknown {
+    if (request === 'server-only') {
+      return {};
+    }
+
+    return originalLoad.call(this, request, parent, isMain);
+  };
+}
+
+async function loadRuntimeModules(): Promise<{
+  appRouter: AppRouterLike;
+  errorCodeMap: Record<string, string>;
+}> {
+  installServerOnlyShim();
+
+  const [{ ERROR_CODE_MAP }, { appRouter }] = await Promise.all([
+    import('../apps/app/src/lib/trpc/errors'),
+    import('../apps/app/src/lib/trpc/root'),
+  ]);
+
+  return {
+    appRouter: appRouter as AppRouterLike,
+    errorCodeMap: ERROR_CODE_MAP,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // 1. tRPCルーターツリー走査
@@ -126,11 +163,13 @@ const TRPC_TO_HTTP_STATUS: Record<string, number> = {
   INTERNAL_SERVER_ERROR: 500,
 };
 
-function buildErrorResponses(): Record<string, Record<string, unknown>> {
+function buildErrorResponses(
+  errorCodeMap: Record<string, string>,
+): Record<string, Record<string, unknown>> {
   // ERROR_CODE_MAPからHTTPステータスごとにサービスエラーコードをグループ化
   const grouped = new Map<string, string[]>();
 
-  for (const [serviceCode, trpcCode] of Object.entries(ERROR_CODE_MAP)) {
+  for (const [serviceCode, trpcCode] of Object.entries(errorCodeMap)) {
     const existing = grouped.get(trpcCode) ?? [];
     existing.push(serviceCode);
     grouped.set(trpcCode, existing);
@@ -216,7 +255,10 @@ function buildRateLimitExtension(meta: ProcedureMeta): Record<string, unknown> |
   return undefined;
 }
 
-function generateOpenApiSpec(procedures: ProcedureInfo[]): Record<string, unknown> {
+function generateOpenApiSpec(
+  procedures: ProcedureInfo[],
+  errorCodeMap: Record<string, string>,
+): Record<string, unknown> {
   const paths: Record<string, Record<string, unknown>> = {};
   const inputSchemas: Record<string, Record<string, unknown>> = {};
 
@@ -305,7 +347,7 @@ function generateOpenApiSpec(procedures: ProcedureInfo[]): Record<string, unknow
     };
   }
 
-  const errorResponses = buildErrorResponses();
+  const errorResponses = buildErrorResponses(errorCodeMap);
 
   return {
     openapi: '3.1.0',
@@ -364,21 +406,22 @@ function generateOpenApiSpec(procedures: ProcedureInfo[]): Record<string, unknow
 // 4. メイン実行
 // ---------------------------------------------------------------------------
 
-function main(): void {
+async function main(): Promise<void> {
+  const { appRouter, errorCodeMap } = await loadRuntimeModules();
+
   // ルーターツリー走査
-  const record = (appRouter as unknown as { _def: { record: Record<string, unknown> } })._def
-    .record;
+  const record = appRouter._def.record;
   const procedures = walkRouter(record);
 
   // OpenAPIドキュメント生成
-  const spec = generateOpenApiSpec(procedures);
+  const spec = generateOpenApiSpec(procedures, errorCodeMap);
   const specJson = JSON.stringify(spec, null, 2) + '\n';
 
   // --check モード: 既存specと比較
   if (CHECK_MODE) {
     if (!existsSync(OUTPUT_PATH)) {
       console.error(`❌ API仕様書が見つかりません: ${OUTPUT_PATH}`);
-      console.error('   npm run api:spec を実行して生成してください。');
+      console.error('   pnpm --filter @dayopt/app api:spec を実行して生成してください。');
       process.exit(1);
     }
 
@@ -388,7 +431,7 @@ function main(): void {
       process.exit(0);
     } else {
       console.error('❌ API仕様書が最新ではありません。');
-      console.error('   npm run api:spec を実行して更新してください。');
+      console.error('   pnpm --filter @dayopt/app api:spec を実行して更新してください。');
       process.exit(1);
     }
   }
@@ -416,4 +459,7 @@ function main(): void {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

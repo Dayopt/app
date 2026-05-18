@@ -18,7 +18,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const BUDGET_FILE = resolve(ROOT, '.feature-boundary-budget.json');
+const APP_ROOT = resolve(ROOT, 'apps/app');
+const BUDGET_FILE = resolve(APP_ROOT, '.feature-boundary-budget.json');
 const UPDATE_MODE = process.argv.includes('--update');
 
 interface ESLintMessage {
@@ -50,17 +51,17 @@ interface BudgetFile {
 function countViolations(): ViolationCounts {
   let jsonOutput: string;
   try {
-    execSync('npx eslint src/features/ --format json --no-error-on-unmatched-pattern', {
-      cwd: ROOT,
+    execSync('pnpm exec eslint src/features/ --format json --no-error-on-unmatched-pattern', {
+      cwd: APP_ROOT,
       encoding: 'utf8',
       maxBuffer: 10 * 1024 * 1024,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     // eslint exits 0 if no errors (warnings don't cause non-zero)
     jsonOutput = execSync(
-      'npx eslint src/features/ --format json --no-error-on-unmatched-pattern',
+      'pnpm exec eslint src/features/ --format json --no-error-on-unmatched-pattern',
       {
-        cwd: ROOT,
+        cwd: APP_ROOT,
         encoding: 'utf8',
         maxBuffer: 10 * 1024 * 1024,
         stdio: ['pipe', 'pipe', 'pipe'],
