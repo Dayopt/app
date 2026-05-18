@@ -32,6 +32,7 @@ interface DisplayNameDialogProps {
 export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNameDialogProps) {
   const t = useTranslations();
   const user = useAuthStore((state) => state.user);
+  const userId = user?.id;
   const supabase = createClient();
 
   const [displayName, setDisplayName] = useState(currentName);
@@ -40,7 +41,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!user?.id) return;
+      if (!userId) return;
       if (!displayName.trim()) return;
 
       setIsLoading(true);
@@ -51,7 +52,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
             full_name: displayName.trim(),
             updated_at: new Date().toISOString(),
           })
-          .eq('id', user.id);
+          .eq('id', userId);
 
         if (profileError) {
           throw new Error(profileError.message);
@@ -74,7 +75,7 @@ export function DisplayNameDialog({ open, onOpenChange, currentName }: DisplayNa
         setIsLoading(false);
       }
     },
-    [displayName, user?.id, supabase, t, onOpenChange],
+    [displayName, userId, supabase, t, onOpenChange],
   );
 
   const handleOpenChange = useCallback(

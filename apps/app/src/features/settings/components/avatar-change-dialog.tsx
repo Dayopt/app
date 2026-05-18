@@ -30,6 +30,7 @@ interface AvatarChangeDialogProps {
 export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogProps) {
   const t = useTranslations();
   const user = useAuthStore((state) => state.user);
+  const userId = user?.id;
   const supabase = createClient();
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
@@ -39,11 +40,11 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
 
   const handleUpload = useCallback(
     async (file: File) => {
-      if (!user?.id) return;
+      if (!userId) return;
 
       setIsUploading(true);
       try {
-        const publicUrl = await uploadAvatar(file, user.id);
+        const publicUrl = await uploadAvatar(file, userId);
         setAvatarUrl(publicUrl);
 
         // Update profile
@@ -53,7 +54,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
             avatar_url: publicUrl,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', user.id);
+          .eq('id', userId);
 
         await supabase.auth.updateUser({
           data: { avatar_url: publicUrl },
@@ -65,15 +66,15 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
         setIsUploading(false);
       }
     },
-    [user?.id, supabase],
+    [userId, supabase],
   );
 
   const handleRemove = useCallback(async () => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     setIsUploading(true);
     try {
-      await deleteAvatar(user.id);
+      await deleteAvatar(userId);
       setAvatarUrl(null);
 
       // Update profile
@@ -83,7 +84,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
           avatar_url: null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       await supabase.auth.updateUser({
         data: { avatar_url: null },
@@ -94,7 +95,7 @@ export function AvatarChangeDialog({ open, onOpenChange }: AvatarChangeDialogPro
     } finally {
       setIsUploading(false);
     }
-  }, [user?.id, supabase]);
+  }, [userId, supabase]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);

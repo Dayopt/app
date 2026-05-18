@@ -82,15 +82,17 @@ export function TagCreateModal({ open, onClose, initialParentId, onCreated }: Ta
   // モーダル open 時に初期値を同期
   useEffect(() => {
     if (!open) return;
-    setName('');
-    setDebouncedName('');
-    setColor(DEFAULT_TAG_COLOR);
-    setIcon(null);
-    setParentId(initialParentId ?? null);
-    setSubmitting(false);
-    setColorPopoverOpen(false);
-    setIconPopoverOpen(false);
-    setGroupPopoverOpen(false);
+    queueMicrotask(() => {
+      setName('');
+      setDebouncedName('');
+      setColor(DEFAULT_TAG_COLOR);
+      setIcon(null);
+      setParentId(initialParentId ?? null);
+      setSubmitting(false);
+      setColorPopoverOpen(false);
+      setIconPopoverOpen(false);
+      setGroupPopoverOpen(false);
+    });
   }, [open, initialParentId]);
 
   useEffect(() => {

@@ -182,7 +182,7 @@ export function useSessionMonitor(): SessionMonitorState {
     }
 
     // 初期チェック
-    checkSession();
+    queueMicrotask(checkSession);
 
     // 定期チェック
     checkIntervalRef.current = setInterval(checkSession, 10000);

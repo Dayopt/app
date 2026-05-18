@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -53,10 +53,15 @@ export function useAutoSaveSettings<T>({
   }, debounceMs);
 
   const prevValuesRef = useRef<T>(initialValues);
-  if (JSON.stringify(values) !== JSON.stringify(prevValuesRef.current)) {
+
+  useEffect(() => {
+    if (JSON.stringify(values) === JSON.stringify(prevValuesRef.current)) {
+      return;
+    }
+
     prevValuesRef.current = values;
     debouncedSave(values);
-  }
+  }, [debouncedSave, values]);
 
   const updateValue = useCallback(<K extends keyof T>(key: K, value: T[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));

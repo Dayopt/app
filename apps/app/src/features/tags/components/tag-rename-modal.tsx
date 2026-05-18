@@ -36,6 +36,12 @@ interface TagRenameModalProps {
 }
 
 export function TagRenameModal({ open, onClose, tag }: TagRenameModalProps) {
+  const formKey = open ? `${tag.id}:${tag.name}` : 'closed';
+
+  return <TagRenameModalForm key={formKey} open={open} onClose={onClose} tag={tag} />;
+}
+
+function TagRenameModalForm({ open, onClose, tag }: TagRenameModalProps) {
   const t = useTranslations('calendar.filter.renamePopover');
   const tCommon = useTranslations('common');
 
@@ -45,14 +51,6 @@ export function TagRenameModal({ open, onClose, tag }: TagRenameModalProps) {
   const [name, setName] = useState(tag.name);
   const [debouncedName, setDebouncedName] = useState(tag.name);
   const [submitting, setSubmitting] = useState(false);
-
-  // モーダルが開いたら初期値を同期
-  useEffect(() => {
-    if (!open) return;
-    setName(tag.name);
-    setDebouncedName(tag.name);
-    setSubmitting(false);
-  }, [open, tag.name]);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedName(name), 200);

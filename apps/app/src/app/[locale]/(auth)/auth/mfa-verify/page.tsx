@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
@@ -34,12 +34,7 @@ export default function MFAVerifyPage() {
   const [factorId, setFactorId] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkMFARequired();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const checkMFARequired = async () => {
+  const checkMFARequired = useCallback(async () => {
     try {
       const { data: factors } = await supabase.auth.mfa.listFactors();
 
@@ -73,7 +68,11 @@ export default function MFAVerifyPage() {
       });
       setError(t('common.errors.mfa.verifyFailed'));
     }
-  };
+  }, [router, supabase, t]);
+
+  useEffect(() => {
+    queueMicrotask(() => void checkMFARequired());
+  }, [checkMFARequired]);
 
   const handleVerifyTotp = async () => {
     if (!factorId || !challengeId || !verificationCode) {

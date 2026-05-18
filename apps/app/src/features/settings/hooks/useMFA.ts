@@ -115,7 +115,7 @@ export function useMFA(): UseMFAReturn {
 
   // 初回マウント時にMFA状態チェック
   useEffect(() => {
-    checkMFAStatus();
+    queueMicrotask(checkMFAStatus);
   }, [checkMFAStatus]);
 
   // MFA登録開始

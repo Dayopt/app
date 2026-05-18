@@ -253,7 +253,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   useEffect(() => {
     if (!waitingForModal) return;
     if (isTagCreateModalOpen) return;
-    setWaitingForModal(false);
+    queueMicrotask(() => setWaitingForModal(false));
   }, [waitingForModal, isTagCreateModalOpen]);
 
   // pending を modal-pending 状態で抱えている間、unmount または waitingForModal の解除で
@@ -265,12 +265,17 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   }, [waitingForModal, clearPendingSelection]);
 
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const [nowForPastCheck, setNowForPastCheck] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!pendingSelection) return;
+    queueMicrotask(() => setNowForPastCheck(Date.now()));
+  }, [pendingSelection]);
 
   // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
   // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
-  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
-  const nowForPastCheck = Date.now();
   const isPast = (() => {
+    if (nowForPastCheck === null) return false;
     if (!pendingSelection) return false;
     const { date: selDate, endHour, endMinute } = pendingSelection;
     const endLocal = new Date(
