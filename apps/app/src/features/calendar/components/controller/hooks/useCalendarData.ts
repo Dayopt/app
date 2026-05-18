@@ -10,7 +10,6 @@ import { useEntries } from '@/features/entry';
 import { useTags } from '@/features/tags';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { api } from '@/lib/trpc';
-import * as Sentry from '@sentry/nextjs';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
@@ -208,8 +207,6 @@ export function useCalendarData({
     const calendarPlans: CalendarEvent[] = [];
 
     if (entriesData) {
-      const startTime = performance.now();
-
       // サーバー型 → コア型に正規化（tagId を保証）
       const normalized: EntryWithTags[] = entriesData.map((e) => ({
         ...e,
@@ -217,20 +214,6 @@ export function useCalendarData({
       })) as EntryWithTags[];
       const expandedEvents = expandEntriesToCalendarEvents(normalized, timezone);
       calendarPlans.push(...expandedEvents);
-
-      const duration = performance.now() - startTime;
-      if (duration > 10) {
-        Sentry.addBreadcrumb({
-          category: 'performance',
-          message: `expandEntriesToCalendarEvents took ${duration.toFixed(1)}ms`,
-          level: 'warning',
-          data: {
-            duration,
-            entryCount: entriesData.length,
-            expandedCount: expandedEvents.length,
-          },
-        });
-      }
     }
 
     return calendarPlans;

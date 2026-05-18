@@ -40,10 +40,6 @@ const Z_INDEX = {
   DRAGGING: 30,
 } as const;
 
-function formatDiffMinutes(minutes: number): string {
-  return `${Math.abs(Math.round(minutes))}m`;
-}
-
 /** カレンダーグリッド上に表示するエントリカードコンポーネント（ドラッグ・リサイズ・Inspector連携対応） */
 export const EntryCard = memo<EntryCardProps>(function EntryCard({
   entry,

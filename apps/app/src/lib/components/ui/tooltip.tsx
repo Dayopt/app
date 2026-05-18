@@ -118,7 +118,6 @@ function HoverTooltip({
       top = window.innerHeight - tooltip.height - padding;
     }
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM計測(getBoundingClientRect)後の位置設定は不可避
     setPosition({ top, left });
   }, [isVisible, side]);
 
