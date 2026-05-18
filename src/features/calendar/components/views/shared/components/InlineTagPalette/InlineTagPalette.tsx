@@ -256,7 +256,6 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   useEffect(() => {
     if (!waitingForModal) return;
     if (isTagCreateModalOpen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync
     setWaitingForModal(false);
   }, [waitingForModal, isTagCreateModalOpen]);
 
