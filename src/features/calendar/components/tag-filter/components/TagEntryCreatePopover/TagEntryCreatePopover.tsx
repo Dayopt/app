@@ -203,12 +203,15 @@ export function TagEntryCreatePopover({
       }
     }
 
+    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
+    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
+    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
     return hasTwoLayerTimeConflict(events, {
       id: '',
       plannedStart: willBeUnplanned ? null : startDate.toISOString(),
       plannedEnd: willBeUnplanned ? null : endDate.toISOString(),
-      actualStart: willBeUnplanned ? startDate.toISOString() : null,
-      actualEnd: willBeUnplanned ? endDate.toISOString() : null,
+      actualStart: startDate.toISOString(),
+      actualEnd: endDate.toISOString(),
     });
   }, [queryClient, selectedDate, startTime, endTime, willBeUnplanned]);
 

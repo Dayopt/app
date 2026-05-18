@@ -110,14 +110,15 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       }
     }
 
-    // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
-    // isPast は render 上部で算出済み（Date.now() を useMemo の外に出す）
+    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
+    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
+    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
     return hasTwoLayerTimeConflict(events, {
       id: '',
       plannedStart: isPast ? null : startDate.toISOString(),
       plannedEnd: isPast ? null : endDate.toISOString(),
-      actualStart: isPast ? startDate.toISOString() : null,
-      actualEnd: isPast ? endDate.toISOString() : null,
+      actualStart: startDate.toISOString(),
+      actualEnd: endDate.toISOString(),
     });
   }, [queryClient, draft.date, startH, startM, endH, endM, startMinutes, endMinutes, isPast]);
 

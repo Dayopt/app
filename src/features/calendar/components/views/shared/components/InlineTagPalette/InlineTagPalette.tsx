@@ -140,14 +140,17 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           });
         }
       }
-      // past 時間帯は保存時に unplanned になるため、overlap 判定も actual として渡す。
+      // past 時間帯は保存時に unplanned になり planned 範囲を持たない。
+      // future は planned origin で planned/actual の両 layer が同じ範囲を持つ
+      // (server がデフォルトで actual を planned に mirror する) ため、actual も同じ範囲で
+      // 判定する必要がある（hasTwoLayerTimeConflict は target.actualStart/End が必須）。
       const createWillBeUnplanned = utcEnd.getTime() <= Date.now();
       const hasOverlap = hasTwoLayerTimeConflict(events, {
         id: '',
         plannedStart: createWillBeUnplanned ? null : utcStart.toISOString(),
         plannedEnd: createWillBeUnplanned ? null : utcEnd.toISOString(),
-        actualStart: createWillBeUnplanned ? utcStart.toISOString() : null,
-        actualEnd: createWillBeUnplanned ? utcEnd.toISOString() : null,
+        actualStart: utcStart.toISOString(),
+        actualEnd: utcEnd.toISOString(),
       });
       if (hasOverlap) {
         toast.error(tEntry('errors.timeOverlap'));
@@ -253,6 +256,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   useEffect(() => {
     if (!waitingForModal) return;
     if (isTagCreateModalOpen) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- external store sync
     setWaitingForModal(false);
   }, [waitingForModal, isTagCreateModalOpen]);
 
@@ -340,14 +344,15 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       }
     }
 
-    // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
-    // isPast は render 上部で算出済み（Date.now() を useMemo の外に出す）
+    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
+    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
+    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
     return hasTwoLayerTimeConflict(events, {
       id: '',
       plannedStart: isPast ? null : utcStart.toISOString(),
       plannedEnd: isPast ? null : utcEnd.toISOString(),
-      actualStart: isPast ? utcStart.toISOString() : null,
-      actualEnd: isPast ? utcEnd.toISOString() : null,
+      actualStart: utcStart.toISOString(),
+      actualEnd: utcEnd.toISOString(),
     });
   }, [queryClient, pendingSelection, timezone, isPast]);
 
