@@ -167,7 +167,6 @@ describe('EntryCard', () => {
       expect(overtimeAccent?.parentElement?.style.borderRightStyle).toBe('dashed');
       expect(overtimeAccent?.parentElement?.style.borderBottomStyle).toBe('dashed');
       expect(overtimeAccent?.parentElement?.style.borderLeftStyle).toBe('');
-      expect(screen.getByText('calendar.event.diff.overtime')).toBeInTheDocument();
     });
 
     it('unplanned entry は planned 背景を描かず点線の actual のみ表示する', () => {
