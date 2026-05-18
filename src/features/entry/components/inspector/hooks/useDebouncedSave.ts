@@ -190,20 +190,18 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
    * 適合しないため破棄。title / description / note / tag_id / fulfillment_score などの
    * 非構造フィールドは debounce 窓内のユーザー入力を失わせないよう先に flush する。
    * すでに送信中の保存は完了を待ち、変換と順序を揃える。
+   *
+   * pre-flush 保存または in-flight 保存が失敗した場合は reject して伝播する。
+   * 呼び出し側は .catch で受けて変換を中止すること（stale state で conversion が
+   * 走るのを防ぐ）。失敗時は捨てた非構造 pending を復元してリトライ可能にする。
+   * suppress flag は pre-flush 完了後にだけ立てる — 失敗時はちゃんと toast が出る。
    */
   const prepareForStructuralMutation = useCallback(async () => {
-    if (suppressResetTimerRef.current) {
-      clearTimeout(suppressResetTimerRef.current);
-      suppressResetTimerRef.current = null;
-    }
-    suppressSaveErrorToastRef.current = true;
-
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
 
-    // 構造フィールドは破棄、非構造フィールドだけを先に保存する
     const STRUCTURAL_FIELDS = new Set([
       'start_time',
       'end_time',
@@ -219,13 +217,27 @@ export function useDebouncedSave({ entryId }: UseDebouncedSaveOptions) {
     pendingRef.current = {};
 
     const id = entryIdRef.current;
-    if (id && Object.keys(nonStructural).length > 0) {
-      await runSave(id, nonStructural).catch(() => undefined);
+
+    try {
+      if (id && Object.keys(nonStructural).length > 0) {
+        await runSave(id, nonStructural);
+      }
+      if (lastSavePromiseRef.current) {
+        await lastSavePromiseRef.current;
+      }
+    } catch (error) {
+      // 失敗時: 非構造 pending を復元（直近にユーザーが入力したフィールドは保持）
+      pendingRef.current = { ...nonStructural, ...pendingRef.current };
+      throw error;
     }
 
-    if (lastSavePromiseRef.current) {
-      await lastSavePromiseRef.current.catch(() => undefined);
+    // pre-flush が成功した後でだけ suppress を立てる。
+    // 変換中に走り出す in-flight な debounce 保存（fulfillment 等）の CONFLICT toast を抑制する。
+    if (suppressResetTimerRef.current) {
+      clearTimeout(suppressResetTimerRef.current);
+      suppressResetTimerRef.current = null;
     }
+    suppressSaveErrorToastRef.current = true;
   }, [runSave]);
 
   const finishStructuralMutation = useCallback(() => {
