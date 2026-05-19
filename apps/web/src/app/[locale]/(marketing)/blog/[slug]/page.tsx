@@ -241,7 +241,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 <div className="mt-6 space-y-6">
                   <div>
                     <h3 className="text-foreground mb-4 text-lg font-medium">
-                      {tCommon('blog.post.tagsUsed')}
+                      {t('post.tagsUsed')}
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {post.frontMatter.tags.map((tag) => (
