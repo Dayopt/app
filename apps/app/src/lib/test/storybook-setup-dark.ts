@@ -1,7 +1,7 @@
+import * as projectAnnotations from '@dayopt/storybook/preview';
 import * as a11yAddonAnnotations from '@storybook/addon-a11y/preview';
 import { setProjectAnnotations } from '@storybook/nextjs-vite';
 import { beforeEach } from 'vitest';
-import * as projectAnnotations from '@dayopt/storybook/preview';
 
 setProjectAnnotations([a11yAddonAnnotations, projectAnnotations]);
 
