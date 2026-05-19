@@ -1,0 +1,36 @@
+/* ============================================
+ * ステートレイヤー（M3準拠）
+ * foregroundベースの半透明オーバーレイ
+ * 一箇所変更で全体に反映
+ * ============================================ */
+@theme inline {
+  --color-state-hover: oklch(from var(--foreground) l c h / 10%);
+  --color-state-focus: oklch(from var(--foreground) l c h / 12%);
+  --color-state-pressed: oklch(from var(--foreground) l c h / 12%);
+  --color-state-selected: oklch(from var(--foreground) l c h / 12%);
+  --color-state-dragged: oklch(from var(--foreground) l c h / 16%);
+  --color-state-active: var(--state-active);
+  --color-state-active-foreground: var(--state-active-foreground);
+
+  /* 塗りボタン用ホバー（背景色を暗くする方式） */
+  --color-primary-hover: oklch(from var(--primary) l c h / 90%);
+  --color-destructive-hover: oklch(from var(--destructive) l c h / 90%);
+  --color-warning-hover: oklch(from var(--warning) l c h / 90%);
+  --color-success-hover: oklch(from var(--success) l c h / 90%);
+  --color-info-hover: oklch(from var(--info) l c h / 90%);
+
+  /* ============================================
+   * Primaryベースのステートレイヤー
+   * 「新規追加」ボタン等、primary強調したい要素用
+   * ============================================ */
+  --color-primary-state-hover: oklch(from var(--primary) l c h / 10%);
+  --color-primary-state-selected: oklch(from var(--primary) l c h / 12%);
+
+  /* ============================================
+   * Destructive ステートレイヤー
+   * ============================================ */
+  --color-destructive-state-hover: oklch(from var(--destructive) l c h / 10%);
+
+  /* Secondary ホバー */
+  --color-secondary-hover: oklch(from var(--secondary) l c h / 80%);
+}

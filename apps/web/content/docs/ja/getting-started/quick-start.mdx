@@ -1,0 +1,269 @@
+---
+title: '5-Minute Quickstart'
+description: 'Build your first YourSaaS application in just 5 minutes. This quickstart guide will have you creating users, handling authentication, and making API calls.'
+tags: ['quickstart', 'tutorial', 'getting-started', '5-minutes']
+author: 'YourSaaS Team'
+publishedAt: '2024-01-18'
+updatedAt: '2024-01-28'
+order: 2
+featured: true
+category: 'getting-started'
+slug: 'quick-start'
+
+# === AI/RAG用メタデータ（簡略版） ===
+ai:
+  relatedQuestions:
+    - 'Dayoptを始めるには？'
+    - '最初のアプリを作るには？'
+    - '5分で始められる？'
+    - '認証機能を実装したい'
+    - 'ユーザー登録を実装したい'
+    - 'ログイン機能の作り方'
+  prerequisites:
+    - 'Node.js 18以上がインストール済み'
+    - 'Dayopt SDKがインストール済み'
+    - 'APIキーを取得済み'
+  relatedDocs:
+    - '/docs/getting-started/installation'
+    - '/docs/api-reference/authentication'
+    - '/docs/api-reference/users'
+  chunkStrategy: 'h2'
+  searchable: true
+  difficulty: 'beginner'
+  contentType: 'tutorial'
+---
+
+# 5-Minute Quickstart
+
+Welcome! In just 5 minutes, you'll have a working application that:
+
+- ✅ Creates and authenticates users
+- ✅ Makes secure API calls
+- ✅ Handles real-time updates
+- ✅ Manages user sessions
+
+Let's dive in!
+
+## Step 1: Setup (30 seconds)
+
+First, install YourSaaS and create your project structure:
+
+```bash
+npx create-yoursaas-app my-app
+cd my-app
+npm install
+```
+
+Or add to an existing project:
+
+```bash
+npm install @yoursaas/sdk
+```
+
+## Step 2: Configuration (1 minute)
+
+Create your `.env.local` file with your API credentials:
+
+```bash
+# Get these from https://dashboard.yoursaas.com
+YOURSAAS_API_KEY=your_api_key_here
+YOURSAAS_PROJECT_ID=your_project_id_here
+```
+
+> **Need API keys?** [Sign up for free](https://dashboard.yoursaas.com) and get your keys instantly.
+
+## Step 3: Initialize the Client (30 seconds)
+
+Create a client instance:
+
+```typescript
+// lib/yoursaas.ts
+import { YourSaaSClient } from '@yoursaas/sdk';
+
+export const client = new YourSaaSClient({
+  apiKey: process.env.YOURSAAS_API_KEY!,
+  projectId: process.env.YOURSAAS_PROJECT_ID!,
+});
+```
+
+## Step 4: Create Your First User (1 minute)
+
+Let's create a simple user registration:
+
+```typescript
+// pages/api/register.ts (or app/api/register/route.ts for App Router)
+import { client } from '@/lib/yoursaas';
+
+export async function POST(request: Request) {
+  try {
+    const { email, password, name } = await request.json();
+
+    // Create user with YourSaaS
+    const result = await client.auth.register({
+      email,
+      password,
+      name,
+    });
+
+    return Response.json({
+      success: true,
+      user: result.user,
+      session: result.session,
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      { status: 400 },
+    );
+  }
+}
+```
+
+## Step 5: Add Authentication (1 minute)
+
+Create a login form component:
+
+```tsx
+// components/LoginForm.tsx
+'use client';
+import { useState } from 'react';
+
+export function LoginForm() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [user, setUser] = useState(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setUser(data.user);
+      // Store session token
+      localStorage.setItem('token', data.session.token);
+    }
+  };
+
+  if (user) {
+    return (
+      <div className="rounded-lg bg-green-50 p-6">
+        <h2 className="text-xl font-bold text-green-800">Welcome back, {user.name}! 🎉</h2>
+        <p className="text-green-600">You're successfully logged in.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleLogin} className="mx-auto max-w-md space-y-4">
+      <div>
+        <label className="mb-1 block text-sm font-medium">Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded border p-2 focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium">Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded border p-2 focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
+      <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white hover:bg-blue-700">
+        Login
+      </button>
+    </form>
+  );
+}
+```
+
+## Step 6: Test Everything (30 seconds)
+
+Start your development server and test:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` and try:
+
+1. **Register a new user** with email/password
+2. **Login** with those credentials
+3. **View the welcome message**
+
+## 🎉 Congratulations!
+
+You've just built a complete authentication system in 5 minutes! Your app now has:
+
+- ✅ User registration and login
+- ✅ Secure session management
+- ✅ Protected API routes
+- ✅ Automatic token handling
+
+## What's Next?
+
+Now that you have the basics working, explore these features:
+
+### Add Real-time Features
+
+```typescript
+// Subscribe to user activity
+const subscription = client.realtime.subscribe('user-activity', {
+  userId: currentUser.id,
+  onUpdate: (activity) => {
+    console.log('New activity:', activity);
+    // Update UI in real-time
+  },
+});
+```
+
+### Implement User Profiles
+
+```typescript
+// Update user profile
+await client.users.update(userId, {
+  name: 'New Name',
+  avatar: 'https://example.com/avatar.jpg',
+  preferences: {
+    theme: 'dark',
+    notifications: true,
+  },
+});
+```
+
+## Common Next Steps
+
+1. **[Configuration](/docs/configuration)** - Advanced setup options
+2. **[API Reference](/docs/api-reference)** - Complete API documentation
+3. **[Examples](/docs/examples)** - Real-world implementation examples
+4. **[Best Practices](/docs/guides/best-practices)** - Learn recommended patterns
+
+## Get Help
+
+Stuck? We're here to help:
+
+- 💬 **[Discord Community](https://discord.gg/yoursaas)** - Get real-time help
+- 📚 **[Documentation](/docs)** - Comprehensive guides
+- 📧 **[Support](mailto:support@yoursaas.com)** - Direct technical help
+
+---
+
+**Ready to build something amazing?** You now have all the tools you need to create powerful, scalable applications with YourSaaS. Happy coding! 🚀

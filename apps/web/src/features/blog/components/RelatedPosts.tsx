@@ -1,0 +1,67 @@
+'use client';
+
+import { Container } from '@/components/ui/container';
+import { Heading, Text } from '@/components/ui/typography';
+import { Link } from '@/platform/i18n/navigation';
+import { ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { BlogPostMeta } from '../lib/blog';
+import { PostCard } from './PostCard';
+
+interface RelatedPostsProps {
+  posts: BlogPostMeta[];
+  currentSlug: string;
+  locale?: string;
+}
+
+export function RelatedPosts({
+  posts,
+  currentSlug: _currentSlug,
+  locale = 'en',
+}: RelatedPostsProps) {
+  const t = useTranslations('blog.relatedPosts');
+
+  if (posts.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="bg-container py-16">
+      <Container>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <Heading as="h2" size="2xl" className="mb-4">
+              {t('title')}
+            </Heading>
+            <Text size="lg" variant="muted">
+              {t('subtitle')}
+            </Text>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {posts.slice(0, 3).map((post, index) => (
+              <PostCard
+                key={post.slug}
+                post={post}
+                priority={index === 0}
+                layout="vertical"
+                locale={locale}
+              />
+            ))}
+          </div>
+
+          {/* View all articles link */}
+          <div className="mt-12 text-center">
+            <Link
+              href="/blog"
+              className="border-border bg-card text-foreground hover:border-foreground hover:bg-muted inline-flex items-center rounded-lg border px-6 py-4 text-sm font-medium transition-colors"
+            >
+              {t('viewAll')}
+              <ArrowRight className="ml-2 size-4" />
+            </Link>
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}

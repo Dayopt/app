@@ -1,0 +1,154 @@
+/* ============================================
+ * Surface Elevation ユーティリティ（app同期）
+ * 物理照明を表現するグラデーション + シャドウの複合
+ * ============================================ */
+
+@utility surface-sunken {
+  background-image: var(--elevation-gradient-sunken);
+  box-shadow: var(--elevation-sunken);
+}
+
+@utility surface-flat {
+  background-image: var(--elevation-gradient-card);
+}
+
+@utility surface-raised {
+  background-image: var(--elevation-gradient-card);
+  box-shadow: var(--elevation-raised);
+}
+
+@utility surface-raised-heavy {
+  background-image: var(--elevation-gradient-card);
+  box-shadow: var(--elevation-raised-heavy);
+}
+
+/* ============================================
+ * 汎用ユーティリティ
+ * ============================================ */
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Responsive text */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl;
+  }
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl;
+  }
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl;
+  }
+  .text-responsive-3xl {
+    @apply text-3xl sm:text-4xl lg:text-5xl;
+  }
+
+  /* 8px Grid spacing */
+  .space-responsive {
+    @apply space-y-4 sm:space-y-6 lg:space-y-8;
+  }
+  .gap-responsive {
+    @apply gap-4 sm:gap-6 lg:gap-8;
+  }
+  .p-responsive {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  /* Touch targets */
+  .touch-target {
+    @apply flex min-h-[48px] min-w-[48px] items-center justify-center;
+  }
+
+  /* Visibility */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Line clamp */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* ============================================
+ * アニメーション（Storybook Motion準拠）
+ * ============================================ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--container) 0%, var(--muted) 50%, var(--container) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, var(--container) 0%, var(--card) 50%, var(--container) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}

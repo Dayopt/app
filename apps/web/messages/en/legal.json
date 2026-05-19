@@ -1,0 +1,676 @@
+{
+  "legal": {
+    "title": "Legal Information",
+    "description": "Terms of Service, Privacy Policy, and other legal documents",
+    "lastUpdated": "Last Updated",
+    "effectiveDate": "Effective Date",
+    "cookieSettings": "Cookie Settings",
+    "privacy": {
+      "title": "Privacy Policy",
+      "subtitle": "How we collect, use, and protect your information",
+      "description": "How Dayopt handles your personal information",
+      "sections": {
+        "introduction": {
+          "title": "Introduction",
+          "content": "Dayopt (the \"Service\") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, and protect your personal information."
+        },
+        "dataCollection": {
+          "title": "Information We Collect",
+          "accountInfo": "Account Information (email address, name, profile picture)",
+          "usageData": "Service Usage Data (tasks, calendar, settings)",
+          "technicalData": "Technical Data (IP address, browser information, device information)",
+          "cookies": "Cookies and similar technologies"
+        },
+        "dataUsage": {
+          "title": "How We Use Your Information",
+          "serviceProvision": "Providing, operating, and improving the Service",
+          "userSupport": "User support and responding to inquiries",
+          "security": "Preventing unauthorized use and maintaining security",
+          "analytics": "Service analysis and feature improvements",
+          "communication": "Sending important notices and service updates"
+        },
+        "dataSharing": {
+          "title": "Third-Party Services",
+          "intro": "We work with the following service providers:",
+          "supabase": "Supabase (authentication & database)",
+          "vercel": "Vercel (hosting)",
+          "sentry": "Sentry (error monitoring)",
+          "note": "These providers manage information according to their respective privacy policies."
+        },
+        "dataOwnership": {
+          "title": "Data Ownership",
+          "content": "You retain full ownership of all data you create, upload, or store through the Service. Dayopt does not claim any intellectual property rights over your data.",
+          "export": "You may export your data at any time through the account settings page. Exports are available in standard formats (JSON, CSV) to ensure portability.",
+          "termination": "Upon account deletion or service discontinuation, you will have at least 30 days to export your data before it is permanently removed from our systems."
+        },
+        "subProcessors": {
+          "title": "Sub-Processors",
+          "intro": "We engage the following sub-processors to assist in providing the Service. Each sub-processor has entered into a Data Processing Agreement (DPA) with us:",
+          "supabase": "Supabase, Inc. — Authentication and database services. Data location: AWS US-East-1 (N. Virginia, USA)",
+          "vercel": "Vercel, Inc. — Hosting, serverless functions, edge delivery, and web analytics (Vercel Analytics / Speed Insights). Data location: Global Edge Network",
+          "sentry": "Functional Software, Inc. (Sentry) — Error monitoring and diagnostics. Data location: United States",
+          "stripe": "Stripe, Inc. — Payment processing and subscription management. Data location: United States. Stripe is PCI DSS Level 1 certified. We do not store credit card numbers on our servers.",
+          "anthropic": "Anthropic, PBC — AI-powered features (chat, weekly review insights). Data location: United States. Your data is processed under Anthropic's API terms and is not used for model training.",
+          "openai": "OpenAI, LLC — AI-powered features (optional, when user provides their own API key). Data location: United States. Data processed via API is not used for model training per OpenAI's API data usage policy.",
+          "resend": "Resend, Inc. — Transactional email delivery (account notifications, billing confirmations). Data location: United States",
+          "upstash": "Upstash, Inc. — Rate limiting and abuse prevention via serverless Redis. Data location: United States. Only IP hashes and request counts are stored temporarily.",
+          "google": "Google LLC — reCAPTCHA v2/v3 for bot protection on forms. Google may collect usage data subject to Google's Privacy Policy.",
+          "changes": "We will notify you at least 30 days before engaging a new sub-processor or making material changes to existing sub-processor arrangements."
+        },
+        "internationalTransfers": {
+          "title": "International Data Transfers",
+          "content": "Your data may be transferred to and processed in countries other than your country of residence.",
+          "location": "Primary data storage: AWS US-East-1 (N. Virginia, USA) via Supabase. Edge caching and serverless functions are distributed globally via Vercel.",
+          "safeguards": "For transfers from the EU/EEA, we rely on Standard Contractual Clauses (SCCs) approved by the European Commission to ensure adequate data protection.",
+          "japan": "For transfers from Japan, we comply with the Act on the Protection of Personal Information (APPI) requirements for cross-border data transfers, including obtaining consent and ensuring the recipient country provides an equivalent level of protection."
+        },
+        "legalBasis": {
+          "title": "Legal Basis for Processing",
+          "intro": "We process your personal data on the following legal bases (as applicable under GDPR and similar regulations):",
+          "contract": "Contract Performance — Processing necessary to provide the Service you have signed up for, including account management, task storage, and calendar synchronization",
+          "consent": "Consent — Where you have given explicit consent, such as opting in to analytics cookies or marketing communications",
+          "legitimate": "Legitimate Interests — Processing for service improvement, security monitoring, and fraud prevention, where these interests are not overridden by your rights",
+          "legal": "Legal Obligation — Where processing is required to comply with applicable laws, regulations, or legal proceedings"
+        },
+        "aiFeatures": {
+          "title": "AI-Powered Features",
+          "intro": "The Service includes optional AI-powered features that process your data to provide productivity insights and suggestions:",
+          "whatIsSent": "When you use AI features, the following data may be sent to our AI providers (Anthropic or OpenAI): task titles and descriptions, time tracking data, energy mapping data, and calendar entries. This data is used solely to generate contextual suggestions and insights.",
+          "noTraining": "Your data is NOT used to train AI models. Both Anthropic and OpenAI process API requests without using the data for model training or improvement, as specified in their respective API data usage policies.",
+          "byok": "You may optionally provide your own API key (Bring Your Own Key) for OpenAI or Anthropic. When using your own key, requests are sent directly to the provider under your own API agreement. Your API key is encrypted and stored locally on your device, not on our servers.",
+          "limitations": "AI-generated content is provided for informational purposes only. We do not guarantee the accuracy, completeness, or reliability of AI outputs. You should review all AI-generated suggestions before acting on them.",
+          "optOut": "AI features are optional. You can use the Service without enabling any AI functionality. Free tier users are limited to 30 AI interactions per month."
+        },
+        "dataProcessing": {
+          "title": "Data Processing Details",
+          "intro": "The following describes how we process each category of personal data:",
+          "accountData": "Account Data (email, name, avatar) — Processed to create and manage your account, authenticate your identity, and communicate service-related notices",
+          "usageData": "Usage Data (tasks, plans, calendar entries, settings) — Processed to provide core Service functionality, generate productivity insights, and improve features",
+          "technicalData": "Technical Data (IP address, browser, device information) — Processed for security monitoring, performance optimization, and error diagnostics",
+          "automated": "We do not engage in automated decision-making or profiling that produces legal or similarly significant effects on you. AI-powered features (such as weekly review insights) provide suggestions only and do not make decisions on your behalf.",
+          "exportInfo": "You can export your data in standard formats (JSON, CSV) at any time from your account settings. We support data portability to ensure you can move your data to another service if desired."
+        },
+        "dataRetention": {
+          "title": "Data Retention",
+          "active": "We retain your data while your account is active",
+          "deleted": "Data is permanently deleted within 30 days after account deletion",
+          "legal": "Except where retention is required by law"
+        },
+        "userRights": {
+          "title": "Your Rights",
+          "access": "Right to access your personal information",
+          "correction": "Right to correct your personal information",
+          "deletion": "Right to delete your personal information (right to be forgotten)",
+          "portability": "Right to data portability",
+          "objection": "Right to object to processing",
+          "complaint": "Right to lodge a complaint with a supervisory authority (e.g., your local data protection authority under GDPR, or the Personal Information Protection Commission in Japan)",
+          "contact": "To exercise these rights, please contact us through the settings page or contact form."
+        },
+        "security": {
+          "title": "Security Measures",
+          "measures": "We implement industry-standard security measures to protect your personal information from unauthorized access, loss, damage, alteration, and disclosure.",
+          "encryption": "SSL/TLS encryption for data transmission",
+          "access": "Access control and authentication systems",
+          "monitoring": "Regular security audits"
+        },
+        "cookies": {
+          "title": "About Cookies",
+          "intro": "We use cookies to improve user experience.",
+          "essential": "Essential Cookies (maintain login state)",
+          "analytics": "Analytics Cookies (understand usage)",
+          "preference": "Preference Cookies (save user settings)",
+          "control": "You can disable cookies in your browser settings, but some features may be limited.",
+          "policyLink": "For detailed information about our use of cookies, please see our Cookie Policy."
+        },
+        "dataBreach": {
+          "title": "Data Breach Notification",
+          "content": "In the event of a personal data breach that is likely to result in a risk to your rights and freedoms, we will:",
+          "notify": "Notify the relevant supervisory authority within 72 hours of becoming aware of the breach, as required by GDPR Article 33",
+          "inform": "Inform affected users without undue delay when the breach is likely to result in a high risk to their rights and freedoms",
+          "document": "Document all breaches, including the facts, effects, and remedial actions taken",
+          "measures": "Take immediate steps to contain and remediate the breach, and implement measures to prevent recurrence"
+        },
+        "ccpa": {
+          "title": "California Privacy Rights (CCPA/CPRA)",
+          "intro": "If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and the California Privacy Rights Act (CPRA):",
+          "know": "Right to Know — You have the right to request information about the categories and specific pieces of personal information we have collected about you",
+          "delete": "Right to Delete — You have the right to request deletion of your personal information, subject to certain exceptions",
+          "noSell": "Right to Opt-Out of Sale — We do not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising.",
+          "nondiscrimination": "Right to Non-Discrimination — We will not discriminate against you for exercising any of your CCPA/CPRA rights",
+          "categories": "Categories of personal information we collect: identifiers (email, name), commercial information (subscription status), internet activity (usage data, device info), and inferences drawn from the above",
+          "contact": "To exercise your California privacy rights, contact us at support@dayopt.app or through your account settings."
+        },
+        "children": {
+          "title": "Children's Privacy",
+          "content": "Our Service is not intended for children under 13 years old, and we do not knowingly collect personal information from them."
+        },
+        "changes": {
+          "title": "Policy Changes",
+          "content": "This Privacy Policy may be updated due to legal changes or business reviews. We will notify users in advance of any significant changes."
+        },
+        "contact": {
+          "title": "Contact Us",
+          "content": "If you have any questions or concerns about privacy, please contact us at:"
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "description": "Our terms and conditions for using the Dayopt service",
+      "lastUpdated": "Last updated",
+      "sections": {
+        "introduction": {
+          "title": "Introduction",
+          "content": "These Terms of Service (the \"Terms\") govern your use of Dayopt (the \"Service\"). By using the Service, you agree to these Terms."
+        },
+        "serviceDescription": {
+          "title": "Service Description",
+          "content": "The Service is a web application providing task management, calendar functionality, and productivity tools."
+        },
+        "accountRegistration": {
+          "title": "Account Registration",
+          "requirements": "Provide accurate and current information",
+          "responsibility": "You are responsible for managing your account information",
+          "security": "Notify us immediately if you discover unauthorized use",
+          "age": "You must be at least 13 years old"
+        },
+        "userResponsibilities": {
+          "title": "User Responsibilities",
+          "intro": "You must not engage in the following activities:",
+          "illegal": "Illegal activities",
+          "harmful": "Activities harmful to other users or the Service",
+          "unauthorized": "Unauthorized access or system interference",
+          "impersonation": "Impersonating others",
+          "spam": "Spam or abusive behavior",
+          "content": "Posting inappropriate content"
+        },
+        "intellectualProperty": {
+          "title": "Intellectual Property",
+          "ownership": "All intellectual property rights related to the Service belong to us or the rightful owners.",
+          "userContent": "You retain copyright to content you create.",
+          "license": "However, you grant us a license to use your content to the extent necessary to provide the Service."
+        },
+        "dataOwnership": {
+          "title": "Data Ownership & Export",
+          "ownership": "You retain all rights, title, and interest in and to your data. Dayopt does not claim ownership of any data you create, upload, or store through the Service.",
+          "license": "You grant Dayopt a limited, non-exclusive, worldwide license to use, process, and store your data solely for the purpose of providing and improving the Service. This license terminates when you delete your account.",
+          "export": "You may export your data at any time through account settings in standard formats (JSON, CSV). We are committed to data portability and will not lock you into our platform.",
+          "termination": "If we discontinue the Service, you will have at least 30 days' advance notice and the ability to export all your data before the Service is shut down."
+        },
+        "aiTerms": {
+          "title": "AI-Powered Features",
+          "intro": "The Service includes optional AI-powered features. By using these features, you acknowledge and agree to the following:",
+          "providers": "AI features are powered by third-party providers (Anthropic and/or OpenAI). Your data may be transmitted to these providers for processing. See our Privacy Policy for details.",
+          "noTraining": "Data submitted through AI features is processed via API and is not used for training AI models by the providers.",
+          "byok": "You may use your own API key (Bring Your Own Key) for AI providers. When doing so, your usage is subject to the respective provider's terms of service and you are responsible for any associated costs.",
+          "accuracy": "AI-generated content is provided \"as is\" for informational purposes only. We do not guarantee the accuracy, completeness, or suitability of AI outputs. You are solely responsible for reviewing and validating any AI-generated suggestions before acting on them.",
+          "limits": "Free plan users are limited to 30 AI interactions per month. Pro plan users have higher limits as described on the pricing page.",
+          "liability": "We are not liable for any decisions made or actions taken based on AI-generated content."
+        },
+        "subscriptionPlans": {
+          "title": "Subscription Plans",
+          "intro": "The Service is available in the following plans:",
+          "free": "Free Plan ($0/month) — Up to 3 projects, 1GB storage, basic analytics, 30 AI interactions per month",
+          "pro": "Pro Plan ($5/month) — Unlimited projects, 100GB storage, AI insights, advanced analytics, priority support, service credit eligibility",
+          "changes": "We reserve the right to modify plan features and pricing. Any price changes will be notified at least 30 days in advance and will apply to the next billing cycle.",
+          "downgrade": "If you downgrade from Pro to Free, any data exceeding the Free plan limits will be preserved but read-only until you reduce usage or upgrade again."
+        },
+        "acceptableUse": {
+          "title": "Acceptable Use Policy",
+          "intro": "In addition to the user responsibilities above, you agree not to:",
+          "automation": "Use automated means to access the Service beyond documented APIs without prior written consent",
+          "reverse": "Reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code of the Service",
+          "abuse": "Exceed reasonable usage limits or intentionally abuse Service resources (e.g., excessive API calls, storage abuse)",
+          "resale": "Resell, sublicense, or redistribute access to the Service without authorization",
+          "security": "Attempt to probe, scan, or test the vulnerability of the Service without prior written authorization from our security team"
+        },
+        "serviceLevel": {
+          "title": "Service Level & Availability",
+          "target": "We target 99.9% uptime for the Service, measured on a monthly basis, excluding scheduled maintenance windows.",
+          "maintenance": "Planned maintenance will be announced at least 48 hours in advance via email and in-app notification. We will schedule maintenance during low-usage periods whenever possible.",
+          "status": "Real-time service status and incident history are available on our status page.",
+          "credits": "Pro plan subscribers may be eligible for service credits if monthly uptime falls below our target. Credits are applied to future billing periods and must be requested within 30 days of the incident."
+        },
+        "limitationOfLiability": {
+          "title": "Limitation of Liability",
+          "cap": "To the maximum extent permitted by applicable law, our total aggregate liability to you for all claims arising out of or relating to the Service shall not exceed the total amount you paid to us in the twelve (12) months immediately preceding the event giving rise to the claim.",
+          "indirect": "In no event shall we be liable for any indirect, incidental, special, consequential, or punitive damages, including but not limited to loss of profits, data, business opportunities, or goodwill, regardless of whether we have been advised of the possibility of such damages.",
+          "forceMajeure": "We shall not be liable for any failure or delay in performance due to circumstances beyond our reasonable control, including but not limited to natural disasters, acts of government, internet or telecommunications failures, or third-party service provider outages.",
+          "exceptions": "Nothing in these Terms excludes or limits liability that cannot be lawfully excluded or limited under applicable law, including liability for fraud, gross negligence, or death or personal injury caused by our negligence."
+        },
+        "indemnification": {
+          "title": "Indemnification",
+          "obligation": "You agree to indemnify, defend, and hold harmless Dayopt, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising out of or in connection with:",
+          "violations": "Your violation of these Terms or any applicable law or regulation",
+          "thirdParty": "Your infringement of any third party's intellectual property or other rights",
+          "misuse": "Your misuse of the Service or any data obtained through the Service",
+          "notification": "We will promptly notify you of any claim subject to indemnification and provide reasonable cooperation in its defense."
+        },
+        "dataBackup": {
+          "title": "Data Backup",
+          "responsibility": "You are responsible for backing up your important data.",
+          "liability": "We are not liable for any data loss."
+        },
+        "disclaimer": {
+          "title": "Disclaimer",
+          "availability": "We do not guarantee the availability, accuracy, or completeness of the Service",
+          "interruption": "We are not liable for service interruptions or failures",
+          "damages": "We are not liable for damages arising from use of the Service",
+          "thirdParty": "We are not responsible for issues with third-party service integrations"
+        },
+        "termination": {
+          "title": "Account Suspension/Deletion",
+          "userInitiated": "You may delete your account at any time through the settings page.",
+          "serviceInitiated": "We may suspend or delete accounts without prior notice for Terms violations or unauthorized use.",
+          "dataRetention": "Data is permanently deleted within 30 days after deletion."
+        },
+        "modifications": {
+          "title": "Terms Modifications",
+          "content": "We may modify these Terms as necessary. We will notify users in advance of any significant changes."
+        },
+        "cancellation": {
+          "title": "Cancellation & Refunds",
+          "summary": "You may cancel your subscription at any time. No prorated refunds are provided for partial billing periods. Service remains available until the end of your current billing period.",
+          "details": "For full details, please see our Refund & Cancellation Policy.",
+          "detailsLink": "/legal/refund"
+        },
+        "governingLaw": {
+          "title": "Governing Law & Jurisdiction",
+          "law": "These Terms are governed by Japanese law",
+          "jurisdiction": "Tokyo District Court has exclusive jurisdiction over disputes related to these Terms"
+        },
+        "generalProvisions": {
+          "title": "General Provisions",
+          "severability": "If any provision of these Terms is found to be invalid or unenforceable by a court of competent jurisdiction, the remaining provisions shall continue in full force and effect. The invalid provision shall be modified to the minimum extent necessary to make it valid and enforceable.",
+          "entireAgreement": "These Terms, together with the Privacy Policy, Cookie Policy, and any other policies referenced herein, constitute the entire agreement between you and Dayopt regarding the use of the Service, and supersede all prior agreements and understandings.",
+          "waiver": "Our failure to exercise or enforce any right or provision of these Terms shall not constitute a waiver of such right or provision. Any waiver must be in writing and signed by us to be effective.",
+          "assignment": "You may not assign or transfer your rights or obligations under these Terms without our prior written consent. We may assign our rights and obligations under these Terms in connection with a merger, acquisition, reorganization, or sale of assets, or by operation of law."
+        },
+        "contact": {
+          "title": "Contact Us",
+          "content": "If you have any questions about these Terms, please contact us at:"
+        }
+      }
+    },
+    "contact": {
+      "email": "support@dayopt.app",
+      "website": "https://dayopt.app"
+    },
+    "refund": {
+      "title": "Refund & Cancellation Policy",
+      "description": "Information about cancelling your subscription and our refund policy",
+      "sections": {
+        "cancellation": {
+          "title": "Cancellation Policy",
+          "anytime": "You can cancel your subscription at any time from your account settings.",
+          "access": "After cancellation, you will continue to have access to the service until the end of your current billing period.",
+          "noDowngrade": "Your subscription will not renew at the end of the billing period."
+        },
+        "refund": {
+          "title": "Refund Policy",
+          "general": "We do not provide prorated refunds for partial billing periods.",
+          "exception": "In exceptional circumstances, such as extended service outages or billing errors, we may issue refunds at our discretion.",
+          "request": "To request a refund for exceptional circumstances, please contact us at support@dayopt.app within 30 days of the charge."
+        },
+        "freeTrial": {
+          "title": "Free Trial",
+          "content": "If you cancel during your free trial period, you will not be charged. No credit card is required to start a free trial."
+        },
+        "howToCancel": {
+          "title": "How to Cancel",
+          "step1": "Log in to your Dayopt account",
+          "step2": "Go to Settings > Subscription",
+          "step3": "Click \"Cancel Subscription\"",
+          "step4": "Confirm your cancellation",
+          "note": "You will receive a confirmation email once your cancellation is processed."
+        },
+        "contact": {
+          "title": "Questions?",
+          "content": "If you have any questions about cancellation or refunds, please contact us at:"
+        }
+      }
+    },
+    "cookies": {
+      "title": "Cookie Policy",
+      "description": "How Dayopt uses cookies and similar technologies",
+      "sections": {
+        "introduction": {
+          "title": "Introduction",
+          "content": "This Cookie Policy explains how Dayopt (\"we\", \"us\", or \"our\") uses cookies and similar technologies when you visit or use our Service. It explains what these technologies are, why we use them, and your rights to control our use of them. This policy should be read together with our Privacy Policy."
+        },
+        "whatAreCookies": {
+          "title": "What Are Cookies",
+          "content": "Cookies are small text files that are placed on your device (computer, tablet, or mobile phone) when you visit a website. They are widely used to make websites work more efficiently, provide a better user experience, and supply information to site owners. Cookies can be \"persistent\" (remain on your device until they expire or are deleted) or \"session\" (deleted when you close your browser)."
+        },
+        "categories": {
+          "title": "Cookie Categories",
+          "essential": {
+            "name": "Essential Cookies",
+            "description": "These cookies are strictly necessary for the Service to function. They enable core features such as authentication, session management, and security protection. The Service cannot operate properly without these cookies.",
+            "examples": "Authentication tokens, CSRF protection, session management"
+          },
+          "analytics": {
+            "name": "Analytics Cookies",
+            "description": "These cookies help us understand how visitors interact with the Service by collecting and reporting usage information. All analytics data is aggregated and anonymized.",
+            "examples": "Page views, feature usage patterns, performance metrics"
+          },
+          "preference": {
+            "name": "Preference Cookies",
+            "description": "These cookies remember your settings and preferences to provide a personalized experience. They are set when you change a setting and persist across sessions.",
+            "examples": "Language preference, theme selection (light/dark mode), display settings"
+          },
+          "marketing": {
+            "name": "Marketing Cookies",
+            "description": "These cookies are used to deliver relevant advertisements and track the effectiveness of marketing campaigns.",
+            "note": "Dayopt does not currently use marketing cookies. If this changes in the future, we will update this policy and request your consent."
+          }
+        },
+        "specificCookies": {
+          "title": "Specific Cookies We Use",
+          "headerName": "Cookie Name",
+          "headerProvider": "Provider",
+          "headerPurpose": "Purpose",
+          "headerCategory": "Category",
+          "headerDuration": "Duration",
+          "supabaseAuth": {
+            "name": "sb-*-auth-token",
+            "provider": "Supabase",
+            "purpose": "Maintains your authenticated session",
+            "category": "Essential",
+            "duration": "Session"
+          },
+          "nextLocale": {
+            "name": "NEXT_LOCALE",
+            "provider": "Next.js",
+            "purpose": "Stores your language preference",
+            "category": "Preference",
+            "duration": "1 year"
+          },
+          "theme": {
+            "name": "theme",
+            "provider": "Dayopt",
+            "purpose": "Stores your theme preference (light/dark/system)",
+            "category": "Preference",
+            "duration": "1 year"
+          },
+          "cookieConsent": {
+            "name": "cookie-consent",
+            "provider": "Dayopt",
+            "purpose": "Records your cookie consent preferences",
+            "category": "Essential",
+            "duration": "1 year"
+          },
+          "vercelAnalytics": {
+            "name": "va_*",
+            "provider": "Vercel",
+            "purpose": "Web analytics (page views, performance metrics)",
+            "category": "Analytics",
+            "duration": "Session"
+          },
+          "recaptcha": {
+            "name": "_GRECAPTCHA",
+            "provider": "Google",
+            "purpose": "Bot protection and spam prevention on forms",
+            "category": "Essential",
+            "duration": "6 months"
+          }
+        },
+        "thirdParty": {
+          "title": "Third-Party Cookies",
+          "content": "Some cookies are placed by third-party services that appear on our pages. We do not control these cookies. The third parties that set cookies through our Service include:",
+          "vercel": "Vercel — Hosting and performance analytics (Vercel Analytics / Speed Insights). Used to measure page load times, track page views, and optimize delivery. Data is aggregated and anonymized.",
+          "sentry": "Sentry — Error monitoring and diagnostics. Used to detect and diagnose application errors to improve reliability.",
+          "recaptcha": "Google reCAPTCHA — Bot protection on forms (contact, signup). Google may collect hardware and software information, such as device and application data, and send it to Google for analysis. Subject to Google's Privacy Policy and Terms of Service.",
+          "note": "Please refer to each provider's privacy policy for more information about how they use cookies."
+        },
+        "manageCookies": {
+          "title": "How to Manage Cookies",
+          "intro": "You can control and manage cookies through your browser settings. Please note that removing or blocking certain cookies may impact your experience and the functionality of the Service.",
+          "chrome": "Google Chrome: Settings > Privacy and Security > Cookies and other site data",
+          "firefox": "Mozilla Firefox: Settings > Privacy & Security > Cookies and Site Data",
+          "safari": "Safari: Preferences > Privacy > Manage Website Data",
+          "edge": "Microsoft Edge: Settings > Privacy, search, and services > Cookies and site permissions"
+        },
+        "impact": {
+          "title": "Impact of Disabling Cookies",
+          "content": "If you disable essential cookies, you will not be able to log in or use core features of the Service. Disabling preference cookies means your settings (such as language and theme) will not be remembered between sessions. Disabling analytics cookies will not affect your use of the Service."
+        },
+        "doNotTrack": {
+          "title": "Do Not Track Signals",
+          "content": "Some browsers offer a \"Do Not Track\" (DNT) setting that sends a signal to websites requesting that your browsing activity not be tracked. There is currently no universally accepted standard for how to respond to DNT signals. We do not currently respond to DNT signals, but we limit our use of tracking technologies to essential and analytics purposes as described in this policy. We do not engage in cross-site tracking or sell your data to third parties."
+        },
+        "changes": {
+          "title": "Updates to This Policy",
+          "content": "We may update this Cookie Policy from time to time to reflect changes in technology, regulation, or our business practices. We will notify you of any material changes by posting the updated policy on this page with a revised \"Last Updated\" date."
+        },
+        "contact": {
+          "title": "Contact Us",
+          "content": "If you have questions about our use of cookies, please contact us at:"
+        }
+      }
+    },
+    "navigation": {
+      "backToApp": "← Back to Dayopt",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "cookies": "Cookie Policy",
+      "tokushoho": "Commercial Transactions Act",
+      "refund": "Refund Policy",
+      "security": "Security",
+      "ossCredits": "OSS Licenses"
+    },
+    "reviewWarning": {
+      "title": "Legal Review Required Before Commercial Release",
+      "description": "This document is a basic template to meet legal requirements. Please note the following:",
+      "items": {
+        "lawyer": "We strongly recommend having a lawyer review this before commercial release",
+        "update": "Please update the content to match your actual service",
+        "placeholder": "Items marked 'Required' must be replaced with actual information"
+      }
+    },
+    "tokushoho": {
+      "title": "Specified Commercial Transactions Act",
+      "description": "Information required under the Act on Specified Commercial Transactions (Japan)",
+      "placeholder": "Required",
+      "setupNotice": {
+        "title": "Input Required Before Offering Paid Plans",
+        "description": "Items highlighted in yellow marked 'Required' must be replaced with actual information before starting paid services."
+      },
+      "items": {
+        "seller": {
+          "label": "Seller",
+          "hint": "Individual name or trade name"
+        },
+        "representative": {
+          "label": "Representative",
+          "hint": "Name of representative"
+        },
+        "address": {
+          "label": "Address",
+          "hint": "Address (disclosed without delay upon request)"
+        },
+        "contact": {
+          "label": "Contact",
+          "phoneLabel": "Phone"
+        },
+        "price": {
+          "label": "Price",
+          "content": "Displayed on pricing page (tax included)"
+        },
+        "payment": {
+          "label": "Payment Methods",
+          "creditCard": "Credit Card (Visa, Mastercard, American Express, JCB)"
+        },
+        "paymentTiming": {
+          "label": "Payment Timing",
+          "content": "Initial payment at subscription signup, then automatic billing on renewal date"
+        },
+        "delivery": {
+          "label": "Service Delivery",
+          "content": "Service is available immediately after payment completion"
+        },
+        "cancellation": {
+          "label": "Cancellation & Refund",
+          "anytime": "You can cancel your subscription at any time",
+          "noRefund": "No prorated refund for the paid period",
+          "access": "Service remains available until the end of the paid period after cancellation"
+        },
+        "environment": {
+          "label": "System Requirements",
+          "browser": "Modern browsers (latest versions of Chrome, Firefox, Safari, Edge)",
+          "internet": "Internet connection"
+        },
+        "notes": {
+          "label": "Notes",
+          "autoRenewal": "Subscriptions are automatically renewed. You will be notified by email before renewal",
+          "priceChange": "Price changes will be notified at least 30 days in advance"
+        }
+      }
+    },
+    "footer": {
+      "copyright": "© 2025 Dayopt. All rights reserved.",
+      "contact": "Contact: {{email}}"
+    },
+    "security": {
+      "title": "Security",
+      "description": "Dayopt Security Policy, Vulnerability Disclosure Guidelines, and Security Measures",
+      "header": {
+        "title": "Security",
+        "description": "Dayopt implements the highest standards of security to protect your information."
+      },
+      "policy": {
+        "title": "Security Policy",
+        "supportedVersions": {
+          "title": "Supported Versions",
+          "version": "Version",
+          "status": "Status",
+          "v1": "1.x.x",
+          "v1Status": "✅ Security updates provided",
+          "v0": "< 1.0",
+          "v0Status": "❌ No longer supported"
+        },
+        "measures": {
+          "title": "Security Measures Implemented",
+          "https": "HTTPS Enforcement: All communications encrypted with TLS 1.3",
+          "mfa": "Multi-Factor Authentication (MFA): TOTP (Time-based One-Time Password) support",
+          "rateLimit": "Rate Limiting: Brute force attack prevention",
+          "sqlInjection": "SQL Injection Protection: Prisma ORM + parameterized queries",
+          "xss": "XSS Protection: React automatic escaping + Content Security Policy",
+          "csrf": "CSRF Protection: SameSite Cookie + token verification",
+          "dependencies": "Dependency Management: Weekly checks with Dependabot",
+          "monitoring": "Error Monitoring: Real-time monitoring with Sentry"
+        }
+      },
+      "vulnerability": {
+        "title": "Reporting Vulnerabilities",
+        "warning": {
+          "title": "⚠️ Do not report security vulnerabilities in public GitHub Issues",
+          "description": "Publishing vulnerabilities publicly may enable malicious actors to exploit them. Please contact our security team directly."
+        },
+        "contacts": {
+          "title": "How to Report",
+          "email": "Email",
+          "emailAddress": "security@dayopt.app",
+          "github": "GitHub Security Advisory",
+          "githubLink": "Create Advisory"
+        },
+        "includeInfo": {
+          "title": "Information to Include",
+          "type": "Vulnerability type (XSS, SQL Injection, authentication bypass, etc.)",
+          "affectedVersions": "Affected versions",
+          "steps": "Reproduction steps (detailed steps)",
+          "poc": "Proof of Concept code (if available)",
+          "impact": "Potential impact (data breach, service disruption, etc.)",
+          "fix": "Recommended fix (optional)"
+        },
+        "timeline": {
+          "title": "Response Timeline",
+          "severity": "Severity",
+          "initialResponse": "Initial Response",
+          "fixRelease": "Fix Release",
+          "critical": "Critical",
+          "criticalResponse": "Within 24 hours",
+          "criticalFix": "Within 48 hours",
+          "high": "High",
+          "highResponse": "Within 48 hours",
+          "highFix": "Within 1 week",
+          "medium": "Medium",
+          "mediumResponse": "Within 1 week",
+          "mediumFix": "Within 2 weeks",
+          "low": "Low",
+          "lowResponse": "Within 2 weeks",
+          "lowFix": "Next release"
+        }
+      },
+      "disclosure": {
+        "title": "Responsible Disclosure",
+        "safeHarbor": {
+          "title": "Safe Harbor",
+          "description": "We will not take legal action against security research activities conducted in accordance with these guidelines.",
+          "allowed": {
+            "title": "✅ Allowed Activities",
+            "ownAccount": "• Testing using your own account",
+            "research": "• Investigating and reporting vulnerabilities",
+            "poc": "• Creating proof of concept code"
+          },
+          "prohibited": {
+            "title": "❌ Prohibited Activities",
+            "dos": "• DoS/DDoS attacks",
+            "dataAccess": "• Accessing others' data",
+            "disclosure": "• Disclosing to third parties before public release"
+          }
+        }
+      },
+      "relatedDocs": {
+        "title": "Related Documents",
+        "securityPolicy": {
+          "title": "Security Policy",
+          "description": "Detailed security policy (GitHub)"
+        },
+        "vulnerabilityDisclosure": {
+          "title": "Vulnerability Disclosure",
+          "description": "Vulnerability reporting guidelines (GitHub)"
+        },
+        "incidentResponse": {
+          "title": "Incident Response Plan",
+          "description": "Incident response plan (GitHub)"
+        },
+        "privacyPolicy": {
+          "title": "Privacy Policy",
+          "description": "Privacy Policy"
+        }
+      },
+      "contact": {
+        "title": "Contact Us",
+        "securityTeam": "Security Team",
+        "securityEmail": "security@dayopt.app",
+        "general": "General Inquiries",
+        "generalEmail": "support@dayopt.app",
+        "thankYou": "Thank you for helping us improve security. Your reports help keep all users safe."
+      },
+      "lastUpdated": "Last Updated: October 15, 2025"
+    }
+  },
+  "ossCredits": {
+    "title": "Open Source Licenses",
+    "description": "License information for open source software used in this project",
+    "intro": "Dayopt uses the following open source software. We would like to express our gratitude to the maintainers and contributors of each project.",
+    "totalPackages": "Total Packages",
+    "searchPlaceholder": "Search by package name...",
+    "license": "License",
+    "version": "Version",
+    "repository": "Repository",
+    "publisher": "Publisher",
+    "noRepository": "No repository information",
+    "noPublisher": "No publisher information",
+    "noResults": "No search results found",
+    "loadingError": "Failed to load license information",
+    "licenseDistribution": "License Distribution",
+    "packageList": "Package List ({count})",
+    "footer": {
+      "notice": "For complete license texts and NOTICE files, please see:",
+      "thirdPartyNotices": "THIRD_PARTY_NOTICES.txt",
+      "githubRepository": "GitHub Repository"
+    }
+  }
+}

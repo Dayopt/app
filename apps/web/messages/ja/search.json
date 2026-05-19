@@ -1,0 +1,42 @@
+{
+  "search": {
+    "placeholder": "記事、タグ、ドキュメントを検索...",
+    "recentSearches": "最近の検索",
+    "popularTags": "人気のタグ",
+    "popularPages": "人気のページ",
+    "searchResultsFor": "検索結果",
+    "pressEnterToSearch": "Enterキーで検索",
+    "searchFor": "検索：",
+    "findResultsAcross": "すべてのコンテンツから結果を検索",
+    "previewResults": "プレビュー結果：",
+    "relatedTags": "関連タグ：",
+    "articles": "記事",
+    "tags": "タグ",
+    "docs": "ドキュメント",
+    "blog": "ブログ",
+    "release": "リリース",
+    "toSelect": "選択",
+    "toNavigate": "ナビゲート",
+    "toClose": "閉じる",
+    "close": "検索を閉じる",
+    "poweredBy": "Dayopt Search による検索",
+    "quickLinks": {
+      "quickStart": {
+        "title": "クイックスタート",
+        "description": "Dayoptを5分で始める"
+      },
+      "apiReference": {
+        "title": "APIリファレンス",
+        "description": "認証とAPIの使い方"
+      },
+      "latestRelease": {
+        "title": "最新リリース",
+        "description": "v2.1.0の新機能"
+      },
+      "saasStrategy": {
+        "title": "SaaS戦略",
+        "description": "2024年のビジネス戦略"
+      }
+    }
+  }
+}
