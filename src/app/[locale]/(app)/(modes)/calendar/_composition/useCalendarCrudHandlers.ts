@@ -48,6 +48,9 @@ export interface CalendarCrudHandlersResult {
   ) => void | Promise<void> | Promise<{ skipToast: true } | void>;
   onDeleteEntry: (entryId: string) => void;
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
+  onViewStats: (entry: CalendarEvent) => void;
+  onMarkUnplanned: (entry: CalendarEvent) => void;
+  onRestorePlanned: (entry: CalendarEvent) => void;
 }
 
 // =============================================================================
@@ -73,7 +76,12 @@ export function useCalendarCrudHandlers({
   // =========================================================================
   // Context Actions（右クリックメニュー）
   // =========================================================================
-  const { handleDeleteEntry: handleDeleteEntryConfirm } = useEntryContextActions();
+  const {
+    handleDeleteEntry: handleDeleteEntryConfirm,
+    handleViewStats,
+    handleMarkUnplanned,
+    handleRestorePlanned,
+  } = useEntryContextActions();
 
   // =========================================================================
   // Entry Keyboard Shortcuts
@@ -147,6 +155,9 @@ export function useCalendarCrudHandlers({
       onUpdateEntry: handleEntryUpdate,
       onDeleteEntry: deleteEntry,
       onDeleteEntryConfirm: handleDeleteEntryConfirm,
+      onViewStats: handleViewStats,
+      onMarkUnplanned: handleMarkUnplanned,
+      onRestorePlanned: handleRestorePlanned,
     }),
     [
       disabledEntryId,
@@ -155,6 +166,9 @@ export function useCalendarCrudHandlers({
       handleEntryUpdate,
       deleteEntry,
       handleDeleteEntryConfirm,
+      handleViewStats,
+      handleMarkUnplanned,
+      handleRestorePlanned,
     ],
   );
 }

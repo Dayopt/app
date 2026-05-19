@@ -28,6 +28,48 @@ import { InlineTagPalette } from './InlineTagPalette';
 // Types
 // ========================================
 
+function rangeDiffers(
+  firstStart: Date | null | undefined,
+  firstEnd: Date | null | undefined,
+  secondStart: Date | null | undefined,
+  secondEnd: Date | null | undefined,
+): boolean {
+  if (!firstStart || !firstEnd || !secondStart || !secondEnd) return false;
+  return (
+    firstStart.getTime() !== secondStart.getTime() || firstEnd.getTime() !== secondEnd.getTime()
+  );
+}
+
+function actualDiffersFromPlanned(entry: CalendarEvent): boolean {
+  if (entry.origin !== 'planned') return false;
+  const plannedStart = entry.plannedStartDate ?? entry.startDate;
+  const plannedEnd = entry.plannedEndDate ?? entry.endDate;
+  return rangeDiffers(plannedStart, plannedEnd, entry.actualStartDate, entry.actualEndDate);
+}
+
+function minutesToSelection(
+  date: Date,
+  startMinutes: number,
+  endMinutes: number,
+): DateTimeSelection {
+  const normalizedStart = Math.max(0, Math.min(startMinutes, 24 * 60 - 1));
+  const normalizedEnd = Math.max(normalizedStart + 1, Math.min(endMinutes, 24 * 60 - 1));
+  return {
+    date,
+    startHour: Math.floor(normalizedStart / 60),
+    startMinute: normalizedStart % 60,
+    endHour: Math.floor(normalizedEnd / 60),
+    endMinute: normalizedEnd % 60,
+  };
+}
+
+function minutesToDate(date: Date, minutes: number): Date {
+  const normalizedMinutes = Math.max(0, Math.min(minutes, 24 * 60 - 1));
+  const result = new Date(date);
+  result.setHours(Math.floor(normalizedMinutes / 60), normalizedMinutes % 60, 0, 0);
+  return result;
+}
+
 /** CalendarGridContent コンポーネントのプロパティ */
 export interface CalendarGridContentProps {
   /** この列が担当する日付 */
@@ -83,6 +125,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   className,
 }: CalendarGridContentProps) {
   const t = useTranslations();
+  const [gapCreationCutoffMs] = useState(() => Date.now());
   const { getTagById } = useTagsMap();
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
 
@@ -104,7 +147,7 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
   const wrappedOnEventUpdate = useCallback(
     (eventId: string, updates: { startTime: Date; endTime: Date; resetActualTime?: boolean }) => {
       const entry = entries.find((e) => e.id === eventId);
-      if (entry && (entry.actualStartDate || entry.actualEndDate)) {
+      if (entry && actualDiffersFromPlanned(entry)) {
         setPendingDrop({ entryId: eventId, updates });
         return;
       }
@@ -247,6 +290,17 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
               onTouchStart={handlers.handleTouchStart}
               onResizeStart={handlers.handleResizeStart}
               entries={entries}
+              onGapClick={
+                onTimeRangeSelect
+                  ? (startMinutes, endMinutes) => {
+                      if (minutesToDate(date, endMinutes).getTime() > gapCreationCutoffMs) {
+                        return;
+                      }
+                      onTimeRangeSelect(minutesToSelection(date, startMinutes, endMinutes));
+                    }
+                  : undefined
+              }
+              gapCreationCutoffMs={gapCreationCutoffMs}
             />
           );
         })}

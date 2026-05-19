@@ -14,6 +14,7 @@ import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { useRef } from 'react';
 import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -41,13 +42,24 @@ const isEntriesListQuery = createListQueryPredicate('entries');
  * deleteEntry.mutate({ id: '123' })
  * ```
  */
-export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
+export function useEntryMutations(options?: {
+  suppressCreateToast?: boolean;
+  suppressUpdateErrorToast?: () => boolean;
+}) {
   const suppressCreateToast = options?.suppressCreateToast ?? false;
+  const suppressUpdateErrorToast = options?.suppressUpdateErrorToast;
   const t = useTranslations();
   const queryClient = useQueryClient();
   const utils = api.useUtils();
   const closeInspector = useEntryInspectorStore((s) => s.closeInspector);
   const openInspector = useEntryInspectorStore((s) => s.openInspector);
+  const updateMutationSeqRef = useRef(0);
+  const latestUpdateSeqByIdRef = useRef(new Map<string, number>());
+
+  const isLatestUpdateMutation = (id: string, mutationSeq?: number) => {
+    if (mutationSeq == null) return true;
+    return latestUpdateSeqByIdRef.current.get(id) === mutationSeq;
+  };
 
   // 作成（楽観的更新付き）
   const createEntry = api.entries.create.useMutation({
@@ -64,16 +76,19 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
 
       // 一時的なエントリを作成（IDは仮）
       const tempId = createTempId();
-      const origin = input.origin ?? 'planned';
+      const selectedStart = input.start_time ?? input.actual_start_time ?? null;
+      const selectedEnd = input.end_time ?? input.actual_end_time ?? null;
+      const origin =
+        selectedEnd && new Date(selectedEnd).getTime() <= Date.now() ? 'unplanned' : 'planned';
       const tempEntry: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         id: tempId,
         title: input.title,
         description: input.description ?? null,
         origin,
-        start_time: input.start_time ?? null,
-        end_time: input.end_time ?? null,
-        actual_start_time: null,
-        actual_end_time: null,
+        start_time: origin === 'planned' ? selectedStart : null,
+        end_time: origin === 'planned' ? selectedEnd : null,
+        actual_start_time: selectedStart,
+        actual_end_time: selectedEnd,
         duration_minutes: null,
         fulfillment_score: input.fulfillment_score ?? null,
         deleted_at: null,
@@ -162,7 +177,7 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         error.message.includes('既にエントリがあります') ||
         error.message.includes('TIME_OVERLAP')
       ) {
-        toast.error(t('entry.toast.timeOverlap'));
+        toast.error(t('entry.errors.timeOverlap'));
         return;
       }
 
@@ -180,6 +195,9 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
   const updateEntry = api.entries.update.useMutation({
     onMutate: async ({ id, data }) => {
       logger.debug('[mutation:update] onMutate', { id, fields: Object.keys(data) });
+      const mutationSeq = updateMutationSeqRef.current + 1;
+      updateMutationSeqRef.current = mutationSeq;
+      latestUpdateSeqByIdRef.current.set(id, mutationSeq);
 
       // 1. 進行中のクエリをキャンセル（競合回避）
       await utils.entries.list.cancel();
@@ -247,10 +265,14 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         return Object.assign({}, oldData, updateData);
       });
 
-      return { id, previousEntriesList, previousEntry };
+      return { id, previousEntriesList, previousEntry, mutationSeq };
     },
-    onSuccess: (result, variables) => {
+    onSuccess: (result, variables, context) => {
       logger.debug('[mutation:update] onSuccess', { id: variables.id });
+      if (!isLatestUpdateMutation(variables.id, context?.mutationSeq)) {
+        logger.debug('[mutation:update] stale onSuccess ignored', { id: variables.id });
+        return;
+      }
       // サーバーから返ってきた最新データでキャッシュを更新
       // adjustedEntries はキャッシュ操作用（リストに含めない）
       const { adjustedEntries, ...updatedEntry } = result;
@@ -301,27 +323,39 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
     },
     onError: (err, _variables, context) => {
       logger.error('[mutation:update] onError', err);
+      if (context?.id && !isLatestUpdateMutation(context.id, context.mutationSeq)) {
+        logger.debug('[mutation:update] stale onError ignored', { id: context.id });
+        // snapshot rollback は latest mutation の onSuccess を上書きしうるため使えない。
+        // 代わりに invalidate して server truth で cache を refetch する。
+        // (latest が success ならサーバーの新しい状態に揃う / latest も fail なら latest の
+        //  rollback 後の cache が stale optimistic を含むのでこれで真値に戻す)
+        void utils.entries.list.invalidate();
+        void utils.entries.getById.invalidate({ id: context.id });
+        return;
+      }
 
-      // 競合検出（楽観的ロック）: 他タブ/デバイスで変更されたエントリ
-      if (err.data?.code === 'CONFLICT') {
-        toast.error(t('entry.toast.conflict'), {
-          action: {
-            label: t('common.reload'),
-            onClick: () => {
-              if (context?.id) {
-                void utils.entries.list.invalidate();
-                void utils.entries.getById.invalidate({ id: context.id });
-              }
+      if (!suppressUpdateErrorToast?.()) {
+        // 競合検出（楽観的ロック）: 他タブ/デバイスで変更されたエントリ
+        if (err.data?.code === 'CONFLICT') {
+          toast.error(t('entry.toast.conflict'), {
+            action: {
+              label: t('common.reload'),
+              onClick: () => {
+                if (context?.id) {
+                  void utils.entries.list.invalidate();
+                  void utils.entries.getById.invalidate({ id: context.id });
+                }
+              },
             },
-          },
-        });
-      } else if (
-        err.message.includes('既にエントリがあります') ||
-        err.message.includes('TIME_OVERLAP')
-      ) {
-        toast.error(t('entry.toast.timeOverlap'));
-      } else {
-        toast.error(t('entry.toast.updateFailed'));
+          });
+        } else if (
+          err.message.includes('既にエントリがあります') ||
+          err.message.includes('TIME_OVERLAP')
+        ) {
+          toast.error(t('entry.errors.timeOverlap'));
+        } else {
+          toast.error(t('entry.toast.updateFailed'));
+        }
       }
 
       // エラー時: 全ての entries.list キャッシュをロールバック
@@ -334,8 +368,204 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
         utils.entries.getById.setData({ id: context.id }, context.previousEntry);
       }
     },
-    onSettled: async () => {
+    onSettled: async (_result, _error, variables, context) => {
+      if (variables?.id && !isLatestUpdateMutation(variables.id, context?.mutationSeq)) {
+        logger.debug('[mutation:update] stale onSettled ignored', { id: variables.id });
+        return;
+      }
       void utils.entries.list.invalidate();
+    },
+  });
+
+  // planned → unplanned 明示変換
+  const convertPlannedToUnplanned = api.entries.convertPlannedToUnplanned.useMutation({
+    onMutate: async ({ id }) => {
+      logger.debug('[mutation:convertPlannedToUnplanned] onMutate', { id });
+
+      await utils.entries.list.cancel();
+      await utils.entries.getById.cancel({ id });
+      await utils.entries.getById.cancel({ id, include: { tags: true } });
+
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+      const previousEntry = utils.entries.getById.getData({ id });
+
+      const convert = <
+        T extends {
+          origin?: string | null;
+          start_time?: string | null;
+          end_time?: string | null;
+          duration_minutes?: number | null;
+        },
+      >(
+        entry: T,
+      ): T => ({
+        ...entry,
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+        duration_minutes: null,
+      });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) => (entry.id === id ? convert(entry) : entry));
+      });
+
+      utils.entries.getById.setData({ id }, (oldData) => {
+        if (!oldData) return undefined;
+        return convert(oldData);
+      });
+      utils.entries.getById.setData({ id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return convert(oldData);
+      });
+
+      return { id, previousEntriesList, previousEntry };
+    },
+    onSuccess: (updatedEntry, variables) => {
+      logger.debug('[mutation:convertPlannedToUnplanned] onSuccess', { id: variables.id });
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) =>
+          entry.id === variables.id ? { ...updatedEntry, tagId: entry.tagId ?? null } : entry,
+        );
+      });
+
+      utils.entries.getById.setData({ id: variables.id }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+      utils.entries.getById.setData({ id: variables.id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+
+      toast.success(t('entry.toast.updated'));
+    },
+    onError: (err, _variables, context) => {
+      logger.error('[mutation:convertPlannedToUnplanned] onError', err);
+
+      if (err.message.includes('既にエントリがあります') || err.message.includes('TIME_OVERLAP')) {
+        toast.error(t('entry.errors.timeOverlap'));
+      } else {
+        toast.error(t('entry.toast.updateFailed'));
+      }
+
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousEntry) {
+        utils.entries.getById.setData({ id: context.id }, context.previousEntry);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      void utils.entries.list.invalidate();
+      if (variables?.id) {
+        void utils.entries.getById.invalidate({ id: variables.id });
+      }
+    },
+  });
+
+  // unplanned → planned 明示変換
+  const convertUnplannedToPlanned = api.entries.convertUnplannedToPlanned.useMutation({
+    onMutate: async ({ id }) => {
+      logger.debug('[mutation:convertUnplannedToPlanned] onMutate', { id });
+
+      await utils.entries.list.cancel();
+      await utils.entries.getById.cancel({ id });
+      await utils.entries.getById.cancel({ id, include: { tags: true } });
+
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+      const previousEntriesList = queryClient.getQueriesData<EntryListData>({
+        predicate: isEntriesListQuery,
+      });
+      const previousEntry = utils.entries.getById.getData({ id });
+
+      const convert = <
+        T extends {
+          origin?: string | null;
+          start_time?: string | null;
+          end_time?: string | null;
+          actual_start_time?: string | null;
+          actual_end_time?: string | null;
+        },
+      >(
+        entry: T,
+      ): T => ({
+        ...entry,
+        origin: 'planned',
+        start_time: entry.actual_start_time ?? null,
+        end_time: entry.actual_end_time ?? null,
+      });
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) => (entry.id === id ? convert(entry) : entry));
+      });
+
+      utils.entries.getById.setData({ id }, (oldData) => {
+        if (!oldData) return undefined;
+        return convert(oldData);
+      });
+      utils.entries.getById.setData({ id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return convert(oldData);
+      });
+
+      return { id, previousEntriesList, previousEntry };
+    },
+    onSuccess: (updatedEntry, variables) => {
+      logger.debug('[mutation:convertUnplannedToPlanned] onSuccess', { id: variables.id });
+      type EntryListData = Awaited<ReturnType<typeof utils.entries.list.fetch>>;
+
+      queryClient.setQueriesData<EntryListData>({ predicate: isEntriesListQuery }, (oldData) => {
+        if (!oldData) return oldData;
+        return oldData.map((entry) =>
+          entry.id === variables.id ? { ...updatedEntry, tagId: entry.tagId ?? null } : entry,
+        );
+      });
+
+      utils.entries.getById.setData({ id: variables.id }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+      utils.entries.getById.setData({ id: variables.id, include: { tags: true } }, (oldData) => {
+        if (!oldData) return undefined;
+        return { ...oldData, ...updatedEntry };
+      });
+
+      toast.success(t('entry.toast.updated'));
+    },
+    onError: (err, _variables, context) => {
+      logger.error('[mutation:convertUnplannedToPlanned] onError', err);
+
+      if (err.message.includes('既にエントリがあります') || err.message.includes('TIME_OVERLAP')) {
+        toast.error(t('entry.errors.timeOverlap'));
+      } else {
+        toast.error(t('entry.toast.updateFailed'));
+      }
+
+      if (context?.previousEntriesList) {
+        for (const [queryKey, data] of context.previousEntriesList) {
+          queryClient.setQueryData(queryKey, data);
+        }
+      }
+      if (context?.previousEntry) {
+        utils.entries.getById.setData({ id: context.id }, context.previousEntry);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      void utils.entries.list.invalidate();
+      if (variables?.id) {
+        void utils.entries.getById.invalidate({ id: variables.id });
+      }
     },
   });
 
@@ -435,6 +665,10 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
             ...(data.description !== undefined && { description: data.description }),
             ...(data.start_time !== undefined && { start_time: data.start_time }),
             ...(data.end_time !== undefined && { end_time: data.end_time }),
+            ...(data.actual_start_time !== undefined && {
+              actual_start_time: data.actual_start_time,
+            }),
+            ...(data.actual_end_time !== undefined && { actual_end_time: data.actual_end_time }),
             ...(data.fulfillment_score !== undefined && {
               fulfillment_score: data.fulfillment_score,
             }),
@@ -527,6 +761,8 @@ export function useEntryMutations(options?: { suppressCreateToast?: boolean }) {
   return {
     createEntry,
     updateEntry,
+    convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
     restoreEntry,
     deleteEntry,
     bulkUpdateEntries,

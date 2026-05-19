@@ -7,7 +7,7 @@ import { entryToCalendarEvent, expandEntriesToCalendarEvents } from '../entry-ad
 const TZ = 'Asia/Tokyo';
 
 function makeEntry(overrides: Partial<EntryWithTags> & { id: string }): EntryWithTags {
-  return {
+  const entry: EntryWithTags = {
     user_id: 'user-1',
     title: 'Sample',
     description: null,
@@ -23,6 +23,13 @@ function makeEntry(overrides: Partial<EntryWithTags> & { id: string }): EntryWit
     tagId: null,
     ...overrides,
   };
+
+  if (entry.origin === 'planned') {
+    entry.actual_start_time = overrides.actual_start_time ?? entry.start_time;
+    entry.actual_end_time = overrides.actual_end_time ?? entry.end_time;
+  }
+
+  return entry;
 }
 
 describe('entryToCalendarEvent', () => {
@@ -67,7 +74,7 @@ describe('entryToCalendarEvent', () => {
     expect(event!.endDate!.toISOString()).toBe('2026-04-27T06:00:00.000Z');
   });
 
-  it('unplanned で actual 時間が無い場合は start_time / end_time にフォールバック', () => {
+  it('unplanned で actual 時間が無い場合は null を返す', () => {
     const event = entryToCalendarEvent(
       makeEntry({
         id: 'e1',
@@ -80,8 +87,7 @@ describe('entryToCalendarEvent', () => {
       TZ,
     );
 
-    expect(event!.startDate!.toISOString()).toBe('2026-04-27T01:00:00.000Z');
-    expect(event!.endDate!.toISOString()).toBe('2026-04-27T02:00:00.000Z');
+    expect(event).toBeNull();
   });
 
   it('秒・ミリ秒は 0 化されるが、分は保持される（1 分粒度許容）', () => {

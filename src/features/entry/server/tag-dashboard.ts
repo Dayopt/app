@@ -60,11 +60,8 @@ export function buildTagDashboard({ tag, rows, limit, timezone }: TagDashboardIn
 
   const computedRows = rows.map((row) => {
     const plannedMinutes = diffMinutes(row.start_time, row.end_time);
-    const actualMinutes =
-      row.actual_start_time != null || row.actual_end_time != null
-        ? diffMinutes(row.actual_start_time ?? row.start_time, row.actual_end_time ?? row.end_time)
-        : plannedMinutes;
-    const date = dateKeyInTimezone(row.start_time ?? row.actual_start_time, timezone);
+    const actualMinutes = diffMinutes(row.actual_start_time, row.actual_end_time);
+    const date = dateKeyInTimezone(row.actual_start_time ?? row.start_time, timezone);
 
     if (date !== '') {
       const daily = dailyMap.get(date) ?? { date, plannedMinutes: 0, actualMinutes: 0 };
@@ -102,8 +99,8 @@ export function buildTagDashboard({ tag, rows, limit, timezone }: TagDashboardIn
       })),
     entries: computedRows
       .sort((a, b) => {
-        const aTime = new Date(a.row.start_time ?? a.row.actual_start_time ?? 0).getTime();
-        const bTime = new Date(b.row.start_time ?? b.row.actual_start_time ?? 0).getTime();
+        const aTime = new Date(a.row.actual_start_time ?? a.row.start_time ?? 0).getTime();
+        const bTime = new Date(b.row.actual_start_time ?? b.row.start_time ?? 0).getTime();
         return bTime - aTime;
       })
       .slice(0, limit)

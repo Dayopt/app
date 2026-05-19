@@ -56,10 +56,14 @@ export interface EntryCardProps {
   previewTime?: ({ start: Date; end: Date } | null) | undefined;
   /** グリッドの1時間あたりの高さ（px）。予定vs記録の差分オーバーレイ計算に使用 */
   hourHeight?: number | undefined;
+  /** 外部でカード全体を planned+actual の union 高さに調整済みの場合の planned range 高さ */
+  plannedHeight?: number | undefined;
   /** 外部（WeekContent等）がwrapper側でoverlay位置調整済みの場合true。EntryCard内でのtopShift/heightDelta適用をスキップする */
   overlayPositionApplied?: boolean | undefined;
   /** 空き枠（unexecuted）クリック時のコールバック。引数は空き時間の開始・終了（分 of day） */
   onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
+  /** 空き枠クリックを許可する上限時刻。未来の予定外記録作成を防ぐために使用 */
+  gapCreationCutoffMs?: number | undefined;
 }
 
 /** カレンダーグリッド上のEntryCardの位置情報（top/left/width/heightはpx or %） */

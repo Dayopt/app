@@ -47,7 +47,10 @@ jobs:
 
       - uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # supabase/setup-cli@v2 は `supabase_linux_amd64.tar.gz` を期待するが v2.99.0+ から
+          # asset 名が `supabase_${version}_linux_amd64.tar.gz` に変わって 404 になるため
+          # 旧 asset 形式を持つ最終 version (2.98.0) に pin する
+          version: 2.98.0
 
       - name: Start Supabase
         run: supabase start

@@ -68,6 +68,9 @@ export interface CalendarControllerProps {
 
   // --- Context menu actions ---
   onDeleteEntryConfirm: (entry: CalendarEvent) => void;
+  onViewStats: (entry: CalendarEvent) => void;
+  onMarkUnplanned: (entry: CalendarEvent) => void;
+  onRestorePlanned: (entry: CalendarEvent) => void;
 
   // --- Navigation handlers ---
   onNavigate: (direction: 'prev' | 'next' | 'today') => void;
@@ -107,6 +110,9 @@ export function CalendarController({
   onUpdateEntry,
   onDeleteEntry,
   onDeleteEntryConfirm,
+  onViewStats,
+  onMarkUnplanned,
+  onRestorePlanned,
   onNavigate,
   onViewChange,
   onNavigatePrev,
@@ -228,6 +234,9 @@ export function CalendarController({
           position={contextMenuPosition}
           onClose={handleCloseContextMenu}
           onDelete={onDeleteEntryConfirm}
+          onViewStats={onViewStats}
+          onMarkUnplanned={onMarkUnplanned}
+          onRestorePlanned={onRestorePlanned}
         />
       ) : null}
 

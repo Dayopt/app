@@ -12,6 +12,8 @@ import { ServiceError } from '@/lib/trpc/errors';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 
 import type {
+  ConvertPlannedToUnplannedOptions,
+  ConvertUnplannedToPlannedOptions,
   CreateEntryOptions,
   DeleteEntryOptions,
   EntryRow,
@@ -22,6 +24,13 @@ import type {
   UpdateEntryOptions,
   UpdateEntryResult,
 } from './types';
+
+interface EntryRange {
+  start: string;
+  end: string;
+}
+
+type NormalizedEntryInput = TablesInsert<'entries'>;
 
 /**
  * エントリサービスクラス
@@ -83,12 +92,18 @@ export class EntryService {
       }
     }
 
-    // 日付範囲フィルタ（start_time基準）
-    if (startDate) {
-      query = query.gte('start_time', startDate);
-    }
-    if (endDate) {
-      query = query.lte('start_time', endDate);
+    // 日付範囲フィルタ（planned range または actual range の交差）
+    if (startDate && endDate) {
+      query = query.or(
+        [
+          `and(start_time.lt.${endDate},end_time.gt.${startDate})`,
+          `and(actual_start_time.lt.${endDate},actual_end_time.gt.${startDate})`,
+        ].join(','),
+      );
+    } else if (startDate) {
+      query = query.or(`start_time.gte.${startDate},actual_start_time.gte.${startDate}`);
+    } else if (endDate) {
+      query = query.or(`start_time.lte.${endDate},actual_start_time.lte.${endDate}`);
     }
 
     // 充実度フィルタ
@@ -143,9 +158,9 @@ export class EntryService {
   }
 
   /**
-   * 時間重複をチェック
+   * planned range の時間重複をチェック
    */
-  async checkTimeOverlap(options: {
+  async checkPlannedTimeOverlap(options: {
     userId: string;
     startTime: string;
     endTime: string;
@@ -153,21 +168,15 @@ export class EntryService {
   }): Promise<string[]> {
     const { userId, startTime, endTime, excludeEntryId } = options;
 
-    // 半開区間 [start, end) の重複判定
-    // 境界精度の問題を回避するため、1秒バッファを設けて lte/gte で比較
-    // （最小エントリ幅15分に対して1秒は十分安全なマージン）
-    const endTimeExclusive = new Date(new Date(endTime).getTime() - 1000).toISOString();
-    const startTimeExclusive = new Date(new Date(startTime).getTime() + 1000).toISOString();
-
-    // まず予定時間ベースで候補を取得
     let query = this.supabase
       .from('entries')
-      .select('id, actual_start_time, actual_end_time, start_time, end_time')
+      .select('id')
       .eq('user_id', userId)
+      .is('deleted_at', null)
       .not('start_time', 'is', null)
       .not('end_time', 'is', null)
-      .lte('start_time', endTimeExclusive)
-      .gte('end_time', startTimeExclusive);
+      .lt('start_time', endTime)
+      .gt('end_time', startTime);
 
     if (excludeEntryId) {
       query = query.neq('id', excludeEntryId);
@@ -176,24 +185,58 @@ export class EntryService {
     const { data, error } = await query;
 
     if (error) {
-      logger.error('Time overlap check failed:', error);
+      logger.error('Planned time overlap check failed:', error);
       return [];
     }
 
-    if (!data) return [];
+    return data?.map((row) => row.id) ?? [];
+  }
 
-    // actual 時間が記録されているエントリは、実質的な占有範囲で再判定
-    // 「予定9:00-10:00、実績9:00-9:45」→ 9:45-10:00は空きとみなす
-    const newStart = new Date(startTime).getTime() + 1000;
-    const newEnd = new Date(endTime).getTime() - 1000;
+  /**
+   * actual range の時間重複をチェック
+   */
+  async checkActualTimeOverlap(options: {
+    userId: string;
+    startTime: string;
+    endTime: string;
+    excludeEntryId?: string;
+  }): Promise<string[]> {
+    const { userId, startTime, endTime, excludeEntryId } = options;
 
-    return data
-      .filter((row) => {
-        const effectiveStart = new Date(row.actual_start_time ?? row.start_time!).getTime();
-        const effectiveEnd = new Date(row.actual_end_time ?? row.end_time!).getTime();
-        return effectiveStart < newEnd && effectiveEnd > newStart;
-      })
-      .map((row) => row.id);
+    let query = this.supabase
+      .from('entries')
+      .select('id')
+      .eq('user_id', userId)
+      .is('deleted_at', null)
+      .not('actual_start_time', 'is', null)
+      .not('actual_end_time', 'is', null)
+      .lt('actual_start_time', endTime)
+      .gt('actual_end_time', startTime);
+
+    if (excludeEntryId) {
+      query = query.neq('id', excludeEntryId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logger.error('Actual time overlap check failed:', error);
+      return [];
+    }
+
+    return data?.map((row) => row.id) ?? [];
+  }
+
+  /**
+   * @deprecated use checkPlannedTimeOverlap / checkActualTimeOverlap
+   */
+  async checkTimeOverlap(options: {
+    userId: string;
+    startTime: string;
+    endTime: string;
+    excludeEntryId?: string;
+  }): Promise<string[]> {
+    return this.checkActualTimeOverlap(options);
   }
 
   /**
@@ -202,33 +245,14 @@ export class EntryService {
   async create(options: CreateEntryOptions): Promise<EntryRow> {
     const { userId, input, preventOverlappingEntries, timezone } = options;
 
-    // 日時の正規化（ユーザーTZで日跨ぎを判定）
-    const normalizedInput = this.normalizeDateTimeFields(input, timezone);
-
-    const origin = normalizedInput.origin ?? 'planned';
+    const normalizedInput = this.normalizeCreateInput(userId, input, timezone);
 
     // 重複チェック
-    if (preventOverlappingEntries && normalizedInput.start_time && normalizedInput.end_time) {
-      const overlappingIds = await this.checkTimeOverlap({
-        userId,
-        startTime: normalizedInput.start_time as string,
-        endTime: normalizedInput.end_time as string,
-      });
-
-      if (overlappingIds.length > 0) {
-        throw new EntryServiceError(
-          'TIME_OVERLAP',
-          `この時間帯には既にエントリがある（${overlappingIds.length}件）`,
-        );
-      }
+    if (preventOverlappingEntries) {
+      await this.ensureNoOverlaps(userId, normalizedInput);
     }
 
-    const insertData = {
-      user_id: userId,
-      origin,
-      title: normalizedInput.title,
-      ...removeUndefinedFields(normalizedInput),
-    } as TablesInsert<'entries'>;
+    const insertData = removeUndefinedFields(normalizedInput) as TablesInsert<'entries'>;
 
     const { data, error } = await this.supabase
       .from('entries')
@@ -269,28 +293,21 @@ export class EntryService {
       }
     }
 
-    // 日時の正規化（ユーザーTZで日跨ぎを判定）
-    const normalizedInput = this.normalizeDateTimeFieldsForUpdate(input, oldData, timezone);
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    const normalizedInput = this.normalizeUpdateInput(input, oldData, timezone);
+    const finalEntry = {
+      ...oldData,
+      ...removeUndefinedFields(normalizedInput),
+    } as EntryRow;
+
+    this.validateEntryShape(finalEntry);
 
     // 重複チェック
-    const finalStartTime =
-      (normalizedInput as { start_time?: string }).start_time ?? oldData?.start_time;
-    const finalEndTime = (normalizedInput as { end_time?: string }).end_time ?? oldData?.end_time;
-
-    if (preventOverlappingEntries && finalStartTime && finalEndTime) {
-      const overlappingIds = await this.checkTimeOverlap({
-        userId,
-        startTime: finalStartTime,
-        endTime: finalEndTime,
-        excludeEntryId: entryId,
-      });
-
-      if (overlappingIds.length > 0) {
-        throw new EntryServiceError(
-          'TIME_OVERLAP',
-          `この時間帯には既にエントリがある（${overlappingIds.length}件）`,
-        );
-      }
+    if (preventOverlappingEntries) {
+      await this.ensureNoOverlaps(userId, finalEntry, entryId);
     }
 
     const updateData = removeUndefinedFields(normalizedInput) as TablesUpdate<'entries'>;
@@ -311,6 +328,125 @@ export class EntryService {
     }
 
     return { ...data, adjustedEntries: [] };
+  }
+
+  /**
+   * planned entry を「予定外記録」に明示変換する
+   *
+   * origin は通常 update では変更不可。分類修正としての planned → unplanned だけを
+   * 専用操作に分離し、planned range を破棄して actual range のみを残す。
+   */
+  async convertPlannedToUnplanned(options: ConvertPlannedToUnplannedOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (oldData.origin !== 'planned') {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Only planned entries can be converted to unplanned.',
+      );
+    }
+
+    this.validateRange(oldData.start_time, oldData.end_time, 'INVALID_TIME_RANGE');
+    this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
+
+    if (new Date(oldData.actual_end_time!).getTime() > Date.now()) {
+      throw new EntryServiceError(
+        'UNPLANNED_IN_FUTURE',
+        'Unplanned entries cannot end in the future.',
+      );
+    }
+
+    const finalEntry = {
+      ...oldData,
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+      duration_minutes: null,
+    } as EntryRow;
+
+    this.validateEntryShape(finalEntry);
+    await this.ensureNoOverlaps(userId, finalEntry, entryId);
+
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+      })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
+      }
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to convert entry: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * unplanned entry を「予定」に明示変換する
+   *
+   * 誤って予定外として作った過去記録を、同じ actual range の planned entry に戻す。
+   * future への自動変換ではなく、Inspector の明示操作からのみ呼ばれる。
+   */
+  async convertUnplannedToPlanned(options: ConvertUnplannedToPlannedOptions): Promise<EntryRow> {
+    const { userId, entryId } = options;
+    const oldData = await this.getExistingEntry(entryId, userId);
+
+    if (!oldData) {
+      throw new EntryServiceError('NOT_FOUND', 'Entry not found');
+    }
+
+    if (oldData.origin !== 'unplanned') {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Only unplanned entries can be converted to planned.',
+      );
+    }
+
+    this.validateRange(oldData.actual_start_time, oldData.actual_end_time, 'INVALID_TIME_RANGE');
+
+    const finalEntry = {
+      ...oldData,
+      origin: 'planned',
+      start_time: oldData.actual_start_time,
+      end_time: oldData.actual_end_time,
+    } as EntryRow;
+
+    this.validateEntryShape(finalEntry);
+    await this.ensureNoOverlaps(userId, finalEntry, entryId);
+
+    const { data, error } = await this.supabase
+      .from('entries')
+      .update({
+        origin: 'planned',
+        start_time: oldData.actual_start_time,
+        end_time: oldData.actual_end_time,
+      })
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (this.isExclusionViolation(error)) {
+        throw new EntryServiceError('TIME_OVERLAP', 'この時間帯には既にエントリがある');
+      }
+      throw new EntryServiceError('UPDATE_FAILED', `Failed to convert entry: ${error.message}`);
+    }
+
+    return data;
   }
 
   /**
@@ -366,64 +502,198 @@ export class EntryService {
     return error.code === '23P01';
   }
 
-  private normalizeDateTimeFields<T extends Record<string, unknown>>(
-    input: T,
+  private normalizeCreateInput(
+    userId: string,
+    input: CreateEntryOptions['input'],
     timezone?: string,
-  ): T {
-    const dateTimeData: {
-      start_time?: string | null;
-      end_time?: string | null;
-    } = {};
+  ): NormalizedEntryInput {
+    const selectedRange = this.resolveCreateRange(input, timezone);
+    const isUnplanned = new Date(selectedRange.end).getTime() <= Date.now();
+    const origin = isUnplanned ? 'unplanned' : 'planned';
 
-    const typedInput = input as {
-      start_time?: string | null;
-      end_time?: string | null;
+    const normalized: NormalizedEntryInput = {
+      user_id: userId,
+      title: input.title,
+      description: input.description ?? null,
+      origin,
+      fulfillment_score: input.fulfillment_score ?? null,
+      actual_start_time: selectedRange.start,
+      actual_end_time: selectedRange.end,
+      start_time: origin === 'planned' ? selectedRange.start : null,
+      end_time: origin === 'planned' ? selectedRange.end : null,
     };
-    if (typedInput.start_time !== undefined) dateTimeData.start_time = typedInput.start_time;
-    if (typedInput.end_time !== undefined) dateTimeData.end_time = typedInput.end_time;
 
-    normalizeDateTimeConsistency(dateTimeData, timezone);
-
-    return {
-      ...input,
-      ...dateTimeData,
-    };
+    this.validateEntryShape(normalized);
+    return normalized;
   }
 
-  private normalizeDateTimeFieldsForUpdate<T extends Record<string, unknown>>(
-    input: T,
-    existingData: EntryRow | null,
+  private normalizeUpdateInput(
+    input: UpdateEntryOptions['input'],
+    existingData: EntryRow,
     timezone?: string,
-  ): T {
-    const typedInput = input as {
-      start_time?: string | null;
-      end_time?: string | null;
-    };
-    const hasDateTimeUpdate = !!(typedInput.start_time || typedInput.end_time);
-
-    if (!hasDateTimeUpdate || !existingData) {
-      return input;
+  ): Record<string, unknown> {
+    if (input.origin !== undefined && input.origin !== existingData.origin) {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Entry origin cannot be changed. Create a new entry instead.',
+      );
     }
 
-    const mergedData: {
+    const baseInput = { ...input };
+    const existingIsFuturePlanned =
+      existingData.origin === 'planned' &&
+      existingData.start_time !== null &&
+      new Date(existingData.start_time).getTime() > Date.now();
+
+    if (
+      existingIsFuturePlanned &&
+      (baseInput.start_time !== undefined || baseInput.end_time !== undefined)
+    ) {
+      const plannedRange = this.resolveMergedRange(
+        {
+          start: baseInput.start_time ?? existingData.start_time,
+          end: baseInput.end_time ?? existingData.end_time,
+        },
+        timezone,
+      );
+      return removeUndefinedFields({
+        ...baseInput,
+        start_time: plannedRange.start,
+        end_time: plannedRange.end,
+        actual_start_time:
+          baseInput.actual_start_time ?? existingData.actual_start_time ?? plannedRange.start,
+        actual_end_time:
+          baseInput.actual_end_time ?? existingData.actual_end_time ?? plannedRange.end,
+      });
+    }
+
+    if (
+      existingData.origin === 'unplanned' &&
+      (baseInput.start_time !== undefined || baseInput.end_time !== undefined)
+    ) {
+      throw new EntryServiceError(
+        'INVALID_ENTRY_SHAPE',
+        'Unplanned entries do not have planned time ranges.',
+      );
+    }
+
+    return removeUndefinedFields(baseInput);
+  }
+
+  private resolveCreateRange(input: CreateEntryOptions['input'], timezone?: string): EntryRange {
+    const start = input.start_time ?? input.actual_start_time ?? null;
+    const end = input.end_time ?? input.actual_end_time ?? null;
+    return this.resolveMergedRange({ start, end }, timezone);
+  }
+
+  private resolveMergedRange(
+    range: { start: string | null | undefined; end: string | null | undefined },
+    timezone?: string,
+  ): EntryRange {
+    if (!range.start || !range.end) {
+      throw new EntryServiceError('INVALID_ENTRY_SHAPE', 'Entry time range is required');
+    }
+
+    const normalized = {
+      start_time: range.start,
+      end_time: range.end,
+    };
+    normalizeDateTimeConsistency(normalized, timezone);
+    this.validateRange(normalized.start_time, normalized.end_time, 'INVALID_TIME_RANGE');
+    return { start: normalized.start_time, end: normalized.end_time };
+  }
+
+  private validateEntryShape(entry: {
+    origin?: string;
+    start_time?: string | null;
+    end_time?: string | null;
+    actual_start_time?: string | null;
+    actual_end_time?: string | null;
+  }): void {
+    this.validateRange(
+      entry.actual_start_time ?? null,
+      entry.actual_end_time ?? null,
+      'INVALID_TIME_RANGE',
+    );
+
+    if (entry.origin === 'planned') {
+      this.validateRange(entry.start_time ?? null, entry.end_time ?? null, 'INVALID_TIME_RANGE');
+      return;
+    }
+
+    if (entry.origin === 'unplanned') {
+      if (entry.start_time !== null || entry.end_time !== null) {
+        throw new EntryServiceError(
+          'INVALID_ENTRY_SHAPE',
+          'Unplanned entries must not have planned time ranges.',
+        );
+      }
+      if (new Date(entry.actual_end_time!).getTime() > Date.now()) {
+        throw new EntryServiceError(
+          'UNPLANNED_IN_FUTURE',
+          'Unplanned entries cannot end in the future.',
+        );
+      }
+      return;
+    }
+
+    throw new EntryServiceError('INVALID_ENTRY_SHAPE', 'Invalid entry origin');
+  }
+
+  private validateRange(start: string | null, end: string | null, code: string): void {
+    if (!start || !end) {
+      throw new EntryServiceError(code, 'Entry time range is required');
+    }
+
+    const startMs = new Date(start).getTime();
+    const endMs = new Date(end).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
+      throw new EntryServiceError(code, 'Entry end time must be after start time');
+    }
+  }
+
+  private async ensureNoOverlaps(
+    userId: string,
+    entry: {
+      origin?: string;
       start_time?: string | null;
       end_time?: string | null;
-    } = {};
+      actual_start_time?: string | null;
+      actual_end_time?: string | null;
+    },
+    excludeEntryId?: string,
+  ): Promise<void> {
+    if (entry.origin === 'planned' && entry.start_time && entry.end_time) {
+      const plannedOverlappingIds = await this.checkPlannedTimeOverlap({
+        userId,
+        startTime: entry.start_time,
+        endTime: entry.end_time,
+        ...(excludeEntryId !== undefined && { excludeEntryId }),
+      });
 
-    const startTimeValue = typedInput.start_time ?? existingData.start_time;
-    if (startTimeValue !== undefined) mergedData.start_time = startTimeValue;
+      if (plannedOverlappingIds.length > 0) {
+        throw new EntryServiceError(
+          'TIME_OVERLAP',
+          `予定時間が既存エントリと重複している（${plannedOverlappingIds.length}件）`,
+        );
+      }
+    }
 
-    const endTimeValue = typedInput.end_time ?? existingData.end_time;
-    if (endTimeValue !== undefined) mergedData.end_time = endTimeValue;
+    if (entry.actual_start_time && entry.actual_end_time) {
+      const actualOverlappingIds = await this.checkActualTimeOverlap({
+        userId,
+        startTime: entry.actual_start_time,
+        endTime: entry.actual_end_time,
+        ...(excludeEntryId !== undefined && { excludeEntryId }),
+      });
 
-    normalizeDateTimeConsistency(mergedData, timezone);
-
-    const result = { ...input } as Record<string, unknown>;
-
-    if (mergedData.start_time !== undefined) result.start_time = mergedData.start_time;
-    if (mergedData.end_time !== undefined) result.end_time = mergedData.end_time;
-
-    return result as T;
+      if (actualOverlappingIds.length > 0) {
+        throw new EntryServiceError(
+          'TIME_OVERLAP',
+          `実績時間が既存エントリと重複している（${actualOverlappingIds.length}件）`,
+        );
+      }
+    }
   }
 
   private async getExistingEntry(entryId: string, userId: string): Promise<EntryRow | null> {

@@ -240,13 +240,13 @@ react-hook-form + Zod + Field コンポーネント。
 
 **ビジュアル状態:**
 
-| 状態         | スタイル                               | トークン/クラス           |
-| ------------ | -------------------------------------- | ------------------------- |
-| ドラッグ中   | ゴースト: `opacity-85` + `shadow-card` | `GhostRenderer`（Portal） |
-| ソースカード | `opacity-30`                           | —                         |
-| ドロップ先   | 16% foreground overlay                 | `bg-state-dragged`        |
-| 重複検出     | 赤リング                               | `ring-destructive ring-2` |
-| ドロップ拒否 | 200ms ease-out スナップバック          | GhostRenderer 内蔵        |
+| 状態         | スタイル                                 | トークン/クラス                                                                              |
+| ------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ドラッグ中   | ゴースト: `opacity-85` + `shadow-card`   | `GhostRenderer`（Portal）                                                                    |
+| ソースカード | `opacity-30`                             | —                                                                                            |
+| ドロップ先   | 16% foreground overlay                   | `bg-state-dragged`                                                                           |
+| 重複検出     | 全面 destructive 化 + cursor not-allowed | `bg-destructive-tint` + `text-destructive` + body cursor `not-allowed`（赤リングは使わない） |
+| ドロップ拒否 | 200ms ease-out スナップバック            | GhostRenderer 内蔵                                                                           |
 
 - カーソル: 通常 `cursor-grab`、ドラッグ中 `cursor-grabbing`（`document.body` に直接設定）
 - z-index: `z-calendar-drag` (1000)

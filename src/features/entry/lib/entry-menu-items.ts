@@ -1,0 +1,87 @@
+/**
+ * Entry に対する操作メニューの items 定義（単一情報源）
+ *
+ * 右クリックメニュー（EventContextMenu）と Inspector の TagRow メニューが
+ * 同じ項目セット・同じ表示条件を共有するための shared source。
+ *
+ * shell（floating button / Radix DropdownMenu）は呼び出し側が自前で持つ。
+ * この関数は「どの項目をどの条件で出すか」だけを担う。
+ */
+
+import type { LucideIcon } from 'lucide-react';
+import { BarChart3, CalendarOff, RotateCcw, Trash2 } from 'lucide-react';
+
+import type { EntryOrigin } from '@/lib/types/entry';
+
+export type EntryMenuItemKey = 'viewStats' | 'markUnplanned' | 'restorePlanned' | 'delete';
+
+export interface EntryMenuItem {
+  key: EntryMenuItemKey;
+  /** next-intl の translation key */
+  labelKey: string;
+  icon: LucideIcon;
+  dangerous: boolean;
+  onSelect: () => void;
+}
+
+interface EntryMenuItemsArgs {
+  origin: EntryOrigin | undefined;
+  tagId: string | null | undefined;
+  onViewStats?: (() => void) | undefined;
+  onMarkUnplanned?: (() => void) | undefined;
+  onRestorePlanned?: (() => void) | undefined;
+  onDelete?: (() => void) | undefined;
+}
+
+export function getEntryMenuItems({
+  origin,
+  tagId,
+  onViewStats,
+  onMarkUnplanned,
+  onRestorePlanned,
+  onDelete,
+}: EntryMenuItemsArgs): EntryMenuItem[] {
+  const isUnplanned = origin === 'unplanned';
+  const isPlanned = origin === 'planned';
+
+  const items: (EntryMenuItem | null)[] = [
+    onViewStats && tagId
+      ? {
+          key: 'viewStats',
+          labelKey: 'calendar.filter.viewStats',
+          icon: BarChart3,
+          dangerous: false,
+          onSelect: onViewStats,
+        }
+      : null,
+    onMarkUnplanned && isPlanned
+      ? {
+          key: 'markUnplanned',
+          labelKey: 'entry.inspector.markUnplanned',
+          icon: CalendarOff,
+          dangerous: false,
+          onSelect: onMarkUnplanned,
+        }
+      : null,
+    onRestorePlanned && isUnplanned
+      ? {
+          key: 'restorePlanned',
+          labelKey: 'entry.inspector.restorePlanned',
+          icon: RotateCcw,
+          dangerous: false,
+          onSelect: onRestorePlanned,
+        }
+      : null,
+    onDelete
+      ? {
+          key: 'delete',
+          labelKey: 'common.actions.delete',
+          icon: Trash2,
+          dangerous: true,
+          onSelect: onDelete,
+        }
+      : null,
+  ];
+
+  return items.filter((item): item is EntryMenuItem => item !== null);
+}

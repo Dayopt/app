@@ -55,6 +55,8 @@ interface EntryRendererProps {
     e: React.MouseEvent | React.TouchEvent,
     rect: { top: number; left: number; width: number; height: number },
   ) => void;
+  onGapClick?: ((startMinutes: number, endMinutes: number) => void) | undefined;
+  gapCreationCutoffMs?: number | undefined;
   entries: CalendarEvent[];
 }
 
@@ -81,6 +83,8 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   onPointerDown,
   onTouchStart,
   onResizeStart,
+  onGapClick,
+  gapCreationCutoffMs,
   entries,
 }: EntryRendererProps) {
   const t = useTranslations();
@@ -92,6 +96,13 @@ export const EntryRenderer = React.memo(function EntryRenderer({
 
   const currentTop = parseFloat(style.top?.toString() || '0');
   const currentHeight = parseFloat(style.height?.toString() || '20');
+
+  // リサイズ中のこの entry が他とオーバーラップしている時、赤リング + not-allowed を表示する。
+  // drag は GhostRenderer 側で描くため、ここでは resize のみを担当する。
+  const isResizingOverlap =
+    interactionState.mode === 'resizing' &&
+    interactionState.entryId === entry.id &&
+    interactionState.isOverlapping;
 
   // ドラッグ中は元位置にファントム（半透明シルエット）を残す
   const adjustedStyle: React.CSSProperties = entryDragging
@@ -136,7 +147,10 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   return (
     <div style={finalStyle} className="pointer-events-none absolute" data-entry-wrapper="true">
       <div
-        className="pointer-events-auto absolute inset-0 rounded-lg"
+        className={cn(
+          'pointer-events-auto absolute inset-0 rounded-lg',
+          isResizingOverlap && 'cursor-not-allowed',
+        )}
         data-entry-block="true"
         tabIndex={0}
         role="button"
@@ -186,6 +200,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           onAnchorRect={setAnchorRect}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: finalHeight }}
+          plannedHeight={currentHeight}
           onContextMenu={handleContextMenu}
           onResizeStart={(
             p: CalendarEvent,
@@ -204,6 +219,8 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           isActive={isInspectorOpen && inspectorEntryId === entry.id}
           previewTime={getPreviewTime(entry.id, interactionState)}
           hourHeight={hourHeight}
+          onGapClick={onGapClick}
+          gapCreationCutoffMs={gapCreationCutoffMs}
           {...(enableCrossDayDrag ? { overlayPositionApplied: true } : {})}
           className={cn(
             'h-full w-full',
@@ -211,6 +228,14 @@ export const EntryRenderer = React.memo(function EntryRenderer({
             isNewEntry(entry.id) && 'animate-entry-pop',
           )}
         />
+        {/* リサイズ中に重複していたら、destructive な「重複しています」表示で上書きする（all-red 規範） */}
+        {isResizingOverlap && (
+          <div className="bg-destructive-tint text-destructive pointer-events-none absolute inset-0 flex flex-col gap-1 overflow-hidden rounded-lg p-2">
+            <span className="text-sm leading-tight font-medium">
+              {t('entry.errors.timeOverlap')}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,8 @@ interface TimeRowProps {
   hasError?: boolean;
   /** true で記録行（実績）を視覚的に強調 */
   isPrimary?: boolean;
+  /** E2E/アクセシビリティ確認用の安定セレクタ */
+  testId?: string;
 }
 
 /** Inspectorの時間入力行（開始・終了のTimeInput × 2、予定行・記録行共用、常に 1 行表示） */
@@ -38,9 +40,10 @@ export function TimeRow({
   disabled = false,
   hasError = false,
   isPrimary = false,
+  testId,
 }: TimeRowProps) {
   return (
-    <div className="flex min-h-11 flex-row items-center justify-between gap-0">
+    <div className="flex min-h-11 flex-row items-center justify-between gap-0" data-testid={testId}>
       <div className="flex items-center gap-2">
         {Icon && <Icon className="text-muted-foreground size-4 flex-shrink-0" />}
         <span
@@ -58,6 +61,7 @@ export function TimeRow({
           onChange={onStartChange}
           disabled={disabled}
           hasError={hasError}
+          testId={testId ? `${testId}-start` : undefined}
         />
         <ArrowRight className="text-muted-foreground size-3.5 flex-shrink-0" />
         <TimeInput
@@ -66,6 +70,7 @@ export function TimeRow({
           disabled={disabled || !startTime}
           minTime={startTime}
           hasError={hasError}
+          testId={testId ? `${testId}-end` : undefined}
         />
       </div>
     </div>

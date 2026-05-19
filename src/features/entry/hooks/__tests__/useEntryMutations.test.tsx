@@ -62,6 +62,8 @@ vi.mock('@/lib/trpc', () => {
       entries: {
         create: makeMutation('create'),
         update: makeMutation('update'),
+        convertPlannedToUnplanned: makeMutation('convertPlannedToUnplanned'),
+        convertUnplannedToPlanned: makeMutation('convertUnplannedToPlanned'),
         delete: makeMutation('delete'),
         restore: makeMutation('restore'),
         bulkUpdate: makeMutation('bulkUpdate'),
@@ -127,7 +129,10 @@ function createWrapper() {
   };
 }
 
-function renderUseEntryMutations(options?: { suppressCreateToast?: boolean }) {
+function renderUseEntryMutations(options?: {
+  suppressCreateToast?: boolean;
+  suppressUpdateErrorToast?: () => boolean;
+}) {
   const { queryClient, wrapper } = createWrapper();
   const { result } = renderHook(() => useEntryMutations(options), { wrapper });
   return { queryClient, result };
@@ -249,7 +254,7 @@ describe('useEntryMutations.createEntry', () => {
       {},
       { tempId: 'temp-x', previousEntriesList: [] },
     );
-    expect(toastError).toHaveBeenCalledWith('entry.toast.timeOverlap');
+    expect(toastError).toHaveBeenCalledWith('entry.errors.timeOverlap');
   });
 
   it('onSettled: list.invalidate を呼ぶ', () => {
@@ -296,6 +301,25 @@ describe('useEntryMutations.updateEntry', () => {
     expect(utilsMock.entries.getById.invalidate).toHaveBeenCalledWith({ id: 'e1' });
   });
 
+  it('onError: suppressUpdateErrorToast=true なら toast を出さず rollback する', () => {
+    const { queryClient } = renderUseEntryMutations({ suppressUpdateErrorToast: () => true });
+    const original = [{ id: 'e1', title: 'Old' }];
+    seedList(queryClient, [{ id: 'e1', title: 'Half-Updated' }]);
+
+    captured.update!.onError!(
+      { data: { code: 'CONFLICT' }, message: 'conflict' },
+      { id: 'e1', data: {} },
+      {
+        id: 'e1',
+        previousEntriesList: [[LIST_KEY, original]],
+        previousEntry: { id: 'e1', title: 'Old' },
+      },
+    );
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(LIST_KEY)).toEqual(original);
+  });
+
   it('onError: TIME_OVERLAP も専用 toast を出す', () => {
     renderUseEntryMutations();
     captured.update!.onError!(
@@ -303,7 +327,7 @@ describe('useEntryMutations.updateEntry', () => {
       { id: 'e1', data: {} },
       { id: 'e1', previousEntriesList: [], previousEntry: null },
     );
-    expect(toastError).toHaveBeenCalledWith('entry.toast.timeOverlap');
+    expect(toastError).toHaveBeenCalledWith('entry.errors.timeOverlap');
   });
 
   it('onError: 一般エラーは updateFailed toast を出し snapshot からロールバックする', () => {
@@ -327,6 +351,163 @@ describe('useEntryMutations.updateEntry', () => {
       { id: 'e1' },
       { id: 'e1', title: 'Old' },
     );
+  });
+
+  it('古い update 成功レスポンスは新しい楽観更新を上書きしない', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      },
+    ]);
+
+    const firstCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+      },
+    })) as { mutationSeq: number };
+    const secondCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+      },
+    })) as { mutationSeq: number };
+
+    captured.update!.onSuccess!(
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+        adjustedEntries: [],
+      },
+      { id: 'e1', data: {} },
+      firstCtx,
+    );
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+
+    captured.update!.onSuccess!(
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+        adjustedEntries: [],
+      },
+      { id: 'e1', data: {} },
+      secondCtx,
+    );
+
+    expect(queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)![0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+  });
+
+  it('古い update エラーは新しい楽観更新を rollback しない', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        title: 'Entry',
+        start_time: '2026-04-27T00:00:00.000Z',
+        end_time: '2026-04-27T01:00:00.000Z',
+      },
+    ]);
+
+    const firstCtx = (await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-28T00:00:00.000Z',
+        end_time: '2026-04-28T01:00:00.000Z',
+      },
+    })) as { id: string; mutationSeq: number };
+    await captured.update!.onMutate!({
+      id: 'e1',
+      data: {
+        start_time: '2026-04-29T00:00:00.000Z',
+        end_time: '2026-04-29T01:00:00.000Z',
+      },
+    });
+
+    captured.update!.onError!(
+      { data: undefined, message: 'network' },
+      { id: 'e1', data: {} },
+      firstCtx,
+    );
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)![0]).toMatchObject({
+      start_time: '2026-04-29T00:00:00.000Z',
+      end_time: '2026-04-29T01:00:00.000Z',
+    });
+  });
+});
+
+// =============================================================================
+// convert planned/unplanned
+// =============================================================================
+
+describe('useEntryMutations.convertPlannedToUnplanned', () => {
+  it('onMutate: planned range を null にして optimistic update する', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        origin: 'planned',
+        start_time: '2026-04-27T01:00:00.000Z',
+        end_time: '2026-04-27T02:00:00.000Z',
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
+      },
+    ]);
+
+    await captured.convertPlannedToUnplanned!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      origin: 'unplanned',
+      start_time: null,
+      end_time: null,
+    });
+  });
+});
+
+describe('useEntryMutations.convertUnplannedToPlanned', () => {
+  it('onMutate: actual range を planned range にコピーして optimistic update する', async () => {
+    const { queryClient } = renderUseEntryMutations();
+    seedList(queryClient, [
+      {
+        id: 'e1',
+        origin: 'unplanned',
+        start_time: null,
+        end_time: null,
+        actual_start_time: '2026-04-27T01:00:00.000Z',
+        actual_end_time: '2026-04-27T02:00:00.000Z',
+      },
+    ]);
+
+    await captured.convertUnplannedToPlanned!.onMutate!({ id: 'e1' });
+
+    const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(LIST_KEY)!;
+    expect(cached[0]).toMatchObject({
+      origin: 'planned',
+      start_time: '2026-04-27T01:00:00.000Z',
+      end_time: '2026-04-27T02:00:00.000Z',
+      actual_start_time: '2026-04-27T01:00:00.000Z',
+      actual_end_time: '2026-04-27T02:00:00.000Z',
+    });
   });
 });
 

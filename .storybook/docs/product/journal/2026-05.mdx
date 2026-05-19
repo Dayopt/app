@@ -6,6 +6,98 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-15
+
+### 重複でおけない時の UI を全経路で統一した日
+
+16 コミット。32 files changed / +1,304 / -267。朝は前日からの planned ↔ unplanned 変換 UX の fix-up（5 コミット）、本体は「重複でおけない時の UI 統一」プロジェクト（11 コミット）。drag / resize / 新規作成 / Inspector / palette / popover の 6 経路で散らかっていた重複検出のフィードバックを 1 つの canonical（全面 destructive 化）に揃え、文言も `entry.errors.timeOverlap` 1 キーに集約。最後に過去時間帯の preview を unplanned 風に切替えるところまで。
+
+#### やったこと
+
+- **planned ↔ unplanned 変換の fix-up (5 commits)**: 変換前に inspector 保存を同期 / 変換時の保存競合と予定外判定 / 生成列を更新しない / 予定復帰時の競合 toast 抑制 / 連続移動の古い更新結果を無視。前日の機能追加で見つかった race condition と表示崩れの掃除
+- **重複 UI 統一プロジェクト Phase 1: 集約と検出 (4 commits)**: i18n キーを `entry.errors.timeOverlap` 1 つに集約（5 キー → 1 キー）。drag / resize / 新規作成 / Inspector の 4 経路で silent fail を撲滅し、judgment locus を 1 本化、cursor not-allowed と resize 用赤リングを追加、Inspector 時刻編集の save race を同期再評価で解消
+- **重複 UI 統一プロジェクト Phase 2: visual refactor (4 commits)**: user fb を受けて赤リング廃止 → 全面 destructive (`bg-destructive-tint` + `text-destructive`) に置換。tag entry popover の inline alert + submit disabled、tag draft block と drag-create preview も同じ canonical に統一。drag ghost は重複時 `opacity-85` を外して不透明描画で文字を読みやすく
+- **過去時間帯 preview を unplanned 風に (2 commits)**: 終了時刻が past の preview は破線枠 + accent strip なしの unplanned 風表示に切替。事前 overlap 判定でも `willBeUnplanned = end_time <= now` を見て planned / actual を切替（直後に発覚した planned×planned 誤検知 bug を併せて修正）
+
+#### なぜ今日この作業をしたか
+
+朝の 5 コミットは前日の planned ↔ unplanned 変換機能の不具合潰し。inspector の debounced save と変換 mutation が衝突して古い data で上書きされる、生成列を直接 update に含めて Postgres エラー、変換成功直後に「他で変更されました」toast が誤発火、など 5-14 の最後の 30 分では追えていなかった race condition を朝のうちに片付けた。
+
+本体の重複 UI 統一は user 提案。「重複でおけない時の UI を全体で統一したい」というオープンな相談に対して、まず現状を整理したら 6 経路でフィードバックが散らかっていることがわかった。silent reject が 2 箇所、toast が 2 箇所、inline alert が 1 箇所、文言キーが 5 つに分裂、judgment locus は 1 本化済みだが visual layer がバラバラ。最初の plan では「GAFA デファクトに揃える」と framing したが、user に「100% の自信が出るまで自己レビューしてから再度プランを作って」と指摘され調べ直すと、Calendar 系の GAFA は overlap を hard-block しないため比較対象として誤りだったと判明。NN/g / Material Design 3 / Apple HIG が共通で推奨する「feedback channel matched to interaction modality」を一次根拠に置き直し、modality に応じて drag = 視覚 / フォーム = inline / 離散 = toast の 3 channel を使い分けながらメッセージ内容と判定ロジックは 1 本化、という形で着地。
+
+午後は user fb で大きく軌道修正。「赤リングじゃなくて全部赤くなる方が見やすい」と言われ、design-system.md に明文化していた `ring-destructive ring-2` をやめて Dayopt の destructive container 規範（`bg-destructive-tint` + `text-destructive`）に置き換え、文言「この時間帯には既に予定があります」が overlap 中の preview を全面で覆う形に refactor。さらに「過去に予定を立てるときは自動で unplanned になるのに preview は planned のまま」「作成しようとすると 'すでに予定があります' で作れない」と続けて指摘があり、preview の visual と client 側 overlap 判定の両方を `willBeUnplanned` で分岐させた。
+
+#### Claudeの所感
+
+**「統一」と「使い分け」を両立させる設計の難しさ**: 当初の plan ですべての channel を同じ visual に揃えようとして user fb で 2 回 refactor した。1 回目は「赤リング」、2 回目は「inline alert vs visual」の選択。最終的に NN/g の "feedback channel matched to interaction modality" 原則が腑に落ちると一気に整理がついた。統一すべきは「メッセージ内容と判定ロジック」、使い分けるべきは「channel」。これは design-system.md / copywriting.md に明文化される価値がある原則で、今後類似の UI 議論（成功 / 警告 / 進行中 / 完了など）にも応用できる。
+
+**Server と client の origin 判定を一致させる重要性**: 「過去時間帯の preview を unplanned 風に」という UI 修正で見落とした最後の落とし穴が、client 側 overlap 事前判定でも planned/actual の切替が必要だったこと。サーバーは `normalizeCreateInput` で `end_time <= Date.now()` なら `origin=unplanned` にしているのに、client は常に planned として `hasTwoLayerTimeConflict` を呼んでいたため近接 planned 予定と planned×planned 衝突を誤検知。「preview の見た目」と「判定ロジック」は同じ判断材料（end_time）で動くべきという当然の対称性が抜けていた。次に「未来 / 過去で挙動が違う UI」を作る時の checklist 項目。
+
+**プランの根拠は「事例」より「原則」で書く**: 最初の plan で「GAFA デファクト」と書いたら user に refactor 指示が入った。GAFA は事例の集合であって設計原則ではない。NN/g / Material Design 3 / Apple HIG の共通原則を一次根拠に据え直したら、その下に Google Calendar の挙動も Resource booking 系の挙動も「modality が違うから違って当然」と整理がついた。事例を根拠にすると例外に弱い。原則を根拠にすると事例は派生として説明できる。今後 plan を書く時はまず原則を 1-2 行で書き、事例は補強として並べる順序にする。
+
+---
+
+## 2026-05-14
+
+### MCP Phase 1.5 完了、entry の menu/drag バグを根絶した日
+
+11 コミット。56 files changed / +3,312 / -683。MCP の有料 Pro user 受け入れ準備（Phase 1.5）が大きな塊、残りは 2 レイヤー entry の E2E テスト追加、planned/unplanned 変換 UX の整備、entry 右クリックメニューの Inspector との統一、そして WeekView のドラッグバグ修正。
+
+#### やったこと
+
+- **MCP Phase 1.5 (2 commits)**: `oauth_audit_log` テーブルと `issue_oauth_token_pair` RPC を追加、token 発行を atomic RPC に置換して orphan token を防止。rate limit を `/oauth/token` (10/IP/min) / `/oauth/authorize` (30/IP/min) / `/api/mcp` (300/user/min) に拡張。Stripe webhook でサブスク解約時に即時 revoke、Settings UI に接続済み client 一覧と revoke ボタンを追加、`entries.daily_summary` tool と audit log 記録を実装
+- **2 レイヤー entry の E2E (1 commit)**: planned / actual の 2 レイヤーモデルの結合動作を Playwright で覆う E2E spec を追加（358 lines）
+- **planned ↔ unplanned 変換 UX 整備 (3 commits)**: 予定外記録を予定に戻せる UI、planned 移動時の actual 自動更新、「予定外にする」メニューの表示条件を `origin === 'planned'` だけで判定するよう簡素化
+- **entry 右クリックメニュー統一 (2 commits)**: 右クリックメニューが「削除」1 項目だったのを Inspector の TagRow メニューと同じ 4 項目（振り返り / 計画外にする / 計画に戻す / 削除）に揃え、項目定義を `src/features/entry/lib/entry-menu-items.ts` に共通化
+- **WeekView ドラッグバグ修正 (1 commit)**: 月曜 entry を Sidebar 方向にドラッグすると無条件で金曜にワープしていた fallback を、左右別の clamp に修正
+- **deps (1 commit)**: postcss 8.5.13 → 8.5.14
+
+#### なぜ今日この作業をしたか
+
+MCP Phase 1.5 は「Tomoya 自身が動かせる Phase 1」から「他の Pro user が課金しても壊れない状態」への昇格作業。Phase 1.5 で扱う暴露窓・revocation・audit・rate limit はどれも solo dogfood では露呈しないが、課金 user が 1 人でも入ると即座にリスクになる。Pro 課金開放の前段としてやっておく必要があった。
+
+entry 右クリックメニューの統一は、Inspector の TagRow メニューと右クリックメニューが「同じ entry に対する同じ操作セット」でありながら入口によって出る項目が違うという UX の歪みを解消する作業。最初は「2 箇所だけだから items 配列は手書きでも OK」と判断したが、ユーザーから「片方だけ変えるリスクがある」と指摘され、`getEntryMenuItems` で一元化する方針に切り替えた。これは過剰な抽象化ではなく drift 防止のための必須の集約。
+
+ドラッグバグは「左右どちらに外れても最後の列にする」という雑な fallback が原因で、月曜から金曜にワープするという目立つ症状で日常使用に支障があった。仮説検証なしに `clientX < firstRect.left` で左外を判定する 1 行を足すだけで直る、低コスト・高インパクトの修正。
+
+#### Claudeの所感
+
+**Phase 1.5 の「保険としての二重化」設計は正しい**。Decision 1 で「proProcedure の毎リクエスト DB lookup があるから webhook 不要」とした上で、Phase 1.5 で `customer.subscription.updated` webhook も追加した。これは webhook が「正規の防御」ではなく「DB lookup の冗長化」として位置づけられているからで、片方が壊れても token は最長 5 分で expire するという二重化が成立している。security 系の機構は単一のメカニズムに依存させないというパターンが、設計書の段階で言語化されている点が重要。
+
+**「2 箇所だから共通化しない」は drift リスクを過小評価していた**。今日の plan で `EventContextMenu` と `TagRow` の menu items を共通化しないと書いたが、ユーザーの「片方だけ変える可能性」という指摘で方針転換した。2 箇所でも `BarChart3 icon` / `viewStats labelKey` / `dangerous: true` のような細かい属性が並ぶと、片方の変更時にもう片方の存在を忘れるのは現実的に起こる。特に右クリックメニューは普段の開発で目に入りにくく「忘れられる側」になりやすい。今後は「同じ概念の menu items が複数 shell で出る」パターンを検出した時点で `getXxxMenuItems` を最初から切るほうがいい。
+
+**ドラッグバグの fallback は「症状が出ない方向」に倒れていた**。`if (targetDateIndex === undefined) use last column` は、開発時のメイン動線（右にドラッグして次の列に移す）では問題が出ない。左にドラッグするのが「Sidebar 方向に持っていく」という稀な操作だったため、リリース後まで残った。境界の fallback を書く時は、左右上下それぞれの方向を明示的に考えてから書くべきで、「とりあえず最後の要素にする」は将来必ず仕様の穴になる。
+
+---
+
+## 2026-05-12
+
+### 前日の負債を全決済し、タグ操作 UI を専用コンポーネントとして確立した日
+
+1 コミット（PR merge）。37 files changed / +3,701 / -337。前日（05-11）の tried_and_failed と next に積み上げた 4 件の deferred item をすべて解消した。
+
+#### やったこと
+
+- **get_time_pl_data 修正 migration (1 migration)**: 20260415 で `entry_tags` を削除したにもかかわらず、20260416 の migration がその関数を古い `entry_tags` join で recreate していた。`/review` の Time P/L データが壊れていた根本原因。20260512 migration で `entries.tag_id` 参照に差し替えて解消
+- **タグ操作 UI の専用コンポーネント化 (3 components)**: `ReviewTagList`（サイドバー、765 lines）・`ReviewTagActionsMenu`（アクションメニュー、206 lines）・`ReviewTagChipRow`（モバイル行、218 lines）を新設。`ReviewView.tsx` の肥大化を解消し、タグ操作フローを独立させた
+- **アーキテクチャドキュメント追加**: `ServiceAudit.mdx`（Service 層の現状の歪みマップ）と `ServiceContracts.mdx`（target service 契約定義）を新規追加。`api-shape.md` も api-first 設計の指針文書として追加
+
+#### なぜ今日この作業をしたか
+
+05-11 の作業で TagDetailPage のダッシュボード化という大きな仕事が終わったが、同日に「翌日修正済み」と記録した 4 件が残っていた。`get_time_pl_data` のバグは `/review` の Time P/L 表示が完全に壊れる重大度で、放置できなかった。タグ操作 UI の DnD 復旧も同様で、Review の主要インタラクションが機能しない状態だった。
+
+ServiceAudit と ServiceContracts の追加は、api-shape.md（api-first refactor の設計文書）を書く過程で「現状の歪みを記録しておかないと目標との delta が見えない」と判断したため。実装 task ではなく観察の記録だが、今後の Service 層リファクタの起点として機能する。
+
+#### Claudeの所感
+
+**migration の再定義問題はプロジェクト固有の罠**。`entry_tags` を `entries.tag_id` にインライン化した 20260415 の migration は「削除」だった。しかし同日の別問題修正（available_minutes fix）が `get_time_pl_data` を全体ごと recreate し、その SQL がすでに存在しない `entry_tags` テーブルを JOIN していた。git 上は 2 つの migration が別日に分かれているため見つけにくく、症状は `/review` の Time P/L が空になるというサイレントな壊れ方だった。この種のバグは「削除 migration と recreate migration が別ファイルに分かれている」ことで発生する。今後 DB 関数を recreate する際は、関数内で参照しているテーブル・カラムがその時点のスキーマに存在するか確認するゲートが必要。
+
+**ReviewTagList の 765 lines は適切な分離**。ReviewView.tsx がタグ操作・エントリ表示・レイアウト制御を全部抱えていたのを、専用コンポーネントに切り出した。このサイズは「過剰な抽象化なしに機能をすべて内包した結果」であり、無理に分割する必要はない。タグリスト・アクションメニュー・モバイル行の 3 コンポーネントは UI の粒度として正しく、それぞれ独立してテスト・Story 化できる形になっている。
+
+**1 コミット / 37 files は「PR squash」の良い例**。前日の試行錯誤の途中経過ではなく、4 件の deferred item が全部揃った段階で 1 PR としてまとめた。この粒度のコミットは「何をしたか」が commit message 1 行で読めるため、git log での追跡コストが低い。
+
+---
+
 ## 2026-05-11
 
 ### タグ詳細をダッシュボード化し、MCP ルート URL の根本対処を通した日

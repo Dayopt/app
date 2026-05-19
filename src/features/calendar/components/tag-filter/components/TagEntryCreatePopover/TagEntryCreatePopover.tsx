@@ -1,17 +1,31 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { isSameDay, startOfDay } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
 import { useEntryMutations } from '@/features/entry';
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { toast } from '@/lib/toast';
 
 import { useTagDraftStore } from '../../../../stores/useTagDraftStore';
 import { TagEntryCreateForm, type TagEntryCreateFormProps } from './TagEntryCreateForm';
+
+/** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
+function isEntriesListQuery(query: { queryKey: unknown }): boolean {
+  const key = query.queryKey;
+  return (
+    Array.isArray(key) &&
+    key.length >= 1 &&
+    Array.isArray(key[0]) &&
+    key[0][0] === 'entries' &&
+    key[0][1] === 'list'
+  );
+}
 
 /** 開始時刻の default: today なら現在時刻を次の 15 分境界に ceil、それ以外は 09:00 */
 function defaultStartHHMM(forDate: Date): string {
@@ -72,6 +86,7 @@ export function TagEntryCreatePopover({
 }: TagEntryCreatePopoverProps) {
   const t = useTranslations();
   const { createEntry, deleteEntry } = useEntryMutations({ suppressCreateToast: true });
+  const queryClient = useQueryClient();
 
   const draft = useTagDraftStore((s) => s.draft);
   const openDraft = useTagDraftStore((s) => s.openDraft);
@@ -137,7 +152,72 @@ export function TagEntryCreatePopover({
     closeDraft();
   }, [closeDraft, onOpenChange]);
 
+  // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
+  // useMemo の外で計算しないと react-hooks/purity に引っかかる。
+  // eslint-disable-next-line react-hooks/purity -- transient form, no observable side effect
+  const nowForPastCheck = Date.now();
+  const willBeUnplanned = (() => {
+    if (!startTime || !endTime) return false;
+    const endDate = combineDateAndHHMM(selectedDate, endTime);
+    return endDate.getTime() <= nowForPastCheck;
+  })();
+
+  // クライアント側で時間重複を判定（drag / Inspector と同じ規範）。
+  // 重複時は inline alert + submit disabled で hard-block し、mutation を発火させない。
+  const hasConflict = useMemo(() => {
+    if (!startTime || !endTime) return false;
+    const startDate = combineDateAndHHMM(selectedDate, startTime);
+    const endDate = combineDateAndHHMM(selectedDate, endTime);
+    if (endDate.getTime() <= startDate.getTime()) return false;
+
+    const cachedLists = queryClient.getQueriesData<
+      Array<{
+        id: string;
+        start_time: string | null;
+        end_time: string | null;
+        actual_start_time: string | null;
+        actual_end_time: string | null;
+      }>
+    >({ predicate: isEntriesListQuery });
+
+    const seen = new Set<string>();
+    const events: Array<{
+      id: string;
+      plannedStart: string | null;
+      plannedEnd: string | null;
+      actualStart: string | null;
+      actualEnd: string | null;
+    }> = [];
+    for (const [, data] of cachedLists) {
+      if (!data) continue;
+      for (const e of data) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        events.push({
+          id: e.id,
+          plannedStart: e.start_time,
+          plannedEnd: e.end_time,
+          actualStart: e.actual_start_time,
+          actualEnd: e.actual_end_time,
+        });
+      }
+    }
+
+    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
+    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
+    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
+    return hasTwoLayerTimeConflict(events, {
+      id: '',
+      plannedStart: willBeUnplanned ? null : startDate.toISOString(),
+      plannedEnd: willBeUnplanned ? null : endDate.toISOString(),
+      actualStart: startDate.toISOString(),
+      actualEnd: endDate.toISOString(),
+    });
+  }, [queryClient, selectedDate, startTime, endTime, willBeUnplanned]);
+
   const handleSubmit = useCallback(() => {
+    if (hasConflict) return; // defensive: button is already disabled
+
     const startDate = combineDateAndHHMM(selectedDate, startTime);
     const endDate = combineDateAndHHMM(selectedDate, endTime);
 
@@ -173,6 +253,7 @@ export function TagEntryCreatePopover({
     deleteEntry,
     endTime,
     handleClose,
+    hasConflict,
     selectedDate,
     startTime,
     t,
@@ -192,6 +273,7 @@ export function TagEntryCreatePopover({
       onSubmit={handleSubmit}
       onCancel={handleClose}
       isSubmitting={createEntry.isPending}
+      hasError={hasConflict}
     />
   );
 

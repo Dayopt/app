@@ -334,6 +334,10 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
           title: 'Test Entry for Merge',
           origin: 'planned',
           tag_id: sourceTag.id,
+          start_time: '2026-01-02T09:00:00Z',
+          end_time: '2026-01-02T10:00:00Z',
+          actual_start_time: '2026-01-02T09:00:00Z',
+          actual_end_time: '2026-01-02T10:00:00Z',
         })
         .select()
         .single();
@@ -393,6 +397,10 @@ describe.skipIf(SKIP_INTEGRATION)('Tags Router Integration', () => {
           title: 'Test Entry for Duplicate',
           origin: 'planned',
           tag_id: sourceTag.id,
+          start_time: '2026-01-03T09:00:00Z',
+          end_time: '2026-01-03T10:00:00Z',
+          actual_start_time: '2026-01-03T09:00:00Z',
+          actual_end_time: '2026-01-03T10:00:00Z',
         })
         .select()
         .single();

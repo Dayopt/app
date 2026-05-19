@@ -56,8 +56,8 @@
         "confirm": "移動"
       },
       "diff": {
-        "overtime": "超過",
-        "short": "短縮"
+        "short": "短縮",
+        "addRecordToGap": "空き時間に記録を追加"
       },
       "saved": "保存しました",
       "noEventsOnThisDay": "まっさらな1日です。最初のブロックを追加しましょう",
@@ -91,8 +91,6 @@
       "durationHours": "{hours}時間",
       "durationMinutes": "{minutes}分",
       "duplicated": "{count}件の予定を複製しました",
-      "conflict": "時間が重複しています",
-      "conflictDescription": "既存の予定と時間が重複しています",
       "saving": "保存中...",
       "error": "操作できませんでした。もう一度お試しください",
       "errorDescription": "しばらく時間を置いてから再度お試しください",

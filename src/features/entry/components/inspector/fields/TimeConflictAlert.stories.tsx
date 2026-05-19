@@ -24,7 +24,7 @@ type Story = StoryObj;
 export const Default: Story = {
   render: () => (
     <div className="w-72">
-      <TimeConflictAlert message="時間が重複しています" />
+      <TimeConflictAlert message="この時間帯には既に予定があります" />
     </div>
   ),
   play: async ({ canvasElement }) => {
@@ -32,7 +32,7 @@ export const Default: Story = {
     const alert = canvas.getByRole('alert');
     expect(alert).toBeInTheDocument();
     expect(alert).toHaveAttribute('aria-live', 'assertive');
-    expect(canvas.getByText('時間が重複しています')).toBeInTheDocument();
+    expect(canvas.getByText('この時間帯には既に予定があります')).toBeInTheDocument();
   },
 };
 
@@ -69,7 +69,7 @@ export const AllPatterns: Story = {
     <div className="flex w-80 flex-col gap-4">
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">Default（基本）</p>
-        <TimeConflictAlert message="時間が重複しています" />
+        <TimeConflictAlert message="この時間帯には既に予定があります" />
       </div>
       <div className="space-y-1">
         <p className="text-muted-foreground text-xs">StartAfterEnd（前後逆転）</p>

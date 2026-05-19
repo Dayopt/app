@@ -19,7 +19,7 @@ export interface CalendarEvent {
   duration: number; // minutes
   isMultiDay: boolean;
   // === Entry 統合フィールド ===
-  /** エントリの起源（常に planned） */
+  /** エントリの起源 */
   origin?: EntryOrigin | undefined;
   /** 時間位置ベースの状態（upcoming/active/past） */
   entryState?: EntryState | undefined;
@@ -29,6 +29,10 @@ export interface CalendarEvent {
   actualStartDate?: Date | null | undefined;
   /** 実記録の終了時刻（actual_end_time から変換） */
   actualEndDate?: Date | null | undefined;
+  /** 予定の開始時刻（start_time から変換。unplanned では null） */
+  plannedStartDate?: Date | null | undefined;
+  /** 予定の終了時刻（end_time から変換。unplanned では null） */
+  plannedEndDate?: Date | null | undefined;
   // Optional properties used in various contexts
   userId?: string | undefined; // 所有者ID
   location?: string | undefined; // 場所

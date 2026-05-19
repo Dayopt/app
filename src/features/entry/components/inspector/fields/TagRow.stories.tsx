@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { getEntryMenuItems } from '@/features/entry/lib/entry-menu-items';
 import type { TagColorEntry } from '@/lib/tag-colors';
 
 import { TagRow } from './TagRow';
@@ -10,7 +11,7 @@ import { TagRow } from './TagRow';
  *
  * カラードット + タグ名を表示し、クリックで TagQuickSelector を開く。
  * タグ未設定時は「タグを追加」を表示。
- * 右側に「…」メニュー（統計・削除）を配置。
+ * 右側に「…」メニュー（getEntryMenuItems で生成された項目）を配置。
  */
 const meta = {
   title: 'Features/Entry/Inspector/TagRow',
@@ -52,10 +53,36 @@ const greenTag: TagColorEntry = {
 };
 
 // ---------------------------------------------------------------------------
+// Menu builders（実コードと同じ getEntryMenuItems を経由）
+// ---------------------------------------------------------------------------
+
+const fullPlannedMenu = getEntryMenuItems({
+  origin: 'planned',
+  tagId: 'tag-1',
+  onViewStats: fn(),
+  onMarkUnplanned: fn(),
+  onDelete: fn(),
+});
+
+const unplannedMenu = getEntryMenuItems({
+  origin: 'unplanned',
+  tagId: 'tag-1',
+  onViewStats: fn(),
+  onRestorePlanned: fn(),
+  onDelete: fn(),
+});
+
+const deleteOnlyMenu = getEntryMenuItems({
+  origin: 'planned',
+  tagId: 'tag-1',
+  onDelete: fn(),
+});
+
+// ---------------------------------------------------------------------------
 // Stories
 // ---------------------------------------------------------------------------
 
-/** タグ設定済み（青）+ …メニュー（統計・削除）。 */
+/** タグ設定済み（青）+ …メニュー（全項目）。 */
 export const WithMenu: Story = {
   render: () => (
     <div className="w-72">
@@ -65,8 +92,7 @@ export const WithMenu: Story = {
         tagColorClasses={blueTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        onViewStats={fn()}
-        onDelete={fn()}
+        menuItems={fullPlannedMenu}
       />
     </div>
   ),
@@ -82,8 +108,7 @@ export const ColonTag: Story = {
         tagColorClasses={redTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        onViewStats={fn()}
-        onDelete={fn()}
+        menuItems={fullPlannedMenu}
       />
     </div>
   ),
@@ -99,7 +124,23 @@ export const DeleteOnly: Story = {
         tagColorClasses={greenTag}
         onTagChange={fn()}
         onCreateAndSelect={fn()}
-        onDelete={fn()}
+        menuItems={deleteOnlyMenu}
+      />
+    </div>
+  ),
+};
+
+/** Unplanned（計画に戻す表示）。 */
+export const Unplanned: Story = {
+  render: () => (
+    <div className="w-72">
+      <TagRow
+        tagId="tag-blue-id"
+        tagName="仕事"
+        tagColorClasses={blueTag}
+        onTagChange={fn()}
+        onCreateAndSelect={fn()}
+        menuItems={unplannedMenu}
       />
     </div>
   ),
@@ -125,15 +166,25 @@ export const AllPatterns: Story = {
   render: () => (
     <div className="flex w-80 flex-col gap-6">
       <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">フルメニュー</p>
+        <p className="text-muted-foreground text-xs">フルメニュー（planned）</p>
         <TagRow
           tagId="tag-1"
           tagName="仕事"
           tagColorClasses={blueTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
-          onViewStats={fn()}
-          onDelete={fn()}
+          menuItems={fullPlannedMenu}
+        />
+      </div>
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs">Unplanned</p>
+        <TagRow
+          tagId="tag-2"
+          tagName="読書"
+          tagColorClasses={blueTag}
+          onTagChange={fn()}
+          onCreateAndSelect={fn()}
+          menuItems={unplannedMenu}
         />
       </div>
       <div className="space-y-1">
@@ -144,8 +195,7 @@ export const AllPatterns: Story = {
           tagColorClasses={greenTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
-          onViewStats={fn()}
-          onDelete={fn()}
+          menuItems={fullPlannedMenu}
         />
       </div>
       <div className="space-y-1">
@@ -156,7 +206,7 @@ export const AllPatterns: Story = {
           tagColorClasses={greenTag}
           onTagChange={fn()}
           onCreateAndSelect={fn()}
-          onDelete={fn()}
+          menuItems={deleteOnlyMenu}
         />
       </div>
       <div className="space-y-1">

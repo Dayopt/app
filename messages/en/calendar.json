@@ -56,8 +56,8 @@
         "confirm": "Move"
       },
       "diff": {
-        "overtime": "Over",
-        "short": "Short"
+        "short": "Short",
+        "addRecordToGap": "Add record to open time"
       },
       "saved": "Saved",
       "noEventsOnThisDay": "A fresh day. Add your first block to begin.",
@@ -91,8 +91,6 @@
       "durationHours": "{hours}h",
       "durationMinutes": "{minutes}m",
       "duplicated": "{count} events duplicated",
-      "conflict": "Time conflict",
-      "conflictDescription": "Conflicts with existing event",
       "saving": "Saving...",
       "error": "Operation failed",
       "errorDescription": "Please try again later",

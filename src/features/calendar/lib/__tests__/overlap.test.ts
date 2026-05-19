@@ -160,4 +160,52 @@ describe('checkClientSideOverlap', () => {
       ),
     ).toBe(true);
   });
+
+  it('未来の新規作成はplanned range同士の重複を見る', () => {
+    const events = [
+      createEvent({
+        id: 'a',
+        startDate: new Date('2030-01-15T10:00'),
+        endDate: new Date('2030-01-15T11:00'),
+        plannedStartDate: new Date('2030-01-15T10:00'),
+        plannedEndDate: new Date('2030-01-15T11:00'),
+        actualStartDate: new Date('2030-01-15T12:00'),
+        actualEndDate: new Date('2030-01-15T13:00'),
+        origin: 'planned',
+      }),
+    ];
+
+    expect(
+      checkClientSideOverlap(
+        events,
+        '',
+        new Date('2030-01-15T10:30'),
+        new Date('2030-01-15T10:45'),
+      ),
+    ).toBe(true);
+  });
+
+  it('過去の新規作成はplanned gap内ならactual重複がなければ許可する', () => {
+    const events = [
+      createEvent({
+        id: 'a',
+        startDate: new Date('2026-01-15T10:00'),
+        endDate: new Date('2026-01-15T11:00'),
+        plannedStartDate: new Date('2026-01-15T10:00'),
+        plannedEndDate: new Date('2026-01-15T11:00'),
+        actualStartDate: new Date('2026-01-15T10:00'),
+        actualEndDate: new Date('2026-01-15T10:30'),
+        origin: 'planned',
+      }),
+    ];
+
+    expect(
+      checkClientSideOverlap(
+        events,
+        '',
+        new Date('2026-01-15T10:30'),
+        new Date('2026-01-15T11:00'),
+      ),
+    ).toBe(false);
+  });
 });

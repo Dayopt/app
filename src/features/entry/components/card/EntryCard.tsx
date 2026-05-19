@@ -15,11 +15,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import {
-  computeActualTimeDiffOverlay,
-  formatDiffMinutes,
-  toMinutesOfDay,
-} from '../../lib/actual-time-overlay';
+import { computeActualTimeDiffOverlay, toMinutesOfDay } from '../../lib/actual-time-overlay';
 
 import type { EntryCardProps } from './EntryCard.types';
 import { EntryCardContent } from './EntryCardContent';
@@ -65,8 +61,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   style = {},
   previewTime = null,
   hourHeight: hourHeightProp,
+  plannedHeight: plannedHeightProp,
   overlayPositionApplied = false,
   onGapClick,
+  gapCreationCutoffMs,
 }) {
   const t = useTranslations();
 
@@ -76,10 +74,10 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
 
   // ドラフト（未保存プレビュー）かどうか判定
   const isDraft = entry.isDraft === true;
-  // 過去エントリかどうか（リサイズ・ドラッグ無効化に使用）
-  const isPast = entry.entryState === 'past';
   // 進行中エントリかどうか（視覚区別に使用）
   const isActiveEntry = entry.entryState === 'active';
+  // 過去エントリかどうか（subtle fade で「過ぎた」を視覚的に伝える。Apple Calendar 規範）
+  const isPast = entry.entryState === 'past';
   // 予定外エントリかどうか（全体を破線枠で表示）
   const isUnplanned = entry.origin === 'unplanned';
   // 予定 vs 記録の差分オーバーレイ
@@ -87,6 +85,18 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     () => computeActualTimeDiffOverlay(entry, hourHeightProp ?? DEFAULT_HOUR_HEIGHT),
     [entry, hourHeightProp],
   );
+  const topGapClickEnabled =
+    !!onGapClick &&
+    !!entry.startDate &&
+    !!entry.actualStartDate &&
+    entry.startDate.getTime() < entry.actualStartDate.getTime() &&
+    (gapCreationCutoffMs == null || entry.actualStartDate.getTime() <= gapCreationCutoffMs);
+  const bottomGapClickEnabled =
+    !!onGapClick &&
+    !!entry.actualEndDate &&
+    !!entry.endDate &&
+    entry.actualEndDate.getTime() < entry.endDate.getTime() &&
+    (gapCreationCutoffMs == null || entry.endDate.getTime() <= gapCreationCutoffMs);
 
   // positionが未定義の場合のデフォルト値
   const safePosition = useMemo(
@@ -107,45 +117,81 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
   // 左アクセントの幅（統一: 3px = --border-indicator トークン相当）
   const accentWidth = 3;
 
-  // 計画外カードの内側オフセット（親の実線ボーダーと重ならないよう内側に配置）
-  const unplannedInset = isUnplanned ? accentWidth + 2 : 0;
-
   const minHeight = isMobile ? MIN_EVENT_HEIGHT_MOBILE : MIN_EVENT_HEIGHT;
+  const visualHeight = Math.max(
+    safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0),
+    minHeight,
+  );
+  const plannedHeight = Math.max(
+    plannedHeightProp ??
+      (overlayPositionApplied ? safePosition.height - overlay.heightDelta : safePosition.height),
+    minHeight,
+  );
+  const plannedLayerTop = isUnplanned ? 0 : overlay.topShift;
+  const actualLayerTop = isUnplanned ? 0 : overlay.topKind !== 'none' ? overlay.topHeight : 0;
+  const actualLayerBottomGap =
+    !isUnplanned && overlay.bottomKind !== 'none' ? overlay.bottomHeight : 0;
+  const actualLayerHeight = Math.max(
+    visualHeight - actualLayerTop - actualLayerBottomGap,
+    minHeight,
+  );
+  const contentLayerTop = isUnplanned ? actualLayerTop : plannedLayerTop;
+  const contentLayerHeight = isUnplanned ? actualLayerHeight : plannedHeight;
+  // planned bg は「context」として後ろに引かせ、actual body が「main」として前に出る intensity 階層
+  const plannedBackgroundColor = `color-mix(in oklch, ${accentColor} 8%, var(--background))`;
+  const actualBackgroundColor = `color-mix(in oklch, ${accentColor} 18%, var(--background))`;
 
   // 動的スタイルを計算（overlay.topShift/heightDelta でカード位置を調整）
   const dynamicStyle: React.CSSProperties = useMemo(
     () => ({
       position: 'absolute' as const,
       top: `${safePosition.top - (applyPositionAdjust ? overlay.topShift : 0)}px`,
-      left: isUnplanned
-        ? `calc(${safePosition.left}% + ${unplannedInset}px)`
-        : `${safePosition.left}%`,
-      width: isUnplanned
-        ? `calc(${safePosition.width}% - 8px - ${unplannedInset}px)`
-        : `calc(${safePosition.width}% - 8px)`,
-      height: `${Math.max(safePosition.height + (applyPositionAdjust ? overlay.heightDelta : 0), minHeight)}px`,
+      left: `${safePosition.left}%`,
+      width: `calc(${safePosition.width}% - 8px)`,
+      height: `${visualHeight}px`,
       zIndex: isSelected || isDragging ? Z_INDEX.DRAGGING : Z_INDEX.EVENTS,
       cursor: isDragging ? 'grabbing' : 'pointer',
       ...style,
     }),
-    [
-      safePosition,
-      overlay,
-      applyPositionAdjust,
-      isSelected,
-      isDragging,
-      style,
-      isUnplanned,
-      unplannedInset,
-      minHeight,
-    ],
+    [safePosition, overlay, applyPositionAdjust, isSelected, isDragging, style, visualHeight],
   );
 
-  // 超過オーバーレイの外枠（タグ色の破線で一周 + 角丸）
-  const overtimeBorderStyle: React.CSSProperties = {
-    border: `2px dashed ${accentColor}`,
-    borderRadius: '8px',
+  const unplannedBorderStyle: React.CSSProperties = {
+    borderTopWidth: '2px',
+    borderTopStyle: 'dashed',
+    borderTopColor: accentColor,
+    borderRightWidth: '2px',
+    borderRightStyle: 'dashed',
+    borderRightColor: accentColor,
+    borderBottomWidth: '2px',
+    borderBottomStyle: 'dashed',
+    borderBottomColor: accentColor,
+    borderRadius: '0 8px 8px 0',
   };
+
+  const overtimeBorderStyle: React.CSSProperties = {
+    borderTopWidth: '2px',
+    borderTopStyle: 'dashed',
+    borderTopColor: accentColor,
+    borderRightWidth: '2px',
+    borderRightStyle: 'dashed',
+    borderRightColor: accentColor,
+    borderBottomWidth: '2px',
+    borderBottomStyle: 'dashed',
+    borderBottomColor: accentColor,
+    borderRadius: '0 8px 8px 0',
+  };
+  const topOvertimeBorderStyle: React.CSSProperties = {
+    ...overtimeBorderStyle,
+    borderRadius: '0 8px 0 0',
+  };
+  const bottomOvertimeBorderStyle: React.CSSProperties = {
+    ...overtimeBorderStyle,
+    borderRadius: '0 0 8px 0',
+  };
+  const actualBodyBorderRadius = `0 ${overlay.topKind === 'overtime' ? '0' : '8px'} ${
+    overlay.bottomKind === 'overtime' ? '0' : '8px'
+  } 0`;
 
   // イベントハンドラー
   const handleClick = useCallback(
@@ -288,6 +334,8 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
       'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:transition-colors hover:after:bg-state-hover',
     'text-foreground',
     isDragging && 'opacity-30',
+    // past entry の subtle fade（draft / dragging には適用しない）
+    !isDraft && !isDragging && isPast && 'opacity-90',
     isDraft ? 'cursor-default' : isDragging ? 'cursor-grabbing' : 'cursor-pointer',
     className,
   );
@@ -300,6 +348,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
     <div
       data-entry-card
       data-entry-id={entry.id}
+      data-entry-origin={entry.origin}
       className={entryCardClasses}
       style={dynamicStyle}
       onClick={handleClick}
@@ -330,177 +379,249 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
         </div>
       )}
 
-      {/* 超過オーバーレイ: 上部 — カード外に破線枠、中は透明 */}
+      {/* Layer 1: planned — Google Calendar 風の薄い背景だけ。 */}
+      {!isUnplanned && (
+        <div
+          data-entry-planned-layer
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 left-0 rounded-lg"
+          style={{
+            top: `${plannedLayerTop}px`,
+            height: `${plannedHeight}px`,
+            backgroundColor: plannedBackgroundColor,
+          }}
+        />
+      )}
+
+      {/* 超過オーバーレイ: 上部 — 破線枠だけで overflow を視覚的に伝える。 */}
       {overlay.topKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
-          style={{ top: 0, height: `${overlay.topHeight}px`, ...overtimeBorderStyle }}
+          className="pointer-events-none absolute right-0 left-0 overflow-hidden"
+          style={{ top: 0, height: `${overlay.topHeight}px`, ...topOvertimeBorderStyle }}
         >
-          {overlay.topHeight >= 16 && (
-            <span className="text-muted-foreground text-xs">
-              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
-              <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
-            </span>
-          )}
+          <div
+            data-entry-overtime-accent
+            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
+          />
         </div>
       )}
 
-      {/* 超過オーバーレイ: 下部 — カード外に破線枠、中は透明 */}
+      {/* 超過オーバーレイ: 下部 — 破線枠だけで overflow を視覚的に伝える。 */}
       {overlay.bottomKind === 'overtime' && (
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute right-0 left-0 flex flex-col items-center justify-center"
-          style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...overtimeBorderStyle }}
+          className="pointer-events-none absolute right-0 left-0 overflow-hidden"
+          style={{ bottom: 0, height: `${overlay.bottomHeight}px`, ...bottomOvertimeBorderStyle }}
         >
-          {overlay.bottomHeight >= 16 && (
-            <span className="text-muted-foreground text-xs">
-              <span className="mr-1 opacity-60">{t('calendar.event.diff.overtime')}</span>
-              <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
+          <div
+            data-entry-overtime-accent
+            className={cn('absolute left-0', colorClasses ? colorClasses.dot : 'bg-entry-default')}
+            style={{ top: 0, bottom: 0, width: `${accentWidth}px` }}
+          />
+        </div>
+      )}
+
+      {/* planned-only gap: 背景は planned layer のまま、追加導線だけ重ねる。 */}
+      {overlay.topKind === 'unexecuted' && (
+        <div
+          data-entry-gap="top"
+          aria-hidden={!topGapClickEnabled ? true : undefined}
+          role={topGapClickEnabled ? 'button' : undefined}
+          aria-label={topGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
+          className={cn(
+            'absolute right-0 left-0 flex items-center justify-center rounded-t-lg',
+            topGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+          )}
+          style={{ top: `${plannedLayerTop}px`, height: `${overlay.topHeight}px` }}
+          onMouseDown={topGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+          onTouchStart={topGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+          onClick={
+            topGapClickEnabled
+              ? (e) => {
+                  e.stopPropagation();
+                  onGapClick?.(
+                    toMinutesOfDay(entry.startDate!),
+                    toMinutesOfDay(entry.actualStartDate!),
+                  );
+                }
+              : undefined
+          }
+        >
+          {overlay.topHeight >= 32 && topGapClickEnabled && (
+            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
+              +
             </span>
           )}
         </div>
       )}
 
-      {/* カード実体（アクセント + 本体）— 予定範囲のみに制限 */}
+      {overlay.bottomKind === 'unexecuted' && (
+        <div
+          data-entry-gap="bottom"
+          aria-hidden={!bottomGapClickEnabled ? true : undefined}
+          role={bottomGapClickEnabled ? 'button' : undefined}
+          aria-label={bottomGapClickEnabled ? t('calendar.event.diff.addRecordToGap') : undefined}
+          className={cn(
+            'absolute right-0 left-0 flex items-center justify-center rounded-b-lg',
+            bottomGapClickEnabled ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
+          )}
+          style={{
+            top: `${Math.max(plannedLayerTop + plannedHeight - overlay.bottomHeight, 0)}px`,
+            height: `${overlay.bottomHeight}px`,
+          }}
+          onMouseDown={bottomGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+          onTouchStart={bottomGapClickEnabled ? (e) => e.stopPropagation() : undefined}
+          onClick={
+            bottomGapClickEnabled
+              ? (e) => {
+                  e.stopPropagation();
+                  onGapClick?.(
+                    toMinutesOfDay(entry.actualEndDate!),
+                    toMinutesOfDay(entry.endDate!),
+                  );
+                }
+              : undefined
+          }
+        >
+          {overlay.bottomHeight >= 32 && bottomGapClickEnabled && (
+            <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
+              +
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Layer 2: actual — 既存の記録カード表現を維持。 */}
       <div
-        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-lg')}
+        data-entry-actual-layer
+        className={cn('absolute right-0 left-0 flex', isUnplanned && 'rounded-r-lg')}
         style={{
-          top: overlay.topKind === 'overtime' ? `${overlay.topHeight}px` : 0,
-          bottom: overlay.bottomKind === 'overtime' ? `${overlay.bottomHeight}px` : 0,
-          ...(isUnplanned ? overtimeBorderStyle : {}),
+          top: `${actualLayerTop}px`,
+          height: `${actualLayerHeight}px`,
+          ...(isUnplanned ? unplannedBorderStyle : {}),
         }}
       >
-        {/* 左アクセントストリップ（予定外は非表示） */}
-        {!isUnplanned && (
-          <div
-            className={cn(
-              'relative shrink-0',
-              isActiveEntry && 'animate-pulse',
-              colorClasses ? colorClasses.dot : 'bg-entry-default',
-            )}
-            style={{ width: `${accentWidth}px` }}
-          />
-        )}
-
-        {/* カード本体 */}
+        {/* 左アクセントストリップ（actual=記録のサイン。予定外にも表示）
+            active 中は full intensity、それ以外は 70% で背景に引かせる（animation なしで brighter を表現） */}
         <div
+          data-entry-actual-accent
+          className={cn(
+            'relative shrink-0',
+            isActiveEntry ? 'opacity-100' : 'opacity-70',
+            colorClasses ? colorClasses.dot : 'bg-entry-default',
+          )}
+          style={{ width: `${accentWidth}px` }}
+        />
+
+        {/* カード本体 — actual recorded を main として強調（planned bg 8% に対して 18%） */}
+        <div
+          data-entry-actual-body
           className={cn(
             'relative min-w-0 flex-1 overflow-hidden',
-            isUnplanned ? 'rounded-lg' : 'rounded-r-lg',
-            safePosition.height < 40
+            actualLayerHeight < 40
               ? isMobile
                 ? 'flex items-center px-2 text-xs'
                 : 'flex items-center px-2 text-xs'
               : isMobile
                 ? 'flex items-start gap-1 px-2 pt-2 text-sm'
                 : 'p-2 text-sm',
-            isUnplanned ? 'bg-background' : colorClasses ? colorClasses.tint : 'bg-muted',
+            isUnplanned && 'bg-background',
           )}
+          style={{
+            borderRadius: actualBodyBorderRadius,
+            ...(isUnplanned ? {} : { backgroundColor: actualBackgroundColor }),
+          }}
+        >
+          {isUnplanned && (
+            <EntryCardContent
+              plan={entry}
+              tagName={tagName}
+              isCompact={actualLayerHeight < 40}
+              showTime={actualLayerHeight >= 30}
+              previewTime={previewTime}
+            />
+          )}
+        </div>
+      </div>
+      {/* /actual layer */}
+
+      {!isUnplanned && (
+        <div
+          data-entry-content-layer
+          className={cn(
+            'pointer-events-none absolute right-0 overflow-hidden rounded-r-lg',
+            contentLayerHeight < 40
+              ? isMobile
+                ? 'flex items-center px-2 text-xs'
+                : 'flex items-center px-2 text-xs'
+              : isMobile
+                ? 'flex items-start gap-1 px-2 pt-2 text-sm'
+                : 'p-2 text-sm',
+          )}
+          style={{
+            top: `${contentLayerTop}px`,
+            left: `${accentWidth}px`,
+            height: `${contentLayerHeight}px`,
+          }}
         >
           <EntryCardContent
             plan={entry}
             tagName={tagName}
-            isCompact={safePosition.height < 40}
-            showTime={safePosition.height >= 30}
+            isCompact={contentLayerHeight < 40}
+            showTime={contentLayerHeight >= 30}
             previewTime={previewTime}
           />
-
-          {/* 予定 vs 記録: 上部 — 未実行はハッチング */}
-          {overlay.topKind === 'unexecuted' && (
-            <div
-              aria-hidden="true"
-              className="pattern-hatch pointer-events-none absolute top-0 right-0 left-0 flex flex-col items-center justify-center"
-              style={{ height: `${overlay.topHeight}px` }}
-            >
-              {overlay.topHeight >= 16 && (
-                <span className="text-muted-foreground text-xs">
-                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
-                  <span className="tabular-nums">{formatDiffMinutes(overlay.topDiffMin)}</span>
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* 予定 vs 記録: 下部 — 未実行はハッチング + 空き枠「+」ボタン */}
-          {overlay.bottomKind === 'unexecuted' && (
-            <div
-              aria-hidden={!onGapClick ? true : undefined}
-              className={cn(
-                'pattern-hatch absolute right-0 bottom-0 left-0 flex flex-col items-center justify-center',
-                onGapClick ? 'pointer-events-auto cursor-pointer' : 'pointer-events-none',
-              )}
-              style={{ height: `${overlay.bottomHeight}px` }}
-              onClick={
-                onGapClick && entry.actualEndDate && entry.endDate
-                  ? (e) => {
-                      e.stopPropagation();
-                      onGapClick(
-                        toMinutesOfDay(entry.actualEndDate!),
-                        toMinutesOfDay(entry.endDate!),
-                      );
-                    }
-                  : undefined
-              }
-            >
-              {overlay.bottomHeight >= 16 && !onGapClick && (
-                <span className="text-muted-foreground text-xs">
-                  <span className="mr-1 opacity-60">{t('calendar.event.diff.short')}</span>
-                  <span className="tabular-nums">{formatDiffMinutes(overlay.bottomDiffMin)}</span>
-                </span>
-              )}
-              {overlay.bottomHeight >= 32 && onGapClick && (
-                <span className="bg-background/60 text-muted-foreground hover:bg-background hover:text-foreground flex size-6 items-center justify-center rounded-full text-sm transition-colors">
-                  +
-                </span>
-              )}
-            </div>
-          )}
         </div>
-        {/* /カード本体 */}
+      )}
 
-        {/* 下端リサイズハンドル（Draft/Past は非表示）
+      {/* 下端リサイズハンドル（Draft は非表示）
            PC: 常時 render、hover で pill 出現。
            Mobile: Inspector 開いている entry（isActive）のみ render し、pill は常時表示。
            短いカード（< 40px）は height=44px・bottom=-40px でブロック外側に張り出す。
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
-        {!isDraft && !isPast && (!isMobile || isActive) && (
-          <>
-            {/* drawer pill 風 affordance — PC は hover で出現、Mobile は isActive のとき常時 visible。
-                pointer-events-none で click は下にある handle が拾う。 */}
-            <span
-              aria-hidden
-              className={cn(
-                'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
-                isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
-              )}
-              style={{ zIndex: 11 }}
-            />
-            <div
-              className="focus:ring-ring absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
-              role="slider"
-              tabIndex={0}
-              aria-label="Resize entry duration"
-              aria-orientation="vertical"
-              aria-valuenow={safePosition.height}
-              aria-valuemin={MIN_EVENT_HEIGHT}
-              aria-valuemax={480}
-              onMouseDown={handleBottomResizeMouseDown}
-              onTouchStart={handleBottomResizeTouchStart}
-              onKeyDown={handleResizeKeyDown}
-              style={{
-                // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
-                // PC は短い card のときのみ 44px、通常 32px。
-                height: isMobile || safePosition.height < 40 ? '44px' : '32px',
-                bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
-                zIndex: 10,
-              }}
-              title={t('calendar.event.adjustEndTime')}
-            />
-          </>
-        )}
-      </div>
-      {/* /カード実体ラッパー */}
+      {!isDraft && (!isMobile || isActive) && (
+        <div
+          className="pointer-events-none absolute right-0 left-0"
+          style={{
+            top: `${isUnplanned ? 0 : plannedLayerTop}px`,
+            height: `${isUnplanned ? visualHeight : plannedHeight}px`,
+          }}
+        >
+          {/* drawer pill 風 affordance — PC は hover で出現、Mobile は isActive のとき常時 visible。
+              pointer-events-none で click は下にある handle が拾う。 */}
+          <span
+            aria-hidden
+            className={cn(
+              'bg-muted-foreground pointer-events-none absolute bottom-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full transition-opacity duration-150',
+              isMobile && isActive ? 'opacity-100' : 'opacity-0 group-hover/entry:opacity-100',
+            )}
+            style={{ zIndex: 11 }}
+          />
+          <div
+            className="focus:ring-ring pointer-events-auto absolute right-0 left-0 cursor-ns-resize focus:ring-2 focus:ring-offset-1 focus:outline-none"
+            role="slider"
+            tabIndex={0}
+            aria-label="Resize entry duration"
+            aria-orientation="vertical"
+            aria-valuenow={safePosition.height}
+            aria-valuemin={MIN_EVENT_HEIGHT}
+            aria-valuemax={480}
+            onMouseDown={handleBottomResizeMouseDown}
+            onTouchStart={handleBottomResizeTouchStart}
+            onKeyDown={handleResizeKeyDown}
+            style={{
+              // Mobile は touch target 規約 (min-h-11) に合わせて常に 44px。
+              // PC は短い card のときのみ 44px、通常 32px。
+              height: isMobile || safePosition.height < 40 ? '44px' : '32px',
+              bottom: isMobile || safePosition.height < 40 ? '-40px' : '-12px',
+              zIndex: 10,
+            }}
+            title={t('calendar.event.adjustEndTime')}
+          />
+        </div>
+      )}
     </div>
   );
 });

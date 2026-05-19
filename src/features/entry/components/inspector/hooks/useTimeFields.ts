@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { EntryWithTags } from '../../../types/entry';
 
 /** entries.list の cached query を判定する predicate（tRPC v11 key 形式） */
@@ -41,6 +42,12 @@ interface UseTimeFieldsOptions {
 /** HH:MM 形式の時間文字列を生成 */
 function toHHMM(date: Date): string {
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function toISOForDate(date: Date, time: string, timezone: string): string | null {
+  if (!time) return null;
+  const [hours, minutes] = time.split(':').map(Number);
+  return localTimeToUTCISO(date, hours ?? 0, minutes ?? 0, timezone);
 }
 
 /** Inspectorの時間フィールド状態管理フック（scheduleDate/startTime/endTime/actualTime対応）
@@ -74,13 +81,19 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
   useEffect(() => {
     if (localDirtyRef.current) return; // ユーザーの未保存変更を保護
     if (entry && 'id' in entry) {
-      if (entry.start_time) {
-        const date = parseISOToUserTimezone(entry.start_time, timezone);
+      const dateSource = entry.start_time ?? entry.actual_start_time;
+      if (dateSource) {
+        const date = parseISOToUserTimezone(dateSource, timezone);
         // eslint-disable-next-line react-hooks/set-state-in-effect -- entryデータからのタイムゾーン変換結果を同期
         setScheduleDate(date);
-        setStartTime(toHHMM(date));
       } else {
         setScheduleDate(undefined);
+      }
+
+      if (entry.start_time) {
+        const date = parseISOToUserTimezone(entry.start_time, timezone);
+        setStartTime(toHHMM(date));
+      } else {
         setStartTime('');
       }
 
@@ -125,49 +138,99 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     return undefined;
   }, [entryId]);
 
-  // リアルタイム重複チェック
+  // 同期 overlap 判定：onChange→save の race を回避するため、useEffect ではなく
+  // 各 handler の save 直前にも直接呼ぶ。
+  const checkConflict = useCallback(
+    (proposed: {
+      plannedStart: string | null;
+      plannedEnd: string | null;
+      actualStart: string | null;
+      actualEnd: string | null;
+    }) => {
+      if (!entryId) return false;
+      if (
+        (!proposed.plannedStart || !proposed.plannedEnd) &&
+        (!proposed.actualStart || !proposed.actualEnd)
+      ) {
+        return false;
+      }
+
+      // calendar は date-filtered key を使うため、predicate で全 entries.list cache を集める。
+      const cachedLists = queryClient.getQueriesData<
+        Array<{
+          id: string;
+          origin: string | null;
+          start_time: string | null;
+          end_time: string | null;
+          actual_start_time: string | null;
+          actual_end_time: string | null;
+        }>
+      >({ predicate: isEntriesListQuery });
+
+      const seen = new Set<string>();
+      const collected: Array<{
+        id: string;
+        start_time: string | null;
+        end_time: string | null;
+        actual_start_time: string | null;
+        actual_end_time: string | null;
+      }> = [];
+      for (const [, data] of cachedLists) {
+        if (!data) continue;
+        for (const e of data) {
+          if (seen.has(e.id)) continue;
+          seen.add(e.id);
+          collected.push(e);
+        }
+      }
+
+      return hasTwoLayerTimeConflict(
+        collected.map((e) => ({
+          id: e.id,
+          plannedStart: e.start_time,
+          plannedEnd: e.end_time,
+          actualStart: e.actual_start_time,
+          actualEnd: e.actual_end_time,
+        })),
+        {
+          id: entryId,
+          plannedStart: entry?.origin === 'planned' ? proposed.plannedStart : null,
+          plannedEnd: entry?.origin === 'planned' ? proposed.plannedEnd : null,
+          actualStart: proposed.actualStart,
+          actualEnd: proposed.actualEnd,
+          forbidFutureActual: entry?.origin === 'unplanned',
+        },
+      );
+    },
+    [entryId, entry?.origin, queryClient],
+  );
+
+  // リアルタイム重複チェック（alert 表示用、setState を伴うため useEffect で実行）
   useEffect(() => {
-    if (!scheduleDate || !startTime || !endTime || !entryId) {
+    if (!scheduleDate || !entryId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- tRPCキャッシュ参照を伴う重複チェック結果の反映
       setTimeConflictError(false);
       return;
     }
 
-    const [startH, startM] = startTime.split(':').map(Number);
-    const [endH, endM] = endTime.split(':').map(Number);
-    const startISO = localTimeToUTCISO(scheduleDate, startH ?? 0, startM ?? 0, timezone);
-    const endISO = localTimeToUTCISO(scheduleDate, endH ?? 0, endM ?? 0, timezone);
-
-    // calendar は date-filtered key (`entries.list({ startDate, endDate })`) を使うため、
-    // input なしの `getData()` では永遠に undefined。全 entries.list cache を予測子で集める。
-    const cachedLists = queryClient.getQueriesData<
-      Array<{ id: string; start_time: string | null; end_time: string | null }>
-    >({ predicate: isEntriesListQuery });
-
-    const seen = new Set<string>();
-    const collected: Array<{ id: string; start_time: string | null; end_time: string | null }> = [];
-    for (const [, data] of cachedLists) {
-      if (!data) continue;
-      for (const e of data) {
-        if (seen.has(e.id)) continue;
-        seen.add(e.id);
-        collected.push(e);
-      }
-    }
-
-    if (collected.length === 0) {
-      setTimeConflictError(false);
-      return;
-    }
-
-    const hasOverlap = collected.some((e) => {
-      if (e.id === entryId) return false;
-      if (!e.start_time || !e.end_time) return false;
-      return new Date(e.start_time) < new Date(endISO) && new Date(e.end_time) > new Date(startISO);
+    const hasOverlap = checkConflict({
+      plannedStart: toISOForDate(scheduleDate, startTime, timezone),
+      plannedEnd: toISOForDate(scheduleDate, endTime, timezone),
+      actualStart: toISOForDate(scheduleDate, actualStartTime ?? '', timezone),
+      actualEnd: toISOForDate(scheduleDate, actualEndTime ?? '', timezone),
     });
 
     setTimeConflictError(hasOverlap);
-  }, [scheduleDate, startTime, endTime, entryId, timezone, queryClient]);
+  }, [
+    scheduleDate,
+    startTime,
+    endTime,
+    actualStartTime,
+    actualEndTime,
+    entryId,
+    timezone,
+    checkConflict,
+  ]);
 
   // --- ハンドラー ---
 
@@ -175,80 +238,145 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
     (date: Date | undefined) => {
       setScheduleDate(date);
 
-      if (date && startTime && endTime) {
-        const [startHours, startMinutes] = startTime.split(':').map(Number);
-        const [endHours, endMinutes] = endTime.split(':').map(Number);
-        save({
-          start_time: localTimeToUTCISO(date, startHours ?? 0, startMinutes ?? 0, timezone),
-          end_time: localTimeToUTCISO(date, endHours ?? 0, endMinutes ?? 0, timezone),
-        });
-      } else if (date && startTime) {
-        const [hours, minutes] = startTime.split(':').map(Number);
-        save({ start_time: localTimeToUTCISO(date, hours ?? 0, minutes ?? 0, timezone) });
-      } else if (date && endTime) {
-        const [hours, minutes] = endTime.split(':').map(Number);
-        save({ end_time: localTimeToUTCISO(date, hours ?? 0, minutes ?? 0, timezone) });
+      if (!date) return;
+
+      if (entry?.origin === 'unplanned') {
+        const actualStartISO = toISOForDate(date, actualStartTime ?? '', timezone);
+        const actualEndISO = toISOForDate(date, actualEndTime ?? '', timezone);
+        if (actualStartISO && actualEndISO) {
+          if (new Date(actualEndISO).getTime() > Date.now()) {
+            setTimeConflictError(true);
+            return;
+          }
+          if (
+            checkConflict({
+              plannedStart: null,
+              plannedEnd: null,
+              actualStart: actualStartISO,
+              actualEnd: actualEndISO,
+            })
+          ) {
+            setTimeConflictError(true);
+            return;
+          }
+          save({
+            actual_start_time: actualStartISO,
+            actual_end_time: actualEndISO,
+          });
+        }
+        return;
+      }
+
+      const newStart = startTime ? toISOForDate(date, startTime, timezone) : null;
+      const newEnd = endTime ? toISOForDate(date, endTime, timezone) : null;
+      if (
+        checkConflict({
+          plannedStart: newStart,
+          plannedEnd: newEnd,
+          actualStart: toISOForDate(date, actualStartTime ?? '', timezone),
+          actualEnd: toISOForDate(date, actualEndTime ?? '', timezone),
+        })
+      ) {
+        setTimeConflictError(true);
+        return;
+      }
+
+      if (startTime && endTime) {
+        save({ start_time: newStart, end_time: newEnd });
+      } else if (startTime) {
+        save({ start_time: newStart });
+      } else if (endTime) {
+        save({ end_time: newEnd });
       }
     },
-    [startTime, endTime, save, timezone],
+    [
+      entry?.origin,
+      actualStartTime,
+      actualEndTime,
+      startTime,
+      endTime,
+      save,
+      timezone,
+      checkConflict,
+    ],
   );
 
   const handleStartTimeChange = useCallback(
     (time: string) => {
-      const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
       localDirtyRef.current = true;
       setStartTime(time);
 
       if (suppressSaveRef.current) return;
-      const isoValue =
-        time && scheduleDate
-          ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
-          : null;
+      if (!scheduleDate) return;
+      const isoValue = toISOForDate(scheduleDate, time, timezone);
+      if (!isoValue) return;
 
-      if (isoValue && !timeConflictError) {
-        save({ start_time: isoValue });
+      const conflict = checkConflict({
+        plannedStart: isoValue,
+        plannedEnd: toISOForDate(scheduleDate, endTime, timezone),
+        actualStart: toISOForDate(scheduleDate, actualStartTime ?? '', timezone),
+        actualEnd: toISOForDate(scheduleDate, actualEndTime ?? '', timezone),
+      });
+      if (conflict) {
+        setTimeConflictError(true);
+        return;
       }
+
+      save({ start_time: isoValue });
     },
-    [scheduleDate, save, timezone, timeConflictError],
+    [scheduleDate, endTime, actualStartTime, actualEndTime, save, timezone, checkConflict],
   );
 
   const handleEndTimeChange = useCallback(
     (time: string) => {
-      const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0];
       localDirtyRef.current = true;
       setEndTime(time);
 
       if (suppressSaveRef.current) return;
-      const isoValue =
-        time && scheduleDate
-          ? localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone)
-          : null;
+      if (!scheduleDate) return;
+      const isoValue = toISOForDate(scheduleDate, time, timezone);
+      if (!isoValue) return;
 
-      if (isoValue && !timeConflictError) {
-        save({ end_time: isoValue });
+      const conflict = checkConflict({
+        plannedStart: toISOForDate(scheduleDate, startTime, timezone),
+        plannedEnd: isoValue,
+        actualStart: toISOForDate(scheduleDate, actualStartTime ?? '', timezone),
+        actualEnd: toISOForDate(scheduleDate, actualEndTime ?? '', timezone),
+      });
+      if (conflict) {
+        setTimeConflictError(true);
+        return;
       }
+
+      save({ end_time: isoValue });
     },
-    [scheduleDate, save, timezone, timeConflictError],
+    [scheduleDate, startTime, actualStartTime, actualEndTime, save, timezone, checkConflict],
   );
 
-  // 記録時間: 即時保存（サーバー側で隣接auto-shrink）
+  // 記録時間: 即時保存（サーバー側で隣接auto-shrink）。planned と同じく save 直前に同期判定。
   const handleActualStartChange = useCallback(
     (time: string | null) => {
       localDirtyRef.current = true;
       setActualStartTime(time);
       if (!scheduleDate) return;
 
-      const isoValue = time
-        ? localTimeToUTCISO(
-            scheduleDate,
-            ...(time.split(':').map(Number) as [number, number]),
-            timezone,
-          )
-        : null;
+      const isoValue = toISOForDate(scheduleDate, time ?? '', timezone);
+      if (!isoValue) return;
+
+      const conflict = checkConflict({
+        plannedStart: toISOForDate(scheduleDate, startTime, timezone),
+        plannedEnd: toISOForDate(scheduleDate, endTime, timezone),
+        actualStart: isoValue,
+        actualEnd: toISOForDate(scheduleDate, actualEndTime ?? '', timezone),
+      });
+      if (conflict) {
+        setTimeConflictError(true);
+        return;
+      }
 
       saveImmediate({ actual_start_time: isoValue });
     },
-    [scheduleDate, saveImmediate, timezone],
+    [scheduleDate, saveImmediate, timezone, startTime, endTime, actualEndTime, checkConflict],
   );
 
   const handleActualEndChange = useCallback(
@@ -257,17 +385,37 @@ export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFi
       setActualEndTime(time);
       if (!scheduleDate) return;
 
-      const isoValue = time
-        ? localTimeToUTCISO(
-            scheduleDate,
-            ...(time.split(':').map(Number) as [number, number]),
-            timezone,
-          )
-        : null;
+      const isoValue = toISOForDate(scheduleDate, time ?? '', timezone);
+      if (!isoValue) return;
+
+      if (entry?.origin === 'unplanned' && new Date(isoValue).getTime() > Date.now()) {
+        setTimeConflictError(true);
+        return;
+      }
+
+      const conflict = checkConflict({
+        plannedStart: toISOForDate(scheduleDate, startTime, timezone),
+        plannedEnd: toISOForDate(scheduleDate, endTime, timezone),
+        actualStart: toISOForDate(scheduleDate, actualStartTime ?? '', timezone),
+        actualEnd: isoValue,
+      });
+      if (conflict) {
+        setTimeConflictError(true);
+        return;
+      }
 
       saveImmediate({ actual_end_time: isoValue });
     },
-    [scheduleDate, saveImmediate, timezone],
+    [
+      entry?.origin,
+      scheduleDate,
+      saveImmediate,
+      timezone,
+      startTime,
+      endTime,
+      actualStartTime,
+      checkConflict,
+    ],
   );
 
   // dirty フラグを entry 変更後にクリア（refetch サイクル完了待ち）

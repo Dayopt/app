@@ -5,6 +5,7 @@
  * 全エントリ間で重複を禁止する。
  */
 
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { CalendarEvent } from '../types/calendar.types';
 
 /**
@@ -22,14 +23,40 @@ export function checkClientSideOverlap(
   previewStartTime: Date,
   previewEndTime: Date,
 ): boolean {
-  return events.some((event) => {
-    if (event.id === draggedEventId) return false;
-    if (!event.startDate || !event.endDate) return false;
+  const now = Date.now();
+  const draggedEvent = events.find((event) => event.id === draggedEventId);
+  const isNewFutureEntry = draggedEventId === '' && previewEndTime.getTime() > now;
+  // planned entry は upcoming だけでなく active 状態でも planned 範囲を持つので
+  // 移動先の planned 範囲 overlap を check する。
+  // (サーバー側 ensureNoOverlaps も `origin === 'planned'` で planned 重複を検証する。
+  //  client 側で skip すると server 拒否で snap-back / TIME_OVERLAP toast が出るため UX が悪化する)
+  const shouldCheckPlanned = isNewFutureEntry || draggedEvent?.origin === 'planned';
 
-    // actual 時間が記録されている場合は実質的な占有範囲として使用
-    const effectiveStart = event.actualStartDate ?? event.startDate;
-    const effectiveEnd = event.actualEndDate ?? event.endDate;
+  return hasTwoLayerTimeConflict(
+    events.map((event) => {
+      const plannedStart =
+        event.plannedStartDate ?? (event.origin === 'planned' ? event.startDate : null);
+      const plannedEnd =
+        event.plannedEndDate ?? (event.origin === 'planned' ? event.endDate : null);
+      const actualStart = event.actualStartDate ?? event.startDate;
+      const actualEnd = event.actualEndDate ?? event.endDate;
 
-    return effectiveStart < previewEndTime && effectiveEnd > previewStartTime;
-  });
+      return {
+        id: event.id,
+        plannedStart,
+        plannedEnd,
+        actualStart,
+        actualEnd,
+      };
+    }),
+    {
+      id: draggedEventId,
+      plannedStart: shouldCheckPlanned ? previewStartTime : null,
+      plannedEnd: shouldCheckPlanned ? previewEndTime : null,
+      actualStart: previewStartTime,
+      actualEnd: previewEndTime,
+      forbidFutureActual: draggedEvent?.origin === 'unplanned',
+      now,
+    },
+  );
 }

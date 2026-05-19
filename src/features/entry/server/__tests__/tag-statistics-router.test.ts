@@ -86,8 +86,8 @@ describe('tag-statistics.getTagDashboard (protectedProcedure)', () => {
           description: null,
           start_time: '2026-05-01T00:00:00.000Z',
           end_time: '2026-05-01T01:00:00.000Z',
-          actual_start_time: null,
-          actual_end_time: null,
+          actual_start_time: '2026-05-01T00:00:00.000Z',
+          actual_end_time: '2026-05-01T01:00:00.000Z',
           tag_id: TAG_ID,
         },
         {
@@ -119,8 +119,8 @@ describe('tag-statistics.getTagDashboard (protectedProcedure)', () => {
     expect(from).toHaveBeenCalledWith('entries');
     expect(entriesQuery.or).toHaveBeenCalledWith(
       [
-        'and(start_time.lte.2026-05-07T23:59:59.999Z,end_time.gte.2026-05-01T00:00:00.000Z)',
-        'and(actual_start_time.lte.2026-05-07T23:59:59.999Z,actual_end_time.gte.2026-05-01T00:00:00.000Z)',
+        'and(start_time.lt.2026-05-07T23:59:59.999Z,end_time.gt.2026-05-01T00:00:00.000Z)',
+        'and(actual_start_time.lt.2026-05-07T23:59:59.999Z,actual_end_time.gt.2026-05-01T00:00:00.000Z)',
       ].join(','),
     );
     expect(result.summary).toMatchObject({

@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
-import { Trash2 } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+
+import { getEntryMenuItems } from '@/features/entry';
+import { cn } from '@/lib/utils';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 
 interface EntryContextMenuProps {
@@ -13,10 +13,21 @@ interface EntryContextMenuProps {
   position: { x: number; y: number };
   onClose: () => void;
   onDelete?: ((entry: CalendarEvent) => void) | undefined;
+  onViewStats?: ((entry: CalendarEvent) => void) | undefined;
+  onMarkUnplanned?: ((entry: CalendarEvent) => void) | undefined;
+  onRestorePlanned?: ((entry: CalendarEvent) => void) | undefined;
 }
 
 /** エントリの右クリックコンテキストメニューコンポーネント */
-export const EventContextMenu = ({ entry, position, onClose, onDelete }: EntryContextMenuProps) => {
+export const EventContextMenu = ({
+  entry,
+  position,
+  onClose,
+  onDelete,
+  onViewStats,
+  onMarkUnplanned,
+  onRestorePlanned,
+}: EntryContextMenuProps) => {
   const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -97,15 +108,17 @@ export const EventContextMenu = ({ entry, position, onClose, onDelete }: EntryCo
     onClose();
   };
 
-  const menuItems = [
-    {
-      icon: Trash2,
-      label: t('calendar.contextMenu.delete'),
-      action: () => onDelete?.(entry),
-      available: !!onDelete,
-      dangerous: true,
-    },
-  ].filter((item) => item.available);
+  // 共通の menu items 定義から取得（Inspector の TagRow と同じ source）
+  const menuItems = getEntryMenuItems({
+    origin: entry.origin,
+    tagId: entry.tagId,
+    onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
+    onMarkUnplanned: onMarkUnplanned ? () => onMarkUnplanned(entry) : undefined,
+    onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,
+    onDelete: onDelete ? () => onDelete(entry) : undefined,
+  });
+
+  if (menuItems.length === 0) return null;
 
   return (
     <div
@@ -118,27 +131,30 @@ export const EventContextMenu = ({ entry, position, onClose, onDelete }: EntryCo
         top: adjustedPosition.y,
       }}
     >
-      {menuItems.map((item) => {
+      {menuItems.map((item, index) => {
         const IconComponent = item.icon;
+        const showSeparator = item.dangerous && index > 0 && !menuItems[index - 1]?.dangerous;
 
         return (
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            key={item.label}
-            onClick={() => handleAction(item.action)}
-            className={cn(
-              'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
-              "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-              item.dangerous
-                ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
-                : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
-            )}
-          >
-            <IconComponent />
-            <span>{item.label}</span>
-          </button>
+          <Fragment key={item.key}>
+            {showSeparator && <div role="separator" className="bg-border-subtle -mx-1 my-1 h-px" />}
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={() => handleAction(item.onSelect)}
+              className={cn(
+                'flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left text-sm outline-hidden transition-colors select-none',
+                "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                item.dangerous
+                  ? 'text-destructive hover:bg-destructive-state-hover focus:bg-destructive-state-hover'
+                  : "text-foreground hover:bg-state-hover focus:bg-state-hover [&_svg:not([class*='text-'])]:text-muted-foreground",
+              )}
+            >
+              <IconComponent />
+              <span>{t(item.labelKey)}</span>
+            </button>
+          </Fragment>
         );
       })}
     </div>

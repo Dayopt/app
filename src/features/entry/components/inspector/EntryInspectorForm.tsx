@@ -7,18 +7,16 @@
  * onViewStats は Composition Layer（GlobalOverlays）から注入される。
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
 import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCreateTag, useTagsMap } from '@/features/tags';
-import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
-import { localTimeToUTCISO } from '@/lib/date-utils';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
-import { useEntryMutations } from '../../hooks/useEntryMutations';
+import { getEntryMenuItems } from '../../lib/entry-menu-items';
 import type { FulfillmentScore } from '../../types/entry';
 
 import {
@@ -54,14 +52,17 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     handleEndTimeChange,
     handleActualStartChange,
     handleActualEndChange,
-    setStartTimeLocal,
-    setEndTimeLocal,
-    resetActualTimesLocal,
-    suppressSaveRef,
     autoSave,
   } = handlers;
-  const { timeConflictError, timezone } = state;
-  const { handleDelete, save } = actions;
+  const { timeConflictError } = state;
+  const {
+    handleDelete,
+    updateEntry,
+    convertPlannedToUnplanned,
+    convertUnplannedToPlanned,
+    prepareForStructuralMutation,
+    finishStructuralMutation,
+  } = actions;
 
   // --- タグデータ解決（TagRow に pure props で渡す） ---
   const selectedTag = selectedTagId ? getTagById(selectedTagId) : undefined;
@@ -95,29 +96,48 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   // 充実度（TanStack Query の楽観的更新で即座に反映）
   const fulfillmentScore: FulfillmentScore | null = entry?.fulfillment_score ?? null;
   const isUnplanned = entry?.origin === 'unplanned';
+  const isPlanned = entry?.origin === 'planned';
 
-  const { updateEntry } = useEntryMutations();
-
-  // 計画外にする / 計画に戻す
   const handleMarkUnplanned = useCallback(() => {
-    if (!entryId || !entry) return;
-    updateEntry.mutate({
-      id: entryId,
-      data: {
-        origin: 'unplanned',
-      },
-    });
-  }, [entryId, entry, updateEntry]);
+    if (!entryId || !isPlanned) return;
+    void prepareForStructuralMutation()
+      .then(() => {
+        return convertPlannedToUnplanned.mutateAsync({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み。古いデータのまま変換しない。
+      })
+      .finally(() => {
+        finishStructuralMutation();
+      });
+  }, [
+    entryId,
+    isPlanned,
+    prepareForStructuralMutation,
+    finishStructuralMutation,
+    convertPlannedToUnplanned,
+  ]);
 
   const handleRestorePlanned = useCallback(() => {
-    if (!entryId || !entry) return;
-    updateEntry.mutate({
-      id: entryId,
-      data: {
-        origin: 'planned',
-      },
-    });
-  }, [entryId, entry, updateEntry]);
+    if (!entryId || !isUnplanned) return;
+    void prepareForStructuralMutation()
+      .then(() => {
+        return convertUnplannedToPlanned.mutateAsync({ id: entryId });
+      })
+      .catch(() => {
+        // 保存側で toast 済み。古いデータのまま変換しない。
+      })
+      .finally(() => {
+        finishStructuralMutation();
+      });
+  }, [
+    entryId,
+    isUnplanned,
+    prepareForStructuralMutation,
+    finishStructuralMutation,
+    convertUnplannedToPlanned,
+  ]);
+
   const handleFulfillmentChange = useCallback(
     (score: FulfillmentScore | null) => {
       if (!entryId) return;
@@ -131,13 +151,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
     handleStartTimeChange: autoPlannedStartChange,
     handleEndTimeChange: autoPlannedEndChange,
   } = useAutoAdjustEndTime(startTime, endTime, handleEndTimeChange);
-
-  // 記録付きエントリの予定時間変更確認
-  const hasActualTime = entry?.actual_start_time != null || entry?.actual_end_time != null;
-  const [pendingTimeChange, setPendingTimeChange] = useState<{
-    type: 'start' | 'end';
-    time: string;
-  } | null>(null);
 
   const applyPlannedTimeChange = useCallback(
     (type: 'start' | 'end', time: string) => {
@@ -153,64 +166,12 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   );
 
   const onPlannedStartChange = (time: string) => {
-    if (hasActualTime) {
-      setPendingTimeChange({ type: 'start', time });
-      return;
-    }
     applyPlannedTimeChange('start', time);
   };
 
   const onPlannedEndChange = (time: string) => {
-    if (hasActualTime) {
-      setPendingTimeChange({ type: 'end', time });
-      return;
-    }
     applyPlannedTimeChange('end', time);
   };
-
-  const handleConfirmTimeChange = useCallback(() => {
-    if (!pendingTimeChange || !scheduleDate) return;
-    const { type, time } = pendingTimeChange;
-    const [hours, minutes] = time.split(':').map(Number);
-    const isoValue = localTimeToUTCISO(scheduleDate, hours ?? 0, minutes ?? 0, timezone);
-
-    // autoAdjust 経由の追加 save を抑制
-    suppressSaveRef.current = true;
-
-    // ローカル状態のみ更新（save を発火しない）
-    if (type === 'start') {
-      setStartTimeLocal(time);
-    } else {
-      setEndTimeLocal(time);
-    }
-    resetActualTimesLocal();
-
-    // debounced save にマージ — 先行 pending があってもそのまま合流して1回の mutation
-    save({
-      [type === 'start' ? 'start_time' : 'end_time']: isoValue,
-      actual_start_time: null,
-      actual_end_time: null,
-    });
-    toast.success(t('entry.toast.updated'));
-    setTimeout(() => {
-      suppressSaveRef.current = false;
-    }, 100);
-    setPendingTimeChange(null);
-  }, [
-    pendingTimeChange,
-    scheduleDate,
-    timezone,
-    setStartTimeLocal,
-    setEndTimeLocal,
-    resetActualTimesLocal,
-    suppressSaveRef,
-    save,
-    t,
-  ]);
-
-  const handleCancelTimeChange = useCallback(() => {
-    setPendingTimeChange(null);
-  }, []);
 
   // 記録行の実効値（null → 予定の値を使用）
   const effectiveActualStart = actualStartTime ?? startTime;
@@ -223,6 +184,15 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
 
   if (!entry) return null;
 
+  const menuItems = getEntryMenuItems({
+    origin: entry.origin,
+    tagId: selectedTagId,
+    onViewStats: onViewStats && selectedTagId ? handleViewStats : undefined,
+    onMarkUnplanned: isPlanned ? handleMarkUnplanned : undefined,
+    onRestorePlanned: isUnplanned ? handleRestorePlanned : undefined,
+    onDelete: handleDelete,
+  });
+
   return (
     <div className="px-4 pt-2 pb-4 md:px-6 md:pt-4 md:pb-6">
       {/* Row 0: タグ + 削除ボタン */}
@@ -234,11 +204,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         tagColor={selectedTag?.color}
         onTagChange={handleTagChange}
         onCreateAndSelect={handleCreateAndSelectTag}
-        onViewStats={onViewStats && selectedTagId ? handleViewStats : undefined}
-        onDelete={handleDelete}
-        isUnplanned={isUnplanned}
-        onMarkUnplanned={handleMarkUnplanned}
-        onRestorePlanned={handleRestorePlanned}
+        menuItems={menuItems}
         onCloseInspector={onCloseInspector}
       />
 
@@ -249,7 +215,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
         aria-hidden={!timeConflictError}
       >
         <div className="overflow-hidden">
-          <TimeConflictAlert message={t('calendar.toast.conflictDescription')} />
+          <TimeConflictAlert message={t('entry.errors.timeOverlap')} />
         </div>
       </div>
 
@@ -274,6 +240,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             onEndChange={onPlannedEndChange}
             hasError={timeConflictError}
             disabled={isUnplanned}
+            testId="entry-inspector-planned-time"
           />
 
           {/* 記録行 */}
@@ -283,46 +250,12 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
             startTime={effectiveActualStart}
             endTime={effectiveActualEnd}
             onStartChange={(time) => {
-              if (isUnplanned && scheduleDate) {
-                // 予定外: 記録と予定を1回のmutationで同期
-                const isoValue = time
-                  ? localTimeToUTCISO(
-                      scheduleDate,
-                      ...(time.split(':').map(Number) as [number, number]),
-                      timezone,
-                    )
-                  : null;
-                setStartTimeLocal(time);
-                handleActualStartChange(time);
-                suppressSaveRef.current = true;
-                save({ start_time: isoValue });
-                setTimeout(() => {
-                  suppressSaveRef.current = false;
-                }, 100);
-              } else {
-                handleActualStartChange(time);
-              }
+              handleActualStartChange(time);
             }}
             onEndChange={(time) => {
-              if (isUnplanned && scheduleDate) {
-                const isoValue = time
-                  ? localTimeToUTCISO(
-                      scheduleDate,
-                      ...(time.split(':').map(Number) as [number, number]),
-                      timezone,
-                    )
-                  : null;
-                setEndTimeLocal(time);
-                handleActualEndChange(time);
-                suppressSaveRef.current = true;
-                save({ end_time: isoValue });
-                setTimeout(() => {
-                  suppressSaveRef.current = false;
-                }, 100);
-              } else {
-                handleActualEndChange(time);
-              }
+              handleActualEndChange(time);
             }}
+            testId="entry-inspector-actual-time"
           />
 
           {/* 予定 vs 記録 差分バー */}
@@ -362,16 +295,6 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
           />
         </div>
       </div>
-      {/* 記録リセット確認ダイアログ */}
-      <ConfirmDialog
-        open={pendingTimeChange !== null}
-        onClose={handleCancelTimeChange}
-        onConfirm={handleConfirmTimeChange}
-        title={t('calendar.event.moveWithRecord.title')}
-        description={t('calendar.event.moveWithRecord.description')}
-        variant="warning"
-        confirmLabel={t('calendar.event.moveWithRecord.confirm')}
-      />
     </div>
   );
 }

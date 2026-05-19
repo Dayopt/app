@@ -30,6 +30,8 @@ interface TimeInputProps {
   hasError?: boolean;
   /** この時刻以前は受け付けない（end > start 制約用、HH:mm）。違反入力は revert される。 */
   minTime?: string;
+  /** E2E/アクセシビリティ確認用の安定セレクタ */
+  testId?: string | undefined;
 }
 
 const PRESET_STEP_MINUTES = 15;
@@ -66,6 +68,7 @@ export function TimeInput({
   disabled = false,
   hasError = false,
   minTime,
+  testId,
 }: TimeInputProps) {
   const isMobile = useIsMobile();
   const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
@@ -134,6 +137,7 @@ export function TimeInput({
       <>
         <button
           type="button"
+          data-testid={testId}
           onClick={() => setPickerOpen(true)}
           disabled={disabled}
           aria-label={value ? `${value} を編集` : '時刻を入力'}
@@ -263,6 +267,7 @@ export function TimeInput({
       <PopoverAnchor asChild>
         <input
           ref={inputRef}
+          data-testid={testId}
           type="text"
           inputMode="numeric"
           value={draft}
