@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:run": "vitest run",
     "test:watch": "vitest",
+    "prebuild": "pnpm generate:search-index",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",
