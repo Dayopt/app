@@ -301,7 +301,7 @@ export function TimeInput({
           id="time-input-listbox"
           ref={listRef}
           role="listbox"
-          className="scrollbar-thin max-h-52 touch-pan-y overflow-y-auto overscroll-contain px-1 py-1"
+          className="max-h-52 touch-pan-y scrollbar-thin overflow-y-auto overscroll-contain px-1 py-1"
           style={{
             scrollbarColor:
               'color-mix(in oklch, var(--color-muted-foreground) 30%, transparent) transparent',

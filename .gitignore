@@ -135,6 +135,9 @@ yarn.lock
 # Next.js build output
 .next
 
+# Turborepo cache
+.turbo/
+
 # Nuxt.js build / generate output
 .nuxt
 dist

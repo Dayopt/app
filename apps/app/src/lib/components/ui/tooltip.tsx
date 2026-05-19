@@ -61,10 +61,16 @@ function HoverTooltip({
   const triggerRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(false);
 
   const showTooltip = useCallback(() => {
     if (disabled) return;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      if (!mountedRef.current || typeof window === 'undefined') return;
       setIsVisible(true);
     }, delayMs);
   }, [delayMs, disabled]);
@@ -123,9 +129,12 @@ function HoverTooltip({
 
   // クリーンアップ
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
   }, []);

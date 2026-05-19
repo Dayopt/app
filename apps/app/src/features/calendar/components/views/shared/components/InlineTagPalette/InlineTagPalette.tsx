@@ -356,6 +356,92 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     });
   }, [queryClient, pendingSelection, timezone, isPast]);
 
+  // 現在の selection が他 entry と重なるかを live 判定（resize や外部更新に追随）。
+  // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
+  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
+  const nowForPastCheck = Date.now();
+  const isPast = (() => {
+    if (!pendingSelection) return false;
+    const { date: selDate, endHour, endMinute } = pendingSelection;
+    const endLocal = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      endHour,
+      endMinute,
+    );
+    return endLocal.getTime() <= nowForPastCheck;
+  })();
+
+  // hooks は早期 return より前で呼ぶ必要があるため、null セーフに書く。
+  const hasConflict = useMemo(() => {
+    if (!pendingSelection) return false;
+    const { date: selDate, startHour, startMinute, endHour, endMinute } = pendingSelection;
+    const startMin = startHour * 60 + startMinute;
+    const endMin = endHour * 60 + endMinute;
+    if (endMin <= startMin) return false;
+
+    const localStart = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      startHour,
+      startMinute,
+    );
+    const localEnd = new Date(
+      selDate.getFullYear(),
+      selDate.getMonth(),
+      selDate.getDate(),
+      endHour,
+      endMinute,
+    );
+    const utcStart = convertFromTimezone(localStart, timezone);
+    const utcEnd = convertFromTimezone(localEnd, timezone);
+
+    const cachedLists = queryClient.getQueriesData<
+      Array<{
+        id: string;
+        start_time: string | null;
+        end_time: string | null;
+        actual_start_time: string | null;
+        actual_end_time: string | null;
+      }>
+    >({ predicate: isEntriesListQuery });
+    const seen = new Set<string>();
+    const events: Array<{
+      id: string;
+      plannedStart: string | null;
+      plannedEnd: string | null;
+      actualStart: string | null;
+      actualEnd: string | null;
+    }> = [];
+    for (const [, data] of cachedLists) {
+      if (!data) continue;
+      for (const e of data) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        events.push({
+          id: e.id,
+          plannedStart: e.start_time,
+          plannedEnd: e.end_time,
+          actualStart: e.actual_start_time,
+          actualEnd: e.actual_end_time,
+        });
+      }
+    }
+
+    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
+    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
+    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
+    return hasTwoLayerTimeConflict(events, {
+      id: '',
+      plannedStart: isPast ? null : utcStart.toISOString(),
+      plannedEnd: isPast ? null : utcEnd.toISOString(),
+      actualStart: utcStart.toISOString(),
+      actualEnd: utcEnd.toISOString(),
+    });
+  }, [queryClient, pendingSelection, timezone, isPast]);
+
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;
   if (date && !isSameDay(date, pendingSelection.date)) return null;

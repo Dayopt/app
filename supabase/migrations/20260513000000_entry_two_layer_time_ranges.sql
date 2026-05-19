@@ -146,6 +146,64 @@ ALTER TABLE public.entries
     )
   ) NOT VALID;
 
+-- Tag recent entries must keep unplanned rows visible after their planned
+-- range is cleared. Preserve the existing RPC shape by returning the effective
+-- display range in start_time/end_time.
+CREATE OR REPLACE FUNCTION public.get_tag_recent_entries(
+  p_user_id UUID,
+  p_tag_id UUID,
+  p_limit INT DEFAULT 10
+)
+RETURNS TABLE(
+  entry_id UUID,
+  title TEXT,
+  start_time TIMESTAMPTZ,
+  end_time TIMESTAMPTZ,
+  duration_minutes DOUBLE PRECISION,
+  planned_minutes DOUBLE PRECISION,
+  fulfillment_score INT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+BEGIN
+  RETURN QUERY
+    SELECT
+      e.id AS entry_id,
+      e.title::TEXT,
+      CASE WHEN e.origin = 'unplanned' THEN e.actual_start_time ELSE e.start_time END AS start_time,
+      CASE WHEN e.origin = 'unplanned' THEN e.actual_end_time ELSE e.end_time END AS end_time,
+      EXTRACT(EPOCH FROM (
+        (CASE WHEN e.origin = 'unplanned' THEN e.actual_end_time ELSE e.end_time END)
+        - (CASE WHEN e.origin = 'unplanned' THEN e.actual_start_time ELSE e.start_time END)
+      ))::DOUBLE PRECISION / 60 AS duration_minutes,
+      e.duration_minutes::DOUBLE PRECISION AS planned_minutes,
+      e.fulfillment_score::INT
+    FROM public.entries e
+    WHERE e.user_id = p_user_id
+      AND e.tag_id = p_tag_id
+      AND e.deleted_at IS NULL
+      AND (
+        (
+          e.origin = 'planned'
+          AND e.start_time IS NOT NULL
+          AND e.end_time IS NOT NULL
+        )
+        OR
+        (
+          e.origin = 'unplanned'
+          AND e.actual_start_time IS NOT NULL
+          AND e.actual_end_time IS NOT NULL
+        )
+      )
+    ORDER BY
+      CASE WHEN e.origin = 'unplanned' THEN e.actual_start_time ELSE e.start_time END DESC
+    LIMIT p_limit;
+END;
+$$;
+
 -- Review Time P/L must treat planned minutes and actual minutes as separate
 -- layers. Unplanned rows have 0 planned minutes and actual minutes from actual
 -- range.
