@@ -19,10 +19,11 @@ import type { CoverageMetric, MetricKey, QualitySnapshot } from './quality-metri
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const APP_ROOT = resolve(ROOT, 'apps/app');
 const REPORTS_DIR = resolve(ROOT, 'quality-reports');
 const MIGRATIONS_DIR = resolve(ROOT, 'supabase/migrations');
-const UI_DIR = resolve(ROOT, 'src/components/ui');
-const BUDGET_FILE = resolve(ROOT, '.feature-boundary-budget.json');
+const UI_DIR = resolve(APP_ROOT, 'src/lib/components/ui');
+const BUDGET_FILE = resolve(APP_ROOT, '.feature-boundary-budget.json');
 
 // ---------------------------------------------------------------------------
 // CLI引数パース
@@ -73,7 +74,7 @@ function collectTypeSafety(): QualitySnapshot['metrics']['typeSafety'] {
     return { errors: 0, status: 'pass' };
   }
 
-  const output = exec('npx tsc --noEmit 2>&1', { ignoreError: true });
+  const output = exec('pnpm --filter @dayopt/app typecheck 2>&1', { ignoreError: true });
   const errorLines = output.split('\n').filter((line) => /error TS\d+/.test(line));
   return {
     errors: errorLines.length,
@@ -87,9 +88,9 @@ function collectTestCoverage(): QualitySnapshot['metrics']['testCoverage'] {
     return { statements: zeroCov, functions: zeroCov, branches: zeroCov };
   }
 
-  exec('npx vitest --project unit run --coverage', { ignoreError: true });
+  exec('pnpm --filter @dayopt/app test:coverage', { ignoreError: true });
 
-  const coveragePath = resolve(ROOT, 'coverage/coverage-final.json');
+  const coveragePath = resolve(APP_ROOT, 'coverage/coverage-final.json');
   if (!existsSync(coveragePath)) {
     console.warn('  ⚠ coverage-final.json not found, skipping testCoverage');
     return { statements: zeroCov, functions: zeroCov, branches: zeroCov };
@@ -237,7 +238,7 @@ function collectCircularDeps(): QualitySnapshot['metrics']['circularDeps'] {
   }
 
   const output = exec(
-    'npx madge --circular --json --ts-config ./tsconfig.json --extensions ts,tsx src/',
+    'pnpm --dir apps/app exec madge --circular --json --ts-config ./tsconfig.json --extensions ts,tsx src/',
     {
       ignoreError: true,
     },
@@ -256,7 +257,7 @@ function collectDeadCode(): QualitySnapshot['metrics']['deadCode'] {
     return { unusedExports: 0, unusedFiles: 0 };
   }
 
-  const output = exec('npx knip --reporter json', { ignoreError: true });
+  const output = exec('pnpm --filter @dayopt/app quality:deadcode', { ignoreError: true });
 
   try {
     const result = JSON.parse(output) as {
@@ -280,7 +281,7 @@ function collectA11y(): QualitySnapshot['metrics']['a11y'] {
     return { violations: 0, status: 'skipped' };
   }
 
-  const output = exec('npx vitest --project storybook run --reporter json 2>&1', {
+  const output = exec('pnpm --filter @dayopt/storybook test-storybook -- --run --reporter json 2>&1', {
     ignoreError: true,
   });
 
@@ -326,7 +327,7 @@ function collectBundleSize(): QualitySnapshot['metrics']['bundleSize'] {
     };
   }
 
-  const statsFile = resolve(ROOT, '.next/diagnostics/route-bundle-stats.json');
+  const statsFile = resolve(APP_ROOT, '.next/diagnostics/route-bundle-stats.json');
   if (!existsSync(statsFile)) {
     console.log('    (.next/diagnostics not found — skipping bundle size)');
     return {
@@ -339,11 +340,14 @@ function collectBundleSize(): QualitySnapshot['metrics']['bundleSize'] {
   }
 
   try {
-    exec('npx tsx scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json', {
-      ignoreError: true,
-    });
+    exec(
+      'pnpm --filter @dayopt/app exec tsx ../../scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json',
+      {
+        ignoreError: true,
+      },
+    );
 
-    const resultFile = resolve(ROOT, '.next/diagnostics/budget-result.json');
+    const resultFile = resolve(APP_ROOT, '.next/diagnostics/budget-result.json');
     if (!existsSync(resultFile)) {
       return {
         loginPageGzipKB: 0,

@@ -19,7 +19,9 @@
     "/billing.getInfo": {
       "get": {
         "operationId": "billing.getInfo",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "課金情報取得（サブスクリプション状態）",
         "security": [
           {
@@ -47,7 +49,9 @@
     "/billing.getOverview": {
       "get": {
         "operationId": "billing.getOverview",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "課金情報一括取得（N+1解消、billingInfo+支払方法+請求書）",
         "security": [
           {
@@ -75,7 +79,9 @@
     "/billing.createCheckoutSession": {
       "post": {
         "operationId": "billing.createCheckoutSession",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "Stripe Checkoutセッション作成",
         "security": [
           {
@@ -113,7 +119,9 @@
     "/billing.getPaymentMethod": {
       "get": {
         "operationId": "billing.getPaymentMethod",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "デフォルト支払い方法取得",
         "security": [
           {
@@ -141,7 +149,9 @@
     "/billing.getInvoices": {
       "get": {
         "operationId": "billing.getInvoices",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "請求書一覧取得",
         "security": [
           {
@@ -169,7 +179,9 @@
     "/billing.createPortalSession": {
       "post": {
         "operationId": "billing.createPortalSession",
-        "tags": ["billing"],
+        "tags": [
+          "billing"
+        ],
         "summary": "Stripe Customer Portalセッション作成",
         "security": [
           {
@@ -197,7 +209,9 @@
     "/contact.submit": {
       "post": {
         "operationId": "contact.submit",
-        "tags": ["contact"],
+        "tags": [
+          "contact"
+        ],
         "summary": "お問い合わせ送信（GitHub Issue作成）",
         "security": [
           {
@@ -235,7 +249,9 @@
     "/email.sendWelcome": {
       "post": {
         "operationId": "email.sendWelcome",
-        "tags": ["email"],
+        "tags": [
+          "email"
+        ],
         "summary": "ウェルカムメール送信",
         "security": [
           {
@@ -270,11 +286,13 @@
         "x-auth-level": "protected"
       }
     },
-    "/email.sendReminder": {
+    "/email.sendTrialStart": {
       "post": {
-        "operationId": "email.sendReminder",
-        "tags": ["email"],
-        "summary": "プランリマインダーメール送信",
+        "operationId": "email.sendTrialStart",
+        "tags": [
+          "email"
+        ],
+        "summary": "トライアル開始メール送信",
         "security": [
           {
             "sessionCookie": []
@@ -288,7 +306,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/email_sendReminder_input"
+                "$ref": "#/components/schemas/email_sendTrialStart_input"
               }
             }
           }
@@ -308,11 +326,13 @@
         "x-auth-level": "protected"
       }
     },
-    "/email.sendOverdue": {
+    "/email.sendTrialExpiring": {
       "post": {
-        "operationId": "email.sendOverdue",
-        "tags": ["email"],
-        "summary": "期限超過通知メール送信",
+        "operationId": "email.sendTrialExpiring",
+        "tags": [
+          "email"
+        ],
+        "summary": "トライアル残3日メール送信",
         "security": [
           {
             "sessionCookie": []
@@ -326,7 +346,247 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/email_sendOverdue_input"
+                "$ref": "#/components/schemas/email_sendTrialExpiring_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendTrialExpired": {
+      "post": {
+        "operationId": "email.sendTrialExpired",
+        "tags": [
+          "email"
+        ],
+        "summary": "トライアル期限切れメール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendTrialExpired_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendProStart": {
+      "post": {
+        "operationId": "email.sendProStart",
+        "tags": [
+          "email"
+        ],
+        "summary": "Pro開始メール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendProStart_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendPaymentFailed": {
+      "post": {
+        "operationId": "email.sendPaymentFailed",
+        "tags": [
+          "email"
+        ],
+        "summary": "支払い失敗メール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendPaymentFailed_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendPaymentRecovered": {
+      "post": {
+        "operationId": "email.sendPaymentRecovered",
+        "tags": [
+          "email"
+        ],
+        "summary": "支払い復旧メール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendPaymentRecovered_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendPasswordChanged": {
+      "post": {
+        "operationId": "email.sendPasswordChanged",
+        "tags": [
+          "email"
+        ],
+        "summary": "パスワード変更通知メール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendPasswordChanged_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/email.sendCancellationConfirm": {
+      "post": {
+        "operationId": "email.sendCancellationConfirm",
+        "tags": [
+          "email"
+        ],
+        "summary": "Pro解約確認メール送信",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/email_sendCancellationConfirm_input"
               }
             }
           }
@@ -349,7 +609,9 @@
     "/email.sendAccountDeletion": {
       "post": {
         "operationId": "email.sendAccountDeletion",
-        "tags": ["email"],
+        "tags": [
+          "email"
+        ],
         "summary": "アカウント削除確認メール送信（GDPR対応）",
         "security": [
           {
@@ -387,7 +649,9 @@
     "/email.sendTest": {
       "post": {
         "operationId": "email.sendTest",
-        "tags": ["email"],
+        "tags": [
+          "email"
+        ],
         "summary": "テストメール送信（開発環境のみ）",
         "deprecated": true,
         "security": [
@@ -426,7 +690,9 @@
     "/entries.list": {
       "get": {
         "operationId": "entries.list",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリ一覧取得（フィルタ・ソート・ページネーション対応）",
         "security": [
           {
@@ -469,7 +735,9 @@
     "/entries.getById": {
       "get": {
         "operationId": "entries.getById",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリ詳細取得（タグ情報含む）",
         "security": [
           {
@@ -512,7 +780,9 @@
     "/entries.create": {
       "post": {
         "operationId": "entries.create",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリ作成（日次500件上限）",
         "security": [
           {
@@ -550,7 +820,9 @@
     "/entries.update": {
       "post": {
         "operationId": "entries.update",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリ更新（楽観的ロック対応）",
         "security": [
           {
@@ -585,10 +857,92 @@
         "x-auth-level": "protected"
       }
     },
+    "/entries.convertPlannedToUnplanned": {
+      "post": {
+        "operationId": "entries.convertPlannedToUnplanned",
+        "tags": [
+          "entries"
+        ],
+        "summary": "planned エントリを予定外記録へ変換",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/entries_convertPlannedToUnplanned_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/entries.convertUnplannedToPlanned": {
+      "post": {
+        "operationId": "entries.convertUnplannedToPlanned",
+        "tags": [
+          "entries"
+        ],
+        "summary": "unplanned エントリを予定へ変換",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/entries_convertUnplannedToPlanned_input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
     "/entries.delete": {
       "post": {
         "operationId": "entries.delete",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリ削除（ソフトデリート、復元可能）",
         "security": [
           {
@@ -626,7 +980,9 @@
     "/entries.restore": {
       "post": {
         "operationId": "entries.restore",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "ソフト削除されたエントリを復元",
         "security": [
           {
@@ -664,7 +1020,9 @@
     "/entries.bulkUpdate": {
       "post": {
         "operationId": "entries.bulkUpdate",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "複数エントリの一括更新",
         "security": [
           {
@@ -702,7 +1060,9 @@
     "/entries.bulkDelete": {
       "post": {
         "operationId": "entries.bulkDelete",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "複数エントリの一括削除（ソフトデリート）",
         "security": [
           {
@@ -740,7 +1100,9 @@
     "/entries.bulkAddTags": {
       "post": {
         "operationId": "entries.bulkAddTags",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "複数エントリにタグを一括設定",
         "security": [
           {
@@ -775,167 +1137,12 @@
         "x-auth-level": "protected"
       }
     },
-    "/entries.getInstances": {
-      "get": {
-        "operationId": "entries.getInstances",
-        "tags": ["entries"],
-        "summary": "繰り返しエントリの例外情報取得（バッチ）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/entries_getInstances_input"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/entries.createInstance": {
-      "post": {
-        "operationId": "entries.createInstance",
-        "tags": ["entries"],
-        "summary": "繰り返しエントリの例外作成（変更/キャンセル/移動）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/entries_createInstance_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/entries.deleteInstance": {
-      "post": {
-        "operationId": "entries.deleteInstance",
-        "tags": ["entries"],
-        "summary": "繰り返しエントリの例外削除",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/entries_deleteInstance_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/entries.splitRecurrence": {
-      "post": {
-        "operationId": "entries.splitRecurrence",
-        "tags": ["entries"],
-        "summary": "繰り返しエントリ分割（この日以降を別エントリに）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/entries_splitRecurrence_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
     "/entries.addTag": {
       "post": {
         "operationId": "entries.addTag",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリにタグ追加（upsert）",
         "security": [
           {
@@ -973,7 +1180,9 @@
     "/entries.removeTag": {
       "post": {
         "operationId": "entries.removeTag",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリからタグ削除",
         "security": [
           {
@@ -1011,7 +1220,9 @@
     "/entries.setTags": {
       "post": {
         "operationId": "entries.setTags",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エントリのタグ設定（1タグ制約、nullで解除）",
         "security": [
           {
@@ -1049,7 +1260,9 @@
     "/entries.getTagStats": {
       "get": {
         "operationId": "entries.getTagStats",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "タグ別統計取得（エントリ数・最終使用日）",
         "security": [
           {
@@ -1077,7 +1290,9 @@
     "/entries.getTimeByTag": {
       "get": {
         "operationId": "entries.getTimeByTag",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "タグ別時間集計（期間フィルタ対応）",
         "security": [
           {
@@ -1120,7 +1335,9 @@
     "/entries.getDailyHours": {
       "get": {
         "operationId": "entries.getDailyHours",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "日別記録時間取得（ヒートマップ用）",
         "security": [
           {
@@ -1163,7 +1380,9 @@
     "/entries.getHourlyDistribution": {
       "get": {
         "operationId": "entries.getHourlyDistribution",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "時間帯別分布取得（2時間スロット）",
         "security": [
           {
@@ -1195,18 +1414,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getDayOfWeekDistribution": {
       "get": {
         "operationId": "entries.getDayOfWeekDistribution",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "曜日別分布取得（月曜始まり）",
         "security": [
           {
@@ -1238,18 +1462,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getMonthlyTrend": {
       "get": {
         "operationId": "entries.getMonthlyTrend",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "月別トレンド取得（デフォルト12ヶ月）",
         "security": [
           {
@@ -1281,19 +1510,24 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
-    "/entries.getPlanRate": {
+    "/entries.getEntryRate": {
       "get": {
-        "operationId": "entries.getPlanRate",
-        "tags": ["entries"],
-        "summary": "計画率KPI（計画エントリ / 全エントリ）",
+        "operationId": "entries.getEntryRate",
+        "tags": [
+          "entries"
+        ],
+        "summary": "エントリ率KPI（計画エントリ / 全エントリ）",
         "security": [
           {
             "sessionCookie": []
@@ -1311,7 +1545,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/entries_getPlanRate_input"
+                  "$ref": "#/components/schemas/entries_getEntryRate_input"
                 }
               }
             }
@@ -1324,18 +1558,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getEstimationAccuracy": {
       "get": {
         "operationId": "entries.getEstimationAccuracy",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "見積もり精度KPI（タグ別の予定vs実績）",
         "security": [
           {
@@ -1367,18 +1606,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getEnergyMap": {
       "get": {
         "operationId": "entries.getEnergyMap",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "エネルギーマップ（時間帯×曜日の活動分布）",
         "security": [
           {
@@ -1410,18 +1654,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getContextSwitches": {
       "get": {
         "operationId": "entries.getContextSwitches",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "コンテキストスイッチ回数（タグ変化頻度）",
         "security": [
           {
@@ -1453,18 +1702,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getBlankRate": {
       "get": {
         "operationId": "entries.getBlankRate",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "空白率KPI（未スケジュール時間の割合）",
         "security": [
           {
@@ -1496,18 +1750,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getCumulativeTime": {
       "get": {
         "operationId": "entries.getCumulativeTime",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "合計記録時間取得（分単位）",
         "security": [
           {
@@ -1539,18 +1798,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getAvgFulfillment": {
       "get": {
         "operationId": "entries.getAvgFulfillment",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "平均充実度取得（1-5スケール）",
         "security": [
           {
@@ -1582,18 +1846,23 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
     "/entries.getStreak": {
       "get": {
         "operationId": "entries.getStreak",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "連続アクティブ日数（ストリーク）取得",
         "security": [
           {
@@ -1621,7 +1890,9 @@
     "/entries.getStatsOverview": {
       "get": {
         "operationId": "entries.getStatsOverview",
-        "tags": ["entries"],
+        "tags": [
+          "entries"
+        ],
         "summary": "全KPIサマリー一括取得（7指標を1クエリ）",
         "security": [
           {
@@ -1653,19 +1924,24 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "429": {
             "description": "Too Many Requests（100 req/min）"
           }
         },
         "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
+        "x-auth-level": "pro"
       }
     },
-    "/suggestions.recentTitles": {
+    "/entries.getTimePL": {
       "get": {
-        "operationId": "suggestions.recentTitles",
-        "tags": ["suggestions"],
-        "summary": "最近のタイトル+タグサジェスト取得",
+        "operationId": "entries.getTimePL",
+        "tags": [
+          "entries"
+        ],
+        "summary": "Time P/L データ取得（タグ別予実 + 日次累積）",
         "security": [
           {
             "sessionCookie": []
@@ -1683,7 +1959,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/suggestions_recentTitles_input"
+                  "$ref": "#/components/schemas/entries_getTimePL_input"
                 }
               }
             }
@@ -1704,10 +1980,633 @@
         "x-auth-level": "protected"
       }
     },
+    "/entries.getStatsPageData": {
+      "get": {
+        "operationId": "entries.getStatsPageData",
+        "tags": [
+          "entries"
+        ],
+        "summary": "Stats全データ一括取得（12クエリ統合）",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getStatsPageData_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagDashboard": {
+      "get": {
+        "operationId": "entries.getTagDashboard",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ詳細ダッシュボードデータ",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagDashboard_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
+    "/entries.getTagOverview": {
+      "get": {
+        "operationId": "entries.getTagOverview",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ詳細ページ用統合概要データ",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagOverview_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagTimeline": {
+      "get": {
+        "operationId": "entries.getTagTimeline",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ詳細ページ用タイムラインデータ",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagTimeline_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagCumulativeTime": {
+      "get": {
+        "operationId": "entries.getTagCumulativeTime",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別合計時間",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagCumulativeTime_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagAvgFulfillment": {
+      "get": {
+        "operationId": "entries.getTagAvgFulfillment",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別平均充実度",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagAvgFulfillment_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagPlanRate": {
+      "get": {
+        "operationId": "entries.getTagPlanRate",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別計画率",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagPlanRate_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagHourlyDistribution": {
+      "get": {
+        "operationId": "entries.getTagHourlyDistribution",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別時間帯分布",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagHourlyDistribution_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagDowDistribution": {
+      "get": {
+        "operationId": "entries.getTagDowDistribution",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別曜日分布",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagDowDistribution_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getChildTagBreakdown": {
+      "get": {
+        "operationId": "entries.getChildTagBreakdown",
+        "tags": [
+          "entries"
+        ],
+        "summary": "子タグ内訳",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getChildTagBreakdown_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagFulfillmentDistribution": {
+      "get": {
+        "operationId": "entries.getTagFulfillmentDistribution",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別充実度分布",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagFulfillmentDistribution_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagAccuracyTrend": {
+      "get": {
+        "operationId": "entries.getTagAccuracyTrend",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグ別見積もり精度推移",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagAccuracyTrend_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
+    "/entries.getTagRecentEntries": {
+      "get": {
+        "operationId": "entries.getTagRecentEntries",
+        "tags": [
+          "entries"
+        ],
+        "summary": "タグの直近エントリ一覧",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "input",
+            "in": "query",
+            "required": true,
+            "description": "JSON-encoded input（SuperJSON形式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/entries_getTagRecentEntries_input"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "pro"
+      }
+    },
     "/tags.list": {
       "get": {
         "operationId": "tags.list",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ一覧取得（ソート対応）",
         "security": [
           {
@@ -1747,10 +2646,42 @@
         "x-auth-level": "protected"
       }
     },
+    "/tags.listHierarchy": {
+      "get": {
+        "operationId": "tags.listHierarchy",
+        "tags": [
+          "tags"
+        ],
+        "summary": "タグ階層取得",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {
+            "oauthBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success（SuperJSON形式）"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Too Many Requests（100 req/min）"
+          }
+        },
+        "x-rate-limit": "100 req/min",
+        "x-auth-level": "protected"
+      }
+    },
     "/tags.getById": {
       "get": {
         "operationId": "tags.getById",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ詳細取得",
         "security": [
           {
@@ -1793,7 +2724,9 @@
     "/tags.create": {
       "post": {
         "operationId": "tags.create",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ作成",
         "security": [
           {
@@ -1831,7 +2764,9 @@
     "/tags.update": {
       "post": {
         "operationId": "tags.update",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ更新（名前・色）",
         "security": [
           {
@@ -1869,7 +2804,9 @@
     "/tags.merge": {
       "post": {
         "operationId": "tags.merge",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグマージ（ソース→ターゲットに関連移行）",
         "security": [
           {
@@ -1907,7 +2844,9 @@
     "/tags.delete": {
       "post": {
         "operationId": "tags.delete",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ削除（エントリ削除/再割当て選択可）",
         "security": [
           {
@@ -1945,7 +2884,9 @@
     "/tags.renameGroup": {
       "post": {
         "operationId": "tags.renameGroup",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "グループ一括リネーム（コロン記法プレフィックス）",
         "security": [
           {
@@ -1983,7 +2924,9 @@
     "/tags.ungroupTags": {
       "post": {
         "operationId": "tags.ungroupTags",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "グループ解除（プレフィックス除去）",
         "security": [
           {
@@ -2021,7 +2964,9 @@
     "/tags.deleteGroup": {
       "post": {
         "operationId": "tags.deleteGroup",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "グループ一括削除",
         "security": [
           {
@@ -2059,7 +3004,9 @@
     "/tags.reorder": {
       "post": {
         "operationId": "tags.reorder",
-        "tags": ["tags"],
+        "tags": [
+          "tags"
+        ],
         "summary": "タグ並び替え（バッチsort_order更新、最大200件）",
         "security": [
           {
@@ -2097,7 +3044,9 @@
     "/user.deleteAccount": {
       "post": {
         "operationId": "user.deleteAccount",
-        "tags": ["user"],
+        "tags": [
+          "user"
+        ],
         "summary": "アカウント即時削除（CASCADE DELETE）",
         "security": [
           {
@@ -2135,7 +3084,9 @@
     "/user.deleteBlocks": {
       "post": {
         "operationId": "user.deleteBlocks",
-        "tags": ["user"],
+        "tags": [
+          "user"
+        ],
         "summary": "全エントリを削除（タグ・設定は保持）",
         "security": [
           {
@@ -2173,7 +3124,9 @@
     "/user.deleteAllData": {
       "post": {
         "operationId": "user.deleteAllData",
-        "tags": ["user"],
+        "tags": [
+          "user"
+        ],
         "summary": "全データを削除（アカウントは保持）",
         "security": [
           {
@@ -2211,7 +3164,9 @@
     "/user.exportData": {
       "get": {
         "operationId": "user.exportData",
-        "tags": ["user"],
+        "tags": [
+          "user"
+        ],
         "summary": "ユーザーデータエクスポート（GDPR対応）",
         "security": [
           {
@@ -2239,7 +3194,9 @@
     "/user.verifyRecoveryCode": {
       "post": {
         "operationId": "user.verifyRecoveryCode",
-        "tags": ["user"],
+        "tags": [
+          "user"
+        ],
         "summary": "リカバリーコードでMFA認証（MFA無効化 + ログイン許可）",
         "security": [
           {
@@ -2274,446 +3231,12 @@
         "x-auth-level": "protected"
       }
     },
-    "/notifications.list": {
-      "get": {
-        "operationId": "notifications.list",
-        "tags": ["notifications"],
-        "summary": "通知一覧取得（フィルタ・ページネーション対応）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/notifications_list_input"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.unreadCount": {
-      "get": {
-        "operationId": "notifications.unreadCount",
-        "tags": ["notifications"],
-        "summary": "未読通知数取得",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.getById": {
-      "get": {
-        "operationId": "notifications.getById",
-        "tags": ["notifications"],
-        "summary": "通知詳細取得",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "input",
-            "in": "query",
-            "required": true,
-            "description": "JSON-encoded input（SuperJSON形式）",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/notifications_getById_input"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.markAsRead": {
-      "post": {
-        "operationId": "notifications.markAsRead",
-        "tags": ["notifications"],
-        "summary": "通知を既読にする（単一）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notifications_markAsRead_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.markAllAsRead": {
-      "post": {
-        "operationId": "notifications.markAllAsRead",
-        "tags": ["notifications"],
-        "summary": "通知を一括既読にする",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notifications_markAllAsRead_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.delete": {
-      "post": {
-        "operationId": "notifications.delete",
-        "tags": ["notifications"],
-        "summary": "通知削除（単一）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notifications_delete_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notifications.deleteAllRead": {
-      "post": {
-        "operationId": "notifications.deleteAllRead",
-        "tags": ["notifications"],
-        "summary": "既読通知を全削除",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notificationPreferences.get": {
-      "get": {
-        "operationId": "notificationPreferences.get",
-        "tags": ["notificationPreferences"],
-        "summary": "通知設定取得（ブラウザ/メール/プッシュ）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notificationPreferences.updateBrowserNotifications": {
-      "post": {
-        "operationId": "notificationPreferences.updateBrowserNotifications",
-        "tags": ["notificationPreferences"],
-        "summary": "ブラウザ通知ON/OFF更新",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notificationPreferences_updateBrowserNotifications_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notificationPreferences.updateEmailNotifications": {
-      "post": {
-        "operationId": "notificationPreferences.updateEmailNotifications",
-        "tags": ["notificationPreferences"],
-        "summary": "メール通知ON/OFF更新",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notificationPreferences_updateEmailNotifications_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notificationPreferences.updatePushNotifications": {
-      "post": {
-        "operationId": "notificationPreferences.updatePushNotifications",
-        "tags": ["notificationPreferences"],
-        "summary": "プッシュ通知ON/OFF更新",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notificationPreferences_updatePushNotifications_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
-    "/notificationPreferences.updateDefaultReminderMinutes": {
-      "post": {
-        "operationId": "notificationPreferences.updateDefaultReminderMinutes",
-        "tags": ["notificationPreferences"],
-        "summary": "デフォルトリマインダー時間更新（分単位）",
-        "security": [
-          {
-            "sessionCookie": []
-          },
-          {
-            "oauthBearer": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/notificationPreferences_updateDefaultReminderMinutes_input"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success（SuperJSON形式）"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "429": {
-            "description": "Too Many Requests（100 req/min）"
-          }
-        },
-        "x-rate-limit": "100 req/min",
-        "x-auth-level": "protected"
-      }
-    },
     "/userSettings.get": {
       "get": {
         "operationId": "userSettings.get",
-        "tags": ["userSettings"],
+        "tags": [
+          "userSettings"
+        ],
         "summary": "ユーザー設定取得（カレンダー・表示・クロノタイプ等）",
         "security": [
           {
@@ -2741,7 +3264,9 @@
     "/userSettings.update": {
       "post": {
         "operationId": "userSettings.update",
-        "tags": ["userSettings"],
+        "tags": [
+          "userSettings"
+        ],
         "summary": "ユーザー設定更新（upsert）",
         "security": [
           {
@@ -2779,7 +3304,9 @@
     "/userSettings.getICalToken": {
       "get": {
         "operationId": "userSettings.getICalToken",
-        "tags": ["userSettings"],
+        "tags": [
+          "userSettings"
+        ],
         "summary": "iCalフィードトークン取得",
         "security": [
           {
@@ -2807,7 +3334,9 @@
     "/userSettings.regenerateICalToken": {
       "post": {
         "operationId": "userSettings.regenerateICalToken",
-        "tags": ["userSettings"],
+        "tags": [
+          "userSettings"
+        ],
         "summary": "iCalフィードトークン再生成",
         "security": [
           {
@@ -2862,7 +3391,9 @@
             "pattern": "^price\\_"
           }
         },
-        "required": ["priceId"],
+        "required": [
+          "priceId"
+        ],
         "additionalProperties": false
       },
       "contact_submit_input": {
@@ -2870,7 +3401,12 @@
         "properties": {
           "category": {
             "type": "string",
-            "enum": ["bug", "feature", "question", "other"]
+            "enum": [
+              "bug",
+              "feature",
+              "question",
+              "other"
+            ]
           },
           "message": {
             "type": "string",
@@ -2896,11 +3432,21 @@
                 "type": "string"
               }
             },
-            "required": ["appVersion", "os", "browser", "timezone", "language"],
+            "required": [
+              "appVersion",
+              "os",
+              "browser",
+              "timezone",
+              "language"
+            ],
             "additionalProperties": false
           }
         },
-        "required": ["category", "message", "environment"],
+        "required": [
+          "category",
+          "message",
+          "environment"
+        ],
         "additionalProperties": false
       },
       "email_sendWelcome_input": {
@@ -2915,10 +3461,13 @@
             "minLength": 1
           }
         },
-        "required": ["email", "userName"],
+        "required": [
+          "email",
+          "userName"
+        ],
         "additionalProperties": false
       },
-      "email_sendReminder_input": {
+      "email_sendTrialStart_input": {
         "type": "object",
         "properties": {
           "email": {
@@ -2929,19 +3478,19 @@
             "type": "string",
             "minLength": 1
           },
-          "planTitle": {
-            "type": "string",
-            "minLength": 1
-          },
-          "startTime": {
+          "trialEndDate": {
             "type": "string",
             "minLength": 1
           }
         },
-        "required": ["email", "userName", "planTitle", "startTime"],
+        "required": [
+          "email",
+          "userName",
+          "trialEndDate"
+        ],
         "additionalProperties": false
       },
-      "email_sendOverdue_input": {
+      "email_sendTrialExpiring_input": {
         "type": "object",
         "properties": {
           "email": {
@@ -2952,16 +3501,133 @@
             "type": "string",
             "minLength": 1
           },
-          "planTitle": {
-            "type": "string",
-            "minLength": 1
-          },
-          "endTime": {
+          "trialEndDate": {
             "type": "string",
             "minLength": 1
           }
         },
-        "required": ["email", "userName", "planTitle", "endTime"],
+        "required": [
+          "email",
+          "userName",
+          "trialEndDate"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendTrialExpired_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "userName"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendProStart_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "userName"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendPaymentFailed_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "portalUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "email",
+          "userName"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendPaymentRecovered_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "userName"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendPasswordChanged_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "userName"
+        ],
+        "additionalProperties": false
+      },
+      "email_sendCancellationConfirm_input": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "userName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "periodEndDate": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "userName",
+          "periodEndDate"
+        ],
         "additionalProperties": false
       },
       "email_sendAccountDeletion_input": {
@@ -2976,7 +3642,10 @@
             "minLength": 1
           }
         },
-        "required": ["email", "userName"],
+        "required": [
+          "email",
+          "userName"
+        ],
         "additionalProperties": false
       },
       "email_sendTest_input": {
@@ -2992,7 +3661,9 @@
             "default": "Test Email from Dayopt"
           }
         },
-        "required": ["to"],
+        "required": [
+          "to"
+        ],
         "additionalProperties": false
       },
       "entries_list_input": {
@@ -3005,7 +3676,10 @@
             "properties": {
               "origin": {
                 "type": "string",
-                "enum": ["planned"]
+                "enum": [
+                  "planned",
+                  "unplanned"
+                ]
               },
               "search": {
                 "type": "string",
@@ -3035,11 +3709,19 @@
               },
               "sortBy": {
                 "type": "string",
-                "enum": ["created_at", "updated_at", "title", "start_time"]
+                "enum": [
+                  "created_at",
+                  "updated_at",
+                  "title",
+                  "start_time"
+                ]
               },
               "sortOrder": {
                 "type": "string",
-                "enum": ["asc", "desc"]
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
               },
               "limit": {
                 "type": "number",
@@ -3072,7 +3754,9 @@
             "additionalProperties": false
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "entries_create_input": {
@@ -3088,7 +3772,10 @@
           },
           "origin": {
             "type": "string",
-            "enum": ["planned"]
+            "enum": [
+              "planned",
+              "unplanned"
+            ]
           },
           "start_time": {
             "type": "string",
@@ -3110,22 +3797,20 @@
             "format": "date-time",
             "nullable": true
           },
-          "duration_minutes": {
-            "type": "integer",
-            "minimum": 1,
-            "nullable": true
-          },
           "fulfillment_score": {
             "type": "integer",
             "minimum": 1,
             "maximum": 3,
             "nullable": true
           },
-          "reminder_enabled": {
-            "type": "boolean"
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
-        "required": ["title"],
+        "required": [
+          "title"
+        ],
         "additionalProperties": false
       },
       "entries_update_input": {
@@ -3148,7 +3833,10 @@
               },
               "origin": {
                 "type": "string",
-                "enum": ["planned"]
+                "enum": [
+                  "planned",
+                  "unplanned"
+                ]
               },
               "start_time": {
                 "type": "string",
@@ -3170,19 +3858,11 @@
                 "format": "date-time",
                 "nullable": true
               },
-              "duration_minutes": {
-                "type": "integer",
-                "minimum": 1,
-                "nullable": true
-              },
               "fulfillment_score": {
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 3,
                 "nullable": true
-              },
-              "reminder_enabled": {
-                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -3192,7 +3872,36 @@
             "format": "date-time"
           }
         },
-        "required": ["id", "data"],
+        "required": [
+          "id",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "entries_convertPlannedToUnplanned_input": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "entries_convertUnplannedToPlanned_input": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "entries_delete_input": {
@@ -3203,7 +3912,9 @@
             "format": "uuid"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "entries_restore_input": {
@@ -3214,7 +3925,9 @@
             "format": "uuid"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "entries_bulkUpdate_input": {
@@ -3242,7 +3955,10 @@
               },
               "origin": {
                 "type": "string",
-                "enum": ["planned"]
+                "enum": [
+                  "planned",
+                  "unplanned"
+                ]
               },
               "start_time": {
                 "type": "string",
@@ -3264,25 +3980,20 @@
                 "format": "date-time",
                 "nullable": true
               },
-              "duration_minutes": {
-                "type": "integer",
-                "minimum": 1,
-                "nullable": true
-              },
               "fulfillment_score": {
                 "type": "integer",
                 "minimum": 1,
                 "maximum": 3,
                 "nullable": true
-              },
-              "reminder_enabled": {
-                "type": "boolean"
               }
             },
             "additionalProperties": false
           }
         },
-        "required": ["ids", "data"],
+        "required": [
+          "ids",
+          "data"
+        ],
         "additionalProperties": false
       },
       "entries_bulkDelete_input": {
@@ -3298,7 +4009,9 @@
             "maxItems": 100
           }
         },
-        "required": ["ids"],
+        "required": [
+          "ids"
+        ],
         "additionalProperties": false
       },
       "entries_bulkAddTags_input": {
@@ -3318,108 +4031,10 @@
             "format": "uuid"
           }
         },
-        "required": ["entryIds", "tagId"],
-        "additionalProperties": false
-      },
-      "entries_getInstances_input": {
-        "type": "object",
-        "properties": {
-          "entryIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "maxItems": 100
-          },
-          "startDate": {
-            "type": "string"
-          },
-          "endDate": {
-            "type": "string"
-          }
-        },
-        "required": ["entryIds"],
-        "additionalProperties": false
-      },
-      "entries_createInstance_input": {
-        "type": "object",
-        "properties": {
-          "entryId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "instanceDate": {
-            "type": "string"
-          },
-          "exceptionType": {
-            "type": "string",
-            "enum": ["modified", "cancelled", "moved"]
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "instanceStart": {
-            "type": "string"
-          },
-          "instanceEnd": {
-            "type": "string"
-          },
-          "originalDate": {
-            "type": "string"
-          }
-        },
-        "required": ["entryId", "instanceDate", "exceptionType"],
-        "additionalProperties": false
-      },
-      "entries_deleteInstance_input": {
-        "type": "object",
-        "properties": {
-          "entryId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "instanceDate": {
-            "type": "string"
-          }
-        },
-        "required": ["entryId", "instanceDate"],
-        "additionalProperties": false
-      },
-      "entries_splitRecurrence_input": {
-        "type": "object",
-        "properties": {
-          "entryId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "splitDate": {
-            "type": "string"
-          },
-          "overrides": {
-            "type": "object",
-            "properties": {
-              "title": {
-                "type": "string"
-              },
-              "description": {
-                "type": "string",
-                "nullable": true
-              },
-              "start_time": {
-                "type": "string"
-              },
-              "end_time": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "required": ["entryId", "splitDate"],
+        "required": [
+          "entryIds",
+          "tagId"
+        ],
         "additionalProperties": false
       },
       "entries_addTag_input": {
@@ -3434,7 +4049,10 @@
             "format": "uuid"
           }
         },
-        "required": ["entryId", "tagId"],
+        "required": [
+          "entryId",
+          "tagId"
+        ],
         "additionalProperties": false
       },
       "entries_removeTag_input": {
@@ -3449,7 +4067,10 @@
             "format": "uuid"
           }
         },
-        "required": ["entryId", "tagId"],
+        "required": [
+          "entryId",
+          "tagId"
+        ],
         "additionalProperties": false
       },
       "entries_setTags_input": {
@@ -3465,7 +4086,10 @@
             "nullable": true
           }
         },
-        "required": ["entryId", "tagId"],
+        "required": [
+          "entryId",
+          "tagId"
+        ],
         "additionalProperties": false
       },
       "entries_getTimeByTag_input": {
@@ -3498,7 +4122,9 @@
             "maximum": 2100
           }
         },
-        "required": ["year"],
+        "required": [
+          "year"
+        ],
         "additionalProperties": false
       },
       "entries_getHourlyDistribution_input": {
@@ -3561,7 +4187,7 @@
           }
         ]
       },
-      "entries_getPlanRate_input": {
+      "entries_getEntryRate_input": {
         "type": "object",
         "properties": {
           "startDate": {
@@ -3697,32 +4323,373 @@
         },
         "additionalProperties": false
       },
-      "suggestions_recentTitles_input": {
-        "anyOf": [
-          {
-            "not": {}
+      "entries_getTimePL_input": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
           },
-          {
-            "type": "object",
-            "properties": {
-              "search": {
-                "type": "string",
-                "maxLength": 200
-              },
-              "limit": {
-                "type": "number",
-                "minimum": 1,
-                "maximum": 30,
-                "default": 20
-              },
-              "type": {
-                "type": "string",
-                "enum": ["plan", "record"]
-              }
-            },
-            "additionalProperties": false
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prevStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prevEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "wakeHour": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 23,
+            "default": 7
+          },
+          "sleepHour": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 23,
+            "default": 23
           }
-        ]
+        },
+        "required": [
+          "startDate",
+          "endDate"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getStatsPageData_input": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prevStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "prevEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "monthlyMonths": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24,
+            "default": 3
+          },
+          "wakeHour": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 23,
+            "default": 7
+          },
+          "sleepHour": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 23,
+            "default": 23
+          }
+        },
+        "required": [
+          "startDate",
+          "endDate",
+          "prevStart",
+          "prevEnd",
+          "year"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagDashboard_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50
+          }
+        },
+        "required": [
+          "tagId",
+          "startDate",
+          "endDate"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagOverview_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagTimeline_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "week",
+              "month",
+              "day"
+            ]
+          },
+          "recentLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagCumulativeTime_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagAvgFulfillment_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagPlanRate_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagHourlyDistribution_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagDowDistribution_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getChildTagBreakdown_input": {
+        "type": "object",
+        "properties": {
+          "parentTagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "parentTagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagFulfillmentDistribution_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagAccuracyTrend_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": [
+              "week",
+              "month",
+              "day"
+            ]
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
+      },
+      "entries_getTagRecentEntries_input": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "tagId"
+        ],
+        "additionalProperties": false
       },
       "tags_list_input": {
         "anyOf": [
@@ -3734,13 +4701,20 @@
             "properties": {
               "sortField": {
                 "type": "string",
-                "enum": ["name", "created_at", "updated_at", "tag_number"],
-                "default": "name"
+                "enum": [
+                  "name",
+                  "created_at",
+                  "updated_at",
+                  "tag_number",
+                  "sort_order"
+                ]
               },
               "sortOrder": {
                 "type": "string",
-                "enum": ["asc", "desc"],
-                "default": "asc"
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
               }
             },
             "additionalProperties": false
@@ -3755,7 +4729,9 @@
             "format": "uuid"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "tags_create_input": {
@@ -3765,6 +4741,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 50
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           },
           "color": {
             "type": "string",
@@ -3780,9 +4761,16 @@
               "pink",
               "gray"
             ]
+          },
+          "icon": {
+            "type": "string",
+            "maxLength": 50,
+            "pattern": "^[a-z][a-z0-9-]*$"
           }
         },
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "additionalProperties": false
       },
       "tags_update_input": {
@@ -3797,6 +4785,11 @@
             "minLength": 1,
             "maxLength": 50
           },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
           "color": {
             "type": "string",
             "enum": [
@@ -3811,9 +4804,17 @@
               "pink",
               "gray"
             ]
+          },
+          "icon": {
+            "type": "string",
+            "maxLength": 50,
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "nullable": true
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "tags_merge_input": {
@@ -3836,7 +4837,10 @@
             "default": true
           }
         },
-        "required": ["sourceTagId", "targetTagId"],
+        "required": [
+          "sourceTagId",
+          "targetTagId"
+        ],
         "additionalProperties": false
       },
       "tags_delete_input": {
@@ -3848,14 +4852,19 @@
           },
           "strategy": {
             "type": "string",
-            "enum": ["delete_entries", "reassign"]
+            "enum": [
+              "delete_entries",
+              "reassign"
+            ]
           },
           "targetTagId": {
             "type": "string",
             "format": "uuid"
           }
         },
-        "required": ["id"],
+        "required": [
+          "id"
+        ],
         "additionalProperties": false
       },
       "tags_renameGroup_input": {
@@ -3872,7 +4881,10 @@
             "maxLength": 50
           }
         },
-        "required": ["oldPrefix", "newPrefix"],
+        "required": [
+          "oldPrefix",
+          "newPrefix"
+        ],
         "additionalProperties": false
       },
       "tags_ungroupTags_input": {
@@ -3887,7 +4899,9 @@
             "type": "boolean"
           }
         },
-        "required": ["prefix"],
+        "required": [
+          "prefix"
+        ],
         "additionalProperties": false
       },
       "tags_deleteGroup_input": {
@@ -3900,14 +4914,19 @@
           },
           "strategy": {
             "type": "string",
-            "enum": ["delete_entries", "reassign"]
+            "enum": [
+              "delete_entries",
+              "reassign"
+            ]
           },
           "targetTagId": {
             "type": "string",
             "format": "uuid"
           }
         },
-        "required": ["prefix"],
+        "required": [
+          "prefix"
+        ],
         "additionalProperties": false
       },
       "tags_reorder_input": {
@@ -3922,17 +4941,28 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "parent_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
                 "sort_order": {
                   "type": "integer"
                 }
               },
-              "required": ["id", "sort_order"],
+              "required": [
+                "id",
+                "parent_id",
+                "sort_order"
+              ],
               "additionalProperties": false
             },
             "maxItems": 200
           }
         },
-        "required": ["updates"],
+        "required": [
+          "updates"
+        ],
         "additionalProperties": false
       },
       "user_deleteAccount_input": {
@@ -3944,10 +4974,15 @@
           },
           "confirmText": {
             "type": "string",
-            "enum": ["DELETE"]
+            "enum": [
+              "DELETE"
+            ]
           }
         },
-        "required": ["password", "confirmText"],
+        "required": [
+          "password",
+          "confirmText"
+        ],
         "additionalProperties": false
       },
       "user_deleteBlocks_input": {
@@ -3955,10 +4990,14 @@
         "properties": {
           "confirmText": {
             "type": "string",
-            "enum": ["DELETE"]
+            "enum": [
+              "DELETE"
+            ]
           }
         },
-        "required": ["confirmText"],
+        "required": [
+          "confirmText"
+        ],
         "additionalProperties": false
       },
       "user_deleteAllData_input": {
@@ -3966,10 +5005,14 @@
         "properties": {
           "confirmText": {
             "type": "string",
-            "enum": ["DELETE"]
+            "enum": [
+              "DELETE"
+            ]
           }
         },
-        "required": ["confirmText"],
+        "required": [
+          "confirmText"
+        ],
         "additionalProperties": false
       },
       "user_verifyRecoveryCode_input": {
@@ -3979,145 +5022,9 @@
             "type": "string"
           }
         },
-        "required": ["code"],
-        "additionalProperties": false
-      },
-      "notifications_list_input": {
-        "anyOf": [
-          {
-            "not": {}
-          },
-          {
-            "type": "object",
-            "properties": {
-              "is_read": {
-                "type": "boolean"
-              },
-              "type": {
-                "type": "string",
-                "enum": [
-                  "reminder",
-                  "overdue",
-                  "ai_insight",
-                  "weekly_report",
-                  "burnout_warning",
-                  "energy_insight"
-                ]
-              },
-              "limit": {
-                "type": "number",
-                "minimum": 1,
-                "maximum": 100,
-                "default": 50
-              },
-              "offset": {
-                "type": "number",
-                "minimum": 0,
-                "default": 0
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "notifications_getById_input": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": ["id"],
-        "additionalProperties": false
-      },
-      "notifications_markAsRead_input": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": ["id"],
-        "additionalProperties": false
-      },
-      "notifications_markAllAsRead_input": {
-        "anyOf": [
-          {
-            "not": {}
-          },
-          {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "reminder",
-                  "overdue",
-                  "ai_insight",
-                  "weekly_report",
-                  "burnout_warning",
-                  "energy_insight"
-                ]
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "notifications_delete_input": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": ["id"],
-        "additionalProperties": false
-      },
-      "notificationPreferences_updateBrowserNotifications_input": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": ["enabled"],
-        "additionalProperties": false
-      },
-      "notificationPreferences_updateEmailNotifications_input": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": ["enabled"],
-        "additionalProperties": false
-      },
-      "notificationPreferences_updatePushNotifications_input": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          }
-        },
-        "required": ["enabled"],
-        "additionalProperties": false
-      },
-      "notificationPreferences_updateDefaultReminderMinutes_input": {
-        "type": "object",
-        "properties": {
-          "minutes": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 10080,
-            "nullable": true
-          }
-        },
-        "required": ["minutes"],
+        "required": [
+          "code"
+        ],
         "additionalProperties": false
       },
       "userSettings_update_input": {
@@ -4126,30 +5033,32 @@
           "timezone": {
             "type": "string"
           },
-          "showUtcOffset": {
-            "type": "boolean"
-          },
           "timeFormat": {
             "type": "string",
-            "enum": ["24h", "12h"]
-          },
-          "dateFormat": {
-            "type": "string",
-            "enum": ["yyyy/MM/dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd"]
+            "enum": [
+              "24h",
+              "12h"
+            ]
           },
           "weekStartsOn": {
             "anyOf": [
               {
                 "type": "number",
-                "enum": [0]
+                "enum": [
+                  0
+                ]
               },
               {
                 "type": "number",
-                "enum": [1]
+                "enum": [
+                  1
+                ]
               },
               {
                 "type": "number",
-                "enum": [6]
+                "enum": [
+                  6
+                ]
               }
             ]
           },
@@ -4168,134 +5077,81 @@
             "anyOf": [
               {
                 "type": "number",
-                "enum": [5]
+                "enum": [
+                  5
+                ]
               },
               {
                 "type": "number",
-                "enum": [10]
+                "enum": [
+                  10
+                ]
               },
               {
                 "type": "number",
-                "enum": [15]
+                "enum": [
+                  15
+                ]
               },
               {
                 "type": "number",
-                "enum": [30]
+                "enum": [
+                  30
+                ]
               }
             ]
           },
-          "businessHoursStart": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 23
-          },
-          "businessHoursEnd": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 23
-          },
-          "showDeclinedEvents": {
-            "type": "boolean"
-          },
-          "chronotypeEnabled": {
-            "type": "boolean"
-          },
           "chronotypeType": {
             "type": "string",
-            "enum": ["lion", "bear", "wolf", "dolphin", "custom"]
-          },
-          "chronotypeCustomZones": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "startHour": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 23
-                },
-                "endHour": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 23
-                },
-                "level": {
-                  "type": "string",
-                  "enum": ["warmup", "peak", "dip", "recovery", "winddown"]
-                },
-                "label": {
-                  "type": "string",
-                  "maxLength": 100
-                }
-              },
-              "required": ["startHour", "endHour", "level", "label"],
-              "additionalProperties": false
-            },
-            "maxItems": 24
-          },
-          "chronotypeDisplayMode": {
-            "type": "string",
-            "enum": ["border", "background", "both"]
-          },
-          "chronotypeOpacity": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 100
+            "enum": [
+              "lion",
+              "bear",
+              "wolf",
+              "dolphin"
+            ],
+            "nullable": true
           },
           "defaultView": {
             "type": "string",
-            "enum": ["day", "3day", "5day", "week"]
+            "enum": [
+              "day",
+              "3day",
+              "5day",
+              "week"
+            ]
           },
           "hourHeightDensity": {
             "type": "string",
-            "enum": ["compact", "default", "spacious"]
-          },
-          "planRecordMode": {
-            "type": "string",
-            "enum": ["plan", "record", "both"]
+            "enum": [
+              "compact",
+              "default",
+              "spacious"
+            ]
           },
           "theme": {
             "type": "string",
-            "enum": ["light", "dark", "system"]
+            "enum": [
+              "light",
+              "dark",
+              "system"
+            ]
           },
-          "colorScheme": {
+          "dismissedTrialEndedDialog": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "paymentErrorDialogLastShownAt": {
             "type": "string",
-            "enum": ["blue", "green", "purple", "orange", "red"]
+            "format": "date-time"
           },
-          "personalizationValues": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "text": {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                "importance": {
-                  "type": "number",
-                  "minimum": 1,
-                  "maximum": 10
-                }
-              },
-              "required": ["text", "importance"],
-              "additionalProperties": false
-            }
-          },
-          "aiCommunicationStyle": {
+          "preferredLocale": {
             "type": "string",
-            "enum": ["coach", "analyst", "friendly", "custom"]
-          },
-          "aiCustomStylePrompt": {
-            "type": "string",
-            "maxLength": 1000
-          },
-          "rankedValues": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 50
-            },
-            "maxItems": 5
+            "enum": [
+              "en",
+              "ja"
+            ]
           }
         },
         "additionalProperties": false
@@ -4324,7 +5180,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["INTERNAL_SERVER_ERROR"]
+                          "enum": [
+                            "INTERNAL_SERVER_ERROR"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4339,18 +5197,22 @@
                             "CREATE_WITH_TAGS_FAILED",
                             "DELETE_FAILED",
                             "DELETE_WITH_CLEANUP_FAILED",
+                            "EVALUATE_FAILED",
                             "EXPORT_FAILED",
+                            "FETCH_ENTRIES_FAILED",
                             "FETCH_FAILED",
+                            "FETCH_PINNED_FAILED",
                             "GENERATION_FAILED",
                             "GITHUB_API_FAILED",
                             "MERGE_FAILED",
-                            "NOTIFICATION_SEND_FAILED",
+                            "PIN_FAILED",
                             "PORTAL_FAILED",
                             "PROFILE_UPDATE_FAILED",
                             "REORDER_FAILED",
                             "RPC_CALL_FAILED",
                             "STRIPE_NOT_CONFIGURED",
                             "TAG_FILTER_FAILED",
+                            "UNPIN_FAILED",
                             "UPDATE_FAILED",
                             "UPDATE_WITH_TAGS_FAILED"
                           ],
@@ -4387,7 +5249,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["NOT_FOUND"]
+                          "enum": [
+                            "NOT_FOUND"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4395,7 +5259,11 @@
                         },
                         "serviceErrorCode": {
                           "type": "string",
-                          "enum": ["NOT_FOUND", "SUBSCRIPTION_NOT_FOUND", "TARGET_NOT_FOUND"],
+                          "enum": [
+                            "NOT_FOUND",
+                            "SUBSCRIPTION_NOT_FOUND",
+                            "TARGET_NOT_FOUND"
+                          ],
                           "description": "アプリケーション固有のエラーコード"
                         }
                       }
@@ -4429,7 +5297,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["BAD_REQUEST"]
+                          "enum": [
+                            "BAD_REQUEST"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4445,6 +5315,7 @@
                             "SAME_TAG_MERGE",
                             "TIME_OVERLAP",
                             "UNGROUP_CONFLICTS",
+                            "UNPLANNED_IN_FUTURE",
                             "VALIDATION_FAILED"
                           ],
                           "description": "アプリケーション固有のエラーコード"
@@ -4480,7 +5351,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["UNAUTHORIZED"]
+                          "enum": [
+                            "UNAUTHORIZED"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4488,7 +5361,10 @@
                         },
                         "serviceErrorCode": {
                           "type": "string",
-                          "enum": ["INVALID_PASSWORD", "UNAUTHORIZED"],
+                          "enum": [
+                            "INVALID_PASSWORD",
+                            "UNAUTHORIZED"
+                          ],
                           "description": "アプリケーション固有のエラーコード"
                         }
                       }
@@ -4522,7 +5398,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["FORBIDDEN"]
+                          "enum": [
+                            "FORBIDDEN"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4530,7 +5408,10 @@
                         },
                         "serviceErrorCode": {
                           "type": "string",
-                          "enum": ["FORBIDDEN", "QUOTA_EXCEEDED"],
+                          "enum": [
+                            "FORBIDDEN",
+                            "QUOTA_EXCEEDED"
+                          ],
                           "description": "アプリケーション固有のエラーコード"
                         }
                       }
@@ -4564,7 +5445,9 @@
                       "properties": {
                         "code": {
                           "type": "string",
-                          "enum": ["CONFLICT"]
+                          "enum": [
+                            "CONFLICT"
+                          ]
                         },
                         "httpStatus": {
                           "type": "number",
@@ -4572,7 +5455,9 @@
                         },
                         "serviceErrorCode": {
                           "type": "string",
-                          "enum": ["CONFLICT"],
+                          "enum": [
+                            "CONFLICT"
+                          ],
                           "description": "アプリケーション固有のエラーコード"
                         }
                       }

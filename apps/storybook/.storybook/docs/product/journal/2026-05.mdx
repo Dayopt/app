@@ -1,0 +1,225 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Strategy/Journal/2026-05" />
+
+# 2026年5月 Diary
+
+---
+
+## 2026-05-19
+
+### 1 日で 7 件の dependabot を吸収して v0.28.0 を release、monorepo branch に main を統合した日
+
+25 コミット。本日のセッション全部が「滞留した変更を 1 本にまとめて流す」運用作業に充てられた。前半は 7 件のオープン dependabot PR を bulk merge（CI 失敗 2 件は別途）、後半は v0.28.0 のリリース作業（version bump + `.gitignore` の `.turbo/` 追加 + タグ作成 + 48 PR を 7 カテゴリに分類した詳細リリースノート）、最後に monorepo branch (`codex/dayopt-monorepo-stage-1`) に main を統合してコンフリクトを resolve。
+
+#### やったこと
+
+- **dependabot PR 7 件の bulk merge (8 commits)**: CI パスの 5 件と、CI 失敗のうち rebase 後に通った 2 件（development-storybook / development-other）を直列に merge。Tailwind 4.3 の class sort 順変更で発生した `TimeInput.tsx` の Prettier 失敗だけは dependabot branch に手動 fix を push して対応
+- **v0.28.0 リリース (3 commits)**: `.gitignore` に `.turbo/` を追加して Turborepo cache を untracked から除外、`package.json` を 0.28.0 へ bump、リリース PR (#1166) を merge、`v0.28.0` タグを push、GitHub Release を auto-generated → 詳細リリースノート（前回 v0.27.0 以降の 48 PR を Added / Changed / Fixed / Security / Breaking / Test / Dependencies / Chore に分類）で上書き
+- **monorepo branch ← main の統合 (1 merge commit, 13 files changed)**: 構造系コンフリクト（`package.json` の name / version / scripts、`package-lock.json` 削除）は monorepo 構造優先、コンテンツ系（two-layer model の actual 範囲扱い、エラーコード追加、Tailwind class 順、`get_tag_recent_entries` の unplanned 対応 migration）は conflict ごとに正しい側を選択。main の 21 個の dep bump は `apps/app/package.json` と `apps/storybook/package.json` に転記
+
+#### なぜ今日この作業をしたか
+
+オープン PR が 7 件まで溜まっていた。dependabot の transitive bump は単体では大した変更でなくとも、置いておくと 1 件マージするごとに残り全部が BEHIND に戻って rebase が必要になり、結局誰かが面倒な直列処理をすることになる。今日のうちに全部畳むと、明日以降の dependabot 新規 PR が出てもまた直列にこなすだけになり、開発者の認知負荷から外せる。
+
+v0.28.0 のリリースタイミングはユーザーの要求。前回 v0.27.0 から約 3 週間で 48 PR が main に積み上がり、その中に Remote MCP server の Phase 1 PoC、entry の 2-layer model 化、`/stats` → `/review` 統合、Onboarding/Tour 削除、Cloudflare Turnstile 統合、Next.js 16.2.6 のセキュリティ修正など意味のある塊が複数含まれていた。tagless で放置するとリリースノートが書きにくくなる（PR を 1 件ずつ追って再構成するコストが時間に比例して上がる）ので、ユーザーの「release したい」発話を契機に releasing skill を起動して end-to-end で完了。`.turbo/` の `.gitignore` 追加は本来別 commit / 別 PR でも良かったが、リリース PR 1 本に束ねれば後片付けがゼロになるので一緒に流した。
+
+monorepo branch への main 統合は、放置すると差分が日々開いてコンフリクト解決が指数関数的に重くなるため。今日のタイミングで取り込めば「main の 45 commits + monorepo の 14 commits」だけで済むが、来週まで持ち越すと両側がさらに進んで diff が増える。「monorepo 側を優先・コンテンツを壊さない」の原則は user 指定。構造系（pnpm workspace、`apps/*` 配下のパス）は monorepo の決定が後勝ちなので main の name / lockfile はそのまま採用してはいけない。一方で main 側で入った bug fix（`INVALID_ENTRY_SHAPE` エラーコード、`get_tag_recent_entries` の unplanned 対応、`react-hooks/purity` の eslint-disable など）は monorepo branch にもないと grace 期に壊れるので必ず取り込む。この 2 つの方針を 1 conflict ずつ判定して resolve した。
+
+#### Claudeの所感
+
+**直列処理が最速になる場面**: 並列実行できそうな依頼でも、状態が逐次変わるなら直列の方が結果的に速い。今日の dependabot merge では、最初に「5 件並列で rebase 投げて全部 admin merge」を試したが ruleset で全件 reject、その後「全件 rebase → 並列 CI 待ち」に切替えたが 1 件目を merge した瞬間に残り 4 件が再び BEHIND になり 2 度目の rebase が必要に。最初から「1 件 rebase → CI 待ち → merge → 次の 1 件」を直列で回した方が CI 実行時間も無駄にならなかった。並列化の見かけの効率と、状態空間が線形でない作業の本質的な逐次性は区別する必要がある。
+
+**リリースノートの粒度は時間軸を畳むほど粗くなる**: 48 PR を 1 つのリリースノートに圧縮すると、個別 PR の意図は溶ける。Remote MCP server の Phase 1 PoC は #1117 / #1118 / #1121 / #1127 / #1128 の 5 PR に分かれているが、リリースノートでは「MCP server + OAuth 2.1」の 1 項目に圧縮した。圧縮は読みやすさのために必要だが、historical accident を辿りたい人にとっては Full Changelog のリンクが命綱になる。template.md が Full Changelog 必須としているのは正しい判断で、見落とすと future maintainer に大きな負債を残す。
+
+**Conflict resolution はパッチではなく意思決定の保存である**: monorepo branch の merge で「monorepo 側を優先」を機械的に適用すると、main 側で入った INVALID_ENTRY_SHAPE エラーコードが落ちて production が壊れる。逆に「全部 main 優先」を取ると monorepo の two-layer model 改善（future planned で actual を null にする refinement）が消える。Conflict は「2 つの開発系列が独立に正しい判断をした証拠」であり、resolution は「両者の意思決定の上位概念に立って取捨選択を再宣言する」工程。`-X ours` / `-X theirs` のような一括戦略はその責任を回避する手段で、複雑な merge では結局後で崩れる。今日のように conflict ごとに 1 件ずつ理由付きで決める方が、後でレビューする人にも追える形になる。
+
+---
+
+## 2026-05-18
+
+### monorepo 第一段階の土台を入れ、entry card を 2-layer 構造に再編した日
+
+23 コミット。前半は monorepo 移行の Phase 1（apps/app + apps/storybook の 2 workspace、pnpm + Turborepo、packages/\* の placeholder）、後半は entry card の 2-layer 構造再編（planned 枠 + actual overlay の組み合わせ、超過 overlay は破線枠のみ）と関連 fix の連鎖。
+
+#### やったこと
+
+- **monorepo 第一段階の土台 (4 commits)**: `apps/app`（Next.js）と `apps/storybook` の 2 workspace + `packages/{ui,types,server,utils,config}` placeholder を導入、root の `package.json` を scripts と pnpm.overrides だけに削ぎ、pre-commit を workspace 対応に。monorepo lint で出た hooks 違反と未使用コードを整理
+- **entry card 2-layer 構造への再編 (2 commits)**: planned 枠と actual overlay の組み合わせで視覚階層を統制、超過 overlay の「超過 +X 分」テキストラベルを削除して破線枠のみで超過を表現
+- **entry / inspector まわりの fix 連鎖 (8 commits)**: 構造変換 (planned ↔ unplanned) の pre-flush 失敗時に conversion を中止、構造変換時の inspector pending edit を保持、planned 移動の overlap 検知と stale onError の cache fix、planned 更新で actual 範囲を保持、planned 作成の overlap 判定で actual 範囲を mirror、未使用 eslint-disable 削除
+- **DB / test / その他 (5 commits)**: seed.sql に actual_start_time / actual_end_time を追加、entry insert integration test に 2-layer time fields を補う、tooltip の遅延表示 timer を安全に破棄、merge_tags_with_hierarchy の RPC error 詳細を log、タグ直近 entry で予定外記録を保持
+- **CI (2 commits)**: supabase setup-cli version pin (2.99.0 → 2.98.0 にロールバック)
+
+#### なぜ今日この作業をしたか
+
+monorepo 移行の必要性は前から認識されていたが、放置のままだと将来 packages 切り出しの判断ごとにヒューリスティクスでパスを決め続けることになる。第一段階で workspace 構造だけ確定させておけば、次から「これは packages/utils か apps/app/src か」の判断が type-bound になる。今日は土台のみで、実際の移植は packages/\* に少しずつ進める運用に切替。
+
+entry card の 2-layer 構造は前日（5-15）に進めた「重複検出 UI 統一」と「過去時間帯は unplanned に切替」の自然な延長線。planned と actual の概念分離が UI レベルで visible でないと、user が「いま planned を編集しているのか actual を編集しているのか」を混同する。視覚階層を「planned 枠の中に actual の overlay」にすると、planned 編集は枠を、actual 編集は内側 overlay を触れば良いという物理的 affordance が成立する。
+
+超過 overlay のテキストラベル削除は user 提案だが理由は明確。「超過 +5 分」のように具体的な数値を出すと「超過したことの情報」と「具体的にどれくらい超過したか」が二重に出る。破線枠だけにすれば「超過したという事実」だけが伝わり、具体的な分数を知りたければカードを開けば良い。情報密度を下げる選択。
+
+inspector / 構造変換まわりの fix は前日からの繰越分も含む race condition の掃除。debounced save の pre-flush が変換 mutation と衝突するパターン、planned 移動の overlap 検知が stale な onError cache で 1 tick 遅れて誤発火するパターンなど、UX レベルで顕在化しない race を sentry log で発見してまとめて潰した。
+
+#### Claudeの所感
+
+**Monorepo 移行は「土台だけ」を Phase 1 にする選択が正しい**: 完全移行を 1 つの PR で済ませようとすると、packages の境界判断と pnpm 設定の細かい挙動が同じ PR に混じり、レビューの粒度が崩壊する。「workspace 構造の宣言 + placeholder」だけを切り離して main に入れれば、次の Phase で packages/utils の中身を埋めるときに「箱は既にある」前提で diff を読める。土台と中身を分離する原則は monorepo に限らず DB schema 変更や trpc router 分割でも同じ。
+
+**Visual hierarchy で概念を表現すると prose の i18n key が減る**: 超過 overlay の「超過 +X 分」テキストを破線枠だけに置き換えると、i18n key が 1 つ消える。同じことが「重複検出の文言を `entry.errors.timeOverlap` 1 キーに集約」（5-15）でも起きていた。テキストで状態を説明するのは多くの場合冗長で、視覚で表現できる状態は視覚に任せた方が i18n の保守コストが下がる。Dayopt の copywriting tone guide が「装飾のない基本体験」を志向しているのと整合的。
+
+**Race condition は sentry log で見つけてからまとめて潰す**: 個別の race を 1 件ずつ「気付いて直す」と修正が日付に散らばってリリースノートが追いにくい。sentry の error grouping を見て「同じ race の variant が 3-4 件」とまとまったところで 1 日かけて潰せば、リリースノートに「inspector の race condition 群を一括 fix」と書ける。observability data は debugging だけでなく maintenance のバッチングにも使える。
+
+---
+
+## 2026-05-15
+
+### 重複でおけない時の UI を全経路で統一した日
+
+16 コミット。32 files changed / +1,304 / -267。朝は前日からの planned ↔ unplanned 変換 UX の fix-up（5 コミット）、本体は「重複でおけない時の UI 統一」プロジェクト（11 コミット）。drag / resize / 新規作成 / Inspector / palette / popover の 6 経路で散らかっていた重複検出のフィードバックを 1 つの canonical（全面 destructive 化）に揃え、文言も `entry.errors.timeOverlap` 1 キーに集約。最後に過去時間帯の preview を unplanned 風に切替えるところまで。
+
+#### やったこと
+
+- **planned ↔ unplanned 変換の fix-up (5 commits)**: 変換前に inspector 保存を同期 / 変換時の保存競合と予定外判定 / 生成列を更新しない / 予定復帰時の競合 toast 抑制 / 連続移動の古い更新結果を無視。前日の機能追加で見つかった race condition と表示崩れの掃除
+- **重複 UI 統一プロジェクト Phase 1: 集約と検出 (4 commits)**: i18n キーを `entry.errors.timeOverlap` 1 つに集約（5 キー → 1 キー）。drag / resize / 新規作成 / Inspector の 4 経路で silent fail を撲滅し、judgment locus を 1 本化、cursor not-allowed と resize 用赤リングを追加、Inspector 時刻編集の save race を同期再評価で解消
+- **重複 UI 統一プロジェクト Phase 2: visual refactor (4 commits)**: user fb を受けて赤リング廃止 → 全面 destructive (`bg-destructive-tint` + `text-destructive`) に置換。tag entry popover の inline alert + submit disabled、tag draft block と drag-create preview も同じ canonical に統一。drag ghost は重複時 `opacity-85` を外して不透明描画で文字を読みやすく
+- **過去時間帯 preview を unplanned 風に (2 commits)**: 終了時刻が past の preview は破線枠 + accent strip なしの unplanned 風表示に切替。事前 overlap 判定でも `willBeUnplanned = end_time <= now` を見て planned / actual を切替（直後に発覚した planned×planned 誤検知 bug を併せて修正）
+
+#### なぜ今日この作業をしたか
+
+朝の 5 コミットは前日の planned ↔ unplanned 変換機能の不具合潰し。inspector の debounced save と変換 mutation が衝突して古い data で上書きされる、生成列を直接 update に含めて Postgres エラー、変換成功直後に「他で変更されました」toast が誤発火、など 5-14 の最後の 30 分では追えていなかった race condition を朝のうちに片付けた。
+
+本体の重複 UI 統一は user 提案。「重複でおけない時の UI を全体で統一したい」というオープンな相談に対して、まず現状を整理したら 6 経路でフィードバックが散らかっていることがわかった。silent reject が 2 箇所、toast が 2 箇所、inline alert が 1 箇所、文言キーが 5 つに分裂、judgment locus は 1 本化済みだが visual layer がバラバラ。最初の plan では「GAFA デファクトに揃える」と framing したが、user に「100% の自信が出るまで自己レビューしてから再度プランを作って」と指摘され調べ直すと、Calendar 系の GAFA は overlap を hard-block しないため比較対象として誤りだったと判明。NN/g / Material Design 3 / Apple HIG が共通で推奨する「feedback channel matched to interaction modality」を一次根拠に置き直し、modality に応じて drag = 視覚 / フォーム = inline / 離散 = toast の 3 channel を使い分けながらメッセージ内容と判定ロジックは 1 本化、という形で着地。
+
+午後は user fb で大きく軌道修正。「赤リングじゃなくて全部赤くなる方が見やすい」と言われ、design-system.md に明文化していた `ring-destructive ring-2` をやめて Dayopt の destructive container 規範（`bg-destructive-tint` + `text-destructive`）に置き換え、文言「この時間帯には既に予定があります」が overlap 中の preview を全面で覆う形に refactor。さらに「過去に予定を立てるときは自動で unplanned になるのに preview は planned のまま」「作成しようとすると 'すでに予定があります' で作れない」と続けて指摘があり、preview の visual と client 側 overlap 判定の両方を `willBeUnplanned` で分岐させた。
+
+#### Claudeの所感
+
+**「統一」と「使い分け」を両立させる設計の難しさ**: 当初の plan ですべての channel を同じ visual に揃えようとして user fb で 2 回 refactor した。1 回目は「赤リング」、2 回目は「inline alert vs visual」の選択。最終的に NN/g の "feedback channel matched to interaction modality" 原則が腑に落ちると一気に整理がついた。統一すべきは「メッセージ内容と判定ロジック」、使い分けるべきは「channel」。これは design-system.md / copywriting.md に明文化される価値がある原則で、今後類似の UI 議論（成功 / 警告 / 進行中 / 完了など）にも応用できる。
+
+**Server と client の origin 判定を一致させる重要性**: 「過去時間帯の preview を unplanned 風に」という UI 修正で見落とした最後の落とし穴が、client 側 overlap 事前判定でも planned/actual の切替が必要だったこと。サーバーは `normalizeCreateInput` で `end_time <= Date.now()` なら `origin=unplanned` にしているのに、client は常に planned として `hasTwoLayerTimeConflict` を呼んでいたため近接 planned 予定と planned×planned 衝突を誤検知。「preview の見た目」と「判定ロジック」は同じ判断材料（end_time）で動くべきという当然の対称性が抜けていた。次に「未来 / 過去で挙動が違う UI」を作る時の checklist 項目。
+
+**プランの根拠は「事例」より「原則」で書く**: 最初の plan で「GAFA デファクト」と書いたら user に refactor 指示が入った。GAFA は事例の集合であって設計原則ではない。NN/g / Material Design 3 / Apple HIG の共通原則を一次根拠に据え直したら、その下に Google Calendar の挙動も Resource booking 系の挙動も「modality が違うから違って当然」と整理がついた。事例を根拠にすると例外に弱い。原則を根拠にすると事例は派生として説明できる。今後 plan を書く時はまず原則を 1-2 行で書き、事例は補強として並べる順序にする。
+
+---
+
+## 2026-05-14
+
+### MCP Phase 1.5 完了、entry の menu/drag バグを根絶した日
+
+11 コミット。56 files changed / +3,312 / -683。MCP の有料 Pro user 受け入れ準備（Phase 1.5）が大きな塊、残りは 2 レイヤー entry の E2E テスト追加、planned/unplanned 変換 UX の整備、entry 右クリックメニューの Inspector との統一、そして WeekView のドラッグバグ修正。
+
+#### やったこと
+
+- **MCP Phase 1.5 (2 commits)**: `oauth_audit_log` テーブルと `issue_oauth_token_pair` RPC を追加、token 発行を atomic RPC に置換して orphan token を防止。rate limit を `/oauth/token` (10/IP/min) / `/oauth/authorize` (30/IP/min) / `/api/mcp` (300/user/min) に拡張。Stripe webhook でサブスク解約時に即時 revoke、Settings UI に接続済み client 一覧と revoke ボタンを追加、`entries.daily_summary` tool と audit log 記録を実装
+- **2 レイヤー entry の E2E (1 commit)**: planned / actual の 2 レイヤーモデルの結合動作を Playwright で覆う E2E spec を追加（358 lines）
+- **planned ↔ unplanned 変換 UX 整備 (3 commits)**: 予定外記録を予定に戻せる UI、planned 移動時の actual 自動更新、「予定外にする」メニューの表示条件を `origin === 'planned'` だけで判定するよう簡素化
+- **entry 右クリックメニュー統一 (2 commits)**: 右クリックメニューが「削除」1 項目だったのを Inspector の TagRow メニューと同じ 4 項目（振り返り / 計画外にする / 計画に戻す / 削除）に揃え、項目定義を `src/features/entry/lib/entry-menu-items.ts` に共通化
+- **WeekView ドラッグバグ修正 (1 commit)**: 月曜 entry を Sidebar 方向にドラッグすると無条件で金曜にワープしていた fallback を、左右別の clamp に修正
+- **deps (1 commit)**: postcss 8.5.13 → 8.5.14
+
+#### なぜ今日この作業をしたか
+
+MCP Phase 1.5 は「Tomoya 自身が動かせる Phase 1」から「他の Pro user が課金しても壊れない状態」への昇格作業。Phase 1.5 で扱う暴露窓・revocation・audit・rate limit はどれも solo dogfood では露呈しないが、課金 user が 1 人でも入ると即座にリスクになる。Pro 課金開放の前段としてやっておく必要があった。
+
+entry 右クリックメニューの統一は、Inspector の TagRow メニューと右クリックメニューが「同じ entry に対する同じ操作セット」でありながら入口によって出る項目が違うという UX の歪みを解消する作業。最初は「2 箇所だけだから items 配列は手書きでも OK」と判断したが、ユーザーから「片方だけ変えるリスクがある」と指摘され、`getEntryMenuItems` で一元化する方針に切り替えた。これは過剰な抽象化ではなく drift 防止のための必須の集約。
+
+ドラッグバグは「左右どちらに外れても最後の列にする」という雑な fallback が原因で、月曜から金曜にワープするという目立つ症状で日常使用に支障があった。仮説検証なしに `clientX < firstRect.left` で左外を判定する 1 行を足すだけで直る、低コスト・高インパクトの修正。
+
+#### Claudeの所感
+
+**Phase 1.5 の「保険としての二重化」設計は正しい**。Decision 1 で「proProcedure の毎リクエスト DB lookup があるから webhook 不要」とした上で、Phase 1.5 で `customer.subscription.updated` webhook も追加した。これは webhook が「正規の防御」ではなく「DB lookup の冗長化」として位置づけられているからで、片方が壊れても token は最長 5 分で expire するという二重化が成立している。security 系の機構は単一のメカニズムに依存させないというパターンが、設計書の段階で言語化されている点が重要。
+
+**「2 箇所だから共通化しない」は drift リスクを過小評価していた**。今日の plan で `EventContextMenu` と `TagRow` の menu items を共通化しないと書いたが、ユーザーの「片方だけ変える可能性」という指摘で方針転換した。2 箇所でも `BarChart3 icon` / `viewStats labelKey` / `dangerous: true` のような細かい属性が並ぶと、片方の変更時にもう片方の存在を忘れるのは現実的に起こる。特に右クリックメニューは普段の開発で目に入りにくく「忘れられる側」になりやすい。今後は「同じ概念の menu items が複数 shell で出る」パターンを検出した時点で `getXxxMenuItems` を最初から切るほうがいい。
+
+**ドラッグバグの fallback は「症状が出ない方向」に倒れていた**。`if (targetDateIndex === undefined) use last column` は、開発時のメイン動線（右にドラッグして次の列に移す）では問題が出ない。左にドラッグするのが「Sidebar 方向に持っていく」という稀な操作だったため、リリース後まで残った。境界の fallback を書く時は、左右上下それぞれの方向を明示的に考えてから書くべきで、「とりあえず最後の要素にする」は将来必ず仕様の穴になる。
+
+---
+
+## 2026-05-12
+
+### 前日の負債を全決済し、タグ操作 UI を専用コンポーネントとして確立した日
+
+1 コミット（PR merge）。37 files changed / +3,701 / -337。前日（05-11）の tried_and_failed と next に積み上げた 4 件の deferred item をすべて解消した。
+
+#### やったこと
+
+- **get_time_pl_data 修正 migration (1 migration)**: 20260415 で `entry_tags` を削除したにもかかわらず、20260416 の migration がその関数を古い `entry_tags` join で recreate していた。`/review` の Time P/L データが壊れていた根本原因。20260512 migration で `entries.tag_id` 参照に差し替えて解消
+- **タグ操作 UI の専用コンポーネント化 (3 components)**: `ReviewTagList`（サイドバー、765 lines）・`ReviewTagActionsMenu`（アクションメニュー、206 lines）・`ReviewTagChipRow`（モバイル行、218 lines）を新設。`ReviewView.tsx` の肥大化を解消し、タグ操作フローを独立させた
+- **アーキテクチャドキュメント追加**: `ServiceAudit.mdx`（Service 層の現状の歪みマップ）と `ServiceContracts.mdx`（target service 契約定義）を新規追加。`api-shape.md` も api-first 設計の指針文書として追加
+
+#### なぜ今日この作業をしたか
+
+05-11 の作業で TagDetailPage のダッシュボード化という大きな仕事が終わったが、同日に「翌日修正済み」と記録した 4 件が残っていた。`get_time_pl_data` のバグは `/review` の Time P/L 表示が完全に壊れる重大度で、放置できなかった。タグ操作 UI の DnD 復旧も同様で、Review の主要インタラクションが機能しない状態だった。
+
+ServiceAudit と ServiceContracts の追加は、api-shape.md（api-first refactor の設計文書）を書く過程で「現状の歪みを記録しておかないと目標との delta が見えない」と判断したため。実装 task ではなく観察の記録だが、今後の Service 層リファクタの起点として機能する。
+
+#### Claudeの所感
+
+**migration の再定義問題はプロジェクト固有の罠**。`entry_tags` を `entries.tag_id` にインライン化した 20260415 の migration は「削除」だった。しかし同日の別問題修正（available_minutes fix）が `get_time_pl_data` を全体ごと recreate し、その SQL がすでに存在しない `entry_tags` テーブルを JOIN していた。git 上は 2 つの migration が別日に分かれているため見つけにくく、症状は `/review` の Time P/L が空になるというサイレントな壊れ方だった。この種のバグは「削除 migration と recreate migration が別ファイルに分かれている」ことで発生する。今後 DB 関数を recreate する際は、関数内で参照しているテーブル・カラムがその時点のスキーマに存在するか確認するゲートが必要。
+
+**ReviewTagList の 765 lines は適切な分離**。ReviewView.tsx がタグ操作・エントリ表示・レイアウト制御を全部抱えていたのを、専用コンポーネントに切り出した。このサイズは「過剰な抽象化なしに機能をすべて内包した結果」であり、無理に分割する必要はない。タグリスト・アクションメニュー・モバイル行の 3 コンポーネントは UI の粒度として正しく、それぞれ独立してテスト・Story 化できる形になっている。
+
+**1 コミット / 37 files は「PR squash」の良い例**。前日の試行錯誤の途中経過ではなく、4 件の deferred item が全部揃った段階で 1 PR としてまとめた。この粒度のコミットは「何をしたか」が commit message 1 行で読めるため、git log での追跡コストが低い。
+
+---
+
+## 2026-05-11
+
+### タグ詳細をダッシュボード化し、MCP ルート URL の根本対処を通した日
+
+9 コミット。review/tag-detail の大幅刷新（+928/-99 lines）、MCP/OAuth エンドポイント URL の正式化、日付表示フックの統一、Next.js セキュリティ更新が主な作業領域。
+
+#### やったこと
+
+- **タグ詳細ダッシュボード化 (1 commit)**: TagDetailPage を「エントリ一覧」から「KPI / 日別推移 / 予定対実績」を持つダッシュボードに刷新。8 本の個別 RPC 呼び出しを getTagOverview（7 並列）と getTagDashboard（直接テーブルクエリ）の 2 本に統合。純粋な集計ロジックを `tag-dashboard.ts` として router から分離し、テストも 2 ファイル追加（120 + 120 lines）
+- **MCP/OAuth URL 正式化 (3 commits)**: `mcp.dayopt.app/` ルートパスへの rewrite と `/oauth/token` の rewrite を proxy.ts の publicRewritePaths で通す根本対処を実装。05-01 に deferred にした「vercel.json rewrite が効かない件」を解消
+- **日付表示統一 (1 commit)**: ReviewLayout の日付表示を `useReviewDateDisplayProps` フックに切り出し、Calendar と同じ weekStartsOn / showWeekNumbers を参照するよう統一
+- **Next.js セキュリティ更新 + dependabot 30 packages (4 commits)**: next 16.2.3 → 16.2.4 セキュリティパッチ適用
+
+#### なぜ今日この作業をしたか
+
+タグ詳細ページは以前「特定タグのエントリを並べるだけ」の実装だったが、Review の文脈では「このタグに今週何時間使ったか、予定と比べてどうか」を見たいはずで、単なるリスト表示では振り返りとして機能しない。KPI・日別グラフ・予定対実績の差分を一画面に収めることで、タグ詳細が「そのタグの週間レポート」として機能するようになった。集計ロジックを `tag-dashboard.ts` として router から分離したのは、RPC 呼び出しではなくアプリ側集計にしたため（DB 側に RPC を作らない設計）、純粋関数として独立させてテストしやすくする意図。
+
+MCP ルート URL の正式化は、05-01 の tried_and_failed に記録した「vercel.json rewrite が CDN cache に捕まる問題」の根本対処。当日は metadata と UI の advertise URL を実体パス（`/api/mcp`）に一時変更して凌いだが、MCP クライアントが期待するエントリポイント（`mcp.dayopt.app/`）を正式に通すには middleware 側で rewrite を拾う必要があった。proxy.ts の publicRewritePaths に `/mcp` と `/oauth/token` を追加することで、Next.js の i18n / auth middleware をバイパスして vercel rewrite が機能するパスが確立できた。
+
+#### Claudeの所感
+
+**タグ詳細ダッシュボードの設計判断が良い**。8本→2本のクエリ統合は単純な最適化ではなく、「タグ詳細ページが答えるべき問い」を変えた設計変更だ。旧実装は「このタグのエントリを全部見せる」という問いに答えていたが、新実装は「このタグに費やした時間の週間サマリー」という問いに答える。`tag-dashboard.ts` を pure computation layer として分離したことで、同じ集計ロジックを将来の MCP tool や REST endpoint から呼べる構造にもなっている。api-shape.md が目指す skin-agnostic service 層への方向性と整合している。
+
+**tried_and_failed が翌日の Codex 指摘に変換された**。`useReviewDateDisplayProps` から granularity 引数を削ったのは、「日付表示を Calendar と統一する」という目的に対して設計が過度に単純化されていた。granularity が week/day/year で formatPattern と showWeekNumber の戻り値が変わるという仕様は、hook の signature から消せるものではなかった。Codex の P2 指摘はこの退行を正確に捉えており、翌日の修正コストは小さかった。コードレビューが「UI が壊れる可能性のある hook の signature 変更」を静的解析ベースで検出できている点が印象的。
+
+**MCP 正式化が意味するもの**。05-01 の一時対処（実体パス advertise）から今日の根本対処（middleware rewrite）への移行で、MCP エントリポイントが仕様通りの URL になった。この変更は小さく見えるが、MCP クライアントが discovery で `/` → `/.well-known/oauth-protected-resource` と辿る flow が正しく機能するための前提条件だった。Phase 1.5 で書く tool や Phase 2 で拡張する scope は、このエントリポイントが正しくないと全て動かなかった。
+
+---
+
+## 2026-05-01
+
+### MCP Phase 1 PoC を production smoke test まで通し、`/stats` 4 タブ構成を `/review` 単一ページに集約した日
+
+6 PR merge、176 files changed / +987 / -8,802 の大規模整理日。前日 ship した MCP Phase 1 PoC を **production smoke test まで通す** ための fix が 5 件（codex review round 3 / CI environment fix / types narrow / metadata URL hardcode / vercel rewrite bypass）と、並行で **`/stats` の 4 タブ構成を `/review` 単一ページに集約 + Badge / 価値観評定機能の完全削除** を 1 PR で実施。pre-launch のため redirect なしで即廃止し、launch 後に廃止すべき route を launch 前に整理した。
+
+#### やったこと
+
+- **MCP Phase 1 hardening (5 PR)**: codex review round 3 で `oauth_tokens` の user UPDATE policy を drop（column-level RLS が無いため token_hash 等の sensitive column を user 自身が書き換えられる穴を塞ぐ）+ Phase 1.5 deferral 2 件を code comment で明示 (#1118)、supabase-migration workflow の environment 名を `production` → `Production` に修正し放置されていた 3 migration を production 適用 (#1119)、types:generate 再生成 + service-role client を `OAuthOnlyDatabase` で narrow して views / functions / enums / composites まで `Record<string, never>` で塞ぎ cross-tenant leak の type guard を完成 (#1121)、AS metadata の issuer / authorization / token endpoint を env 依存から hardcode に変更し RFC 8414 §3 issuer 一致要件を満たす (#1127)、vercel.json rewrite が production で効かない件を回避するため `/api/mcp` と `/api/oauth/token` を実体 path で advertise (#1128)
+- **`/stats` → `/review` 単一ページ化 (1 PR)**: `/stats/{review,progress,insights,badges}` 4 タブ構成を廃止し `/review` 単一ページに集約、Badge 機能（route / feature / tRPC router / DB table / i18n）を完全削除、Progress / Insights タブの feature コードも削除（再導入は別 plan）、`features/stats/` を `features/review/` に rename、StatsLayout（タブ UI）を ReviewLayout（タブなし）に置換、`StatsSidebar` を `ReviewSidebar` に rename、Sidebar / BottomTab / PageNav の表記を `Review` / `振り返り` に統一、プロフィール設定から ACT 12 領域の価値評定 + 価値観キーワード Top5 を削除し `personalizationValues` / `rankedValues` schema を userSettings から除去、pre-launch のため `/stats` への redirect は設けず即廃止 (#1120)
+
+#### なぜ今日この作業をしたか
+
+前日の MCP Phase 1 PoC は staging で動作確認まで完了していたが、production smoke test を通す段で **3 種類の本番固有問題** が顕在化した。1 つ目は GitHub Environment 名が case-sensitive で `production` (workflow) と `Production` (repo settings) の不一致で 4 回連続 startup_failure し、PoC で追加した 3 migration が production に未適用だった件。run log を開かないと理由が見えない sliently fail で、merge 前の workflow 確認に case 照合を追加すべきレッスン。2 つ目は AS metadata の issuer が `NEXT_PUBLIC_APP_URL` 経由で apex (`dayopt.app`) になっていて subdomain (`app.dayopt.app`) で稼働する AS と RFC 8414 §3 issuer 一致が取れず client discovery が失敗。env 依存をやめて hardcode に変更。3 つ目は vercel.json rewrite で短縮 path (`/mcp` / `/oauth/token`) を advertise する設計が production で 404 page (cached) に捕まり効かなかった件で、これは Phase 1.5 で middleware (proxy.ts) 経由に切り替える根本対処を残しつつ、暫定で metadata と UI の advertise URL を実体 path に変更して通した。
+
+codex review round 3 では P1 として **`oauth_tokens` の user UPDATE policy が穴になっていた** 指摘が来た。column-level RLS が無いため user が token_hash / scopes / expires_at を書き換えられる構造で、Phase 1 では user-initiated revoke 機能も無いため UPDATE policy 自体を drop して service-role 経由に閉じる判断。Phase 1.5 で revoke を実装する時は service-role 経由の tRPC mutation で行う。並行して P2 指摘 2 件（`issueTokenPair` の 2 insert atomicity / `/oauth/authorize` error redirect）は Phase 1.5 deferral として code comment で明示し、Phase 1 の scope を膨らませない判断。
+
+`/stats` → `/review` 集約は MCP Phase 1 とは別軸で、**pre-launch の今こそ廃止すべき route を整理する** タイミングだった。`/stats` の 4 タブ構成（review / progress / insights / badges）は機能の網羅感はあったが、ユーザーから見ると「振り返りたい時にどのタブを開けばよいか」の認知負荷が高く、Dayopt の差別化軸（時間記録の一体化）に対して機能を分散させすぎていた。Review = 「自分の時間がどう使われたか」を中心にした単一ページに集約し、Progress / Insights の周辺機能は launch 後にユーザーフィードバックを見て再導入する。Badge 機能は **gamification 系の負債** として明確に切り離す判断で、`user_badges` table も drop。価値観評定（ACT 12 領域）と価値観キーワード Top5 は ship 前の personalization 試作だったが、ユーザーに与える価値が「自分の時間を観測する」という主軸から離れていたため、profile 設定から完全に削除。`personalization` JSONB 自体は trial / payment dialog flag のために残す。
+
+pre-launch のため `/stats` への redirect は設けない判断。launch 後の URL contract が無いので breaking change ではなく、301 redirect を残すと history が増えて将来の cleanup コストになる。launch 後に廃止する route を launch 前に廃止しておくことで、launch 後の breaking change を 1 件減らせる。
+
+#### Claudeの所感
+
+**「production smoke test を通すまでが Phase 1」**: Phase 1 PoC を staging で動作確認した時点では「Phase 1 完了」と感じやすいが、今日の 5 PR は production 固有の問題（CI environment case / metadata URL / vercel rewrite）を露出させた。**Phase 1 は production smoke test を通すまでが Phase 1** という認識を強化すべき。staging と production の差分は CI / domain / CDN / cache の 4 軸で出やすく、staging で動いた時点で「Phase 1 完了」と宣言すると production fix が「Phase 1 の延長戦」として scope に乗ってくる。今日の 5 PR は Phase 1 scope に含まれるべき内容で、Phase 2 の prep として扱うのは違う。
+
+**「type-level の cross-tenant leak guard は narrow が完成するまで guard ではない」**: service-role client を `SupabaseClient<Database>` で型付けた初版 → `Pick` で table を 2 つに narrow → views / functions / enums / composites まで narrow、と 3 段階で fix した。「narrow した」と感じた時点で完成しておらず、`Database` generic が持つ全 surface (Tables / Views / Functions / Enums / CompositeTypes) を塞ぐまで type guard は完成しない。この知見は Phase 2 以降の MCP write tool で別の service-role client を作る時に再発しないよう、`OAuthOnlyDatabase` パターンを reference として明文化する価値がある。
+
+**「pre-launch の route 廃止は launch 後よりずっと自由」**: launch 後に廃止する route を launch 前に廃止する判断は、URL contract が確定する前にしかできない。`/stats` 4 タブを `/review` 単一ページに集約 + Badge / 価値観評定の完全削除は、launch 後だと redirect / data migration / コミュニケーションが必要になる作業を、launch 前は「即削除」で済ませられる。Pre-launch の現在こそ「launch 後の self に対して負債を残さない」整理を進めるべきで、`docs/refactor/api-first-audit.md` のような調査メモが追加されたのも同じ流れ。次の機会に「launch までに廃止すべき route / 機能 / schema」を network-wide に洗い出す plan を切ると効いてくる。
+
+**「spec 違反を inline で fix せず deferral comment で明示する」**: codex review P2 の 2 件（atomicity / error redirect）を Phase 1.5 deferral として code comment で残した判断は、Phase 1 の scope 規律を保つ正しい挙動。spec 違反を見つけた時に「ついでに fix」で Phase 1 に押し込むと scope が膨らみ Phase 1 のフィードバックが取れる前に複雑度が爆発する。code comment で「Phase 1.5 で対処」と明示することで、(1) 後で plan を切る時に code grep で発見できる、(2) reviewer / 自分が「これは認識済みの負債」と分かる、(3) Phase 1 の scope を意識的に保てる、の 3 つが同時に成立する。spec 違反 = inline fix の reflex を抑える convention として今日のパターンを定着させたい。
+
+---

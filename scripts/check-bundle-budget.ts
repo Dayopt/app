@@ -19,7 +19,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const STATS_FILE = resolve(ROOT, '.next/diagnostics/route-bundle-stats.json');
+const APP_ROOT = resolve(ROOT, 'apps/app');
+const STATS_FILE = resolve(APP_ROOT, '.next/diagnostics/route-bundle-stats.json');
 
 // ---------------------------------------------------------------------------
 // バジェット定数
@@ -84,7 +85,7 @@ interface BudgetResult {
 
 const failOnBudget = process.argv.includes('--fail');
 const outputArg = process.argv.find((a) => a.startsWith('--output='));
-const outputPath = outputArg ? resolve(ROOT, outputArg.replace('--output=', '')) : null;
+const outputPath = outputArg ? resolve(APP_ROOT, outputArg.replace('--output=', '')) : null;
 
 // ---------------------------------------------------------------------------
 // gzip計算
@@ -94,7 +95,7 @@ function computeGzipSize(filePath: string): number {
   if (!existsSync(filePath)) return 0;
   try {
     const result = execSync(`gzip -c "${filePath}" | wc -c`, {
-      cwd: ROOT,
+    cwd: APP_ROOT,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -107,7 +108,7 @@ function computeGzipSize(filePath: string): number {
 function computeRouteGzipBytes(chunkPaths: string[]): number {
   let total = 0;
   for (const chunk of chunkPaths) {
-    const fullPath = resolve(ROOT, chunk);
+    const fullPath = resolve(APP_ROOT, chunk);
     total += computeGzipSize(fullPath);
   }
   return total;
@@ -116,7 +117,7 @@ function computeRouteGzipBytes(chunkPaths: string[]): number {
 function computeCssGzipKB(): number {
   try {
     const result = execSync('gzip -c .next/static/chunks/*.css | wc -c', {
-      cwd: ROOT,
+      cwd: APP_ROOT,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });

@@ -12,6 +12,9 @@
 # next.js
 /.next/
 /out/
+apps/*/.next/
+apps/*/out/
+.turbo/
 
 # production
 /build
@@ -85,6 +88,8 @@ coverage/
 
 # Dependency directories
 node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
 jspm_packages/
 
 # Optional npm cache directory
@@ -145,6 +150,7 @@ dist
 .out
 .storybook-out
 storybook-static/
+apps/storybook/storybook-static/
 
 # Temporary folders
 tmp/

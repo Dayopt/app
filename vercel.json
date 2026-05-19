@@ -1,8 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm ci",
+  "buildCommand": "pnpm --filter @dayopt/app build",
+  "devCommand": "pnpm --filter @dayopt/app dev",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "apps/app/.next",
   "framework": "nextjs",
   "regions": ["hnd1"],
   "git": {

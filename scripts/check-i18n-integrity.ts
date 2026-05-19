@@ -25,8 +25,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const MESSAGES_DIR = resolve(ROOT, 'messages');
-const SRC_DIR = resolve(ROOT, 'src');
+const APP_ROOT = resolve(ROOT, 'apps/app');
+const MESSAGES_DIR = resolve(APP_ROOT, 'messages');
+const SRC_DIR = resolve(APP_ROOT, 'src');
 
 const LOCALES = ['en', 'ja'] as const;
 

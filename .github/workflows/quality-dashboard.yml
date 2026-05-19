@@ -19,13 +19,13 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
-      - run: npm ci
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
 
       - name: Collect quality metrics
-        run: npm run quality:collect -- --skip=a11y
+        run: pnpm quality:collect -- --skip=a11y
 
       - name: Commit snapshot
         run: |

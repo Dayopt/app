@@ -14,30 +14,30 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 
 ```bash
 # 開発（AIは実行しない）
-npm run dev              # 開発サーバー（.env.local を参照）
-npm run dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
-npm run env:check        # op references の解決確認
-npm run storybook        # Storybook
+pnpm dev              # 開発サーバー（apps/app/.env.local を参照）
+pnpm dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
+pnpm env:check        # op references の解決確認
+pnpm storybook        # Storybook
 
 # 検証（AI必須：コード変更後）
-npm run typecheck        # 型チェック
-npm run lint             # コード品質
-npm run lint:boundaries  # feature境界チェック
-npm run lint:tokens      # デザイントークン検証（トークン変更時）
-npm run lint:i18n        # i18n整合性チェック（翻訳キー変更時）
+pnpm typecheck        # 型チェック
+pnpm lint             # コード品質
+pnpm lint:boundaries  # feature境界チェック
+pnpm lint:tokens      # デザイントークン検証（トークン変更時）
+pnpm lint:i18n        # i18n整合性チェック（翻訳キー変更時）
 
 # テスト
-npm run test:run         # ユニットテスト（ロジック変更後）
-npm run test:integration # 統合テスト
-npm run test:e2e:smoke   # E2Eスモークテスト
+pnpm test:run         # ユニットテスト（ロジック変更後）
+pnpm test:integration # 統合テスト
+pnpm test:e2e:smoke   # E2Eスモークテスト
 
 # 型生成・DB
-npm run types:generate          # Supabase型生成（Production project）
-npm run migration:create        # マイグレーション作成
-npm run db:fresh                # ローカルDB初期化+シード
+pnpm types:generate          # Supabase型生成（Production project）
+pnpm migration:create        # マイグレーション作成
+pnpm db:fresh                # ローカルDB初期化+シード
 
 # 品質
-npm run quality:deadcode # 未使用コード検出（knip）
+pnpm quality:deadcode # 未使用コード検出（knip）
 ```
 
 ## コーディング規範（必須パターン）
@@ -50,7 +50,7 @@ npm run quality:deadcode # 未使用コード検出（knip）
 - **スタイル**: Tailwind のセマンティックトークンで書く。例: `<div className="bg-card text-foreground p-4" />`
 - **export**: named export を使う（App Router 特殊ファイルのみ `export default` 例外）。例: `export function EntryCard() {}`
 - **Component**: 関数宣言で props 型を直接注釈する。例: `export function Foo({ id }: { id: string }) {}`
-- **Feature 間参照**: 他 feature の結合は Composition Layer（ページ/ルート）で行う。例: `src/app/(app)/calendar/page.tsx` で合成
+- **Feature 間参照**: 他 feature の結合は Composition Layer（ページ/ルート）で行う。例: `apps/app/src/app/(app)/calendar/page.tsx` で合成
 - **依存方向**: `features/ → lib/` の一方向。`lib/` は feature 非依存の再利用コードだけを置く
 - **Import 経路**: feature barrel（`index.ts`）から import する。例: `import { EntryCard } from '@/features/entries'`
 - **ファイル命名**: 責務を表す具体名で切る。例: `formatDuration.ts` / `dateRangeFilter.ts`（`utils.ts` / `helpers.ts` は不可）
@@ -61,7 +61,7 @@ npm run quality:deadcode # 未使用コード検出（knip）
 1. **Explore**: 既存コードを検索、影響範囲を把握
 2. **Plan**: 実装戦略を策定（`think hard`〜`ultrathink`で検討）。出力 format は [`rules/plan-format.md`](.claude/rules/plan-format.md)。承認前に `/plan-review` で fact-checker + critic に並列レビューさせる
 3. **Code**: CLAUDE.md + rules/ 準拠で実装
-4. **Commit**: typecheck → lint → lint:boundaries → コミット
+4. **Commit**: `pnpm typecheck` → `pnpm lint` → `pnpm lint:boundaries` → コミット
    - トークン変更時: `lint:tokens` も実行
    - 翻訳キー変更時: `lint:i18n` も実行
 
@@ -89,7 +89,7 @@ npm run quality:deadcode # 未使用コード検出（knip）
 | `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                                                                                                                                               |
 | `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                                                                                                                                                       |
 | `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                                                                                                                                                     |
-| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`src/lib/styles/tokens/IconConventions.mdx`](src/lib/styles/tokens/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
+| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`apps/app/src/lib/styles/tokens/IconConventions.mdx`](apps/app/src/lib/styles/tokens/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
 | `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                                                                                                                                                       |
 | `quality.md`              | テスト優先度、A11y、パフォーマンス基準                                                                                                                                                     |
 | `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                     |
