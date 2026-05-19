@@ -1,9 +1,13 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Architecture/App Routes" />
+
 # App Routes Overview
 
-`src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview.md](./api-overview.md) を参照。
+`src/app/[locale]/**` 配下の Next.js App Router routing を総覧。Route Group / Composition Layer / 認証境界の関係を一望できるようまとめる。`/api/**` は別途 [api-overview](./api-overview.mdx) を参照。
 
 策定日: 2026-04-26（最終更新: 2026-05-12 に onboarding route group 削除を反映）
-スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview.md](./api-overview.md) 参照）。`(public)` Route Group は現時点で存在しない。
+スコープ: `src/app/**` 配下の Next.js App Router 全 route。`/api/**` は除外（[api-overview](./api-overview.mdx) 参照）。`(public)` Route Group は現時点で存在しない。
 
 ## Route Group 構造
 
@@ -169,6 +173,6 @@ locale 不正 / path 不在    → [locale]/error.tsx, not-found.tsx, root not-f
 
 ## 関連ドキュメント
 
-- API endpoints: [api-overview.md](./api-overview.md)
+- API endpoints: [api-overview](./api-overview.mdx)
 - Feature 境界: [.claude/rules/feature-boundaries.md](../.claude/rules/feature-boundaries.md)
 - アーキテクチャ全体: [.claude/rules/architecture.md](../.claude/rules/architecture.md)
