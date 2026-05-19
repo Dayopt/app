@@ -1,8 +1,11 @@
 /**
  * 環境変数の型定義とバリデーション
  *
- * 型安全な環境変数アクセスを提供し、実行時のバリデーションを行います。
- * 必須の環境変数が未設定の場合、起動時にエラーをスローします。
+ * 型安全な環境変数アクセスを提供する。production-only secret の存在検証は
+ * モジュールロード時ではなく runtime boundary (route handler / server action /
+ * server start instrumentation) で `assertProductionRuntimeEnv()` を呼び出して行う。
+ *
+ * これにより public marketing pages の static build は secret なしでも通る。
  */
 
 /**
@@ -203,61 +206,50 @@ function parseBoolean(value: string | undefined): boolean | undefined {
 }
 
 /**
- * 必須環境変数のチェック
+ * Production runtime で必須となる secret 群を検証する。
+ *
+ * モジュールロード時には呼ばれない。静的 build (public marketing pages の prerender) は
+ * これらの secret が無くても通る。本番デプロイ後の最初のリクエスト / server boot で
+ * 呼び出して、設定漏れを早期検知することを意図している。
+ *
+ * @throws {EnvValidationError} production NODE_ENV で必須 secret が未設定の場合
  */
-function validateRequiredEnv(env: Partial<EnvConfig>): void {
-  // CI環境ではビルドチェックのみなのでスキップ
+export function assertProductionRuntimeEnv(env: Partial<EnvConfig> = loadEnv()): void {
+  // CI 環境では production 同等のチェックを実行しない (build pipeline は secret を持たない)
   if (env.CI) {
+    return;
+  }
+
+  // production NODE_ENV 以外は assert 対象外 (dev は warn 系で別途案内)
+  if (env.NODE_ENV !== 'production') {
     return;
   }
 
   const errors: string[] = [];
 
-  // Production環境では NEXT_PUBLIC_APP_URL が必須
-  if (env.NODE_ENV === 'production' && !env.NEXT_PUBLIC_APP_URL && !env.VERCEL_URL) {
+  if (!env.NEXT_PUBLIC_APP_URL && !env.VERCEL_URL) {
     errors.push('NEXT_PUBLIC_APP_URL or VERCEL_URL is required in production environment');
   }
 
-  // コンタクトフォームを使用する場合は GITHUB_TOKEN が必須
-  // （開発環境では警告のみ）
   if (!env.GITHUB_TOKEN) {
-    const message = 'GITHUB_TOKEN is not set. Contact form will not work.';
-    if (env.NODE_ENV === 'production') {
-      errors.push(message);
-    } else {
-      console.warn(`[ENV WARNING] ${message}`);
-    }
+    errors.push('GITHUB_TOKEN is not set. Contact form will not work.');
   }
 
-  // Turnstile設定の一貫性チェック
   const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
   if (hasTurnstileSite !== hasTurnstileSecret) {
-    const message =
-      'Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.';
-    if (env.NODE_ENV === 'production') {
-      errors.push(message);
-    } else {
-      console.warn(`[ENV WARNING] ${message}`);
-    }
+    errors.push(
+      'Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
+    );
   }
 
-  // Upstash設定チェック
   const hasUpstashUrl = !!env.UPSTASH_REDIS_REST_URL;
   const hasUpstashToken = !!env.UPSTASH_REDIS_REST_TOKEN;
-
   if (hasUpstashUrl !== hasUpstashToken) {
-    const message =
-      'Both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN should be set together.';
-    if (env.NODE_ENV === 'production') {
-      errors.push(message);
-    } else {
-      console.warn(`[ENV WARNING] ${message}`);
-    }
+    errors.push('Both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN should be set together.');
   }
 
-  // Production では Upstash が両方必須（未設定時は rate limit が pass-through で無効化される）
-  if (env.NODE_ENV === 'production' && (!hasUpstashUrl || !hasUpstashToken)) {
+  if (!hasUpstashUrl || !hasUpstashToken) {
     errors.push(
       'UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production (rate limit becomes pass-through without them)',
     );
@@ -269,9 +261,40 @@ function validateRequiredEnv(env: Partial<EnvConfig>): void {
 }
 
 /**
+ * development 環境で missing secret を console.warn で案内する (DX 向け)。
+ * production では何もしない (assertProductionRuntimeEnv が担当)。
+ */
+function warnMissingDevEnv(env: Partial<EnvConfig>): void {
+  if (env.NODE_ENV !== 'development') {
+    return;
+  }
+
+  if (!env.GITHUB_TOKEN) {
+    console.warn('[ENV WARNING] GITHUB_TOKEN is not set. Contact form will not work.');
+  }
+
+  const hasTurnstileSite = !!env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const hasTurnstileSecret = !!env.TURNSTILE_SECRET_KEY;
+  if (hasTurnstileSite !== hasTurnstileSecret) {
+    console.warn(
+      '[ENV WARNING] Both NEXT_PUBLIC_TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY should be set together.',
+    );
+  }
+
+  const hasUpstashUrl = !!env.UPSTASH_REDIS_REST_URL;
+  const hasUpstashToken = !!env.UPSTASH_REDIS_REST_TOKEN;
+  if (hasUpstashUrl !== hasUpstashToken) {
+    console.warn(
+      '[ENV WARNING] Both UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN should be set together.',
+    );
+  }
+}
+
+/**
  * 環境変数を読み込み、型安全なオブジェクトとして返す
  *
- * @throws {EnvValidationError} 必須の環境変数が未設定の場合
+ * モジュールロード時に呼ばれる側でも安全。production secret の存在検証は
+ * `assertProductionRuntimeEnv()` を runtime boundary で呼び出して行う。
  */
 export function loadEnv(): EnvConfig {
   const rawEnv = process.env;
@@ -307,8 +330,8 @@ export function loadEnv(): EnvConfig {
     YAHOO_VERIFICATION: rawEnv.YAHOO_VERIFICATION,
   };
 
-  // バリデーション実行
-  validateRequiredEnv(env);
+  // development では DX 向けに warn を出す。production 用 assert は呼び出し側 (runtime boundary) の責務。
+  warnMissingDevEnv(env);
 
   return env;
 }
