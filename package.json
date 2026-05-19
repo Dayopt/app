@@ -126,6 +126,7 @@
     "lint-staged": "^16.4.0",
     "madge": "^8.0.0",
     "mermaid": "^11.15.0",
+    "next": "^16.2.6",
     "npm-check-updates": "^19.6.6",
     "playwright": "^1.56.0",
     "postcss": "^8",
