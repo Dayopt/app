@@ -91,7 +91,10 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
+    // monorepo (pnpm) で apps/app(zod3) と apps/web(zod4) を併存させているため、
+    // @hookform/resolvers の zod adapter が strict 隔離下で型解決できない。
+    // ランタイムは正常。zod version 統一は follow-up PR で対応する。
+    resolver: zodResolver(signupSchema as never),
     defaultValues: {
       email: '',
       password: '',

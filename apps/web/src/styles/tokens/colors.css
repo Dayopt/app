@@ -1,0 +1,226 @@
+/* ============================================
+ * セマンティックカラー（app側 colors.css と同期）
+ * primitives.css のプリミティブ値を「役割」で参照
+ * OKLCH色空間・MD3準拠
+ * ============================================ */
+
+/* ライトモード */
+:root {
+  /* ============================================
+   * Surface体系（3段階 + muted）
+   * container(沈む) → background(基準) → card(浮く)
+   * muted は入力欄・well 用の控えめな面
+   *
+   *   container   L=0.96  サイドバー、セクション
+   *   background  L=0.98  ページ背景（基準）
+   *   card        L=1.00  カード、ダイアログ、ポップオーバー
+   *   muted       L=0.95  入力欄、well
+   * ============================================ */
+  --background: var(--neutral-98); /* ページ背景（基準） */
+  --foreground: var(--neutral-13);
+
+  --container: var(--neutral-96); /* サイドバー、セクション（沈む） */
+  --card: var(--white); /* カード、ダイアログ、ポップオーバー（浮く） */
+  --muted: var(--neutral-95); /* 入力欄、well */
+
+  /* Overlay（MD3 scrim準拠・モーダル背景用） */
+  --overlay: var(--black-32);
+
+  /* shadcn/ui aliases (DO NOT REMOVE — shadcn components depend on these) */
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--container);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: oklch(0.4 0 0);
+
+  /* Primary */
+  --primary: oklch(0.45 0.14 var(--hue-brand));
+  --primary-foreground: var(--white);
+
+  /* State: Active（選択中・アクティブ状態） H260統一 */
+  --state-active: oklch(0.95 0.025 260);
+  --state-active-foreground: oklch(0.38 0.14 260);
+
+  /* shadcn/ui互換エイリアス（accent → state-active） */
+  --accent: var(--state-active);
+  --accent-foreground: var(--state-active-foreground);
+
+  /* ============================================
+   * Semantic Colors — accent + tint 体系
+   * accent: テキスト・アイコン・ボーダー用（中彩度）
+   * tint: 背景用（高明度・低彩度）
+   * 4色とも同じ L/C 構造で hue のみ変化
+   * ============================================ */
+  --destructive: oklch(0.54 0.18 25);
+  --destructive-tint: oklch(0.96 0.015 25);
+  --destructive-foreground: var(--white);
+  --warning: oklch(0.55 0.16 70);
+  --warning-tint: oklch(0.97 0.015 70);
+  --warning-foreground: var(--white);
+  --success: oklch(0.5 0.15 150);
+  --success-tint: oklch(0.95 0.02 150);
+  --success-foreground: var(--white);
+  --info: oklch(0.55 0.02 260);
+  --info-tint: oklch(0.96 0.005 260);
+  --info-foreground: var(--white);
+
+  /* Tooltip（反転デザイン） */
+  --tooltip: oklch(0.25 0 0);
+  --tooltip-foreground: oklch(0.95 0 0);
+
+  /* Borders & Inputs */
+  --border: oklch(0 0 0 / 0.12);
+  --border-subtle: oklch(0 0 0 / 0.06);
+  --input: var(--black-06);
+  --ring: var(--primary); /* shadcn/ui互換: focus-visible:ring-primary を推奨 */
+
+  /* Shadow（light） */
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.04);
+  --shadow-sm: 0 0 0 1px oklch(0 0 0 / 0.03), 0 1px 3px oklch(0 0 0 / 0.03);
+  --shadow-card:
+    0 0 0 1px oklch(0 0 0 / 0.03), 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 16px oklch(0 0 0 / 0.05);
+
+  /* Charts - Comparison（比較用、shadcn準拠） */
+  --chart-1: oklch(0.6231 0.14 var(--hue-brand));
+  --chart-2: oklch(0.5461 0.2152 262.8809);
+  --chart-3: oklch(0.4882 0.2172 264.3763);
+  --chart-4: oklch(0.4244 0.1809 265.6377);
+  --chart-5: oklch(0.3791 0.1378 265.5222);
+
+  /* ============================================
+   * Tag Colors — Base（borders / dots / accents）
+   * 均等OKLCH: L=0.65, C=0.18, Hのみ変化
+   * Hue配置（最小25°間隔）:
+   *   red(25) orange(55) amber(80) green(145) teal(185)
+   *   blue(240) indigo(280) violet(310) pink(350) gray(achromatic)
+   * 例外: teal(H=185) と gray は sRGB色域が狭いため C を個別調整
+   * ============================================ */
+  --tag-red: oklch(0.65 0.18 25);
+  --tag-orange: oklch(0.65 0.18 55);
+  --tag-amber: oklch(0.65 0.18 80);
+  --tag-green: oklch(0.65 0.18 145);
+  --tag-teal: oklch(0.65 0.13 185); /* C=0.13: H=185はsRGB色域が狭い */
+  --tag-blue: oklch(0.65 0.18 240); /* H=240: chronotype-ease(260)と20°分離 */
+  --tag-indigo: oklch(0.65 0.18 280);
+  --tag-violet: oklch(0.65 0.18 310);
+  --tag-pink: oklch(0.65 0.18 350);
+  --tag-gray: oklch(0.55 0.02 250);
+
+  /* Tag Colors — Tint（card背景用、WCAG AA準拠）
+   * L=0.92, C=0.05 → foreground text(L≈0.15)とのコントラスト比 ≈ 11:1 */
+  --tag-red-tint: oklch(0.92 0.05 25);
+  --tag-orange-tint: oklch(0.92 0.05 55);
+  --tag-amber-tint: oklch(0.92 0.05 80);
+  --tag-green-tint: oklch(0.92 0.05 145);
+  --tag-teal-tint: oklch(0.92 0.05 185);
+  --tag-blue-tint: oklch(0.92 0.05 240);
+  --tag-indigo-tint: oklch(0.92 0.05 280);
+  --tag-violet-tint: oklch(0.92 0.05 310);
+  --tag-pink-tint: oklch(0.92 0.05 350);
+  --tag-gray-tint: oklch(0.92 0.01 250);
+}
+
+/* ダークモード */
+.dark {
+  /* ============================================
+   * Surface体系（3段階 + muted・warm H60 C=0.008）
+   * container(沈む) → background(基準) → card(浮く)
+   *
+   *   container   L=0.15  サイドバー、セクション
+   *   background  L=0.18  ページ背景（基準）
+   *   card        L=0.22  カード、ダイアログ、ポップオーバー
+   *   muted       L=0.25  入力欄、well
+   * ============================================ */
+  --background: oklch(0.18 0.008 60); /* ページ背景（基準） */
+  --foreground: oklch(0.9 0.005 70);
+
+  --container: oklch(0.15 0.008 60); /* サイドバー、セクション（沈む） */
+  --card: oklch(0.22 0.008 60); /* カード、ダイアログ、ポップオーバー（浮く） */
+  --muted: oklch(0.25 0.008 60); /* 入力欄、well */
+
+  /* Overlay */
+  --overlay: var(--black-50);
+
+  /* shadcn/ui aliases */
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--container);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: oklch(0.68 0.005 60);
+
+  /* Primary */
+  --primary: oklch(0.5 0.188 var(--hue-brand));
+  --primary-foreground: var(--white);
+
+  /* State: Active（WCAG 1.4.11: bg上3:1+） H260統一 */
+  --state-active: oklch(0.45 0.14 260);
+  --state-active-foreground: oklch(0.88 0.06 260);
+
+  /* shadcn/ui互換エイリアス */
+  --accent: var(--state-active);
+  --accent-foreground: var(--state-active-foreground);
+
+  /* Semantic Colors — accent + tint 体系（dark） */
+  --destructive: oklch(0.65 0.14 25);
+  --destructive-tint: oklch(0.22 0.03 25);
+  --destructive-foreground: var(--neutral-15);
+  --warning: oklch(0.72 0.14 70);
+  --warning-tint: oklch(0.22 0.03 70);
+  --warning-foreground: var(--neutral-15);
+  --success: oklch(0.65 0.12 150);
+  --success-tint: oklch(0.22 0.03 150);
+  --success-foreground: var(--neutral-15);
+  --info: oklch(0.65 0.02 260);
+  --info-tint: oklch(0.22 0.01 260);
+  --info-foreground: var(--neutral-15);
+
+  /* Tooltip（反転デザイン - 明るい背景） */
+  --tooltip: oklch(0.9 0 0);
+  --tooltip-foreground: oklch(0.2 0 0);
+
+  /* Borders & Inputs */
+  --border: oklch(1 0 0 / 0.12);
+  --border-subtle: oklch(1 0 0 / 0.07);
+  --input: var(--white-08);
+  --ring: var(--primary); /* shadcn/ui互換 */
+
+  /* Shadow（dark） */
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.14);
+  --shadow-sm: 0 0 0 1px oklch(1 0 0 / 0.03), 0 1px 4px oklch(0 0 0 / 0.18);
+  --shadow-card: 0 0 0 1px oklch(1 0 0 / 0.04), 0 2px 8px oklch(0 0 0 / 0.25);
+
+  /* Charts - Comparison（shadcn準拠・card L=0.22上で3:1+） */
+  --chart-1: oklch(0.7137 0.1434 254.624);
+  --chart-2: oklch(0.6231 0.188 var(--hue-brand));
+  --chart-3: oklch(0.5461 0.2152 262.8809);
+  --chart-4: oklch(0.55 0.2 264.38);
+  --chart-5: oklch(0.55 0.16 265.64);
+
+  /* Tag Colors — Base（ダークモード: L=0.78, C=0.15） */
+  --tag-red: oklch(0.78 0.15 25);
+  --tag-orange: oklch(0.78 0.15 55);
+  --tag-amber: oklch(0.78 0.15 80);
+  --tag-green: oklch(0.78 0.15 145);
+  --tag-teal: oklch(0.78 0.11 185); /* C=0.11: sRGB色域制限 */
+  --tag-blue: oklch(0.78 0.15 240); /* H=240: chronotype-ease(260)と20°分離 */
+  --tag-indigo: oklch(0.78 0.15 280);
+  --tag-violet: oklch(0.78 0.15 310);
+  --tag-pink: oklch(0.78 0.15 350);
+  --tag-gray: oklch(0.7 0.02 250);
+
+  /* Tag Colors — Tint（ダークモード card背景: L=0.28, C=0.06）
+   * card(L=0.22)上で視認可能・低明度でも色味を識別できるようC=0.06に引き上げ
+   * foreground text(L≈0.92)とのコントラスト比 ≈ 8:1 維持 */
+  --tag-red-tint: oklch(0.28 0.06 25);
+  --tag-orange-tint: oklch(0.28 0.06 55);
+  --tag-amber-tint: oklch(0.28 0.06 80);
+  --tag-green-tint: oklch(0.28 0.06 145);
+  --tag-teal-tint: oklch(0.28 0.06 185);
+  --tag-blue-tint: oklch(0.28 0.06 240);
+  --tag-indigo-tint: oklch(0.28 0.06 280);
+  --tag-violet-tint: oklch(0.28 0.06 310);
+  --tag-pink-tint: oklch(0.28 0.06 350);
+  --tag-gray-tint: oklch(0.28 0.02 250);
+}

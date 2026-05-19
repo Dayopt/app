@@ -1,0 +1,219 @@
+{
+  "marketing": {
+    "hero": {
+      "title": "One workflow. Every day, a little better.",
+      "subtitle": "A simple loop: plan, execute, reflect. Each cycle, your estimates get sharper and your days get calmer.",
+      "cta": "Begin With One Day",
+      "headline": {
+        "words": ["Own", "your", "time."],
+        "highlightIndex": 2
+      },
+      "subcopy": "Plan, track, and learn — in one timeline. The timeboxing app that shows where your time actually goes.",
+      "ctaPrimary": "Get started free",
+      "ctaNote": "Free for 14 days · No credit card required",
+      "mocks": {
+        "plan": "Plan",
+        "track": "Track",
+        "learn": "Learn"
+      }
+    },
+    "problem": {
+      "title": "Sound familiar?",
+      "items": {
+        "separateApps": {
+          "title": "Your plan lives in one app, your work in another",
+          "description": "Google Calendar for meetings, Todoist for tasks, Notion for notes. Nothing talks to each other."
+        },
+        "plansFallApart": {
+          "title": "By 10am, your morning plan is gone",
+          "description": "Slack pings, email, a 'quick sync' — your focused deep work block never stood a chance."
+        },
+        "noReview": {
+          "title": "Friday comes and you can't name what you finished",
+          "description": "You were busy all week. But what did you actually accomplish? You're not sure."
+        }
+      }
+    },
+    "solution": {
+      "title": "How Dayopt works",
+      "subtitle": "Three steps to take control of your day.",
+      "steps": {
+        "plan": {
+          "number": "01",
+          "title": "Plan",
+          "description": "Drag tasks onto your calendar as time blocks. Syncs with Google Calendar. Commit to real hours — not wishful thinking."
+        },
+        "execute": {
+          "number": "02",
+          "title": "Execute",
+          "description": "Work through your blocks one at a time. One click to start, one click to finish. No timers to babysit."
+        },
+        "reflect": {
+          "number": "03",
+          "title": "Reflect",
+          "description": "You planned 4 hours of deep work but delivered 2.5. Why? Dayopt shows you the patterns — so tomorrow is better."
+        }
+      }
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "Your time. Planned, tracked, and understood.",
+      "subtitle": "Your calendar plans. Your tracker records. Nothing connects the two. Dayopt brings it all into one timeline.",
+      "pillars": {
+        "plan": {
+          "number": "01",
+          "title": "Design your day",
+          "description": "Timebox your hours with drag & drop. Decide how you spend your time before the day decides for you."
+        },
+        "track": {
+          "number": "02",
+          "title": "See what actually happened",
+          "description": "Plan and reality, side by side. Instantly see where your time went — and where it drifted."
+        },
+        "learn": {
+          "number": "03",
+          "title": "Get smarter every week",
+          "description": "AI detects your patterns and shows your time P&L. See what's working, what's not, and what to change."
+        }
+      },
+      "cycle": {
+        "plan": "Plan",
+        "track": "Track",
+        "learn": "Learn",
+        "repeat": "repeat"
+      }
+    },
+    "features": {
+      "grid": {
+        "title": "What makes Dayopt different",
+        "subtitle": "Features you won't find in a regular calendar or to-do app."
+      },
+      "items": {
+        "accuracyScore": {
+          "title": "Accuracy Score",
+          "description": "Not a grade. A mirror. See the gap between intention and execution — then gradually close it.",
+          "example": "Plan 2 hours of deep work, complete 1.5 → score 75%. Track weekly trends to improve your estimates."
+        },
+        "energyMapping": {
+          "title": "Energy Mapping",
+          "description": "Your body has a rhythm. Map it. Then stop fighting your energy and start working with it.",
+          "example": "One tap after each block. After a week, see your peak hours and schedule important work there."
+        },
+        "aiReflection": {
+          "title": "AI Reflection",
+          "description": "AI-powered, but human-focused. Insights that help you gradually become more intentional about your time.",
+          "example": "Weekly summary: 'Deep work on Tuesday afternoons has a 90% completion rate. Consider blocking more.'"
+        }
+      },
+      "integrations": {
+        "title": "Works with your tools",
+        "items": ["Google Calendar sync", "Keyboard shortcuts", "API access"]
+      }
+    },
+    "mission": {
+      "title": "Why Dayopt exists",
+      "description": "I built Dayopt because I kept losing days to reactive work. I had a calendar and a to-do list, but nothing that helped me plan realistically, stay on track, and learn from how I actually spent my time.",
+      "builderNote": "Built by an indie developer. Open development, no VC pressure, no data selling.",
+      "values": {
+        "simple": {
+          "title": "Simple by design",
+          "description": "No feature bloat. One workflow — plan, execute, reflect — done well."
+        },
+        "honest": {
+          "title": "Honest time tracking",
+          "description": "Not about billing hours. About understanding where your time really goes."
+        },
+        "private": {
+          "title": "Your data, your business",
+          "description": "No ads, no selling data. You pay for the product, not with your attention."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": {
+        "line1": "Start free",
+        "line2": "Upgrade as you grow"
+      },
+      "plans": {
+        "free": {
+          "name": "Free",
+          "description": "Everything you need to experience timeboxing",
+          "price": "$0",
+          "period": "",
+          "cta": "Start Free",
+          "features": [
+            "Up to 3 projects",
+            "1GB storage",
+            "Basic analytics",
+            "Community support",
+            "API access"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "badge": "Recommended",
+          "description": "Unlimited projects, AI insights, and advanced analytics",
+          "price": "$5",
+          "period": "/month",
+          "priceDaily": "About 15¢ a day",
+          "cta": "Try Pro Free",
+          "highlights": [
+            "Unlimited projects & 100GB storage",
+            "AI-powered weekly insights",
+            "Advanced analytics & trends",
+            "Priority support"
+          ]
+        }
+      },
+      "trialNote": "No credit card required. Start free, upgrade anytime."
+    },
+    "contact": {
+      "title": "Get in Touch",
+      "subtitle": "Have questions? We'd love to hear from you. Our expert team will respond quickly.",
+      "form": {
+        "title": "Contact Us",
+        "subtitle": "If you have any questions or inquiries, please feel free to contact us. Our expert staff will respond promptly.",
+        "name": {
+          "label": "Name / Nickname",
+          "support": "Your name or nickname (50 characters max)",
+          "required": "Please enter your name",
+          "maxLength": "Name must be 50 characters or less"
+        },
+        "email": {
+          "label": "Email Address",
+          "support": "e.g., example@email.com",
+          "invalid": "Please enter a valid email address"
+        },
+        "category": {
+          "label": "Inquiry Type",
+          "support": "Select the type of inquiry",
+          "required": "Please select an inquiry type",
+          "options": {
+            "bug": "Bug Report",
+            "feature": "Feature Request",
+            "question": "Question",
+            "other": "Other"
+          }
+        },
+        "message": {
+          "label": "Message",
+          "support": "Please provide details about your inquiry (10-1000 characters)",
+          "minLength": "Message must be at least 10 characters",
+          "maxLength": "Message must be 1000 characters or less",
+          "charCount": "characters"
+        },
+        "submit": "Send Message",
+        "submitting": "Sending...",
+        "submitError": "Failed to send message. Please try again later.",
+        "success": {
+          "title": "Message Sent Successfully",
+          "description": "Thank you for your inquiry. We will respond within 2 business days.",
+          "newMessage": "Send New Message"
+        },
+        "privacyNotice": "By submitting this form, you agree to our",
+        "privacyLink": "Privacy Policy"
+      }
+    }
+  }
+}

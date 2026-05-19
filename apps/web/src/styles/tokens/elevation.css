@@ -1,0 +1,41 @@
+/* ============================================
+ * 物理照明（Physical Lighting）
+ * 上方光源を模擬した elevation 表現
+ * ============================================ */
+
+:root {
+  --elevation-highlight: oklch(1 0 0 / 0.07);
+
+  /* card(L=1.0) → 上端を微明にする余地がないため border-subtle で代用 */
+  --elevation-gradient-card: linear-gradient(to bottom, var(--card), var(--card));
+  --elevation-gradient-container: linear-gradient(
+    to bottom,
+    oklch(from var(--container) calc(l + 0.015) c h),
+    var(--container)
+  );
+  --elevation-gradient-sunken: linear-gradient(
+    to bottom,
+    oklch(from var(--input) calc(l - 0.02) c h),
+    var(--input)
+  );
+
+  --elevation-sunken: inset 0 2px 4px 0 oklch(0 0 0 / 0.08), inset 0 1px 2px 0 oklch(0 0 0 / 0.06);
+  --elevation-surface: none;
+  --elevation-raised:
+    inset 0 1px 0 0 var(--elevation-highlight), 0 1px 3px 0 oklch(0 0 0 / 0.1),
+    0 4px 8px -2px oklch(0 0 0 / 0.1);
+  --elevation-raised-heavy:
+    inset 0 1px 0 0 var(--elevation-highlight), 0 1px 3px 0 oklch(0 0 0 / 0.12),
+    0 8px 16px -4px oklch(0 0 0 / 0.12);
+}
+
+.dark {
+  --elevation-highlight: oklch(1 0 0 / 0.05);
+
+  --elevation-raised:
+    inset 0 1px 0 0 var(--elevation-highlight), 0 1px 3px 0 oklch(0 0 0 / 0.2),
+    0 4px 8px -2px oklch(0 0 0 / 0.25);
+  --elevation-raised-heavy:
+    inset 0 1px 0 0 var(--elevation-highlight), 0 1px 3px 0 oklch(0 0 0 / 0.25),
+    0 8px 16px -4px oklch(0 0 0 / 0.3);
+}

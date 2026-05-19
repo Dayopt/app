@@ -1,0 +1,341 @@
+{
+  "common": {
+    "dates": {
+      "format": "MM/DD/YYYY"
+    },
+    "reload": "Reload Page",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "undo": "Undo",
+    "skipToMainContent": "Skip to main content",
+    "navigation": {
+      "home": "Home",
+      "about": "About",
+      "features": "Features",
+      "pricing": "Pricing",
+      "blog": "Blog",
+      "docs": "Documentation",
+      "contact": "Contact",
+      "releases": "Releases",
+      "tags": "Tags",
+      "resources": "Resources",
+      "blogDescription": "Read our latest articles and tutorials",
+      "docsDescription": "Documentation and guides",
+      "releasesDescription": "Latest updates and changelog",
+      "tagsDescription": "Browse content by topic"
+    },
+    "states": {
+      "loading": "Loading...",
+      "error": "Error",
+      "notFound": "Not Found"
+    },
+    "labels": {
+      "language": "Language",
+      "theme": "Theme",
+      "menu": "Menu"
+    },
+    "metadata": {
+      "siteName": "Dayopt",
+      "siteDescription": "A modern SaaS platform built with Next.js and Tailwind CSS"
+    },
+    "actions": {
+      "search": "Search",
+      "login": "Login",
+      "signup": "Sign up",
+      "getStarted": "Get Started",
+      "learnMore": "Learn More",
+      "readMore": "Read More",
+      "viewAll": "View All",
+      "backToHome": "Back to Home",
+      "tryAgain": "Try again",
+      "close": "Close",
+      "submit": "Submit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "copyLink": "Copy link",
+      "share": "Share",
+      "shareOn": "Share on {platform}",
+      "urlCopied": "URL copied to clipboard",
+      "urlCopyFailed": "Failed to copy URL",
+      "copy": "Copy",
+      "copied": "Copied!"
+    },
+    "aria": {
+      "clearSelection": "Clear selection",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "closeSidebar": "Close sidebar",
+      "cardMenu": "Card menu",
+      "closeModal": "Close modal",
+      "closeFilterMenu": "Close filter menu",
+      "changeColor": "Change color",
+      "unread": "Unread",
+      "notifications": "Notifications",
+      "close": "Close",
+      "previousPlan": "Previous plan",
+      "nextPlan": "Next plan",
+      "options": "Options",
+      "selectAll": "Select all",
+      "tagColor": "Tag color",
+      "closeSettings": "Close settings",
+      "weeklyCalendar": "Weekly calendar",
+      "previous": "Previous",
+      "next": "Next",
+      "selectColor": "Select {color}",
+      "mainNavigation": "Main navigation",
+      "docsNavigation": "Docs navigation",
+      "navigationMenu": "Navigation menu",
+      "goToPreviousPage": "Go to previous page",
+      "goToNextPage": "Go to next page",
+      "morePages": "More pages",
+      "pagination": "pagination",
+      "more": "More"
+    }
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "general": {
+      "title": "Something went wrong",
+      "description": "We encountered an unexpected error. Please try again or contact support if the problem persists."
+    },
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.",
+      "goHome": "Back to Home"
+    },
+    "network": {
+      "title": "Connection problem",
+      "description": "Unable to connect to the server. Please check your internet connection and try again."
+    }
+  },
+  "footer": {
+    "description": "Modern productivity tools that help you organize, track, and achieve your goals.",
+    "cta": {
+      "label": "Get started",
+      "title": "Boost your productivity. Start using Dayopt today.",
+      "description": "Organize your tasks, track your time, and achieve your goals with Dayopt's powerful productivity tools.",
+      "primaryButton": "Get started",
+      "secondaryButton": "Learn more"
+    },
+    "sections": {
+      "resources": "Resources",
+      "support": "Support",
+      "legal": "Legal"
+    },
+    "links": {
+      "integrations": "Integrations",
+      "careers": "Careers",
+      "partners": "Partners",
+      "helpCenter": "Help Center",
+      "guides": "Guides",
+      "community": "Community",
+      "status": "Status",
+      "security": "Security",
+      "api": "API"
+    },
+    "support": {
+      "reportIssue": "Report an issue"
+    },
+    "legal": {
+      "copyright": "All rights reserved.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfService": "Terms of Service",
+      "refundPolicy": "Refund Policy",
+      "cookiePolicy": "Cookie Policy",
+      "tokushoho": "Commercial Transaction Act"
+    }
+  },
+  "blog": {
+    "header": {
+      "title": "Blog"
+    },
+    "filters": {
+      "title": "Filters",
+      "clearAll": "Clear all",
+      "searchArticles": "Search Articles",
+      "searchPlaceholder": "Search by title, content, or tags...",
+      "clearSearch": "Clear search",
+      "sortBy": "Sort By",
+      "order": "Order",
+      "date": "Date",
+      "popularity": "Popularity",
+      "category": "Category",
+      "orderAsc": "A-Z",
+      "orderDesc": "Z-A",
+      "filterByTags": "Filter by Tags",
+      "showingPostsAll": "all",
+      "showingPostsAny": "any",
+      "showingPostsMessage": "Showing posts that match {match} of the selected tags",
+      "applyFilters": "Apply Filters",
+      "showMore": "Show more",
+      "showLess": "Show less"
+    },
+    "relatedPosts": {
+      "title": "Related Articles",
+      "subtitle": "Here are some recommended articles related to this post",
+      "viewAll": "View All Articles"
+    },
+    "list": {
+      "articlesFound": "{count} article found",
+      "articlesFoundPlural": "{count} articles found",
+      "filteredBy": "Filtered by",
+      "searchTerm": "Search",
+      "noArticles": "No Articles Found",
+      "noArticlesHint": "Try adjusting your filters or search terms",
+      "clearAllFilters": "Clear All Filters"
+    },
+    "post": {
+      "tagsUsed": "Tags"
+    },
+    "share": {
+      "title": "Share this article"
+    },
+    "view": {
+      "list": "List",
+      "grid": "Grid"
+    }
+  },
+  "tags": {
+    "title": "Tags",
+    "description": "Explore content by tags. Find blog posts, releases, and documentation organized by topics.",
+    "searchPlaceholder": "Search tags...",
+    "clearSearch": "Clear search",
+    "category": "Category",
+    "all": "All",
+    "blog": "Blog",
+    "releases": "Releases",
+    "docs": "Docs",
+    "popularTags": "Popular Tags",
+    "noTagsFound": "No tags found",
+    "noTagsHint": "Try adjusting your search or filters",
+    "clearFilters": "Clear filters",
+    "tagsCount": "{count} tags",
+    "tagsCountSingular": "{count} tag",
+    "filters": "Filters",
+    "filtersClearAll": "Clear all",
+    "filtersApply": "Apply Filters",
+    "view": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "detail": {
+      "items": "{count} items",
+      "itemsSingular": "{count} item",
+      "allTags": "All Tags",
+      "searchContent": "Search content...",
+      "noContentFound": "No content found",
+      "noContentHint": "Try adjusting your search",
+      "clearSearch": "Clear search"
+    }
+  },
+  "releases": {
+    "header": {
+      "title": "Releases",
+      "subtitle": "Latest release notes and updates"
+    },
+    "featured": "Featured",
+    "breaking": "Breaking",
+    "filters": {
+      "title": "Filters",
+      "clearAll": "Clear all",
+      "tags": "Tags",
+      "showLess": "Show less",
+      "showMore": "Show more",
+      "resultsFound": "{count} of {total} releases",
+      "featuredReleases": "Featured releases",
+      "breakingChanges": "Breaking changes",
+      "quickFilters": "Quick Filters",
+      "searchPlaceholder": "Search by version, title, or tags...",
+      "clearSearch": "Clear search",
+      "sortBy": "Sort By",
+      "orderAsc": "Oldest first",
+      "orderDesc": "Newest first",
+      "applyFilters": "Apply Filters"
+    },
+    "view": {
+      "list": "List",
+      "grid": "Grid"
+    },
+    "changeTypes": {
+      "title": "Change Types",
+      "showAll": "Show all",
+      "newFeatures": "New Features",
+      "improvements": "Improvements",
+      "bugFixes": "Bug Fixes",
+      "breakingChanges": "Breaking Changes",
+      "securityUpdates": "Security Updates"
+    },
+    "rss": {
+      "title": "Stay Updated",
+      "description": "Subscribe to our RSS feed to get notified about new releases.",
+      "link": "Subscribe to RSS"
+    },
+    "history": {
+      "title": "Release History",
+      "count": " releases"
+    },
+    "emptyState": {
+      "title": "No Releases Yet",
+      "description": "Check back later for updates."
+    },
+    "noResults": {
+      "title": "No Releases Found",
+      "description": "No releases match your current filters.",
+      "clearFilters": "Clear Filters"
+    },
+    "detail": {
+      "backToReleases": "Back to Releases",
+      "readingTime": "About {minutes} min read",
+      "viewAllReleases": "View all releases",
+      "relatedReleases": "Related Releases",
+      "relatedDescription": "Other updates related to this release"
+    }
+  },
+  "docs": {
+    "relatedArticles": "Related Articles",
+    "tags": "Tags",
+    "pageNavigation": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "description": "We encountered an error while loading this page.",
+      "backToDocs": "Back to Documentation"
+    },
+    "landing": {
+      "subtitle": "Get started with Dayopt using our documentation and guides",
+      "quickStart": {
+        "title": "Quick Start",
+        "description": "Get started with Dayopt in minutes",
+        "link": "Read guide →"
+      },
+      "apiReference": {
+        "title": "API Reference",
+        "description": "Explore our API documentation",
+        "link": "View docs →"
+      },
+      "guides": {
+        "title": "Guides",
+        "description": "Step-by-step tutorials",
+        "link": "Browse guides →"
+      }
+    },
+    "toc": {
+      "onThisPage": "On This Page",
+      "loading": "Loading...",
+      "noHeadings": "No headings found",
+      "links": "Links",
+      "reportIssue": "Report an issue",
+      "viewSource": "View source"
+    },
+    "sidebar": {
+      "searchPlaceholder": "Search docs..."
+    }
+  }
+}

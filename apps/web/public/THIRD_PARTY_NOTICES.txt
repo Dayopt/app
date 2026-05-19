@@ -1,0 +1,19 @@
+Dayopt - Third Party Notices
+
+This file contains notices for third-party software components included in this project.
+
+Apache License 2.0 - NOTICE Files
+--------------------------------------------------------------------------------
+
+The following components are licensed under the Apache License 2.0 and include
+NOTICE files that must be preserved according to the license terms.
+
+
+(No Apache-2.0 packages with NOTICE files found)
+
+--------------------------------------------------------------------------------
+
+For a complete list of all third-party software and their licenses,
+please visit: /legal/oss-credits
+
+Generated: 2026-02-18T09:00:19.688Z

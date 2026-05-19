@@ -1,0 +1,310 @@
+{
+  "common": {
+    "navigation": {
+      "home": "ホーム",
+      "about": "概要",
+      "features": "機能",
+      "pricing": "料金",
+      "blog": "ブログ",
+      "docs": "ドキュメント",
+      "contact": "お問い合わせ",
+      "releases": "リリース",
+      "tags": "タグ",
+      "resources": "リソース",
+      "blogDescription": "最新の記事とチュートリアル",
+      "docsDescription": "ドキュメントとガイド",
+      "releasesDescription": "最新のアップデートと変更履歴",
+      "tagsDescription": "トピックでコンテンツを探す"
+    },
+    "actions": {
+      "search": "検索",
+      "login": "ログイン",
+      "signup": "新規登録",
+      "getStarted": "今すぐ始める",
+      "learnMore": "詳細を見る",
+      "readMore": "続きを読む",
+      "viewAll": "すべて表示",
+      "backToHome": "ホームに戻る",
+      "tryAgain": "再試行",
+      "close": "閉じる",
+      "submit": "送信",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "copyLink": "リンクをコピー",
+      "share": "共有",
+      "shareOn": "{platform}で共有",
+      "urlCopied": "URLをコピーしました",
+      "urlCopyFailed": "URLのコピーに失敗しました",
+      "copy": "コピー",
+      "copied": "コピーしました"
+    },
+    "states": {
+      "loading": "読み込み中...",
+      "error": "エラー",
+      "notFound": "見つかりません"
+    },
+    "labels": {
+      "language": "言語",
+      "theme": "テーマ",
+      "menu": "メニュー"
+    },
+    "metadata": {
+      "siteName": "Dayopt",
+      "siteDescription": "Next.jsとTailwind CSSで構築されたモダンなSaaSプラットフォーム"
+    },
+    "aria": {
+      "openMenu": "メニューを開く",
+      "closeMenu": "メニューを閉じる",
+      "close": "閉じる",
+      "previous": "前へ",
+      "next": "次へ",
+      "mainNavigation": "メインナビゲーション",
+      "docsNavigation": "ドキュメントナビゲーション",
+      "navigationMenu": "ナビゲーションメニュー",
+      "goToPreviousPage": "前のページへ",
+      "goToNextPage": "次のページへ",
+      "morePages": "その他のページ",
+      "pagination": "ページネーション",
+      "more": "その他"
+    }
+  },
+  "footer": {
+    "description": "タスクの整理、時間管理、目標達成を支援するモダンな生産性ツール。",
+    "cta": {
+      "label": "今すぐ始める",
+      "title": "生産性を向上させよう。Dayoptを今すぐ始めましょう。",
+      "description": "Dayoptの強力な生産性ツールで、タスクを整理し、時間を追跡し、目標を達成しましょう。",
+      "primaryButton": "今すぐ始める",
+      "secondaryButton": "詳細を見る"
+    },
+    "sections": {
+      "resources": "リソース",
+      "support": "サポート",
+      "legal": "法的事項"
+    },
+    "links": {
+      "integrations": "インテグレーション",
+      "careers": "キャリア",
+      "partners": "パートナー",
+      "helpCenter": "ヘルプセンター",
+      "guides": "ガイド",
+      "community": "コミュニティ",
+      "status": "ステータス",
+      "security": "セキュリティ",
+      "api": "API"
+    },
+    "support": {
+      "reportIssue": "問題を報告"
+    },
+    "legal": {
+      "copyright": "すべての権利を保有しています。",
+      "privacyPolicy": "プライバシーポリシー",
+      "termsOfService": "利用規約",
+      "refundPolicy": "返金・解約ポリシー",
+      "cookiePolicy": "Cookieポリシー",
+      "tokushoho": "特定商取引法に基づく表記"
+    }
+  },
+  "errors": {
+    "general": {
+      "title": "エラーが発生しました",
+      "description": "予期しないエラーが発生しました。再度お試しいただくか、問題が解決しない場合はサポートにお問い合わせください。"
+    },
+    "notFound": {
+      "title": "ページが見つかりません",
+      "description": "お探しのページは削除されたか、名前が変更されたか、一時的に利用できない可能性があります。"
+    },
+    "network": {
+      "title": "接続に問題があります",
+      "description": "サーバーに接続できません。インターネット接続を確認して再度お試しください。"
+    }
+  },
+  "blog": {
+    "header": {
+      "title": "ブログ"
+    },
+    "filters": {
+      "title": "フィルター",
+      "clearAll": "すべてクリア",
+      "searchArticles": "記事を検索",
+      "searchPlaceholder": "タイトル、内容、タグで検索...",
+      "clearSearch": "検索をクリア",
+      "sortBy": "並び替え",
+      "order": "順序",
+      "date": "日付",
+      "popularity": "人気順",
+      "category": "カテゴリ",
+      "orderAsc": "昇順",
+      "orderDesc": "降順",
+      "filterByTags": "タグで絞り込み",
+      "showingPostsAll": "すべて",
+      "showingPostsAny": "いずれか",
+      "showingPostsMessage": "選択したタグの{match}に一致する記事を表示中",
+      "applyFilters": "フィルターを適用",
+      "showMore": "もっと見る",
+      "showLess": "閉じる"
+    },
+    "relatedPosts": {
+      "title": "関連記事",
+      "subtitle": "この記事に関連するおすすめの記事をご紹介します",
+      "viewAll": "すべての記事を見る"
+    },
+    "list": {
+      "articlesFound": "{count}件の記事が見つかりました",
+      "articlesFoundPlural": "{count}件の記事が見つかりました",
+      "filteredBy": "フィルター",
+      "searchTerm": "検索",
+      "noArticles": "記事が見つかりませんでした",
+      "noArticlesHint": "フィルターや検索条件を変更してみてください",
+      "clearAllFilters": "すべてのフィルターをクリア"
+    },
+    "post": {
+      "tagsUsed": "タグ"
+    },
+    "share": {
+      "title": "この記事をシェア"
+    },
+    "view": {
+      "list": "リスト",
+      "grid": "グリッド"
+    }
+  },
+  "tags": {
+    "title": "タグ",
+    "description": "タグでコンテンツを探す。ブログ記事、リリース、ドキュメントをトピック別に閲覧できます。",
+    "searchPlaceholder": "タグを検索...",
+    "clearSearch": "検索をクリア",
+    "category": "カテゴリ",
+    "all": "すべて",
+    "blog": "ブログ",
+    "releases": "リリース",
+    "docs": "ドキュメント",
+    "popularTags": "人気のタグ",
+    "noTagsFound": "タグが見つかりません",
+    "noTagsHint": "検索条件を変更してみてください",
+    "clearFilters": "フィルターをクリア",
+    "tagsCount": "{count}件のタグ",
+    "tagsCountSingular": "{count}件のタグ",
+    "filters": "フィルター",
+    "filtersClearAll": "すべてクリア",
+    "filtersApply": "フィルターを適用",
+    "view": {
+      "grid": "グリッド",
+      "list": "リスト"
+    },
+    "detail": {
+      "items": "{count}件",
+      "itemsSingular": "{count}件",
+      "allTags": "すべてのタグ",
+      "searchContent": "コンテンツを検索...",
+      "noContentFound": "コンテンツが見つかりません",
+      "noContentHint": "検索条件を変更してみてください",
+      "clearSearch": "検索をクリア"
+    }
+  },
+  "releases": {
+    "header": {
+      "title": "リリース",
+      "subtitle": "最新のリリースノートと更新情報"
+    },
+    "featured": "注目",
+    "breaking": "破壊的変更",
+    "filters": {
+      "title": "フィルター",
+      "clearAll": "すべてクリア",
+      "tags": "タグ",
+      "showLess": "表示を減らす",
+      "showMore": "さらに表示",
+      "resultsFound": "{total}件中{count}件のリリース",
+      "featuredReleases": "注目のリリース",
+      "breakingChanges": "破壊的変更",
+      "quickFilters": "クイックフィルター",
+      "searchPlaceholder": "バージョン、タイトル、タグで検索...",
+      "clearSearch": "検索をクリア",
+      "sortBy": "並び替え",
+      "orderAsc": "古い順",
+      "orderDesc": "新しい順",
+      "applyFilters": "フィルターを適用"
+    },
+    "view": {
+      "list": "リスト",
+      "grid": "グリッド"
+    },
+    "changeTypes": {
+      "title": "変更タイプ",
+      "showAll": "すべて表示",
+      "newFeatures": "新機能",
+      "improvements": "改善",
+      "bugFixes": "バグ修正",
+      "breakingChanges": "破壊的変更",
+      "securityUpdates": "セキュリティアップデート"
+    },
+    "rss": {
+      "title": "最新情報を受け取る",
+      "description": "RSSフィードを購読して、新しいリリースの通知を受け取りましょう。",
+      "link": "RSSを購読"
+    },
+    "history": {
+      "title": "リリース履歴",
+      "count": "件"
+    },
+    "emptyState": {
+      "title": "リリースはまだありません",
+      "description": "後で更新をご確認ください。"
+    },
+    "noResults": {
+      "title": "リリースが見つかりません",
+      "description": "現在のフィルターに一致するリリースはありません。",
+      "clearFilters": "フィルターをクリア"
+    },
+    "detail": {
+      "backToReleases": "リリース一覧に戻る",
+      "readingTime": "約{minutes}分で読了",
+      "viewAllReleases": "すべてのリリースを見る",
+      "relatedReleases": "関連リリース",
+      "relatedDescription": "このリリースに関連するアップデート"
+    }
+  },
+  "docs": {
+    "relatedArticles": "関連記事",
+    "tags": "タグ",
+    "pageNavigation": {
+      "previous": "前へ",
+      "next": "次へ"
+    },
+    "error": {
+      "title": "エラーが発生しました",
+      "description": "ページの読み込み中にエラーが発生しました。",
+      "backToDocs": "ドキュメントに戻る"
+    },
+    "landing": {
+      "subtitle": "ドキュメントとガイドでDayoptを始めましょう",
+      "quickStart": {
+        "title": "クイックスタート",
+        "description": "数分でDayoptを始めましょう",
+        "link": "ガイドを読む →"
+      },
+      "apiReference": {
+        "title": "APIリファレンス",
+        "description": "APIドキュメントを探索する",
+        "link": "ドキュメントを見る →"
+      },
+      "guides": {
+        "title": "ガイド",
+        "description": "ステップバイステップのチュートリアル",
+        "link": "ガイドを見る →"
+      }
+    },
+    "toc": {
+      "onThisPage": "このページの内容",
+      "loading": "読み込み中...",
+      "noHeadings": "見出しが見つかりません",
+      "links": "リンク",
+      "reportIssue": "問題を報告",
+      "viewSource": "ソースを表示"
+    },
+    "sidebar": {
+      "searchPlaceholder": "ドキュメントを検索..."
+    }
+  }
+}
