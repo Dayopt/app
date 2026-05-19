@@ -200,7 +200,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
 
       - name: Run E2E tests
-        run: pnpm test:e2e -- --project="chromium"
+        run: pnpm --dir apps/app exec playwright test --project="chromium"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
