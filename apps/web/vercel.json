@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "installCommand": "pnpm install --frozen-lockfile",
   "functions": {
-    "app/api/*/route.ts": {
+    "src/app/api/*/route.ts": {
       "maxDuration": 30
     }
   },
@@ -48,27 +48,11 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "/api/robots"
-    }
-  ],
   "redirects": [
     {
       "source": "/home",
       "destination": "/",
       "permanent": true
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/revalidate",
-      "schedule": "0 0 * * *"
     }
   ]
 }
