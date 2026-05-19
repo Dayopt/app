@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Heading, Text } from '@/components/ui/typography';
 import { Highlight } from '@/lib/highlight';
 import type { SearchResultItem } from '@/types/api';
+import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ import { Suspense, useEffect, useState } from 'react';
 function SearchResults() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const locale = useLocale();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +28,7 @@ function SearchResults() {
     if (q) {
       setIsLoading(true);
       // 実際の検索API呼び出し
-      fetch(`/api/search?q=${encodeURIComponent(q)}`)
+      fetch(`/api/search?q=${encodeURIComponent(q)}&locale=${encodeURIComponent(locale)}`)
         .then((response) => response.json())
         .then((data) => {
           setResults(data.results || []);
@@ -39,7 +41,7 @@ function SearchResults() {
     } else {
       setResults([]);
     }
-  }, [searchParams]);
+  }, [searchParams, locale]);
 
   const handleSearch = (newQuery: string) => {
     const trimmedQuery = newQuery.trim();

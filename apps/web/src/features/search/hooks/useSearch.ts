@@ -25,7 +25,7 @@ export function useSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = useCallback(async (query: string) => {
+  const search = useCallback(async (query: string, locale: string) => {
     if (!query.trim()) {
       setResults([]);
       return;
@@ -35,7 +35,9 @@ export function useSearch() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(query)}&locale=${encodeURIComponent(locale)}`,
+      );
       if (!response.ok) {
         throw new Error(`Search failed with status: ${response.status}`);
       }

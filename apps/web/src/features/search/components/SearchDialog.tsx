@@ -136,7 +136,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => {
-      fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+      fetch(`/api/search?q=${encodeURIComponent(query)}&locale=${encodeURIComponent(locale)}`, {
         signal: abortController.signal,
       })
         .then((response) => response.json())
@@ -154,7 +154,7 @@ export function SearchDialog({ open, onOpenChange, locale }: SearchDialogProps) 
       clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [query]);
+  }, [query, locale]);
 
   useEffect(() => {
     if (open) {
