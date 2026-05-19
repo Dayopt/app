@@ -169,7 +169,7 @@ done
 
 **粒度の基準**: 第三者が見ても「何が変わったか」がわかるレベル
 
-**構造テンプレート**: `docs/releases/template.md` を参照
+**構造テンプレート**: `apps/storybook/docs/operations/releases/template.mdx` を参照
 
 **❌ 悪い例（抽象的）**:
 
@@ -259,4 +259,4 @@ gh release edit v${VERSION} --notes-file /tmp/release-notes-v${VERSION}.md
 
 ## 詳細ドキュメント
 
-完全なチェックリスト: `docs/releases/RELEASE_CHECKLIST.md`
+完全なチェックリスト: `apps/storybook/docs/operations/releases/checklist.mdx`
