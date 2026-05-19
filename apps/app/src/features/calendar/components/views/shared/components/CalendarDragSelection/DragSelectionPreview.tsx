@@ -50,7 +50,6 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   const timeLabel = `${formatTime(selection.startHour, selection.startMinute)} – ${formatTime(selection.endHour, selection.endMinute)}`;
 
   // 過去時間帯は保存時に自動で unplanned になるため、preview もダッシュ枠の unplanned 風に切替える。
-  // eslint-disable-next-line react-hooks/purity -- transient preview component, no observable side effect
   const nowForPastCheck = Date.now();
   const endDateTime = new Date(date);
   endDateTime.setHours(selection.endHour, selection.endMinute, 0, 0);
