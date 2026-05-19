@@ -385,7 +385,7 @@ scope は `oauth_tokens.scopes text[]` に格納。MCP runtime は tool dispatch
 
 - LP / blog 訴求（「Bring your AI」軸）
 - `docs/adr/ADR-00X-mcp-remote-server.md` 起票
-- `.storybook/docs/product/projects/mcp-server/` に移動 + `summary.md` 追加
+- `apps/storybook/docs/product/projects/mcp-server/` に移動 + `summary.md` 追加
 - 技術 docs 公開（`content/docs/integrations/mcp.mdx`）
 
 ---
