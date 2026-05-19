@@ -465,12 +465,12 @@ React DevTools Profiler で Calendar ↔ Stats ↔ AI を往復:
 
 実装中に以下が発生したら停止して原因調査:
 
-| 状況                                        | 停止ポイント                                                                             |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `npm run typecheck` fail                    | import path / 型不整合を特定してから再開                                                 |
-| `npm run lint:boundaries` fail              | feature 違反。配置場所 (Option c) を再検討                                               |
+| 状況                                       | 停止ポイント                                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `npm run typecheck` fail                   | import path / 型不整合を特定してから再開                                                 |
+| `npm run lint:boundaries` fail             | feature 違反。配置場所 (Option c) を再検討                                               |
 | Calendar ↔ Stats 往復で state 保持されない | CalendarNavigationProvider の mount 位置が変わった可能性、base-layout-content.tsx を確認 |
-| Sidebar 外殻が再マウントしている            | Option Y の前提崩壊。Profiler で原因特定、Phase 2-A §4 に戻して Option X / Z を再検討    |
+| Sidebar 外殻が再マウントしている           | Option Y の前提崩壊。Profiler で原因特定、Phase 2-A §4 に戻して Option X / Z を再検討    |
 
 ---
 

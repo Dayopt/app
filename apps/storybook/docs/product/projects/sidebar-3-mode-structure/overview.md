@@ -533,7 +533,7 @@ Phase 2-B の 8 コミット実績を踏まえ、Phase 2-C は **6 Step / 6-7 �
 | Step | 手動確認内容                                                                                        |
 | ---- | --------------------------------------------------------------------------------------------------- |
 | C-1  | Desktop / Mobile で Calendar / Stats の URL 直アクセスと往復、Sidebar / BottomTabBar が従来通り動作 |
-| C-2  | Calendar ↔ Stats 往復で Sidebar 中身が正しく切替、再マウント 0 回 (React DevTools Profiler で確認) |
+| C-2  | Calendar ↔ Stats 往復で Sidebar 中身が正しく切替、再マウント 0 回 (React DevTools Profiler で確認)  |
 | C-3  | `/ja/ai` / `/ja/ai/threads/abc` 直アクセスで stub 描画、AI モード時に Sidebar が `AiSidebar` に切替 |
 | C-4  | Mobile で AI タブが表示され、タップで `/ja/ai` に遷移、4 等分配分でレイアウト崩れなし               |
 | C-5  | Desktop で AI タブが表示され、クリックで `/ja/ai` に遷移、aria-current が正しく設定                 |

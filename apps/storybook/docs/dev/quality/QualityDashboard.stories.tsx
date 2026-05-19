@@ -9,14 +9,14 @@ let latestSnapshot: QualitySnapshot = sampleSnapshot;
 let prevSnapshot: QualitySnapshot = samplePreviousSnapshot;
 
 try {
-  latestSnapshot = (await import('../../../../../../quality-reports/latest.json'))
+  latestSnapshot = (await import('../../../../../quality-reports/latest.json'))
     .default as QualitySnapshot;
 } catch {
   // quality-reports/latest.json が未生成の場合はサンプルを使用
 }
 
 try {
-  prevSnapshot = (await import('../../../../../../quality-reports/previous.json'))
+  prevSnapshot = (await import('../../../../../quality-reports/previous.json'))
     .default as QualitySnapshot;
 } catch {
   // quality-reports/previous.json が未生成の場合はサンプルを使用

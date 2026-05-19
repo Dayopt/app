@@ -102,10 +102,10 @@ docs/design/{project-name}/
 
 ### 完了後
 
-Project 完了時に `.storybook/docs/product/projects/` へ移動:
+Project 完了時に `apps/storybook/docs/product/projects/` へ移動:
 
 ```
-.storybook/docs/product/projects/{project-name}/
+apps/storybook/docs/product/projects/{project-name}/
 ├── overview.md
 ├── step-X-detail.md
 └── summary.md         — 完了時に追加（達成した成果）
@@ -119,7 +119,7 @@ Project 完了時に `.storybook/docs/product/projects/` へ移動:
 
 ### src/ にはコロケーションしない
 
-設計書は Project 単位（複数ファイル横断）の情報なので、src/ の個別コードにコロケーションしない。src/ はコード専用、設計書は `.storybook/docs/product/projects/` に集約する。
+設計書は Project 単位（複数ファイル横断）の情報なので、src/ の個別コードにコロケーションしない。src/ はコード専用、設計書は `apps/storybook/docs/product/projects/` に集約する。
 
 ただし feature 単位の長期設計（ARCHITECTURE.md 相当）は feature 内コロケーションの選択肢あり。これは Project 設計書とは別物。
 
@@ -172,4 +172,4 @@ UI 変更を含む作業では、Storybook 起動して視覚確認を Tomoya �
 
 - フォローアップ作業群（typo 修正、namespace 追加、etc.）
 
-詳細は `.storybook/docs/product/projects/` 配下の各 project ディレクトリを参照。
+詳細は `apps/storybook/docs/product/projects/` 配下の各 project ディレクトリを参照。

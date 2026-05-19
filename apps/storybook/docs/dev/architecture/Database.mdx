@@ -19,7 +19,7 @@ DayoptはSupabase（PostgreSQL）を使用し、3環境（Local / Staging / Prod
 | -------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | **entries**    | 時間ブロック（計画・実績の統合エンティティ） | title, origin(planned), start*time, end_time, actual_start_time, actual_end_time, fulfillment_score(1-5), duration_minutes, reminder*\* |
 | **tags**       | 階層タグ（親子1階層）                        | name, color, parent_id, level, sort_order, is_active                                                                                    |
-| **entry_tags** | Entries↔Tags中間テーブル                    | entry_id, tag_id                                                                                                                        |
+| **entry_tags** | Entries↔Tags中間テーブル                     | entry_id, tag_id                                                                                                                        |
 
 ### ユーザー設定（3テーブル）
 
