@@ -560,8 +560,10 @@ export class EntryService {
         ...baseInput,
         start_time: plannedRange.start,
         end_time: plannedRange.end,
-        actual_start_time: baseInput.actual_start_time ?? plannedRange.start,
-        actual_end_time: baseInput.actual_end_time ?? plannedRange.end,
+        actual_start_time:
+          baseInput.actual_start_time ?? existingData.actual_start_time ?? plannedRange.start,
+        actual_end_time:
+          baseInput.actual_end_time ?? existingData.actual_end_time ?? plannedRange.end,
       });
     }
 

@@ -321,21 +321,19 @@ describe('EntryService.update', () => {
     );
   });
 
-  it('future planned更新でactual未指定ならplannedと同じ範囲で補完する', async () => {
+  it('future planned更新でactual未指定なら既存actual範囲を保持する', async () => {
     const existing = createMockEntry({
       id: 'entry-1',
       origin: 'planned',
       start_time: '2030-03-17T09:00:00Z',
       end_time: '2030-03-17T10:00:00Z',
-      actual_start_time: '2030-03-17T09:00:00Z',
-      actual_end_time: '2030-03-17T10:00:00Z',
+      actual_start_time: '2030-03-17T09:15:00Z',
+      actual_end_time: '2030-03-17T09:45:00Z',
     });
     const updated = {
       ...existing,
       start_time: '2030-03-17T11:00:00Z',
       end_time: '2030-03-17T12:00:00Z',
-      actual_start_time: '2030-03-17T11:00:00Z',
-      actual_end_time: '2030-03-17T12:00:00Z',
     };
 
     const { service, mockSupabase } = createService();
@@ -362,8 +360,8 @@ describe('EntryService.update', () => {
       expect.objectContaining({
         start_time: '2030-03-17T11:00:00Z',
         end_time: '2030-03-17T12:00:00Z',
-        actual_start_time: '2030-03-17T11:00:00Z',
-        actual_end_time: '2030-03-17T12:00:00Z',
+        actual_start_time: '2030-03-17T09:15:00Z',
+        actual_end_time: '2030-03-17T09:45:00Z',
       }),
     );
   });
