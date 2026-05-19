@@ -53,8 +53,12 @@ function isOriginAllowed(origin: string | null): boolean {
     return true;
   }
 
-  // Vercel プレビュー URL のパターンマッチ（*.vercel.app）
-  if (origin.match(/^https:\/\/.*\.vercel\.app$/)) {
+  // dayopt team の Vercel preview/production URL のみ許可
+  // フォーマット: `<project>-<hash>-dayopt.vercel.app` /
+  //              `<project>-git-<branch>-dayopt.vercel.app`
+  // 全 `*.vercel.app` を許可すると他テナントの悪意あるアプリから
+  // CSRF が通ってしまうため team slug でロックダウンする。
+  if (origin.match(/^https:\/\/[a-z0-9-]+-dayopt\.vercel\.app$/)) {
     return true;
   }
 

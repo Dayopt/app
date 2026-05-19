@@ -26,6 +26,14 @@ interface SearchIndexEntry {
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'search-index.json');
 
+// routing.ts の defaultLocale と一致させる (localePrefix: 'as-needed' のため
+// defaultLocale は prefix なし、それ以外は `/{locale}` を前置する)
+const DEFAULT_LOCALE = 'en';
+
+function localizedUrl(locale: string, pathname: string): string {
+  return locale === DEFAULT_LOCALE ? pathname : `/${locale}${pathname}`;
+}
+
 /**
  * Markdownからプレーンテキストを抽出（検索用）
  */
@@ -80,7 +88,7 @@ function indexBlog(locale: string): SearchIndexEntry[] {
         id: `blog-${locale}-${slug}`,
         title: (data.title as string) || '',
         description: (data.description as string) || '',
-        url: `/blog/${slug}`,
+        url: localizedUrl(locale, `/blog/${slug}`),
         type: 'blog',
         tags: (data.tags as string[]) || [],
         category: (data.category as string) || 'general',
@@ -115,7 +123,7 @@ function indexDocs(locale: string): SearchIndexEntry[] {
         id: `docs-${locale}-${slug}`,
         title: (data.title as string) || '',
         description: (data.description as string) || stripMarkdown(body).slice(0, 200),
-        url: `/docs/${slug}`,
+        url: localizedUrl(locale, `/docs/${slug}`),
         type: 'docs',
         tags: (data.tags as string[]) || [],
         category: (data.category as string) || slug.split('/')[0] || 'general',
@@ -148,7 +156,7 @@ function indexReleases(locale: string): SearchIndexEntry[] {
         id: `release-${locale}-${slug}`,
         title: (data.title as string) || `Release ${version}`,
         description: (data.description as string) || '',
-        url: `/releases/${version}`,
+        url: localizedUrl(locale, `/releases/${version}`),
         type: 'release',
         tags: (data.tags as string[]) || [],
         category: 'releases',
