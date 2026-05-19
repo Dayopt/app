@@ -6,6 +6,70 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-19
+
+### 1 日で 7 件の dependabot を吸収して v0.28.0 を release、monorepo branch に main を統合した日
+
+25 コミット。本日のセッション全部が「滞留した変更を 1 本にまとめて流す」運用作業に充てられた。前半は 7 件のオープン dependabot PR を bulk merge（CI 失敗 2 件は別途）、後半は v0.28.0 のリリース作業（version bump + `.gitignore` の `.turbo/` 追加 + タグ作成 + 48 PR を 7 カテゴリに分類した詳細リリースノート）、最後に monorepo branch (`codex/dayopt-monorepo-stage-1`) に main を統合してコンフリクトを resolve。
+
+#### やったこと
+
+- **dependabot PR 7 件の bulk merge (8 commits)**: CI パスの 5 件と、CI 失敗のうち rebase 後に通った 2 件（development-storybook / development-other）を直列に merge。Tailwind 4.3 の class sort 順変更で発生した `TimeInput.tsx` の Prettier 失敗だけは dependabot branch に手動 fix を push して対応
+- **v0.28.0 リリース (3 commits)**: `.gitignore` に `.turbo/` を追加して Turborepo cache を untracked から除外、`package.json` を 0.28.0 へ bump、リリース PR (#1166) を merge、`v0.28.0` タグを push、GitHub Release を auto-generated → 詳細リリースノート（前回 v0.27.0 以降の 48 PR を Added / Changed / Fixed / Security / Breaking / Test / Dependencies / Chore に分類）で上書き
+- **monorepo branch ← main の統合 (1 merge commit, 13 files changed)**: 構造系コンフリクト（`package.json` の name / version / scripts、`package-lock.json` 削除）は monorepo 構造優先、コンテンツ系（two-layer model の actual 範囲扱い、エラーコード追加、Tailwind class 順、`get_tag_recent_entries` の unplanned 対応 migration）は conflict ごとに正しい側を選択。main の 21 個の dep bump は `apps/app/package.json` と `apps/storybook/package.json` に転記
+
+#### なぜ今日この作業をしたか
+
+オープン PR が 7 件まで溜まっていた。dependabot の transitive bump は単体では大した変更でなくとも、置いておくと 1 件マージするごとに残り全部が BEHIND に戻って rebase が必要になり、結局誰かが面倒な直列処理をすることになる。今日のうちに全部畳むと、明日以降の dependabot 新規 PR が出てもまた直列にこなすだけになり、開発者の認知負荷から外せる。
+
+v0.28.0 のリリースタイミングはユーザーの要求。前回 v0.27.0 から約 3 週間で 48 PR が main に積み上がり、その中に Remote MCP server の Phase 1 PoC、entry の 2-layer model 化、`/stats` → `/review` 統合、Onboarding/Tour 削除、Cloudflare Turnstile 統合、Next.js 16.2.6 のセキュリティ修正など意味のある塊が複数含まれていた。tagless で放置するとリリースノートが書きにくくなる（PR を 1 件ずつ追って再構成するコストが時間に比例して上がる）ので、ユーザーの「release したい」発話を契機に releasing skill を起動して end-to-end で完了。`.turbo/` の `.gitignore` 追加は本来別 commit / 別 PR でも良かったが、リリース PR 1 本に束ねれば後片付けがゼロになるので一緒に流した。
+
+monorepo branch への main 統合は、放置すると差分が日々開いてコンフリクト解決が指数関数的に重くなるため。今日のタイミングで取り込めば「main の 45 commits + monorepo の 14 commits」だけで済むが、来週まで持ち越すと両側がさらに進んで diff が増える。「monorepo 側を優先・コンテンツを壊さない」の原則は user 指定。構造系（pnpm workspace、`apps/*` 配下のパス）は monorepo の決定が後勝ちなので main の name / lockfile はそのまま採用してはいけない。一方で main 側で入った bug fix（`INVALID_ENTRY_SHAPE` エラーコード、`get_tag_recent_entries` の unplanned 対応、`react-hooks/purity` の eslint-disable など）は monorepo branch にもないと grace 期に壊れるので必ず取り込む。この 2 つの方針を 1 conflict ずつ判定して resolve した。
+
+#### Claudeの所感
+
+**直列処理が最速になる場面**: 並列実行できそうな依頼でも、状態が逐次変わるなら直列の方が結果的に速い。今日の dependabot merge では、最初に「5 件並列で rebase 投げて全部 admin merge」を試したが ruleset で全件 reject、その後「全件 rebase → 並列 CI 待ち」に切替えたが 1 件目を merge した瞬間に残り 4 件が再び BEHIND になり 2 度目の rebase が必要に。最初から「1 件 rebase → CI 待ち → merge → 次の 1 件」を直列で回した方が CI 実行時間も無駄にならなかった。並列化の見かけの効率と、状態空間が線形でない作業の本質的な逐次性は区別する必要がある。
+
+**リリースノートの粒度は時間軸を畳むほど粗くなる**: 48 PR を 1 つのリリースノートに圧縮すると、個別 PR の意図は溶ける。Remote MCP server の Phase 1 PoC は #1117 / #1118 / #1121 / #1127 / #1128 の 5 PR に分かれているが、リリースノートでは「MCP server + OAuth 2.1」の 1 項目に圧縮した。圧縮は読みやすさのために必要だが、historical accident を辿りたい人にとっては Full Changelog のリンクが命綱になる。template.md が Full Changelog 必須としているのは正しい判断で、見落とすと future maintainer に大きな負債を残す。
+
+**Conflict resolution はパッチではなく意思決定の保存である**: monorepo branch の merge で「monorepo 側を優先」を機械的に適用すると、main 側で入った INVALID_ENTRY_SHAPE エラーコードが落ちて production が壊れる。逆に「全部 main 優先」を取ると monorepo の two-layer model 改善（future planned で actual を null にする refinement）が消える。Conflict は「2 つの開発系列が独立に正しい判断をした証拠」であり、resolution は「両者の意思決定の上位概念に立って取捨選択を再宣言する」工程。`-X ours` / `-X theirs` のような一括戦略はその責任を回避する手段で、複雑な merge では結局後で崩れる。今日のように conflict ごとに 1 件ずつ理由付きで決める方が、後でレビューする人にも追える形になる。
+
+---
+
+## 2026-05-18
+
+### monorepo 第一段階の土台を入れ、entry card を 2-layer 構造に再編した日
+
+23 コミット。前半は monorepo 移行の Phase 1（apps/app + apps/storybook の 2 workspace、pnpm + Turborepo、packages/\* の placeholder）、後半は entry card の 2-layer 構造再編（planned 枠 + actual overlay の組み合わせ、超過 overlay は破線枠のみ）と関連 fix の連鎖。
+
+#### やったこと
+
+- **monorepo 第一段階の土台 (4 commits)**: `apps/app`（Next.js）と `apps/storybook` の 2 workspace + `packages/{ui,types,server,utils,config}` placeholder を導入、root の `package.json` を scripts と pnpm.overrides だけに削ぎ、pre-commit を workspace 対応に。monorepo lint で出た hooks 違反と未使用コードを整理
+- **entry card 2-layer 構造への再編 (2 commits)**: planned 枠と actual overlay の組み合わせで視覚階層を統制、超過 overlay の「超過 +X 分」テキストラベルを削除して破線枠のみで超過を表現
+- **entry / inspector まわりの fix 連鎖 (8 commits)**: 構造変換 (planned ↔ unplanned) の pre-flush 失敗時に conversion を中止、構造変換時の inspector pending edit を保持、planned 移動の overlap 検知と stale onError の cache fix、planned 更新で actual 範囲を保持、planned 作成の overlap 判定で actual 範囲を mirror、未使用 eslint-disable 削除
+- **DB / test / その他 (5 commits)**: seed.sql に actual_start_time / actual_end_time を追加、entry insert integration test に 2-layer time fields を補う、tooltip の遅延表示 timer を安全に破棄、merge_tags_with_hierarchy の RPC error 詳細を log、タグ直近 entry で予定外記録を保持
+- **CI (2 commits)**: supabase setup-cli version pin (2.99.0 → 2.98.0 にロールバック)
+
+#### なぜ今日この作業をしたか
+
+monorepo 移行の必要性は前から認識されていたが、放置のままだと将来 packages 切り出しの判断ごとにヒューリスティクスでパスを決め続けることになる。第一段階で workspace 構造だけ確定させておけば、次から「これは packages/utils か apps/app/src か」の判断が type-bound になる。今日は土台のみで、実際の移植は packages/\* に少しずつ進める運用に切替。
+
+entry card の 2-layer 構造は前日（5-15）に進めた「重複検出 UI 統一」と「過去時間帯は unplanned に切替」の自然な延長線。planned と actual の概念分離が UI レベルで visible でないと、user が「いま planned を編集しているのか actual を編集しているのか」を混同する。視覚階層を「planned 枠の中に actual の overlay」にすると、planned 編集は枠を、actual 編集は内側 overlay を触れば良いという物理的 affordance が成立する。
+
+超過 overlay のテキストラベル削除は user 提案だが理由は明確。「超過 +5 分」のように具体的な数値を出すと「超過したことの情報」と「具体的にどれくらい超過したか」が二重に出る。破線枠だけにすれば「超過したという事実」だけが伝わり、具体的な分数を知りたければカードを開けば良い。情報密度を下げる選択。
+
+inspector / 構造変換まわりの fix は前日からの繰越分も含む race condition の掃除。debounced save の pre-flush が変換 mutation と衝突するパターン、planned 移動の overlap 検知が stale な onError cache で 1 tick 遅れて誤発火するパターンなど、UX レベルで顕在化しない race を sentry log で発見してまとめて潰した。
+
+#### Claudeの所感
+
+**Monorepo 移行は「土台だけ」を Phase 1 にする選択が正しい**: 完全移行を 1 つの PR で済ませようとすると、packages の境界判断と pnpm 設定の細かい挙動が同じ PR に混じり、レビューの粒度が崩壊する。「workspace 構造の宣言 + placeholder」だけを切り離して main に入れれば、次の Phase で packages/utils の中身を埋めるときに「箱は既にある」前提で diff を読める。土台と中身を分離する原則は monorepo に限らず DB schema 変更や trpc router 分割でも同じ。
+
+**Visual hierarchy で概念を表現すると prose の i18n key が減る**: 超過 overlay の「超過 +X 分」テキストを破線枠だけに置き換えると、i18n key が 1 つ消える。同じことが「重複検出の文言を `entry.errors.timeOverlap` 1 キーに集約」（5-15）でも起きていた。テキストで状態を説明するのは多くの場合冗長で、視覚で表現できる状態は視覚に任せた方が i18n の保守コストが下がる。Dayopt の copywriting tone guide が「装飾のない基本体験」を志向しているのと整合的。
+
+**Race condition は sentry log で見つけてからまとめて潰す**: 個別の race を 1 件ずつ「気付いて直す」と修正が日付に散らばってリリースノートが追いにくい。sentry の error grouping を見て「同じ race の variant が 3-4 件」とまとまったところで 1 日かけて潰せば、リリースノートに「inspector の race condition 群を一括 fix」と書ける。observability data は debugging だけでなく maintenance のバッチングにも使える。
+
+---
+
 ## 2026-05-15
 
 ### 重複でおけない時の UI を全経路で統一した日
