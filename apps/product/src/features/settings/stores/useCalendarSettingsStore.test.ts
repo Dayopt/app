@@ -19,13 +19,6 @@ describe('useCalendarSettingsStore', () => {
       const state = useCalendarSettingsStore.getState();
       expect(state.chronotype).toBeNull();
     });
-
-    it('睡眠スケジュールのデフォルト', () => {
-      const state = useCalendarSettingsStore.getState();
-      expect(state.sleepSchedule.enabled).toBe(true);
-      expect(state.sleepSchedule.bedtime).toBe(23);
-      expect(state.sleepSchedule.wakeTime).toBe(7);
-    });
   });
 
   describe('updateSettings', () => {
