@@ -6,7 +6,7 @@
  */
 
 import type { EntryWithTags } from '@/features/entry';
-import { getEntryState } from '@/features/entry';
+import { getEntryState, isPlannedEntry, isUnplannedEntry } from '@/features/entry';
 import { tzIsSameDay } from '@/lib/date/timezone';
 import type { CalendarEvent } from '../types/calendar.types';
 
@@ -39,8 +39,8 @@ export function entryToCalendarEvent(entry: EntryWithTags, timezone: string): Ca
     return null;
   }
 
-  const isUnplanned = entry.origin === 'unplanned';
-  const isPlanned = entry.origin === 'planned';
+  const isUnplanned = isUnplannedEntry(entry);
+  const isPlanned = isPlannedEntry(entry);
 
   if (isPlanned && (!entry.start_time || !entry.end_time)) {
     return null;

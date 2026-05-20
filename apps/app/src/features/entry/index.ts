@@ -26,6 +26,22 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
 
 // =============================================================================
+// Domain (Entry 時間モデル — 純粋関数、DB/tRPC/React 非依存)
+// =============================================================================
+export {
+  determineEntryOrigin,
+  getActualMinutes,
+  getActualRange,
+  getDiffMinutes,
+  getPlannedMinutes,
+  getPlannedRange,
+  hasPlannedActualDiff,
+  isPlannedEntry,
+  isUnplannedEntry,
+} from './domain';
+export type { EntryLike, TimeRange } from './domain';
+
+// =============================================================================
 // Lib (entry-status utilities)
 // =============================================================================
 export { getEntryState } from './lib/entry-status';
