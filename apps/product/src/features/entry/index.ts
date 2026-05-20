@@ -29,17 +29,21 @@ export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
 // Domain (Entry 時間モデル — 純粋関数、DB/tRPC/React 非依存)
 // =============================================================================
 export {
+  buildTimeUpdateData,
+  buildUndoTimeUpdateData,
   determineEntryOrigin,
   getActualMinutes,
   getActualRange,
   getDiffMinutes,
   getPlannedMinutes,
   getPlannedRange,
+  hasActualRangeDiff,
   hasPlannedActualDiff,
   isPlannedEntry,
   isUnplannedEntry,
+  rangesMatch,
 } from './domain';
-export type { EntryLike, TimeRange } from './domain';
+export type { EntryLike, EntryTimeUpdateData, TimeRange } from './domain';
 
 // =============================================================================
 // Lib (entry-status utilities)
