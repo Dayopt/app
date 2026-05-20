@@ -4,13 +4,12 @@ import { formatTimeString, parseTimeString } from '@/lib/date';
 
 import {
   addMinutesToTime,
-  DEFAULT_SNAP_INTERVAL,
   pixelsToTime,
   pixelsToTimeUnsnapped,
   snapDeltaToGrid,
   snapToGrid,
   timeToPixels,
-} from './time-math';
+} from '../time-math';
 
 const HOUR_HEIGHT = 60; // 1px = 1 分でテストしやすい
 
@@ -55,9 +54,7 @@ describe('pixelsToTime', () => {
     expect(result.hour).toBeLessThanOrEqual(23);
   });
 
-  it('DEFAULT_SNAP_INTERVAL は 15', () => {
-    expect(DEFAULT_SNAP_INTERVAL).toBe(15);
-  });
+  // snap interval policy のテストは precision.test.ts で DEFAULT_DRAG_SNAP_MINUTES として担保
 });
 
 describe('timeToPixels', () => {

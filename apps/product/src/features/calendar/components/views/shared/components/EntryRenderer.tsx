@@ -14,7 +14,7 @@ import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
-import type { InteractionState } from '../../../../interaction/types';
+import type { InteractionState } from '../../../../domain/interaction/types';
 import type { CalendarEvent } from '../../../../types/calendar.types';
 import { getAdjustedStyle, getPreviewTime } from '../utils/interactionHelpers';
 

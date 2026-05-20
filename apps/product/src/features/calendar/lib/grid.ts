@@ -24,7 +24,7 @@ export interface EventStyle {
 }
 
 // コア計算は interaction/time-math.ts に委譲（プリミティブ版が正規ソース）
-import { timeToPixels as timeToPixelsPrimitive } from '../interaction/time-math';
+import { timeToPixels as timeToPixelsPrimitive } from '../domain/interaction/time-math';
 
 /**
  * 時刻をピクセル位置に変換（Date版）

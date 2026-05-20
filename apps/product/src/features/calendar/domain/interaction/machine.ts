@@ -5,12 +5,8 @@
  * テスト: expect(interactionReducer(state, action, ctx)).toEqual(...)
  */
 
-import {
-  DEFAULT_SNAP_INTERVAL,
-  pixelsToTimeUnsnapped,
-  snapDeltaToGrid,
-  snapToGrid,
-} from './time-math';
+import { DEFAULT_DRAG_SNAP_MINUTES } from '../precision';
+import { pixelsToTimeUnsnapped, snapDeltaToGrid, snapToGrid } from './time-math';
 import type {
   InteractionAction,
   InteractionContext,
@@ -131,7 +127,7 @@ export function interactionReducer(
   ctx: InteractionContext,
 ): InteractionResult {
   const effects: InteractionEffect[] = [];
-  const interval = ctx.snapIntervalMinutes ?? DEFAULT_SNAP_INTERVAL;
+  const interval = ctx.snapIntervalMinutes ?? DEFAULT_DRAG_SNAP_MINUTES;
 
   switch (action.type) {
     // ---- Event drag initiation ----

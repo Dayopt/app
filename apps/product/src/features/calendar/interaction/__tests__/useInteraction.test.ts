@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import type { EntryRect } from '../../domain/interaction/types';
 import type { CalendarEvent } from '../../types/calendar.types';
-import type { EntryRect } from '../types';
 import { useInteraction, type UseInteractionProps } from '../useInteraction';
 
 const baseEvent: CalendarEvent = {
