@@ -2,16 +2,17 @@
  * 時刻 ↔ ピクセル変換の唯一のソース
  *
  * React/DOM 依存ゼロ。DnDProvider / machine.ts / useDragSelection が共通利用。
- * テスト: time-math.test.ts
+ * snap interval policy は `../precision` の `DEFAULT_DRAG_SNAP_MINUTES` を canonical source とする。
+ * テスト: __tests__/time-math.test.ts
  */
 
-export const DEFAULT_SNAP_INTERVAL = 15;
+import { DEFAULT_DRAG_SNAP_MINUTES } from '../precision';
 
 /** Y座標 → 時刻（スナップあり） */
 export function pixelsToTime(
   yPx: number,
   hourHeight: number,
-  snapInterval: number = DEFAULT_SNAP_INTERVAL,
+  snapInterval: number = DEFAULT_DRAG_SNAP_MINUTES,
 ): { hour: number; minute: number } {
   const clampedY = Math.max(0, yPx);
   const hourDecimal = clampedY / hourHeight;
@@ -36,7 +37,7 @@ export function timeToPixels(hour: number, minute: number, hourHeight: number): 
 export function snapToGrid(
   yPx: number,
   hourHeight: number,
-  intervalMin: number = DEFAULT_SNAP_INTERVAL,
+  intervalMin: number = DEFAULT_DRAG_SNAP_MINUTES,
 ): { snappedTop: number; hour: number; minute: number } {
   const { hour, minute } = pixelsToTime(yPx, hourHeight, intervalMin);
   const snappedTop = timeToPixels(hour, minute, hourHeight);
@@ -89,7 +90,7 @@ export function pixelsToTimeUnsnapped(
 export function snapDeltaToGrid(
   deltaPx: number,
   hourHeight: number,
-  intervalMin: number = DEFAULT_SNAP_INTERVAL,
+  intervalMin: number = DEFAULT_DRAG_SNAP_MINUTES,
 ): number {
   const pxPerInterval = (hourHeight / 60) * intervalMin;
   if (pxPerInterval <= 0) return 0;

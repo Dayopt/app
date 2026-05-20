@@ -17,8 +17,12 @@ import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { toast } from '@/lib/toast';
 
+import {
+  calculateSelection,
+  createInstantSelection,
+} from '../../../../../domain/interaction/selection-rules';
+import { pixelsToTime as pixelsToTimeRaw } from '../../../../../domain/interaction/time-math';
 import { useHapticFeedback } from '../../../../../hooks/accessibility/useHapticFeedback';
-import { pixelsToTime as pixelsToTimeRaw } from '../../../../../interaction/time-math';
 import { checkClientSideOverlap } from '../../../../../lib/overlap';
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
@@ -165,46 +169,6 @@ function selectionReducer(state: SelectionMode, action: SelectionAction): Select
     default:
       return state;
   }
-}
-
-// ========================================
-// Helpers
-// ========================================
-
-/** 開始時刻と現在時刻から選択範囲を計算（下方向のみ、最低15分保証） */
-function calculateSelection(
-  start: { hour: number; minute: number },
-  current: { hour: number; minute: number },
-): TimeRange {
-  const startMin = start.hour * 60 + start.minute;
-  const currentMin = current.hour * 60 + current.minute;
-
-  // 下方向のみ: 開始時刻より前にはドラッグできない
-  const endMin = Math.max(currentMin, startMin + 15);
-
-  const startHour = Math.max(0, Math.floor(startMin / 60));
-  const startMinute = Math.max(0, startMin % 60);
-  const endHour = Math.min(23, Math.floor(endMin / 60));
-  const endMinute = Math.min(59, endMin % 60);
-
-  return { startHour, startMinute, endHour, endMinute };
-}
-
-/** defaultDuration を使った即時選択範囲を作成 */
-function createInstantSelection(
-  time: { hour: number; minute: number },
-  date: Date,
-  defaultDuration: number,
-): DateTimeSelection {
-  const startTotal = time.hour * 60 + time.minute;
-  const endTotal = Math.min(startTotal + defaultDuration, 24 * 60 - 1);
-  return {
-    date,
-    startHour: time.hour,
-    startMinute: time.minute,
-    endHour: Math.floor(endTotal / 60),
-    endMinute: endTotal % 60,
-  };
 }
 
 // ========================================

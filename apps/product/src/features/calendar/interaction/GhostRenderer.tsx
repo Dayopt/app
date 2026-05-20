@@ -20,7 +20,7 @@ import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 
-import type { InteractionState, TimeRange } from './types';
+import type { InteractionState, TimeRange } from '../domain/interaction/types';
 
 // ========================================
 // Types

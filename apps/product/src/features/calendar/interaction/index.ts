@@ -3,7 +3,7 @@
  */
 
 // Types
-export type { InteractionState } from './types';
+export type { InteractionState } from '../domain/interaction/types';
 
 // React hook
 export { useInteraction } from './useInteraction';

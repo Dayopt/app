@@ -17,15 +17,19 @@ import type { CalendarEvent } from '../types/calendar.types';
 import { checkClientSideOverlap } from '../lib/overlap';
 import { useCalendarDragStore } from '../stores/useCalendarDragStore';
 
-import { IDLE, interactionReducer } from './machine';
-import { constrainToRect, getPointerPoint, isTouchEvent } from './pointer-tracker';
+import { IDLE, interactionReducer } from '../domain/interaction/machine';
+import {
+  constrainToRect,
+  getPointerPoint,
+  isTouchEvent,
+} from '../domain/interaction/pointer-tracker';
 import type {
   EntryRect,
   InteractionAction,
   InteractionContext,
   InteractionEffect,
   InteractionState,
-} from './types';
+} from '../domain/interaction/types';
 
 // ========================================
 // Types
