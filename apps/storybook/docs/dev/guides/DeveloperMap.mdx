@@ -11,7 +11,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 ## ディレクトリマップ
 
 ```
-src/
+apps/product/src/
 ├── app/[locale]/              # Next.js App Router（ページ = Composition Layer）
 │   ├── (app)/                 # 認証済みユーザー向けレイアウト
 │   │   ├── calendar/          # カレンダーページ（day/week/nday）
@@ -57,16 +57,31 @@ src/
 ├── hooks/                     # 共有カスタムフック
 ├── types/                     # 共有型定義
 ├── lib/                       # ユーティリティ（日付、セキュリティ、PWA等）
-├── styles/tokens/             # デザイントークン + Storybook可視化
+├── lib/styles/tokens/         # 現在のデザイントークン + Storybook可視化
 │
 ├── stories/
 │   ├── patterns/              # 実装パターン Story
 │   └── docs/                  # ドキュメント MDX
 │
 └── emails/                    # メールテンプレート
+
+packages/
+├── design/                    # 将来のデザイントークン source of truth
+├── ui/                        # domain logic を持たない React UI
+├── config/                    # URL / metadata / public constants
+├── domain/                    # DB に依存しない Dayopt domain model
+├── database/                  # Supabase generated types / converters
+├── billing/                   # plans / subscription / entitlement
+└── utils/                     # generic pure utilities
 ```
 
 ---
+
+## Monorepo packages
+
+責務境界の詳細は [Packages Overview](?path=/docs/architecture-packages-overview--docs) を参照。
+
+現在は `apps/product/src/lib/styles/tokens/` が token の実体と Storybook 可視化を持つ。今後 `packages/design` を作る時は、Storybook の `Foundations/*` 階層を維持したまま source path だけを移す。
 
 ## 目的別ガイド
 
@@ -77,7 +92,7 @@ src/
 | ボタン・入力欄を変更     | `src/components/ui/`      | `button.tsx`, `input.tsx`             |
 | 共通UIを変更             | `src/components/common/`  | `EmptyState.tsx`, `DateNavigator.tsx` |
 | ヘッダー・サイドバー変更 | `src/shell/components/`   | `AppHeader.tsx`, `sidebar/`           |
-| デザイントークン変更     | `src/styles/tokens/`      | `colors.css`, `spacing.css`           |
+| デザイントークン変更     | `src/lib/styles/tokens/`  | `colors.css`, `spacing.css`           |
 | アイコン確認             | `Foundations/Icons` Story | lucide-react 一覧                     |
 
 ### Feature を変更したい
