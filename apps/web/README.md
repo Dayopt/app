@@ -89,7 +89,7 @@ src/
 │   ├── mdx.ts              # MDX処理
 │   └── utils.ts            # 汎用ユーティリティ
 ├── hooks/                  # カスタムフック
-└── middleware.ts           # Next.jsミドルウェア
+└── proxy.ts                # Next.js Proxy
 
 messages/
 ├── en/                     # 英語翻訳

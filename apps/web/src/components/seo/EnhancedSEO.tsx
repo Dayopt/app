@@ -1,5 +1,5 @@
 import { env, getAppUrl } from '@/platform/config/env';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 
 interface SEOProps {
   title?: string;
@@ -40,6 +40,7 @@ export function generateEnhancedMetadata({
   const fullTitle = title === siteTitle ? title : `${title} | ${siteTitle}`;
 
   return {
+    metadataBase: new URL(baseUrl),
     title: fullTitle,
     description,
     keywords: keywords.join(', '),
