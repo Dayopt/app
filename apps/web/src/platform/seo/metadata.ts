@@ -1,5 +1,5 @@
 import { env, getSiteUrl } from '@/platform/config/env';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 
 export interface SEOData {
   title?: string;
@@ -130,6 +130,7 @@ export function generateSEOMetadata(data: SEOData = {}): Metadata {
   const allKeywords = [...siteConfig.keywords, ...keywords, ...tags].filter(Boolean);
 
   return {
+    metadataBase: new URL(siteConfig.url),
     title: pageTitle,
     description,
     keywords: allKeywords.join(', '),
