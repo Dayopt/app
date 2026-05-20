@@ -14,7 +14,7 @@ import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
 import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 
-import { calculateViewDateRange } from '../../../lib/range';
+import { calculateViewDateRange } from '../../../domain/view-range';
 
 import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../../../types/calendar.types';
 import { getMultiDayCount, isMultiDayView } from '../../../types/calendar.types';

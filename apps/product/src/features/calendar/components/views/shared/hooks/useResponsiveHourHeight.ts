@@ -10,8 +10,8 @@
 
 import { useEffect } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { BREAKPOINT_VALUES } from '@/lib/breakpoints';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { create } from 'zustand';
 
 import { HOUR_HEIGHT, HOUR_HEIGHT_DENSITIES } from '../constants/grid.constants';

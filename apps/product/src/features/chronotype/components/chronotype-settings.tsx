@@ -9,7 +9,6 @@ import { Button } from '@/lib/components/ui/button';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { Switch } from '@/lib/components/ui/switch';
 import { CACHE_5_MINUTES } from '@/lib/date';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
@@ -136,11 +135,22 @@ function TypeCard({
   );
 }
 
+interface ChronotypeSettingsProps {
+  /**
+   * Chronotype 変更時の楽観更新コールバック。
+   *
+   * Why: chronotype state は Calendar UI store (`useCalendarSettingsStore`) 配下に
+   * あるが、本コンポーネントは Layer 0 (chronotype feature) のため Calendar feature
+   * (Layer 2) を直接 import できない。呼び出し元（features/settings 層）から
+   * store 更新関数を注入することで feature DAG を保つ。
+   */
+  onChronotypeChange?: ((chronotype: ChronotypeSettingsState | null) => void) | undefined;
+}
+
 /** クロノタイプ設定パネル */
-export function ChronotypeSettings() {
+export function ChronotypeSettings({ onChronotypeChange }: ChronotypeSettingsProps = {}) {
   const t = useTranslations();
   const utils = api.useUtils();
-  const updateStoreSettings = useCalendarSettingsStore((state) => state.updateSettings);
 
   const { data: dbSettings, isPending } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -180,20 +190,20 @@ export function ChronotypeSettings() {
   const handleToggle = useCallback(
     (checked: boolean) => {
       const nextChronotype = checked ? { type: selectedType } : null;
-      updateStoreSettings({ chronotype: nextChronotype });
+      onChronotypeChange?.(nextChronotype);
       autoSave.updateValue('chronotype', nextChronotype);
     },
-    [autoSave, updateStoreSettings, selectedType],
+    [autoSave, onChronotypeChange, selectedType],
   );
 
   const handleSelectType = useCallback(
     (type: PresetChronotypeType) => {
       const nextChronotype = { type: type as ChronotypeType };
-      updateStoreSettings({ chronotype: nextChronotype });
+      onChronotypeChange?.(nextChronotype);
       autoSave.updateValue('chronotype', nextChronotype);
       setView('idle');
     },
-    [autoSave, updateStoreSettings],
+    [autoSave, onChronotypeChange],
   );
 
   const handleQuizComplete = useCallback(

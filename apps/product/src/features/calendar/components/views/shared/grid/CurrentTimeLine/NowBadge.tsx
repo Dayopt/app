@@ -9,8 +9,8 @@
 
 import { memo, useMemo } from 'react';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { getActiveZoneLevel, getChronotypeProfile } from '@/features/chronotype';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useTranslations } from 'next-intl';
 
 interface NowBadgeProps {

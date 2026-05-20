@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import type { CalendarViewType, HourHeightDensity } from '@/lib/calendar-constants';
 import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
 import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
+import type { CalendarViewType, HourHeightDensity } from '../lib/constants';
 
-export type { CalendarViewType } from '@/lib/calendar-constants';
+export type { CalendarViewType } from '../lib/constants';
 
 /** Calendar 専用の UI 表示設定 */
 export interface CalendarSettings {

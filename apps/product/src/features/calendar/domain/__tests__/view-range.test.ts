@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from '../range';
+import { calculateViewDateRange, getNextPeriod, getPreviousPeriod } from '../view-range';
 
 describe('calculateViewDateRange', () => {
   describe('day view', () => {
