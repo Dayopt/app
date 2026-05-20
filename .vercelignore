@@ -10,7 +10,7 @@ apps/storybook/
 /supabase/
 
 # ドキュメント
-docs/
+/docs/
 
 # テスト・Story ファイル
 *.test.ts
