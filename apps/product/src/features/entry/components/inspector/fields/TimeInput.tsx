@@ -15,6 +15,7 @@ import { Drawer, DrawerContent } from '@/lib/components/ui/drawer';
 import { Popover, PopoverAnchor, PopoverContent } from '@/lib/components/ui/popover';
 import { formatHHmm, formatTimeString, parseTimeString } from '@/lib/date';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { computeDuration, formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 

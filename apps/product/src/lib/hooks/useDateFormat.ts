@@ -8,6 +8,7 @@ import { useCallback } from 'react';
 import { format } from 'date-fns';
 
 import type { DateFormatType } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 interface UseDateFormatReturn {
   dateFormat: DateFormatType;

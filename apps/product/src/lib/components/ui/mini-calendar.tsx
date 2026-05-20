@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/lib/components/ui/select';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
 export interface MiniCalendarProps {

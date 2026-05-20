@@ -11,6 +11,7 @@ import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDis
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 import { isTodayInTimezone } from '@/lib/date/timezone';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';

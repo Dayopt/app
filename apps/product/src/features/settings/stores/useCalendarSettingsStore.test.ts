@@ -10,14 +10,9 @@ describe('useCalendarSettingsStore', () => {
   describe('初期状態', () => {
     it('デフォルト値が正しい', () => {
       const state = useCalendarSettingsStore.getState();
-      expect(state.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
-      expect(state.timeFormat).toBe('24h');
-      expect(state.dateFormat).toBe('yyyy-MM-dd');
       expect(state.defaultView).toBe('week');
-      expect(state.weekStartsOn).toBe(1);
-      expect(state.defaultDuration).toBe(60);
-      expect(state.snapInterval).toBe(15);
       expect(state.showWeekends).toBe(true);
+      expect(state.hourHeightDensity).toBe('default');
     });
 
     it('クロノタイプはデフォルト無効（null）', () => {
@@ -36,14 +31,14 @@ describe('useCalendarSettingsStore', () => {
   describe('updateSettings', () => {
     it('一部の設定を更新できる', () => {
       useCalendarSettingsStore.getState().updateSettings({
-        timeFormat: '12h',
-        dateFormat: 'MM/dd/yyyy',
+        defaultView: 'day',
+        hourHeightDensity: 'compact',
       });
       const state = useCalendarSettingsStore.getState();
-      expect(state.timeFormat).toBe('12h');
-      expect(state.dateFormat).toBe('MM/dd/yyyy');
+      expect(state.defaultView).toBe('day');
+      expect(state.hourHeightDensity).toBe('compact');
       // 他は維持
-      expect(state.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+      expect(state.showWeekends).toBe(true);
     });
 
     it('クロノタイプを有効化できる', () => {
@@ -54,24 +49,24 @@ describe('useCalendarSettingsStore', () => {
       expect(state.chronotype).toEqual({ type: 'lion' });
     });
 
-    it('snapIntervalを変更できる', () => {
-      useCalendarSettingsStore.getState().updateSettings({ snapInterval: 5 });
-      expect(useCalendarSettingsStore.getState().snapInterval).toBe(5);
+    it('showWeekends を切り替えられる', () => {
+      useCalendarSettingsStore.getState().updateSettings({ showWeekends: false });
+      expect(useCalendarSettingsStore.getState().showWeekends).toBe(false);
     });
   });
 
   describe('resetSettings', () => {
     it('全設定をデフォルトに戻す', () => {
       useCalendarSettingsStore.getState().updateSettings({
-        timeFormat: '12h',
-        weekStartsOn: 0,
+        defaultView: 'day',
         showWeekends: false,
+        hourHeightDensity: 'spacious',
       });
       useCalendarSettingsStore.getState().resetSettings();
       const state = useCalendarSettingsStore.getState();
-      expect(state.timeFormat).toBe('24h');
-      expect(state.weekStartsOn).toBe(1);
+      expect(state.defaultView).toBe('week');
       expect(state.showWeekends).toBe(true);
+      expect(state.hourHeightDensity).toBe('default');
     });
   });
 });

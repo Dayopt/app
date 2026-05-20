@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';

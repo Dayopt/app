@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { EntryWithTags } from '../../../types/entry';
 
