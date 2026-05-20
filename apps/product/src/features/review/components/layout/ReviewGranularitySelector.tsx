@@ -17,8 +17,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { toast } from '@/lib/toast';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -49,15 +49,15 @@ export function ReviewGranularitySelector({
   className,
 }: ReviewGranularitySelectorProps) {
   const t = useTranslations();
-  const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
-  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
+  const updatePreferences = useUserPreferenceStore((s) => s.updatePreferences);
   const utils = api.useUtils();
 
   const updateMutation = api.userSettings.update.useMutation({
     onMutate: (settings) => {
-      const previousShowWeekNumbers = useCalendarSettingsStore.getState().showWeekNumbers;
+      const previousShowWeekNumbers = useUserPreferenceStore.getState().showWeekNumbers;
       if (typeof settings.showWeekNumbers === 'boolean') {
-        updateSettings({ showWeekNumbers: settings.showWeekNumbers });
+        updatePreferences({ showWeekNumbers: settings.showWeekNumbers });
       }
       return { previousShowWeekNumbers };
     },
@@ -66,7 +66,7 @@ export function ReviewGranularitySelector({
     },
     onError: (_error, _settings, context) => {
       if (context) {
-        updateSettings({ showWeekNumbers: context.previousShowWeekNumbers });
+        updatePreferences({ showWeekNumbers: context.previousShowWeekNumbers });
       }
       toast.error(t('settings.common.saveFailed'));
     },

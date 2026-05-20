@@ -17,9 +17,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/lib/stores/userSettings';
+import { dispatchUserSettings } from '@/lib/stores/userSettings';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 import type { ShortcutDef } from '../../../hooks/keyboard/shortcut-registry';
 import { registerShortcuts } from '../../../hooks/keyboard/shortcut-registry';
@@ -30,7 +32,7 @@ import { isMultiDayView } from '../../../types/calendar.types';
 interface ViewSwitcherProps {
   currentView: CalendarViewType;
   onChange: (view: CalendarViewType) => void;
-  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
+  onSettingsChange?: ((settings: Partial<UserSettings>) => void) | undefined;
   className?: string;
 }
 
@@ -66,16 +68,15 @@ export function ViewSwitcher({
 }: ViewSwitcherProps) {
   const t = useTranslations();
   const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
-  const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
+  const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
   const hourHeightDensity = useCalendarSettingsStore((s) => s.hourHeightDensity);
-  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
 
   const persistSettings = useCallback(
-    (settings: Partial<CalendarSettings>) => {
-      updateSettings(settings);
+    (settings: Partial<UserSettings>) => {
+      dispatchUserSettings(settings);
       onSettingsChange?.(settings);
     },
-    [updateSettings, onSettingsChange],
+    [onSettingsChange],
   );
 
   const currentLabel = isMultiDayView(currentView)

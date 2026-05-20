@@ -6,7 +6,7 @@ import { getWeek } from 'date-fns';
 
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 import { CalendarDateHeader, DateDisplay, ScrollableCalendarLayout } from '../shared';
@@ -34,8 +34,8 @@ export const DayView = ({
   onNavigateNext: _onNavigateNext,
   onNavigateToday: _onNavigateToday,
 }: DayViewProps) => {
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   // 表示する日付
   const displayDates = useMemo(() => {

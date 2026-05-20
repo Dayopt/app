@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { api } from '@/lib/trpc';
 
 import {
@@ -23,8 +23,8 @@ import type { StatsPageData } from '../types/metrics.types';
 export function useReviewPageData() {
   const currentDate = useReviewFilterStore((s) => s.currentDate);
   const granularity = useReviewFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),

@@ -10,8 +10,8 @@ import { DateNavigator } from '@/lib/components/common/DateNavigator';
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { InlineBanner } from '@/lib/components/ui/inline-banner';
 import { useInlineBanner } from '@/lib/hooks/useInlineBanner';
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/lib/stores/userSettings';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { useSwipeGesture } from '../../hooks/useSwipeGesture';
 import type { CalendarViewType } from '../../types/calendar.types';
 
@@ -46,7 +46,7 @@ export interface CalendarLayoutProps {
   onPrefetch?: ((direction: NavigationDirection) => void) | undefined;
 
   // Settings persistence callback
-  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined;
+  onSettingsChange?: ((settings: Partial<UserSettings>) => void) | undefined;
 
   // Header slots
   leftSlot?: React.ReactNode | undefined;
@@ -84,8 +84,8 @@ export const CalendarLayout = memo<CalendarLayoutProps>(
     rightSlot,
   }) => {
     const t = useTranslations('calendar');
-    const showWeekNumbers = useCalendarSettingsStore((s) => s.showWeekNumbers);
-    const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+    const showWeekNumbers = useUserPreferenceStore((s) => s.showWeekNumbers);
+    const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
     const banner = useInlineBanner();
 
     // ナビゲーション方向 + キーの追跡（スライドアニメーション用）

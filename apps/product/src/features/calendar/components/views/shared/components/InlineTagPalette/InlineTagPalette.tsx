@@ -23,8 +23,8 @@ import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
@@ -60,7 +60,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const pendingSelection = useInlineCreateStore.use.pendingSelection();
   const clearPendingSelection = useInlineCreateStore.use.clearPendingSelection();
   const updateSelectionTimes = useInlineCreateStore.use.updateSelectionTimes();
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
   const locale = useLocale();
   const t = useTranslations('tags');
   const tCalendar = useTranslations('calendar');
@@ -264,7 +264,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
     return () => clearPendingSelection();
   }, [waitingForModal, clearPendingSelection]);
 
-  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
   const [nowForPastCheck, setNowForPastCheck] = useState<number | null>(null);
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { resolveTagColor } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 
@@ -49,8 +49,8 @@ interface TimePLRpcResponse {
 export function useTimePLData() {
   const currentDate = useReviewFilterStore((s) => s.currentDate);
   const granularity = useReviewFilterStore((s) => s.granularity);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),

@@ -12,8 +12,8 @@ import { useCallback, useMemo } from 'react';
 import type { CalendarViewType } from '@/features/calendar';
 import { useCalendarNavigationHandlers, useWeekendToggleShortcut } from '@/features/calendar';
 import { useUserSettings } from '@/features/settings';
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/lib/stores/userSettings';
 
 // =============================================================================
 // Types
@@ -36,7 +36,7 @@ export interface CalendarNavHandlersResult {
   onNavigateToday: () => void;
   onToggleWeekends: () => void;
   onDateSelect: (date: Date) => void;
-  onSettingsChange: (settings: Partial<CalendarSettings>) => void;
+  onSettingsChange: (settings: Partial<UserSettings>) => void;
 }
 
 // =============================================================================
@@ -72,7 +72,7 @@ export function useCalendarNavHandlers({
 
   // Settings persistence（ViewSwitcherからの設定変更をDBに保存）
   const handleSettingsChange = useCallback(
-    (settings: Partial<CalendarSettings>) => {
+    (settings: Partial<UserSettings>) => {
       saveSettings(settings);
     },
     [saveSettings],

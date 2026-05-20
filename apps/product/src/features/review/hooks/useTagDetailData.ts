@@ -9,7 +9,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cacheStrategies } from '@/lib/tanstack-query/cache-config';
 import { api } from '@/lib/trpc';
 
@@ -38,8 +38,8 @@ function granularityToBucket(g: ReviewGranularity): 'week' | 'month' | 'day' {
 export function useTagOverviewData(tagId: string) {
   const granularity = useReviewFilterStore((s) => s.granularity);
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
@@ -55,8 +55,8 @@ export function useTagOverviewData(tagId: string) {
 export function useTagTimelineData(tagId: string) {
   const granularity = useReviewFilterStore((s) => s.granularity);
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),
@@ -76,8 +76,8 @@ export function useTagTimelineData(tagId: string) {
 export function useTagDashboardData(tagId: string) {
   const granularity = useReviewFilterStore((s) => s.granularity);
   const currentDate = useReviewFilterStore((s) => s.currentDate);
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const weekStartsOn = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const weekStartsOn = useUserPreferenceStore((s) => s.weekStartsOn);
 
   const dateRange = useMemo(
     () => computeStatsDateRange(currentDate, granularity, timezone, weekStartsOn),

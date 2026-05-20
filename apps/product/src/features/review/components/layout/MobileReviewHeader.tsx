@@ -11,7 +11,7 @@ import type { DateRangeDisplayProps } from '@/lib/components/common/DateRangeDis
 import { AppHeader } from '@/lib/components/shell/AppHeader';
 import { MiniCalendar } from '@/lib/components/ui/mini-calendar';
 import { isTodayInTimezone } from '@/lib/date/timezone';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
 import type { NavigationDirection } from '@/lib/components/common/DateNavigator';
@@ -45,7 +45,7 @@ export function MobileReviewHeader({
   const t = useTranslations('calendar.actions');
   const locale = useLocale();
   const dateFnsLocale = locale === 'ja' ? ja : enUS;
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
   const [isExpanded, setIsExpanded] = useState(false);
   const ChevronIcon = isExpanded ? ChevronUp : ChevronDown;
   const currentDate = dateDisplayProps.date;

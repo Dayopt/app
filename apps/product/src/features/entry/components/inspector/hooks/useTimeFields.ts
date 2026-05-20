@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { localTimeToUTCISO, parseISOToUserTimezone } from '@/lib/date-utils';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import type { EntryWithTags } from '../../../types/entry';
 
@@ -55,7 +55,7 @@ function toISOForDate(date: Date, time: string, timezone: string): string | null
  * @returns scheduleDate, startTime, endTime, actualStartTime, actualEndTime および各ハンドラー
  */
 export function useTimeFields({ entry, entryId, save, saveImmediate }: UseTimeFieldsOptions) {
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
+  const timezone = useUserPreferenceStore((state) => state.timezone);
   const queryClient = useQueryClient();
 
   // UI refs

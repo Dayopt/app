@@ -14,7 +14,7 @@
 import { memo, useMemo } from 'react';
 
 import { convertToTimezone, tzIsSameDay } from '@/lib/date/timezone';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { timeToPixels } from '../../../../../lib/grid';
 import type { CurrentTimeLineProps } from '../../../../../types/grid.types';
 import { CURRENT_TIME_DOT_SIZE, HOUR_HEIGHT, Z_INDEX } from '../../constants/grid.constants';
@@ -35,7 +35,7 @@ export const CurrentTimeLine = memo<CurrentTimeLineProps>(function CurrentTimeLi
   containerWidth: _containerWidth = 800,
 }) {
   const rawTime = useCurrentTime({ updateInterval });
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
+  const timezone = useUserPreferenceStore((state) => state.timezone);
 
   // ユーザーTZに変換してから位置計算（ブラウザTZと異なる場合に正しい位置を表示）
   const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
@@ -159,7 +159,7 @@ export const CurrentTimeLineForColumn = memo<{
   endHour = 24,
 }) {
   const rawTime = useCurrentTime({ updateInterval: 60000 });
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
+  const timezone = useUserPreferenceStore((state) => state.timezone);
 
   // ユーザーTZに変換
   const currentTime = useMemo(() => convertToTimezone(rawTime, timezone), [rawTime, timezone]);
