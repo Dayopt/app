@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
 import { buttonVariants } from '@/lib/components/ui/button';
 import {
   DropdownMenu,
@@ -17,9 +20,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
-import type { UserSettings } from '@/lib/stores/userSettings';
-import { dispatchUserSettings } from '@/lib/stores/userSettings';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';

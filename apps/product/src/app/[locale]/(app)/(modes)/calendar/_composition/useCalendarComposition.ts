@@ -17,11 +17,10 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 
 // Feature barrel imports（side-effect用）
-import type { CalendarViewType } from '@/features/calendar';
+import type { CalendarViewType, UserSettings } from '@/features/calendar';
+import { useCalendarNavigationStore } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { logger } from '@/lib/logger';
-import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
-import type { UserSettings } from '@/lib/stores/userSettings';
 
 // Sub-hooks
 import { useCalendarCrudHandlers } from './useCalendarCrudHandlers';

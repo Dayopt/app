@@ -8,7 +8,7 @@ import { isTodayInTimezone } from '../timezone';
  * Bug 背景: date-fns の `isToday` はブラウザ ローカル TZ で判定するため、
  * ユーザーが OS TZ と異なる timezone を設定している場合、calendar の
  * 「今日」ハイライトが 1 日ずれる問題があった。
- * 取得・表示の両方を `useCalendarSettingsStore.timezone` で揃える。
+ * 取得・表示の両方を `useUserPreferenceStore.timezone` で揃える。
  */
 describe('isTodayInTimezone', () => {
   it('UTC 23:30 を JST から見ると「翌日」が今日', () => {
