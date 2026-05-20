@@ -16,7 +16,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - **Lighthouse CI** — パフォーマンス・a11y計測（`lighthouserc.cjs` 設定済み）
 - **knip** — デッドコード検出（`npm run quality:deadcode`）
 - **diff-coverage** — 差分カバレッジ（`scripts/diff-coverage.ts`）
-- **axe-core** — a11yテスト（quality-dashboardでは `--skip=a11y`）
+- **axe-core** — a11yテスト
 
 過剰自動化を避ける現方針は正しいが、トリガー条件付きのロードマップで「いつ何を自動化するか」を明確にする。
 
@@ -24,12 +24,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## 原則
 
-| #   | 原則                 | 説明                                                              |
-| --- | -------------------- | ----------------------------------------------------------------- |
-| 1   | **warn → error**     | 新チェックは必ず warn で導入 → 最低2週間安定後に error 昇格       |
-| 2   | **Dashboard ≠ Gate** | Weekly Dashboard = 傾向把握、CI Gate = PRブロッキング（差分特化） |
-| 3   | **15分バジェット**   | 全ジョブ並列で最大15分以内。重いジョブは別ワークフローに分離      |
-| 4   | **即時ロールバック** | `continue-on-error: true` に戻すだけで warn 降格可能              |
+| #   | 原則                 | 説明                                                                |
+| --- | -------------------- | ------------------------------------------------------------------- |
+| 1   | **warn → error**     | 新チェックは必ず warn で導入 → 最低2週間安定後に error 昇格         |
+| 2   | **Gate-first**       | PRブロッキングはCI Gateに集約し、週次スナップショット生成は持たない |
+| 3   | **15分バジェット**   | 全ジョブ並列で最大15分以内。重いジョブは別ワークフローに分離        |
+| 4   | **即時ロールバック** | `continue-on-error: true` に戻すだけで warn 降格可能                |
 
 ---
 
@@ -58,7 +58,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 | ------------- | --------------------------------------------------------------- | ------------ |
 | size-limit    | `andresz1/size-limit-action` で PR にバンドルサイズ差分コメント | Warn         |
 | Lighthouse CI | 新ワークフロー `lighthouse.yml` で PR 実行                      | Warn         |
-| a11y 週次計測 | quality-dashboard.yml の `--skip=a11y` 解除                     | N/A（週次）  |
+| a11y 計測     | Storybook Tests または Lighthouse CI で警告として可視化         | Warn         |
 
 **前提条件**: `.size-limit` エントリポイントを package.json に設定
 
@@ -120,7 +120,6 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 - `docs/adr/ADR-006-ci-quality-gates-roadmap.md` — ADR本体
 - `.github/workflows/ci.yml` — 段階的に変更する中心ファイル
-- `.github/workflows/quality-dashboard.yml` — 週次メトリクス収集
 - `scripts/diff-coverage.ts` — Phase 1 でCI連携
 - `lighthouserc.cjs` — Phase 2 でCI連携
 - `.claude/rules/quality.md` — 品質基準の定義

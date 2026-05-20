@@ -34,8 +34,6 @@
     "generate-licenses": "pnpm --filter @dayopt/product generate-licenses",
     "perf:lighthouse": "pnpm --filter @dayopt/product perf:lighthouse",
     "quality:full": "pnpm --filter @dayopt/product quality:full",
-    "quality:collect": "pnpm --filter @dayopt/product quality:collect",
-    "quality:collect:fast": "pnpm --filter @dayopt/product quality:collect:fast",
     "quality:deadcode": "pnpm --filter @dayopt/product quality:deadcode",
     "quality:deadcode:ci": "pnpm --filter @dayopt/product quality:deadcode:ci",
     "test": "pnpm --filter @dayopt/product test",
