@@ -1,0 +1,164 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Architecture/Packages Overview" />
+
+# Packages Overview
+
+Dayopt の monorepo は、アプリケーションを増やすための置き場ではなく、責務を小さく保つための境界として `packages/*` を使う。
+
+このページは「どのコードをどの package に出すか」を決めるための基準であり、今すぐ大規模な実装移動をするための計画ではない。Phase 1 では `apps/product` の中にある実装を壊さず、抽出候補だけを明確にしておく。
+
+## Package Map
+
+| Package             | 責務                                                  | 入れてよいもの                                               | 入れないもの                                         |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
+| `packages/design`   | design tokens / theme css / CSS variables             | colors, typography, spacing, radius, shadow, motion, z-index | React components, domain logic, DB 型                |
+| `packages/ui`       | React UI primitives / reusable components             | Button, Badge, Card, Input, Logo, layout primitives          | Supabase, Stripe, feature-specific business rules    |
+| `packages/config`   | public constants / metadata / URL definitions         | Dayopt URLs, app metadata, public feature flags              | secrets, request-scoped values, server-only clients  |
+| `packages/domain`   | Dayopt の純粋な domain model                          | entry, tag, plan, entitlement などの型と pure definitions    | DB row shape, React, Supabase client                 |
+| `packages/database` | Supabase generated types と database/domain 変換      | generated `Database` types, row aliases, converters          | UI components, Stripe secret handling                |
+| `packages/billing`  | plan / subscription / entitlement の公開 billing 定義 | plan ids, price metadata, entitlement matrix                 | Stripe secret key を使う処理、webhook handlers       |
+| `packages/utils`    | generic pure utilities                                | date/string/array/object helpers, type guards                | Dayopt 固有 domain policy, framework-specific helper |
+
+## Dependency Direction
+
+`packages/*` は下の方向にだけ依存する。上位の app や feature へ戻る import を作らない。
+
+```txt
+apps/product, apps/web, apps/admin, apps/storybook
+  -> packages/ui
+  -> packages/design
+
+apps/product, apps/web, apps/admin
+  -> packages/config
+  -> packages/domain
+  -> packages/database
+  -> packages/billing
+  -> packages/utils
+```
+
+実際には `packages/ui` は `packages/design` の token / CSS variables を使えるが、`packages/design` は `packages/ui` を知らない。`packages/domain` は `packages/database` を知らない。DB の都合を domain model に漏らす場合は `packages/database` 側の converter で吸収する。
+
+## Current Phase
+
+現在の実装はまだ `apps/product` 中心で、`packages/ui`, `packages/config`, `packages/types`, `packages/server`, `packages/utils` は第一段階の placeholder に近い。
+
+次の段階では `packages/types` をそのまま拡張し続けるより、責務を `packages/domain` と `packages/database` に分ける。`packages/server` は Supabase / Stripe / admin helper のような server-only 境界に残すか、用途が明確になったものから `packages/database` / `packages/billing` へ分離する。
+
+## `packages/design`
+
+`packages/design` は Dayopt の見た目の source of truth にする。React component は持たず、tokens と theme だけを扱う。
+
+### Scope
+
+| 領域       | Source                                   | Storybook 表示                             |
+| ---------- | ---------------------------------------- | ------------------------------------------ |
+| Colors     | `tokens/colors.css`, `tokens/states.css` | `Foundations/Colors`, `Foundations/States` |
+| Typography | typography scale / font variables        | `Foundations/Typography`                   |
+| Spacing    | spacing scale / layout rhythm            | `Foundations/Spacing`                      |
+| Radius     | radius scale / partial radius rules      | `Foundations/Radius`                       |
+| Shadow     | elevation / shadow variables             | `Foundations/Elevation`                    |
+| Motion     | duration / easing rules                  | `Foundations/Motion`                       |
+| Z-Index    | layering scale                           | `Foundations/ZIndex`                       |
+
+現在はこれらが `apps/product/src/lib/styles/tokens/` にある。移動時は Storybook の表示名を変えず、source path だけを `packages/design` に寄せる。Storybook は token の可視化面であり、token の所有者は `packages/design` にする。
+
+### Export Shape
+
+`packages/design` は CSS を主たる public API にする。
+
+```txt
+packages/design/
+  src/
+    theme.css
+    tokens/
+      colors.css
+      spacing.css
+      radius.css
+      states.css
+      z-index.css
+    index.ts
+```
+
+推奨 import:
+
+```ts
+import '@dayopt/design/theme.css';
+```
+
+CSS variables は `--color-*`, `--shadow-*`, `--radius-*` のような token として公開し、アプリ側では Tailwind semantic class 経由で使う。React component 内で raw OKLCH 値や hex 値を直書きしない。
+
+## `packages/ui`
+
+`packages/ui` は domain logic を持たない React UI の置き場にする。Button, Badge, Card, Input, Logo のような primitive と、複数 app で再利用する小さな composition を入れる。
+
+`packages/ui` が知ってよいもの:
+
+- React
+- accessibility primitives
+- `packages/design`
+- generic utility
+
+`packages/ui` が知ってはいけないもの:
+
+- `apps/product/src/features/*`
+- Supabase / database row
+- Stripe / billing secret
+- user session / auth policy
+- entry/tag/calendar 固有の business rule
+
+## Domain, Database, Billing
+
+### `packages/domain`
+
+Dayopt の言葉を型と pure definition にする。DB に保存する形ではなく、アプリが考える概念を置く。
+
+例:
+
+- `Entry`
+- `TimeRange`
+- `Tag`
+- `Plan`
+- `Entitlement`
+
+### `packages/database`
+
+Supabase generated types と DB row の alias を置く。domain model との変換もここで扱う。
+
+例:
+
+- `Database`
+- `EntryRow`
+- `TagRow`
+- `entryRowToDomainEntry`
+- `domainEntryToInsert`
+
+### `packages/billing`
+
+公開してよい plan / subscription / entitlement 定義を置く。Stripe secret key を使う処理や webhook handler は server-only 境界に置き、client import できる定義と混ぜない。
+
+## Extraction Rules
+
+抽出は「共通化したいから」ではなく、責務境界が明確になった時だけ行う。
+
+| 条件                                                | 移動先              |
+| --------------------------------------------------- | ------------------- |
+| UI だけで成立し、domain を知らない                  | `packages/ui`       |
+| 見た目の token / CSS variable / theme               | `packages/design`   |
+| URL / metadata / public constants                   | `packages/config`   |
+| DB なしで説明できる Dayopt の business definition   | `packages/domain`   |
+| Supabase row / generated type / domain converter    | `packages/database` |
+| plan / subscription / entitlement の公開定義        | `packages/billing`  |
+| Dayopt に依存しない pure helper                     | `packages/utils`    |
+| secret, admin, webhook, service-role を使う共通処理 | server-only package |
+
+## Storybook Policy
+
+Storybook は `packages/design` と `packages/ui` の公開面を確認する場所にする。
+
+- `packages/design`: token の一覧、意味、使用禁止例を `Foundations/*` で可視化する。
+- `packages/ui`: props と状態を `Primitives/*` / `Recipes/*` で可視化する。
+- `packages/domain`, `packages/database`, `packages/billing`: UI カタログではなく docs と decision table で境界を説明する。
+- `apps/product` 固有の feature component は `Features/*` に残し、汎用化できたものだけ `packages/ui` に移す。
+
+移動後も Storybook の階層名は利用者の認知に合わせて維持する。内部 path が `packages/design` になっても、閲覧面では `Foundations/Colors` のままでよい。
