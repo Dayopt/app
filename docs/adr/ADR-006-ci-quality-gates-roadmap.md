@@ -13,7 +13,7 @@ proposed（2026-03-19）
 
 ## コンテキスト
 
-現在のCI（`.github/workflows/ci.yml`）は lint / typecheck / test / storybook-tests / build の5ジョブ + quality-gate / security-gate の集約ジョブで構成されている。加えて E2E、Integration、週次 Quality Dashboard の別ワークフローも稼働中。
+現在のCI（`.github/workflows/ci.yml`）は lint / typecheck / test / storybook-tests / build の5ジョブ + quality-gate / security-gate の集約ジョブで構成されている。加えて E2E と Integration の別ワークフローも稼働中。
 
 一方、以下のツールはインストール・設定済みだがCIワークフローに未連携:
 
@@ -21,7 +21,7 @@ proposed（2026-03-19）
 - **Lighthouse CI**: パフォーマンス・a11y計測（`lighthouserc.cjs`設定済み）
 - **knip**: デッドコード検出（`npm run quality:deadcode`）
 - **diff-coverage**: 差分カバレッジ（`scripts/diff-coverage.ts`）
-- **axe-core**: a11yテスト（quality-dashboardでは`--skip=a11y`）
+- **axe-core**: a11yテスト
 
 過剰自動化を避けるという現フェーズの判断は正しい。しかし「いつ、どの順番で、何を自動化するか」のロードマップがないと、ずるずるとマニュアルのまま進むリスクがある。「そろそろCI入れた方がいいかな…」という漠然とした判断を、トリガー条件に基づく明確なアクションに変えたい。
 
@@ -44,7 +44,7 @@ proposed（2026-03-19）
 ### 原則
 
 1. **warn → error パターン**: 新チェックは必ずwarn（情報提供）で導入 → 最低2週間安定後にerror（ブロッキング）に昇格
-2. **Weekly Dashboardとの棲み分け**: Dashboard = 傾向把握（全メトリクス）、CI Gate = PRブロッキング（差分に特化）
+2. **Gate-first**: PRブロッキングはCI Gateに集約し、週次スナップショット生成は持たない
 3. **CI実行時間バジェット**: 全ジョブ並列で最大15分以内維持。重いジョブは別ワークフローに分離
 4. **ロールバック容易性**: 全フェーズで `continue-on-error: true` に戻すだけでwarn降格可能
 
@@ -82,7 +82,7 @@ proposed（2026-03-19）
 | ------------- | ------------------------------------------------------------------------ | :----------: |
 | size-limit    | `andresz1/size-limit-action` で PR にバンドルサイズ差分コメント          |     Warn     |
 | Lighthouse CI | 新ワークフロー `lighthouse.yml` で PR 実行、既存 `lighthouserc.cjs` 利用 |     Warn     |
-| a11y 週次計測 | quality-dashboard.yml の `--skip=a11y` 解除                              | N/A（週次）  |
+| a11y 計測     | Storybook Tests または Lighthouse CI で警告として可視化                  |     Warn     |
 
 **前提条件**:
 
@@ -156,8 +156,6 @@ proposed（2026-03-19）
 ## 関連
 
 - `.github/workflows/ci.yml` — 段階的に変更する中心ファイル
-- `.github/workflows/quality-dashboard.yml` — 週次メトリクス収集（CIゲートとは役割が異なる）
 - `scripts/diff-coverage.ts` — Phase 1 でCI連携
-- `scripts/collect-quality-metrics.ts` — Weekly Dashboard のメトリクス収集
 - `lighthouserc.cjs` — Phase 2 でCI連携、Phase 4 でブロッキング化
 - `.claude/rules/quality.md` — 品質基準の定義

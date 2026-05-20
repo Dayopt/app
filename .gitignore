@@ -104,6 +104,7 @@ performance-*.log
 
 # Validation artifacts
 .violations.json
+/quality-reports/
 
 # Auto-generated code
 /src/types/generated/

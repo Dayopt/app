@@ -33,8 +33,6 @@
     "generate-licenses": "tsx ../../scripts/generate-licenses.ts",
     "perf:lighthouse": "lhci autorun",
     "quality:full": "pnpm lint && pnpm license:check && pnpm perf:lighthouse && pnpm typecheck",
-    "quality:collect": "tsx ../../scripts/collect-quality-metrics.ts",
-    "quality:collect:fast": "tsx ../../scripts/collect-quality-metrics.ts --skip=a11y,testCoverage",
     "quality:deadcode": "knip --config knip.json --reporter json",
     "quality:deadcode:ci": "knip --config knip.json --no-exit-code",
     "test": "vitest --project unit",
