@@ -30,7 +30,6 @@ const CALENDAR_SETTINGS_KEYS = [
   'hourHeightDensity',
   'chronotype',
   'chronotypeGradient',
-  'sleepSchedule',
 ] as const satisfies ReadonlyArray<keyof CalendarSettings>;
 
 /** 統合 partial を 2 ストアに振り分ける純粋ユーティリティ（テスト/外部用途向け） */

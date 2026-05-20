@@ -21,13 +21,6 @@ export interface CalendarSettings {
   // クロノタイプ設定
   chronotype: ChronotypeSettingsState | null;
   chronotypeGradient: { light: string | null; dark: string | null };
-
-  // 睡眠スケジュール設定
-  sleepSchedule: {
-    enabled: boolean; // 睡眠時間帯の表示オン/オフ
-    bedtime: number; // 就寝時刻（0-23）
-    wakeTime: number; // 起床時刻（0-23）
-  };
 }
 
 interface CalendarSettingsStore extends CalendarSettings {
@@ -41,11 +34,6 @@ const defaultSettings: CalendarSettings = {
   hourHeightDensity: 'default',
   chronotype: DEFAULT_CHRONOTYPE_SETTINGS,
   chronotypeGradient: { light: null, dark: null },
-  sleepSchedule: {
-    enabled: true,
-    bedtime: 23,
-    wakeTime: 7,
-  },
 };
 
 /**
