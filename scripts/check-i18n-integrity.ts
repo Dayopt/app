@@ -25,7 +25,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const APP_ROOT = resolve(ROOT, 'apps/app');
+const APP_ROOT = resolve(ROOT, 'apps/product');
 const MESSAGES_DIR = resolve(APP_ROOT, 'messages');
 const SRC_DIR = resolve(APP_ROOT, 'src');
 

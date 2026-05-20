@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
-const APP_ROOT = path.join(ROOT, 'apps/app');
+const APP_ROOT = path.join(ROOT, 'apps/product');
 const STORYBOOK_ROOT = path.join(ROOT, 'apps/storybook');
 
 // ─────────────────────────────────────────────────────────

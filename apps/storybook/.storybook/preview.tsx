@@ -1,7 +1,7 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
-import '../../app/src/lib/styles/globals.css';
+import '../../product/src/lib/styles/globals.css';
 import { providerDecorator, storeMockDecorator } from './decorators';
 import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
 import { DocsTemplate, ThemedDocsContainer } from './theme/docs';

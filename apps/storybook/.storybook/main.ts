@@ -11,8 +11,8 @@ const __dirname = dirname(__filename);
 
 const config: StorybookConfig = {
   stories: [
-    '../../app/src/**/*.mdx',
-    '../../app/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    '../../product/src/**/*.mdx',
+    '../../product/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
     '../docs/**/*.mdx',
     '../docs/**/*.stories.@(js|jsx|mjs|ts|tsx)',
     './stories/**/*.stories.@(js|jsx|mjs|ts|tsx)',
@@ -45,7 +45,7 @@ const config: StorybookConfig = {
     name: '@storybook/nextjs-vite',
     options: {},
   },
-  staticDirs: ['../../app/public'],
+  staticDirs: ['../../product/public'],
   typescript: {
     reactDocgen: 'react-docgen-typescript',
   },
@@ -87,7 +87,7 @@ const config: StorybookConfig = {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@': path.resolve(__dirname, '../../app/src'),
+      '@': path.resolve(__dirname, '../../product/src'),
       '@dayopt/storybook': path.resolve(__dirname),
       // next-intl（React未定義エラー回避）— next/image, next/link, next/navigation は @storybook/nextjs-vite が自動解決
       'next-intl/navigation': path.resolve(__dirname, './mocks/next-intl-navigation.tsx'),

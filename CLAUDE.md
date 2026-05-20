@@ -14,7 +14,7 @@ Next.js 15 (App Router) / React 19 / TypeScript strict / Tailwind CSS v4 / Zusta
 
 ```bash
 # 開発（AIは実行しない）
-pnpm dev              # 開発サーバー（apps/app/.env.local を参照）
+pnpm dev              # 開発サーバー（apps/product/.env.local を参照）
 pnpm dev:op           # 1Password op-run 経由（.op-env.local、Phase 1）
 pnpm env:check        # op references の解決確認
 pnpm storybook        # Storybook
@@ -50,7 +50,7 @@ pnpm quality:deadcode # 未使用コード検出（knip）
 - **スタイル**: Tailwind のセマンティックトークンで書く。例: `<div className="bg-card text-foreground p-4" />`
 - **export**: named export を使う（App Router 特殊ファイルのみ `export default` 例外）。例: `export function EntryCard() {}`
 - **Component**: 関数宣言で props 型を直接注釈する。例: `export function Foo({ id }: { id: string }) {}`
-- **Feature 間参照**: 他 feature の結合は Composition Layer（ページ/ルート）で行う。例: `apps/app/src/app/(app)/calendar/page.tsx` で合成
+- **Feature 間参照**: 他 feature の結合は Composition Layer（ページ/ルート）で行う。例: `apps/product/src/app/(app)/calendar/page.tsx` で合成
 - **依存方向**: `features/ → lib/` の一方向。`lib/` は feature 非依存の再利用コードだけを置く
 - **Import 経路**: feature barrel（`index.ts`）から import する。例: `import { EntryCard } from '@/features/entries'`
 - **ファイル命名**: 責務を表す具体名で切る。例: `formatDuration.ts` / `dateRangeFilter.ts`（`utils.ts` / `helpers.ts` は不可）
@@ -84,18 +84,18 @@ pnpm quality:deadcode # 未使用コード検出（knip）
 
 詳細ルールは `.claude/rules/` に分離。CLAUDE.md は概要のみ記載。
 
-| ファイル                  | 内容                                                                                                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                                                                                                                                               |
-| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                                                                                                                                                       |
-| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                                                                                                                                                     |
-| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`apps/app/src/lib/styles/tokens/IconConventions.mdx`](apps/app/src/lib/styles/tokens/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
-| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                                                                                                                                                       |
-| `quality.md`              | テスト優先度、A11y、パフォーマンス基準                                                                                                                                                     |
-| `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                     |
-| `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他）                                                                                                                            |
-| `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                                                                                                                                                   |
-| `plan-format.md`          | 実装 plan の必須セクション（Goal / Minimum Viable / Reversibility / Reuse / Not Doing）                                                                                                    |
+| ファイル                  | 内容                                                                                                                                                                                                                 |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-behavior.md`          | 拡張思考レベル、モデル選択、曖昧指示への対応                                                                                                                                                                         |
+| `architecture.md`         | tRPC 3層パターン、状態管理、環境構成                                                                                                                                                                                 |
+| `code-style.md`           | 型安全、セキュリティ、依存関係追加基準                                                                                                                                                                               |
+| `design-system.md`        | セマンティックトークン、elevation、spacing（アイコン運用は [`apps/product/src/lib/styles/tokens/IconConventions.mdx`](apps/product/src/lib/styles/tokens/IconConventions.mdx) / Storybook `Foundations/Icons/Docs`） |
+| `feature-boundaries.md`   | DAGレイヤーモデル、Composition Layer                                                                                                                                                                                 |
+| `quality.md`              | テスト優先度、A11y、パフォーマンス基準                                                                                                                                                                               |
+| `temporal-constraints.md` | 過去ブロックの編集制約                                                                                                                                                                                               |
+| `mcp-usage.md`            | MCP サーバーの呼び出し基準（Sentry/Supabase/Context7/Eagle 他）                                                                                                                                                      |
+| `skill-design.md`         | Skill 設計原則、類型、境界設計、記述書式                                                                                                                                                                             |
+| `plan-format.md`          | 実装 plan の必須セクション（Goal / Minimum Viable / Reversibility / Reuse / Not Doing）                                                                                                                              |
 
 ## スキル
 

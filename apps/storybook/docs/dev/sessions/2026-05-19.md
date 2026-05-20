@@ -43,11 +43,11 @@ tried_and_failed:
 files_of_note:
 
 - apps/storybook/.storybook/docs/dev/sessions/2026-05-18.md # 前日 monorepo stage 1 のセッションログ。本日抜けていたため後追いで作成
-- apps/app/package.json # main の 21 個の dep bump を反映（Next 16.2.6 セキュリティ修正、Storybook 10.4 etc.）
+- apps/product/package.json # main の 21 個の dep bump を反映（Next 16.2.6 セキュリティ修正、Storybook 10.4 etc.）
 - apps/storybook/package.json # storybook 系 dep の bump 反映
 - package.json # root は monorepo 構造維持。version 0.28.0
 - supabase/migrations/20260513000000_entry_two_layer_time_ranges.sql # main 側の `get_tag_recent_entries` (unplanned 対応) を統合
-- apps/app/src/lib/trpc/errors.ts # INVALID_TIME_RANGE / INVALID_ENTRY_SHAPE を追加（entry-service が参照）
+- apps/product/src/lib/trpc/errors.ts # INVALID_TIME_RANGE / INVALID_ENTRY_SHAPE を追加（entry-service が参照）
 - /tmp/release-notes-v0.28.0.md # GitHub Release に反映済みのリリースノート
 
 next:

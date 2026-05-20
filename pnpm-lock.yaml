@@ -197,7 +197,7 @@ importers:
         specifier: ^3.25.2
         version: 3.25.2(zod@4.3.6)
 
-  apps/app:
+  apps/product:
     dependencies:
       '@dnd-kit/core':
         specifier: ^6.3.1
@@ -584,9 +584,9 @@ importers:
 
   apps/storybook:
     dependencies:
-      '@dayopt/app':
+      '@dayopt/product':
         specifier: workspace:*
-        version: link:../app
+        version: link:../product
       '@tanstack/react-query':
         specifier: ^5.100.11
         version: 5.100.11(react@19.2.6)

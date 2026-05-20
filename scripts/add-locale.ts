@@ -22,7 +22,7 @@ import path, { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MESSAGES_DIR = resolve(__dirname, '..', 'apps/app/messages');
+const MESSAGES_DIR = resolve(__dirname, '..', 'apps/product/messages');
 const SOURCE_LOCALE = 'en';
 
 function markForTranslation(obj: unknown, prefix = ''): unknown {

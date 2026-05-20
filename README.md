@@ -1,6 +1,6 @@
 # Dayopt
 
-Dayopt monorepo。現在のプロダクト本体は `apps/app`、Storybook は `apps/storybook` にあります。
+Dayopt monorepo。現在のプロダクト本体は `apps/product`、Storybook は `apps/storybook` にあります。
 
 ## 🚀 クイックスタート
 
@@ -8,7 +8,7 @@ Dayopt monorepo。現在のプロダクト本体は `apps/app`、Storybook は `
 # 依存関係のインストール
 pnpm install
 
-# 環境変数の設定（apps/app/.env.local を作成して必要な値を設定）
+# 環境変数の設定（apps/product/.env.local を作成して必要な値を設定）
 
 # 開発サーバー起動
 pnpm dev
@@ -18,16 +18,16 @@ pnpm dev
 
 ## ⚙️ 主要技術
 
-| カテゴリ           | 技術                                                         |
-| ------------------ | ------------------------------------------------------------ |
-| **フレームワーク** | Next.js 15 (App Router), React 19, TypeScript 5              |
-| **UIライブラリ**   | shadcn/ui (Radix UI)                                         |
-| **スタイリング**   | Tailwind CSS v4, セマンティックトークン (`apps/app/src/lib/styles/tokens/`) |
-| **状態管理**       | Zustand (グローバル), TanStack Query (サーバー状態)          |
-| **API**            | tRPC 11 (型安全なAPI)                                        |
-| **データベース**   | Supabase (PostgreSQL + Auth + Realtime)                      |
-| **バリデーション** | Zod                                                          |
-| **テスト**         | Vitest, Playwright                                           |
+| カテゴリ           | 技術                                                                            |
+| ------------------ | ------------------------------------------------------------------------------- |
+| **フレームワーク** | Next.js 15 (App Router), React 19, TypeScript 5                                 |
+| **UIライブラリ**   | shadcn/ui (Radix UI)                                                            |
+| **スタイリング**   | Tailwind CSS v4, セマンティックトークン (`apps/product/src/lib/styles/tokens/`) |
+| **状態管理**       | Zustand (グローバル), TanStack Query (サーバー状態)                             |
+| **API**            | tRPC 11 (型安全なAPI)                                                           |
+| **データベース**   | Supabase (PostgreSQL + Auth + Realtime)                                         |
+| **バリデーション** | Zod                                                                             |
+| **テスト**         | Vitest, Playwright                                                              |
 
 ## 📋 開発時の重要ルール
 
@@ -42,7 +42,7 @@ pnpm dev         # 開発サーバー起動
 ### コーディング規約
 
 1. **コンポーネント**: 関数宣言 + 名前付きエクスポート（`React.FC`禁止）
-2. **スタイリング**: セマンティックトークン使用（`bg-card`, `text-foreground`等、定義: `apps/app/src/lib/styles/tokens/`）
+2. **スタイリング**: セマンティックトークン使用（`bg-card`, `text-foreground`等、定義: `apps/product/src/lib/styles/tokens/`）
 3. **型定義**: `any`型禁止、厳密な型定義必須
 4. **UIコンポーネント選択**: shadcn/ui → カスタム実装
 

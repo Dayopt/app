@@ -17,7 +17,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### ✨ 新機能 (Added)
 
-#### モバイルUI全面刷新 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### モバイルUI全面刷新 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 **ボトムタブナビゲーション**
 
@@ -51,14 +51,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - 入力値のフォントサイズを `text-base` に統一
 - メモ欄の最大高さを160px（`max-h-40`）に拡大
 
-#### カレンダー機能強化 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### カレンダー機能強化 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - 日付遷移スライドアニメーション追加
 - エントリ作成時のアニメーション追加（day view）
 - ミニカレンダーに週番号表示を追加
 - ブロック配置時のスクロール位置を画面中央に調整
 
-#### タグアイコン機能 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### タグアイコン機能 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - タグにLucideアイコンフィールドを追加（48個の厳選アイコン）
 - `TagGridPicker` — GridSelectorパターンで統一されたタグ選択UI
@@ -66,7 +66,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - タグ統合モーダルをドリルダウン対応（親→子タグ）に改善
 - `TagQuickSelector` に作成フォーム + キャンセルボタン追加
 
-#### メールi18n対応 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### メールi18n対応 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - 全15メールテンプレートを日英バイリンガル対応
 - `createEmailTranslator(locale)` ファクトリー関数（react-email環境でnext-intlが使えないため独自実装）
@@ -74,7 +74,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - 通知設定UIにメール言語セレクター追加
 - 3つの送信パス（Auth / Transactional / Edge Function）すべてにlocale伝播
 
-#### 通知機能の強化 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### 通知機能の強化 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 **daily-insights Edge Function**
 
@@ -91,16 +91,16 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - 未読/既読デザインをGAFA準拠に改善
 - 設定ギアボタンから通知設定へ直接遷移
 
-#### iCalフィードのレート制限 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### iCalフィードのレート制限 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - レート制限をUpstash Redisに移行（Supabase依存から脱却）
 
-#### i18n CI整合性チェック ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### i18n CI整合性チェック ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - `lint:i18n` — 全ロケール間の翻訳キー整合性チェックをCIに追加
 - 新言語追加スクリプト
 
-#### Storybook Docs全面刷新 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### Storybook Docs全面刷新 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - カラードキュメント全面刷新 + StyleGuide廃止
 - Foundations Overviewページ新設
@@ -110,7 +110,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### 🔄 変更 (Changed)
 
-#### Chronotype機能リデザイン ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### Chronotype機能リデザイン ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 **用語変更**
 
@@ -137,7 +137,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - Chronotypeトグルを設定パネルに追加
 - クイズ導線を統一
 
-#### カレンダー内部アーキテクチャ統一 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### カレンダー内部アーキテクチャ統一 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - 3つの `Content` コンポーネント（DayContent/WeekContent/MonthContent）を `CalendarGridContent` に統一
 - weekViewの `overlap` アルゴリズムを `lib/layout.ts` に集約（重複関数 `entriesToCalendarEvents` 削除）
@@ -146,7 +146,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - キーボードショートカットの中央レジストリ化（D/W/0-9, Cmd+C/V, Delete, Cmd+W）
 - dead code削除（アニメーションstub + `handlePlanRestore`）
 
-#### デザイントークン体系の刷新 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### デザイントークン体系の刷新 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - opacity派生トークン全廃 → named tint/scale/stateトークンに統一
 - `surface-inset` 廃止 → `bg-muted` に移行（26箇所）
@@ -156,7 +156,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - `shadow-*` をTailwind標準クラスに統一（独自surface-\*ユーティリティ廃止）
 - カラー準拠監査 — primitive/semantic修正 + lint拡張
 
-#### タイムゾーン対応の全面修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### タイムゾーン対応の全面修正 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 **DB関数**
 
@@ -175,7 +175,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 - 統計、ストリーク、AI文脈、月次トレンド、キーボードペースト、日付フィルタ、prefetch/クエリの計7箇所のTZずれを修正
 
-#### plan/record → entry 用語統一 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### plan/record → entry 用語統一 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - `plan.json` を `entry.json` にマージ（en/ja両方）
 - 全コンポーネント・フック・テストのi18nキーを `plan.*` → `entry.*` に移行
@@ -183,27 +183,27 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - `usePlanOperations` → `useEntryOperations`
 - `SamplePlanTemplate` → `SampleEntryTemplate`
 
-#### シェル・ヘッダー整理 ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### シェル・ヘッダー整理 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - `appHeader` を薄いシェルに簡素化 — `leftSlot` / `children` / `rightSlot` の3スロット構成
 - 3カラムgridレイアウトに変更（children中央寄せ）
 - PCヘッダーのナビゲーション・ビュー切替を日付の右隣に配置
 - サイドバー閉じ時の `PanelLeft` トグルボタンをヘッダーに復元
 
-#### 設定画面リデザイン ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### 設定画面リデザイン ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - `SectionCard` / `LabeledRow` コンポーネントをリデザイン
 - 全設定ページにリデザインコンポーネントを適用
 - モバイル設定ルートのハイドレーション後ガード追加
 
-#### Zustand Store統合 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### Zustand Store統合 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - `useShellStore` に5ストアを統合（`useLayoutStore`, `usePageTitleStore`, `useMobileCreateSheetStore`, `useContactStore`, `useSettingsStore`）
 - `calendarNavigationStore` を一方向コマンドチャネルに整理
 - `entryInspectorStore` の `anchorRect` をmodule-scoped refに移動
 - 不要ストア3つ削除（onboarding, tagCache等）
 
-#### スタイル最適化 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### スタイル最適化 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - `tw-animate-css` 導入で手書きアニメーション約190行を削除
 - arbitrary values・インラインstyleをTailwind標準に置換
@@ -213,7 +213,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - `pageNav` をセグメントコントロールからghost+stateレイヤーに変更
 - `tabsTrigger` をアンダーラインスタイルに統一
 
-#### UIリファインメント ([#1017](https://github.com/Dayopt/app/pull/1017))
+#### UIリファインメント ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 - `blockItem` 16px化 + 履歴ピンアイコンを Star に統一
 - `entryCard` リマインダーBellアイコン削除
@@ -222,7 +222,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### 🐛 バグ修正 (Fixed)
 
-#### a11y修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### a11y修正 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - Chronotype Switchに `aria-label` 追加
 - Timeline labelに `aria-hidden` 追加
@@ -230,19 +230,19 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - Destructive色のコントラスト修正
 - オーバーレイ閉じアニメーション中のクリック貫通防止
 
-#### グローバル対応修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### グローバル対応修正 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - デフォルトtimezoneを自動検出に変更（`Asia/Tokyo` ハードコード排除）
 - dateFormatをISO 8601（`yyyy-MM-dd`）に変更
 - `weekStartsOn` をユーザー設定に統一（Monday ハードコード排除）
 - 料金表示の `$` ハードコードを `Intl.NumberFormat` に置換
 
-#### Supabase修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### Supabase修正 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - Security advisor警告の一括修正
 - Performance advisor警告の修正
 
-#### モバイル修正 ([#1017](https://github.com/Dayopt/app/pull/1017), [#1022](https://github.com/Dayopt/app/pull/1022))
+#### モバイル修正 ([#1017](https://github.com/Dayopt/dayopt/pull/1017), [#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - 隣接予定の重複誤検出を修正
 - ヘッダーTodayアイコンを `size-5` に縮小
@@ -252,7 +252,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 - `mobileMonthGrid` の週番号 `weekStartsOn` 不整合を修正
 - `calendarDateHeader` 上部ボーダー削除
 
-#### その他 ([#1022](https://github.com/Dayopt/app/pull/1022))
+#### その他 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 - Stats: `hasNoData` がエラー・フェッチ中を無視して空状態を表示するバグ修正
 - Stats: `useStatsFilterSync` の `useEffect` 無限ループとURLパラメータ消失修正
@@ -263,19 +263,19 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### ⚡ パフォーマンス (Performance)
 
-- **Next.jsパフォーマンス最適化** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **Next.jsパフォーマンス最適化** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
   - React Compiler有効化（→後に無効化、安定性のため）
   - `useTransition` によるUI応答性改善
   - リスト仮想化
-- **ホットパス改善** ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **ホットパス改善** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
   - ホットパスのlogger呼び出し削除
   - drag中のDOM queryキャッシュ化
-- **`entryInspector` / `tourOrchestrator` をdynamic importに変更** ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **統計関数のWHERE句をインデックス活用可能に最適化** ([#1022](https://github.com/Dayopt/app/pull/1022))
+- **`entryInspector` / `tourOrchestrator` をdynamic importに変更** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **統計関数のWHERE句をインデックス活用可能に最適化** ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 ### 🔒 セキュリティ (Security)
 
-- Supabase Security advisor警告の一括修正 ([#1022](https://github.com/Dayopt/app/pull/1022))
+- Supabase Security advisor警告の一括修正 ([#1022](https://github.com/Dayopt/dayopt/pull/1022))
 
 ### 🗑️ 削除 (Removed)
 
@@ -320,12 +320,12 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### 🔧 開発基盤 (DX)
 
-- **knip dead code検出をCIに組み込み** ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **i18n整合性チェック（`lint:i18n`）をCIに追加** ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **未使用依存削除** ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **E2Eテスト追加** — モバイル設定・ボトムナビゲーション ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **ユニットテスト追加** — history・onboarding・palette（48テスト） ([#1017](https://github.com/Dayopt/app/pull/1017))
-- **AI feature の deep import解消** + 重複テスト削除 ([#1017](https://github.com/Dayopt/app/pull/1017))
+- **knip dead code検出をCIに組み込み** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **i18n整合性チェック（`lint:i18n`）をCIに追加** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **未使用依存削除** ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **E2Eテスト追加** — モバイル設定・ボトムナビゲーション ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **ユニットテスト追加** — history・onboarding・palette（48テスト） ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
+- **AI feature の deep import解消** + 重複テスト削除 ([#1017](https://github.com/Dayopt/dayopt/pull/1017))
 
 ---
 
@@ -333,14 +333,14 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ### Pull Requests
 
-| PR                                               | タイトル                                                         | 概要                                                                         |
-| ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [#1017](https://github.com/Dayopt/app/pull/1017) | feat: モバイルUI刷新 + カレンダーリファクタリング + タグアイコン | モバイル体験の全面刷新、カレンダー内部統一、タグアイコン、パフォーマンス改善 |
-| [#1022](https://github.com/Dayopt/app/pull/1022) | v0.23.0                                                          | Chronotypeリデザイン、トークン刷新、TZ修正、メールi18n、通知強化、用語統一   |
+| PR                                                  | タイトル                                                         | 概要                                                                         |
+| --------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [#1017](https://github.com/Dayopt/dayopt/pull/1017) | feat: モバイルUI刷新 + カレンダーリファクタリング + タグアイコン | モバイル体験の全面刷新、カレンダー内部統一、タグアイコン、パフォーマンス改善 |
+| [#1022](https://github.com/Dayopt/dayopt/pull/1022) | v0.23.0                                                          | Chronotypeリデザイン、トークン刷新、TZ修正、メールi18n、通知強化、用語統一   |
 
 ---
 
-**Full Changelog**: https://github.com/Dayopt/app/compare/v0.22.0...v0.23.0
+**Full Changelog**: https://github.com/Dayopt/dayopt/compare/v0.22.0...v0.23.0
 
 **🤖 Generated with [Claude Code](https://claude.com/claude-code)**
 
