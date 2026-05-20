@@ -40,14 +40,18 @@ export {
 } from './hooks/navigation/CalendarNavigationContext';
 
 // =============================================================================
+// Stores（app/ composition 層からの barrel import 用）
+// =============================================================================
+// Note: useInlineCreateStore / useCalendarFilterStore は barrel 公開せず deep import で参照する。
+// useUserPreferenceStore は app-wide な user preference のため @/lib/stores/ 配下に残る。
+export { useCalendarNavigationStore } from './stores/useCalendarNavigationStore';
+export { useCalendarSettingsStore } from './stores/useCalendarSettingsStore';
+export type { CalendarSettings } from './stores/useCalendarSettingsStore';
+export type { UserSettings } from './stores/userSettings';
+
+// =============================================================================
 // Hooks
 // =============================================================================
-
-// Note: useInlineCreateStore は calendar hub 内部のみで使用。barrel 公開せず
-// deep import (`./stores/useInlineCreateStore`) で参照する。
-// useCalendarSettingsStore / useCalendarNavigationStore / useCalendarFilterStore /
-// 型 CalendarSettings, DateFormatType は cross-cutting UI state として @/lib/stores/ に移動済み。
-// 直接 `@/lib/stores/useCalendar...Store` から import すること。
 
 // Hooks: Cross-feature (used by composition layer in app/)
 export { useCalendarData } from './components/controller/hooks/useCalendarData';

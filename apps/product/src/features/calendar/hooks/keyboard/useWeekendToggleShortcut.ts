@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
-import type { UserSettings } from '@/lib/stores/userSettings';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import type { ShortcutDef } from './shortcut-registry';
 import { registerShortcut } from './shortcut-registry';
 

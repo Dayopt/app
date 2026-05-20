@@ -11,9 +11,9 @@ import { useTranslations } from 'next-intl';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
-import type { UserSettings } from '@/lib/stores/userSettings';
-import { dispatchUserSettings } from '@/lib/stores/userSettings';
+import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/features/calendar/stores/userSettings';
+import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 /**

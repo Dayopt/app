@@ -6,10 +6,10 @@
  * 各 store の責務境界を保ったまま 1 度の呼び出しで両方の state を更新できる。
  */
 
+import type { UserPreference } from '@/lib/stores/useUserPreferenceStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import type { CalendarSettings } from './useCalendarSettingsStore';
 import { useCalendarSettingsStore } from './useCalendarSettingsStore';
-import type { UserPreference } from './useUserPreferenceStore';
-import { useUserPreferenceStore } from './useUserPreferenceStore';
 
 /** 2 ストアを統合した設定オブジェクトの型 */
 export type UserSettings = UserPreference & CalendarSettings;

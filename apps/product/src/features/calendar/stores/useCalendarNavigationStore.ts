@@ -14,7 +14,7 @@
 
 import { create } from 'zustand';
 
-import type { CalendarViewType } from '@/lib/calendar-constants';
+import type { CalendarViewType } from '../lib/constants';
 
 interface CalendarNavigationStore {
   // ── コマンドチャネル（外部 → カレンダー） ──

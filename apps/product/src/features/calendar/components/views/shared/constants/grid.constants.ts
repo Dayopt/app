@@ -9,9 +9,9 @@ export const HALF_HOUR_HEIGHT = HOUR_HEIGHT / 2; // 30分の高さ(px)
 /** 1分の高さ（px） */
 export const MINUTE_HEIGHT = HOUR_HEIGHT / 60; // 1分の高さ(px)
 
-// 密度プリセット — 共有レイヤー (@/lib/calendar-constants) から re-export
-export { HOUR_HEIGHT_DENSITIES } from '@/lib/calendar-constants';
-export type { HourHeightDensity } from '@/lib/calendar-constants';
+// 密度プリセット — feature lib/constants から re-export
+export { HOUR_HEIGHT_DENSITIES } from '../../../../lib/constants';
+export type { HourHeightDensity } from '../../../../lib/constants';
 
 /** イベントの最小高さ（px） — 1 分粒度 entry でも視認できる程度に低く設定 */
 export const MIN_EVENT_HEIGHT = 14; // イベントの最小高さ(px)
