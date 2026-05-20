@@ -15,6 +15,7 @@ import { api } from '@/lib/trpc';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
+import { determineEntryOrigin } from '../domain';
 import { clearNew, markNew } from '../lib/new-entry-tracker';
 import type { UpdateEntryInput } from '../schemas/entry';
 import { useEntryInspectorStore } from '../stores/useEntryInspectorStore';
@@ -78,8 +79,7 @@ export function useEntryMutations(options?: {
       const tempId = createTempId();
       const selectedStart = input.start_time ?? input.actual_start_time ?? null;
       const selectedEnd = input.end_time ?? input.actual_end_time ?? null;
-      const origin =
-        selectedEnd && new Date(selectedEnd).getTime() <= Date.now() ? 'unplanned' : 'planned';
+      const origin = selectedEnd ? determineEntryOrigin(selectedEnd) : 'planned';
       const tempEntry: Awaited<ReturnType<typeof utils.entries.list.fetch>>[number] = {
         id: tempId,
         title: input.title,

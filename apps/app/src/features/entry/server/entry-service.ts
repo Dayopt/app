@@ -9,6 +9,7 @@ import 'server-only';
 import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { ServiceError } from '@/lib/trpc/errors';
+import { determineEntryOrigin } from '../domain';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 
 import type {
@@ -508,8 +509,7 @@ export class EntryService {
     timezone?: string,
   ): NormalizedEntryInput {
     const selectedRange = this.resolveCreateRange(input, timezone);
-    const isUnplanned = new Date(selectedRange.end).getTime() <= Date.now();
-    const origin = isUnplanned ? 'unplanned' : 'planned';
+    const origin = determineEntryOrigin(selectedRange.end);
 
     const normalized: NormalizedEntryInput = {
       user_id: userId,
