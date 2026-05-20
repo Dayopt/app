@@ -1,6 +1,7 @@
 import { env } from '@/platform/config/env';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 
 /**
  * レート制限設定
@@ -10,6 +11,7 @@ import { Redis } from '@upstash/redis';
  */
 
 const hasRedis = !!(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN);
+const isProductionBuild = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
 
 // Redis クライアント（Upstash 設定時のみ）
 const redis = hasRedis
@@ -19,8 +21,9 @@ const redis = hasRedis
     })
   : undefined;
 
-if (!hasRedis) {
-  // production では env.ts の validateRequiredEnv が起動時に throw するため、ここに到達するのは dev/test のみ
+if (!hasRedis && !isProductionBuild) {
+  // production build では route module 評価時に繰り返し出るため抑止する。
+  // runtime の production secret 検証は instrumentation.ts の assertProductionRuntimeEnv が担当する。
   console.warn(
     '[RateLimit] Upstash is not configured. All rate limits become pass-through (no protection). Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.',
   );
