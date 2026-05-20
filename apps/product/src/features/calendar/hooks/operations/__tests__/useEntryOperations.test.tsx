@@ -9,12 +9,19 @@ const getByIdGetData = vi.fn();
 const toastSuccess = vi.fn();
 const loggerError = vi.fn();
 
-vi.mock('@/features/entry', () => ({
-  useEntryMutations: () => ({
-    updateEntry: { mutate: updateMutate },
-    deleteEntry: { mutate: deleteMutate },
-  }),
-}));
+// domain helper (buildTimeUpdateData 等) は実体を保持し、hook のみ mock する。
+// useEntryOperations は entry barrel から buildTimeUpdateData / buildUndoTimeUpdateData を
+// import するので、これらが undefined だと time patch の構築が壊れる。
+vi.mock('@/features/entry', async () => {
+  const actual = await vi.importActual<typeof import('@/features/entry')>('@/features/entry');
+  return {
+    ...actual,
+    useEntryMutations: () => ({
+      updateEntry: { mutate: updateMutate },
+      deleteEntry: { mutate: deleteMutate },
+    }),
+  };
+});
 
 vi.mock('@/lib/trpc', () => ({
   api: {
