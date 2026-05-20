@@ -182,7 +182,7 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
         <ul className="space-y-2">
           <li>
             <a
-              href="https://github.com/dayopt/dayopt-web/issues/new"
+              href="https://github.com/Dayopt/dayopt/issues/new"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
@@ -192,7 +192,7 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
           </li>
           <li>
             <a
-              href="https://github.com/dayopt/dayopt-web"
+              href="https://github.com/Dayopt/dayopt"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"

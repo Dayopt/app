@@ -4,19 +4,19 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'apps/app/src/server/**'
-      - 'apps/app/src/features/*/services/**'
-      - 'apps/app/src/platform/supabase/**'
+      - 'apps/product/src/server/**'
+      - 'apps/product/src/features/*/services/**'
+      - 'apps/product/src/platform/supabase/**'
       - 'supabase/migrations/**'
-      - 'apps/app/src/test/integration/**'
+      - 'apps/product/src/test/integration/**'
   push:
     branches: [main]
     paths:
-      - 'apps/app/src/server/**'
-      - 'apps/app/src/features/*/services/**'
-      - 'apps/app/src/platform/supabase/**'
+      - 'apps/product/src/server/**'
+      - 'apps/product/src/features/*/services/**'
+      - 'apps/product/src/platform/supabase/**'
       - 'supabase/migrations/**'
-      - 'apps/app/src/test/integration/**'
+      - 'apps/product/src/test/integration/**'
 
 env:
   NODE_VERSION: '22'

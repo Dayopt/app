@@ -14,7 +14,7 @@ import { ServiceError } from '@/lib/trpc/errors';
 import type { ContactFormInput } from '../types';
 
 const GITHUB_TOKEN = env.GITHUB_TOKEN;
-/** Web側と同じ変数名 (e.g. "Dayopt/web") */
+/** Web側と同じ変数名 (e.g. "Dayopt/dayopt") */
 const GITHUB_CONTACT_REPO = env.GITHUB_CONTACT_REPO;
 
 /** Web側と統一したカテゴリラベル */

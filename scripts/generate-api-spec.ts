@@ -20,7 +20,7 @@ import { fileURLToPath } from 'url';
 import type { ZodType } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
-import type { ProcedureMeta } from '../apps/app/src/lib/trpc/procedures';
+import type { ProcedureMeta } from '../apps/product/src/lib/trpc/procedures';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -57,8 +57,8 @@ async function loadRuntimeModules(): Promise<{
   installServerOnlyShim();
 
   const [{ ERROR_CODE_MAP }, { appRouter }] = await Promise.all([
-    import('../apps/app/src/lib/trpc/errors'),
-    import('../apps/app/src/lib/trpc/root'),
+    import('../apps/product/src/lib/trpc/errors'),
+    import('../apps/product/src/lib/trpc/root'),
   ]);
 
   return {
@@ -421,7 +421,7 @@ async function main(): Promise<void> {
   if (CHECK_MODE) {
     if (!existsSync(OUTPUT_PATH)) {
       console.error(`❌ API仕様書が見つかりません: ${OUTPUT_PATH}`);
-      console.error('   pnpm --filter @dayopt/app api:spec を実行して生成してください。');
+      console.error('   pnpm --filter @dayopt/product api:spec を実行して生成してください。');
       process.exit(1);
     }
 
@@ -431,7 +431,7 @@ async function main(): Promise<void> {
       process.exit(0);
     } else {
       console.error('❌ API仕様書が最新ではありません。');
-      console.error('   pnpm --filter @dayopt/app api:spec を実行して更新してください。');
+      console.error('   pnpm --filter @dayopt/product api:spec を実行して更新してください。');
       process.exit(1);
     }
   }

@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const APP_ROOT = resolve(ROOT, 'apps/app');
+const APP_ROOT = resolve(ROOT, 'apps/product');
 const STATS_FILE = resolve(APP_ROOT, '.next/diagnostics/route-bundle-stats.json');
 
 // ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ function computeGzipSize(filePath: string): number {
   if (!existsSync(filePath)) return 0;
   try {
     const result = execSync(`gzip -c "${filePath}" | wc -c`, {
-    cwd: APP_ROOT,
+      cwd: APP_ROOT,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });

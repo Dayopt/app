@@ -16,7 +16,7 @@ import { Meta } from '@storybook/blocks';
 
 - **dependabot PR 7 件の bulk merge (8 commits)**: CI パスの 5 件と、CI 失敗のうち rebase 後に通った 2 件（development-storybook / development-other）を直列に merge。Tailwind 4.3 の class sort 順変更で発生した `TimeInput.tsx` の Prettier 失敗だけは dependabot branch に手動 fix を push して対応
 - **v0.28.0 リリース (3 commits)**: `.gitignore` に `.turbo/` を追加して Turborepo cache を untracked から除外、`package.json` を 0.28.0 へ bump、リリース PR (#1166) を merge、`v0.28.0` タグを push、GitHub Release を auto-generated → 詳細リリースノート（前回 v0.27.0 以降の 48 PR を Added / Changed / Fixed / Security / Breaking / Test / Dependencies / Chore に分類）で上書き
-- **monorepo branch ← main の統合 (1 merge commit, 13 files changed)**: 構造系コンフリクト（`package.json` の name / version / scripts、`package-lock.json` 削除）は monorepo 構造優先、コンテンツ系（two-layer model の actual 範囲扱い、エラーコード追加、Tailwind class 順、`get_tag_recent_entries` の unplanned 対応 migration）は conflict ごとに正しい側を選択。main の 21 個の dep bump は `apps/app/package.json` と `apps/storybook/package.json` に転記
+- **monorepo branch ← main の統合 (1 merge commit, 13 files changed)**: 構造系コンフリクト（`package.json` の name / version / scripts、`package-lock.json` 削除）は monorepo 構造優先、コンテンツ系（two-layer model の actual 範囲扱い、エラーコード追加、Tailwind class 順、`get_tag_recent_entries` の unplanned 対応 migration）は conflict ごとに正しい側を選択。main の 21 個の dep bump は `apps/product/package.json` と `apps/storybook/package.json` に転記
 
 #### なぜ今日この作業をしたか
 
@@ -40,11 +40,11 @@ monorepo branch への main 統合は、放置すると差分が日々開いて�
 
 ### monorepo 第一段階の土台を入れ、entry card を 2-layer 構造に再編した日
 
-23 コミット。前半は monorepo 移行の Phase 1（apps/app + apps/storybook の 2 workspace、pnpm + Turborepo、packages/\* の placeholder）、後半は entry card の 2-layer 構造再編（planned 枠 + actual overlay の組み合わせ、超過 overlay は破線枠のみ）と関連 fix の連鎖。
+23 コミット。前半は monorepo 移行の Phase 1（apps/product + apps/storybook の 2 workspace、pnpm + Turborepo、packages/\* の placeholder）、後半は entry card の 2-layer 構造再編（planned 枠 + actual overlay の組み合わせ、超過 overlay は破線枠のみ）と関連 fix の連鎖。
 
 #### やったこと
 
-- **monorepo 第一段階の土台 (4 commits)**: `apps/app`（Next.js）と `apps/storybook` の 2 workspace + `packages/{ui,types,server,utils,config}` placeholder を導入、root の `package.json` を scripts と pnpm.overrides だけに削ぎ、pre-commit を workspace 対応に。monorepo lint で出た hooks 違反と未使用コードを整理
+- **monorepo 第一段階の土台 (4 commits)**: `apps/product`（Next.js）と `apps/storybook` の 2 workspace + `packages/{ui,types,server,utils,config}` placeholder を導入、root の `package.json` を scripts と pnpm.overrides だけに削ぎ、pre-commit を workspace 対応に。monorepo lint で出た hooks 違反と未使用コードを整理
 - **entry card 2-layer 構造への再編 (2 commits)**: planned 枠と actual overlay の組み合わせで視覚階層を統制、超過 overlay の「超過 +X 分」テキストラベルを削除して破線枠のみで超過を表現
 - **entry / inspector まわりの fix 連鎖 (8 commits)**: 構造変換 (planned ↔ unplanned) の pre-flush 失敗時に conversion を中止、構造変換時の inspector pending edit を保持、planned 移動の overlap 検知と stale onError の cache fix、planned 更新で actual 範囲を保持、planned 作成の overlap 判定で actual 範囲を mirror、未使用 eslint-disable 削除
 - **DB / test / その他 (5 commits)**: seed.sql に actual_start_time / actual_end_time を追加、entry insert integration test に 2-layer time fields を補う、tooltip の遅延表示 timer を安全に破棄、merge_tags_with_hierarchy の RPC error 詳細を log、タグ直近 entry で予定外記録を保持
@@ -52,7 +52,7 @@ monorepo branch への main 統合は、放置すると差分が日々開いて�
 
 #### なぜ今日この作業をしたか
 
-monorepo 移行の必要性は前から認識されていたが、放置のままだと将来 packages 切り出しの判断ごとにヒューリスティクスでパスを決め続けることになる。第一段階で workspace 構造だけ確定させておけば、次から「これは packages/utils か apps/app/src か」の判断が type-bound になる。今日は土台のみで、実際の移植は packages/\* に少しずつ進める運用に切替。
+monorepo 移行の必要性は前から認識されていたが、放置のままだと将来 packages 切り出しの判断ごとにヒューリスティクスでパスを決め続けることになる。第一段階で workspace 構造だけ確定させておけば、次から「これは packages/utils か apps/product/src か」の判断が type-bound になる。今日は土台のみで、実際の移植は packages/\* に少しずつ進める運用に切替。
 
 entry card の 2-layer 構造は前日（5-15）に進めた「重複検出 UI 統一」と「過去時間帯は unplanned に切替」の自然な延長線。planned と actual の概念分離が UI レベルで visible でないと、user が「いま planned を編集しているのか actual を編集しているのか」を混同する。視覚階層を「planned 枠の中に actual の overlay」にすると、planned 編集は枠を、actual 編集は内側 overlay を触れば良いという物理的 affordance が成立する。
 

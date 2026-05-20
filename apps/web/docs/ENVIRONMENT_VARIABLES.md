@@ -64,10 +64,10 @@ npm run dev
 
 ### 外部サービス - GitHub
 
-| 変数名                | 型       | デフォルト             | 必須        | 説明                                                                  |
-| --------------------- | -------- | ---------------------- | ----------- | --------------------------------------------------------------------- |
-| `GITHUB_TOKEN`        | `string` | `undefined`            | ⚠️ 本番のみ | GitHub Personal Access Token<br>スコープ: `repo` または `public_repo` |
-| `GITHUB_CONTACT_REPO` | `string` | `'t3-nico/dayopt-web'` | ❌          | コンタクトフォームのIssue作成先リポジトリ<br>形式: `owner/repo`       |
+| 変数名                | 型       | デフォルト        | 必須        | 説明                                                                  |
+| --------------------- | -------- | ----------------- | ----------- | --------------------------------------------------------------------- |
+| `GITHUB_TOKEN`        | `string` | `undefined`       | ⚠️ 本番のみ | GitHub Personal Access Token<br>スコープ: `repo` または `public_repo` |
+| `GITHUB_CONTACT_REPO` | `string` | `'Dayopt/dayopt'` | ❌          | コンタクトフォームのIssue作成先リポジトリ<br>形式: `owner/repo`       |
 
 ### 外部サービス - Upstash (Rate Limiting)
 
@@ -260,7 +260,7 @@ npm run dev
 
 **任意:**
 
-- `GITHUB_CONTACT_REPO`: デフォルトは `t3-nico/dayopt-web`
+- `GITHUB_CONTACT_REPO`: デフォルトは `Dayopt/dayopt`
 - `PRIVACY_PROTECTION_MODE`: デフォルトは `normal`
 - `GOOGLE_SITE_VERIFICATION`: Google Search Console 検証用
 - `YANDEX_VERIFICATION`: Yandex Webmaster 検証用

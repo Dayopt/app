@@ -6,8 +6,8 @@ const relativeToRoot = (files) => files.map((file) => path.relative(process.cwd(
 
 const relativeToApp = (files) =>
   files
-    .filter((file) => path.relative(process.cwd(), file).startsWith('apps/app/'))
-    .map((file) => path.relative(path.join(process.cwd(), 'apps/app'), file));
+    .filter((file) => path.relative(process.cwd(), file).startsWith('apps/product/'))
+    .map((file) => path.relative(path.join(process.cwd(), 'apps/product'), file));
 
 export default {
   '*.{ts,tsx,js,jsx}': (files) => {
@@ -17,7 +17,7 @@ export default {
     return [
       `prettier --write ${rootFiles.map(quote).join(' ')}`,
       ...(appFiles.length > 0
-        ? [`pnpm --dir apps/app exec eslint --fix ${appFiles.map(quote).join(' ')}`]
+        ? [`pnpm --dir apps/product exec eslint --fix ${appFiles.map(quote).join(' ')}`]
         : []),
     ];
   },

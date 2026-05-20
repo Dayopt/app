@@ -92,7 +92,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
-    // monorepo (pnpm) で apps/app(zod3) と apps/web(zod4) を併存させているため、
+    // monorepo (pnpm) で apps/product(zod3) と apps/web(zod4) を併存させているため、
     // @hookform/resolvers の zod adapter が strict 隔離下で型解決できない。
     // ランタイムは正常。zod version 統一は follow-up PR で対応する。
     resolver: zodResolver(loginSchema as never),

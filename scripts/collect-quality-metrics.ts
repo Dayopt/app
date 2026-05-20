@@ -19,7 +19,7 @@ import type { CoverageMetric, MetricKey, QualitySnapshot } from './quality-metri
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const APP_ROOT = resolve(ROOT, 'apps/app');
+const APP_ROOT = resolve(ROOT, 'apps/product');
 const REPORTS_DIR = resolve(ROOT, 'quality-reports');
 const MIGRATIONS_DIR = resolve(ROOT, 'supabase/migrations');
 const UI_DIR = resolve(APP_ROOT, 'src/lib/components/ui');
@@ -74,7 +74,7 @@ function collectTypeSafety(): QualitySnapshot['metrics']['typeSafety'] {
     return { errors: 0, status: 'pass' };
   }
 
-  const output = exec('pnpm --filter @dayopt/app typecheck 2>&1', { ignoreError: true });
+  const output = exec('pnpm --filter @dayopt/product typecheck 2>&1', { ignoreError: true });
   const errorLines = output.split('\n').filter((line) => /error TS\d+/.test(line));
   return {
     errors: errorLines.length,
@@ -88,7 +88,7 @@ function collectTestCoverage(): QualitySnapshot['metrics']['testCoverage'] {
     return { statements: zeroCov, functions: zeroCov, branches: zeroCov };
   }
 
-  exec('pnpm --filter @dayopt/app test:coverage', { ignoreError: true });
+  exec('pnpm --filter @dayopt/product test:coverage', { ignoreError: true });
 
   const coveragePath = resolve(APP_ROOT, 'coverage/coverage-final.json');
   if (!existsSync(coveragePath)) {
@@ -238,7 +238,7 @@ function collectCircularDeps(): QualitySnapshot['metrics']['circularDeps'] {
   }
 
   const output = exec(
-    'pnpm --dir apps/app exec madge --circular --json --ts-config ./tsconfig.json --extensions ts,tsx src/',
+    'pnpm --dir apps/product exec madge --circular --json --ts-config ./tsconfig.json --extensions ts,tsx src/',
     {
       ignoreError: true,
     },
@@ -257,7 +257,7 @@ function collectDeadCode(): QualitySnapshot['metrics']['deadCode'] {
     return { unusedExports: 0, unusedFiles: 0 };
   }
 
-  const output = exec('pnpm --filter @dayopt/app quality:deadcode', { ignoreError: true });
+  const output = exec('pnpm --filter @dayopt/product quality:deadcode', { ignoreError: true });
 
   try {
     const result = JSON.parse(output) as {
@@ -281,9 +281,12 @@ function collectA11y(): QualitySnapshot['metrics']['a11y'] {
     return { violations: 0, status: 'skipped' };
   }
 
-  const output = exec('pnpm --filter @dayopt/storybook test-storybook -- --run --reporter json 2>&1', {
-    ignoreError: true,
-  });
+  const output = exec(
+    'pnpm --filter @dayopt/storybook test-storybook -- --run --reporter json 2>&1',
+    {
+      ignoreError: true,
+    },
+  );
 
   try {
     const jsonStart = output.indexOf('{');
@@ -341,7 +344,7 @@ function collectBundleSize(): QualitySnapshot['metrics']['bundleSize'] {
 
   try {
     exec(
-      'pnpm --filter @dayopt/app exec tsx ../../scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json',
+      'pnpm --filter @dayopt/product exec tsx ../../scripts/check-bundle-budget.ts --output=.next/diagnostics/budget-result.json',
       {
         ignoreError: true,
       },

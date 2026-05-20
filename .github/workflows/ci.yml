@@ -39,7 +39,7 @@ jobs:
         run: pnpm lint:boundaries
 
       - name: Prettier
-        run: pnpm exec prettier --check "apps/app/src/**/*.{ts,tsx,js,jsx,json,md}"
+        run: pnpm exec prettier --check "apps/product/src/**/*.{ts,tsx,js,jsx,json,md}"
 
       - name: License check
         run: pnpm license:check
@@ -99,8 +99,8 @@ jobs:
 
       - uses: actions/cache@v5
         with:
-          path: apps/app/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/app/src/**/*.{ts,tsx}') }}
+          path: apps/product/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/product/src/**/*.{ts,tsx}') }}
           restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - name: Build
@@ -116,9 +116,9 @@ jobs:
       - name: Check for leaked secrets in client bundle
         run: |
           PATTERN="SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY|RECOVERY_CODE_PEPPER|SENTRY_AUTH_TOKEN|UPSTASH_REDIS_REST_TOKEN|RESEND_API_KEY|RECAPTCHA_SECRET_KEY|SLACK_BILLING_WEBHOOK|GITHUB_TOKEN|sk_live_|sk_test_|whsec_|ghp_"
-          if grep -rqE "$PATTERN" apps/app/.next/static/ --include="*.js" 2>/dev/null; then
+          if grep -rqE "$PATTERN" apps/product/.next/static/ --include="*.js" 2>/dev/null; then
             echo "::error::Secret pattern found in client bundle!"
-            grep -rE "$PATTERN" apps/app/.next/static/ --include="*.js"
+            grep -rE "$PATTERN" apps/product/.next/static/ --include="*.js"
             exit 1
           fi
           echo "✓ No secrets found in client bundle"
@@ -131,8 +131,8 @@ jobs:
         with:
           name: nextjs-build-diagnostics
           path: |
-            apps/app/.next/diagnostics/budget-result.json
-            apps/app/.next/static/chunks/*.css
+            apps/product/.next/diagnostics/budget-result.json
+            apps/product/.next/static/chunks/*.css
           retention-days: 1
 
   web-build:
@@ -178,14 +178,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: nextjs-build-diagnostics
-          path: apps/app/.next
+          path: apps/product/.next
 
       - name: Report JS bundle budget
         run: |
-          if [ -f apps/app/.next/diagnostics/budget-result.json ]; then
+          if [ -f apps/product/.next/diagnostics/budget-result.json ]; then
             echo "## 📦 Bundle Size Budget Report" >> "$GITHUB_STEP_SUMMARY"
             node -e "
-              const r = require('./apps/app/.next/diagnostics/budget-result.json');
+              const r = require('./apps/product/.next/diagnostics/budget-result.json');
               const s = r.summary;
               console.log('| Metric | Value |');
               console.log('|--------|-------|');
@@ -224,7 +224,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium chromium-headless-shell
 
       - name: Run E2E tests
-        run: pnpm --dir apps/app exec playwright test --project="chromium"
+        run: pnpm --dir apps/product exec playwright test --project="chromium"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder' }}
@@ -235,7 +235,7 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: apps/app/playwright-report/
+          path: apps/product/playwright-report/
           retention-days: 7
 
       - name: Upload screenshots on failure
@@ -243,7 +243,7 @@ jobs:
         if: failure()
         with:
           name: screenshots
-          path: apps/app/test-results/
+          path: apps/product/test-results/
           retention-days: 7
 
   # ── Gate ──────────────────────────────────────────────

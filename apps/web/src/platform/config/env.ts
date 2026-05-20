@@ -95,7 +95,7 @@ export interface EnvConfig {
   /**
    * GitHub リポジトリ (owner/repo 形式)
    *
-   * @default 't3-nico/dayopt-web'
+   * @default 'Dayopt/dayopt'
    * @example 'your-org/your-repo'
    */
   GITHUB_CONTACT_REPO?: string;

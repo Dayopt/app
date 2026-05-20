@@ -118,8 +118,8 @@ content/
 1. **リポジトリをクローン**
 
    ```bash
-   git clone https://github.com/your-username/dayopt-web.git
-   cd dayopt-web
+   git clone https://github.com/Dayopt/dayopt.git
+   cd dayopt
    ```
 
 2. **依存関係をインストール**

@@ -27,7 +27,7 @@ gh pr list --state merged --base main --limit 100 --json number,title,mergedAt,l
   | jq -r --arg since "$SINCE_DATE" '
     .[]
     | select(.mergedAt > $since)
-    | "- [#\(.number)](https://github.com/Dayopt/app/pull/\(.number)) - \(.title)"
+    | "- [#\(.number)](https://github.com/Dayopt/dayopt/pull/\(.number)) - \(.title)"
   '
 
 echo ""

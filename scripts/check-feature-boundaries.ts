@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const APP_ROOT = resolve(ROOT, 'apps/app');
+const APP_ROOT = resolve(ROOT, 'apps/product');
 const BUDGET_FILE = resolve(APP_ROOT, '.feature-boundary-budget.json');
 const UPDATE_MODE = process.argv.includes('--update');
 
