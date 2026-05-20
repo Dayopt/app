@@ -5,7 +5,7 @@ import React from 'react';
 import { format } from 'date-fns';
 
 import { isTodayInTimezone } from '@/lib/date/timezone';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { cn } from '@/lib/utils';
 
 import type { DateDisplayProps } from '../../../../types/date-display.types';
@@ -144,7 +144,7 @@ export const DateDisplay = ({
   onClick,
   onDoubleClick,
 }: DateDisplayProps) => {
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
   const today = todayProp ?? isTodayInTimezone(date, timezone);
 
   const { dayName, dateString, monthYear } = useDateFormats(

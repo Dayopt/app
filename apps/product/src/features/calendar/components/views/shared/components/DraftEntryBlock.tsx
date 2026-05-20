@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ interface DraftEntryBlockProps {
  */
 export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
   const t = useTranslations();
-  const timeFormat = useCalendarSettingsStore((s) => s.timeFormat);
+  const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
   const updateTimes = useTagDraftStore((s) => s.updateTimes);
   const queryClient = useQueryClient();
 

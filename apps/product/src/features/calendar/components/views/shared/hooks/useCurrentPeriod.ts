@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 
 import { isSameDay, isSameWeek } from 'date-fns';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 import { getTodayIndex } from '../utils/dateHelpers';
 
@@ -42,7 +42,7 @@ export function useCurrentPeriod({
   periodType,
   weekStartsOn = 0,
 }: UseCurrentPeriodOptions): UseCurrentPeriodReturn {
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
+  const timezone = useUserPreferenceStore((state) => state.timezone);
 
   // 今日が期間内のどこにあるかを計算（ユーザー TZ 基準）
   const todayIndex = useMemo(() => {

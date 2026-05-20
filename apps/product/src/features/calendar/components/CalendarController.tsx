@@ -20,7 +20,6 @@ import type { CalendarEvent, CalendarViewType, ViewDateRange } from '../types/ca
 import { CalendarViewRenderer } from './controller/components';
 import { initializePreload } from './controller/utils';
 
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 import { CalendarLayout } from './layout/CalendarLayout';
 import { EventContextMenu, MobileTouchHint } from './views/shared/components';
 
@@ -85,7 +84,7 @@ export interface CalendarControllerProps {
   onPrefetch?: ((direction: 'prev' | 'next' | 'today') => void) | undefined;
 
   // --- Settings persistence ---
-  onSettingsChange?: (settings: Partial<CalendarSettings>) => void;
+  onSettingsChange?: (settings: Partial<UserSettings>) => void;
 
   // --- Slots ---
   className?: string;

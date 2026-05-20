@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 import { TimezoneOffset } from './TimezoneOffset';
 
@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   decorators: [
     (Story) => {
-      useCalendarSettingsStore.setState({ timezone: 'Asia/Tokyo' });
+      useUserPreferenceStore.setState({ timezone: 'Asia/Tokyo' });
       return <Story />;
     },
   ],
@@ -36,7 +36,7 @@ export const Default: Story = {
 export const UTC: Story = {
   decorators: [
     (Story) => {
-      useCalendarSettingsStore.setState({ timezone: 'Europe/London' });
+      useUserPreferenceStore.setState({ timezone: 'Europe/London' });
       return <Story />;
     },
   ],
@@ -46,7 +46,7 @@ export const UTC: Story = {
 export const NewYork: Story = {
   decorators: [
     (Story) => {
-      useCalendarSettingsStore.setState({ timezone: 'America/New_York' });
+      useUserPreferenceStore.setState({ timezone: 'America/New_York' });
       return <Story />;
     },
   ],
@@ -56,7 +56,7 @@ export const NewYork: Story = {
 export const LosAngeles: Story = {
   decorators: [
     (Story) => {
-      useCalendarSettingsStore.setState({ timezone: 'America/Los_Angeles' });
+      useUserPreferenceStore.setState({ timezone: 'America/Los_Angeles' });
       return <Story />;
     },
   ],
@@ -69,7 +69,7 @@ export const WithClassName: Story = {
   },
   decorators: [
     (Story) => {
-      useCalendarSettingsStore.setState({ timezone: 'Asia/Tokyo' });
+      useUserPreferenceStore.setState({ timezone: 'Asia/Tokyo' });
       return <Story />;
     },
   ],
@@ -89,7 +89,7 @@ export const AllPatterns: Story = {
     return (
       <div className="flex flex-col gap-4">
         {timezones.map(({ label, tz }) => {
-          useCalendarSettingsStore.setState({ timezone: tz });
+          useUserPreferenceStore.setState({ timezone: tz });
           return (
             <div key={tz} className="flex items-center gap-4">
               <span className="text-muted-foreground w-52 text-xs">{label}</span>

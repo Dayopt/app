@@ -21,7 +21,6 @@ import type { CalendarViewType } from '@/features/calendar';
 import { useEntryInspectorStore } from '@/features/entry';
 import { logger } from '@/lib/logger';
 import { useCalendarNavigationStore } from '@/lib/stores/useCalendarNavigationStore';
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 
 // Sub-hooks
 import { useCalendarCrudHandlers } from './useCalendarCrudHandlers';
@@ -82,7 +81,7 @@ export interface CalendarCompositionResult {
   onDateSelect: ReturnType<typeof useCalendarNavHandlers>['onDateSelect'];
 
   // === Settings persistence ===
-  onSettingsChange: (settings: Partial<CalendarSettings>) => void;
+  onSettingsChange: (settings: Partial<UserSettings>) => void;
 }
 
 // =============================================================================

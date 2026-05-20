@@ -2,7 +2,7 @@
 
 import { isWeekend } from 'date-fns';
 
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 import { CalendarViewAnimation } from '../../animations/ViewTransition';
 
@@ -44,7 +44,7 @@ export const WeekView = ({
   onUpdateEntry,
   onTimeRangeSelect,
 }: WeekViewProps) => {
-  const weekStartsOnSetting = useCalendarSettingsStore((s) => s.weekStartsOn);
+  const weekStartsOnSetting = useUserPreferenceStore((s) => s.weekStartsOn);
   // 設定ストアの値を優先、プロップでオーバーライド可能
   const weekStartsOn = weekStartsOnProp ?? weekStartsOnSetting;
 

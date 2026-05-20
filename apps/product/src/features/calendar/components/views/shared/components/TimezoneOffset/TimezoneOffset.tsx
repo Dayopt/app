@@ -3,7 +3,6 @@
 import { useTranslations } from 'next-intl';
 
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/lib/components/ui/select';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import { getTimeZones } from '@/lib/timezone-utils';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
@@ -16,8 +15,8 @@ interface TimezoneOffsetProps {
 /** タイムゾーンを選択するドロップダウンコンポーネント（UTC オフセット表示） */
 export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   const tActions = useTranslations('calendar.actions');
-  const timezone = useCalendarSettingsStore((s) => s.timezone);
-  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
+  const timezone = useUserPreferenceStore((s) => s.timezone);
+  const updatePreferences = useUserPreferenceStore((s) => s.updatePreferences);
   const utils = api.useUtils();
   const updateMutation = api.userSettings.update.useMutation({
     onSuccess: () => {
@@ -58,7 +57,7 @@ export function TimezoneOffset({ className }: TimezoneOffsetProps) {
   };
 
   const handleTimezoneChange = (value: string) => {
-    updateSettings({ timezone: value });
+    updatePreferences({ timezone: value });
     updateMutation.mutate({ timezone: value });
   };
 

@@ -18,7 +18,7 @@ import { useTagsMap } from '@/features/tags';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { isTodayInTimezone } from '@/lib/date/timezone';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
-import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { filterEntriesByDate, sortTimedEntries } from '../../../../../lib/layout';
 
 export const DayColumn = memo<DayColumnProps>(function DayColumn({
@@ -37,7 +37,7 @@ export const DayColumn = memo<DayColumnProps>(function DayColumn({
   const setAnchorRect = useEntryInspectorStore((state) => state.setAnchorRect);
   const isMobile = useMediaQuery(MEDIA_QUERIES.mobile);
   const format = useFormatter();
-  const timezone = useCalendarSettingsStore((state) => state.timezone);
+  const timezone = useUserPreferenceStore((state) => state.timezone);
 
   // この日のエントリをフィルタリング
   const dayEntries = useMemo(() => {

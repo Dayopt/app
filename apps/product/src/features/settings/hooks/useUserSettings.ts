@@ -3,7 +3,7 @@
  * TanStack Queryを使用してSupabaseと同期
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
@@ -11,8 +11,10 @@ import { useTranslations } from 'next-intl';
 import { CACHE_5_MINUTES } from '@/lib/date';
 import { api } from '@/lib/trpc';
 
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
+import type { UserSettings } from '@/lib/stores/userSettings';
+import { dispatchUserSettings } from '@/lib/stores/userSettings';
+import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 /**
  * ユーザー設定をDBと同期するhook
@@ -20,8 +22,6 @@ import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore'
  * - 設定変更時: DBに保存（debounce済み）
  */
 export function useUserSettings() {
-  // セレクタで関数のみ購読（saveSettings の deps を安定化）
-  const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
   const t = useTranslations();
   const utils = api.useUtils();
 
@@ -71,7 +71,7 @@ export function useUserSettings() {
   useEffect(() => {
     if (isPending) return;
     if (dbSettings) {
-      updateSettings({
+      dispatchUserSettings({
         timezone: dbSettings.timezone,
         timeFormat: dbSettings.timeFormat,
         // 初回のみ locale から導出、以降は Store の値を維持
@@ -96,13 +96,13 @@ export function useUserSettings() {
     // dbSettings が object でも null でも apply は完了扱い
     // eslint-disable-next-line react-hooks/set-state-in-effect -- query 解決後の 1 回限りの hydration flag
     setStoreHydrated(true);
-  }, [dbSettings, isPending, updateSettings]);
+  }, [dbSettings, isPending]);
 
   // 設定をDBに保存する関数
   const saveSettings = useCallback(
-    (settings: Partial<CalendarSettings>) => {
+    (settings: Partial<UserSettings>) => {
       // Storeを即座に更新（楽観的更新）
-      updateSettings(settings);
+      dispatchUserSettings(settings);
 
       // DBに保存用のマッピング
       const dbInput: Record<string, unknown> = {};
@@ -126,11 +126,16 @@ export function useUserSettings() {
         updateMutation.mutate(dbInput);
       }
     },
-    [updateSettings, updateMutation],
+    [updateMutation],
   );
 
-  // UI表示用にストア全体を返す（呼び出し元との互換性維持）
-  const settings = useCalendarSettingsStore();
+  // UI表示用に2ストアを merge した shape を返す（既存 consumer との互換性維持）
+  const preferences = useUserPreferenceStore();
+  const calendarSettings = useCalendarSettingsStore();
+  const settings = useMemo<UserSettings>(
+    () => ({ ...preferences, ...calendarSettings }),
+    [preferences, calendarSettings],
+  );
 
   return {
     settings,

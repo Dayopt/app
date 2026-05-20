@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import type { CalendarSettings } from '@/lib/stores/useCalendarSettingsStore';
 import { useCalendarSettingsStore } from '@/lib/stores/useCalendarSettingsStore';
 import type { ShortcutDef } from './shortcut-registry';
 import { registerShortcut } from './shortcut-registry';
@@ -12,14 +11,14 @@ import { registerShortcut } from './shortcut-registry';
  * 週末表示切り替えのキーボードショートカット（Cmd/Ctrl + W）を管理するフック
  */
 export function useWeekendToggleShortcut(
-  onSettingsChange?: ((settings: Partial<CalendarSettings>) => void) | undefined,
+  onSettingsChange?: ((settings: Partial<UserSettings>) => void) | undefined,
 ) {
   const showWeekends = useCalendarSettingsStore((s) => s.showWeekends);
   const updateSettings = useCalendarSettingsStore((s) => s.updateSettings);
   const t = useTranslations('calendar.toast');
 
   const persistSettings = useCallback(
-    (settings: Partial<CalendarSettings>) => {
+    (settings: Partial<UserSettings>) => {
       updateSettings(settings);
       onSettingsChange?.(settings);
     },
