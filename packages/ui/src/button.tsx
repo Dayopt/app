@@ -1,4 +1,3 @@
-import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 
@@ -40,6 +39,17 @@ export const buttonVariants = cva(
 );
 
 type ButtonSize = 'sm' | 'default' | 'lg';
+type ButtonChildProps = {
+  className?: string;
+  disabled?: boolean;
+  onClick?: React.MouseEventHandler<HTMLElement>;
+  ref?: React.Ref<HTMLElement>;
+  tabIndex?: number;
+  children?: React.ReactNode;
+  'data-slot'?: string;
+  'aria-busy'?: React.AriaAttributes['aria-busy'];
+  'aria-disabled'?: React.AriaAttributes['aria-disabled'];
+};
 
 export interface ButtonProps
   extends React.ComponentProps<'button'>, Omit<VariantProps<typeof buttonVariants>, 'size'> {
@@ -67,42 +77,67 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) => {
-    const Comp = asChild ? Slot : 'button';
     const resolvedSize = icon ? (`_icon-${size ?? 'default'}` as const) : (size ?? undefined);
+    const ariaDisabled = props['aria-disabled'];
+    const disabledState = disabled || loading || ariaDisabled === true || ariaDisabled === 'true';
+    const renderContent = (buttonContent: React.ReactNode) =>
+      loading ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
+          />
+          {loadingText ?? buttonContent}
+        </>
+      ) : (
+        buttonContent
+      );
 
-    const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-      const ariaDisabled = props['aria-disabled'];
-
-      if (disabled || loading || ariaDisabled === true || ariaDisabled === 'true') {
+    const handleClick = (
+      event: React.MouseEvent<HTMLElement>,
+      childOnClick?: React.MouseEventHandler<HTMLElement>,
+    ) => {
+      if (disabledState) {
         event.preventDefault();
+        event.stopPropagation();
         return;
       }
 
       onClick?.(event as React.MouseEvent<HTMLButtonElement>);
+      childOnClick?.(event);
     };
 
+    if (asChild && React.isValidElement<ButtonChildProps>(children)) {
+      return React.cloneElement(children, {
+        ...props,
+        ref,
+        'data-slot': 'button',
+        className: cn(
+          buttonVariants({ variant, size: resolvedSize, className }),
+          children.props.className,
+        ),
+        disabled: disabledState,
+        'aria-busy': loading || props['aria-busy'] || undefined,
+        'aria-disabled': disabledState || props['aria-disabled'] || undefined,
+        tabIndex: disabledState ? -1 : (props.tabIndex ?? children.props.tabIndex),
+        onClick: (event: React.MouseEvent<HTMLElement>) =>
+          handleClick(event, children.props.onClick),
+        children: renderContent(children.props.children),
+      });
+    }
+
     return (
-      <Comp
+      <button
         ref={ref}
         data-slot="button"
         className={cn(buttonVariants({ variant, size: resolvedSize, className }))}
-        disabled={loading || disabled}
+        disabled={disabledState}
         aria-busy={loading || undefined}
-        onClick={handleClick}
+        onClick={(event) => handleClick(event)}
         {...props}
       >
-        {loading ? (
-          <>
-            <span
-              aria-hidden="true"
-              className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
-            />
-            {loadingText ?? children}
-          </>
-        ) : (
-          children
-        )}
-      </Comp>
+        {renderContent(children)}
+      </button>
     );
   },
 );
