@@ -13,6 +13,7 @@
   "dependencies": {
     "@dayopt/design": "workspace:*",
     "@dayopt/product": "workspace:*",
+    "@dayopt/ui": "workspace:*",
     "@tanstack/react-query": "^5.100.11",
     "@trpc/client": "^11.17.0",
     "@trpc/server": "^11.17.0",

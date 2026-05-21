@@ -13,6 +13,8 @@
       "@/*": ["../product/src/*"],
       "@dayopt/design": ["../../packages/design/src/index.ts"],
       "@dayopt/design/*": ["../../packages/design/src/*"],
+      "@dayopt/ui": ["../../packages/ui/src/index.ts"],
+      "@dayopt/ui/*": ["../../packages/ui/src/*"],
       "@dayopt/storybook/*": [".storybook/*"]
     },
     "resolveJsonModule": true,
@@ -27,6 +29,8 @@
     "../product/src/**/*.stories.tsx",
     "../product/src/**/*.mdx",
     "../../packages/design/src/**/*.ts",
-    "../../packages/design/src/**/*.tsx"
+    "../../packages/design/src/**/*.tsx",
+    "../../packages/ui/src/**/*.ts",
+    "../../packages/ui/src/**/*.tsx"
   ]
 }
