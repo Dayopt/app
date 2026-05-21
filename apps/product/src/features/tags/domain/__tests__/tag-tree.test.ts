@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tag, TagTreeNode } from '../types';
+import type { Tag, TagTreeNode } from '../../types';
 
-import { buildTagHierarchyUpdates, buildTagTree, flattenTagTree } from './tag-tree';
+import { buildTagHierarchyUpdates, buildTagTree, flattenTagTree } from '../tag-tree';
 
 function makeTag(overrides: Partial<Tag> & { id: string; name: string }): Tag {
   return {
