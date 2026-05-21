@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
+import { useChronotypeSettingsStore } from '@/features/chronotype';
 
 import { NowBadge } from './NowBadge';
 
@@ -24,13 +24,13 @@ type Story = StoryObj<typeof meta>;
 // ─────────────────────────────────────────────────────────
 
 const enableBearChronotype = () => {
-  useCalendarSettingsStore.setState({
+  useChronotypeSettingsStore.setState({
     chronotype: { type: 'bear' },
   });
 };
 
 const disableChronotype = () => {
-  useCalendarSettingsStore.setState({
+  useChronotypeSettingsStore.setState({
     chronotype: null,
   });
 };

@@ -20,4 +20,8 @@ export { getChronotypeProfile } from './lib/chronotype-profile';
 export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';
 export { chronotypeTypeSchema } from './lib/schemas';
 
+// --- Stores ---
+export { useChronotypeSettingsStore } from './stores/useChronotypeSettingsStore';
+export type { ChronotypeSettings } from './stores/useChronotypeSettingsStore';
+
 // ここにないものはfeature内部専用

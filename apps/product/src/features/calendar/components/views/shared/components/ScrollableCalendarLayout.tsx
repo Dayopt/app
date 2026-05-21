@@ -11,10 +11,9 @@
 
 import React, { useCallback, useMemo } from 'react';
 
-import { getChronotypeProfile } from '@/features/chronotype';
+import { getChronotypeProfile, useChronotypeSettingsStore } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
@@ -149,7 +148,7 @@ export const ScrollableCalendarLayout = ({
   const gradientCss = useChronotypeGradient();
 
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
-  const chronotype = useCalendarSettingsStore((s) => s.chronotype);
+  const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
   const chronotypeZones = useMemo(() => {
     if (!chronotype) return undefined;
     return getChronotypeProfile(chronotype.type).productivityZones;

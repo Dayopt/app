@@ -9,8 +9,11 @@
 
 import { memo, useMemo } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
-import { getActiveZoneLevel, getChronotypeProfile } from '@/features/chronotype';
+import {
+  getActiveZoneLevel,
+  getChronotypeProfile,
+  useChronotypeSettingsStore,
+} from '@/features/chronotype';
 import { useTranslations } from 'next-intl';
 
 interface NowBadgeProps {
@@ -20,7 +23,7 @@ interface NowBadgeProps {
 
 export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
   const t = useTranslations('calendar.nowBadge');
-  const chronotype = useCalendarSettingsStore((s) => s.chronotype);
+  const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
 
   const zoneLevel = useMemo(() => {
     if (!chronotype) return null;
