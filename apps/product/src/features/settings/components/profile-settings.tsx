@@ -6,8 +6,10 @@ import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
-import { ChronotypeSettingsPanel as ChronotypeSettings } from '@/features/chronotype';
+import {
+  ChronotypeSettingsPanel as ChronotypeSettings,
+  useChronotypeSettingsStore,
+} from '@/features/chronotype';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
@@ -25,7 +27,7 @@ import { DisplayNameDialog } from './display-name-dialog';
 export function ProfileSettings() {
   const t = useTranslations();
   const user = useAuthStore((state) => state.user);
-  const updateCalendarSettings = useCalendarSettingsStore((state) => state.updateSettings);
+  const updateChronotypeSettings = useChronotypeSettingsStore((state) => state.updateSettings);
 
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
@@ -35,9 +37,9 @@ export function ProfileSettings() {
 
   const handleChronotypeChange = useCallback(
     (chronotype: ChronotypeSettingsState | null) => {
-      updateCalendarSettings({ chronotype });
+      updateChronotypeSettings({ chronotype });
     },
-    [updateCalendarSettings],
+    [updateChronotypeSettings],
   );
 
   return (

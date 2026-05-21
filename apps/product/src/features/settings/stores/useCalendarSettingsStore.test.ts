@@ -14,11 +14,6 @@ describe('useCalendarSettingsStore', () => {
       expect(state.showWeekends).toBe(true);
       expect(state.hourHeightDensity).toBe('default');
     });
-
-    it('クロノタイプはデフォルト無効（null）', () => {
-      const state = useCalendarSettingsStore.getState();
-      expect(state.chronotype).toBeNull();
-    });
   });
 
   describe('updateSettings', () => {
@@ -32,14 +27,6 @@ describe('useCalendarSettingsStore', () => {
       expect(state.hourHeightDensity).toBe('compact');
       // 他は維持
       expect(state.showWeekends).toBe(true);
-    });
-
-    it('クロノタイプを有効化できる', () => {
-      useCalendarSettingsStore.getState().updateSettings({
-        chronotype: { type: 'lion' },
-      });
-      const state = useCalendarSettingsStore.getState();
-      expect(state.chronotype).toEqual({ type: 'lion' });
     });
 
     it('showWeekends を切り替えられる', () => {

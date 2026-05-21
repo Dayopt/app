@@ -139,10 +139,10 @@ interface ChronotypeSettingsProps {
   /**
    * Chronotype 変更時の楽観更新コールバック。
    *
-   * Why: chronotype state は Calendar UI store (`useCalendarSettingsStore`) 配下に
-   * あるが、本コンポーネントは Layer 0 (chronotype feature) のため Calendar feature
-   * (Layer 2) を直接 import できない。呼び出し元（features/settings 層）から
-   * store 更新関数を注入することで feature DAG を保つ。
+   * chronotype state は `useChronotypeSettingsStore` (Layer 0 / 本 feature) に
+   * 集約されているが、各 callsite （`features/settings` の profile-settings 等）が
+   * 直接 store を触る形を保つため、本コンポーネントは callback 注入で楽観更新を
+   * 委譲する。本コンポーネント側では autoSave 経由で DB 保存のみ行う。
    */
   onChronotypeChange?: ((chronotype: ChronotypeSettingsState | null) => void) | undefined;
 }

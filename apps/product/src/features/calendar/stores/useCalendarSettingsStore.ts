@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
-import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
 import type { CalendarViewType, HourHeightDensity } from '../lib/constants';
 
 export type { CalendarViewType } from '../lib/constants';
@@ -17,10 +15,6 @@ export interface CalendarSettings {
 
   // グリッド密度
   hourHeightDensity: HourHeightDensity;
-
-  // クロノタイプ設定
-  chronotype: ChronotypeSettingsState | null;
-  chronotypeGradient: { light: string | null; dark: string | null };
 }
 
 interface CalendarSettingsStore extends CalendarSettings {
@@ -32,8 +26,6 @@ const defaultSettings: CalendarSettings = {
   defaultView: 'week',
   showWeekends: true,
   hourHeightDensity: 'default',
-  chronotype: DEFAULT_CHRONOTYPE_SETTINGS,
-  chronotypeGradient: { light: null, dark: null },
 };
 
 /**
@@ -45,7 +37,8 @@ const defaultSettings: CalendarSettings = {
  * 永続 cache から hydrate される流れでほぼ即時に正しい値になる。
  *
  * app-wide な user preference (timezone / weekStartsOn 等) は `useUserPreferenceStore`
- * に分離されている。
+ * に分離されている。chronotype 設定は `useChronotypeSettingsStore`
+ * (`@/features/chronotype`) に分離されている。
  */
 export const useCalendarSettingsStore = create<CalendarSettingsStore>()(
   devtools(

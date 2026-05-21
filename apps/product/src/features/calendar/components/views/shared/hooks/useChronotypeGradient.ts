@@ -7,13 +7,16 @@
 
 import { useMemo } from 'react';
 
-import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
-import { generateChronotypeGradient, getChronotypeProfile } from '@/features/chronotype';
+import {
+  generateChronotypeGradient,
+  getChronotypeProfile,
+  useChronotypeSettingsStore,
+} from '@/features/chronotype';
 import { useTheme } from '@/lib/hooks/useTheme';
 
 export function useChronotypeGradient(): string | null {
-  const chronotype = useCalendarSettingsStore((s) => s.chronotype);
-  const chronotypeGradient = useCalendarSettingsStore((s) => s.chronotypeGradient);
+  const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
+  const chronotypeGradient = useChronotypeSettingsStore((s) => s.chronotypeGradient);
   const { resolvedTheme } = useTheme();
 
   return useMemo(() => {

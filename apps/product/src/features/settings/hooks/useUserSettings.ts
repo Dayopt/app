@@ -14,6 +14,7 @@ import { api } from '@/lib/trpc';
 import { useCalendarSettingsStore } from '@/features/calendar/stores/useCalendarSettingsStore';
 import type { UserSettings } from '@/features/calendar/stores/userSettings';
 import { dispatchUserSettings } from '@/features/calendar/stores/userSettings';
+import { useChronotypeSettingsStore } from '@/features/chronotype';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 
 /**
@@ -129,12 +130,13 @@ export function useUserSettings() {
     [updateMutation],
   );
 
-  // UI表示用に2ストアを merge した shape を返す（既存 consumer との互換性維持）
+  // UI表示用に3ストアを merge した shape を返す（既存 consumer との互換性維持）
   const preferences = useUserPreferenceStore();
   const calendarSettings = useCalendarSettingsStore();
+  const chronotypeSettings = useChronotypeSettingsStore();
   const settings = useMemo<UserSettings>(
-    () => ({ ...preferences, ...calendarSettings }),
-    [preferences, calendarSettings],
+    () => ({ ...preferences, ...calendarSettings, ...chronotypeSettings }),
+    [preferences, calendarSettings, chronotypeSettings],
   );
 
   return {
