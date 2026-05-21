@@ -30,8 +30,8 @@ export {
   useUpdateTag,
 } from './hooks';
 
-// Lib
-export { buildTagHierarchyUpdates, flattenTagTree } from './lib/tag-tree';
+// Domain
+export { buildTagHierarchyUpdates, flattenTagTree } from './domain/tag-tree';
 
 // Types
 export type { Tag, TagTreeNode } from './types';

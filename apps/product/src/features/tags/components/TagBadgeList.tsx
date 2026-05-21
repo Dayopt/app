@@ -21,7 +21,7 @@ import { Input } from '@/lib/components/ui/input';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
-import { buildTagTree } from '../lib/tag-tree';
+import { buildTagTree } from '../domain/tag-tree';
 import { TagIcon } from './TagIcon';
 
 import type { Tag } from '../types';

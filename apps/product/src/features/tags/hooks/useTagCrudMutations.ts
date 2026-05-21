@@ -14,7 +14,7 @@ import {
 } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/lib/trpc/client';
 
-import { buildTagTree, flattenTagTree } from '../lib/tag-tree';
+import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag } from '../types';
 
 // 新しい入力型（tRPC形式）

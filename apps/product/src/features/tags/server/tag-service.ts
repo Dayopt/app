@@ -21,7 +21,7 @@ import 'server-only';
 import type { Database } from '@/lib/database.types';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { buildTagTree, flattenTagTree } from '../lib/tag-tree';
+import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
 
 /** DB タグ行の型 */
