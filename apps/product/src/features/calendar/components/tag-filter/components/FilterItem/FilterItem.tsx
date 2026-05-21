@@ -8,8 +8,8 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useTags } from '@/features/tags';
-import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import { useTagModalNavigation } from '../../../../hooks/useTagModalNavigation';
 
 import { Checkbox } from '@/lib/components/ui/checkbox';

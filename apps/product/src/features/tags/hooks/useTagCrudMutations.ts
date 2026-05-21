@@ -3,7 +3,6 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
 import type { TagColorName } from '@/lib/tag-colors';
 import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import {
@@ -60,7 +59,9 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
         return { ...old, data: [tempTag, ...old.data], count: old.count + 1 };
       });
 
-      useCalendarFilterStore.getState().initializeWithTags([tempId]);
+      // Calendar filter store の sync は useCalendarData / CalendarFilterList の effect が
+      // utils.tags.list 変更を検知して syncWithTags 経由で行う（Layer 0 境界を保つため、
+      // tags hook からは calendar store を直接触らない）。
       return { listSnapshot, tempId, tagName: input.name };
     },
     onSuccess: (result, _input, context) => {
@@ -71,15 +72,10 @@ export function useCreateTag({ showToast = true }: { showToast?: boolean } = {})
       );
       utils.tags.getById.setData({ id: result.id }, result);
 
-      const filterStore = useCalendarFilterStore.getState();
-      filterStore.removeTag(context.tempId);
-      filterStore.initializeWithTags([result.id]);
-
       if (showToast) toast.success(t('toast.created', { name: result.name }));
     },
     onError: (_err, _input, context) => {
       context?.listSnapshot?.restore();
-      if (context?.tempId) useCalendarFilterStore.getState().removeTag(context.tempId);
       if (showToast) toast.error(t('toast.createFailed'));
     },
     onSettled: () => {

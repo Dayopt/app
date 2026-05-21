@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 import { useShellStore } from '@/lib/stores/useShellStore';
 
 import { useIsFetching } from '@tanstack/react-query';
@@ -54,7 +54,7 @@ export function CalendarFilterList() {
   // セレクタで必要な状態のみ購読
   const visibleTagIds = useCalendarFilterStore((s) => s.visibleTagIds);
   const toggleTag = useCalendarFilterStore((s) => s.toggleTag);
-  const initializeWithTags = useCalendarFilterStore((s) => s.initializeWithTags);
+  const syncWithTags = useCalendarFilterStore((s) => s.syncWithTags);
   const showOnlyTag = useCalendarFilterStore((s) => s.showOnlyTag);
   const toggleGroupTags = useCalendarFilterStore((s) => s.toggleGroupTags);
   const showOnlyGroupTags = useCalendarFilterStore((s) => s.showOnlyGroupTags);
@@ -63,14 +63,15 @@ export function CalendarFilterList() {
   // hierarchy フェッチ中はフィルター初期化をスキップ（Race Condition防止）
   const isTagsFetching = useIsFetching({ queryKey: tagKeys.hierarchy() }) > 0;
 
-  // タグ一覧取得後に初期化（フェッチ中は競合防止のためスキップ）
+  // タグ一覧と filter state を同期（新規は visible 追加、削除済みは orphan として除去）
+  // フェッチ中は競合防止のためスキップ
   useEffect(() => {
     if (isTagsFetching) return;
 
     if (tags && tags.length > 0) {
-      initializeWithTags(tags.map((tag) => tag.id));
+      syncWithTags(tags.map((tag) => tag.id));
     }
-  }, [tags, initializeWithTags, isTagsFetching]);
+  }, [tags, syncWithTags, isTagsFetching]);
 
   const isLoading = tagsLoading;
 
