@@ -1,19 +1,15 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import { Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useAuthStore } from '@/features/auth';
-import {
-  ChronotypeSettingsPanel as ChronotypeSettings,
-  useChronotypeSettingsStore,
-} from '@/features/chronotype';
+import { ChronotypeSettingsPanel as ChronotypeSettings } from '@/features/chronotype';
 import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
-import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
 import { getAvatarUrl, getDisplayName, getInitials } from '@/lib/user';
 
 import { AvatarChangeDialog } from './avatar-change-dialog';
@@ -27,20 +23,12 @@ import { DisplayNameDialog } from './display-name-dialog';
 export function ProfileSettings() {
   const t = useTranslations();
   const user = useAuthStore((state) => state.user);
-  const updateChronotypeSettings = useChronotypeSettingsStore((state) => state.updateSettings);
 
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
 
   const avatarUrl = getAvatarUrl(user);
   const displayName = getDisplayName(user);
-
-  const handleChronotypeChange = useCallback(
-    (chronotype: ChronotypeSettingsState | null) => {
-      updateChronotypeSettings({ chronotype });
-    },
-    [updateChronotypeSettings],
-  );
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -73,7 +61,7 @@ export function ProfileSettings() {
       </SectionCard>
 
       {/* クロノタイプ */}
-      <ChronotypeSettings onChronotypeChange={handleChronotypeChange} />
+      <ChronotypeSettings />
 
       {/* Dialogs */}
       <AvatarChangeDialog open={showAvatarDialog} onOpenChange={setShowAvatarDialog} />
