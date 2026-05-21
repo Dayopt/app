@@ -100,4 +100,4 @@ src/features/{feature}/server/
 - 環境変数は `src/env.ts` で Zod バリデーション（サーバーサイドのみ）
 - **破壊的操作の制限**: preview / dev が production DB を直接触るため、`db reset` 等は厳禁。RLS 信頼前提
 - **将来計画**: Pro plan + GitHub integration + persistent staging branch + ephemeral preview branches への移行（ローンチ後）
-- 詳細: `.claude/skills/supabase/SKILL.md` / `docs/development/migration-checklist.md`
+- 詳細: `.claude/skills/supabase/SKILL.md` / `apps/storybook/docs/dev/guides/MigrationChecklist.mdx`

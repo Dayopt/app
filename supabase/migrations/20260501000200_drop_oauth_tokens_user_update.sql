@@ -11,7 +11,7 @@
 --   user の UPDATE は完全に閉じる。Phase 1.5 で revoke を実装する際は
 --   service-role で動く tRPC mutation 経由で UPDATE する。
 --
--- See: docs/design/mcp-server/overview.md (Phase 1.5)
+-- See: apps/storybook/docs/product/projects/mcp-server/overview.mdx (Phase 1.5)
 -- ============================================================
 
 DROP POLICY IF EXISTS "Users can update own oauth_tokens" ON public.oauth_tokens;

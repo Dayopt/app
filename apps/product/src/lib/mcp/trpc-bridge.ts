@@ -11,7 +11,7 @@ import { appRouter } from '@/lib/trpc/root';
  *
  * `proProcedure` の Pro gate と `protectedProcedure` の userId 注入を再利用するため、
  * MCP tool は service 層を直 import せずこの caller を経由する
- * (docs/design/mcp-server/overview.md Decision 9)。
+ * (apps/storybook/docs/product/projects/mcp-server/overview.mdx Decision 9)。
  *
  * 認証は `authMode: 'oauth'` でセットされるので proProcedure 側が毎リクエスト
  * profiles.subscription_status を DB lookup する (Decision 1)。

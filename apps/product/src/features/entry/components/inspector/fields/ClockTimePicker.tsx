@@ -9,7 +9,7 @@
  * - 時選択後に自動で分ステップへ遷移
  * - drag（pointermove）で連続調整可
  *
- * @see docs/design/timeline-precision-redesign/overview.md § 4 D-9
+ * @see apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx § 4 D-9
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

@@ -7,7 +7,7 @@
 --   始まらず未使用 vestige のまま、feedd7641 で MCP の受け皿として
 --   温存されていた。
 --
--- 方針 (docs/design/mcp-server/overview.md Decision 1, 4):
+-- 方針 (apps/storybook/docs/product/projects/mcp-server/overview.mdx Decision 1, 4):
 --   API key 認証は破棄し、OAuth 2.1 + opaque token model に統一する。
 --   既存テーブルが未使用なため安全に rename + 拡張可能。
 --

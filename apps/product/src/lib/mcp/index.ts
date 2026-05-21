@@ -8,7 +8,7 @@
  *
  * MCP server / tool 登録は composition layer (`src/app/api/mcp/_server.ts`) 側に置く。
  *
- * See docs/design/mcp-server/overview.md (Decision 9).
+ * See apps/storybook/docs/product/projects/mcp-server/overview.mdx (Decision 9).
  */
 
 export { extractBearerToken, verifyAccessToken, type VerifiedAccessToken } from './auth';

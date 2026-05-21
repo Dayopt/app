@@ -10,7 +10,7 @@
 #
 # 将来計画: Pro plan + GitHub integration + persistent staging branch +
 #   ephemeral preview branches への移行（ローンチ後）。
-# 詳細: docs/development/migration-checklist.md / .claude/skills/supabase/SKILL.md
+# 詳細: apps/storybook/docs/dev/guides/MigrationChecklist.mdx / .claude/skills/supabase/SKILL.md
 # ============================================================
 
 project_id = "dayopt"

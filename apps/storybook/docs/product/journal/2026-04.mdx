@@ -14,7 +14,7 @@ import { Meta } from '@storybook/blocks';
 
 #### やったこと
 
-- **MCP server PoC (Phase 1) — 12 commit**: 設計ドキュメント (`docs/design/mcp-server/overview.md`)、vercel.json rewrite 3 件、`src/lib/mcp` + `src/lib/oauth-server` skeleton、`oauth_tokens` / `oauth_authorization_codes` schema (api_keys 撤廃を兼ねる)、domain を `dayopt.app` に修正、entry resize handle に drawer pill 風 affordance、oauth i18n namespace + `/oauth` protected path、oauth-server helpers (clients / tokens / metadata / scopes)、`/.well-known/*` metadata endpoints、`/oauth/authorize` page + 独立 OAuth layout、`/oauth/consent` UI + Server Action、`/oauth/token` endpoint + code/refresh exchange、`/api/mcp` Streamable HTTP route + Bearer token 検証、`entries.list` tool、proProcedure を OAuth で DB lookup 強制 + entries.list を trpc-bridge 経由に
+- **MCP server PoC (Phase 1) — 12 commit**: 設計ドキュメント (`apps/storybook/docs/product/projects/mcp-server/overview.mdx`)、vercel.json rewrite 3 件、`src/lib/mcp` + `src/lib/oauth-server` skeleton、`oauth_tokens` / `oauth_authorization_codes` schema (api_keys 撤廃を兼ねる)、domain を `dayopt.app` に修正、entry resize handle に drawer pill 風 affordance、oauth i18n namespace + `/oauth` protected path、oauth-server helpers (clients / tokens / metadata / scopes)、`/.well-known/*` metadata endpoints、`/oauth/authorize` page + 独立 OAuth layout、`/oauth/consent` UI + Server Action、`/oauth/token` endpoint + code/refresh exchange、`/api/mcp` Streamable HTTP route + Bearer token 検証、`entries.list` tool、proProcedure を OAuth で DB lookup 強制 + entries.list を trpc-bridge 経由に
 - **Inspector / Drawer UX 整流化 — 4 commit**: drawer overlay backdrop を廃止し Inspector を非モーダル化、モバイル calendar で inspector / tag draft の entry を resize 可能に、close × を TagRow の「…」menu の隣に移動 → 全 drawer 共通化を試行 → 個別最適配置に戻す（3 段階の試行錯誤）
 - **Mobile stats フッター (1 commit)**: tag chip row を追加（chip タップで tag stats 詳細ページに遷移する版）
 - **既知バグ + 安定化 (5 commit)**: ローカル main のバッチ取り込み (#1115)、Project B (tag タップで即作成 α) revert、inspector 重複チェック復活、tag popup の cancel 反応しない問題修正、tags / user_settings UPDATE policy に WITH CHECK 追加
@@ -119,11 +119,11 @@ UI primitive 負債整理 3 件は session 中盤に「既存 UI を弄る前に
 
 ### auto mode で knip ベースの barrel cleanup を Plan → Phase 2 → docs 整備まで一気通貫した日
 
-34 コミット、約 -1,070 LOC（cleanup） / +260（docs） / +38（story）。一日を通して `docs/cleanup-plan-2026-04-26.md` の C-XXX 連番を auto mode に投げ続け、Phase 1（監査）→ Phase 2（barrel re-export 削減 + 連鎖孤立 file 削除）→ セッション A〜D（api / app routes / 追加 barrel）まで段階的に消化。途中 4 件連続 skip による停止条件発動と、ブランチ自動切替による orphaned commit を経て cherry-pick で main に集約した。最後に api-overview / app-routes-overview の総覧 docs を新規作成し、後続作業の起点として固定した。
+34 コミット、約 -1,070 LOC（cleanup） / +260（docs） / +38（story）。一日を通して `apps/storybook/docs/product/projects/cleanup-2026-04-26/overview.mdx` の C-XXX 連番を auto mode に投げ続け、Phase 1（監査）→ Phase 2（barrel re-export 削減 + 連鎖孤立 file 削除）→ セッション A〜D（api / app routes / 追加 barrel）まで段階的に消化。途中 4 件連続 skip による停止条件発動と、ブランチ自動切替による orphaned commit を経て cherry-pick で main に集約した。最後に api-overview / app-routes-overview の総覧 docs を新規作成し、後続作業の起点として固定した。
 
 #### やったこと
 
-- **Phase 1 監査と plan 作成（2 commit）**: src/ 配下を 6 カテゴリ（dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap / jsdoc-drift）で機械監査し、57 entry を C-001〜C-057 で `docs/cleanup-plan-2026-04-26.md` に列挙
+- **Phase 1 監査と plan 作成（2 commit）**: src/ 配下を 6 カテゴリ（dead-code / cast-residue / lint-warn / feature-sliced / storybook-gap / jsdoc-drift）で機械監査し、57 entry を C-001〜C-057 で `apps/storybook/docs/product/projects/cleanup-2026-04-26/overview.mdx` に列挙
 - **Phase 2 barrel cleanup（14 commit + storybook 1 件）**: `src/lib/date` / `src/features/(calendar, entry, tags, auth, stats, chronotype, tour, settings, onboarding)` / `src/lib/(sentry, components/shell/sidebar)` / `src/lib/i18n` の barrel 13 file から約 250 件の未使用 re-export を削除。加えて C-041 で TourOrchestrator の minimal story 1 件
 - **セッション A — api/ docs 整備（2 commit）**: tRPC route handler のトップレベル JSDoc 追加 + `docs/api-overview.md` 新規作成（8 endpoints のテーブル + 共通方針）
 - **セッション B/C — app-routes-overview.md 新規作成（2 commit）**: `(app)` segment の Route Group 構造図 → `(auth)/(onboarding)/[locale]/root` を追記し、認証境界の ASCII 図で締め
@@ -156,7 +156,7 @@ C-001〜C-004 で停止が起きたのは、knip が `next.config.mjs` の動的
 
 #### やったこと
 
-**workflow 規約と project 命名の統一（5 件）**: `.claude/rules/workflow.md` に大規模/中規模/小規模の判定基準と進め方、project 命名規則 `{domain}-{action}[-{variant}]`、設計書保存場所を明文化。同時に既存の Phase 2-B/2-C/2-D 設計書を新命名（sidebar-routing-unification / sidebar-3-mode-structure / sidebar-v2-design）に rename + path 移動。`docs/design/sidebar-redesign-plan.md` を `.storybook/docs/product/projects/sidebar-redesign/` にディレクトリ昇格して umbrella の summary.md を新規作成。projects/README.md の Active / Completed を整理。
+**workflow 規約と project 命名の統一（5 件）**: `.claude/rules/workflow.md` に大規模/中規模/小規模の判定基準と進め方、project 命名規則 `{domain}-{action}[-{variant}]`、設計書保存場所を明文化。同時に既存の Phase 2-B/2-C/2-D 設計書を新命名（sidebar-routing-unification / sidebar-3-mode-structure / sidebar-v2-design）に rename + path 移動。`apps/storybook/docs/product/projects/sidebar-redesign/overview.md` を `.storybook/docs/product/projects/sidebar-redesign/` にディレクトリ昇格して umbrella の summary.md を新規作成。projects/README.md の Active / Completed を整理。
 
 **Phase 2-E WIP の撤退（1 件）**: feature-colocation-migration の WIP（AiSidebar / AiMainContent / aiRouter を `src/features/ai/` 配下に移動する作業）を全 revert。AiSidebar を `_shell/` 配下に戻し、`src/features/ai/components/{main,thread}` を削除、SidebarContent / page / eslint 設定の worktree modification も全て revert。umbrella close-out を優先する判断。
 
@@ -174,7 +174,7 @@ C-001〜C-004 で停止が起きたのは、knip が `next.config.mjs` の動的
 
 #### なぜ今日この作業をしたか
 
-Workflow 規約と project 命名の統一は、ここ 1 ヶ月で「Phase 2-B」「Phase 2-C」のような記号命名が増えてきて、後から開いた時に内容が思い出せないのと、umbrella plan が完了しても `docs/design/` 配下に残り続けて Active / Completed の境界が曖昧になっていたのを直したかった。命名を `{domain}-{action}` に揃えると、ファイル名だけで「sidebar の routing を unification する」「sidebar の 3 mode 構造を作る」と読めるので、grep / 設計書一覧でのスキャン速度が上がる。完了 project は `.storybook/docs/product/projects/{name}/` にディレクトリ形式で昇格させ、summary.md で「成果 / ハマり点 / 引き継ぎ」を残す形にしたのも同じ動機（後で参照可能な状態にする）。
+Workflow 規約と project 命名の統一は、ここ 1 ヶ月で「Phase 2-B」「Phase 2-C」のような記号命名が増えてきて、後から開いた時に内容が思い出せないのと、umbrella plan が完了しても `apps/storybook/docs/product/projects/` 配下に残り続けて Active / Completed の境界が曖昧になっていたのを直したかった。命名を `{domain}-{action}` に揃えると、ファイル名だけで「sidebar の routing を unification する」「sidebar の 3 mode 構造を作る」と読めるので、grep / 設計書一覧でのスキャン速度が上がる。完了 project は `.storybook/docs/product/projects/{name}/` にディレクトリ形式で昇格させ、summary.md で「成果 / ハマり点 / 引き継ぎ」を残す形にしたのも同じ動機（後で参照可能な状態にする）。
 
 Phase 2-E WIP の撤退は umbrella close-out との優先順位の問題。feature-colocation-migration を進めると AiSidebar の path 変更が大量に発生して umbrella の summary.md を書く前に状態が複雑化する。「umbrella を Completed にする時点で worktree がきれい」を優先する判断で、Phase 2-E は独立 project として再着手するかも含めて保留。
 
@@ -354,7 +354,7 @@ Supabase 運用の方針転換は朝の時点で「1 project + branches」モデ
 
 **Stats タグ詳細の刷新（1件）**: タグ詳細のエントリ一覧をリッチリスト + ページネーションに全面刷新。
 
-**Opus 4.7 migration の周辺整備（7件）**: 12 project skill に When to Use / When NOT to Use セクションを追加し発動条件を明文化、skill 設計ルールを `.claude/rules/skill-design.md` に常駐化、migration note を `docs/development/opus-4-7-skill-triggers.md` に記録。続いて CLAUDE.md のコーディング規範セクションを「絶対禁止」からポジティブ例示化して [ADR-007](../../dev/adr/ADR-007-positive-framing-coding-norms) に記録、MCP サーバー利用基準を `.claude/rules/mcp-usage.md` に分離、auto mode 使用ガイドラインを `.claude/rules/ai-behavior.md` に追加、Stop hook での完了音通知を settings.local.json に設定。
+**Opus 4.7 migration の周辺整備（7件）**: 12 project skill に When to Use / When NOT to Use セクションを追加し発動条件を明文化、skill 設計ルールを `.claude/rules/skill-design.md` に常駐化、migration note を `apps/storybook/docs/dev/guides/Opus47SkillTriggers.mdx` に記録。続いて CLAUDE.md のコーディング規範セクションを「絶対禁止」からポジティブ例示化して [ADR-007](../../dev/adr/ADR-007-positive-framing-coding-norms) に記録、MCP サーバー利用基準を `.claude/rules/mcp-usage.md` に分離、auto mode 使用ガイドラインを `.claude/rules/ai-behavior.md` に追加、Stop hook での完了音通知を settings.local.json に設定。
 
 #### なぜ今日この作業をしたか
 
