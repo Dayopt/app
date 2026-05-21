@@ -12,7 +12,7 @@ import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { api } from '@/lib/trpc';
 import { expandEntriesToCalendarEvents } from '../../../lib/entry-adapter';
 
-import { useCalendarFilterStore } from '@/lib/stores/useCalendarFilterStore';
+import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';
 
 import { calculateViewDateRange } from '../../../domain/view-range';
 
@@ -107,16 +107,17 @@ export function useCalendarData({
     refetch: refetchEntries,
   } = useEntries(dateFilter);
 
-  // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ初期化）
+  // タグマスタ取得（EntryCard等で使用するためキャッシュをwarm up + フィルタ同期）
   const { data: tagsData } = useTags();
-  const initializeWithTags = useCalendarFilterStore((state) => state.initializeWithTags);
+  const syncWithTags = useCalendarFilterStore((state) => state.syncWithTags);
 
-  // タグフィルタを初期化（モバイルではサイドバーがマウントされないため、ここで保証する）
+  // タグフィルタを tagsData と同期（新規 tag は visible として追加、削除済み tag は orphan として除去）
+  // モバイルではサイドバーがマウントされないため、ここで保証する
   useEffect(() => {
     if (tagsData && tagsData.length > 0) {
-      initializeWithTags(tagsData.map((tag) => tag.id));
+      syncWithTags(tagsData.map((tag) => tag.id));
     }
-  }, [tagsData, initializeWithTags]);
+  }, [tagsData, syncWithTags]);
 
   // tRPC utils（プリフェッチ用）
   const utils = api.useUtils();

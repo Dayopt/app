@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useCalendarFilterStore } from './useCalendarFilterStore';
+import { useCalendarFilterStore } from '../useCalendarFilterStore';
 
 describe('useCalendarFilterStore', () => {
   beforeEach(() => {
@@ -79,21 +79,44 @@ describe('useCalendarFilterStore', () => {
     });
   });
 
-  describe('initializeWithTags', () => {
+  describe('syncWithTags', () => {
     it('初回は全タグを表示＆initializedをtrue', () => {
-      useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
       const state = useCalendarFilterStore.getState();
       expect(state.initialized).toBe(true);
       expect(state.visibleTagIds.size).toBe(2);
     });
 
-    it('2回目は既存タグは変更せず新しいタグを追加', () => {
-      useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2']);
-      useCalendarFilterStore.getState().initializeWithTags(['tag-1', 'tag-2', 'tag-3']);
+    it('2回目は既存 visible タグを保持しつつ新規タグを visible として追加', () => {
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2', 'tag-3']);
       const ids = useCalendarFilterStore.getState().visibleTagIds;
       expect(ids.has('tag-1')).toBe(true);
       expect(ids.has('tag-2')).toBe(true);
       expect(ids.has('tag-3')).toBe(true);
+    });
+
+    it('削除済みタグ（orphan ID）は除去される', () => {
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2', 'tag-3']);
+      // tag-3 が削除された想定で再 sync
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'tag-2']);
+      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      expect(ids.has('tag-1')).toBe(true);
+      expect(ids.has('tag-2')).toBe(true);
+      expect(ids.has('tag-3')).toBe(false);
+    });
+
+    it('一時 ID → 実 ID の置き換えで orphan が cleanup される', () => {
+      useCalendarFilterStore.getState().syncWithTags(['tag-1']);
+      // 楽観更新で temp-2 を追加
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'temp-2']);
+      expect(useCalendarFilterStore.getState().visibleTagIds.has('temp-2')).toBe(true);
+      // mutation 成功で temp-2 → real-2 に置き換わる
+      useCalendarFilterStore.getState().syncWithTags(['tag-1', 'real-2']);
+      const ids = useCalendarFilterStore.getState().visibleTagIds;
+      expect(ids.has('tag-1')).toBe(true);
+      expect(ids.has('real-2')).toBe(true);
+      expect(ids.has('temp-2')).toBe(false);
     });
   });
 

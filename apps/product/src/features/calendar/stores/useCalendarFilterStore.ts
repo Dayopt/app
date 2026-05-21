@@ -39,8 +39,14 @@ export interface CalendarFilterActions {
   /** グループ内のタグを一括切替（全ON→全OFF、それ以外→全ON） */
   toggleGroupTags: (tagIds: string[]) => void;
 
-  /** タグ一覧で初期化（まだ設定がないタグを追加） */
-  initializeWithTags: (tagIds: string[]) => void;
+  /**
+   * タグ一覧と filter state を同期する。
+   *
+   * - 初回: 全タグを表示 + `initialized=true`
+   * - 2 回目以降: 既存の visible / hidden toggle を保持しつつ、
+   *   新規タグは visible として追加、削除済みタグ（orphan ID）は除去
+   */
+  syncWithTags: (tagIds: string[]) => void;
 
   /** 特定のタグを削除（マージ後などに使用） */
   removeTag: (tagId: string) => void;
@@ -142,25 +148,28 @@ export const useCalendarFilterStore = create<CalendarFilterStore>()(
           return { visibleTagIds: newSet };
         }),
 
-      initializeWithTags: (tagIds) =>
+      syncWithTags: (tagIds) =>
         set((state) => {
-          if (state.initialized) {
-            // すでに初期化済みの場合は、新しいタグのみ追加
-            const newSet = new Set(state.visibleTagIds);
-            tagIds.forEach((id) => {
-              // 存在しないタグは追加（デフォルト表示）
-              if (!state.visibleTagIds.has(id)) {
-                newSet.add(id);
-              }
-            });
-            return { visibleTagIds: newSet };
+          if (!state.initialized) {
+            // 初回は全タグを表示
+            return {
+              visibleTagIds: new Set(tagIds),
+              initialized: true,
+            };
           }
 
-          // 初回は全タグを表示
-          return {
-            visibleTagIds: new Set(tagIds),
-            initialized: true,
-          };
+          // 2 回目以降: 既存の visible / hidden toggle を保持しつつ
+          //   - 新規タグは visible として追加
+          //   - 削除済みタグ（orphan ID）は除去
+          const tagIdSet = new Set(tagIds);
+          const newSet = new Set<string>();
+          for (const id of state.visibleTagIds) {
+            if (tagIdSet.has(id)) newSet.add(id);
+          }
+          for (const id of tagIds) {
+            if (!state.visibleTagIds.has(id)) newSet.add(id);
+          }
+          return { visibleTagIds: newSet };
         }),
 
       removeTag: (tagId) =>
