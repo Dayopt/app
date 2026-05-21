@@ -5,6 +5,8 @@
  * 全てのパーセンテージ・ステータス・集計値はここで算出する。
  */
 
+import { computeVariance } from '@/features/review/domain/variance';
+
 import type {
   AccuracyStatus,
   BalanceSheetData,
@@ -128,17 +130,19 @@ export function deriveStatement(input: TimePLInput): StatementViewData {
   const allTagIds = new Set(input.tags.map((t) => t.tagId));
   for (const tagId of allTagIds) {
     const tag = input.tags.find((t) => t.tagId === tagId)!;
-    const variance = tag.budgetMinutes - tag.actualMinutes;
     if (tag.budgetMinutes === 0 && tag.actualMinutes === 0) continue;
+    const { varianceMinutes, variancePercent } = computeVariance(
+      tag.budgetMinutes,
+      tag.actualMinutes,
+      tag.isPlanned,
+    );
     varianceRows.push({
       tagId: tag.tagId,
       tagName: tag.tagName,
       tagColor: tag.tagColor,
       tagIcon: tag.tagIcon,
-      varianceMinutes: variance,
-      variancePercent: tag.isPlanned
-        ? Math.round((variance / Math.max(tag.budgetMinutes, 1)) * 100)
-        : null,
+      varianceMinutes,
+      variancePercent,
     });
   }
 
@@ -199,7 +203,11 @@ export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
   return input.tags
     .filter((t) => t.budgetMinutes > 0 || t.actualMinutes > 0)
     .map((t) => {
-      const variance = t.budgetMinutes - t.actualMinutes;
+      const { varianceMinutes, variancePercent } = computeVariance(
+        t.budgetMinutes,
+        t.actualMinutes,
+        t.isPlanned,
+      );
       return {
         tagId: t.tagId,
         tagName: t.tagName,
@@ -207,10 +215,8 @@ export function deriveBarComparison(input: TimePLInput): BarComparisonRow[] {
         tagIcon: t.tagIcon,
         budgetMinutes: t.budgetMinutes,
         actualMinutes: t.actualMinutes,
-        varianceMinutes: variance,
-        variancePercent: t.isPlanned
-          ? Math.round((variance / Math.max(t.budgetMinutes, 1)) * 100)
-          : null,
+        varianceMinutes,
+        variancePercent,
       };
     })
     .sort(
