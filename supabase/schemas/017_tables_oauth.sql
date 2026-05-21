@@ -3,7 +3,7 @@
 -- ============================================================
 --
 -- Phase 1 で MCP Remote Server 用に api_keys → oauth_tokens に rename + 拡張。
--- 詳細: docs/design/mcp-server/overview.md
+-- 詳細: apps/storybook/docs/product/projects/mcp-server/overview.mdx
 --
 -- Migration:
 --   20260501000000_oauth_tokens_from_api_keys.sql  (rename + extend)

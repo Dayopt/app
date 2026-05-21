@@ -43,14 +43,14 @@ Phase 2-D では以下の視覚課題を解決する:
 
 ## 0. v2 mock の扱い (blocker)
 
-**Tomoya が言及した `dayopt-sidebar-tabs-refined.html` は本 repo に commit されていない** (Glob で 0 件)。`docs/design/` にも画像・URL・参照 link なし。
+**Tomoya が言及した `dayopt-sidebar-tabs-refined.html` は本 repo に commit されていない** (Glob で 0 件)。`apps/storybook/docs/product/projects/` にも画像・URL・参照 link なし。
 
 視覚デザインの「正解」が外部依存のままでは Phase 2-D は前に進められない。以下のいずれかで解消する必要がある:
 
-- **Option α**: mock HTML を `docs/design/mocks/phase-2-d-refined.html` にコミット (推奨)
+- **Option α**: mock HTML を `apps/storybook/docs/product/projects/sidebar-v2-design/mocks/phase-2-d-refined.html` にコミット (推奨)
   - 利点: PR レビューで「何を目指しているか」が self-documenting
   - 利点: Storybook visual regression の reference として転用可能
-- **Option β**: mock のスクリーンショットを `docs/design/mocks/phase-2-d-*.png` にコミット
+- **Option β**: mock のスクリーンショットを `apps/storybook/docs/product/projects/sidebar-v2-design/mocks/phase-2-d-*.png` にコミット
   - 利点: HTML を保守する必要がない
   - 欠点: hover / transition の挙動が静止画で伝わらない
 - **Option γ**: mock 相当の要件を本書 §2 に文章化し、mock 自体はコミットしない
@@ -466,16 +466,16 @@ Phase 2-C 時点で両者は別実装 (DOM / style が独立)。v2 デザイン�
 
 Phase 2-B / 2-C の Step 分割パターンを踏襲 (6-8 Step / 6-7 コミット)。
 
-| Step | 内容                                            | 触るファイル                                                | blast radius | 状態                      |
-| ---- | ----------------------------------------------- | ----------------------------------------------------------- | ------------ | ------------------------- |
-| D-0  | mock コミット + 方針最終確定                    | `docs/design/mocks/*` / `phase-2-d-detail.md` 更新          | 小 (docs)    | **skip (2026-04-23)**     |
-| D-1  | design-tokens 整備 (必要なトークン追加)         | `colors.css` / `states.css` 等                              | 中           | **skip 候補** (§6.3 参照) |
-| D-2  | PageNav v2 基本実装 (expanding tab)             | `PageNav.tsx` / `PageNav.stories.tsx`                       | 中           | 実行                      |
-| D-3  | PageNav の squeeze / transition 洗練            | `PageNav.tsx` / stories 拡張                                | 小           | 実行                      |
-| D-4  | BottomTabBar v2 調整 (共有トークン統合)         | `BottomTabBar.tsx` / stories                                | 小           | 実行                      |
-| D-5  | amber バッジ実装 (`NavBadge.tsx` + 両 nav 統合) | `NavBadge.tsx` 新規 / PageNav / BottomTabBar / i18n         | 中           | 実行                      |
-| D-6  | Sidebar セクション見出し統一                    | `CalendarSidebar.tsx` / `StatsSidebar.tsx` / 関連 component | 小           | 実行                      |
-| D-7  | Storybook バリアント拡張 (hover / transition)   | PageNav / BottomTabBar / NavBadge stories                   | 小           | 実行                      |
+| Step | 内容                                            | 触るファイル                                                                                  | blast radius | 状態                      |
+| ---- | ----------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------ | ------------------------- |
+| D-0  | mock コミット + 方針最終確定                    | `apps/storybook/docs/product/projects/sidebar-v2-design/mocks/*` / `phase-2-d-detail.md` 更新 | 小 (docs)    | **skip (2026-04-23)**     |
+| D-1  | design-tokens 整備 (必要なトークン追加)         | `colors.css` / `states.css` 等                                                                | 中           | **skip 候補** (§6.3 参照) |
+| D-2  | PageNav v2 基本実装 (expanding tab)             | `PageNav.tsx` / `PageNav.stories.tsx`                                                         | 中           | 実行                      |
+| D-3  | PageNav の squeeze / transition 洗練            | `PageNav.tsx` / stories 拡張                                                                  | 小           | 実行                      |
+| D-4  | BottomTabBar v2 調整 (共有トークン統合)         | `BottomTabBar.tsx` / stories                                                                  | 小           | 実行                      |
+| D-5  | amber バッジ実装 (`NavBadge.tsx` + 両 nav 統合) | `NavBadge.tsx` 新規 / PageNav / BottomTabBar / i18n                                           | 中           | 実行                      |
+| D-6  | Sidebar セクション見出し統一                    | `CalendarSidebar.tsx` / `StatsSidebar.tsx` / 関連 component                                   | 小           | 実行                      |
+| D-7  | Storybook バリアント拡張 (hover / transition)   | PageNav / BottomTabBar / NavBadge stories                                                     | 小           | 実行                      |
 
 **当初想定**: 7 Step / 7 コミット。
 **D-0 skip 後**: 実質 6 Step / 6 コミット (2026-04-23 確定)。
@@ -804,8 +804,8 @@ v2 デザインの視覚判断 + 技術判断を含む 7 項目。実装着手�
 
 ### A. mock HTML/PNG の扱い (§0 blocker)
 
-- α: mock HTML を `docs/design/mocks/phase-2-d-refined.html` にコミット (推奨)
-- β: PNG スクリーンショットを `docs/design/mocks/*.png` にコミット
+- α: mock HTML を `apps/storybook/docs/product/projects/sidebar-v2-design/mocks/phase-2-d-refined.html` にコミット (推奨)
+- β: PNG スクリーンショットを `apps/storybook/docs/product/projects/sidebar-v2-design/mocks/*.png` にコミット
 - γ: mock をコミットせず §2 文章記述のみを基準にする
 - **私のデフォルト提案**: α (self-documenting / 再利用可能)
 - **【確定】Option δ: mock 不要、§2 文章記述を基準に進める (2026-04-23、Tomoya 判断)**

@@ -7,7 +7,7 @@
 -- service-role 経由でのみ insert / select / update する。RLS は有効化
 -- するが user 向け policy は持たない (anon / authenticated は全 deny)。
 --
--- See docs/design/mcp-server/overview.md Decision 4.
+-- See apps/storybook/docs/product/projects/mcp-server/overview.mdx Decision 4.
 -- ============================================================
 
 CREATE TABLE public.oauth_authorization_codes (

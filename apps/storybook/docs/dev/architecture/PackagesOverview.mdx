@@ -162,3 +162,18 @@ Storybook は `packages/design` と `packages/ui` の公開面を確認する場
 - `apps/product` 固有の feature component は `Features/*` に残し、汎用化できたものだけ `packages/ui` に移す。
 
 移動後も Storybook の階層名は利用者の認知に合わせて維持する。内部 path が `packages/design` になっても、閲覧面では `Foundations/Colors` のままでよい。
+
+## Ownership And Operations
+
+UI ownership は Storybook の表示階層で判断する。
+
+| Storybook 階層   | Owner                    | Source of truth                                                 |
+| ---------------- | ------------------------ | --------------------------------------------------------------- |
+| `Foundations/*`  | design tokens            | `packages/design`、現状は `apps/product/src/lib/styles/tokens/` |
+| `Primitives/*`   | reusable UI primitives   | `packages/ui`、現状は `apps/product/src/lib/components/ui/`     |
+| `Recipes/*`      | reusable UI compositions | `packages/ui` または app 共通 component                         |
+| `Features/*`     | product feature UI       | `apps/product/src/features/*`                                   |
+| `Operations/*`   | deployment / release ops | `apps/storybook/docs/operations/*`                              |
+| `Architecture/*` | engineering decisions    | `apps/storybook/docs/dev/architecture/*`                        |
+
+Deployment と release の手順は code package ではなく `Operations/*` docs の責務にする。package 境界のページには運用手順を重複させず、参照先だけを固定する。

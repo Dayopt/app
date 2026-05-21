@@ -1,3 +1,7 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Projects/Cleanup 2026-04-26/Overview" />
+
 # Cleanup Plan 2026-04-26
 
 監査範囲: `src/` 配下
@@ -630,10 +634,12 @@ src/ 内 195 件（test 除外後）の `as` キャスト。多くは `import * 
 
 ## 実行ログ（Phase 2 で追記）
 
-<!-- Phase 2 実行時に以下のフォーマットで追記:
+追記フォーマット:
+
+```txt
 - 2026-04-26 14:00 C-001 完了 (commit: abc1234, est=-120 actual=-118)
 - 2026-04-26 14:05 C-004 skip 理由: 参照あり (i18n request handler は next-intl が動的 import)
--->
+```
 
 ### 2026-04-26 Phase 2 開始時 skip ログ
 
@@ -896,7 +902,7 @@ LOC: 約 -1,070（barrel cleanup + 孤立 file 削除）/ +260（docs 系）/ +3
 
 ### 2026-04-27 セッション E: 残り barrel cleanup の追加消化
 
-`docs/cleanup-plan-2026-04-26.md` の追加 entry として、再 knip 監査で残っていた小規模 barrel と service-index aggregator を整理。
+`apps/storybook/docs/product/projects/cleanup-2026-04-26/overview.mdx` の追加 entry として、再 knip 監査で残っていた小規模 barrel と service-index aggregator を整理。
 
 - id: C-071
   category: dead-code

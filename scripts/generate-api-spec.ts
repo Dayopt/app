@@ -7,7 +7,7 @@
  * input型、認証要件、レート制限、エラーコードを構造化して出力。
  *
  * Usage:
- *   npx tsx scripts/generate-api-spec.ts              # docs/api/openapi.json に生成
+ *   npx tsx scripts/generate-api-spec.ts              # apps/storybook/docs/api/openapi.json に生成
  *   npx tsx scripts/generate-api-spec.ts --check       # 既存specと比較（CI用ドリフト検出）
  *   npx tsx scripts/generate-api-spec.ts --output path  # 出力先を指定
  */
@@ -17,6 +17,7 @@ import Module from 'module';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
+import { format as formatWithPrettier } from 'prettier';
 import type { ZodType } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
@@ -24,7 +25,7 @@ import type { ProcedureMeta } from '../apps/product/src/lib/trpc/procedures';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const DEFAULT_OUTPUT = resolve(ROOT, 'docs/api/openapi.json');
+const DEFAULT_OUTPUT = resolve(ROOT, 'apps/storybook/docs/api/openapi.json');
 const CHECK_MODE = process.argv.includes('--check');
 const OUTPUT_INDEX = process.argv.indexOf('--output');
 const OUTPUT_PATH = OUTPUT_INDEX !== -1 ? resolve(process.argv[OUTPUT_INDEX + 1]) : DEFAULT_OUTPUT;
@@ -415,7 +416,10 @@ async function main(): Promise<void> {
 
   // OpenAPIドキュメント生成
   const spec = generateOpenApiSpec(procedures, errorCodeMap);
-  const specJson = JSON.stringify(spec, null, 2) + '\n';
+  const specJson = await formatWithPrettier(JSON.stringify(spec), {
+    parser: 'json',
+    printWidth: 100,
+  });
 
   // --check モード: 既存specと比較
   if (CHECK_MODE) {

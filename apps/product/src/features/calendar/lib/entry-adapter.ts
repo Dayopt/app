@@ -20,7 +20,7 @@ import type { CalendarEvent } from '../types/calendar.types';
  * adapter に持ち込む形だった。Project A で 1 分粒度を許す方針になったため、
  * 責務を「秒以下の truncate」だけに分離する。
  *
- * @see docs/design/timeline-precision-redesign/overview.md § 4 A-3
+ * @see apps/storybook/docs/product/projects/timeline-precision-redesign/overview.mdx § 4 A-3
  */
 function truncateToMinute(date: Date): Date {
   const d = new Date(date);

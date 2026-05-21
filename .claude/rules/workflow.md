@@ -33,7 +33,7 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 
 ### 大規模
 
-- Project 全体設計書を必ず作成（`docs/design/{project-name}/overview.md`）
+- Project 全体設計書を必ず作成（`apps/storybook/docs/product/projects/{project-name}/overview.md`）
 - 複雑な Step は Step 詳細設計書（`step-X-detail.md`）
 - 各 Step で事前調査プロンプト必須
 - 相談事項は Option α/β/γ 形式で提示
@@ -93,12 +93,12 @@ Dayopt の作業を進める際の規約。作業規模に応じて進め方を�
 ### 進行中
 
 ```
-docs/design/{project-name}/
+apps/storybook/docs/product/projects/{project-name}/
 ├── overview.md        — Project 全体設計書
 └── step-X-detail.md   — Step 詳細設計書（必要なら）
 ```
 
-または簡略形式として `docs/design/{project-name}-detail.md` 1 ファイル。
+または簡略形式として `apps/storybook/docs/product/projects/{project-name}-detail.md` 1 ファイル。
 
 ### 完了後
 
