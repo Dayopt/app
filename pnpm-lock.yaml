@@ -585,6 +585,9 @@ importers:
 
   apps/storybook:
     dependencies:
+      '@dayopt/design':
+        specifier: workspace:*
+        version: link:../../packages/design
       '@dayopt/product':
         specifier: workspace:*
         version: link:../product
@@ -869,6 +872,12 @@ importers:
         version: 1.32.0
 
   packages/config:
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/design:
     devDependencies:
       typescript:
         specifier: ^5

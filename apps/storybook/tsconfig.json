@@ -11,6 +11,8 @@
     "noEmit": true,
     "paths": {
       "@/*": ["../product/src/*"],
+      "@dayopt/design": ["../../packages/design/src/index.ts"],
+      "@dayopt/design/*": ["../../packages/design/src/*"],
       "@dayopt/storybook/*": [".storybook/*"]
     },
     "resolveJsonModule": true,
@@ -23,6 +25,8 @@
     ".storybook/**/*.ts",
     ".storybook/**/*.tsx",
     "../product/src/**/*.stories.tsx",
-    "../product/src/**/*.mdx"
+    "../product/src/**/*.mdx",
+    "../../packages/design/src/**/*.ts",
+    "../../packages/design/src/**/*.tsx"
   ]
 }

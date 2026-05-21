@@ -1,6 +1,7 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport';
 
+import '@dayopt/design/theme.css';
 import '../../product/src/lib/styles/globals.css';
 import { providerDecorator, storeMockDecorator } from './decorators';
 import { dayoptDarkTheme, dayoptLightTheme } from './theme/dayopt';
@@ -47,6 +48,7 @@ const preview: Preview = {
           'Strategy',
           'Components',
           'Features',
+          'Design',
           'Foundations',
           'Patterns',
         ],
