@@ -71,7 +71,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const resolvedSize = icon ? (`_icon-${size ?? 'default'}` as const) : (size ?? undefined);
 
     const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-      if (props['aria-disabled'] || loading) {
+      const ariaDisabled = props['aria-disabled'];
+
+      if (disabled || loading || ariaDisabled === true || ariaDisabled === 'true') {
         event.preventDefault();
         return;
       }
