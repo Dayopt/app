@@ -19,6 +19,8 @@ import { LabeledRow } from '@/lib/components/common/LabeledRow';
 import { SectionCard } from '@/lib/components/common/SectionCard';
 import { useAutoSaveSettings } from '@/lib/hooks/useAutoSaveSettings';
 
+import { useChronotypeSettingsStore } from '../stores/useChronotypeSettingsStore';
+
 import { ChronotypeQuiz } from './chronotype-quiz';
 
 import type {
@@ -135,22 +137,11 @@ function TypeCard({
   );
 }
 
-interface ChronotypeSettingsProps {
-  /**
-   * Chronotype 変更時の楽観更新コールバック。
-   *
-   * chronotype state は `useChronotypeSettingsStore` (Layer 0 / 本 feature) に
-   * 集約されているが、各 callsite （`features/settings` の profile-settings 等）が
-   * 直接 store を触る形を保つため、本コンポーネントは callback 注入で楽観更新を
-   * 委譲する。本コンポーネント側では autoSave 経由で DB 保存のみ行う。
-   */
-  onChronotypeChange?: ((chronotype: ChronotypeSettingsState | null) => void) | undefined;
-}
-
 /** クロノタイプ設定パネル */
-export function ChronotypeSettings({ onChronotypeChange }: ChronotypeSettingsProps = {}) {
+export function ChronotypeSettings() {
   const t = useTranslations();
   const utils = api.useUtils();
+  const updateChronotype = useChronotypeSettingsStore((state) => state.updateSettings);
 
   const { data: dbSettings, isPending } = api.userSettings.get.useQuery(undefined, {
     staleTime: CACHE_5_MINUTES,
@@ -190,20 +181,20 @@ export function ChronotypeSettings({ onChronotypeChange }: ChronotypeSettingsPro
   const handleToggle = useCallback(
     (checked: boolean) => {
       const nextChronotype = checked ? { type: selectedType } : null;
-      onChronotypeChange?.(nextChronotype);
+      updateChronotype({ chronotype: nextChronotype });
       autoSave.updateValue('chronotype', nextChronotype);
     },
-    [autoSave, onChronotypeChange, selectedType],
+    [autoSave, updateChronotype, selectedType],
   );
 
   const handleSelectType = useCallback(
     (type: PresetChronotypeType) => {
       const nextChronotype = { type: type as ChronotypeType };
-      onChronotypeChange?.(nextChronotype);
+      updateChronotype({ chronotype: nextChronotype });
       autoSave.updateValue('chronotype', nextChronotype);
       setView('idle');
     },
-    [autoSave, onChronotypeChange],
+    [autoSave, updateChronotype],
   );
 
   const handleQuizComplete = useCallback(
