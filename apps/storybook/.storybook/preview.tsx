@@ -49,6 +49,7 @@ const preview: Preview = {
           'Components',
           'Features',
           'Design',
+          'UI',
           'Foundations',
           'Patterns',
         ],
