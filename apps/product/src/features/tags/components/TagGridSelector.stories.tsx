@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 import type { TagColorName } from '@/lib/tag-colors';
 
-import { parseColonTag } from '../lib/tag-colon';
+import { parseColonTag } from '../domain/tag-colon';
 import { IconPicker } from './IconPicker';
 import { TagIcon } from './TagIcon';
 

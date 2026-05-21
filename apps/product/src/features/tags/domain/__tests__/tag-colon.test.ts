@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tag } from '../types';
+import type { Tag } from '../../types';
 
 import {
   buildColonTagName,
   getTagDisplayLabel,
   groupTagsByPrefix,
   parseColonTag,
-} from './tag-colon';
+} from '../tag-colon';
 
 /** テスト用のタグファクトリ */
 function makeTag(overrides: Partial<Tag> & { name: string }): Tag {
