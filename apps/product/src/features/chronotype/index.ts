@@ -15,6 +15,9 @@ export { ChronotypeSettings as ChronotypeSettingsPanel } from './components/chro
 // --- Constants ---
 export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';
 
+// --- Hooks ---
+export { useChronotypeGradient } from './hooks/useChronotypeGradient';
+
 // --- Lib ---
 export { getChronotypeProfile } from './lib/chronotype-profile';
 export { generateChronotypeGradient, getActiveZoneLevel } from './lib/gradient';

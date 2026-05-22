@@ -11,7 +11,11 @@
 
 import React, { useCallback, useMemo } from 'react';
 
-import { getChronotypeProfile, useChronotypeSettingsStore } from '@/features/chronotype';
+import {
+  getChronotypeProfile,
+  useChronotypeGradient,
+  useChronotypeSettingsStore,
+} from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
 import { formatTimeString } from '@/lib/date';
@@ -21,7 +25,6 @@ import { TIME_COLUMN_WIDTH, Z_INDEX } from '../constants/grid.constants';
 import { CurrentTimeLine } from '../grid/CurrentTimeLine';
 import { NowBadge } from '../grid/CurrentTimeLine/NowBadge';
 import { TimeColumn } from '../grid/TimeColumn/TimeColumn';
-import { useChronotypeGradient } from '../hooks/useChronotypeGradient';
 import { useCurrentTimeLine } from '../hooks/useCurrentTimeLine';
 import { useHourHeightSync, useResponsiveHourHeight } from '../hooks/useResponsiveHourHeight';
 import { useScrollableCalendar } from '../hooks/useScrollableCalendar';
