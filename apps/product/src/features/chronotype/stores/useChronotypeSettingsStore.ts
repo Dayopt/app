@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
-import type { ChronotypeSettings as ChronotypeSettingsState } from '@/lib/types/chronotype';
+import { DEFAULT_CHRONOTYPE_SETTINGS } from '../lib/defaults';
+import type { ChronotypeSettings as ChronotypeSettingsState } from '../types/chronotype';
 
 export interface ChronotypeSettings {
   chronotype: ChronotypeSettingsState | null;

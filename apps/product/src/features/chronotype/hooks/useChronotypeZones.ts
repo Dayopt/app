@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 
-import type { ProductivityZone } from '@/lib/types/chronotype';
+import type { ProductivityZone } from '../types/chronotype';
 
 import { getChronotypeProfile } from '../lib/chronotype-profile';
 import { useChronotypeSettingsStore } from '../stores/useChronotypeSettingsStore';

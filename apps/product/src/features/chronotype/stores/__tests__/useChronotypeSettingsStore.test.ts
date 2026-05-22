@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { DEFAULT_CHRONOTYPE_SETTINGS } from '@/lib/chronotype-defaults';
+import { DEFAULT_CHRONOTYPE_SETTINGS } from '../../lib/defaults';
 
 import { useChronotypeSettingsStore } from '../useChronotypeSettingsStore';
 

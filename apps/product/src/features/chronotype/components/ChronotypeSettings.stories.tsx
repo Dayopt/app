@@ -16,11 +16,7 @@ import {
   CHRONOTYPE_SELECTABLE_TYPES,
 } from '../lib/constants';
 
-import type {
-  ChronotypeType,
-  PresetChronotypeType,
-  ProductivityZone,
-} from '@/lib/types/chronotype';
+import type { ChronotypeType, PresetChronotypeType, ProductivityZone } from '../types/chronotype';
 
 // ─────────────────────────────────────────────────────────
 // Demo Components（tRPC/Zustandに依存しないpure版）

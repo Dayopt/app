@@ -1,5 +1,5 @@
-import type { PresetChronotypeType } from '@/lib/types/chronotype';
 import { describe, expect, it } from 'vitest';
+import type { PresetChronotypeType } from '../../types/chronotype';
 import { calculateChronotypeResult, CHRONOTYPE_QUIZ_QUESTIONS } from '../quiz';
 
 describe('calculateChronotypeResult', () => {
