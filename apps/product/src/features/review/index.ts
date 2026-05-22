@@ -11,6 +11,7 @@
 export { ReviewTagChipRow } from './components/mobile/ReviewTagChipRow';
 export { ReviewLayout } from './components/ReviewLayout';
 export { ReviewView } from './components/ReviewView';
+export { EntryMicroInsight } from './components/shared/EntryMicroInsight';
 export { ReviewTagList } from './components/sidebar/ReviewTagList';
 
 // =============================================================================
