@@ -7,12 +7,11 @@
 
 import { useMemo } from 'react';
 
-import {
-  generateChronotypeGradient,
-  getChronotypeProfile,
-  useChronotypeSettingsStore,
-} from '@/features/chronotype';
 import { useTheme } from '@/lib/hooks/useTheme';
+
+import { getChronotypeProfile } from '../lib/chronotype-profile';
+import { generateChronotypeGradient } from '../lib/gradient';
+import { useChronotypeSettingsStore } from '../stores/useChronotypeSettingsStore';
 
 export function useChronotypeGradient(): string | null {
   const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
