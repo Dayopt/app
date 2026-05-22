@@ -9,13 +9,9 @@
 
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 
-import {
-  getChronotypeProfile,
-  useChronotypeGradient,
-  useChronotypeSettingsStore,
-} from '@/features/chronotype';
+import { useChronotypeGradient, useChronotypeZones } from '@/features/chronotype';
 import { cn } from '@/lib/utils';
 
 import { formatTimeString } from '@/lib/date';
@@ -151,11 +147,7 @@ export const ScrollableCalendarLayout = ({
   const gradientCss = useChronotypeGradient();
 
   // Chronotype ゾーン配列（TimeColumn ラベル装飾用）
-  const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
-  const chronotypeZones = useMemo(() => {
-    if (!chronotype) return undefined;
-    return getChronotypeProfile(chronotype.type).productivityZones;
-  }, [chronotype]);
+  const chronotypeZones = useChronotypeZones();
 
   // 現在時刻のフォーマット（設定に応じて 24h/12h）
   const timeFormat = useUserPreferenceStore((s) => s.timeFormat);
