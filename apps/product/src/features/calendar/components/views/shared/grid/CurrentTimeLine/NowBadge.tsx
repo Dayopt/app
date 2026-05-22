@@ -7,13 +7,9 @@
 
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
-import {
-  getActiveZoneLevel,
-  getChronotypeProfile,
-  useChronotypeSettingsStore,
-} from '@/features/chronotype';
+import { useActiveZoneLevel } from '@/features/chronotype';
 import { useTranslations } from 'next-intl';
 
 interface NowBadgeProps {
@@ -23,13 +19,7 @@ interface NowBadgeProps {
 
 export const NowBadge = memo<NowBadgeProps>(function NowBadge({ currentHour }) {
   const t = useTranslations('calendar.nowBadge');
-  const chronotype = useChronotypeSettingsStore((s) => s.chronotype);
-
-  const zoneLevel = useMemo(() => {
-    if (!chronotype) return null;
-    const profile = getChronotypeProfile(chronotype.type);
-    return getActiveZoneLevel(profile.productivityZones, currentHour);
-  }, [chronotype, currentHour]);
+  const zoneLevel = useActiveZoneLevel(currentHour);
 
   if (!zoneLevel) return null;
 
