@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 
 import { logger } from '@/lib/logger';
@@ -14,13 +15,16 @@ import { createMcpServer } from './_server';
  * Bearer token を `oauth_tokens` で検証 → per-request stateless transport を立て、
  * MCP server に dispatch する。
  *
- * Vercel rewrite で `mcp.dayopt.app/` から到達する (production)。
+ * Vercel rewrite で MCP host の `/` から到達する (production)。
  * `/mcp` も既存 client 向けの互換 alias として同じ handler に到達する。
  * 401 のときは `WWW-Authenticate` の `resource_metadata` で client が
  * `/.well-known/oauth-protected-resource` を辿れるようにする (MCP spec 2025-03)。
  */
 
-const RESOURCE_METADATA_URL = 'https://mcp.dayopt.app/.well-known/oauth-protected-resource';
+const RESOURCE_METADATA_URL = createDayoptUrl(
+  dayoptUrls.mcp,
+  '/.well-known/oauth-protected-resource',
+);
 
 export const dynamic = 'force-dynamic';
 

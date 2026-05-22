@@ -8,6 +8,8 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { dayoptUrls } from '@dayopt/config';
+
 import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
@@ -22,7 +24,7 @@ export function PasswordResetEmail({
   userName,
   resetUrl,
   locale = 'en',
-  appUrl = 'https://app.dayopt.app',
+  appUrl = dayoptUrls.product,
 }: PasswordResetEmailProps) {
   const t = createEmailTranslator(locale);
   const settingsLinkText = t('passwordReset.yourSettings');

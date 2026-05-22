@@ -1,4 +1,5 @@
 import type { Locale } from '@/platform/i18n/routing';
+import { dayoptContact } from '@dayopt/config';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
@@ -118,7 +119,8 @@ export default async function TokushohoPage({ params }: PageProps) {
               <td className="text-foreground px-6 py-4 text-sm">
                 <div className="space-y-1">
                   <p>
-                    <span className="text-muted-foreground">Email:</span> support@dayopt.app
+                    <span className="text-muted-foreground">Email:</span>{' '}
+                    {dayoptContact.supportEmail}
                   </p>
                   <p>
                     <span className="text-muted-foreground">

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
+import { dayoptUrls } from '@dayopt/config';
 import {
   AlertTriangle,
   Check,
@@ -261,7 +262,7 @@ function McpApiSection() {
 
   // OAuth 接続のため client (Claude.ai etc.) に渡すのはこの URL のみ。
   // API key 入力欄は Phase 1.5 で「接続済み client 一覧」に置換する vestige。
-  const mcpServerUrl = 'https://mcp.dayopt.app';
+  const mcpServerUrl = dayoptUrls.mcp;
 
   const handleCopy = useCallback(
     (text: string, type: 'url' | 'key') => {

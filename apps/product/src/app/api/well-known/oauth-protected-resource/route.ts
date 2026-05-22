@@ -5,7 +5,7 @@ import { buildProtectedResourceMetadata } from '@/lib/oauth-server/metadata';
 /**
  * RFC 9728 - OAuth 2.0 Protected Resource Metadata
  *
- * Public metadata. Production hostname `mcp.dayopt.app` の `/.well-known/oauth-protected-resource`
+ * Public metadata. Production MCP host の `/.well-known/oauth-protected-resource`
  * からの vercel rewrite で到達する。
  *
  * MCP client (Claude.ai connectors 等) は MCP server を Bearer token なしで叩いた際の

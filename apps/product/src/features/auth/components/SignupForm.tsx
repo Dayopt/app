@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 
+import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -327,7 +328,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 <p className="text-muted-foreground text-center text-xs leading-relaxed">
                   {t('auth.signupForm.byContinuing')}{' '}
                   <a
-                    href="https://dayopt.app/legal/terms"
+                    href={createDayoptUrl(dayoptUrls.marketing, '/legal/terms')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-foreground underline underline-offset-4"
@@ -336,7 +337,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                   </a>{' '}
                   {t('auth.signupForm.and')}{' '}
                   <a
-                    href="https://dayopt.app/legal/privacy"
+                    href={createDayoptUrl(dayoptUrls.marketing, '/legal/privacy')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-foreground underline underline-offset-4"

@@ -41,7 +41,7 @@ apps/product, apps/web, apps/admin
 
 ## Current Phase
 
-現在の実装はまだ `apps/product` 中心で、`packages/ui`, `packages/config`, `packages/types`, `packages/server`, `packages/utils` は第一段階の placeholder に近い。
+現在の実装はまだ `apps/product` 中心だが、`packages/design`, `packages/ui`, `packages/config` は最小の公開面を持つ package として動き始めている。`packages/types`, `packages/server`, `packages/utils` は第一段階の placeholder に近い。
 
 次の段階では `packages/types` をそのまま拡張し続けるより、責務を `packages/domain` と `packages/database` に分ける。`packages/server` は Supabase / Stripe / admin helper のような server-only 境界に残すか、用途が明確になったものから `packages/database` / `packages/billing` へ分離する。
 
@@ -51,17 +51,17 @@ apps/product, apps/web, apps/admin
 
 ### Scope
 
-| 領域       | Source                                   | Storybook 表示                             |
-| ---------- | ---------------------------------------- | ------------------------------------------ |
-| Colors     | `tokens/colors.css`, `tokens/states.css` | `Foundations/Colors`, `Foundations/States` |
-| Typography | typography scale / font variables        | `Foundations/Typography`                   |
-| Spacing    | spacing scale / layout rhythm            | `Foundations/Spacing`                      |
-| Radius     | radius scale / partial radius rules      | `Foundations/Radius`                       |
-| Shadow     | elevation / shadow variables             | `Foundations/Elevation`                    |
-| Motion     | duration / easing rules                  | `Foundations/Motion`                       |
-| Z-Index    | layering scale                           | `Foundations/ZIndex`                       |
+| 領域       | Source                                           | Storybook 表示      |
+| ---------- | ------------------------------------------------ | ------------------- |
+| Colors     | `packages/design/src/colors.ts`, `theme.css`     | `Design/Colors`     |
+| Typography | `packages/design/src/typography.ts`, `theme.css` | `Design/Typography` |
+| Spacing    | `packages/design/src/spacing.ts`, `theme.css`    | `Design/Spacing`    |
+| Radius     | `packages/design/src/radius.ts`, `theme.css`     | `Design/Radius`     |
+| Shadow     | `packages/design/src/shadow.ts`, `theme.css`     | `Design/Shadows`    |
+| Motion     | 未定義。必要になった時に追加                     | 未定                |
+| Z-Index    | 未定義。必要になった時に追加                     | 未定                |
 
-現在はこれらが `apps/product/src/lib/styles/tokens/` にある。移動時は Storybook の表示名を変えず、source path だけを `packages/design` に寄せる。Storybook は token の可視化面であり、token の所有者は `packages/design` にする。
+Storybook は token の可視化面であり、token の所有者は `packages/design` にする。`apps/product/src/lib/styles/tokens/` は既存 product UI のための layer として残し、段階的に `packages/design` の contract へ寄せる。
 
 ### Export Shape
 
@@ -70,13 +70,13 @@ apps/product, apps/web, apps/admin
 ```txt
 packages/design/
   src/
+    colors.ts
+    typography.ts
+    spacing.ts
+    radius.ts
+    shadow.ts
+    tokens.ts
     theme.css
-    tokens/
-      colors.css
-      spacing.css
-      radius.css
-      states.css
-      z-index.css
     index.ts
 ```
 
@@ -86,7 +86,26 @@ packages/design/
 import '@dayopt/design/theme.css';
 ```
 
-CSS variables は `--color-*`, `--shadow-*`, `--radius-*` のような token として公開し、アプリ側では Tailwind semantic class 経由で使う。React component 内で raw OKLCH 値や hex 値を直書きしない。
+CSS variables は `--dayopt-*` prefix で公開し、既存 app の `--background`, `--primary`, `--radius-*` などは上書きしない。React component 内で raw OKLCH 値や hex 値を直書きしない。
+
+## `packages/config`
+
+`packages/config` は product/web が共有する public constants の置き場にする。副作用を持たず、Next.js / React / Zod / env / server-only に依存しない。
+
+置いてよいもの:
+
+- Dayopt の domain と canonical URL
+- support / security / contact email
+- brand name / public social URL
+- URL join helper
+
+置かないもの:
+
+- env validation
+- secrets
+- request-scoped value
+- Next.js metadata generator 本体
+- server-only client
 
 ## `packages/ui`
 
@@ -156,24 +175,26 @@ Supabase generated types と DB row の alias を置く。domain model との変
 
 Storybook は `packages/design` と `packages/ui` の公開面を確認する場所にする。
 
-- `packages/design`: token の一覧、意味、使用禁止例を `Foundations/*` で可視化する。
-- `packages/ui`: props と状態を `Primitives/*` / `Recipes/*` で可視化する。
+- `packages/design`: token の一覧、意味、使用禁止例を `Design/*` で可視化する。
+- `packages/ui`: props と状態を `UI/*` で可視化する。
 - `packages/domain`, `packages/database`, `packages/billing`: UI カタログではなく docs と decision table で境界を説明する。
 - `apps/product` 固有の feature component は `Features/*` に残し、汎用化できたものだけ `packages/ui` に移す。
 
-移動後も Storybook の階層名は利用者の認知に合わせて維持する。内部 path が `packages/design` になっても、閲覧面では `Foundations/Colors` のままでよい。
+移動後も Storybook の階層名は利用者の認知に合わせて調整する。現在の shared package は `Design/*` と `UI/*` を公開面にする。
 
 ## Ownership And Operations
 
 UI ownership は Storybook の表示階層で判断する。
 
-| Storybook 階層   | Owner                    | Source of truth                                                 |
-| ---------------- | ------------------------ | --------------------------------------------------------------- |
-| `Foundations/*`  | design tokens            | `packages/design`、現状は `apps/product/src/lib/styles/tokens/` |
-| `Primitives/*`   | reusable UI primitives   | `packages/ui`、現状は `apps/product/src/lib/components/ui/`     |
-| `Recipes/*`      | reusable UI compositions | `packages/ui` または app 共通 component                         |
-| `Features/*`     | product feature UI       | `apps/product/src/features/*`                                   |
-| `Operations/*`   | deployment / release ops | `apps/storybook/docs/operations/*`                              |
-| `Architecture/*` | engineering decisions    | `apps/storybook/docs/dev/architecture/*`                        |
+| Storybook 階層   | Owner                               | Source of truth                          |
+| ---------------- | ----------------------------------- | ---------------------------------------- |
+| `Design/*`       | design tokens                       | `packages/design`                        |
+| `UI/*`           | reusable UI primitives              | `packages/ui`                            |
+| `Foundations/*`  | legacy / product-facing foundations | `apps/product` 由来の既存 Storybook 表示 |
+| `Primitives/*`   | legacy reusable UI primitives       | `apps/product/src/lib/components/ui/`    |
+| `Recipes/*`      | reusable UI compositions            | `packages/ui` または app 共通 component  |
+| `Features/*`     | product feature UI                  | `apps/product/src/features/*`            |
+| `Operations/*`   | deployment / release ops            | `apps/storybook/docs/operations/*`       |
+| `Architecture/*` | engineering decisions               | `apps/storybook/docs/dev/architecture/*` |
 
 Deployment と release の手順は code package ではなく `Operations/*` docs の責務にする。package 境界のページには運用手順を重複させず、参照先だけを固定する。

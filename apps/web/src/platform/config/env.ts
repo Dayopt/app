@@ -1,3 +1,5 @@
+import { dayoptUrls } from '@dayopt/config';
+
 /**
  * 環境変数の型定義とバリデーション
  *
@@ -48,14 +50,14 @@ export interface EnvConfig {
    * アプリケーションの公開 URL
    *
    * @required Production環境では必須
-   * @example 'https://dayopt.app'
+   * @example dayoptUrls.marketing
    */
   NEXT_PUBLIC_APP_URL?: string;
 
   /**
    * サイトの公開 URL（SEO・OGP用）
    *
-   * @default 'https://dayopt.app'
+   * @default dayoptUrls.marketing
    */
   NEXT_PUBLIC_SITE_URL?: string;
 
@@ -372,7 +374,7 @@ export const isCI = env.CI === true;
  * 優先順位:
  * 1. NEXT_PUBLIC_APP_URL
  * 2. VERCEL_URL (https:// プレフィックス付与)
- * 3. デフォルト値 (開発: localhost:3000, 本番: https://dayopt.app)
+ * 3. デフォルト値 (開発: localhost:3000, 本番: dayoptUrls.marketing)
  */
 export const getAppUrl = (): string => {
   if (env.NEXT_PUBLIC_APP_URL) {
@@ -387,7 +389,7 @@ export const getAppUrl = (): string => {
     return 'http://localhost:3000';
   }
 
-  return 'https://dayopt.app';
+  return dayoptUrls.marketing;
 };
 
 /**

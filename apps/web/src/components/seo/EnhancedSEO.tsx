@@ -1,4 +1,5 @@
 import { env, getAppUrl } from '@/platform/config/env';
+import { createDayoptUrl, dayoptBrand, dayoptUrls } from '@dayopt/config';
 import type { Metadata } from 'next';
 
 interface SEOProps {
@@ -167,19 +168,19 @@ export function StructuredData({ type, data }: StructuredDataProps) {
 
   // 組織の基本情報
   if (type === 'Organization') {
-    baseStructure.name = 'Dayopt';
-    baseStructure.url = 'https://dayopt.app';
-    baseStructure.logo = 'https://dayopt.app/logo.png';
-    baseStructure.sameAs = ['https://x.com/dayoptapp', 'https://github.com/dayoptapp'];
+    baseStructure.name = dayoptBrand.name;
+    baseStructure.url = dayoptUrls.marketing;
+    baseStructure.logo = createDayoptUrl(dayoptUrls.marketing, '/logo.png');
+    baseStructure.sameAs = [dayoptBrand.xUrl, dayoptBrand.githubUrl];
   }
 
   // ウェブサイトの情報
   if (type === 'WebSite') {
-    baseStructure.name = 'Dayopt';
-    baseStructure.url = 'https://dayopt.app';
+    baseStructure.name = dayoptBrand.name;
+    baseStructure.url = dayoptUrls.marketing;
     baseStructure.potentialAction = {
       '@type': 'SearchAction',
-      target: 'https://dayopt.app/search?q={search_term_string}',
+      target: createDayoptUrl(dayoptUrls.marketing, '/search?q={search_term_string}'),
       'query-input': 'required name=search_term_string',
     };
   }
@@ -283,7 +284,7 @@ export function ArticleStructuredData({
       name: 'Dayopt',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://dayopt.app/logo.png',
+        url: createDayoptUrl(dayoptUrls.marketing, '/logo.png'),
       },
     },
     ...(category && { category }),

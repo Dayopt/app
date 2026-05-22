@@ -1,4 +1,5 @@
 import { env } from '@/platform/config/env';
+import { dayoptUrls } from '@dayopt/config';
 import { NextRequest } from 'next/server';
 
 /**
@@ -35,7 +36,7 @@ function getAllowedOrigins(): string[] {
   }
 
   // デフォルトの本番ドメイン
-  allowedOrigins.push('https://dayopt.app', 'https://www.dayopt.app');
+  allowedOrigins.push(dayoptUrls.marketing, dayoptUrls.www);
 
   return allowedOrigins;
 }

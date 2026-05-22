@@ -2,7 +2,7 @@
  * Resend Webhook エンドポイント
  *
  * Resend Dashboard → Webhooks でこのURLを登録:
- *   https://dayopt.app/api/webhooks/resend
+ *   dayoptUrls.marketing + /api/webhooks/resend
  *
  * 監視イベント:
  * - email.bounced: バウンス検知（無効アドレス）

@@ -200,6 +200,9 @@ importers:
 
   apps/product:
     dependencies:
+      '@dayopt/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -664,6 +667,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@dayopt/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.2.2(react-hook-form@7.76.0(react@19.2.6))

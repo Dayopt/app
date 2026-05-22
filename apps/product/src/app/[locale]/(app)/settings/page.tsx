@@ -3,6 +3,7 @@
 import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useEffect, useState } from 'react';
 
+import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import {
   Book,
   ChevronDown,
@@ -86,7 +87,7 @@ export default function SettingsPage() {
     },
     {
       labelKey: 'settings.accountPage.documentation',
-      href: 'https://docs.dayopt.app',
+      href: dayoptUrls.docs,
       icon: Book,
       external: true,
     },
@@ -104,19 +105,19 @@ export default function SettingsPage() {
   }> = [
     {
       labelKey: 'settings.accountPage.termsOfService',
-      href: `https://dayopt.app/${locale}/legal/terms`,
+      href: createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/terms`),
     },
     {
       labelKey: 'settings.accountPage.privacyPolicy',
-      href: `https://dayopt.app/${locale}/legal/privacy`,
+      href: createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/privacy`),
     },
     {
       labelKey: 'settings.accountPage.tokushoho',
-      href: `https://dayopt.app/${locale}/legal/tokushoho`,
+      href: createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/tokushoho`),
     },
     {
       labelKey: 'settings.accountPage.security',
-      href: `https://dayopt.app/${locale}/legal/security`,
+      href: createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/security`),
     },
   ];
 

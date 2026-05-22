@@ -1,3 +1,4 @@
+import { dayoptContact } from '@dayopt/config';
 import { AlertTriangle, ExternalLink, FileText, Lock, Mail, Shield } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -96,7 +97,10 @@ export async function SecurityContent() {
             <li className="flex items-center gap-2">
               <Mail className="size-4" />
               <strong>{t('security.vulnerability.contacts.email')}</strong>:{' '}
-              <a href="mailto:security@dayopt.app" className="text-primary hover:underline">
+              <a
+                href={`mailto:${dayoptContact.securityEmail}`}
+                className="text-primary hover:underline"
+              >
                 {t('security.vulnerability.contacts.emailAddress')}
               </a>
             </li>
@@ -291,14 +295,20 @@ export async function SecurityContent() {
           <p className="flex items-center gap-2">
             <Mail className="size-4" />
             <strong>{t('security.contact.securityTeam')}</strong>:{' '}
-            <a href="mailto:security@dayopt.app" className="text-primary hover:underline">
+            <a
+              href={`mailto:${dayoptContact.securityEmail}`}
+              className="text-primary hover:underline"
+            >
               {t('security.contact.securityEmail')}
             </a>
           </p>
           <p className="flex items-center gap-2">
             <Mail className="size-4" />
             <strong>{t('security.contact.general')}</strong>:{' '}
-            <a href="mailto:support@dayopt.app" className="text-primary hover:underline">
+            <a
+              href={`mailto:${dayoptContact.supportEmail}`}
+              className="text-primary hover:underline"
+            >
               {t('security.contact.generalEmail')}
             </a>
           </p>

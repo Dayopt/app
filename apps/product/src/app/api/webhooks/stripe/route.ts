@@ -2,7 +2,7 @@
  * Stripe Webhook エンドポイント
  *
  * Stripe Dashboard → Webhooks でこのURLを登録:
- *   https://dayopt.app/api/webhooks/stripe
+ *   dayoptUrls.marketing + /api/webhooks/stripe
  *
  * 監視イベント:
  * - checkout.session.completed: チェックアウト完了

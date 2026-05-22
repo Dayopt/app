@@ -2,6 +2,7 @@ import { generateEnhancedMetadata, StructuredData } from '@/components/seo/Enhan
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/shell/providers/theme-provider';
+import { dayoptBrand, dayoptContact } from '@dayopt/config';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
@@ -41,28 +42,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <StructuredData
           type="Organization"
           data={{
-            name: 'Dayopt',
-            alternateName: 'Dayopt Platform',
+            name: dayoptBrand.name,
+            alternateName: dayoptBrand.platformName,
             description: 'Modern SaaS platform for businesses',
             foundingDate: '2024-01-01',
             contactPoint: {
               '@type': 'ContactPoint',
               contactType: 'customer service',
-              email: 'contact@dayopt.app',
+              email: dayoptContact.contactEmail,
             },
           }}
         />
         <StructuredData
           type="WebSite"
           data={{
-            name: 'Dayopt Platform',
-            alternateName: 'Dayopt',
+            name: dayoptBrand.platformName,
+            alternateName: dayoptBrand.name,
           }}
         />
         <StructuredData
           type="SoftwareApplication"
           data={{
-            name: 'Dayopt',
+            name: dayoptBrand.name,
             description: 'Plan, execute, and reflect — a simple cycle to optimize your day.',
             applicationCategory: 'ProductivityApplication',
             operatingSystem: 'Web',

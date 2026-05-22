@@ -1,4 +1,5 @@
 import { env, getSiteUrl } from '@/platform/config/env';
+import { createDayoptUrl, dayoptBrand, dayoptContact } from '@dayopt/config';
 import type { Metadata } from 'next';
 
 export interface SEOData {
@@ -33,14 +34,14 @@ export interface SiteConfig {
 }
 
 export const siteConfig: SiteConfig = {
-  name: 'Dayopt',
+  name: dayoptBrand.name,
   title: 'Dayopt - スケーラブルなアプリケーションのためのモダンSaaSプラットフォーム',
   description:
     'Dayoptで次世代のSaaSアプリケーションを構築、デプロイ、スケール。認証、ユーザー管理、請求処理など包括的なツールを提供します。',
   url: getSiteUrl(),
   ogImage: '/og-image.png',
-  creator: 'Dayopt Team',
-  twitterHandle: '@dayoptapp',
+  creator: dayoptBrand.teamName,
+  twitterHandle: dayoptBrand.twitterHandle,
   keywords: [
     'SaaS',
     'Software as a Service',
@@ -267,11 +268,11 @@ export function generateStructuredData(type: string, data: StructuredDataInput) 
         url: baseUrl,
         logo: `${baseUrl}/logo.png`,
         description: siteConfig.description,
-        sameAs: ['https://x.com/dayoptapp', 'https://github.com/dayoptapp'],
+        sameAs: [dayoptBrand.xUrl, dayoptBrand.githubUrl],
         contactPoint: {
           '@type': 'ContactPoint',
           contactType: 'Customer Service',
-          email: 'support@dayopt.app',
+          email: dayoptContact.supportEmail,
         },
       };
 
@@ -286,7 +287,7 @@ export function generateStructuredData(type: string, data: StructuredDataInput) 
           '@type': 'SearchAction',
           target: {
             '@type': 'EntryPoint',
-            urlTemplate: `${baseUrl}/search?q={search_term_string}`,
+            urlTemplate: createDayoptUrl(baseUrl, '/search?q={search_term_string}'),
           },
           'query-input': 'required name=search_term_string',
         },

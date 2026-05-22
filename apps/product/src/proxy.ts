@@ -1,6 +1,8 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { dayoptDomains } from '@dayopt/config';
+
 import { routing } from '@/lib/i18n/routing';
 import { logger } from '@/lib/logger';
 import { updateSession } from '@/lib/supabase/middleware';
@@ -32,7 +34,7 @@ const publicPaths = ['/', '/about', '/privacy', '/terms', '/contact', '/pricing'
 
 // Vercel rewritesでAPI routeへ到達させる公開パス
 const publicRewritePaths = ['/mcp', '/oauth/token'];
-const MCP_HOST = 'mcp.dayopt.app';
+const MCP_HOST = dayoptDomains.mcp;
 
 // 言語プレフィックスを除いたパスを取得
 // as-needed設定: デフォルト言語(en)はプレフィックスなし
