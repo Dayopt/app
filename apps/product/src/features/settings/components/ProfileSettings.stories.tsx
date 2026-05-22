@@ -44,7 +44,6 @@ export const Default: Story = {
   parameters: {
     trpcMocks: {
       'userSettings.get': PRESET_USER_SETTINGS.default,
-      'chronotype.get': PRESET_USER_SETTINGS.default.chronotype,
     },
   },
 };
