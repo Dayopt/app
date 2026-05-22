@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
+
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
 import {
@@ -149,7 +151,7 @@ export function UserMenu({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="https://docs.dayopt.app" target="_blank" rel="noopener noreferrer">
+                <Link href={dayoptUrls.docs} target="_blank" rel="noopener noreferrer">
                   <Book />
                   <span className="flex-1">
                     {t('navigation.navUser.helpSubmenu.documentation')}
@@ -160,7 +162,7 @@ export function UserMenu({
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <a
-                  href={`https://dayopt.app/${locale}/legal/terms`}
+                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/terms`)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -173,7 +175,7 @@ export function UserMenu({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a
-                  href={`https://dayopt.app/${locale}/legal/privacy`}
+                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/privacy`)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -186,7 +188,7 @@ export function UserMenu({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a
-                  href={`https://dayopt.app/${locale}/legal/tokushoho`}
+                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/tokushoho`)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -197,7 +199,7 @@ export function UserMenu({
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <a
-                  href={`https://dayopt.app/${locale}/legal/security`}
+                  href={createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/security`)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

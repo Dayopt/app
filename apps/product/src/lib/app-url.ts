@@ -1,3 +1,5 @@
+import { dayoptUrls } from '@dayopt/config';
+
 import { env } from '@/env';
 
 /**
@@ -12,3 +14,5 @@ export function getAppUrl(): string {
   if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
   return 'http://localhost:3000';
 }
+
+export const PRODUCT_APP_URL = dayoptUrls.product;

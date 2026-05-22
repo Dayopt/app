@@ -12,6 +12,8 @@
 
 import { useCallback, useState } from 'react';
 
+import { dayoptContact } from '@dayopt/config';
+
 import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
@@ -179,8 +181,11 @@ export function ContactDialogContent({
             <DrawerTitle>{labels.title}</DrawerTitle>
             <DrawerDescription>
               {labels.description}{' '}
-              <a href="mailto:support@dayopt.app" className="text-primary hover:underline">
-                support@dayopt.app
+              <a
+                href={`mailto:${dayoptContact.supportEmail}`}
+                className="text-primary hover:underline"
+              >
+                {dayoptContact.supportEmail}
               </a>
             </DrawerDescription>
           </DrawerHeader>
@@ -210,8 +215,11 @@ export function ContactDialogContent({
           <DialogTitle>{labels.title}</DialogTitle>
           <DialogDescription>
             {labels.description}{' '}
-            <a href="mailto:support@dayopt.app" className="text-primary hover:underline">
-              support@dayopt.app
+            <a
+              href={`mailto:${dayoptContact.supportEmail}`}
+              className="text-primary hover:underline"
+            >
+              {dayoptContact.supportEmail}
             </a>
           </DialogDescription>
         </DialogHeader>

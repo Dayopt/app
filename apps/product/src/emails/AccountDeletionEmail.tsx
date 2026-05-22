@@ -7,6 +7,8 @@
 
 import { Body, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { dayoptUrls } from '@dayopt/config';
+
 import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
@@ -21,11 +23,11 @@ export function AccountDeletionEmail({
   userName,
   deletionDate,
   locale = 'en',
-  appUrl = 'https://app.dayopt.app',
+  appUrl = dayoptUrls.product,
 }: AccountDeletionEmailProps) {
   const t = createEmailTranslator(locale);
   const supportEmail = t('emailCommon.supportEmail');
-  const appLinkText = 'app.dayopt.app';
+  const appLinkText = new URL(dayoptUrls.product).hostname;
 
   const mistakeLine = t('accountDeletion.mistakeLine', { supportEmail });
   const [mistakeBefore, mistakeAfter] = mistakeLine.split(supportEmail);

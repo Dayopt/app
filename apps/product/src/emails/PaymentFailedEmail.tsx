@@ -7,6 +7,8 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { dayoptUrls } from '@dayopt/config';
+
 import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
@@ -22,7 +24,7 @@ export function PaymentFailedEmail({
   userName,
   portalUrl,
   locale = 'en',
-  appUrl = 'https://app.dayopt.app',
+  appUrl = dayoptUrls.product,
 }: PaymentFailedEmailProps) {
   const t = createEmailTranslator(locale);
   const ctaUrl = portalUrl || `${appUrl}/settings/billing`;

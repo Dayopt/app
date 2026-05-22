@@ -57,7 +57,7 @@ apps/product/src/
 ├── hooks/                     # 共有カスタムフック
 ├── types/                     # 共有型定義
 ├── lib/                       # ユーティリティ（日付、セキュリティ、PWA等）
-├── lib/styles/tokens/         # 現在のデザイントークン + Storybook可視化
+├── lib/styles/tokens/         # product 固有 / legacy token layer
 │
 ├── stories/
 │   ├── patterns/              # 実装パターン Story
@@ -66,9 +66,9 @@ apps/product/src/
 └── emails/                    # メールテンプレート
 
 packages/
-├── design/                    # 将来のデザイントークン source of truth
+├── design/                    # design token source of truth
 ├── ui/                        # domain logic を持たない React UI
-├── config/                    # URL / metadata / public constants
+├── config/                    # URL / domain / contact / public constants
 ├── domain/                    # DB に依存しない Dayopt domain model
 ├── database/                  # Supabase generated types / converters
 ├── billing/                   # plans / subscription / entitlement
@@ -81,7 +81,7 @@ packages/
 
 責務境界の詳細は [Packages Overview](?path=/docs/architecture-packages-overview--docs) を参照。
 
-現在は `apps/product/src/lib/styles/tokens/` が token の実体と Storybook 可視化を持つ。今後 `packages/design` を作る時は、Storybook の `Foundations/*` 階層を維持したまま source path だけを移す。
+現在は `packages/design` が token の source of truth で、Storybook の `Design/*` で最小 token を確認できる。`packages/config` は product/web が共有する URL / domain / contact / brand constants の置き場にする。
 
 ## 目的別ガイド
 
@@ -92,7 +92,7 @@ packages/
 | ボタン・入力欄を変更     | `src/components/ui/`      | `button.tsx`, `input.tsx`             |
 | 共通UIを変更             | `src/components/common/`  | `EmptyState.tsx`, `DateNavigator.tsx` |
 | ヘッダー・サイドバー変更 | `src/shell/components/`   | `AppHeader.tsx`, `sidebar/`           |
-| デザイントークン変更     | `src/lib/styles/tokens/`  | `colors.css`, `spacing.css`           |
+| デザイントークン変更     | `packages/design/src/`    | `colors.ts`, `theme.css`              |
 | アイコン確認             | `Foundations/Icons` Story | lucide-react 一覧                     |
 
 ### Feature を変更したい

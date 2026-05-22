@@ -8,6 +8,8 @@
 
 import { Body, Button, Container, Head, Html, Link, Section, Text } from '@react-email/components';
 
+import { dayoptDomains, dayoptUrls } from '@dayopt/config';
+
 import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
@@ -20,7 +22,7 @@ export interface MagicLinkEmailProps {
 export function MagicLinkEmail({
   loginUrl,
   locale = 'en',
-  appUrl = 'https://app.dayopt.app',
+  appUrl = dayoptUrls.product,
 }: MagicLinkEmailProps) {
   const t = createEmailTranslator(locale);
 
@@ -47,7 +49,7 @@ export function MagicLinkEmail({
               <br />
               <br />
               <Link style={styles.link} href={appUrl}>
-                app.dayopt.app
+                {dayoptDomains.product}
               </Link>
               <br />
               <br />

@@ -27,7 +27,7 @@
     "docs:check": "tsx ../../scripts/validate-doc-references.ts",
     "api:spec": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx ../../scripts/generate-api-spec.ts",
     "api:spec:check": "NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy SUPABASE_SERVICE_ROLE_KEY=dummy tsx ../../scripts/generate-api-spec.ts --check",
-    "license:check": "license-checker --production --excludePackages \"@dayopt/product@$(node -p 'require(\"./package.json\").version')\" --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
+    "license:check": "license-checker --production --excludePrivatePackages --onlyAllow \"$(cat .licensrc.json | jq -r .onlyAllow)\"",
     "license:check-risks": "tsx ../../scripts/check-license-risks.ts",
     "license:audit": "license-checker --production --summary",
     "generate-licenses": "tsx ../../scripts/generate-licenses.ts",
@@ -73,6 +73,7 @@
     "eagle:test": "tsx ../../scripts/eagle-api.ts"
   },
   "dependencies": {
+    "@dayopt/config": "workspace:*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

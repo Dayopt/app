@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { acceptAllCookies, acceptNecessaryOnly, needsCookieConsent } from '@/lib/cookie-consent';
+import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 
@@ -67,7 +68,7 @@ export function CookieConsentBanner() {
     return null;
   }
 
-  const privacyUrl = `https://dayopt.app/${locale}/legal/privacy`;
+  const privacyUrl = createDayoptUrl(dayoptUrls.marketing, `/${locale}/legal/privacy`);
 
   return (
     <div

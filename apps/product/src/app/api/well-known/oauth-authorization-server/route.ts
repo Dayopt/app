@@ -5,7 +5,7 @@ import { buildAuthorizationServerMetadata } from '@/lib/oauth-server/metadata';
 /**
  * RFC 8414 - OAuth 2.0 Authorization Server Metadata
  *
- * Public metadata. Production hostname `app.dayopt.app` の `/.well-known/oauth-authorization-server`
+ * Public metadata. Production product host の `/.well-known/oauth-authorization-server`
  * からの vercel rewrite で到達する。
  *
  * MCP / OAuth client (Claude.ai connectors 等) が discovery 用に取得する。

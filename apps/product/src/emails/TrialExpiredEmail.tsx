@@ -7,6 +7,8 @@
 
 import { Body, Button, Container, Head, Html, Section, Text } from '@react-email/components';
 
+import { dayoptUrls } from '@dayopt/config';
+
 import { createEmailTranslator, type EmailLocale } from './i18n';
 import * as styles from './styles';
 
@@ -19,7 +21,7 @@ export interface TrialExpiredEmailProps {
 export function TrialExpiredEmail({
   userName,
   locale = 'en',
-  appUrl = 'https://app.dayopt.app',
+  appUrl = dayoptUrls.product,
 }: TrialExpiredEmailProps) {
   const t = createEmailTranslator(locale);
   return (

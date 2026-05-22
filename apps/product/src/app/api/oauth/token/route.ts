@@ -18,7 +18,7 @@ import {
  *   - refresh_token (rotation あり、旧 refresh は revoke)
  *
  * 認証は不要 (public client only — token endpoint auth method = "none")。
- * Vercel rewrite で `app.dayopt.app/oauth/token` から到達する。
+ * Vercel rewrite で product host の `/oauth/token` から到達する。
  */
 export const dynamic = 'force-dynamic';
 
