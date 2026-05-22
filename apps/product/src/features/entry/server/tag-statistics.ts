@@ -13,7 +13,7 @@ import { logger } from '@/lib/logger';
 import { traceDbQuery } from '@/lib/sentry/trace';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
-import { buildTagDashboard } from './tag-dashboard';
+import { buildTagDashboard } from '../domain/tag-dashboard';
 
 /** 統計クエリの共通エラーハンドラー */
 function handleTagStatsError(operation: string, error: unknown): never {
