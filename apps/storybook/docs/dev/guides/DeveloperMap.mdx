@@ -83,6 +83,20 @@ packages/
 
 現在は `packages/design` が token の source of truth で、Storybook の `Design/*` で最小 token を確認できる。`packages/config` は product/web が共有する URL / domain / contact / brand constants の置き場にする。
 
+## Root commands
+
+root の `dev`, `build`, `start` は既存互換のため product app の alias として残す。monorepo の対象を明示したいときは下の command を使う。
+
+| やりたいこと                 | コマンド                  |
+| ---------------------------- | ------------------------- |
+| product を起動               | `pnpm dev:product`        |
+| product を build             | `pnpm build:product`      |
+| web を build                 | `pnpm build:web`          |
+| Storybook を build           | `pnpm build-storybook`    |
+| shared packages を build     | `pnpm build:packages`     |
+| shared packages を型チェック | `pnpm typecheck:packages` |
+| workspace smoke check        | `pnpm check:workspace`    |
+
 ## 目的別ガイド
 
 ### UI を変更したい
