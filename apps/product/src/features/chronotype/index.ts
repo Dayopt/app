@@ -17,6 +17,7 @@ export { CHRONOTYPE_EMOJI, CHRONOTYPE_SELECTABLE_TYPES } from './lib/constants';
 
 // --- Hooks ---
 export { useChronotypeGradient } from './hooks/useChronotypeGradient';
+export { useChronotypeZones } from './hooks/useChronotypeZones';
 
 // --- Lib ---
 export { getChronotypeProfile } from './lib/chronotype-profile';
