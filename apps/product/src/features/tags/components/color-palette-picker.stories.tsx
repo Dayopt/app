@@ -1,15 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 
-import { TAG_COLOR_MAP, TAG_COLOR_NAMES } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { TAG_COLOR_MAP, TAG_COLOR_NAMES } from '../lib/tag-colors';
 
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '../lib/tag-colors';
 
-import { Button } from './button';
+import { Button } from '@/lib/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/lib/components/ui/dropdown-menu';
 import { ColorPaletteMenuItems, getColorDisplayName } from './color-palette-picker';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './dropdown-menu';
 
 const meta = {
   title: 'Components/UI/ColorPaletteMenuItems',

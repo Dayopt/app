@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
+import { getTagColorClasses } from '@/features/tags';
 
 import { Checkbox } from './checkbox';
 import { Label } from './label';

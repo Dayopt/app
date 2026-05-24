@@ -5,7 +5,7 @@
  * この1つの入力型から導出される。ビュー固有の計算値はここに持たず、derivers で算出する。
  */
 
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '@/features/tags';
 
 /** P/Lの表示粒度 */
 export type TimePLGranularity = 'day' | 'week' | 'month' | 'year';

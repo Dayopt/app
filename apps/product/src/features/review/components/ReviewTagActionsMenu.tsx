@@ -14,9 +14,14 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import type { Tag } from '@/features/tags';
-import { IconPickerDropdownItems, TagIcon, useUpdateTag } from '@/features/tags';
-import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
+import type { Tag, TagColorName } from '@/features/tags';
+import {
+  ColorPaletteMenuItems,
+  IconPickerDropdownItems,
+  resolveTagColor,
+  TagIcon,
+  useUpdateTag,
+} from '@/features/tags';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,8 +33,6 @@ import {
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
 import { useShellStore } from '@/lib/stores/useShellStore';
-import type { TagColorName } from '@/lib/tag-colors';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface GroupOption {

@@ -4,7 +4,7 @@
  * メトリクス定義マスター型 + tRPCレスポンス型
  */
 
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '@/features/tags';
 
 // =============================================================================
 // Metric Definition System（定義マスター型）

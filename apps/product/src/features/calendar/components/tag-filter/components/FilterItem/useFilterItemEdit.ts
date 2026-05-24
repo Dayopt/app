@@ -4,10 +4,9 @@ import { useCallback, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { useUpdateTag } from '@/features/tags';
+import type { TagColorName } from '@/features/tags';
+import { resolveTagColor, useUpdateTag } from '@/features/tags';
 import { logger } from '@/lib/logger';
-import type { TagColorName } from '@/lib/tag-colors';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { toast } from '@/lib/toast';
 
 interface UseFilterItemEditProps {

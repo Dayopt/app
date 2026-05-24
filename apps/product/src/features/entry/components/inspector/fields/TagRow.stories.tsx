@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
 import { getEntryMenuItems } from '@/features/entry/lib/entry-menu-items';
-import type { TagColorEntry } from '@/lib/tag-colors';
+import type { TagColorEntry } from '@/features/tags';
 
 import { TagRow } from './TagRow';
 

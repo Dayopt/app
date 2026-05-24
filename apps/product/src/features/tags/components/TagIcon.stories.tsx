@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { TAG_COLOR_NAMES } from '@/lib/tag-colors';
+import { TAG_COLOR_NAMES } from '../lib/tag-colors';
 
 import { TagIcon } from './TagIcon';
 

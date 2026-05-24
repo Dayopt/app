@@ -11,8 +11,8 @@ import { createElement } from 'react';
 import type { LucideIcon as LucideIconType } from 'lucide-react';
 import { icons } from 'lucide-react';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { getTagColorClasses } from '../lib/tag-colors';
 
 import { CURATED_ICONS, DEFAULT_TAG_ICON, kebabToPascal } from '../lib/curated-icons';
 

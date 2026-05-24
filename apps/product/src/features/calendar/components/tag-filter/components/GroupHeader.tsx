@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { IconPickerDropdownItems, TagIcon } from '@/features/tags';
-import { ColorPaletteMenuItems } from '@/lib/components/ui/color-palette-picker';
+import type { TagColorName } from '@/features/tags';
+import { ColorPaletteMenuItems, IconPickerDropdownItems, TagIcon } from '@/features/tags';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +29,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
-import type { TagColorName } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 interface GroupHeaderProps {

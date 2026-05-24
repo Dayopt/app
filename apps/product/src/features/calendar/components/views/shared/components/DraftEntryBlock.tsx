@@ -5,10 +5,10 @@ import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { getTagColorClasses } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
 

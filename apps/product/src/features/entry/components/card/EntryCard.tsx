@@ -12,7 +12,7 @@ import React, { memo, startTransition, useCallback, useEffect, useMemo } from 'r
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
+import { getTagColorClasses } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
 import { computeActualTimeDiffOverlay, toMinutesOfDay } from '../../lib/actual-time-overlay';
