@@ -1,5 +1,5 @@
 export const timeFormats = ['12h', '24h'] as const;
-export const dateFormats = ['yyyy-MM-dd', 'MM/dd/yyyy', 'dd/MM/yyyy'] as const;
+export const dateFormats = ['yyyy-MM-dd', 'yyyy/MM/dd', 'MM/dd/yyyy', 'dd/MM/yyyy'] as const;
 export const weekStartsOnValues = [0, 1, 6] as const;
 
 export type TimeFormat = (typeof timeFormats)[number];
