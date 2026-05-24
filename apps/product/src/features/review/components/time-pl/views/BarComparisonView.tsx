@@ -4,9 +4,13 @@ import { TagIcon } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
-import { formatMinutesDuration, formatVariance, getVarianceColor } from '../data/timePL.derivers';
+import {
+  formatMinutesDuration,
+  formatVariance,
+  getVarianceColor,
+} from '../data/timePL.presentation';
 
-import type { BarComparisonRow } from '../data/timePL.types';
+import type { BarComparisonRow } from '@/features/review/domain/timePL/types';
 
 interface BarComparisonViewProps {
   rows: BarComparisonRow[];

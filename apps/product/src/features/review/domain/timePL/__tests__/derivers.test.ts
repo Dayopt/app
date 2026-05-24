@@ -1,43 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  MOCK_DAY_EXCELLENT,
+  MOCK_MINIMAL,
+  MOCK_MONTH_POOR,
+  MOCK_WEEK_GOOD,
+  MOCK_WITH_UNPLANNED,
+} from '../../../components/time-pl/data/timePL.mocks';
+import {
   deriveAccuracy,
   deriveBalanceSheet,
   deriveBarComparison,
   deriveBreakEven,
   deriveStatement,
   deriveWaterfall,
-  formatMinutesDuration,
-  formatVariance,
   getAccuracyStatus,
-  getVarianceColor,
-} from '../timePL.derivers';
-import {
-  MOCK_DAY_EXCELLENT,
-  MOCK_MINIMAL,
-  MOCK_MONTH_POOR,
-  MOCK_WEEK_GOOD,
-  MOCK_WITH_UNPLANNED,
-} from '../timePL.mocks';
-
-// ── Utility functions ──
-
-describe('formatMinutesDuration', () => {
-  it('formats hours and minutes', () => {
-    expect(formatMinutesDuration(150)).toBe('2h 30m');
-    expect(formatMinutesDuration(60)).toBe('1h');
-    expect(formatMinutesDuration(45)).toBe('45m');
-    expect(formatMinutesDuration(0)).toBe('0m');
-  });
-});
-
-describe('formatVariance', () => {
-  it('formats with sign', () => {
-    expect(formatVariance(90)).toBe('+1h 30m');
-    expect(formatVariance(-45)).toBe('-45m');
-    expect(formatVariance(0)).toBe('±0');
-  });
-});
+} from '../derivers';
 
 describe('getAccuracyStatus', () => {
   it('returns correct status for thresholds', () => {
@@ -54,19 +32,6 @@ describe('getAccuracyStatus', () => {
     expect(getAccuracyStatus(0.69)).toBe('poor');
   });
 });
-
-describe('getVarianceColor', () => {
-  it('returns correct color class', () => {
-    expect(getVarianceColor(null)).toBe('text-muted-foreground');
-    expect(getVarianceColor(0)).toBe('text-success');
-    expect(getVarianceColor(5)).toBe('text-success');
-    expect(getVarianceColor(10)).toBe('text-foreground');
-    expect(getVarianceColor(-25)).toBe('text-warning');
-    expect(getVarianceColor(50)).toBe('text-destructive');
-  });
-});
-
-// ── Derivers ──
 
 describe('deriveAccuracy', () => {
   it('calculates accuracy rate from tags', () => {
@@ -118,7 +83,6 @@ describe('deriveStatement', () => {
   it('calculates percentages that sum to ~100', () => {
     const result = deriveStatement(MOCK_WEEK_GOOD);
     const budgetPctSum = result.budgetRows.reduce((s, r) => s + r.percentage, 0);
-    // Due to rounding, allow ±5
     expect(budgetPctSum).toBeGreaterThanOrEqual(95);
     expect(budgetPctSum).toBeLessThanOrEqual(105);
   });
@@ -182,7 +146,6 @@ describe('deriveBreakEven', () => {
   it('calculates cumulative totals', () => {
     const result = deriveBreakEven(MOCK_WEEK_GOOD)!;
     expect(result.points.length).toBe(MOCK_WEEK_GOOD.dailyPoints!.length);
-    // Last cumulative should equal sum
     const lastPoint = result.points[result.points.length - 1]!;
     const expectedBudget = MOCK_WEEK_GOOD.dailyPoints!.reduce((s, p) => s + p.budgetMinutes, 0);
     expect(lastPoint.cumulativeBudget).toBe(expectedBudget);
@@ -190,7 +153,6 @@ describe('deriveBreakEven', () => {
 
   it('detects crossover point', () => {
     const result = deriveBreakEven(MOCK_WEEK_GOOD)!;
-    // With this mock data, budget > actual early, actual catches up → crossover exists
     if (result.breakEvenIndex !== null) {
       expect(result.breakEvenIndex).toBeGreaterThan(0);
       expect(result.breakEvenIndex).toBeLessThan(result.points.length);

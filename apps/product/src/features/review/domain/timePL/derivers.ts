@@ -3,9 +3,10 @@
  *
  * TimePLInput → 各ビュー用データへの変換。
  * 全てのパーセンテージ・ステータス・集計値はここで算出する。
+ * React / UI / format / color に依存しない純粋ロジックのみを置く。
  */
 
-import { computeVariance } from '@/features/review/domain/variance';
+import { computeVariance } from '../variance';
 
 import type {
   AccuracyStatus,
@@ -18,27 +19,7 @@ import type {
   TimePLRow,
   TimePLVarianceRow,
   WaterfallStep,
-} from './timePL.types';
-
-// ── 共通ユーティリティ ──
-
-/** 分を "2h 30m" 形式にフォーマット */
-export function formatMinutesDuration(minutes: number): string {
-  const abs = Math.abs(minutes);
-  if (abs >= 60) {
-    const h = Math.floor(abs / 60);
-    const m = Math.round(abs % 60);
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  }
-  return `${Math.round(abs)}m`;
-}
-
-/** 差異を符号付きフォーマット */
-export function formatVariance(minutes: number): string {
-  if (minutes === 0) return '±0';
-  const sign = minutes > 0 ? '+' : '-';
-  return `${sign}${formatMinutesDuration(minutes)}`;
-}
+} from './types';
 
 /** 精度率 → ステータス */
 export function getAccuracyStatus(rate: number): AccuracyStatus {
@@ -47,31 +28,6 @@ export function getAccuracyStatus(rate: number): AccuracyStatus {
   if (rate >= 0.7) return 'fair';
   return 'poor';
 }
-
-/** 乖離率 → テキストカラークラス */
-export function getVarianceColor(variancePercent: number | null): string {
-  if (variancePercent === null) return 'text-muted-foreground';
-  const abs = Math.abs(variancePercent);
-  if (abs <= 5) return 'text-success';
-  if (abs <= 15) return 'text-foreground';
-  if (abs <= 30) return 'text-warning';
-  return 'text-destructive';
-}
-
-/** AccuracyStatus → バッジ用カラー */
-export function getAccuracyColors(status: AccuracyStatus): { bg: string; text: string } {
-  switch (status) {
-    case 'excellent':
-    case 'good':
-      return { bg: 'bg-success/10', text: 'text-success' };
-    case 'fair':
-      return { bg: 'bg-warning/10', text: 'text-warning' };
-    case 'poor':
-      return { bg: 'bg-destructive/10', text: 'text-destructive' };
-  }
-}
-
-// ── Derivers ──
 
 /** 精度を算出 */
 export function deriveAccuracy(input: TimePLInput): TimePLAccuracy {

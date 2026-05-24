@@ -4,7 +4,7 @@
  * TimePLInput 1型のみ。全ビューの表示データは derivers で算出される。
  */
 
-import type { TimePLInput } from './timePL.types';
+import type { TimePLInput } from '@/features/review/domain/timePL/types';
 
 /** 週次: 標準的な週（良好精度、前期比あり） */
 export const MOCK_WEEK_GOOD: TimePLInput = {

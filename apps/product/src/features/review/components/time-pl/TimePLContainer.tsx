@@ -7,8 +7,8 @@ import {
   deriveBreakEven,
   deriveStatement,
   deriveWaterfall,
-  formatMinutesDuration,
-} from './data/timePL.derivers';
+} from '@/features/review/domain/timePL/derivers';
+import { formatMinutesDuration } from './data/timePL.presentation';
 import { TimePLShell } from './shell/TimePLShell';
 import { BalanceSheetView } from './views/BalanceSheetView';
 import { BarComparisonView } from './views/BarComparisonView';
@@ -17,7 +17,7 @@ import { StackedView } from './views/StackedView';
 import { StatementView } from './views/StatementView';
 import { WaterfallView } from './views/WaterfallView';
 
-import type { TimePLInput, TimePLViewType } from './data/timePL.types';
+import type { TimePLInput, TimePLViewType } from '@/features/review/domain/timePL/types';
 
 interface TimePLContainerProps {
   input: TimePLInput | null;

@@ -1,8 +1,8 @@
 'use client';
 
-import { formatMinutesDuration } from '../data/timePL.derivers';
+import { formatMinutesDuration } from '../data/timePL.presentation';
 
-import type { BreakEvenCurve } from '../data/timePL.types';
+import type { BreakEvenCurve } from '@/features/review/domain/timePL/types';
 
 interface BreakEvenViewProps {
   curve: BreakEvenCurve;

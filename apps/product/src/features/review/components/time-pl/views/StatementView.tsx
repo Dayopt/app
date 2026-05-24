@@ -9,14 +9,14 @@ import {
   formatVariance,
   getAccuracyColors,
   getVarianceColor,
-} from '../data/timePL.derivers';
+} from '../data/timePL.presentation';
 
 import type {
   StatementViewData,
   TimePLAccuracy,
   TimePLRow,
   TimePLVarianceRow,
-} from '../data/timePL.types';
+} from '@/features/review/domain/timePL/types';
 
 interface StatementViewProps {
   data: StatementViewData;

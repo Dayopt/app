@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader } from '@/lib/components/ui/card';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-import { getAccuracyColors } from '../data/timePL.derivers';
+import { getAccuracyColors } from '../data/timePL.presentation';
 
-import type { TimePLAccuracy } from '../data/timePL.types';
+import type { TimePLAccuracy } from '@/features/review/domain/timePL/types';
 
 interface TimePLShellProps {
   /** カードタイトル */

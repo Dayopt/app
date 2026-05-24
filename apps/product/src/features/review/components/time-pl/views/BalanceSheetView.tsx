@@ -2,9 +2,9 @@
 
 import { cn } from '@/lib/utils';
 
-import { formatMinutesDuration } from '../data/timePL.derivers';
+import { formatMinutesDuration } from '../data/timePL.presentation';
 
-import type { BalanceSheetData, BalanceSheetSide } from '../data/timePL.types';
+import type { BalanceSheetData, BalanceSheetSide } from '@/features/review/domain/timePL/types';
 
 interface BalanceSheetViewProps {
   data: BalanceSheetData;

@@ -4,9 +4,9 @@ import { TagIcon } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { cn } from '@/lib/utils';
 
-import { formatMinutesDuration } from '../data/timePL.derivers';
+import { formatMinutesDuration } from '../data/timePL.presentation';
 
-import type { TimePLRow } from '../data/timePL.types';
+import type { TimePLRow } from '@/features/review/domain/timePL/types';
 
 interface StackedViewProps {
   budgetRows: TimePLRow[];
