@@ -1,6 +1,6 @@
 import type { TimeRange } from './time-range';
 
-export const reviewPeriods = ['day', 'week', 'month'] as const;
+export const reviewPeriods = ['day', 'week', 'month', 'year'] as const;
 
 export type ReviewPeriod = (typeof reviewPeriods)[number];
 
