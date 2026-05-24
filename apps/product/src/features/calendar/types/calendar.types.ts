@@ -1,6 +1,6 @@
-// CalendarEvent は共有層（@/types）が canonical source
-// feature 間で共有するため features/ 内には定義しない
-export type { CalendarEvent } from '@/lib/types/calendar-event';
+// CalendarEvent は features/entry/types/calendar-event.ts が canonical source
+// (Entry の表示射影型のため owner は entry)
+export type { CalendarEvent } from '@/features/entry';
 
 // CalendarViewType 関連は feature 内の lib/constants が canonical source
 export { getMultiDayCount, isMultiDayView } from '../lib/constants';

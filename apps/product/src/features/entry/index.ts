@@ -8,7 +8,8 @@
 // =============================================================================
 // Types
 // =============================================================================
-export type { EntryWithTags } from './types/entry';
+export type { CalendarEvent } from './types/calendar-event';
+export type { EntryOrigin, EntryState, EntryWithTags, FulfillmentScore } from './types/entry';
 
 // =============================================================================
 // Hooks

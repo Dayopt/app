@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '../../types/calendar-event';
 
 import {
   computeActualTimeDiffOverlay,

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '../../types/calendar-event';
 
 import { EntryCard } from './EntryCard';
 

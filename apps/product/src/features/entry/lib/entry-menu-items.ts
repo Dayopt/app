@@ -11,7 +11,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, CalendarOff, RotateCcw, Trash2 } from 'lucide-react';
 
-import type { EntryOrigin } from '@/lib/types/entry';
+import type { EntryOrigin } from '../types/entry';
 
 export type EntryMenuItemKey = 'viewStats' | 'markUnplanned' | 'restorePlanned' | 'delete';
 

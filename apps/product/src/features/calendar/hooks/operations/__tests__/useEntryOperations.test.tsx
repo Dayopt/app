@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '@/features/entry';
 
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
