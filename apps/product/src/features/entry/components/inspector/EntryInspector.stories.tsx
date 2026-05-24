@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 import type { FulfillmentScore } from '../../types/entry';
 
 // Story 内のみ: Composition Layer 連携プレビュー用
-import { EntryMicroInsight } from '@/features/review/components/shared/EntryMicroInsight';
+import { EntryMicroInsight } from '@/features/review';
 
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Spinner } from '@/lib/components/ui/spinner';

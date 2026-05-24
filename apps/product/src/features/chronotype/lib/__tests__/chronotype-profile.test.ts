@@ -1,5 +1,5 @@
-import type { ChronotypeProfile, ProductivityZone } from '@/lib/types/chronotype';
 import { describe, expect, it } from 'vitest';
+import type { ChronotypeProfile, ProductivityZone } from '../../types/chronotype';
 import {
   getChronotypeProfile,
   getDeepHours,

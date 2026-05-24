@@ -18,3 +18,6 @@ export {
   rangesMatch,
 } from './entry-time-update';
 export type { EntryTimeUpdateData } from './entry-time-update';
+
+export { buildTagDashboard } from './tag-dashboard';
+export type { TagDashboardEntryRow, TagDashboardInput, TagDashboardTagRow } from './tag-dashboard';

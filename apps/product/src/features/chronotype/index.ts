@@ -6,7 +6,7 @@
  */
 
 // --- Types ---
-export type { ChronotypeType } from '@/lib/types/chronotype';
+export type { ChronotypeType, ProductivityZone } from './types/chronotype';
 
 // --- Components ---
 export { ChronotypeQuiz } from './components/chronotype-quiz';
