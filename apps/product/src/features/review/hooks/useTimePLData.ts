@@ -8,7 +8,7 @@ import { resolveTagColor } from '@/features/tags';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
 import { api } from '@/lib/trpc';
 
-import type { TimePLInput } from '../components/time-pl/data/timePL.types';
+import type { TimePLInput } from '../domain/timePL/types';
 import { computePreviousDateRange, computeStatsDateRange } from '../lib/compute-date-range';
 import { useReviewFilterStore } from '../stores/useReviewFilterStore';
 

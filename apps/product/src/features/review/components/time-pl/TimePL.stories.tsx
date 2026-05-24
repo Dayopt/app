@@ -11,7 +11,7 @@ import {
   MOCK_WITH_UNPLANNED,
 } from './data/timePL.mocks';
 
-import type { TimePLViewType } from './data/timePL.types';
+import type { TimePLViewType } from '@/features/review/domain/timePL/types';
 
 /** Time P/L — 全ビューを1つの入力データから描画 */
 const meta = {

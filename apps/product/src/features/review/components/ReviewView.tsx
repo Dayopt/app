@@ -14,12 +14,13 @@ import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
+import { deriveStatement } from '@/features/review/domain/timePL/derivers';
+import type { TimePLInput } from '@/features/review/domain/timePL/types';
 import { useReviewPageData } from '../hooks/useReviewPageData';
 import { useTimePLData } from '../hooks/useTimePLData';
 import type { ReviewViewProps } from '../types/review.types';
 import { TagBreakdownBar } from './review/TagBreakdownBar';
-import { deriveStatement, formatMinutesDuration } from './time-pl/data/timePL.derivers';
-import type { TimePLInput } from './time-pl/data/timePL.types';
+import { formatMinutesDuration } from './time-pl/data/timePL.presentation';
 
 interface TagSummaryRow {
   tagId: string;

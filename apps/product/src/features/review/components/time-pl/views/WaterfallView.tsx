@@ -2,9 +2,9 @@
 
 import { cn } from '@/lib/utils';
 
-import { formatMinutesDuration, formatVariance } from '../data/timePL.derivers';
+import { formatMinutesDuration, formatVariance } from '../data/timePL.presentation';
 
-import type { WaterfallStep } from '../data/timePL.types';
+import type { WaterfallStep } from '@/features/review/domain/timePL/types';
 
 interface WaterfallViewProps {
   steps: WaterfallStep[];
