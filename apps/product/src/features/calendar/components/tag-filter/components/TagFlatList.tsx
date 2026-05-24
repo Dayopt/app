@@ -25,6 +25,7 @@ import type { Tag, TagTreeNode } from '@/features/tags';
 import {
   TagIcon,
   buildTagHierarchyUpdates,
+  resolveTagColor,
   useMergeTag,
   useReorderTags,
   useUpdateTag,
@@ -32,7 +33,6 @@ import {
 import { ConfirmDialog } from '@/lib/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuTrigger } from '@/lib/components/ui/dropdown-menu';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 import { useTagModalNavigation } from '../../../hooks/useTagModalNavigation';

@@ -22,7 +22,7 @@ import {
 } from '@/lib/components/ui/dialog';
 import { FieldError } from '@/lib/components/ui/field';
 import { Input } from '@/lib/components/ui/input';
-import { TAG_NAME_MAX_LENGTH } from '@/lib/tag-colors';
+import { TAG_NAME_MAX_LENGTH } from '../lib/tag-colors';
 
 import { useUpdateTag } from '../hooks/useTagCrudMutations';
 import { useTags } from '../hooks/useTagsQuery';

@@ -18,14 +18,18 @@ import { useLocale, useTranslations } from 'next-intl';
 
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
-import { TagQuickSelector, useCreateTag } from '@/features/tags';
+import {
+  getTagColorClasses,
+  resolveTagColor,
+  TagQuickSelector,
+  useCreateTag,
+} from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
 import { convertFromTimezone } from '@/lib/date/timezone';
 import { logger } from '@/lib/logger';
 import { useShellStore } from '@/lib/stores/useShellStore';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
-import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
 import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
 import { cn } from '@/lib/utils';
 

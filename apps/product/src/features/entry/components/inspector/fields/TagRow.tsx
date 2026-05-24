@@ -16,6 +16,7 @@ import { ChevronDown, MoreHorizontal, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import type { EntryMenuItem } from '@/features/entry/lib/entry-menu-items';
+import type { TagColorEntry } from '@/features/tags';
 import { TagIcon, TagQuickSelector } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import {
@@ -25,7 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
-import type { TagColorEntry } from '@/lib/tag-colors';
 
 interface TagRowProps {
   tagId: string | null;

@@ -1,6 +1,6 @@
 // タグシステムの型定義（Canonical source）
 
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '../lib/tag-colors';
 
 export interface Tag {
   id: string;

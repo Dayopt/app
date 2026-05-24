@@ -18,8 +18,8 @@ import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { Input } from '@/lib/components/ui/input';
-import { getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { getTagColorClasses } from '../lib/tag-colors';
 
 import { buildTagTree } from '../domain/tag-tree';
 import { TagIcon } from './TagIcon';

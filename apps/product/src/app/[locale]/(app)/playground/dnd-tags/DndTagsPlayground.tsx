@@ -20,10 +20,10 @@ import {
   TagIcon,
   buildTagHierarchyUpdates,
   flattenTagTree,
+  resolveTagColor,
   useReorderTags,
   useTagsHierarchy,
 } from '@/features/tags';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
 
 const ROOT = '__root__';

@@ -13,8 +13,7 @@ import { toast } from '@/lib/toast';
 import { Calendar, Clock, Play, StickyNote } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { useCreateTag, useTagsMap } from '@/features/tags';
-import { getTagColorClasses, resolveTagColor } from '@/lib/tag-colors';
+import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { getEntryMenuItems } from '../../lib/entry-menu-items';
 import type { FulfillmentScore } from '../../types/entry';

@@ -4,8 +4,8 @@ import { useMemo } from 'react';
 
 import { formatInTimeZone } from 'date-fns-tz';
 
+import { resolveTagColor } from '@/features/tags';
 import { useUserPreferenceStore } from '@/lib/stores/useUserPreferenceStore';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 
 import type { TimePLInput } from '../components/time-pl/data/timePL.types';

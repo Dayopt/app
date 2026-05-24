@@ -28,14 +28,14 @@ import {
 import { FieldError } from '@/lib/components/ui/field';
 import { Input } from '@/lib/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/lib/components/ui/popover';
+import { cn } from '@/lib/utils';
 import {
   DEFAULT_TAG_COLOR,
   TAG_COLOR_MAP,
   TAG_COLOR_NAMES,
   TAG_NAME_MAX_LENGTH,
   resolveTagColor,
-} from '@/lib/tag-colors';
-import { cn } from '@/lib/utils';
+} from '../lib/tag-colors';
 
 import { useCreateTag } from '../hooks/useTagCrudMutations';
 import { useTags } from '../hooks/useTagsQuery';
@@ -43,7 +43,7 @@ import { CURATED_ICONS, DEFAULT_TAG_ICON, kebabToPascal } from '../lib/curated-i
 import { TagIcon } from './TagIcon';
 
 import type { CreatedTagPayload } from '@/lib/stores/useShellStore';
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '../lib/tag-colors';
 import type { Tag } from '../types';
 
 interface GroupOption {

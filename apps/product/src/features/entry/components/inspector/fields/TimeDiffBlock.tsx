@@ -15,7 +15,7 @@
 
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
+import { getTagColorClasses } from '@/features/tags';
 import { formatDurationDisplay } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
 import { computeTimeDiff } from '../../../lib/time-diff';

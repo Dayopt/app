@@ -3,8 +3,6 @@
 import { toast } from '@/lib/toast';
 import { useTranslations } from 'next-intl';
 
-import type { TagColorName } from '@/lib/tag-colors';
-import { DEFAULT_TAG_COLOR } from '@/lib/tag-colors';
 import {
   generateTempId,
   replaceInPaginatedList,
@@ -12,6 +10,8 @@ import {
   updatePaginatedList,
 } from '@/lib/tanstack-query/optimistic-mutation';
 import { trpc } from '@/lib/trpc/client';
+import type { TagColorName } from '../lib/tag-colors';
+import { DEFAULT_TAG_COLOR } from '../lib/tag-colors';
 
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag } from '../types';

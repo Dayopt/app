@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { getTagColorClasses } from '@/lib/tag-colors';
+import { getTagColorClasses } from '@/features/tags';
 import { cn } from '@/lib/utils';
 
 import { useCalendarFilterStore } from '@/features/calendar/stores/useCalendarFilterStore';

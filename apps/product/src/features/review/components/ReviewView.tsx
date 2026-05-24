@@ -7,11 +7,10 @@ import { useRouter } from 'next/navigation';
 import type { ComponentType, ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 
-import { TagIcon } from '@/features/tags';
+import { resolveTagColor, TagIcon } from '@/features/tags';
 import { EmptyState } from '@/lib/components/common/EmptyState';
 import { ErrorState } from '@/lib/components/common/ErrorState';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
-import { resolveTagColor } from '@/lib/tag-colors';
 import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 

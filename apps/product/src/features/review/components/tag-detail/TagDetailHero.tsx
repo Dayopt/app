@@ -2,8 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 
+import { resolveTagColor } from '@/features/tags';
 import { Skeleton } from '@/lib/components/ui/skeleton';
-import { resolveTagColor } from '@/lib/tag-colors';
 
 import { useTagOverviewData } from '../../hooks/useTagDetailData';
 

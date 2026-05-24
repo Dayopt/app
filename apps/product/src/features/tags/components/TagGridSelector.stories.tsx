@@ -7,10 +7,10 @@ import { fn } from 'storybook/test';
 import { Button } from '@/lib/components/ui/button';
 import { Drawer, DrawerContent, DrawerTitle } from '@/lib/components/ui/drawer';
 import { Input } from '@/lib/components/ui/input';
-import { TAG_COLOR_NAMES, getTagColorClasses } from '@/lib/tag-colors';
 import { cn } from '@/lib/utils';
+import { TAG_COLOR_NAMES, getTagColorClasses } from '../lib/tag-colors';
 
-import type { TagColorName } from '@/lib/tag-colors';
+import type { TagColorName } from '../lib/tag-colors';
 
 import { parseColonTag } from '../domain/tag-colon';
 import { IconPicker } from './IconPicker';
