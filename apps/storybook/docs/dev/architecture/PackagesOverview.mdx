@@ -9,15 +9,13 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 
 ## Package Map
 
-| Package             | 責務                                          | 入れてよいもの                                      | 入れないもの                                        |
-| ------------------- | --------------------------------------------- | --------------------------------------------------- | --------------------------------------------------- |
-| `packages/design`   | design tokens / theme css / CSS variables     | colors, typography, spacing, radius, shadow         | React components, domain logic, DB 型               |
-| `packages/ui`       | React UI primitives / reusable components     | Button, Badge, Card, Logo, layout primitives        | Supabase, Stripe, feature-specific business rules   |
-| `packages/config`   | public constants / metadata / URL definitions | Dayopt URLs, contact, brand constants, URL helpers  | secrets, request-scoped values, server-only clients |
-| `packages/domain`   | Dayopt domain model / pure types / helpers    | Entry, Tag, Review, Chronotype, TimeRange concepts  | DB row shape, React, Next, Supabase, Zustand        |
-| `packages/database` | Supabase generated types と converters         | generated `Database` types, row aliases, converters | UI components, Stripe secret handling               |
-| `packages/billing`  | public plan / entitlement definitions          | plan ids, public price metadata, entitlement matrix | Stripe secret key, webhook handlers                 |
-| `packages/utils`    | generic pure utilities                        | date/string/array/object helpers, type guards       | Dayopt 固有 domain policy, framework helper         |
+- `packages/design`: design tokens / theme css / CSS variables。React components, domain logic, DB 型は入れない。
+- `packages/ui`: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
+- `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
+- `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。
+- `packages/database`: Supabase generated types と converters の予定地。UI components, Stripe secret handling は入れない。
+- `packages/billing`: public plan / entitlement definitions の予定地。Stripe secret key, webhook handlers は入れない。
+- `packages/utils`: generic pure utilities。Dayopt 固有 domain policy, framework helper は入れない。
 
 ## Dependency Direction
 
@@ -36,7 +34,7 @@ apps/product, apps/web, apps/admin
   -> packages/utils
 ```
 
-実際には `packages/ui` は `packages/design` の token / CSS variables を使えるが、`packages/design` は `packages/ui` を知らない。
+`packages/ui` は `packages/design` の token / CSS variables を使えるが、`packages/design` は `packages/ui` を知らない。
 `packages/domain` は `packages/database` を知らない。DB の都合を domain model に漏らす場合は `packages/database` 側の converter で吸収する。
 
 ## Current Phase
@@ -139,16 +137,14 @@ Supabase generated types と DB row alias を置く予定の境界。domain mode
 
 抽出は「共通化したいから」ではなく、責務境界が明確になった時だけ行う。
 
-| 条件                                                | 移動先              |
-| --------------------------------------------------- | ------------------- |
-| UI だけで成立し、domain を知らない                  | `packages/ui`       |
-| 見た目の token / CSS variable / theme               | `packages/design`   |
-| URL / metadata / public constants                   | `packages/config`   |
-| DB なしで説明できる Dayopt の business definition   | `packages/domain`   |
-| Supabase row / generated type / domain converter    | `packages/database` |
-| plan / subscription / entitlement の公開定義        | `packages/billing`  |
-| Dayopt に依存しない pure helper                     | `packages/utils`    |
-| secret, admin, webhook, service-role を使う共通処理 | server-only package |
+- UI だけで成立し、domain を知らない: `packages/ui`
+- 見た目の token / CSS variable / theme: `packages/design`
+- URL / metadata / public constants: `packages/config`
+- DB なしで説明できる Dayopt の business definition: `packages/domain`
+- Supabase row / generated type / domain converter: `packages/database`
+- plan / subscription / entitlement の公開定義: `packages/billing`
+- Dayopt に依存しない pure helper: `packages/utils`
+- secret, admin, webhook, service-role を使う共通処理: server-only package
 
 ## Storybook Policy
 
@@ -161,12 +157,10 @@ Storybook は `packages/design` と `packages/ui` の公開面を確認する場
 
 ## Ownership And Operations
 
-| Storybook 階層   | Owner                               | Source of truth                          |
-| ---------------- | ----------------------------------- | ---------------------------------------- |
-| `Design/*`       | design tokens                       | `packages/design`                        |
-| `UI/*`           | reusable UI primitives              | `packages/ui`                            |
-| `Foundations/*`  | legacy / product-facing foundations | `apps/product` 由来の既存 Storybook 表示 |
-| `Primitives/*`   | legacy reusable UI primitives       | `apps/product/src/lib/components/ui/`    |
-| `Features/*`     | product feature UI                  | `apps/product/src/features/*`            |
-| `Operations/*`   | deployment / release ops            | `apps/storybook/docs/operations/*`       |
-| `Architecture/*` | engineering decisions               | `apps/storybook/docs/dev/architecture/*` |
+- `Design/*`: design tokens。Source of truth は `packages/design`。
+- `UI/*`: reusable UI primitives。Source of truth は `packages/ui`。
+- `Foundations/*`: legacy / product-facing foundations。Source of truth は `apps/product` 由来の既存 Storybook 表示。
+- `Primitives/*`: legacy reusable UI primitives。Source of truth は `apps/product/src/lib/components/ui/`。
+- `Features/*`: product feature UI。Source of truth は `apps/product/src/features/*`。
+- `Operations/*`: deployment / release ops。Source of truth は `apps/storybook/docs/operations/*`。
+- `Architecture/*`: engineering decisions。Source of truth は `apps/storybook/docs/dev/architecture/*`。
