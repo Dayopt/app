@@ -10,7 +10,7 @@ import { useTranslations } from 'next-intl';
 
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeRange } from '@/lib/date';
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '../../types/calendar-event';
 
 interface EntryCardContentProps {
   plan: CalendarEvent;

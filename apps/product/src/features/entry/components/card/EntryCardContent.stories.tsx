@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '../../types/calendar-event';
 
 import { EntryCardContent } from './EntryCardContent';
 

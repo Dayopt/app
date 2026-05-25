@@ -1,10 +1,28 @@
 // Entry型定義（Canonical source）
 // plans + records を統合した entries テーブルに対応
 
-// 共有層が必要とする型は @/lib/types/entry に配置（shared layerはfeaturesをimportできない）
-import type { EntryOrigin, FulfillmentScore } from '@/lib/types/entry';
+/**
+ * エントリの時間位置ベースの状態
+ * - upcoming: 未来の予定
+ * - active: 現在進行中
+ * - past: 過去の記録
+ */
+export type EntryState = 'upcoming' | 'active' | 'past';
 
-export type { EntryOrigin, EntryState, FulfillmentScore } from '@/lib/types/entry';
+/**
+ * エントリの起源
+ * - planned: 計画済み（予定あり）
+ * - unplanned: 計画外（記録のみ）
+ */
+export type EntryOrigin = 'planned' | 'unplanned';
+
+/**
+ * 充実度スコア（3段階）
+ * 1: 微妙
+ * 2: 普通
+ * 3: 良い
+ */
+export type FulfillmentScore = 1 | 2 | 3;
 
 /**
  * エントリ基本型（entries テーブルに対応）

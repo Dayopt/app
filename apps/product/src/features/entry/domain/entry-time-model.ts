@@ -1,4 +1,4 @@
-import type { EntryOrigin } from '@/lib/types/entry';
+import type { EntryOrigin } from '../types/entry';
 
 export type EntryLike = {
   origin?: string | null;

@@ -6,7 +6,7 @@
  * Entry ドメインのロジックのため features/entry に配置。
  */
 
-import type { CalendarEvent } from '@/lib/types/calendar-event';
+import type { CalendarEvent } from '../types/calendar-event';
 
 /** 予定 vs 記録の差分オーバーレイ情報 */
 export interface ActualTimeDiffOverlay {
