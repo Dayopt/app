@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getUserTimezone, invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Client = SupabaseClient<Database>;

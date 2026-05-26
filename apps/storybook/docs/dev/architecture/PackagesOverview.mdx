@@ -13,7 +13,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/ui`: React UI primitives / reusable components。Supabase, Stripe, feature-specific business rules は入れない。
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。
-- `packages/database`: Supabase generated types と converters の予定地。UI components, Stripe secret handling は入れない。
+- `packages/database`: Supabase/Postgres boundary。generated types / table names / row helper types / converters を扱い、UI components, DB access clients, service role secrets は入れない。
 - `packages/billing`: public plan / entitlement definitions の予定地。Stripe secret key, webhook handlers は入れない。
 - `packages/utils`: generic pure utilities。Dayopt 固有 domain policy, framework helper は入れない。
 
@@ -42,7 +42,8 @@ apps/product, apps/web, apps/admin
 `packages/design`, `packages/ui`, `packages/config`, `packages/domain` は最小の公開面を持つ package として動き始めている。
 `packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
 
-`packages/types`, `packages/server`, `packages/utils` はまだ第一段階の placeholder に近い。次に DB row / Supabase generated types / domain converter を扱うなら `packages/database` を別 package として作る。
+`packages/database` は Supabase generated types と DB row helper の境界として動き始めている。converter は受け皿だけを先に作り、DB access を含む service は product 側に残す。
+`packages/types`, `packages/server`, `packages/utils` はまだ第一段階の placeholder に近い。
 
 ## Package Boundaries
 
@@ -119,7 +120,7 @@ Dayopt の「意味」を pure TypeScript の型・定数・helper にする。D
 
 ### `packages/database`
 
-Supabase generated types と DB row alias を置く予定の境界。domain model との変換もここで扱う。
+Supabase/Postgres 上の形を扱う境界。generated types, table names, row helper types を公開し、domain model との pure converter もここで扱う。
 
 例:
 
@@ -128,6 +129,13 @@ Supabase generated types と DB row alias を置く予定の境界。domain mode
 - `TagRow`
 - `entryRowToDomainEntry`
 - `domainEntryToInsert`
+
+入れないもの:
+
+- Supabase client instance
+- service role secret
+- route handler / server action
+- React / Zustand / UI component
 
 ### `packages/billing`
 

@@ -203,6 +203,9 @@ importers:
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@dayopt/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -891,6 +894,8 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/database: {}
 
   packages/domain: {}
 

@@ -6,9 +6,9 @@ import 'server-only';
  * entries テーブルのビジネスロジック
  */
 
-import type { TablesInsert, TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { ServiceError } from '@/lib/trpc/errors';
+import type { TablesInsert, TablesUpdate } from '@dayopt/database';
 import { determineEntryOrigin } from '../domain';
 import { normalizeDateTimeConsistency, removeUndefinedFields } from '../lib/entry-normalization';
 

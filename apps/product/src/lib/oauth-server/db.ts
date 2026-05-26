@@ -3,7 +3,7 @@ import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/env';
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 
 /**
  * OAuth 用 service-role client が触れる surface だけに narrow した DB 型。

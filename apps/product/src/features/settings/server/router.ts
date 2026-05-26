@@ -12,11 +12,11 @@ import {
   generateChronotypeGradient,
   getChronotypeProfile,
 } from '@/features/chronotype';
-import type { Database } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
+import type { Database } from '@dayopt/database';
 
 type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'];
 

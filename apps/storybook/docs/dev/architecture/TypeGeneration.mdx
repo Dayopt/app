@@ -17,7 +17,7 @@ Supabase CLIを使用して、データベーススキーマからTypeScript型�
 
 > 現在は単一 Supabase project 運用のため、リモート生成は Production project 1 つのみ。
 
-全コマンドとも `src/types/supabase.ts` に出力。
+全コマンドとも `packages/database/src/generated/database.types.ts` に出力。
 
 ---
 
@@ -51,7 +51,7 @@ npm run types:generate
 npm run typecheck
 
 # 4. コミット
-git add src/types/supabase.ts
+git add packages/database/src/generated/database.types.ts
 git commit -m "chore(types): supabase型定義を更新"
 ```
 
@@ -59,13 +59,13 @@ git commit -m "chore(types): supabase型定義を更新"
 
 ## カスタム型
 
-`src/types/supabase.ts` は自動生成ファイル。**直接編集禁止**。
+`packages/database/src/generated/database.types.ts` は自動生成ファイル。**直接編集禁止**。
 
 カスタム型が必要な場合は別ファイルに定義:
 
 ```typescript
-// src/types/custom.ts
-import type { Database } from './supabase';
+// packages/database/src/types.ts
+import type { Database } from './generated/database.types';
 
 export type PlanRow = Database['public']['Tables']['plans']['Row'];
 export type TagRow = Database['public']['Tables']['tags']['Row'];
