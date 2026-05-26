@@ -36,3 +36,6 @@ export type { MonthTrendSlot, MonthlyTrendRow } from './monthly-trend';
 
 export { transformEstimationAccuracy } from './estimation-accuracy';
 export type { EstimationAccuracyDbRow, EstimationAccuracyItem } from './estimation-accuracy';
+
+export { aggregateTagStats } from './tag-stats';
+export type { TagStatsResult, TagStatsRow } from './tag-stats';
