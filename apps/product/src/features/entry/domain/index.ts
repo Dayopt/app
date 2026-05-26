@@ -30,3 +30,6 @@ export type { DayOfWeekRow, DayOfWeekSlot } from './day-of-week-distribution';
 
 export { calculateStreak } from './streak-calculator';
 export type { StreakInput } from './streak-calculator';
+
+export { aggregateMonthlyTrend, getMonthlyStartDate } from './monthly-trend';
+export type { MonthTrendSlot, MonthlyTrendRow } from './monthly-trend';
