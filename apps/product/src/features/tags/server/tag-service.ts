@@ -21,7 +21,9 @@ import 'server-only';
 import { ServiceError } from '@/lib/trpc/errors';
 import type { Database } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { formatRpcErrorDetail } from '../domain/tag-merge';
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
+import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungroup';
 import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
 
 /** DB タグ行の型 */
@@ -498,13 +500,7 @@ export class TagService {
     }
 
     // 各タグの suffix を算出
-    const tagSuffixes = matchingTags.map((tag) => {
-      const colonIndex = tag.name.indexOf(':');
-      return {
-        tag,
-        suffix: colonIndex !== -1 ? tag.name.slice(colonIndex + 1) : tag.name,
-      };
-    });
+    const tagSuffixes = extractTagSuffixes(matchingTags);
 
     // 全 suffix 名で既存タグを一括検索（衝突チェック）
     const suffixNames = [...new Set(tagSuffixes.map((t) => t.suffix))];
@@ -517,8 +513,7 @@ export class TagService {
     const existingByName = new Map((existingTags ?? []).map((t) => [t.name, t]));
 
     // 衝突と非衝突を分類
-    const conflicts = tagSuffixes.filter((t) => existingByName.has(t.suffix));
-    const nonConflicts = tagSuffixes.filter((t) => !existingByName.has(t.suffix));
+    const { conflicts, nonConflicts } = partitionByExistingName(tagSuffixes, existingByName);
 
     // 衝突があるが mergeConflicts が false → エラー（衝突リストを返す）
     if (conflicts.length > 0 && !mergeConflicts) {
@@ -749,17 +744,10 @@ export class TagService {
     );
 
     if (rpcError) {
-      // PostgREST が返す 502 は message が generic ("invalid response from upstream") に
-      // なるため、code / details / hint を含めて debug できるようにする
-      const detail = [
-        rpcError.message,
-        rpcError.code ? `code=${rpcError.code}` : null,
-        rpcError.details ? `details=${rpcError.details}` : null,
-        rpcError.hint ? `hint=${rpcError.hint}` : null,
-      ]
-        .filter(Boolean)
-        .join(' | ');
-      throw new TagServiceError('MERGE_FAILED', `Failed to merge tags atomically: ${detail}`);
+      throw new TagServiceError(
+        'MERGE_FAILED',
+        `Failed to merge tags atomically: ${formatRpcErrorDetail(rpcError)}`,
+      );
     }
 
     const migrated =
