@@ -1,4 +1,7 @@
-import type { EntryOrigin } from '../types/entry';
+import type { EntryOrigin, TimeRange } from '@dayopt/domain';
+import { determineEntryOrigin as determineDomainEntryOrigin } from '@dayopt/domain';
+
+export type { TimeRange } from '@dayopt/domain';
 
 export type EntryLike = {
   origin?: string | null;
@@ -9,11 +12,9 @@ export type EntryLike = {
   duration_minutes?: number | null;
 };
 
-export type TimeRange = { start: Date; end: Date };
-
 /** end <= now なら 'unplanned'、それ以外は 'planned'。now を注入できるのでテストが決定論的になる。 */
 export function determineEntryOrigin(end: Date | string, now: Date = new Date()): EntryOrigin {
-  return new Date(end).getTime() <= now.getTime() ? 'unplanned' : 'planned';
+  return determineDomainEntryOrigin(new Date(end), now);
 }
 
 export function isPlannedEntry(entry: EntryLike): boolean {
