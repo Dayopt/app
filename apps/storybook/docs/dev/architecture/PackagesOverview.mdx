@@ -46,6 +46,19 @@ apps/product, apps/web, apps/admin
 `packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として動き始めている。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
 `packages/types`, `packages/server`, `packages/utils` はまだ第一段階の placeholder に近い。
 
+## Integration Audit
+
+現時点の shared package 統合では、`packages/*` から `apps/*` / product feature / app alias へ戻る依存は作らない。`packages/ui` の React / Radix 依存は UI primitive の責務として許容し、`packages/database` の Stripe 文字列は generated DB type と table name 由来の DB boundary として扱う。
+
+Source of truth:
+
+- URL / domain / contact / public brand constants: `packages/config`
+- Entry origin / fulfillment score / date-time preference / pure Dayopt concept: `packages/domain`
+- Supabase generated type / table name / row helper type: `packages/database`
+- Free / Pro plan / subscription status / `pro_access` entitlement / public pricing: `packages/billing`
+
+Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('entries')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
+
 ## Package Boundaries
 
 ### `packages/design`
@@ -188,3 +201,11 @@ Storybook は `packages/design` と `packages/ui` の公開面を確認する場
 - `Features/*`: product feature UI。Source of truth は `apps/product/src/features/*`。
 - `Operations/*`: deployment / release ops。Source of truth は `apps/storybook/docs/operations/*`。
 - `Architecture/*`: engineering decisions。Source of truth は `apps/storybook/docs/dev/architecture/*`。
+
+## Before Auth Package
+
+`packages/auth` へ進む前の follow-up:
+
+- `packages/database.databaseTables` を DB access call site に少しずつ適用できるか確認する。
+- billing / legal / pricing 文言は i18n の表示責務と `packages/billing` の public constants の境界を分けて扱う。
+- `packages/auth` はまず pure model のみとし、Supabase client, cookie, middleware, session refresh, route handler は product 側に残す。

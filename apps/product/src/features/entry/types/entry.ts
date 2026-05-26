@@ -1,28 +1,13 @@
 // Entry型定義（Canonical source）
 // plans + records を統合した entries テーブルに対応
 
-/**
- * エントリの時間位置ベースの状態
- * - upcoming: 未来の予定
- * - active: 現在進行中
- * - past: 過去の記録
- */
-export type EntryState = 'upcoming' | 'active' | 'past';
+import type { EntryOrigin, EntryState, FulfillmentScore } from '@dayopt/domain';
 
 /**
- * エントリの起源
- * - planned: 計画済み（予定あり）
- * - unplanned: 計画外（記録のみ）
+ * Entry の共通 domain type は @dayopt/domain を source of truth にする。
+ * この feature API は既存 import を壊さないための re-export。
  */
-export type EntryOrigin = 'planned' | 'unplanned';
-
-/**
- * 充実度スコア（3段階）
- * 1: 微妙
- * 2: 普通
- * 3: 良い
- */
-export type FulfillmentScore = 1 | 2 | 3;
+export type { EntryOrigin, EntryState, FulfillmentScore };
 
 /**
  * エントリ基本型（entries テーブルに対応）
