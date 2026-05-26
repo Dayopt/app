@@ -59,6 +59,12 @@ Source of truth:
 
 Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文字列は、ユーザー向け文言・履歴・例示が混ざるため機械的には置換しない。DB access の `.from('entries')` / `.from('tags')` / `.from('user_settings')` も Supabase 型推論と呼び出し箇所が多いため、`databaseTables` 適用は段階的な follow-up にする。
 
+## Foundation Readiness
+
+Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
+
+ここからは新しい package を増やすより、既存 apps が shared package を低リスクに使う段階へ進む。優先順は `packages/ui` の product / web 実利用、`packages/config` の残り hardcode 置換、`packages/database.databaseTables` の段階適用、`packages/billing` の pricing / plan 表示整理とする。
+
 ## Package Boundaries
 
 ### `packages/design`
@@ -204,7 +210,7 @@ Storybook は `packages/design` と `packages/ui` の公開面を確認する場
 
 ## Before Auth Package
 
-`packages/auth` はまだ作らない。auth / permission は現時点では product-only で、admin app や同じ permission model を使う second runtime がまだないため、まず `apps/product` 内で境界を整える。
+`packages/auth` はまだ作らない。auth / permission は現時点では product-only で、admin app や同じ permission model を使う second runtime がまだないため、まず product-local auth domain として `apps/product` 内で境界を整える。
 
 Current placement:
 
