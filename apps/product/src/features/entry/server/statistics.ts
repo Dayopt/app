@@ -26,6 +26,14 @@ import {
   transformEstimationAccuracy,
 } from '../domain';
 
+import { transformEnergyMapResponse } from './statistics-energy-map-transform';
+import {
+  unpackAvgFulfillment,
+  unpackBlankRate,
+  unpackContextSwitches,
+  unpackCumulativeTime,
+  unpackEntryRate,
+} from './statistics-kpi-unpackers';
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
 import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 
@@ -323,17 +331,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as {
-          totalEntries: number;
-          plannedEntries: number;
-          planRate: number;
-        } | null;
-
-        return {
-          totalEntries: result?.totalEntries ?? 0,
-          plannedEntries: result?.plannedEntries ?? 0,
-          entryRate: result?.planRate ?? 0,
-        };
+        return unpackEntryRate(data);
       } catch (error) {
         handleStatsError('getEntryRate', error);
       }
@@ -396,21 +394,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{
-          hour: number;
-          dow: number;
-          avg_fulfillment: number | null;
-          total_minutes: number;
-          entry_count: number;
-        }>;
-
-        return rows.map((row) => ({
-          hour: row.hour,
-          dow: row.dow,
-          avgFulfillment: row.avg_fulfillment,
-          totalMinutes: row.total_minutes,
-          entryCount: row.entry_count,
-        }));
+        return transformEnergyMapResponse(data);
       } catch (error) {
         handleStatsError('getEnergyMap', error);
       }
@@ -443,15 +427,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as {
-          totalSwitches: number;
-          avgPerDay: number;
-        } | null;
-
-        return {
-          totalSwitches: result?.totalSwitches ?? 0,
-          avgPerDay: result?.avgPerDay ?? 0,
-        };
+        return unpackContextSwitches(data);
       } catch (error) {
         handleStatsError('getContextSwitches', error);
       }
@@ -491,19 +467,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as {
-          availableMinutes: number;
-          scheduledMinutes: number;
-          blankMinutes: number;
-          blankRate: number;
-        } | null;
-
-        return {
-          availableMinutes: result?.availableMinutes ?? 0,
-          scheduledMinutes: result?.scheduledMinutes ?? 0,
-          blankMinutes: result?.blankMinutes ?? 0,
-          blankRate: result?.blankRate ?? 0,
-        };
+        return unpackBlankRate(data);
       } catch (error) {
         handleStatsError('getBlankRate', error);
       }
@@ -536,8 +500,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as { totalMinutes: number } | null;
-        return { totalMinutes: result?.totalMinutes ?? 0 };
+        return unpackCumulativeTime(data);
       } catch (error) {
         handleStatsError('getCumulativeTime', error);
       }
@@ -570,11 +533,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as { avgFulfillment: number | null; entryCount: number } | null;
-        return {
-          avgFulfillment: result?.avgFulfillment ?? undefined,
-          entryCount: result?.entryCount ?? 0,
-        };
+        return unpackAvgFulfillment(data);
       } catch (error) {
         handleStatsError('getAvgFulfillment', error);
       }
