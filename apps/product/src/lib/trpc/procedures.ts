@@ -15,6 +15,11 @@ import superjson from 'superjson';
 import { z } from 'zod';
 
 import { env } from '@/env';
+import {
+  canAccessAdminFeatures,
+  canAccessProFeatures,
+  type ProductAccessLevel,
+} from '@/lib/auth/domain';
 import { logger } from '@/lib/logger';
 // 循環依存防止: barrel `@/lib/mcp` は trpc-bridge を再 export し、それが appRouter →
 // feature router → procedures.ts と辿るため、ここでは auth.ts を直 import する。
@@ -24,7 +29,6 @@ import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
-import { isProSubscriptionStatus } from '@dayopt/billing';
 import type { Database } from '@dayopt/database';
 
 /**
@@ -34,7 +38,7 @@ export interface ProcedureMeta {
   /** OpenAPI description */
   description?: string;
   /** 認証レベル */
-  auth?: 'public' | 'protected' | 'pro' | 'admin';
+  auth?: ProductAccessLevel;
   /** エンドポイント固有のレート制限（グローバル100 req/minを上書き） */
   rateLimit?: { requests: number; window: string };
   /** 非推奨フラグ */
@@ -380,7 +384,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
   // Sentryにプラン情報をタグ付け（エラー分析時のフィルタ用）
   Sentry.setTag('user.plan', status ?? 'free');
 
-  const isProActive = isProSubscriptionStatus(status);
+  const isProActive = canAccessProFeatures(status);
 
   if (!isProActive) {
     throw new TRPCError({
@@ -436,7 +440,7 @@ async function checkAdminPermission(_userId: string): Promise<boolean> {
   // TODO: 管理機能が必要になった時点で実装する
   // 候補: ADMIN_USER_IDS 環境変数によるホワイトリスト or profiles.is_admin カラム
   // 現在 adminProcedure を使用するルーターは存在しない（deny-by-default で安全）
-  return false;
+  return canAccessAdminFeatures(null);
 }
 
 /**

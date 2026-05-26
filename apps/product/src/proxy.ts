@@ -3,6 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { dayoptDomains } from '@dayopt/config';
 
+import {
+  isAuthProductPath,
+  isProtectedProductPath,
+  isPublicProductPath,
+  isPublicRewritePath,
+} from '@/lib/auth/domain';
 import { routing } from '@/lib/i18n/routing';
 import { logger } from '@/lib/logger';
 import { updateSession } from '@/lib/supabase/middleware';
@@ -10,30 +16,6 @@ import { updateSession } from '@/lib/supabase/middleware';
 // next-intlのミドルウェアを作成
 const intlMiddleware = createMiddleware(routing);
 
-// 認証が必要なパス
-const protectedPaths = [
-  '/tasks',
-  '/settings',
-  '/calendar',
-  '/review',
-
-  '/box',
-  '/table',
-  '/board',
-  '/add',
-  '/tags',
-  '/oauth/authorize',
-  '/oauth/consent',
-];
-
-// 認証ページのパス
-const authPaths = ['/login', '/signup', '/auth'];
-
-// 公開パス（認証チェック不要）- getUser() 呼び出しをスキップしてパフォーマンス向上
-const publicPaths = ['/', '/about', '/privacy', '/terms', '/contact', '/pricing'];
-
-// Vercel rewritesでAPI routeへ到達させる公開パス
-const publicRewritePaths = ['/mcp', '/oauth/token'];
 const MCP_HOST = dayoptDomains.mcp;
 
 // 言語プレフィックスを除いたパスを取得
@@ -92,7 +74,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.includes('.') ||
     (hostname === MCP_HOST && pathname === '/') ||
-    publicRewritePaths.includes(pathname)
+    isPublicRewritePath(pathname)
   ) {
     return NextResponse.next();
   }
@@ -133,9 +115,9 @@ export async function proxy(request: NextRequest) {
   const currentLocale = getCurrentLocale(pathname);
   const pathWithoutLocale = getPathWithoutLocale(pathname);
 
-  const isProtectedPath = protectedPaths.some((path) => pathWithoutLocale.startsWith(path));
-  const isAuthPath = authPaths.some((path) => pathWithoutLocale.startsWith(path));
-  const isPublicPath = publicPaths.some((path) => pathWithoutLocale === path);
+  const isProtectedPath = isProtectedProductPath(pathWithoutLocale);
+  const isAuthPath = isAuthProductPath(pathWithoutLocale);
+  const isPublicPath = isPublicProductPath(pathWithoutLocale);
 
   // パフォーマンス最適化: 公開ページでは getUser() をスキップ
   // getUser() は Supabase API への往復が発生するため、認証が必要なパスのみ実行
