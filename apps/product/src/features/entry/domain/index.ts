@@ -33,3 +33,6 @@ export type { StreakInput } from './streak-calculator';
 
 export { aggregateMonthlyTrend, getMonthlyStartDate } from './monthly-trend';
 export type { MonthTrendSlot, MonthlyTrendRow } from './monthly-trend';
+
+export { transformEstimationAccuracy } from './estimation-accuracy';
+export type { EstimationAccuracyDbRow, EstimationAccuracyItem } from './estimation-accuracy';

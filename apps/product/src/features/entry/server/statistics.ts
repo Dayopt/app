@@ -20,7 +20,9 @@ import {
   aggregateHourlyDistribution,
   aggregateMonthlyTrend,
   calculateStreak,
+  type EstimationAccuracyDbRow,
   getMonthlyStartDate,
+  transformEstimationAccuracy,
 } from '../domain';
 
 /**
@@ -384,25 +386,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{
-          tag_id: string;
-          tag_name: string;
-          tag_color: string;
-          avg_planned_minutes: number;
-          avg_actual_minutes: number;
-          avg_deviation_minutes: number;
-          entry_count: number;
-        }>;
-
-        return rows.map((row) => ({
-          tagId: row.tag_id,
-          tagName: row.tag_name,
-          tagColor: row.tag_color || 'indigo',
-          avgPlannedMinutes: row.avg_planned_minutes,
-          avgActualMinutes: row.avg_actual_minutes,
-          avgDeviationMinutes: row.avg_deviation_minutes,
-          entryCount: row.entry_count,
-        }));
+        return transformEstimationAccuracy((data ?? []) as ReadonlyArray<EstimationAccuracyDbRow>);
       } catch (error) {
         handleStatsError('getEstimationAccuracy', error);
       }
