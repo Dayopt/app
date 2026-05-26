@@ -26,6 +26,8 @@ import {
   transformEstimationAccuracy,
 } from '../domain';
 
+import { transformStatsOverviewResponse } from './statistics-overview-transform';
+
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
  */
@@ -672,43 +674,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const result = data as {
-          cumulativeTime: { totalMinutes: number };
-          avgFulfillment: { avgFulfillment: number | null; entryCount: number };
-          planRate: { totalEntries: number; plannedEntries: number; planRate: number };
-          contextSwitches: { totalSwitches: number; avgPerDay: number };
-          blankRate: {
-            availableMinutes: number;
-            scheduledMinutes: number;
-            blankMinutes: number;
-            blankRate: number;
-          };
-        } | null;
-
-        return {
-          cumulativeTime: {
-            totalMinutes: result?.cumulativeTime?.totalMinutes ?? 0,
-          },
-          avgFulfillment: {
-            avgFulfillment: result?.avgFulfillment?.avgFulfillment ?? undefined,
-            entryCount: result?.avgFulfillment?.entryCount ?? 0,
-          },
-          entryRate: {
-            totalEntries: result?.planRate?.totalEntries ?? 0,
-            plannedEntries: result?.planRate?.plannedEntries ?? 0,
-            entryRate: result?.planRate?.planRate ?? 0,
-          },
-          contextSwitches: {
-            totalSwitches: result?.contextSwitches?.totalSwitches ?? 0,
-            avgPerDay: result?.contextSwitches?.avgPerDay ?? 0,
-          },
-          blankRate: {
-            availableMinutes: result?.blankRate?.availableMinutes ?? 0,
-            scheduledMinutes: result?.blankRate?.scheduledMinutes ?? 0,
-            blankMinutes: result?.blankRate?.blankMinutes ?? 0,
-            blankRate: result?.blankRate?.blankRate ?? 0,
-          },
-        };
+        return transformStatsOverviewResponse(data);
       } catch (error) {
         handleStatsError('getStatsOverview', error);
       }
