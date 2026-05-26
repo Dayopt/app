@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
+import {
+  dayoptPlanIds,
+  getMonthlyUsd,
+  getPlanIdForSubscriptionStatus,
+  type DayoptPlanId,
+} from '@dayopt/billing';
 import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,18 +34,16 @@ import { api } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 
 interface Plan {
-  id: string;
+  id: DayoptPlanId;
   nameKey: string;
-  price: number;
   featureKeys: string[];
   recommended?: boolean;
 }
 
 const PLANS: Plan[] = [
   {
-    id: 'free',
+    id: dayoptPlanIds.free,
     nameKey: 'settings.subscription.plans.free.name',
-    price: 0,
     featureKeys: [
       'settings.subscription.plans.free.features.timeboxing',
       'settings.subscription.plans.free.features.basicAnalytics',
@@ -48,9 +52,8 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: 'pro',
+    id: dayoptPlanIds.pro,
     nameKey: 'settings.subscription.plans.pro.name',
-    price: 5,
     featureKeys: [
       'settings.subscription.plans.pro.features.fullAnalytics',
       'settings.subscription.plans.pro.features.unlimitedTags',
@@ -97,12 +100,7 @@ export function BillingSettings() {
   });
 
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
-  const currentPlan =
-    subscriptionStatus === 'active' ||
-    subscriptionStatus === 'trialing' ||
-    subscriptionStatus === 'past_due'
-      ? 'pro'
-      : 'free';
+  const currentPlan = getPlanIdForSubscriptionStatus(subscriptionStatus);
 
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
@@ -315,7 +313,7 @@ export function BillingSettings() {
                       {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: 'usd',
-                      }).format(plan.price)}
+                      }).format(getMonthlyUsd(plan.id))}
                     </span>
                     <span className="text-muted-foreground text-base md:text-sm">
                       {t('settings.subscription.perMonth')}
@@ -332,7 +330,7 @@ export function BillingSettings() {
                   ))}
                 </ul>
 
-                {plan.id === 'pro' ? (
+                {plan.id === dayoptPlanIds.pro ? (
                   <Button
                     className="w-full"
                     variant="primary"

@@ -24,6 +24,7 @@ import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
+import { isProSubscriptionStatus } from '@dayopt/billing';
 import type { Database } from '@dayopt/database';
 
 /**
@@ -379,7 +380,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
   // Sentryにプラン情報をタグ付け（エラー分析時のフィルタ用）
   Sentry.setTag('user.plan', status ?? 'free');
 
-  const isProActive = status === 'active' || status === 'trialing' || status === 'past_due';
+  const isProActive = isProSubscriptionStatus(status);
 
   if (!isProActive) {
     throw new TRPCError({

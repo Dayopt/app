@@ -200,6 +200,9 @@ importers:
 
   apps/product:
     dependencies:
+      '@dayopt/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -670,6 +673,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@dayopt/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -882,6 +888,8 @@ importers:
       lightningcss-linux-x64-gnu:
         specifier: ^1.32.0
         version: 1.32.0
+
+  packages/billing: {}
 
   packages/config:
     devDependencies:

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Container } from '@/components/ui/container';
 import { Link } from '@/platform/i18n/navigation';
+import { dayoptPricing } from '@dayopt/billing';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
@@ -68,7 +69,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             <CardContent className="flex-1">
               <div className="mb-8 text-center">
                 <span className="text-foreground text-4xl font-medium">
-                  {t('pricing.plans.free.price')}
+                  {dayoptPricing.free.displayPrice}
                 </span>
               </div>
               <ul className="space-y-4">
@@ -101,7 +102,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             <CardContent className="flex-1">
               <div className="mb-2 text-center">
                 <span className="text-foreground text-4xl font-medium">
-                  {t('pricing.plans.pro.price')}
+                  {dayoptPricing.pro.displayPrice}
                 </span>
                 <span className="text-muted-foreground">{t('pricing.plans.pro.period')}</span>
               </div>

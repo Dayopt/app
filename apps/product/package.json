@@ -73,6 +73,7 @@
     "eagle:test": "tsx ../../scripts/eagle-api.ts"
   },
   "dependencies": {
+    "@dayopt/billing": "workspace:*",
     "@dayopt/config": "workspace:*",
     "@dayopt/database": "workspace:*",
     "@dnd-kit/core": "^6.3.1",

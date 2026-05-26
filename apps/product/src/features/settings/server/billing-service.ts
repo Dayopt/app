@@ -14,12 +14,10 @@ import { getAppUrl } from '@/lib/app-url';
 import { logger } from '@/lib/logger';
 import { requireStripe } from '@/lib/stripe/client';
 import { ServiceError } from '@/lib/trpc/errors';
+import type { SubscriptionStatus } from '@dayopt/billing';
 import type { Database } from '@dayopt/database';
 
 // ===== Types =====
-
-/** Stripeサブスクリプションの状態値 */
-export type SubscriptionStatus = 'free' | 'active' | 'past_due' | 'canceled' | 'trialing';
 
 /** ユーザーの課金情報（サブスクリプション状態・Stripe ID） */
 export interface BillingInfo {
