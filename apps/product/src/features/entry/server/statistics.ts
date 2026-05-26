@@ -27,6 +27,7 @@ import {
 } from '../domain';
 
 import { transformStatsOverviewResponse } from './statistics-overview-transform';
+import { transformTimeByTagResponse } from './statistics-time-by-tag-transform';
 
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
@@ -152,19 +153,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = (data ?? []) as Array<{
-          tag_id: string;
-          tag_name: string;
-          tag_color: string;
-          hours: number;
-        }>;
-
-        return rows.map((row) => ({
-          tagId: row.tag_id,
-          name: row.tag_name,
-          color: row.tag_color,
-          hours: row.hours,
-        }));
+        return transformTimeByTagResponse(data);
       } catch (error) {
         handleStatsError('getTimeByTag', error);
       }
