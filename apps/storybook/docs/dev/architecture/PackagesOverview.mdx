@@ -14,7 +14,7 @@ Dayopt の monorepo は、アプリを増やすためだけではなく、責務
 - `packages/config`: public constants / metadata / URL definitions。secrets, request-scoped values, server-only clients は入れない。
 - `packages/domain`: Dayopt domain model / pure types / helpers。DB row shape, React, Next, Supabase, Zustand は入れない。
 - `packages/database`: Supabase/Postgres boundary。generated types / table names / row helper types / converters を扱い、UI components, DB access clients, service role secrets は入れない。
-- `packages/billing`: public plan / entitlement definitions の予定地。Stripe secret key, webhook handlers は入れない。
+- `packages/billing`: Free / Pro plans, subscription status, entitlement, public-safe pricing constants。Stripe secret key, SDK, webhook handlers, checkout / portal 実装は入れない。
 - `packages/utils`: generic pure utilities。Dayopt 固有 domain policy, framework helper は入れない。
 
 ## Dependency Direction
@@ -43,6 +43,7 @@ apps/product, apps/web, apps/admin
 `packages/domain` は Dayopt の意味を表す pure TypeScript package で、現時点では `TimeRange`, `EntryOrigin`, `Tag`, `ReviewPeriod`, `UserPreference`, `Chronotype` などの軽い型・定数・helper だけを持つ。
 
 `packages/database` は Supabase generated types と DB row helper の境界として動き始めている。converter は受け皿だけを先に作り、DB access を含む service は product 側に残す。
+`packages/billing` は Free / Pro の公開 plan model, subscription status, `pro_access` entitlement, pricing 表示用定数の境界として動き始めている。Stripe SDK / secret / webhook / checkout / portal は product 側の server-only 境界に残す。
 `packages/types`, `packages/server`, `packages/utils` はまだ第一段階の placeholder に近い。
 
 ## Package Boundaries
@@ -139,7 +140,22 @@ Supabase/Postgres 上の形を扱う境界。generated types, table names, row h
 
 ### `packages/billing`
 
-公開してよい plan / subscription / entitlement 定義を置く予定の境界。Stripe secret key を使う処理や webhook handler は server-only 境界に置き、client import できる定義と混ぜない。
+公開してよい plan / subscription / entitlement 定義を置く境界。client import できる public-safe な billing model だけを扱う。
+
+例:
+
+- Free / Pro plan id と plan name
+- Free `$0`, Pro `$5/month` の公開価格表示用定数
+- `free | active | past_due | canceled | trialing` の subscription status
+- `pro_access` entitlement と pure helper
+
+入れないもの:
+
+- Stripe secret key / webhook secret
+- Stripe SDK client
+- webhook handler
+- checkout / customer portal 実装
+- env validation / server action / route handler
 
 ## Extraction Rules
 
