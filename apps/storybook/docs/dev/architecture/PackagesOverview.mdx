@@ -204,8 +204,16 @@ Storybook は `packages/design` と `packages/ui` の公開面を確認する場
 
 ## Before Auth Package
 
-`packages/auth` へ進む前の follow-up:
+`packages/auth` はまだ作らない。auth / permission は現時点では product-only で、admin app や同じ permission model を使う second runtime がまだないため、まず `apps/product` 内で境界を整える。
+
+Current placement:
+
+- Pure product auth model / access policy: `apps/product/src/lib/auth/domain`
+- Product auth runtime: `apps/product/src/lib/supabase`, `apps/product/src/proxy.ts`, auth routes, server actions
+
+Future extraction:
 
 - `packages/database.databaseTables` を DB access call site に少しずつ適用できるか確認する。
 - billing / legal / pricing 文言は i18n の表示責務と `packages/billing` の public constants の境界を分けて扱う。
-- `packages/auth` はまず pure model のみとし、Supabase client, cookie, middleware, session refresh, route handler は product 側に残す。
+- admin app または別 runtime が同じ permission model を必要とした時点で、product auth domain を `packages/auth` の pure model として昇格する。
+- 昇格後も Supabase client, cookie, middleware, session refresh, route handler は product 側に残す。
