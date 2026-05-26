@@ -1,4 +1,4 @@
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 
 type TagRow = Database['public']['Tables']['tags']['Row'];
 

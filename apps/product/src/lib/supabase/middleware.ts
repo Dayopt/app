@@ -45,7 +45,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 
 /**
  * Middlewareでセッションを更新（トークンリフレッシュ）

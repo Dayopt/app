@@ -20,7 +20,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SUPABASE_URL =

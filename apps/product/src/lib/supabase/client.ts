@@ -37,7 +37,7 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { SupabaseClient as SupabaseClientType } from '@supabase/supabase-js';
 
-import type { Database } from '@/lib/database.types';
+import type { Database } from '@dayopt/database';
 
 /**
  * Browser用Supabaseクライアント作成

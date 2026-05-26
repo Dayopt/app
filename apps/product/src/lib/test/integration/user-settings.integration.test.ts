@@ -12,9 +12,9 @@ import { TRPCError } from '@trpc/server';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { userSettingsRouter } from '@/features/settings/server/router';
-import type { Database } from '@/lib/database.types';
 import { createTestCaller } from '@/lib/test/trpc-test-helpers';
 import type { Context } from '@/lib/trpc/procedures';
+import type { Database } from '@dayopt/database';
 
 const LOCAL_DB_URL = 'http://127.0.0.1:54321';
 const SUPABASE_URL =

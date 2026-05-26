@@ -9,13 +9,13 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
-import type { TablesUpdate } from '@/lib/database.types';
 import { logger } from '@/lib/logger';
 import { isEntryCreateLimited } from '@/lib/rate-limit/entry-create-limit';
 import { captureBusinessEvent } from '@/lib/sentry';
 import { getUserTimezone } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
+import type { TablesUpdate } from '@dayopt/database';
 import {
   bulkDeleteEntrySchema,
   bulkUpdateEntrySchema,

@@ -18,8 +18,8 @@ import 'server-only';
  * - TanStack Queryのクライアントキャッシュ（5分）で対応
  */
 
-import type { Database } from '@/lib/database.types';
 import { ServiceError } from '@/lib/trpc/errors';
+import type { Database } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
 import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
