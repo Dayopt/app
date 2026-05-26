@@ -19,6 +19,7 @@ import {
   aggregateDayOfWeekDistribution,
   aggregateHourlyDistribution,
   aggregateMonthlyTrend,
+  aggregateTagStats,
   calculateStreak,
   type EstimationAccuracyDbRow,
   getMonthlyStartDate,
@@ -116,19 +117,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const counts: Record<string, number> = {};
-        const lastUsed: Record<string, string> = {};
-
-        if (data) {
-          for (const row of data) {
-            counts[row.tag_id] = row.entry_count;
-            if (row.last_used) {
-              lastUsed[row.tag_id] = row.last_used;
-            }
-          }
-        }
-
-        return { counts, lastUsed };
+        return aggregateTagStats(data);
       } catch (error) {
         handleStatsError('getTagStats', error);
       }
