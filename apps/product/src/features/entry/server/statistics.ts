@@ -15,6 +15,12 @@ import { traceDbQuery } from '@/lib/sentry/trace';
 import { createTRPCRouter, proProcedure, protectedProcedure } from '@/lib/trpc/procedures';
 import type { Database } from '@dayopt/database';
 
+import {
+  aggregateDayOfWeekDistribution,
+  aggregateHourlyDistribution,
+  calculateStreak,
+} from '../domain';
+
 /**
  * ユーザーのタイムゾーンで「今日」の日付文字列（YYYY-MM-DD）を返す
  */
@@ -226,22 +232,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = data ?? [];
-        const hourlyHours: number[] = new Array(24).fill(0);
-        for (const row of rows) {
-          if (row.hour >= 0 && row.hour < 24) hourlyHours[row.hour] = row.total_minutes / 60;
-        }
-
-        const timeSlots = [];
-        for (let i = 0; i < 24; i += 2) {
-          const hourA = hourlyHours[i] ?? 0;
-          const hourB = hourlyHours[i + 1] ?? 0;
-          timeSlots.push({
-            timeSlot: `${i.toString().padStart(2, '0')}:00`,
-            hours: hourA + hourB,
-          });
-        }
-        return timeSlots;
+        return aggregateHourlyDistribution(data ?? []);
       } catch (error) {
         handleStatsError('getHourlyDistribution', error);
       }
@@ -274,18 +265,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = data ?? [];
-        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-        const dayHours: number[] = new Array(7).fill(0);
-        for (const row of rows) {
-          if (row.dow >= 0 && row.dow < 7) dayHours[row.dow] = row.total_minutes / 60;
-        }
-
-        const mondayFirst = [1, 2, 3, 4, 5, 6, 0];
-        return mondayFirst.map((dayIndex) => ({
-          day: dayNames[dayIndex] ?? '',
-          hours: dayHours[dayIndex] ?? 0,
-        }));
+        return aggregateDayOfWeekDistribution(data ?? []);
       } catch (error) {
         handleStatsError('getDayOfWeekDistribution', error);
       }
@@ -685,22 +665,11 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const activeDates = data ?? [];
-        const dateSet = new Set(activeDates);
-
-        // ユーザーのタイムゾーンで今日から逆順にstreakをカウント
-        let streak = 0;
-        const todayMs = new Date(todayStr + 'T00:00:00Z').getTime();
-
-        for (let i = 0; i < 365; i++) {
-          const d = new Date(todayMs - i * 24 * 60 * 60 * 1000);
-          const dateStr = formatInTimeZone(d, timezone, 'yyyy-MM-dd');
-          if (dateSet.has(dateStr)) {
-            streak++;
-          } else {
-            break;
-          }
-        }
+        const streak = calculateStreak({
+          activeDates: data ?? [],
+          todayStr,
+          timezone,
+        });
 
         return { streak };
       } catch (error) {

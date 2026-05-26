@@ -21,3 +21,12 @@ export type { EntryTimeUpdateData } from './entry-time-update';
 
 export { buildTagDashboard } from './tag-dashboard';
 export type { TagDashboardEntryRow, TagDashboardInput, TagDashboardTagRow } from './tag-dashboard';
+
+export { aggregateHourlyDistribution } from './hourly-distribution';
+export type { HourlyDistributionRow, HourlySlot } from './hourly-distribution';
+
+export { aggregateDayOfWeekDistribution } from './day-of-week-distribution';
+export type { DayOfWeekRow, DayOfWeekSlot } from './day-of-week-distribution';
+
+export { calculateStreak } from './streak-calculator';
+export type { StreakInput } from './streak-calculator';
