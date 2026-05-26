@@ -18,7 +18,9 @@ import type { Database } from '@dayopt/database';
 import {
   aggregateDayOfWeekDistribution,
   aggregateHourlyDistribution,
+  aggregateMonthlyTrend,
   calculateStreak,
+  getMonthlyStartDate,
 } from '../domain';
 
 /**
@@ -285,8 +287,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
         const nowStr = formatInTimeZone(new Date(), timezone, 'yyyy-MM');
         const [nowYear, nowMonth] = nowStr.split('-').map(Number) as [number, number];
 
-        // monthCount ヶ月前の1日（UTC ISO形式）
-        const startDate = new Date(Date.UTC(nowYear, nowMonth - 1 - (monthCount - 1), 1));
+        const startDate = getMonthlyStartDate(nowYear, nowMonth, monthCount);
 
         const { data, error } = await traceDbQuery('stats.get_monthly_hours', async () =>
           supabase.rpc('get_monthly_hours', {
@@ -303,24 +304,7 @@ export const entriesStatisticsRouter = createTRPCRouter({
           });
         }
 
-        const rows = data ?? [];
-        const monthlyHours: Record<string, number> = {};
-        for (let i = 0; i < monthCount; i++) {
-          const year = nowYear + Math.floor((nowMonth - 1 - (monthCount - 1) + i) / 12);
-          const month = ((((nowMonth - 1 - (monthCount - 1) + i) % 12) + 12) % 12) + 1;
-          const key = `${year}-${month.toString().padStart(2, '0')}`;
-          monthlyHours[key] = 0;
-        }
-        for (const row of rows) {
-          if (monthlyHours[row.month] !== undefined) monthlyHours[row.month] = row.hours;
-        }
-
-        return Object.entries(monthlyHours)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([month, hours]) => {
-            const monthPart = month.split('-')[1];
-            return { month, label: `${monthPart ? parseInt(monthPart) : 0}`, hours };
-          });
+        return aggregateMonthlyTrend(data ?? [], nowYear, nowMonth, monthCount);
       } catch (error) {
         handleStatsError('getMonthlyTrend', error);
       }
