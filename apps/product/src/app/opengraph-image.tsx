@@ -1,10 +1,12 @@
 import { ImageResponse } from 'next/og';
 
+import { dayoptBrand, dayoptDomains } from '@dayopt/config';
+
 import { OG_COLORS } from '@/lib/og-colors';
 
 export const runtime = 'edge';
 
-export const alt = 'Dayopt';
+export const alt = dayoptBrand.name;
 export const size = {
   width: 1200,
   height: 630,
@@ -86,7 +88,7 @@ export default function OgImage() {
           marginBottom: 16,
         }}
       >
-        Dayopt
+        {dayoptBrand.name}
       </div>
 
       {/* Tagline */}
@@ -118,7 +120,7 @@ export default function OgImage() {
             letterSpacing: '0.05em',
           }}
         >
-          dayopt.app
+          {dayoptDomains.marketing}
         </div>
       </div>
     </div>,

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { dayoptDomains } from '@dayopt/config';
+
 import { entriesToICal } from '../entry-to-ical';
 
 interface ICalEntryInput {
@@ -25,6 +27,8 @@ function makeEntry(overrides: Partial<ICalEntryInput> & { id: string }): ICalEnt
     ...overrides,
   };
 }
+
+const calendarUid = (entryId: string) => `UID:${entryId}@${dayoptDomains.marketing}`;
 
 describe('entriesToICal', () => {
   describe('VCALENDAR エンベロープ', () => {
@@ -56,7 +60,7 @@ describe('entriesToICal', () => {
       const ical = entriesToICal([makeEntry({ id: 'e1', title: 'Meeting' })]);
       expect(ical).toContain('BEGIN:VEVENT');
       expect(ical).toContain('END:VEVENT');
-      expect(ical).toContain('UID:e1@dayopt.app');
+      expect(ical).toContain(calendarUid('e1'));
       expect(ical).toContain('SUMMARY:Meeting');
     });
 
@@ -73,8 +77,8 @@ describe('entriesToICal', () => {
         makeEntry({ id: 'a', title: 'A' }),
         makeEntry({ id: 'b', title: 'B' }),
       ]);
-      const aIndex = ical.indexOf('UID:a@dayopt.app');
-      const bIndex = ical.indexOf('UID:b@dayopt.app');
+      const aIndex = ical.indexOf(calendarUid('a'));
+      const bIndex = ical.indexOf(calendarUid('b'));
       expect(aIndex).toBeGreaterThan(0);
       expect(bIndex).toBeGreaterThan(aIndex);
     });
