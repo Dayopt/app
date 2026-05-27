@@ -5,6 +5,8 @@
  * Google Calendar / Apple Calendar などで購読可能。
  */
 
+import { dayoptDomains } from '@dayopt/config';
+
 interface ICalEntry {
   id: string;
   title: string;
@@ -73,7 +75,7 @@ export function entriesToICal(entries: ICalEntry[]): string {
     if (!entry.start_time || !entry.end_time) continue;
 
     const summary = entry.tag_name ?? entry.title;
-    const uid = `${entry.id}@dayopt.app`;
+    const uid = `${entry.id}@${dayoptDomains.marketing}`;
 
     lines.push('BEGIN:VEVENT');
     lines.push(foldLine(`UID:${uid}`));
