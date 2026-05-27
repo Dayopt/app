@@ -39,7 +39,7 @@ export function DocsHeader({ onMobileMenuToggle, mobileMenuOpen }: DocsHeaderPro
           {/* Logo → marketing home, Docs badge → docs home */}
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center">
-              <Logo variant="wordmark" size="md" />
+              <Logo variant="wordmark" size="md" className="text-foreground" />
             </Link>
             <Link
               href="/docs"
