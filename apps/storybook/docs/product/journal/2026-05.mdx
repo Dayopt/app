@@ -6,6 +6,34 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-25
+
+### Domain package を新設し、lib → feature の所属修正と dependabot blocker 解消を進めた日
+
+10 コミット。monorepo の packages 層に `@dayopt/domain` を新設して、apps と他 packages から参照できる domain 型の共通置き場を確立。並行して `lib/types/{entry,calendar-event}` などが lib に残っていたものを feature ownership へ移動。dependabot の blocker になっていた `@types/react` を 19.2.14 に pin。
+
+#### やったこと
+
+- **domain package 新設 (1 commit)**: Dayopt domain model package を `packages/domain` として workspace に追加 (#1207)
+- **lib → feature の所属修正 (4 commits)**: 横断 ownership exception の整理 (#1206)、`lib/types/{entry,calendar-event}` を `features/entry/types/` へ移動 (#1210)、review の `timePL.derivers` から pure derivation と types を domain へ分離 (#1209)、`tag-colors` と `color-palette-picker` を `features/tags` へ移動 (#1208)
+- **dependabot 吸収 (5 commits)**: `@types/react` を 19.2.14 に pin (#1217)、development-testing group (#1213)、development-types group (#1215)、postcss (#1181)、production group (#1211) を merge
+
+#### なぜ今日この作業をしたか
+
+domain package を新設した動機は「entry / review / tags の domain 型が apps/product 内に閉じている状態だと、後で billing や AI insights を別 package として切り出した時に domain 型を共有できない」問題への対処。最下層に domain package を置き、apps と上層 packages の両方から import できる形にしておくと、後続の package 追加が dependency direction を破らずに済む。
+
+lib → feature の所属修正は「lib に置かれているが実質特定 feature 専用」のコードを正しい owner に戻す作業。`tag-colors` が lib に置かれていると「他 feature も使うかもしれない」と誤読されて、不要な依存が発生する。明示的に feature owned にすると、boundaries lint が機能する。
+
+`@types/react` の pin は dependabot 自身が React 系の transitive update を行うときに bump で破壊的に動いてしまうケースの blocker 解消。version を pin することで dependabot の挙動を予測可能にする。
+
+#### Claudeの所感
+
+**Domain package は monorepo の中核**: `@dayopt/domain` のような domain package は、apps の interface でも feature の implementation でもなく「ビジネスドメインの語彙」を提供する層。これを最下層に置くと、上層の apps / billing / AI insights が共通の語彙で会話できる。`Entry`, `TimeRange`, `Tag` のような型がここに集約されると、後で「entry の time range 表現を変更する」のような操作が 1 package の update で済む。
+
+**Ownership exception の整理は boundaries lint の前提**: `lib/types` に entry / calendar-event の型が混在していると、boundaries lint は「lib は feature 非依存だが、entry / calendar も lib を参照できる」という曖昧な状態を許してしまう。正しい owner（features/entry）に戻すと、依存方向が DAG として明確になり、自動 lint が機能する。
+
+---
+
 ## 2026-05-22
 
 ### Component から chronotype 計算を除去して hook 化、workspace commands を monorepo-aware にした日
