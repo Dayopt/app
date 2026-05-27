@@ -6,6 +6,40 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-26
+
+### Billing / database package を新設し、statistics.ts god module を 7 段階で分解した日
+
+15 コミット。本日のメインは 2 つ。1 つは monorepo packages 層に `@dayopt/billing` と `@dayopt/database` を追加して shared 資源の置き場を更に拡張。もう 1 つは entry の `statistics.ts` という god module を 7 つの PR で段階的に分解（pure aggregation → monthly-trend → estimation-accuracy → getTagStats → getStatsOverview RPC unpacking → getTimeByTag transformer → tag-service の merge / ungroupTags）。並行して auth boundaries の整理も実施。
+
+#### やったこと
+
+- **packages 層の追加 (2 commits)**: billing model package を新設 (#1221)、Supabase database package を新設 (#1219)
+- **statistics.ts の段階分解 (6 commits)**: pure aggregation を domain へ (#1223)、monthly-trend aggregation を domain へ (#1224)、estimation-accuracy transformer を domain へ (#1225)、getTagStats aggregation を domain へ (#1226)、getStatsOverview の RPC response unpacking を server helper へ (#1227)、getTimeByTag transformer を server helper へ (#1229)
+- **tag-service.ts の分解 (1 commit)**: merge / ungroupTags から pure logic を切り出し (#1222)
+- **auth boundaries の整理 (1 commit)**: product の auth boundaries を明確化 (#1230)
+- **package integration audit (1 commit)**: shared package の dependency 監査 (#1228)
+- **types のメモ追加 (1 commit)**: `lib/types/settings.ts` の残存理由を明記 (#1220)
+- **dependabot 吸収 (3 commits)**: development-storybook (#1212)、development-other (#1218)、development-linting (#1214)
+
+#### なぜ今日この作業をしたか
+
+billing package と database package の新設は、後者を先にしておくと package 間の dependency が「apps → billing → database → domain」と一方向で揃う前提を担保するため。`@dayopt/database` を切り出すと Supabase 関連の型と client が 1 箇所に集まり、apps / billing が共通の client を import できる。
+
+statistics.ts の 7 段階分解は、god module を 1 PR で書き換えると review 不可能・回帰リスク巨大になるのを避けるため、各関数を「pure 部分 → transformer → RPC unpacking」の層ごとに 1 PR にして外側から剥がす方針を採用。pure aggregation を先に切ると、後続の transformer 切り出し時に「これは pure 側に依存できる」という前提が固まる。順序を逆にすると、後で pure を切り出すときに transformer 側を再修正する二重作業が発生する。
+
+auth boundaries の整理は、protectedProcedure と publicProcedure の境界が tRPC router 内で暗黙に決まっていた状態を、明示的なヘルパーで境界を強制する形に変更。security skill の領域と重なる作業で、後で他 router にも展開予定。
+
+#### Claudeの所感
+
+**God module は「外側から剥がす」のが安全**: statistics.ts のような巨大ファイルを分解する際、内側の核（pure aggregation）から先に切り出すと、外側の層（transformer, RPC unpacking）はまだ既存 import で動き続ける。逆順だと、内側の pure を後から切り出す時に外側の層を再書き換えする二重作業が発生する。今日 7 PR で進められたのは順序設計が良かった結果。
+
+**Package の dependency direction は新設時に決まる**: `@dayopt/database` を `@dayopt/billing` より先に新設したのは偶然ではなく、billing が database に依存できるようにする前提。逆順だと「billing を新設したら database への参照経路がなくて型重複した」状態が一時的に発生する。新規 package 追加は「下から固める」原則を毎回適用する。
+
+**Auth boundaries は明示ヘルパーで強制する**: protectedProcedure / publicProcedure の境界が「router 内で if 文で判定」だと、新規 procedure を書く開発者が認可漏れを起こしうる。明示的なヘルパー（`createProtectedProcedure` のような builder）で境界を構造的に強制すると、認可漏れは型エラーで検出可能になる。security skill の責務がコードレベルで担保される形。
+
+---
+
 ## 2026-05-25
 
 ### Domain package を新設し、lib → feature の所属修正と dependabot blocker 解消を進めた日
