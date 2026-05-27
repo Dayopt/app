@@ -83,7 +83,7 @@ Storybook 表示:
 ### `packages/ui`
 
 Domain logic を持たない React UI primitive の置き場。Button, Badge, Card, Logo のように複数 app で使える部品だけを入れる。
-`apps/product` では settings / common feedback states / not-found pages の低リスク surface から runtime 利用を開始している。より広い移行は submit / mutation / billing flow を避けながら段階的に進める。
+`apps/product` では settings / account / fallback surfaces で Button, Badge, Card の runtime 利用を段階的に広げている。Interactive core surfaces は app-local のままにし、submit / mutation / billing flow は避けながら進める。
 
 知ってよいもの:
 

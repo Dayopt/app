@@ -4,7 +4,7 @@ import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useEffect, useState } from 'react';
 
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
-import { Badge } from '@dayopt/ui';
+import { Badge, Card } from '@dayopt/ui';
 import {
   Book,
   ChevronDown,
@@ -126,7 +126,7 @@ export default function SettingsPage() {
     <ScrollArea className="flex-1">
       {/* B. ヒーローエリア */}
       <div className="px-4 pt-8 pb-6">
-        <div className="border-border-subtle overflow-hidden rounded-lg border shadow-sm">
+        <Card className="border-border-subtle gap-0 overflow-hidden rounded-lg py-0 shadow-sm">
           {/* Row 1: Avatar + Name/Email + Plan Badge */}
           <Link
             href="/settings/profile"
@@ -172,7 +172,7 @@ export default function SettingsPage() {
               <ChevronRight className="text-muted-foreground size-4 shrink-0" />
             </button>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* 設定カテゴリ */}

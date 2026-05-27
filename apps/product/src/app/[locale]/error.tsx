@@ -13,8 +13,8 @@
 import { AlertCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
-import { Button } from '@/lib/components/ui/button';
 import { logger } from '@/lib/logger';
+import { Button, Card } from '@dayopt/ui';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -28,7 +28,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
 
   return (
     <div className="bg-background fixed inset-0 flex items-center justify-center overflow-auto p-4">
-      <div className="flex max-w-md flex-col items-center gap-6 text-center">
+      <Card className="w-full max-w-md items-center gap-6 border-0 bg-transparent py-0 text-center shadow-none">
         <div className="border-destructive flex size-16 items-center justify-center rounded-full border-2">
           <AlertCircle className="text-destructive size-8" />
         </div>
@@ -54,7 +54,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
         </div>
 
         <p className="text-muted-foreground text-xs">This error has been automatically reported.</p>
-      </div>
+      </Card>
     </div>
   );
 }

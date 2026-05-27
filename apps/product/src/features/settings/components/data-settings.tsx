@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import { dayoptUrls } from '@dayopt/config';
+import { Button as SharedButton } from '@dayopt/ui';
 import {
   AlertTriangle,
   Check,
@@ -227,14 +228,14 @@ function RestoreSection() {
           disabled
           aria-hidden="true"
         />
-        <Button
+        <SharedButton
           variant="ghost"
           className="mt-4"
           disabled
           onClick={() => fileInputRef.current?.click()}
         >
           {t('selectFile')}
-        </Button>
+        </SharedButton>
       </div>
 
       <div className="mt-4 flex items-start gap-2">

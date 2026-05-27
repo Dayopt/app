@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
+import { Button, Card } from '@dayopt/ui';
+
 import { InstallBanner } from '@/lib/components/shell/InstallBanner';
 import { IOSInstallGuide } from '@/lib/components/shell/IOSInstallGuide';
 import { useInstallPrompt } from '@/lib/hooks/useInstallPrompt';
@@ -44,7 +46,7 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
       {/* 更新バナー（インストールバナーより優先） */}
       {showUpdateBanner && (
         <div className="animate-in slide-in-from-bottom-4 fixed right-4 bottom-20 z-50 md:bottom-4">
-          <div className="bg-card border-border-subtle shadow-card flex items-center gap-4 rounded-2xl border p-4">
+          <Card className="bg-card border-border-subtle shadow-card flex-row items-center gap-4 rounded-2xl p-4 py-4">
             <RefreshCw className="text-primary h-5 w-5" />
             <div className="flex-1">
               <p className="text-foreground text-base font-normal md:text-sm">
@@ -60,15 +62,11 @@ export function ServiceWorkerProvider({ children }: { children: React.ReactNode 
               >
                 {t('later')}
               </button>
-              <button
-                type="button"
-                onClick={applyUpdate}
-                className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-base font-normal transition-colors md:text-sm"
-              >
+              <Button onClick={applyUpdate} className="rounded-lg px-4 py-2 text-base md:text-sm">
                 {t('update')}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 

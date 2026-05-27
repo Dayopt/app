@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { toast } from '@/lib/toast';
-import { Badge } from '@dayopt/ui';
+import { Badge, Button as SharedButton } from '@dayopt/ui';
 import { LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -100,9 +100,9 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
           }
           description={t('settings.account.notConnected')}
         >
-          <Button variant="outline" disabled>
+          <SharedButton variant="outline" disabled>
             {t('settings.account.connect')}
-          </Button>
+          </SharedButton>
         </LabeledRow>
         <LabeledRow
           label={
@@ -118,9 +118,9 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
           }
           description={t('settings.account.notConnected')}
         >
-          <Button variant="outline" disabled>
+          <SharedButton variant="outline" disabled>
             {t('settings.account.connect')}
-          </Button>
+          </SharedButton>
         </LabeledRow>
         <LabeledRow
           label={
@@ -136,9 +136,9 @@ export function AccountSettings({ _MFASectionProps }: AccountSettingsProps = {})
           }
           description={t('settings.account.notConnected')}
         >
-          <Button variant="outline" disabled>
+          <SharedButton variant="outline" disabled>
             {t('settings.account.connect')}
-          </Button>
+          </SharedButton>
         </LabeledRow>
         <p className="text-muted-foreground text-xs">
           <Badge variant="secondary" className="mr-1">
