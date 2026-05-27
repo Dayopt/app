@@ -6,6 +6,33 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-20
+
+### web repo を monorepo に取り込み、entry domain 層を新設した日
+
+12 コミット。monorepo 構造の整備（既存 web repo を `apps/web` として取り込み、旧 app を `apps/product` へリネーム）と、feature-colocation 方針の本格適用（entry 時間モデルの domain 層を新設、calendar store 群を features 配下へ移動、user preference を別 store に分離）が並行で進んだ。CI には `apps/web` の build を quality gate に追加。
+
+#### やったこと
+
+- **monorepo 構造の整備 (3 commits)**: 既存 web repo を `apps/web` として取り込み (#1170)、旧 `app/` を `apps/product/` へリネーム、web docs feature を Vercel deploy 対象に復帰 (#1175)、web build を CI quality gate に追加 (#1174)
+- **web 側の build warning 整理 (2 commits)**: Next 16 の build warning を整理 (#1176)、upstash warning を抑止 (#1177)
+- **entry/calendar feature-colocation (4 commits)**: entry 時間モデルの domain 層を `features/entry/domain` として新設 (#1173)、calendar 専用の store/constants を `features/calendar` 配下へ移動 (#1184)、`useCalendarSettingsStore` から user preference を分離 (#1180)、dead state `sleepSchedule` を削除 (#1182)
+- **dependabot 吸収 (1 commit)**: tmp 0.0.33 → 0.1.0 (#1168)
+
+#### なぜ今日この作業をしたか
+
+monorepo 移行を Phase 1 として「product と web を 1 つの repo で扱える状態」に持っていく必要があった。web repo を取り込む際の workspace 命名は将来の package 追加（domain / ui / token など）を見据えて「役割を表す名詞」で揃えた。`app` という名前は responsibilities を表さないので `product` へリネーム。
+
+feature-colocation の方針自体は前から議論があったが、entry の時間モデルが lib/types に置かれて domain logic と reusable utility が混ざっていた状態を「features 配下に domain 層を新設して切り出す」アプローチで初めて実装した。これが翌日以降に他 feature（chronotype, calendar, tags, review）へ展開する起点になる。
+
+#### Claudeの所感
+
+**Workspace 命名は将来の package 構造を先取りする**: `app` → `product` のリネームは表面的には cosmetic だが、monorepo に packages を追加していく前提では「役割を表す名詞」で workspace を揃えておくと、後から `packages/domain`, `packages/ui` などを追加した時に命名規則が破綻しない。最初の workspace 1 つだけのうちにリネームすると影響範囲が小さい。
+
+**Feature-colocation は domain 層の新設から始まる**: entry domain 層の新設は単なる「ファイル移動」ではなく、lib/types に置かれていた reusable type と feature-specific domain logic を分離する判断。lib/ は feature 非依存の再利用コード専用、`features/{feature}/domain` は当該 feature の純粋ロジック専用、という二層構造を確立した。この区別がないと「lib に置いてあるが実質 entry 専用」のコードが増えて DAG が崩れる。
+
+---
+
 ## 2026-05-19
 
 ### 1 日で 7 件の dependabot を吸収して v0.28.0 を release、monorepo branch に main を統合した日
