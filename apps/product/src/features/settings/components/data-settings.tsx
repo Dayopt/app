@@ -3,6 +3,11 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { toast } from '@/lib/toast';
+import {
+  canUseEntitlement,
+  entitlementKeys,
+  getPlanIdForSubscriptionStatus,
+} from '@dayopt/billing';
 import { dayoptUrls } from '@dayopt/config';
 import { Button as SharedButton } from '@dayopt/ui';
 import {
@@ -257,7 +262,8 @@ function McpApiSection() {
   // Pro判定: billing overview の subscription status から判定
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
-  const isPro = subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due';
+  const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
+  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
   // TODO: Replace with actual API key from backend
   const apiKey: string | null = null;
 
@@ -275,7 +281,7 @@ function McpApiSection() {
     [t],
   );
 
-  if (!isPro) {
+  if (!canAccessPro) {
     return (
       <SectionCard title={t('title')}>
         <p className="text-muted-foreground mb-4 text-base md:text-sm">{t('description')}</p>
