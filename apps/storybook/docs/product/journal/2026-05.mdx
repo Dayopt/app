@@ -6,6 +6,39 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-21
+
+### packages 層を新設し、feature-colocation を 6 feature に一気に展開した日
+
+13 コミット。monorepo の packages 層に `ui` と `design-tokens` を追加して shared 資源の置き場を確立。並行して chronotype / calendar / tags / review / entry の 5 feature に対して「pure logic を `features/{feature}/domain` へ切り出す」操作を反復適用。さらに chronotype の callback 注入 API（`onChronotypeChange` prop）を廃止して、component が直接 store を呼ぶ形に統一。
+
+#### やったこと
+
+- **packages 層の新設 (2 commits)**: shared UI primitives package、design token package を workspace に追加 (#1192)。token は package から import する形に統一
+- **feature-colocation の量産 (6 commits)**: chronotype state を stores へ (#1190)、calendar view range / precision policy を domain へ (#1186)、calendar interaction の純粋部分を domain へ (#1187)、review variance 計算を domain へ (#1191)、tags 純粋ルールを domain へ (#1193)、entry 時間更新ルールを domain へ (#1185)
+- **store の feature ownership 移動 (1 commit)**: `useCalendarFilterStore` を `features/calendar/stores` へ移動 (#1195)
+- **chronotype API 整理 (1 commit)**: `onChronotypeChange` callback 注入を廃止し、直接 store を呼ぶ形に統一 (#1196)
+- **dead pipeline cleanup (1 commit)**: quality reports 生成を削除 (#1188)
+- **docs 集約 (2 commits)**: root docs を集約、packages 設計方針を整理
+
+#### なぜ今日この作業をしたか
+
+前日に entry domain 層を新設した手応えがあったので、同じパターンを他 feature にも展開した。pure logic を domain に切り出すと、test しやすく、UI / server から両方 import 可能になり、feature 境界が明確になる。1 feature ずつ別の日に分けるよりも、同じ思考モードで複数 feature を一気に処理した方が一貫性が出る。
+
+packages 層の新設は monorepo を「単に複数 apps を 1 repo に置く」から「shared 資源を package として切り出せる」段階に引き上げる準備。`ui` と `design-tokens` を最初に切ったのは、これらが apps から最も多く import される下層だから。下層から固めると、後で上層 packages（domain, billing, database など）を追加する際に依存方向が一方向に保てる。
+
+chronotype の callback 注入廃止は、Zustand store を直接呼べる場面で artificial な callback prop を作っていた dead pattern を除去するため。callback 注入は「子 component に親の state setter を見せたくない」場合の defensive な設計だが、store からの値はそもそも globally 取得可能なので、callback で intermediary を作る意味がない。
+
+#### Claudeの所感
+
+**Packages 層は「下から固める」のが安全**: `ui` と `design-tokens` のような最下層 package を最初に切ると、後続の package（domain, billing, etc.）が ui / tokens に依存できる。逆順だと「ui を切り出した時に既存の上層 package が ui を import する形に書き換え必要」となり、変更範囲が大きくなる。
+
+**Feature-colocation は反復が効く**: 同じパターン（pure logic → `features/{feature}/domain`）を 6 feature に適用したが、1 つずつでは「これは本当に正しい切り方か」の判断に時間がかかるところを、3 件目以降は型が固まって機械的に判断できた。この反復の生産性を活かせる日に集中処理するのが効率的。
+
+**Callback 注入の dead pattern は早めに除去する**: defensive な設計として残っている dead pattern（callback 注入、unused prop、no-op wrapper）は、放置すると新規実装で copy されて広がる。1 箇所で見つけたら同様の pattern を検索して同時に潰すのが、技術的負債の伝播を止める最も安いタイミング。
+
+---
+
 ## 2026-05-20
 
 ### web repo を monorepo に取り込み、entry domain 層を新設した日
