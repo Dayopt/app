@@ -6,6 +6,35 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-27
+
+### statistics.ts の最終クリーンアップと、@dayopt/ui を product に初実投入した日
+
+6 コミット（+5 backfill journal）。午前は統計 god module の最後の残存 inline RPC unpacking を helper に切り出し、前日からの分解シリーズを完結させた。午後は `@dayopt/ui` を product app に実際に wire-up し、Button / Badge が shared package から届く最初の形を実現。package foundation 第一段階の完了宣言も docs に記録した。
+
+#### やったこと
+
+- **statistics.ts 最終クリーンアップ (2 commits)**: `statistics-kpi-unpackers.ts`（新規: KPI 5 unpacker 関数）と `statistics-energy-map-transform.ts`（新規: energy map transform）を切り出し、`statistics-overview-transform.ts` を 7 行に簡略化（#1232）
+- **package foundation 宣言 (2 commits)**: PackagesOverview.mdx に Foundation Readiness セクションを追加し、次フェーズの優先順（ui 実利用 → config hardcode 置換 → database.databaseTables → billing 整理）を記録（#1231）
+- **@dayopt/ui 初実利用 (2 commits)**: product に `@dayopt/design` と `@dayopt/ui` を追加、Button / Badge を 7 箇所で shared package から import に切り替え。`globals.css` に `@source` と `@import` を追加、`app-url.ts` を `process.env.*` 直接参照に変更
+- **backfill journal 追加 (5 commits)**: 2026-05-20〜05-26 のセッションログと日記をバックフィル
+
+#### なぜ今日この作業をしたか
+
+statistics.ts の最終クリーンアップは前日の next に明記した「残存 inline RPC unpacking を完全クリーンアップ」の実行。KPI 5 関数（cumulative-time / avg-fulfillment / entry-rate / context-switches / blank-rate）と energy map の 5 フィールドはそれぞれ独立した unpacking パターンを持つため、`statistics-kpi-unpackers.ts` と `statistics-energy-map-transform.ts` の 2 ファイルに分割した。1 ファイルに詰め込むと grep で探せなくなるし、将来 energy map の shape が変わった時に KPI unpacker まで影響を受けるような見かけの耦合が生まれる。
+
+`@dayopt/ui` の product 実利用は前日宣言した「次フェーズは shared package の apps 実利用」の第一手。まず Button と Badge という影響範囲が広くて視認しやすい primitive を選んだのは、「移行後に visual regression が出たら即検出できる」から。env bypass の発見（`app-url.ts` での t3-env 全スキーマ不要問題）は作業中に判明した。metadata 生成で Supabase 系 env が欠けてビルドが壊れる問題を回避するため、URL のみ扱う箇所は `process.env.*` を直接参照する方針に切り替えた。
+
+#### Claudeの所感
+
+**「完結させる」作業が翌日の作業密度を上げる**: statistics.ts の分解シリーズ（前日 6 PR → 当日最終クリーンアップ）を残タスクとして引き越さず当日朝に片付けたことで、午後の @dayopt/ui 実利用に集中できた。「今日の next に残す」選択を増やすと、翌日は「前日の next」と「今日の新規タスク」が混在してコンテキストスイッチコストが上がる。
+
+**env 境界の粒度は経路ごとに考える**: t3-env の `env` オブジェクトは「使う側が何 env を必要とするか」ではなく「存在する全 env スキーマ」を一括で参照する。Supabase 系が不要な URL 生成経路でも `env` を通すと必須バリデーションが走って壊れる。URL のみ使う箇所は `process.env.*` 直接参照が正しい切り分けで、これを「t3-env を使わないのは雑」と見るのは誤り。
+
+**Shared package の初実利用は「視認しやすい primitive」から**: Button / Badge は UI 上で最も多く使われ、visual regression を目で確認しやすい。これを最初に移行することで「shared package 経由の実装が product でも正しく動くか」を高頻度な箇所で検証できる。shadcn の local copy が残っている間は「shared package の version と local copy が乖離する」リスクが存在するので、移行を少しずつ進めていく。
+
+---
+
 ## 2026-05-26
 
 ### Billing / database package を新設し、statistics.ts god module を 7 段階で分解した日
