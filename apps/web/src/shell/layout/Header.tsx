@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Link } from '@/platform/i18n/navigation';
+import { Logo } from '@dayopt/ui';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Menu, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -50,7 +51,7 @@ export function Header() {
         {/* Logo */}
         <div className="flex lg:flex-1">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-foreground text-lg font-medium">Dayopt</span>
+            <Logo variant="wordmark" size="md" className="text-foreground" />
           </Link>
         </div>
 
@@ -113,7 +114,7 @@ export function Header() {
                 className="flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span className="text-foreground text-lg font-medium">Dayopt</span>
+                <Logo variant="wordmark" size="md" className="text-foreground" />
               </Link>
               <DialogPrimitive.Close className="text-muted-foreground hover:bg-state-hover hover:text-foreground -m-2 rounded-lg p-2 transition-colors">
                 <span className="sr-only">{t('aria.closeMenu')}</span>

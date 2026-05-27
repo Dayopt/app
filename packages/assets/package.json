@@ -1,5 +1,5 @@
 {
-  "name": "@dayopt/ui",
+  "name": "@dayopt/assets",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,13 +13,6 @@
   },
   "peerDependencies": {
     "react": "^19"
-  },
-  "dependencies": {
-    "@dayopt/assets": "workspace:*",
-    "@radix-ui/react-slot": "^1.2.4",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@types/react": "^19",

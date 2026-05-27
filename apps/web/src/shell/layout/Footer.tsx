@@ -3,6 +3,7 @@
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
+import { Logo } from '@dayopt/ui';
 import { useTranslations } from 'next-intl';
 
 // SNS Icons
@@ -78,7 +79,7 @@ export function Footer() {
           {/* Logo */}
           <div>
             <Link href="/" className="inline-block">
-              <span className="text-foreground text-2xl font-medium">Dayopt</span>
+              <Logo variant="wordmark" size="lg" className="text-foreground" />
             </Link>
           </div>
 
