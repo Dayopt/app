@@ -7,7 +7,7 @@
  */
 'use client';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/ui';
 
 export default function RootNotFound() {
   return (

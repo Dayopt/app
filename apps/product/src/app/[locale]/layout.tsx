@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
-import { env } from '@/env';
 import { getAppUrl } from '@/lib/app-url';
 import type { Locale } from '@/lib/i18n/routing';
 import { routing } from '@/lib/i18n/routing';
@@ -97,7 +96,7 @@ export async function generateMetadata({
       languages: alternateLanguages,
     },
     other: {
-      'google-site-verification': env.GOOGLE_SITE_VERIFICATION || '',
+      'google-site-verification': process.env.GOOGLE_SITE_VERIFICATION || '',
     },
   };
 }

@@ -2,7 +2,8 @@
 
 import type { LucideIcon } from 'lucide-react';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/ui';
+
 import { cn } from '@/lib/utils';
 
 export interface EmptyStateProps {

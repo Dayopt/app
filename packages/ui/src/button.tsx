@@ -40,15 +40,15 @@ export const buttonVariants = cva(
 
 type ButtonSize = 'sm' | 'default' | 'lg';
 type ButtonChildProps = {
-  className?: string;
-  disabled?: boolean;
-  onClick?: React.MouseEventHandler<HTMLElement>;
-  ref?: React.Ref<HTMLElement>;
-  tabIndex?: number;
-  children?: React.ReactNode;
-  'data-slot'?: string;
-  'aria-busy'?: React.AriaAttributes['aria-busy'];
-  'aria-disabled'?: React.AriaAttributes['aria-disabled'];
+  className?: string | undefined;
+  disabled?: boolean | undefined;
+  onClick?: React.MouseEventHandler<HTMLElement> | undefined;
+  ref?: React.Ref<HTMLElement> | undefined;
+  tabIndex?: number | undefined;
+  children?: React.ReactNode | undefined;
+  'data-slot'?: string | undefined;
+  'aria-busy'?: React.AriaAttributes['aria-busy'] | undefined;
+  'aria-disabled'?: React.AriaAttributes['aria-disabled'] | undefined;
 };
 
 export interface ButtonProps

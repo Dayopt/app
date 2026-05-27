@@ -14,7 +14,7 @@ import { FileQuestion } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/ui';
 
 export default function AppNotFound() {
   const t = useTranslations('error.notFound');

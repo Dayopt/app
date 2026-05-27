@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source '../../../../../packages/ui/src';
 
 /* Tailwind Plugins */
 @plugin '@tailwindcss/typography';
@@ -9,6 +10,7 @@
 /* ============================================
  * Design Tokens
  * ============================================ */
+@import '@dayopt/design/theme.css';
 @import './tokens/primitives.css';
 @import './tokens/colors.css';
 @import './tokens/spacing.css';
