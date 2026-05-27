@@ -14,8 +14,8 @@ import { AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 
-import { Button } from '@/lib/components/ui/button';
 import { logger } from '@/lib/logger';
+import { Button, Card } from '@dayopt/ui';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -32,7 +32,7 @@ export default function AppError({ error, reset }: ErrorProps) {
   return (
     // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
     <div className="grid min-h-[60vh] w-full place-items-center p-8">
-      <div className="flex max-w-md flex-col items-center gap-6 text-center">
+      <Card className="w-full max-w-md items-center gap-6 border-0 bg-transparent py-0 text-center shadow-none">
         <div className="border-destructive flex size-16 items-center justify-center rounded-full border-2">
           <AlertCircle className="text-destructive size-8" />
         </div>
@@ -56,7 +56,7 @@ export default function AppError({ error, reset }: ErrorProps) {
         </div>
 
         <p className="text-muted-foreground text-xs">{t('sentryReport')}</p>
-      </div>
+      </Card>
     </div>
   );
 }

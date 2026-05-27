@@ -9,6 +9,7 @@ import {
   getPlanIdForSubscriptionStatus,
   type DayoptPlanId,
 } from '@dayopt/billing';
+import { Badge } from '@dayopt/ui';
 import { AlertTriangle, Check, CreditCard, Crown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,7 +28,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/lib/components/ui/alert-dialog';
-import { Badge } from '@/lib/components/ui/badge';
 import { Button } from '@/lib/components/ui/button';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { api } from '@/lib/trpc';

@@ -2,6 +2,8 @@
 
 import { WifiOff } from 'lucide-react';
 
+import { Button, Card } from '@dayopt/ui';
+
 const messages = {
   en: {
     title: "You're offline",
@@ -31,20 +33,16 @@ export default function OfflinePage() {
 
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="text-center">
+      <Card className="items-center border-0 bg-transparent py-0 text-center shadow-none">
         <div className="bg-muted mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full">
           <WifiOff className="text-muted-foreground h-10 w-10" />
         </div>
         <h1 className="text-foreground mb-2 text-2xl font-medium">{t.title}</h1>
         <p className="text-muted-foreground mb-6 max-w-sm">{t.description}</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="bg-primary text-primary-foreground hover:bg-primary-hover inline-flex items-center justify-center rounded-2xl px-6 py-4 font-normal transition-colors"
-        >
+        <Button onClick={() => window.location.reload()} className="rounded-2xl px-6 py-4">
           {t.reload}
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   );
 }
