@@ -4,6 +4,7 @@ import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useEffect, useState } from 'react';
 
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
+import { Badge } from '@dayopt/ui';
 import {
   Book,
   ChevronDown,
@@ -23,7 +24,6 @@ import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
-import { Badge } from '@/lib/components/ui/badge';
 import { ScrollArea } from '@/lib/components/ui/scroll-area';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';

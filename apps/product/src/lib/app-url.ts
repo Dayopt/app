@@ -1,17 +1,19 @@
 import { dayoptUrls } from '@dayopt/config';
 
-import { env } from '@/env';
-
 /**
  * アプリのベースURLを取得する
  * 優先順位: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost
  *
- * 全てのusageがサーバーサイド（Route Handler, Server Component, tRPC Router）なので
- * VERCEL_URL（サーバーのみ利用可能）のフォールバックが動作する
+ * Metadata / sitemap / JSON-LD など、Supabase 環境変数が不要な経路でも使うため、
+ * full server env validation は通さず URL に必要な値だけを直接参照する。
  */
 export function getAppUrl(): string {
-  if (env.NEXT_PUBLIC_APP_URL) return env.NEXT_PUBLIC_APP_URL;
-  if (env.VERCEL_URL) return `https://${env.VERCEL_URL}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) return appUrl;
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
+
   return 'http://localhost:3000';
 }
 
