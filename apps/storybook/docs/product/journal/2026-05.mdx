@@ -6,6 +6,35 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-22
+
+### Component から chronotype 計算を除去して hook 化、workspace commands を monorepo-aware にした日
+
+7 コミット。前日の feature-colocation を chronotype 領域に集中させて、Calendar / NowBadge component に残っていた profile 計算を hook 経由に切り替えた。あわせて workspace command を root から一括で呼べる形にし、散在していた public constants を config モジュールに集約。
+
+#### やったこと
+
+- **chronotype hook 化 (3 commits)**: `useChronotypeZones` で Calendar から profile 計算を除去 (#1204)、`useActiveZoneLevel` で NowBadge から profile 計算を除去 (#1205)、`useChronotypeGradient` を `features/chronotype/hooks` へ移動 (#1199)
+- **workspace command 整理 (1 commit)**: root から各 workspace を呼べる monorepo-aware な scripts に統一 (#1203)
+- **config 集約 (1 commit)**: public constants を `config` モジュールに集約 (#1200)
+- **Storybook mock の cleanup (2 commits)**: chronotype mock schema を実型に整合させる (#1197)、ProfileSettings story から dead な `chronotype.get` mock を削除 (#1198)
+
+#### なぜ今日この作業をしたか
+
+前々日から始まった feature-colocation の中で、chronotype だけは「state は store に集約済みだが component が profile から zone を計算する logic を内包」している状態が残っていた。これを hook として切り出すと、Calendar や NowBadge が「profile の生データ」ではなく「zone」や「active level」という抽象を受け取れるようになり、component の責務が UI 表示に純化する。
+
+workspace command の monorepo-aware 化は、apps が 2 つ（product / web）になって packages も増えてきた段階で「個別 workspace に cd して npm 叩く」が現実的でなくなったため。root の `pnpm dev` から product を起動できる、`pnpm build` で全 workspace を build できる、といった形に統一しないと daily な開発フローが破綻する。
+
+Storybook mock の cleanup は、前日の chronotype callback 注入廃止と同じ系統の「dead pattern が新規 story に copy される前に潰す」作業。
+
+#### Claudeの所感
+
+**Component から計算を除去する hook 化は責務の純化**: `useChronotypeZones` のような hook は単なる「ロジックを別ファイルに切り出す」操作ではなく、component が受け取る抽象のレベルを 1 段上げる行為。`profile.timezone.offset` を component が知っているのと `zones[]` を受け取るのとでは、component の認知負荷も変更耐性も違う。hook は「ロジック格納庫」ではなく「抽象の境界」として設計する。
+
+**Workspace command の整備は monorepo の生産性ゲート**: monorepo に移行しても「個別 workspace に入って操作する」フローが残っていると、開発者が「どの workspace でこれを叩くか」を毎回考える認知コストが残る。root の package.json scripts を monorepo-aware に整理する作業は cosmetic に見えるが、これをやらないと monorepo のメリットが daily の操作で打ち消される。
+
+---
+
 ## 2026-05-21
 
 ### packages 層を新設し、feature-colocation を 6 feature に一気に展開した日
