@@ -1,11 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
-import { Logo } from '@dayopt/ui';
+import { Button, Logo } from '@dayopt/ui';
 import { Menu, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -29,6 +28,7 @@ export function DocsHeader({ onMobileMenuToggle, mobileMenuOpen }: DocsHeaderPro
           <Button
             variant="ghost"
             icon
+            size="sm"
             onClick={onMobileMenuToggle}
             className="lg:hidden"
             aria-label={mobileMenuOpen ? t('aria.closeMenu') : t('aria.openMenu')}
