@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { toast } from '@/lib/toast';
 import {
+  canUseEntitlement,
   dayoptPlanIds,
-  getMonthlyUsd,
+  dayoptPlans,
+  dayoptPricing,
+  entitlementKeys,
   getPlanIdForSubscriptionStatus,
   type DayoptPlanId,
 } from '@dayopt/billing';
@@ -42,7 +45,7 @@ interface Plan {
 
 const PLANS: Plan[] = [
   {
-    id: dayoptPlanIds.free,
+    id: dayoptPlans.free.id,
     nameKey: 'settings.subscription.plans.free.name',
     featureKeys: [
       'settings.subscription.plans.free.features.timeboxing',
@@ -52,7 +55,7 @@ const PLANS: Plan[] = [
     ],
   },
   {
-    id: dayoptPlanIds.pro,
+    id: dayoptPlans.pro.id,
     nameKey: 'settings.subscription.plans.pro.name',
     featureKeys: [
       'settings.subscription.plans.pro.features.fullAnalytics',
@@ -101,6 +104,7 @@ export function BillingSettings() {
 
   const subscriptionStatus = overview.data?.billingInfo.subscriptionStatus;
   const currentPlan = getPlanIdForSubscriptionStatus(subscriptionStatus);
+  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
 
   // Checkout Session 作成
   const createCheckout = api.billing.createCheckoutSession.useMutation({
@@ -206,7 +210,7 @@ export function BillingSettings() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h4 className="text-lg font-medium">
-                {currentPlan === 'pro'
+                {canAccessPro
                   ? t('settings.subscription.plans.pro.name')
                   : t('settings.subscription.freePlanLabel')}
               </h4>
@@ -218,12 +222,12 @@ export function BillingSettings() {
             <p className="text-muted-foreground text-base md:text-sm">
               {subscriptionStatus === 'trialing'
                 ? t('settings.subscription.trialDescription')
-                : currentPlan === 'pro'
+                : canAccessPro
                   ? t('settings.subscription.proPlanDescription')
                   : t('settings.subscription.freePlanDescription')}
             </p>
           </div>
-          {currentPlan === 'pro' && (
+          {canAccessPro && (
             <Button
               variant="outline"
               onClick={handleManageSubscription}
@@ -285,7 +289,7 @@ export function BillingSettings() {
       )}
 
       {/* プラン変更（Free ユーザーのみ — canceled は上で専用UIを表示） */}
-      {currentPlan === 'free' && subscriptionStatus !== 'canceled' && (
+      {currentPlan === dayoptPlanIds.free && subscriptionStatus !== 'canceled' && (
         <SectionCard title={t('settings.subscription.selectPlan')}>
           <div className="grid gap-4 md:grid-cols-2">
             {PLANS.map((plan) => (
@@ -313,7 +317,7 @@ export function BillingSettings() {
                       {new Intl.NumberFormat(undefined, {
                         style: 'currency',
                         currency: 'usd',
-                      }).format(getMonthlyUsd(plan.id))}
+                      }).format(dayoptPricing[plan.id].monthlyUsdCents / 100)}
                     </span>
                     <span className="text-muted-foreground text-base md:text-sm">
                       {t('settings.subscription.perMonth')}
@@ -330,7 +334,7 @@ export function BillingSettings() {
                   ))}
                 </ul>
 
-                {plan.id === dayoptPlanIds.pro ? (
+                {canUseEntitlement(plan.id, entitlementKeys.proAccess) ? (
                   <Button
                     className="w-full"
                     variant="primary"
@@ -353,7 +357,7 @@ export function BillingSettings() {
       )}
 
       {/* お支払い方法（Pro ユーザーのみ表示） */}
-      {currentPlan === 'pro' && (
+      {canAccessPro && (
         <SectionCard title={t('settings.subscription.paymentMethod')}>
           <LabeledRow
             label={
@@ -381,7 +385,7 @@ export function BillingSettings() {
       )}
 
       {/* 請求履歴 — overflow-x-auto でモバイル対応（P1-5） */}
-      {currentPlan === 'pro' && (
+      {canAccessPro && (
         <SectionCard title={t('settings.subscription.billingHistory')}>
           {invoicesData.length > 0 ? (
             <div className="overflow-x-auto">
@@ -436,7 +440,7 @@ export function BillingSettings() {
       )}
 
       {/* キャンセル — 確認ダイアログ付き（P0-1） */}
-      {currentPlan === 'pro' && (
+      {canAccessPro && (
         <SectionCard title={t('settings.subscription.cancelTitle')}>
           <LabeledRow label={t('settings.subscription.cancelDescription')}>
             <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

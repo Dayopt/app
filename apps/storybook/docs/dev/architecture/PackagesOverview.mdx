@@ -162,6 +162,7 @@ Supabase/Postgres 上の形を扱う境界。generated types, table names, row h
 ### `packages/billing`
 
 公開してよい plan / subscription / entitlement 定義を置く境界。client import できる public-safe な billing model だけを扱う。
+`apps/product` では billing / settings の表示判定で利用を広げている。Stripe runtime は product-local のままにする。
 
 例:
 
