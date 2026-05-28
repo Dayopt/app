@@ -29,7 +29,7 @@ import { trpcUserRateLimit } from '@/lib/rate-limit/upstash';
 import { AuthMode, createServiceRoleClient, detectAuthMode } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
 
-import type { Database } from '@dayopt/database';
+import { databaseTables, type Database } from '@dayopt/database';
 
 /**
  * プロシージャメタデータ（API仕様書自動生成用）
@@ -365,7 +365,7 @@ export const proProcedure = protectedProcedure.meta({ auth: 'pro' }).use(async (
 
   if (!status) {
     const { data, error } = await ctx.supabase
-      .from('profiles')
+      .from(databaseTables.profiles)
       .select('*')
       .eq('id', ctx.userId)
       .single();

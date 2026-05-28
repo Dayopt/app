@@ -13,7 +13,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@dayopt/database';
+import { databaseTables, type Database } from '@dayopt/database';
 
 interface TzCacheEntry {
   timezone: string;
@@ -38,7 +38,7 @@ export async function getUserTimezone(
   }
 
   const { data } = await supabase
-    .from('user_settings')
+    .from(databaseTables.userSettings)
     .select('timezone')
     .eq('user_id', userId)
     .single();

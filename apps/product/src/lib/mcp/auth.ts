@@ -8,6 +8,7 @@ import {
   type OAuthClientId,
   type SupportedScope,
 } from '@/lib/oauth-server';
+import { databaseTables } from '@dayopt/database';
 
 export interface VerifiedAccessToken {
   /** oauth_tokens.id (chain 追跡用)。 */
@@ -34,7 +35,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
   const db = createOAuthDbClient();
 
   const { data: row, error } = await db
-    .from('oauth_tokens')
+    .from(databaseTables.oauthTokens)
     .select('id, user_id, token_type, client_id, scopes, expires_at, revoked_at')
     .eq('token_hash', tokenHash)
     .maybeSingle();
@@ -58,7 +59,7 @@ export async function verifyAccessToken(token: string): Promise<VerifiedAccessTo
 
   // last_used_at update — best effort, fire-and-forget
   void db
-    .from('oauth_tokens')
+    .from(databaseTables.oauthTokens)
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', row.id)
     .then(({ error: updateError }) => {

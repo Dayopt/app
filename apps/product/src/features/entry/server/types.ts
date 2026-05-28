@@ -6,7 +6,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@dayopt/database';
+import type { Database, Row } from '@dayopt/database';
 import type { CreateEntryInput, EntryFilter, UpdateEntryInput } from '../schemas/entry';
 
 /**
@@ -17,12 +17,12 @@ export type ServiceSupabaseClient = SupabaseClient<Database>;
 /**
  * エントリのデータベース行型
  */
-export type EntryRow = Database['public']['Tables']['entries']['Row'];
+export type EntryRow = Row<'entries'>;
 
 /**
  * タグのデータベース行型
  */
-export type TagRow = Database['public']['Tables']['tags']['Row'];
+export type TagRow = Row<'tags'>;
 
 /**
  * エントリ（タグID付き）
