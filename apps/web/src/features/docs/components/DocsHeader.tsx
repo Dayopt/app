@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Link } from '@/platform/i18n/navigation';
+import { Logo } from '@dayopt/ui';
 import { Menu, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -38,7 +39,7 @@ export function DocsHeader({ onMobileMenuToggle, mobileMenuOpen }: DocsHeaderPro
           {/* Logo → marketing home, Docs badge → docs home */}
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center">
-              <span className="text-foreground text-lg font-medium">Dayopt</span>
+              <Logo variant="wordmark" size="md" className="text-foreground" />
             </Link>
             <Link
               href="/docs"

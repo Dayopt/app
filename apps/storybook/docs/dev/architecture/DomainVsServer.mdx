@@ -1,0 +1,179 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Architecture/Domain vs Server" />
+
+# Domain vs Server
+
+`features/{name}/domain/` と `features/{name}/server/` の境界。
+
+「いつ domain に置き、いつ server に置くか」を判断するためのドキュメント。
+
+---
+
+## 結論
+
+- **domain = TZ / DB / React 非依存の pure logic**
+- **server = DB orchestration + RPC↔tRPC adapter**
+- **RPC / DB shape を domain に持ち込まない**
+
+---
+
+## 判断基準
+
+### domain に置く
+
+- DB / Supabase / tRPC / React / Zustand / TZ に **依存しない pure logic**
+- 入力 → 出力が決定論的、副作用なし
+- unit test で完結する（mock 不要）
+- 例: business rule、validation、計算、変換（domain type → domain type）
+
+### server に置く
+
+- RPC / DB row の snake_case shape に密結合
+- snake → camel rename / outer key rename を含む
+- `null → undefined` 変換など RPC↔tRPC 契約差分の adapter
+- DB error code を持つ Error class に依存（例: `TagServiceError`）
+
+### どちらにも置かない
+
+- React hook が必要なロジック → `hooks/`
+- Zustand store のロジック → `stores/`
+- 1-5 LOC の trivial mapper → inline で OK（独立ファイル化の ROI が低い）
+
+---
+
+## domain と server transformer の違い
+
+| 観点   | domain                    | server transformer                                |
+| ------ | ------------------------- | ------------------------------------------------- |
+| 入力   | feature の domain type    | RPC row / `unknown`                               |
+| 出力   | feature の domain type    | tRPC response shape                               |
+| 依存   | 他 domain function のみ   | RPC shape の型を直接握る                          |
+| テスト | TZ / 副作用なしで pass    | RPC mock 不要、pure                               |
+| 場所   | `features/{name}/domain/` | `features/{name}/server/{procedure}-transform.ts` |
+
+---
+
+## Naming 規則
+
+確立済みの命名規則:
+
+| プレフィックス | 用途                                           | 例                            |
+| -------------- | ---------------------------------------------- | ----------------------------- |
+| `aggregate`    | pure aggregation（複数行 → 集計）              | `aggregateTagStats`           |
+| `transform`    | pure transform（snake → camel、shape 変換）    | `transformEstimationAccuracy` |
+| `unpack`       | RPC field の default 埋め（単一 RPC field 用） | `unpackEntryRate`             |
+| `calculate`    | pure 計算（streak、平均、差分など）            | `calculateStreak`             |
+| `build`        | 入力から構造化された出力を構築                 | `buildTagDashboard`           |
+
+---
+
+## 1 procedure 1 file 原則
+
+server transformer は基本的に **1 procedure 1 file**。
+
+```
+features/entry/server/
+  statistics-overview-transform.ts
+  statistics-time-by-tag-transform.ts
+  statistics-energy-map-transform.ts
+  statistics-kpi-unpackers.ts          # ← 例外: 5 unpacker を集約
+```
+
+**例外**: 同ドメインの subset shape を扱う関連 unpacker は 1 file に集約してよい。
+
+例: `statistics-kpi-unpackers.ts` は 5 つの KPI unpacker (`unpackCumulativeTime` / `unpackAvgFulfillment` / `unpackEntryRate` / `unpackContextSwitches` / `unpackBlankRate`) を集約。これらは:
+
+- 全て `get_stats_kpi_summary` の subset shape を扱う
+- 全て同じ default / rename ロジックを共有
+- 個別 KPI procedure と `transformStatsOverviewResponse` の両方から呼ばれる
+
+「同じ shape を返すから」だけで統合しない。**同じ default / rename / 変換ルールを共有しているか** で判断する。
+
+---
+
+## 共通化の判断（#1232 の教訓）
+
+同一ロジックが 2 箇所以上で重複していたら統合する。
+
+### 重複の典型例
+
+`get_plan_rate` を直接読む procedure と `get_stats_kpi_summary.planRate` から読む procedure が、**同じ default + rename ロジックを別々に書いていた**:
+
+```ts
+// getEntryRate (flat, 個別 RPC)
+return {
+  totalEntries: result?.totalEntries ?? 0,
+  plannedEntries: result?.plannedEntries ?? 0,
+  entryRate: result?.planRate ?? 0,  // ← rename
+};
+
+// transformStatsOverviewResponse (nested, summary RPC)
+entryRate: {
+  totalEntries: result?.planRate?.totalEntries ?? 0,
+  plannedEntries: result?.planRate?.plannedEntries ?? 0,
+  entryRate: result?.planRate?.planRate ?? 0,  // ← rename
+}
+```
+
+これは `unpackEntryRate(data)` を共通化することで両方から再利用可能になり、片方だけ挙動が乖離するリスクを排除できる。
+
+### 統合しない判断
+
+「同じ shape を返すから」だけでは統合しない。判断軸:
+
+- ✅ 同じ default 値を共有
+- ✅ 同じ rename ロジック
+- ✅ 同じ null/undefined 変換
+- ❌ shape が偶然一致しているだけ（rule は別物）
+
+---
+
+## 実例
+
+### domain の例: `aggregateMonthlyTrend`
+
+```ts
+// features/entry/domain/monthly-trend.ts
+export function aggregateMonthlyTrend(
+  rows: MonthlyTrendRow[],
+  nowYear: number,
+  nowMonth: number,
+  monthCount: number,
+): MonthTrendSlot[] {
+  // 月跨ぎ / leap year / 負数 modulo 補正を含む pure logic
+  // ...
+}
+```
+
+- TZ 形式化は呼び出し元 (server procedure) が行い、`nowYear` / `nowMonth` を引数で受ける
+- domain は TZ 非依存に保たれる
+- unit test で leap year / 年跨ぎ を網羅できる
+
+### server transformer の例: `transformStatsOverviewResponse`
+
+```ts
+// features/entry/server/statistics-overview-transform.ts
+export function transformStatsOverviewResponse(data: unknown): StatsOverviewResult {
+  const result = data as Partial<StatsKpiSummaryRpcResult> | null | undefined;
+  return {
+    cumulativeTime: unpackCumulativeTime(result?.cumulativeTime),
+    avgFulfillment: unpackAvgFulfillment(result?.avgFulfillment),
+    entryRate: unpackEntryRate(result?.planRate), // ← outer key rename
+    contextSwitches: unpackContextSwitches(result?.contextSwitches),
+    blankRate: unpackBlankRate(result?.blankRate),
+  };
+}
+```
+
+- RPC `get_stats_kpi_summary` の response shape (camelCase + `planRate` 構造) に密結合
+- `planRate → entryRate` の rename は RPC↔tRPC adapter の役割
+- domain には置けない（RPC shape を握っている）
+
+---
+
+## 参考
+
+- `Code Organization`（このディレクトリ内）
+- `Feature Boundaries`（`.claude/rules/feature-boundaries.md`）
+- `src/lib Policy`（このディレクトリ内）
