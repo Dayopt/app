@@ -1,0 +1,26 @@
+[mcp_servers.context7]
+args = [
+    "-y",
+    "@upstash/context7-mcp@latest",
+]
+command = "npx"
+
+[mcp_servers.eagle]
+url = "http://127.0.0.1:41596/mcp"
+
+[mcp_servers.sentry]
+args = [
+    "-y",
+    "@sentry/mcp-server@latest",
+]
+command = "npx"
+env_vars = ["SENTRY_ACCESS_TOKEN"]
+
+[mcp_servers.supabase-local]
+url = "http://127.0.0.1:54321/mcp"
+
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
