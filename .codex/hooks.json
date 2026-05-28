@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/pre-tool-guard.sh"
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/pre-tool-guard.sh"
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/pre-tool-guard.sh"
           }
         ]
       },
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/pre-tool-guard.sh"
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/pre-tool-guard.sh"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/post-tool-format.sh",
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/post-tool-format.sh",
             "statusMessage": "Prettier でフォーマット中..."
           }
         ]
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/post-tool-format.sh",
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/post-tool-format.sh",
             "statusMessage": "Prettier でフォーマット中..."
           }
         ]
@@ -56,7 +56,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".codex/hooks/session-start.sh",
+            "command": "\"$(git rev-parse --show-toplevel)\"/.codex/hooks/session-start.sh",
             "statusMessage": "プロジェクト状態を取得中..."
           }
         ]
