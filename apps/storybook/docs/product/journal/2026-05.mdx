@@ -6,6 +6,33 @@ import { Meta } from '@storybook/blocks';
 
 ---
 
+## 2026-05-28
+
+### @dayopt/assets パッケージを新設し、Logo を monorepo 全体で共有した日
+
+2 コミット。作業規模は小さく変更ファイルは 13 本（うち pnpm-lock.yaml を除くと 12 本）。新設した `packages/assets` に Symbol（SVG コンポーネント）と Wordmark（brand name テキスト）を集約し、`@dayopt/ui` の Logo がそれを参照する構造へ変更。`apps/web` の Header / Footer / DocsHeader と `apps/product` の OG image も新 Logo へ置き換えた。
+
+#### やったこと
+
+- **@dayopt/assets 新設 (1 commit)**: `packages/assets/src/symbol.tsx`（`Symbol` コンポーネント + `SYMBOL_PATH_D` / `SYMBOL_VIEW_BOX` 定数）と `packages/assets/src/wordmark.tsx`（`Wordmark` コンポーネント + `BRAND_WORDMARK` 定数）を追加。`@dayopt/ui` の `logo.tsx` から参照する構造に変更
+- **apps の Logo 統一 (同 commit)**: `apps/web` の Header / Footer / DocsHeader でハードコードされていた `<span>Dayopt</span>` を `<Logo>` に置換。`apps/product` の OG image はテキスト `"D"` から `SYMBOL_PATH_D` を使う SVG に変更
+
+#### なぜ今日この作業をしたか
+
+前日のセッションログの next に「`@dayopt/ui` の product 実利用を他コンポーネントにも展開」とあった。その方向で作業を進める中で、`@dayopt/ui` の Logo が symbol / wordmark の SVG パスをインライン保持していることに気づいた。shared package として外に出るならアセット自体を独立パッケージに切り出すのが自然で、呼び出し側（UI component / OG image / 将来的な native app など）が独自に参照できる構造にした。
+
+OG image は `next/og` の `ImageResponse` を使っており、通常の React component や Tailwind クラスが解釈できない。Symbol を component として import してもレンダリングできないため、SVG path 文字列を定数として export することで OG image から直接参照できるようにした。「component と定数の両方を export する」設計はこの制約から自然に導かれた。
+
+#### Claudeの所感
+
+**「コンポーネントと定数の両面 export」は制約から生まれた良い設計**: next/og の制約（React component 非サポート）を回避するために SVG path 定数を export した結果、`Symbol` と `SYMBOL_PATH_D` の両方が揃った。これは「将来 native app や canvas で同じアセットを使いたい」場面にも適用できる。制約への対応が汎用性を生んだ例。
+
+**アセットの分離は monorepo の依存整理を促進する**: `@dayopt/ui` が SVG パスをインラインで持っていた間は、「Logo のビジュアルを変えたい = ui package を修正」だった。`@dayopt/assets` に切り出したことで、「アセットの更新 = assets package のみ修正」となり、変更の影響範囲が明確になった。package 間の依存は `assets → ui → apps` の一方向に整理されている。
+
+**web app の Logo がハードコードテキストだったことは見落とし**: `apps/web` の Header / Footer はずっと `<span>Dayopt</span>` というハードコードテキストを使っていた。`@dayopt/ui` の Logo component が存在しているのにそれを使っていなかった。今回の作業で統一されたが、shared component を作ったら全ての利用箇所で使うという原則の徹底が今後の課題。
+
+---
+
 ## 2026-05-27
 
 ### statistics.ts の最終クリーンアップと、@dayopt/ui を product に初実投入した日
