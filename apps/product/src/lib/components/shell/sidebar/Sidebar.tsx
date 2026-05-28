@@ -4,6 +4,7 @@ import { PanelLeft } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
+import { APP_NAME } from '@/lib/app-info';
 import { Button } from '@/lib/components/ui/button';
 import { HoverTooltip } from '@/lib/components/ui/tooltip';
 import { useShellStore } from '@/lib/stores/useShellStore';
@@ -45,13 +46,13 @@ export function Sidebar({
         <div className="flex items-center gap-2 pl-2">
           <Image
             src="/icons/icon-192.png"
-            alt="Dayopt"
+            alt={APP_NAME}
             width={20}
             height={20}
             priority
             className="rounded-lg"
           />
-          <span className="text-foreground text-sm font-medium tracking-tight">Dayopt</span>
+          <span className="text-foreground text-sm font-medium tracking-tight">{APP_NAME}</span>
         </div>
         <div className="flex items-center">
           <HoverTooltip content={t('navigation.sidebar.closeSidebar')} side="bottom">

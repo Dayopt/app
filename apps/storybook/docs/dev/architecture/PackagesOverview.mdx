@@ -65,6 +65,8 @@ Package foundation は第一段階として運用可能な状態にある。root
 
 ここからは新しい package を増やすより、既存 apps が shared package を低リスクに使う段階へ進む。優先順は `packages/ui` の product / web 実利用、`packages/config` の残り hardcode 置換、`packages/database.databaseTables` の段階適用、`packages/billing` の pricing / plan 表示整理とする。
 
+product 側の product-first adoption は一段落した。config / billing / database / domain / assets / ui の 6 package は逆依存なく product surfaces で利用され、shell のブランド名ラベルも product-local の `APP_NAME`（= `dayoptBrand.name`）経由に揃えた。残るのは `apps/web` への adoption（config → assets → ui → billing の順）と、`.from('table')` の大規模 service sweep など follow-up であり、これらは別 PR で段階的に進める。
+
 ## Package Boundaries
 
 ### `packages/design`
