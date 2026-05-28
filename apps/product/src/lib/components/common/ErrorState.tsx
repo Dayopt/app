@@ -3,7 +3,8 @@
 import { AlertCircle, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button } from '@dayopt/ui';
+
 import { cn } from '@/lib/utils';
 
 export interface ErrorStateProps {

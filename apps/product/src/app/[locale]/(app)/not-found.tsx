@@ -14,7 +14,7 @@ import { FileQuestion } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button, Card } from '@dayopt/ui';
 
 export default function AppNotFound() {
   const t = useTranslations('error.notFound');
@@ -22,7 +22,7 @@ export default function AppNotFound() {
   return (
     // eslint-disable-next-line tailwindcss/no-arbitrary-value -- viewport unit
     <div className="grid min-h-[60vh] w-full place-items-center p-8">
-      <div className="flex max-w-md flex-col items-center gap-6 text-center">
+      <Card className="w-full max-w-md items-center gap-6 border-0 bg-transparent py-0 text-center shadow-none">
         <div className="border-border flex size-16 items-center justify-center rounded-full border-2">
           <FileQuestion className="text-muted-foreground size-8" />
         </div>
@@ -35,7 +35,7 @@ export default function AppNotFound() {
         <Button asChild>
           <Link href="/">{t('goHome')}</Link>
         </Button>
-      </div>
+      </Card>
     </div>
   );
 }

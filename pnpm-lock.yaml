@@ -208,9 +208,15 @@ importers:
       '@dayopt/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@dayopt/design':
+        specifier: workspace:*
+        version: link:../../packages/design
       '@dayopt/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@dayopt/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

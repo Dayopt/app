@@ -3,7 +3,13 @@
 import { Link, useRouter } from '@/lib/i18n/navigation';
 import { useEffect, useState } from 'react';
 
+import {
+  canUseEntitlement,
+  entitlementKeys,
+  getPlanIdForSubscriptionStatus,
+} from '@dayopt/billing';
 import { createDayoptUrl, dayoptUrls } from '@dayopt/config';
+import { Badge, Card } from '@dayopt/ui';
 import {
   Book,
   ChevronDown,
@@ -23,7 +29,6 @@ import { SETTINGS_CATEGORIES } from '@/features/settings';
 import { APP_NAME, APP_RELEASES_URL, APP_VERSION } from '@/lib/app-info';
 import { MEDIA_QUERIES } from '@/lib/breakpoints';
 import { Avatar, AvatarFallback, AvatarImage } from '@/lib/components/ui/avatar';
-import { Badge } from '@/lib/components/ui/badge';
 import { ScrollArea } from '@/lib/components/ui/scroll-area';
 import { Skeleton } from '@/lib/components/ui/skeleton';
 import { useHasMounted } from '@/lib/hooks/useHasMounted';
@@ -57,7 +62,8 @@ export default function SettingsPage() {
 
   const billingOverview = api.billing.getOverview.useQuery(undefined, { retry: false });
   const subStatus = billingOverview.data?.billingInfo.subscriptionStatus;
-  const isPro = subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due';
+  const currentPlan = getPlanIdForSubscriptionStatus(subStatus);
+  const canAccessPro = canUseEntitlement(currentPlan, entitlementKeys.proAccess);
   const isLoadingBilling = billingOverview.isLoading;
 
   // PC: ホームにリダイレクトし、設定モーダルを開く
@@ -126,7 +132,7 @@ export default function SettingsPage() {
     <ScrollArea className="flex-1">
       {/* B. ヒーローエリア */}
       <div className="px-4 pt-8 pb-6">
-        <div className="border-border-subtle overflow-hidden rounded-lg border shadow-sm">
+        <Card className="border-border-subtle gap-0 overflow-hidden rounded-lg py-0 shadow-sm">
           {/* Row 1: Avatar + Name/Email + Plan Badge */}
           <Link
             href="/settings/profile"
@@ -147,8 +153,8 @@ export default function SettingsPage() {
             {isLoadingBilling ? (
               <Skeleton className="h-6 w-10 rounded-lg" />
             ) : (
-              <Badge variant={isPro ? 'primary' : 'outline'}>
-                {isPro
+              <Badge variant={canAccessPro ? 'primary' : 'outline'}>
+                {canAccessPro
                   ? t('settings.subscription.plans.pro.name')
                   : t('settings.subscription.plans.free.name')}
               </Badge>
@@ -156,7 +162,7 @@ export default function SettingsPage() {
           </Link>
 
           {/* Row 2: Upgrade CTA（Free時のみ） */}
-          {!isLoadingBilling && !isPro && (
+          {!isLoadingBilling && !canAccessPro && (
             <button
               type="button"
               onClick={() => router.push('/settings/billing')}
@@ -172,7 +178,7 @@ export default function SettingsPage() {
               <ChevronRight className="text-muted-foreground size-4 shrink-0" />
             </button>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* 設定カテゴリ */}

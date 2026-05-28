@@ -7,12 +7,12 @@
  */
 'use client';
 
-import { Button } from '@/lib/components/ui/button';
+import { Button, Card } from '@dayopt/ui';
 
 export default function RootNotFound() {
   return (
     <div className="bg-background fixed inset-0 flex items-center justify-center overflow-auto p-4">
-      <div className="bg-card border-border-subtle w-full max-w-md rounded-2xl border p-8 shadow-sm">
+      <Card className="border-border-subtle bg-card w-full max-w-md gap-0 rounded-2xl p-8 py-8 shadow-sm">
         <div className="mb-6">
           <h1 className="text-foreground mb-2 text-2xl font-medium">Page not found</h1>
           <p className="text-muted-foreground">
@@ -23,7 +23,7 @@ export default function RootNotFound() {
         <Button onClick={() => (window.location.href = '/')} className="w-full">
           Go to Home
         </Button>
-      </div>
+      </Card>
     </div>
   );
 }

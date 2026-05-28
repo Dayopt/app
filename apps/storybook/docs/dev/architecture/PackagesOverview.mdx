@@ -83,6 +83,7 @@ Storybook 表示:
 ### `packages/ui`
 
 Domain logic を持たない React UI primitive の置き場。Button, Badge, Card, Logo のように複数 app で使える部品だけを入れる。
+`apps/product` では settings / account / fallback surfaces で Button, Badge, Card の runtime 利用を段階的に広げている。Interactive core surfaces は app-local のままにし、submit / mutation / billing flow は避けながら進める。
 
 知ってよいもの:
 
@@ -102,6 +103,7 @@ Domain logic を持たない React UI primitive の置き場。Button, Badge, Ca
 ### `packages/config`
 
 Product/web が共有する public constants の置き場。副作用を持たず、Next.js / React / Zod / env / server-only に依存しない。
+`apps/product` では low-risk な public brand / domain / URL / contact constants から利用を広げている。
 
 入れてよいもの:
 
@@ -160,6 +162,7 @@ Supabase/Postgres 上の形を扱う境界。generated types, table names, row h
 ### `packages/billing`
 
 公開してよい plan / subscription / entitlement 定義を置く境界。client import できる public-safe な billing model だけを扱う。
+`apps/product` では billing / settings の表示判定で利用を広げている。Stripe runtime は product-local のままにする。
 
 例:
 
