@@ -64,6 +64,7 @@ Apps 側に残る legal / i18n / docs / test fixture の URL, email, price 文�
 Package foundation は第一段階として運用可能な状態にある。root scripts の `build:packages`, `typecheck:packages`, `check:workspace`, `lint:boundaries`, `build`, `build:web`, `build-storybook` は現在の package 構成を検証対象に含め、CI も `packages-build` job で `pnpm build:packages` を実行する。
 
 ここからは新しい package を増やすより、既存 apps が shared package を低リスクに使う段階へ進む。優先順は `packages/ui` の product / web 実利用、`packages/config` の残り hardcode 置換、`packages/database.databaseTables` の段階適用、`packages/billing` の pricing / plan 表示整理とする。
+`apps/web` でも design theme / UI primitives / config social links / billing pricing の採用を始めている。broader UI migration と design token consolidation は段階的な follow-up として扱う。
 
 product 側の product-first adoption は一段落した。config / billing / database / domain / assets / ui の 6 package は逆依存なく product surfaces で利用され、shell のブランド名ラベルも product-local の `APP_NAME`（= `dayoptBrand.name`）経由に揃えた。残るのは `apps/web` への adoption（config → assets → ui → billing の順）と、`.from('table')` の大規模 service sweep など follow-up であり、これらは別 PR で段階的に進める。
 
@@ -86,6 +87,7 @@ Storybook 表示:
 
 Domain logic を持たない React UI primitive の置き場。Button, Badge, Card, Logo のように複数 app で使える部品だけを入れる。
 `apps/product` では settings / account / fallback surfaces で Button, Badge, Card の runtime 利用を段階的に広げている。Interactive core surfaces は app-local のままにし、submit / mutation / billing flow は避けながら進める。
+`apps/web` では marketing / shell / docs header / fallback surfaces から採用し、form / search / content interaction は web-local のままにする。
 
 知ってよいもの:
 
@@ -106,6 +108,7 @@ Domain logic を持たない React UI primitive の置き場。Button, Badge, Ca
 
 Product/web が共有する public constants の置き場。副作用を持たず、Next.js / React / Zod / env / server-only に依存しない。
 `apps/product` では low-risk な public brand / domain / URL / contact constants から利用を広げている。
+`apps/web` では social links と docs repository links から利用を広げ、legal / i18n / content 本文は copy として残す。
 
 入れてよいもの:
 

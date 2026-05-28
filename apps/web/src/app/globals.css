@@ -1,7 +1,9 @@
 @import 'tailwindcss';
+@source '../../../../packages/ui/src';
 @import 'highlight.js/styles/github.css';
 
 /* Design Tokens */
+@import '@dayopt/design/theme.css';
 @import '../styles/tokens/primitives.css';
 @import '../styles/tokens/colors.css';
 @import '../styles/tokens/elevation.css';

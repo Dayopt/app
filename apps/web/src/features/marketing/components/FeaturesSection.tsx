@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Container } from '@/components/ui/container';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@dayopt/ui';
 import { Brain, Flame, Target } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
@@ -34,7 +34,7 @@ export async function FeaturesSection({ locale }: FeaturesSectionProps) {
             return (
               <Card
                 key={key}
-                className="border-border bg-background surface-flat hover:shadow-elevation-raised transition-shadow"
+                className="border-border bg-background surface-flat hover:shadow-elevation-raised rounded-2xl shadow-none transition-shadow"
               >
                 <CardHeader>
                   <div className="bg-muted mb-4 inline-flex size-12 items-center justify-center rounded-lg">

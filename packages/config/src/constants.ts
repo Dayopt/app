@@ -27,6 +27,9 @@ export const dayoptBrand = {
   twitterHandle: '@dayoptapp',
   xUrl: 'https://x.com/dayoptapp',
   githubUrl: 'https://github.com/dayoptapp',
+  githubRepositoryUrl: 'https://github.com/Dayopt/dayopt',
+  githubIssuesNewUrl: 'https://github.com/Dayopt/dayopt/issues/new',
+  youtubeUrl: 'https://youtube.com/@dayoptapp',
 } as const;
 
 export type DayoptUrlBase = string;

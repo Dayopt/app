@@ -687,6 +687,9 @@ importers:
       '@dayopt/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@dayopt/design':
+        specifier: workspace:*
+        version: link:../../packages/design
       '@dayopt/ui':
         specifier: workspace:*
         version: link:../../packages/ui

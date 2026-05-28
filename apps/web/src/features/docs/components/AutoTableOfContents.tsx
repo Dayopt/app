@@ -1,5 +1,6 @@
 'use client';
 
+import { dayoptBrand } from '@dayopt/config';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { TocItem, generateTableOfContents, truncateHeading } from '../lib/toc';
@@ -182,7 +183,7 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
         <ul className="space-y-2">
           <li>
             <a
-              href="https://github.com/Dayopt/dayopt/issues/new"
+              href={dayoptBrand.githubIssuesNewUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
@@ -192,7 +193,7 @@ export function AutoTableOfContents({ content, className = '' }: AutoTableOfCont
           </li>
           <li>
             <a
-              href="https://github.com/Dayopt/dayopt"
+              href={dayoptBrand.githubRepositoryUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"

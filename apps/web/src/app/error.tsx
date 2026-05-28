@@ -1,8 +1,8 @@
 'use client';
 
 import { ErrorLayout } from '@/components/errors/ErrorLayout';
-import { Button } from '@/components/ui/button';
 import { isDevelopment } from '@/platform/config/env';
+import { Button } from '@dayopt/ui';
 import Link from 'next/link';
 import { useEffect } from 'react';
 

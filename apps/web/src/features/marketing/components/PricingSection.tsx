@@ -1,16 +1,16 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Container } from '@/components/ui/container';
+import { Link } from '@/platform/i18n/navigation';
+import { dayoptPlans, dayoptPricing } from '@dayopt/billing';
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Container } from '@/components/ui/container';
-import { Link } from '@/platform/i18n/navigation';
-import { dayoptPricing } from '@dayopt/billing';
+} from '@dayopt/ui';
 import { Check } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
@@ -23,6 +23,8 @@ interface PricingSectionProps {
 export async function PricingSection({ locale }: PricingSectionProps) {
   const t = await getTranslations({ locale, namespace: 'marketing' });
 
+  const freePlan = dayoptPlans.free;
+  const proPlan = dayoptPlans.pro;
   const freeFeatures = t.raw('pricing.plans.free.features') as string[];
   const proHighlights = t.raw('pricing.plans.pro.highlights') as string[];
 
@@ -59,9 +61,9 @@ export async function PricingSection({ locale }: PricingSectionProps) {
         {/* 2-Card Grid */}
         <div className="mx-auto grid max-w-4xl items-start gap-8 md:grid-cols-2">
           {/* Free Card */}
-          <Card className="border-border flex flex-col">
+          <Card className="border-border flex flex-col rounded-2xl shadow-none">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">{t('pricing.plans.free.name')}</CardTitle>
+              <CardTitle className="text-2xl">{t(`pricing.plans.${freePlan.id}.name`)}</CardTitle>
               <CardDescription className="mt-2">
                 {t('pricing.plans.free.description')}
               </CardDescription>
@@ -69,7 +71,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             <CardContent className="flex-1">
               <div className="mb-8 text-center">
                 <span className="text-foreground text-4xl font-medium">
-                  {dayoptPricing.free.displayPrice}
+                  {dayoptPricing[freePlan.id].displayPrice}
                 </span>
               </div>
               <ul className="space-y-4">
@@ -89,12 +91,12 @@ export async function PricingSection({ locale }: PricingSectionProps) {
           </Card>
 
           {/* Pro Card (Highlighted) */}
-          <Card className="border-primary ring-primary/20 surface-raised relative flex flex-col ring-2 md:scale-105">
+          <Card className="border-primary ring-primary/20 surface-raised relative flex flex-col rounded-2xl ring-2 md:scale-105">
             <Badge className="bg-primary text-primary-foreground absolute -top-3 left-1/2 -translate-x-1/2">
               {t('pricing.plans.pro.badge')}
             </Badge>
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl">{t('pricing.plans.pro.name')}</CardTitle>
+              <CardTitle className="text-2xl">{t(`pricing.plans.${proPlan.id}.name`)}</CardTitle>
               <CardDescription className="mt-2">
                 {t('pricing.plans.pro.description')}
               </CardDescription>
@@ -102,7 +104,7 @@ export async function PricingSection({ locale }: PricingSectionProps) {
             <CardContent className="flex-1">
               <div className="mb-2 text-center">
                 <span className="text-foreground text-4xl font-medium">
-                  {dayoptPricing.pro.displayPrice}
+                  {dayoptPricing[proPlan.id].displayPrice}
                 </span>
                 <span className="text-muted-foreground">{t('pricing.plans.pro.period')}</span>
               </div>

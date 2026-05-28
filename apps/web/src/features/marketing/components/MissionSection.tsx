@@ -1,4 +1,5 @@
 import { Container } from '@/components/ui/container';
+import { dayoptBrand } from '@dayopt/config';
 import { getTranslations } from 'next-intl/server';
 
 interface MissionSectionProps {
@@ -23,7 +24,7 @@ export async function MissionSection({ locale }: MissionSectionProps) {
           <p className="text-muted-foreground mt-4 text-sm">{t('mission.builderNote')}</p>
           <div className="mt-4 flex items-center justify-center gap-x-4">
             <a
-              href="https://x.com/dayoptapp"
+              href={dayoptBrand.xUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -34,7 +35,7 @@ export async function MissionSection({ locale }: MissionSectionProps) {
               </svg>
             </a>
             <a
-              href="https://github.com/dayoptapp"
+              href={dayoptBrand.githubUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-foreground transition-colors"
