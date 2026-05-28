@@ -14,9 +14,9 @@ Layer 0 (基盤):    tags, chronotype             ← 他featureに依存しな�
 Layer 1 (中核):    entry                        ← Layer 0 の barrel を使える
 Layer 2 (体験):    calendar, review, ai,        ← Layer 0+1 を使える
                    palette
-Cross-cutting:     settings                     ← 全feature の barrel を使える
 Independent:       auth, notifications,         ← 他featureに依存しない
                    contact, onboarding, tour
+Composition:       settings                     ← DAG 除外。通常feature扱いしない
 ```
 
 ## 依存ルール（ESLint `error` で強制）
@@ -26,6 +26,49 @@ Independent:       auth, notifications,         ← 他featureに依存しない
 - 同層間・下位→上位の参照は禁止
 - 共有層から `@/features/*` をimportすると **error**
 - `ai/server` はサーバー合成層として例外
+- **settings は DAG から除外** — 後述 [Composition Feature: settings](#composition-feature-settings) を参照
+
+## domain は全 feature に作らない
+
+`features/{name}/domain/` は **pure logic（DB / React / Zustand / TZ 非依存）が複数箇所で参照される or 単体テストで凍結すべき挙動を持つ場合のみ** 作る。
+
+- 例: `features/entry/domain/`、`features/tags/domain/`、`features/review/domain/`
+- domain を作らない feature: `chronotype`（pure logic が薄い）、`settings`（composition なので rule は外部）
+
+「全 feature に domain を作る」は **方針ではない**。pure rule が無い feature には domain は無いのが正しい状態。
+
+## RPC / DB response transformer は domain ではなく server
+
+RPC row の snake_case shape に密結合した変換（snake → camel rename / null → undefined 変換 / outer key rename など）は **`features/{name}/server/` に server transformer として置く**。
+
+- 命名規則: `aggregate{Subject}` (pure) / `transform{Subject}` (snake→camel) / `unpack{Subject}` (RPC field default 埋め)
+- 1 procedure 1 file が原則。同ドメインの subset shape は 1 file に集約してよい（例: `statistics-kpi-unpackers.ts`）
+- domain には RPC / DB shape を持ち込まない（境界を明確に保つ）
+
+## Composition Feature: settings
+
+`settings` は通常 feature の DAG には乗せず、**cross-cutting composition** として扱う。
+
+### 特徴
+
+- ESLint の feature boundary 制約から **除外**（`features/settings/` 配下は他 feature の deep import を許容）
+- 他 feature の store / barrel を組み合わせて「設定」UI を合成する composition feature
+- **自身の domain は持たない**（business rule は composing される側の feature が持つ）
+- server route (`userSettingsRouter`, `billingRouter`) は settings UI からの書き込み入口として settings 配下に同居
+
+### deep import 優先順
+
+settings → 他 feature の deep import は composition の責務上必要なので許容するが、優先順を守る:
+
+1. **`src/lib/stores/*` から取得できる場合は lib 経由を優先**（例: `useUserPreferenceStore`）
+2. **feature の barrel に export されている場合は barrel 経由を優先**（例: `@/features/chronotype` 経由の `useChronotypeSettingsStore`）
+3. **本当に deep import が必要なケースに限定**（例: barrel に出ていない `useCalendarSettingsStore`）
+
+### Layer 1 → Layer 2 は不可（adapter は source 側に置く）
+
+`features/entry`（Layer 1）から `features/review`（Layer 2）の import は DAG 違反のため不可。
+
+「review UI で消費される transformer だから review/domain に置きたい」と思っても、**adapter は source 側 (entry) に置く**のが正解。consumer 側 (review) は tRPC 経由で受ける。
 
 ## Barrel Export
 
