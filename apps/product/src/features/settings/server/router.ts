@@ -16,9 +16,9 @@ import { logger } from '@/lib/logger';
 import { invalidateUserTimezoneCache } from '@/lib/server/user-timezone-cache';
 import { handleServiceError } from '@/lib/trpc/errors';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
-import type { Database } from '@dayopt/database';
+import type { Insert } from '@dayopt/database';
 
-type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert'];
+type UserSettingsInsert = Insert<'user_settings'>;
 
 // バリデーションスキーマ
 const userSettingsSchema = z.object({

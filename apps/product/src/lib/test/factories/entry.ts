@@ -1,6 +1,6 @@
-import type { Database } from '@dayopt/database';
+import type { Row } from '@dayopt/database';
 
-type EntryRow = Database['public']['Tables']['entries']['Row'];
+type EntryRow = Row<'entries'>;
 
 /**
  * テスト用のエントリデータを生成

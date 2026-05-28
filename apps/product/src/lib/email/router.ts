@@ -31,6 +31,7 @@ import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { handleServiceError } from '@/lib/trpc/errors';
 import type { Context } from '@/lib/trpc/procedures';
 import { createTRPCRouter, protectedProcedure } from '@/lib/trpc/procedures';
+import { databaseTables } from '@dayopt/database';
 
 function getResend() {
   return new Resend(env.RESEND_API_KEY);
@@ -44,7 +45,11 @@ const APP_URL = getAppUrl();
  * 未設定の場合は 'en' にフォールバック
  */
 async function getUserLocale(supabase: SupabaseClient, userId: string): Promise<EmailLocale> {
-  const { data } = await supabase.from('user_settings').select('*').eq('user_id', userId).single();
+  const { data } = await supabase
+    .from(databaseTables.userSettings)
+    .select('*')
+    .eq('user_id', userId)
+    .single();
   const locale = (data as Record<string, unknown> | null)?.preferred_locale;
   return (locale as EmailLocale) ?? 'en';
 }
@@ -78,7 +83,7 @@ async function verifyEmailOwnership(ctx: Context, inputEmail: string): Promise<v
 async function isEmailSuppressed(email: string): Promise<boolean> {
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase
-    .from('email_suppressions')
+    .from(databaseTables.emailSuppressions)
     .select('reason')
     .eq('email', email.toLowerCase())
     .limit(1);

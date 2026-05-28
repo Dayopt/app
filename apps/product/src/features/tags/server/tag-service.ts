@@ -19,7 +19,7 @@ import 'server-only';
  */
 
 import { ServiceError } from '@/lib/trpc/errors';
-import type { Database } from '@dayopt/database';
+import type { Database, Insert, Row, Update } from '@dayopt/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { formatRpcErrorDetail } from '../domain/tag-merge';
 import { buildTagTree, flattenTagTree } from '../domain/tag-tree';
@@ -27,7 +27,7 @@ import { extractTagSuffixes, partitionByExistingName } from '../domain/tag-ungro
 import type { Tag, TagDeleteStrategy, TagTreeNode } from '../types';
 
 /** DB タグ行の型 */
-type DbTagRow = Database['public']['Tables']['tags']['Row'];
+type DbTagRow = Row<'tags'>;
 
 /**
  * DBのタグ行をフロントエンド用の Tag 型に変換
@@ -309,7 +309,7 @@ export class TagService {
     await this.makeRoomAtTop(userId, parentId);
 
     // タグデータ作成（sort_order = 0で先頭に追加）
-    const tagData: Database['public']['Tables']['tags']['Insert'] = {
+    const tagData: Insert<'tags'> = {
       user_id: userId,
       name: input.name.trim(),
       color: input.color || 'blue',
@@ -354,7 +354,7 @@ export class TagService {
     }
 
     // 更新データ準備
-    const updateData: Database['public']['Tables']['tags']['Update'] = {};
+    const updateData: Update<'tags'> = {};
     if (updates.name !== undefined) updateData.name = updates.name.trim();
     if (updates.color !== undefined) updateData.color = updates.color;
     if (updates.icon !== undefined) updateData.icon = updates.icon;

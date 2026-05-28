@@ -13,7 +13,7 @@ import { logger } from '@/lib/logger';
 import { getStripe } from '@/lib/stripe/client';
 import { createServiceRoleClient } from '@/lib/supabase/oauth';
 import { ServiceError } from '@/lib/trpc/errors';
-import type { Database } from '@dayopt/database';
+import type { Database, Row } from '@dayopt/database';
 
 /**
  * User Service エラー
@@ -58,8 +58,6 @@ export interface DeleteAccountResult {
   success: true;
 }
 
-/** テーブル行型のエイリアス */
-type Row<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 type LegacyEmptyRows = Array<Record<string, never>>;
 
 /**

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { databaseTables } from '@dayopt/database';
 import type { OAuthClientId } from './clients';
 import { createOAuthDbClient } from './db';
 import { OAuthServerError } from './errors';
@@ -44,7 +45,7 @@ export async function exchangeAuthorizationCode(
   const db = createOAuthDbClient();
 
   const { data: rows, error: consumeError } = await db
-    .from('oauth_authorization_codes')
+    .from(databaseTables.oauthAuthorizationCodes)
     .update({ consumed_at: now })
     .eq('code_hash', codeHash)
     .is('consumed_at', null)
@@ -97,7 +98,7 @@ export async function refreshAccessToken(input: RefreshAccessTokenInput): Promis
   const db = createOAuthDbClient();
 
   const { data: rows, error: revokeError } = await db
-    .from('oauth_tokens')
+    .from(databaseTables.oauthTokens)
     .update({ revoked_at: now })
     .eq('token_hash', refreshHash)
     .eq('token_type', 'refresh')
@@ -144,7 +145,7 @@ async function issueTokenPair(input: IssueTokenPairInput): Promise<TokenResponse
   const refreshExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_SEC * 1000).toISOString();
 
   const { data: refreshRow, error: refreshInsertError } = await db
-    .from('oauth_tokens')
+    .from(databaseTables.oauthTokens)
     .insert({
       user_id: input.userId,
       token_hash: refresh.hash,
@@ -160,7 +161,7 @@ async function issueTokenPair(input: IssueTokenPairInput): Promise<TokenResponse
     throw new OAuthServerError('server_error', 'Failed to issue refresh token', 500);
   }
 
-  const { error: accessInsertError } = await db.from('oauth_tokens').insert({
+  const { error: accessInsertError } = await db.from(databaseTables.oauthTokens).insert({
     user_id: input.userId,
     token_hash: access.hash,
     token_type: 'access',

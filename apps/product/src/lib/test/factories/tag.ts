@@ -1,6 +1,6 @@
-import type { Database } from '@dayopt/database';
+import type { Row } from '@dayopt/database';
 
-type TagRow = Database['public']['Tables']['tags']['Row'];
+type TagRow = Row<'tags'>;
 
 /**
  * テスト用のタグデータを生成
