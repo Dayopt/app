@@ -237,8 +237,6 @@ export function useDragSelection({
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent) => {
       if (disabled || e.button !== 0) return;
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
       const time = pixelsToTime(e.clientY - rect.top);
@@ -269,8 +267,6 @@ export function useDragSelection({
         e.stopPropagation();
         return;
       }
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
       const y = e.clientY - rect.top;
@@ -288,8 +284,6 @@ export function useDragSelection({
       if (disabled) return;
       const touch = e.touches[0];
       if (!touch) return;
-      const target = e.target as HTMLElement;
-      if (target.closest('[data-event-block]') || target.closest('[data-plan-block]')) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
       const y = touch.clientY - rect.top;

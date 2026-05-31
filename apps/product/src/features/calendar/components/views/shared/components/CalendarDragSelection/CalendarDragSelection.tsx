@@ -61,10 +61,7 @@ export const CalendarDragSelection = ({
         className="absolute inset-0"
         onMouseDown={(e) => {
           // Googleカレンダー互換: クリックした日付を記憶（Cmd+Vでペーストする日付として使用）
-          const target = e.target as HTMLElement;
-          if (!target.closest('[data-plan-card]') && !target.closest('[data-plan-block]')) {
-            useEntryClipboardStore.getState().setLastClickedPosition({ date });
-          }
+          useEntryClipboardStore.getState().setLastClickedPosition({ date });
           handleMouseDown(e);
         }}
         onDoubleClick={handleDoubleClick}
