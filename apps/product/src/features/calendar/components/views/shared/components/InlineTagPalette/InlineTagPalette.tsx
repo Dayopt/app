@@ -17,7 +17,7 @@ import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
-import { useEntryMutations } from '@/features/entry';
+import { entryTintColor, useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
   getTagColorClasses,
@@ -372,9 +372,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
   const accentColor = hoveredTag
     ? getTagColorClasses(hoveredTag.color).cssVar
     : 'var(--entry-default)';
-  const tintColor = hoveredTag
-    ? getTagColorClasses(hoveredTag.color).cssVarTint
-    : 'color-mix(in oklch, var(--entry-default) 12%, var(--background))';
+  // EntryCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
+  const tintColor = entryTintColor(accentColor);
   const displayName = hoveredTag?.name ?? tCalendar('event.selectTag');
 
   // 下端 handle: end time だけを 15 分単位で更新
@@ -471,13 +470,13 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       {/* 選択範囲ハイライト（カレンダーグリッド上） */}
       <div
         data-tag-palette
-        className="pointer-events-none absolute right-2 left-0"
+        className="pointer-events-none absolute right-0 left-0"
         style={{ zIndex: Z_INDEX.POPOVER }}
       >
         <div
           ref={highlightRef}
           className={cn(
-            'animate-in fade-in-0 zoom-in-95 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
+            'animate-in fade-in-0 pointer-events-auto absolute right-0 left-0 flex transition-colors duration-150 motion-reduce:animate-none',
             isPast && !hasConflict ? 'rounded-lg' : 'rounded-r-lg',
           )}
           style={{
@@ -495,7 +494,7 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
             <div
               className={cn(
                 'shrink-0 transition-colors duration-150',
-                hasConflict && 'bg-destructive',
+                hasConflict ? 'bg-destructive' : 'opacity-70',
               )}
               style={{
                 width: '3px',
@@ -518,8 +517,12 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
               <div className="flex h-full items-center px-2">
                 <span
                   className={cn(
-                    'truncate text-xs font-normal',
-                    hasConflict ? 'text-destructive' : 'text-foreground',
+                    'truncate text-xs',
+                    hasConflict
+                      ? 'text-destructive font-normal'
+                      : hoveredTag
+                        ? 'text-foreground font-normal'
+                        : 'text-muted-foreground tabular-nums',
                   )}
                 >
                   {hasConflict ? (
@@ -536,7 +539,11 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
                 <span
                   className={cn(
                     'text-sm leading-tight font-normal',
-                    hasConflict ? 'text-destructive' : 'text-foreground',
+                    hasConflict
+                      ? 'text-destructive'
+                      : hoveredTag
+                        ? 'text-foreground'
+                        : 'text-muted-foreground',
                   )}
                 >
                   {hasConflict ? (

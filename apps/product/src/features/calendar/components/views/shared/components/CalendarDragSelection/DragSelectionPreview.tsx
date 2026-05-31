@@ -11,6 +11,8 @@ import { memo } from 'react';
 
 import { useTranslations } from 'next-intl';
 
+import { entryTintColor } from '@/features/entry';
+
 import { HOUR_HEIGHT } from '../../constants/grid.constants';
 
 import type { TimeRange } from './types';
@@ -60,7 +62,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
     const isCompact = height < 40;
     return (
       <div
-        className="bg-destructive-tint text-destructive pointer-events-none absolute right-2 left-0 overflow-hidden rounded-lg"
+        className="bg-destructive-tint text-destructive pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg"
         style={{ top, height, zIndex: 1000 }}
       >
         {isCompact ? (
@@ -86,7 +88,7 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
   if (isPast) {
     return (
       <div
-        className="border-entry-default pointer-events-none absolute right-2 left-0 overflow-hidden rounded-lg border-2 border-dashed"
+        className="border-entry-default pointer-events-none absolute right-0 left-0 overflow-hidden rounded-lg border-2 border-dashed"
         style={{ top, height, zIndex: 1000 }}
       >
         {isCompact ? (
@@ -109,17 +111,20 @@ export const DragSelectionPreview = memo(function DragSelectionPreview({
 
   return (
     <div
-      className="pointer-events-none absolute right-2 left-0 flex rounded-r-lg"
+      className="pointer-events-none absolute right-0 left-0 flex rounded-r-lg"
       style={{
         top,
         height,
         zIndex: 1000,
       }}
     >
-      {/* 左アクセントストリップ */}
-      <div className="bg-entry-default shrink-0" style={{ width: '3px' }} />
-      {/* カード本体 */}
-      <div className="bg-muted min-w-0 flex-1 overflow-hidden rounded-r-lg">
+      {/* 左アクセントストリップ — タグ未選択なので entry-default。確定後カードと同じ opacity-70 */}
+      <div className="bg-entry-default shrink-0 opacity-70" style={{ width: '3px' }} />
+      {/* カード本体 — EntryCard と同じ 18% color-mix tint（neutral base） */}
+      <div
+        className="min-w-0 flex-1 overflow-hidden rounded-r-lg"
+        style={{ backgroundColor: entryTintColor('var(--entry-default)') }}
+      >
         {isCompact ? (
           <div className="flex h-full items-center px-2">
             <span className="text-muted-foreground truncate text-xs tabular-nums">{timeLabel}</span>

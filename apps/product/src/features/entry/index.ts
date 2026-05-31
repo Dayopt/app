@@ -25,6 +25,7 @@ export { useEntryInspectorStore } from './stores/useEntryInspectorStore';
 // Lib (actual-time overlay)
 // =============================================================================
 export { computeActualTimeDiffOverlay } from './lib/actual-time-overlay';
+export { entryTintColor } from './lib/entry-tint';
 
 // =============================================================================
 // Domain (Entry 時間モデル — 純粋関数、DB/tRPC/React 非依存)

@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
+import { entryTintColor } from '@/features/entry';
 import { getTagColorClasses } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
@@ -58,7 +59,8 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
   const height = Math.max(20, (endMinutes - startMinutes) * (hourHeight / 60));
 
   const accentColor = getTagColorClasses(draft.tag.color).cssVar;
-  const tintColor = getTagColorClasses(draft.tag.color).cssVarTint;
+  // EntryCard と同じ 18% color-mix tint を使い、確定後カードと背景色を揃える
+  const tintColor = entryTintColor(accentColor);
 
   const timeLabel = `${formatTimeString(startH, startM, timeFormat)} – ${formatTimeString(endH, endM, timeFormat)}`;
 
@@ -160,7 +162,7 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
   return (
     <div
       data-tag-draft-block
-      className="pointer-events-none absolute right-2 left-0"
+      className="pointer-events-none absolute right-0 left-0"
       style={{ zIndex: Z_INDEX.POPOVER }}
     >
       <div
@@ -179,7 +181,7 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
         {/* 左 accent strip — past unplanned 風の時は描画しない */}
         {!(isPast && !hasConflict) && (
           <div
-            className={cn('shrink-0', hasConflict && 'bg-destructive')}
+            className={cn('shrink-0', hasConflict ? 'bg-destructive' : 'opacity-70')}
             style={{ width: '3px', ...(hasConflict ? {} : { backgroundColor: accentColor }) }}
           />
         )}
