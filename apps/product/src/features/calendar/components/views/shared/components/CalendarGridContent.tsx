@@ -70,6 +70,13 @@ function minutesToDate(date: Date, minutes: number): Date {
   return result;
 }
 
+export function getGhostEntryHeight(style: React.CSSProperties | undefined): number {
+  const rawHeight = style?.height;
+  const height =
+    typeof rawHeight === 'number' ? rawHeight : parseFloat(rawHeight?.toString() ?? '');
+  return Number.isFinite(height) && height > 0 ? height : 20;
+}
+
 /** CalendarGridContent コンポーネントのプロパティ */
 export interface CalendarGridContentProps {
   /** この列が担当する日付 */
@@ -207,19 +214,21 @@ export const CalendarGridContent = React.memo(function CalendarGridContent({
       const tag = entry.tagId ? getTagById(entry.tagId) : null;
       // ゴーストは予定部分のみ表示（実績時間を除外してオーバーレイを抑制）
       const ghostEntry = { ...entry, actualStartDate: null, actualEndDate: null };
+      const ghostHeight = getGhostEntryHeight(entryStyles[entryId]);
       return (
         <EntryCard
           entry={ghostEntry}
           tagName={tag?.name ?? null}
           tagColor={tag?.color ?? null}
           isMobile={isMobile}
-          position={{ top: 0, left: 0, width: 100, height: 9999 }}
+          position={{ top: 0, left: 0, width: 100, height: ghostHeight }}
+          plannedHeight={ghostHeight}
           previewTime={previewTime}
           style={{ position: 'relative', height: '100%' }}
         />
       );
     },
-    [entries, getTagById, isMobile],
+    [entries, entryStyles, getTagById, isMobile],
   );
 
   // 時間グリッド

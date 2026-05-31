@@ -112,6 +112,10 @@ export const EntryRenderer = React.memo(function EntryRenderer({
   // 予定 vs 記録の差分オーバーレイ（multi-column ビューのみ）
   let finalStyle: React.CSSProperties = adjustedStyle;
   let finalHeight: number;
+  const previewPlannedHeight =
+    entryResizing && interactionState.mode === 'resizing'
+      ? interactionState.snappedHeight
+      : currentHeight;
 
   if (enableCrossDayDrag) {
     const overlay = computeActualTimeDiffOverlay(entry, hourHeight);
@@ -128,15 +132,9 @@ export const EntryRenderer = React.memo(function EntryRenderer({
       ? { ...overlayAdjustedStyle, opacity: 0.65 }
       : overlayAdjustedStyle;
 
-    finalHeight =
-      entryResizing && interactionState.mode === 'resizing'
-        ? interactionState.snappedHeight
-        : currentHeight + overlay.heightDelta;
+    finalHeight = previewPlannedHeight + overlay.heightDelta;
   } else {
-    finalHeight =
-      entryResizing && interactionState.mode === 'resizing'
-        ? interactionState.snappedHeight
-        : currentHeight;
+    finalHeight = previewPlannedHeight;
   }
 
   const handleContextMenu = (p: CalendarEvent, e: React.MouseEvent) => {
@@ -200,7 +198,7 @@ export const EntryRenderer = React.memo(function EntryRenderer({
           onAnchorRect={setAnchorRect}
           isMobile={isMobile}
           position={{ top: 0, left: 0, width: 100, height: finalHeight }}
-          plannedHeight={currentHeight}
+          plannedHeight={previewPlannedHeight}
           onContextMenu={handleContextMenu}
           onResizeStart={(
             p: CalendarEvent,

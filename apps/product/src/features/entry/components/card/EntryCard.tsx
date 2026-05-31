@@ -583,6 +583,7 @@ export const EntryCard = memo<EntryCardProps>(function EntryCard({
            card 本体の overflow-hidden 外に置くことで pill icon が短い card でも visible。 */}
       {!isDraft && (!isMobile || isActive) && (
         <div
+          data-entry-resize-frame
           className="pointer-events-none absolute right-0 left-0"
           style={{
             top: `${isUnplanned ? 0 : plannedLayerTop}px`,
