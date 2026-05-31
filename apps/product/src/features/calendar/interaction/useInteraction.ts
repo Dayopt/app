@@ -103,9 +103,13 @@ export interface InteractionHandlers {
 }
 
 function getMinutesFromDayStart(date: Date, time: Date): number {
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  return Math.max(0, Math.min(24 * 60, Math.round((time.getTime() - dayStart.getTime()) / 60_000)));
+  const dayOffset =
+    (Date.UTC(time.getFullYear(), time.getMonth(), time.getDate()) -
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())) /
+    (24 * 60 * 60 * 1000);
+  const wallClockMinutes =
+    Math.round(dayOffset) * 24 * 60 + time.getHours() * 60 + time.getMinutes();
+  return Math.max(0, Math.min(24 * 60, wallClockMinutes));
 }
 
 // ========================================

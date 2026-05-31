@@ -197,6 +197,7 @@ export function interactionReducer(
       );
       const targetDate = resolveTargetDate(ctx, state.dateIndex);
       const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
+      const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
       effects.push({ type: 'HAPTIC', pattern: 'impact' });
       effects.push({
@@ -216,7 +217,7 @@ export function interactionReducer(
           targetDateIndex: state.dateIndex,
           snappedTop: startSnap.snappedTop,
           previewTime,
-          isOverlapping: false,
+          isOverlapping,
         },
         effects,
       };

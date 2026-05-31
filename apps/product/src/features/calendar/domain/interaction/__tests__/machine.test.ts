@@ -190,6 +190,28 @@ describe('LONGPRESS_FIRED', () => {
     });
   });
 
+  it('computes overlap for the snapped long-press preview before any pointer move', () => {
+    const { state } = dispatch(
+      {
+        mode: 'longpress-pending',
+        entryId: 'a',
+        startPoint: origin,
+        originalPosition: { top: 607, left: 0, width: 200, height: 60 },
+        dateIndex: 0,
+      },
+      { type: 'LONGPRESS_FIRED' },
+      createCtx({
+        checkOverlap: (_entryId, start, end) =>
+          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+      }),
+    );
+
+    if (state.mode === 'dragging') {
+      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.isOverlapping).toBe(true);
+    }
+  });
+
   it('ignores when not in longpress-pending mode', () => {
     const { state } = dispatch(IDLE, { type: 'LONGPRESS_FIRED' });
     expect(state.mode).toBe('idle');
