@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { hasTwoLayerTimeConflict } from '@/lib/time/two-layer-overlap';
+
 import type { CalendarEvent } from '../../types/calendar.types';
 
-import { checkClientSideOverlap } from '../overlap';
+import { buildNewEntryOverlapTarget, checkClientSideOverlap } from '../overlap';
 
 function createEvent(
   overrides: Partial<CalendarEvent> & { id: string; startDate: Date; endDate: Date },
@@ -22,6 +24,38 @@ function createEvent(
     ...overrides,
   } as CalendarEvent;
 }
+
+describe('buildNewEntryOverlapTarget', () => {
+  it('未来の新規予定はplanned/actualに同じ範囲を入れる', () => {
+    const start = new Date('2030-01-15T10:00');
+    const end = new Date('2030-01-15T11:00');
+    const target = buildNewEntryOverlapTarget(start, end, new Date('2026-01-15T09:00').getTime());
+
+    expect(target).toMatchObject({
+      id: '',
+      plannedStart: start,
+      plannedEnd: end,
+      actualStart: start,
+      actualEnd: end,
+    });
+    expect(hasTwoLayerTimeConflict([], target)).toBe(false);
+  });
+
+  it('過去の新規記録はplannedなし、actualありにする', () => {
+    const start = new Date('2026-01-15T10:00');
+    const end = new Date('2026-01-15T11:00');
+    const target = buildNewEntryOverlapTarget(start, end, new Date('2026-01-15T12:00').getTime());
+
+    expect(target).toMatchObject({
+      id: '',
+      plannedStart: null,
+      plannedEnd: null,
+      actualStart: start,
+      actualEnd: end,
+    });
+    expect(hasTwoLayerTimeConflict([], target)).toBe(false);
+  });
+});
 
 describe('checkClientSideOverlap', () => {
   it('Plan↔Plan の重複はtrue', () => {
@@ -183,6 +217,36 @@ describe('checkClientSideOverlap', () => {
         new Date('2030-01-15T10:45'),
       ),
     ).toBe(true);
+  });
+
+  it('未来の新規作成は空き枠ならfalse', () => {
+    expect(
+      checkClientSideOverlap([], '', new Date('2030-01-15T10:00'), new Date('2030-01-15T11:00')),
+    ).toBe(false);
+  });
+
+  it('未来の新規作成は既存予定の終端に接していてもfalse', () => {
+    const events = [
+      createEvent({
+        id: 'a',
+        startDate: new Date('2030-01-15T09:00'),
+        endDate: new Date('2030-01-15T10:00'),
+        plannedStartDate: new Date('2030-01-15T09:00'),
+        plannedEndDate: new Date('2030-01-15T10:00'),
+        actualStartDate: new Date('2030-01-15T09:00'),
+        actualEndDate: new Date('2030-01-15T10:00'),
+        origin: 'planned',
+      }),
+    ];
+
+    expect(
+      checkClientSideOverlap(
+        events,
+        '',
+        new Date('2030-01-15T10:00'),
+        new Date('2030-01-15T11:00'),
+      ),
+    ).toBe(false);
   });
 
   it('過去の新規作成はplanned gap内ならactual重複がなければ許可する', () => {
