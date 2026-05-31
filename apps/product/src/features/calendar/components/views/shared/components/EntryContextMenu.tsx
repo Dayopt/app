@@ -107,10 +107,17 @@ export const EventContextMenu = ({
     onClose();
   };
 
+  // 未来の予定は記録が存在し得ないため「予定外にする」を出さない。
+  // planned の予定開始が現在より後（または時刻未設定）なら upcoming 扱い。
+  const plannedStartMs = (entry.plannedStartDate ?? entry.startDate)?.getTime();
+  // eslint-disable-next-line react-hooks/purity -- transient context menu, 右クリック時点の now で十分
+  const isUpcoming = plannedStartMs === undefined || plannedStartMs > Date.now();
+
   // 共通の menu items 定義から取得（Inspector の TagRow と同じ source）
   const menuItems = getEntryMenuItems({
     origin: entry.origin,
     tagId: entry.tagId,
+    isUpcoming,
     onViewStats: onViewStats ? () => onViewStats(entry) : undefined,
     onMarkUnplanned: onMarkUnplanned ? () => onMarkUnplanned(entry) : undefined,
     onRestorePlanned: onRestorePlanned ? () => onRestorePlanned(entry) : undefined,

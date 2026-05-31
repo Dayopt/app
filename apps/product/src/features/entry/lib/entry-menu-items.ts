@@ -27,6 +27,11 @@ export interface EntryMenuItem {
 interface EntryMenuItemsArgs {
   origin: EntryOrigin | undefined;
   tagId: string | null | undefined;
+  /**
+   * 未来（upcoming）の予定か。
+   * 未来の予定はまだ記録が存在し得ないため「予定外にする」を表示しない。
+   */
+  isUpcoming?: boolean | undefined;
   onViewStats?: (() => void) | undefined;
   onMarkUnplanned?: (() => void) | undefined;
   onRestorePlanned?: (() => void) | undefined;
@@ -36,6 +41,7 @@ interface EntryMenuItemsArgs {
 export function getEntryMenuItems({
   origin,
   tagId,
+  isUpcoming = false,
   onViewStats,
   onMarkUnplanned,
   onRestorePlanned,
@@ -54,7 +60,7 @@ export function getEntryMenuItems({
           onSelect: onViewStats,
         }
       : null,
-    onMarkUnplanned && isPlanned
+    onMarkUnplanned && isPlanned && !isUpcoming
       ? {
           key: 'markUnplanned',
           labelKey: 'entry.inspector.markUnplanned',

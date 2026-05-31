@@ -16,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { getTagColorClasses, resolveTagColor, useCreateTag, useTagsMap } from '@/features/tags';
 import { useAutoAdjustEndTime } from '../../hooks/useAutoAdjustEndTime';
 import { getEntryMenuItems } from '../../lib/entry-menu-items';
+import { getEntryState } from '../../lib/entry-status';
 import type { FulfillmentScore } from '../../types/entry';
 
 import {
@@ -186,6 +187,7 @@ export function EntryInspectorForm({ onViewStats, onCloseInspector }: EntryInspe
   const menuItems = getEntryMenuItems({
     origin: entry.origin,
     tagId: selectedTagId,
+    isUpcoming: getEntryState(entry) === 'upcoming',
     onViewStats: onViewStats && selectedTagId ? handleViewStats : undefined,
     onMarkUnplanned: isPlanned ? handleMarkUnplanned : undefined,
     onRestorePlanned: isUnplanned ? handleRestorePlanned : undefined,
