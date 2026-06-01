@@ -52,28 +52,30 @@ src/lib/turnstile/
 
 ## Secret 管理
 
+Secrets 運用の正本は `apps/storybook/docs/operations/secrets.mdx`。1Password が master で、Supabase Dashboard の Turnstile secret は replica として手動同期する。
+
 ### 1Password vault
 
 ```
 Dayopt-Shared/turnstile
-├── site-key     (text, public)
-└── secret-key   (concealed, web verify / Supabase Auth 用)
+├── NEXT_PUBLIC_TURNSTILE_SITE_KEY
+└── TURNSTILE_SECRET_KEY
 ```
 
 ### env 参照
 
 - **app** — `.op-env.local`:
   ```
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/site-key
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
   ```
   （app は secret を持たない）
 - **web** — `.op-env.local`:
   ```
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/site-key
-  TURNSTILE_SECRET_KEY=op://Dayopt-Shared/turnstile/secret-key
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY=op://Dayopt-Shared/turnstile/NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  TURNSTILE_SECRET_KEY=op://Dayopt-Shared/turnstile/TURNSTILE_SECRET_KEY
   ```
 - **Supabase Auth** — Dashboard → Authentication → Bot & Abuse Protection → Turnstile
-  - `Secret key` に `Dayopt-Shared/turnstile/secret-key` の値を貼る
+  - `TURNSTILE_SECRET_KEY` を 1Password master から手動同期する
   - app の signup flow はこの dashboard 設定に依存する
 
 ---
@@ -112,28 +114,13 @@ user submit
 ### Rotation
 
 1. Cloudflare dashboard で widget の site/secret を regenerate
-2. 1Password `Dayopt-Shared/turnstile/{site-key,secret-key}` を更新
+2. 1Password `Dayopt-Shared/turnstile` の fields を更新
 3. Supabase Auth dashboard の secret key を差し替え
 4. アプリ再デプロイは**不要**（op 経由で次回起動時に新値が注入される）
 
 ### 開発時フォールバック
 
-Cloudflare 公式の dev 用テストキー（常時 pass）:
-
-```
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
-```
-
-`.op-env.local` の該当行を**一時的に**ハードコードキーに差し替えるとオフラインでも widget テストができる。commit 前に必ず元の `op://` 参照に戻すこと。
-
-その他のテストキー:
-
-| 用途           | site-key                   | secret-key                            |
-| -------------- | -------------------------- | ------------------------------------- |
-| 常時 pass      | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
-| 常時 block     | `2x00000000000000000000AB` | `2x0000000000000000000000000000000AA` |
-| 強制 challenge | `3x00000000000000000000FF` | `1x0000000000000000000000000000000AA` |
+Cloudflare 公式の dev 用テストキーを使う場合でも、repo docs や `.op-env.local.example` には literal 値を書かない。必要な値は Cloudflare docs で確認し、一時作業後は `.op-env.local` を `op://` 参照へ戻す。
 
 ---
 
@@ -171,7 +158,7 @@ TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 - `src/app/api/contact/route.ts`（web、`verifyTurnstile` 挿入）
 - `src/platform/config/env.ts`（web、env 追加）
 - `src/env.ts`（app、env 置換）
-- `.op-env.local`（app / web 両方）
+- `.op-env.local.example`（app / web 両方の参照例）
 - `Dayopt-Shared/turnstile` item（1Password）
 
 ---

@@ -16,7 +16,7 @@ Dayopt は**単一 Supabase project 運用**（ローンチ前の簡易構成）
 | **Preview**    | Production project | Vercel Preview URL        | `*.vercel.app`   |
 | **Production** | Production project | main マージで自動デプロイ | `app.dayopt.app` |
 
-> ローカル開発は Production DB に直接接続する。`npm run dev` で `vercel env pull` が自動実行され、環境変数が同期される。
+> Secrets は `apps/storybook/docs/operations/secrets.mdx` を正本とする。ローカルでは `.op-env.local` の `op://` 参照を `op run` で注入し、`.env.local` に実値を置かない。
 
 ## Supabase プロジェクト
 
@@ -30,10 +30,9 @@ Dayopt は**単一 Supabase project 運用**（ローンチ前の簡易構成）
 
 ## 環境変数の管理
 
-### 自動同期
+### 1Password master / replica
 
-`npm run dev` を実行すると、`vercel env pull` が自動で `.env.local` を最新化する。
-Vercel ダッシュボードで環境変数を変更 → 次の `npm run dev` でローカルに反映。
+1Password を master とし、Vercel Env / GitHub Secrets / Supabase Dashboard secrets は replica として手動同期する。`vercel env pull` は通常の local dev flow ではなく、生成された `.env.local` は unsafe / temporary として削除対象にする。
 
 ### Zodバリデーション
 
@@ -54,9 +53,9 @@ const supabase = createServerClient(
 > **注意**: `NEXT_PUBLIC_*` はNext.jsがビルド時に文字列置換するため、
 > クライアントコード（`client.ts`等）では従来通り `process.env` を直接参照する。
 
-### `.env.example`
+### `.op-env.local`
 
-プロジェクトルートに `.env.example` がある。手動設定が必要な場合はこちらを参照。
+repository root の `.op-env.local.example` を `.op-env.local` にコピーし、必要な `op://` 参照だけを使う。実値・dummy secret・placeholder secret は書かない。
 
 ---
 
@@ -71,7 +70,7 @@ const supabase = createServerClient(
 ```
 Production     → Production Supabase
 Preview        → Production Supabase（全 Preview ブランチ共通）
-Development    → Production Supabase（vercel env pull で同期）
+Development    → Production Supabase（1Password master から手動同期）
 ```
 
 ---
@@ -175,9 +174,9 @@ feature branch → push → Vercel Preview URL 自動生成
 
 ## トラブルシューティング
 
-| 症状                           | 対処                                                              |
-| ------------------------------ | ----------------------------------------------------------------- |
-| マイグレーションが反映されない | Production にリンクしてから `supabase db push` を実行             |
-| Preview デプロイがエラー       | Vercel ダッシュボードでビルドログを確認                           |
-| Production が paused           | Supabase ダッシュボード → Settings → General → Resume             |
-| 環境変数エラーで起動しない     | `vercel env pull .env.local` を実行、または `.env.example` を参照 |
+| 症状                           | 対処                                                          |
+| ------------------------------ | ------------------------------------------------------------- |
+| マイグレーションが反映されない | Production にリンクしてから `supabase db push` を実行         |
+| Preview デプロイがエラー       | Vercel ダッシュボードでビルドログを確認                       |
+| Production が paused           | Supabase ダッシュボード → Settings → General → Resume         |
+| 環境変数エラーで起動しない     | `.op-env.local` の `op://` 参照と 1Password signin 状態を確認 |
