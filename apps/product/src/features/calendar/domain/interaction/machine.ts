@@ -240,6 +240,7 @@ export function interactionReducer(
         (ctx.hourHeight / 60) * interval,
         endSnap.snappedTop - startSnap.snappedTop,
       );
+      const isOverlapping = ctx.checkOverlap(action.entryId, start, end);
 
       return {
         state: {
@@ -251,7 +252,7 @@ export function interactionReducer(
           direction: action.direction,
           snappedHeight,
           previewTime: { start, end },
-          isOverlapping: false,
+          isOverlapping,
         },
         effects,
       };

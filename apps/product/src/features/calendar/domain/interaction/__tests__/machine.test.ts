@@ -523,6 +523,28 @@ describe('RESIZE_START', () => {
     }
     expect(effects).toHaveLength(0);
   });
+
+  it('computes overlap for the snapped resize preview before any pointer move', () => {
+    const { state } = dispatch(
+      IDLE,
+      {
+        type: 'RESIZE_START',
+        entryId: 'a',
+        direction: 'bottom',
+        point: origin,
+        originalPosition: { top: 607, left: 0, width: 200, height: 60 },
+      },
+      createCtx({
+        checkOverlap: (_entryId, start, end) =>
+          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+      }),
+    );
+
+    if (state.mode === 'resizing') {
+      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.isOverlapping).toBe(true);
+    }
+  });
 });
 
 // ========================================
