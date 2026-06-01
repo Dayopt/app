@@ -190,6 +190,28 @@ describe('LONGPRESS_FIRED', () => {
     });
   });
 
+  it('computes overlap for the snapped long-press preview before any pointer move', () => {
+    const { state } = dispatch(
+      {
+        mode: 'longpress-pending',
+        entryId: 'a',
+        startPoint: origin,
+        originalPosition: { top: 607, left: 0, width: 200, height: 60 },
+        dateIndex: 0,
+      },
+      { type: 'LONGPRESS_FIRED' },
+      createCtx({
+        checkOverlap: (_entryId, start, end) =>
+          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+      }),
+    );
+
+    if (state.mode === 'dragging') {
+      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.isOverlapping).toBe(true);
+    }
+  });
+
   it('ignores when not in longpress-pending mode', () => {
     const { state } = dispatch(IDLE, { type: 'LONGPRESS_FIRED' });
     expect(state.mode).toBe('idle');
@@ -501,6 +523,55 @@ describe('RESIZE_START', () => {
     }
     expect(effects).toHaveLength(0);
   });
+
+  it('computes overlap for the snapped resize preview before any pointer move', () => {
+    const { state } = dispatch(
+      IDLE,
+      {
+        type: 'RESIZE_START',
+        entryId: 'a',
+        direction: 'bottom',
+        point: origin,
+        originalPosition: { top: 607, left: 0, width: 200, height: 60 },
+      },
+      createCtx({
+        checkOverlap: (_entryId, start, end) =>
+          start.getHours() === 10 && start.getMinutes() === 0 && end.getHours() === 11,
+      }),
+    );
+
+    if (state.mode === 'resizing') {
+      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.isOverlapping).toBe(true);
+    }
+  });
+
+  it('keeps initial resize preview duration positive for short off-grid entries', () => {
+    const { state } = dispatch(
+      IDLE,
+      {
+        type: 'RESIZE_START',
+        entryId: 'a',
+        direction: 'bottom',
+        point: origin,
+        originalPosition: { top: 608, left: 0, width: 200, height: 8 },
+      },
+      createCtx({
+        checkOverlap: (_entryId, start, end) => end.getTime() <= start.getTime(),
+      }),
+    );
+
+    if (state.mode === 'resizing') {
+      const durationMs = state.previewTime.end.getTime() - state.previewTime.start.getTime();
+      expect(state.snappedHeight).toBe(15);
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getHours()).toBe(10);
+      expect(state.previewTime.end.getMinutes()).toBe(30);
+      expect(durationMs).toBe(15 * 60 * 1000);
+      expect(state.isOverlapping).toBe(false);
+    }
+  });
 });
 
 // ========================================
@@ -602,14 +673,14 @@ describe('POINTER_UP while resizing', () => {
 });
 
 // ========================================
-// Precision regression — relative offset snap (Project A-2 / D-7)
+// Precision regression — drag/resize absolute grid snap
 // ========================================
 
-describe('precision regression: relative offset snap preserves :07 minutes', () => {
+describe('precision regression: drag/resize snaps off-grid times to the absolute grid', () => {
   // 10:07 entry を表す originalPosition: top=607（hourHeight=60 で 10*60+7=607）
   const off607: EntryRect = { top: 607, left: 0, width: 200, height: 60 };
 
-  it('LONGPRESS_FIRED on 10:07 entry → preview start stays 10:07 (not snapped to 10:00)', () => {
+  it('LONGPRESS_FIRED on 10:07 entry → preview start snaps to 10:00', () => {
     const longpressState: InteractionState = {
       mode: 'longpress-pending',
       entryId: 'a',
@@ -621,13 +692,13 @@ describe('precision regression: relative offset snap preserves :07 minutes', () 
 
     expect(state.mode).toBe('dragging');
     if (state.mode === 'dragging') {
-      expect(state.snappedTop).toBe(607);
+      expect(state.snappedTop).toBe(600);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.previewTime.start.getMinutes()).toBe(0);
     }
   });
 
-  it('drag 10:07 → +30min → 10:37 (precision preserved, NOT snapped to 10:30)', () => {
+  it('drag 10:07 → +30px → 10:30', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
       entryId: 'a',
@@ -647,14 +718,13 @@ describe('precision regression: relative offset snap preserves :07 minutes', () 
     const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
 
     if (state.mode === 'dragging') {
-      // deltaY=30 は 15 分 snap で 30 のまま、original top=607 に加えて 637 → 10:37
-      expect(state.snappedTop).toBe(637);
+      expect(state.snappedTop).toBe(630);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(37);
+      expect(state.previewTime.start.getMinutes()).toBe(30);
     }
   });
 
-  it('drag 10:07 → +7px (snap interval 未満) → 動かない (start stays 10:07)', () => {
+  it('drag 10:07 → +7px → 10:15', () => {
     const draggingState: InteractionState = {
       mode: 'dragging',
       entryId: 'a',
@@ -674,12 +744,116 @@ describe('precision regression: relative offset snap preserves :07 minutes', () 
     const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
 
     if (state.mode === 'dragging') {
-      expect(state.snappedTop).toBe(607);
-      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.snappedTop).toBe(615);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
     }
   });
 
-  it('RESIZE_START on 10:07 entry → preview start stays 10:07', () => {
+  it('5分snap設定では15:13 entryをdragすると15:15へ揃える', () => {
+    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 60 };
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off913,
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 913,
+      previewTime: {
+        start: new Date('2026-01-15T15:13:00'),
+        end: new Date('2026-01-15T16:13:00'),
+      },
+      isOverlapping: false,
+    };
+    const { state } = dispatch(
+      draggingState,
+      { type: 'POINTER_MOVE', point: origin },
+      createCtx({ snapIntervalMinutes: 5 }),
+    );
+
+    if (state.mode === 'dragging') {
+      expect(state.snappedTop).toBe(915);
+      expect(state.previewTime.start.getHours()).toBe(15);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getHours()).toBe(16);
+      expect(state.previewTime.end.getMinutes()).toBe(15);
+    }
+  });
+
+  it('5分snap設定ではdrag時にoff-grid durationも丸めて終了時刻をグリッドへ揃える', () => {
+    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 47 };
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off913,
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 913,
+      previewTime: {
+        start: new Date('2026-01-15T15:13:00'),
+        end: new Date('2026-01-15T16:00:00'),
+      },
+      isOverlapping: false,
+    };
+    const { state } = dispatch(
+      draggingState,
+      { type: 'POINTER_MOVE', point: origin },
+      createCtx({
+        snapIntervalMinutes: 5,
+        getEntryDurationMs: () => 47 * 60 * 1000,
+      }),
+    );
+
+    if (state.mode === 'dragging') {
+      const durationMs = state.previewTime.end.getTime() - state.previewTime.start.getTime();
+      expect(state.previewTime.start.getHours()).toBe(15);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getHours()).toBe(16);
+      expect(state.previewTime.end.getMinutes()).toBe(0);
+      expect(durationMs).toBe(45 * 60 * 1000);
+    }
+  });
+
+  it('drag時は終了境界もsnapし、48分entryを不要に50分へ伸ばさない', () => {
+    const off913: EntryRect = { top: 913, left: 0, width: 200, height: 48 };
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: off913,
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 913,
+      previewTime: {
+        start: new Date('2026-01-15T15:13:00'),
+        end: new Date('2026-01-15T16:01:00'),
+      },
+      isOverlapping: false,
+    };
+    const { state } = dispatch(
+      draggingState,
+      { type: 'POINTER_MOVE', point: origin },
+      createCtx({
+        snapIntervalMinutes: 5,
+        getEntryDurationMs: () => 48 * 60 * 1000,
+      }),
+    );
+
+    if (state.mode === 'dragging') {
+      const durationMs = state.previewTime.end.getTime() - state.previewTime.start.getTime();
+      expect(state.previewTime.start.getHours()).toBe(15);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getHours()).toBe(16);
+      expect(state.previewTime.end.getMinutes()).toBe(0);
+      expect(durationMs).toBe(45 * 60 * 1000);
+    }
+  });
+
+  it('RESIZE_START on 10:07 entry → preview range snaps to 10:00-11:00', () => {
     const { state } = dispatch(IDLE, {
       type: 'RESIZE_START',
       entryId: 'a',
@@ -690,13 +864,13 @@ describe('precision regression: relative offset snap preserves :07 minutes', () 
 
     if (state.mode === 'resizing') {
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.previewTime.start.getMinutes()).toBe(0);
       expect(state.previewTime.end.getHours()).toBe(11);
-      expect(state.previewTime.end.getMinutes()).toBe(7);
+      expect(state.previewTime.end.getMinutes()).toBe(0);
     }
   });
 
-  it('resize 10:07-11:07 entry を +15min → 10:07-11:22 (start stays, end shifts by snap delta)', () => {
+  it('resize 10:07-11:07 entry を +15px → 10:00-11:15', () => {
     const resizingState: InteractionState = {
       mode: 'resizing',
       entryId: 'a',
@@ -717,9 +891,82 @@ describe('precision regression: relative offset snap preserves :07 minutes', () 
     if (state.mode === 'resizing') {
       expect(state.snappedHeight).toBe(75);
       expect(state.previewTime.start.getHours()).toBe(10);
-      expect(state.previewTime.start.getMinutes()).toBe(7);
+      expect(state.previewTime.start.getMinutes()).toBe(0);
       expect(state.previewTime.end.getHours()).toBe(11);
-      expect(state.previewTime.end.getMinutes()).toBe(22);
+      expect(state.previewTime.end.getMinutes()).toBe(15);
+    }
+  });
+});
+
+// ========================================
+// Day-end boundary regression
+// ========================================
+
+describe('day-end boundary regression', () => {
+  it('dragging a 1-hour entry to 23:00 keeps the end at next-day 00:00', () => {
+    const draggingState: InteractionState = {
+      mode: 'dragging',
+      entryId: 'a',
+      startPoint: origin,
+      currentPoint: origin,
+      originalPosition: { top: 1320, left: 0, width: 200, height: 60 },
+      dateIndex: 0,
+      targetDateIndex: 0,
+      snappedTop: 1320,
+      previewTime: {
+        start: new Date('2026-01-15T22:00:00'),
+        end: new Date('2026-01-15T23:00:00'),
+      },
+      isOverlapping: false,
+    };
+    const movedPoint = { clientX: origin.clientX, clientY: origin.clientY + 60 };
+    const { state } = dispatch(draggingState, { type: 'POINTER_MOVE', point: movedPoint });
+
+    if (state.mode === 'dragging') {
+      expect(state.snappedTop).toBe(1380);
+      expect(state.previewTime.start.getHours()).toBe(23);
+      expect(state.previewTime.start.getMinutes()).toBe(0);
+      expect(state.previewTime.end.getDate()).toBe(16);
+      expect(state.previewTime.end.getHours()).toBe(0);
+      expect(state.previewTime.end.getMinutes()).toBe(0);
+      expect(state.previewTime.end.getTime() - state.previewTime.start.getTime()).toBe(
+        60 * 60 * 1000,
+      );
+    }
+  });
+
+  it('RESIZE_START supports a 23:00-24:00 range instead of collapsing to one interval', () => {
+    const { state } = dispatch(IDLE, {
+      type: 'RESIZE_START',
+      entryId: 'a',
+      direction: 'bottom',
+      point: origin,
+      originalPosition: { top: 1380, left: 0, width: 200, height: 60 },
+    });
+
+    if (state.mode === 'resizing') {
+      expect(state.snappedHeight).toBe(60);
+      expect(state.previewTime.start.getHours()).toBe(23);
+      expect(state.previewTime.end.getDate()).toBe(16);
+      expect(state.previewTime.end.getHours()).toBe(0);
+      expect(state.previewTime.end.getMinutes()).toBe(0);
+    }
+  });
+
+  it('grid selection at 23:45 ends at next-day 00:00', () => {
+    const { state } = dispatch(IDLE, {
+      type: 'GRID_POINTER_DOWN',
+      point: origin,
+      dateIndex: 0,
+      gridY: 1425,
+    });
+
+    if (state.mode === 'selecting') {
+      expect(state.selectionRange.start.getHours()).toBe(23);
+      expect(state.selectionRange.start.getMinutes()).toBe(45);
+      expect(state.selectionRange.end.getDate()).toBe(16);
+      expect(state.selectionRange.end.getHours()).toBe(0);
+      expect(state.selectionRange.end.getMinutes()).toBe(0);
     }
   });
 });

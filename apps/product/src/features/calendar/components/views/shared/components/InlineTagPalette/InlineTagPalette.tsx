@@ -16,6 +16,7 @@ import { format, isSameDay } from 'date-fns';
 import { enUS, ja } from 'date-fns/locale';
 import { useLocale, useTranslations } from 'next-intl';
 
+import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { useEntryMutations } from '@/features/entry';
 import type { HoveredTagInfo } from '@/features/tags';
 import {
@@ -144,15 +145,10 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
           });
         }
       }
-      // past 時間帯は保存時に unplanned になるため、overlap 判定も actual として渡す。
-      const createWillBeUnplanned = utcEnd.getTime() <= Date.now();
-      const hasOverlap = hasTwoLayerTimeConflict(events, {
-        id: '',
-        plannedStart: createWillBeUnplanned ? null : utcStart.toISOString(),
-        plannedEnd: createWillBeUnplanned ? null : utcEnd.toISOString(),
-        actualStart: createWillBeUnplanned ? utcStart.toISOString() : null,
-        actualEnd: createWillBeUnplanned ? utcEnd.toISOString() : null,
-      });
+      const hasOverlap = hasTwoLayerTimeConflict(
+        events,
+        buildNewEntryOverlapTarget(utcStart, utcEnd),
+      );
       if (hasOverlap) {
         toast.error(tEntry('errors.timeOverlap'));
         clearPendingSelection();
@@ -349,17 +345,8 @@ export function InlineTagPalette({ hourHeight, date }: InlineTagPaletteProps) {
       }
     }
 
-    // past は unplanned で planned 範囲なし、future は planned で planned/actual 両方持つ。
-    // hasTwoLayerTimeConflict は target.actualStart/End が必須なので future planned 作成でも
-    // 同じ範囲を actual に mirror する（server も create 時に actual を planned に mirror する）。
-    return hasTwoLayerTimeConflict(events, {
-      id: '',
-      plannedStart: isPast ? null : utcStart.toISOString(),
-      plannedEnd: isPast ? null : utcEnd.toISOString(),
-      actualStart: utcStart.toISOString(),
-      actualEnd: utcEnd.toISOString(),
-    });
-  }, [queryClient, pendingSelection, timezone, isPast]);
+    return hasTwoLayerTimeConflict(events, buildNewEntryOverlapTarget(utcStart, utcEnd));
+  }, [queryClient, pendingSelection, timezone]);
 
   // 日付が指定されている場合、対象日と一致するカラムのみ表示
   if (!pendingSelection) return null;

@@ -101,3 +101,45 @@ describe('useInteraction handleResizeStart guard', () => {
     expect(result.current.state.mode).toBe('resizing');
   });
 });
+
+describe('useInteraction selection completion', () => {
+  it('passes day-end selection as 24:00 instead of next-day 0:00', () => {
+    let selection: {
+      date: Date;
+      startHour: number;
+      startMinute: number;
+      endHour: number;
+      endMinute: number;
+    } | null = null;
+    const { result } = renderHook(() =>
+      useInteraction(
+        makeProps({
+          onTimeRangeSelect: (next) => {
+            selection = next;
+          },
+        }),
+      ),
+    );
+
+    act(() => {
+      result.current.dispatch({
+        type: 'GRID_POINTER_DOWN',
+        point: { clientX: 100, clientY: 1425 },
+        dateIndex: 0,
+        gridY: 1425,
+      });
+      result.current.dispatch({
+        type: 'POINTER_MOVE',
+        point: { clientX: 100, clientY: 1445 },
+      });
+      result.current.dispatch({ type: 'POINTER_UP' });
+    });
+
+    expect(selection).toMatchObject({
+      startHour: 23,
+      startMinute: 45,
+      endHour: 24,
+      endMinute: 0,
+    });
+  });
+});

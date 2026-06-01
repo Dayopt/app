@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { buildNewEntryOverlapTarget } from '@/features/calendar/lib/overlap';
 import { getTagColorClasses } from '@/features/tags';
 import { ColonTagLabel } from '@/lib/components/ui/colon-tag-label';
 import { formatTimeString } from '@/lib/date';
@@ -110,16 +111,21 @@ export function DraftEntryBlock({ draft, hourHeight }: DraftEntryBlockProps) {
       }
     }
 
-    // past 時間帯は保存時に unplanned になるため、判定も actual として渡す。
-    // isPast は render 上部で算出済み（Date.now() を useMemo の外に出す）
-    return hasTwoLayerTimeConflict(events, {
-      id: '',
-      plannedStart: isPast ? null : startDate.toISOString(),
-      plannedEnd: isPast ? null : endDate.toISOString(),
-      actualStart: isPast ? startDate.toISOString() : null,
-      actualEnd: isPast ? endDate.toISOString() : null,
-    });
-  }, [queryClient, draft.date, startH, startM, endH, endM, startMinutes, endMinutes, isPast]);
+    return hasTwoLayerTimeConflict(
+      events,
+      buildNewEntryOverlapTarget(startDate, endDate, nowForPastCheck),
+    );
+  }, [
+    queryClient,
+    draft.date,
+    startH,
+    startM,
+    endH,
+    endM,
+    startMinutes,
+    endMinutes,
+    nowForPastCheck,
+  ]);
 
   const handleResizeStart = useCallback(
     (clientY: number) => {

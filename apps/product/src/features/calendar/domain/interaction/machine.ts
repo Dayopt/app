@@ -6,7 +6,7 @@
  */
 
 import { DEFAULT_DRAG_SNAP_MINUTES } from '../precision';
-import { pixelsToTimeUnsnapped, snapDeltaToGrid, snapToGrid } from './time-math';
+import { snapToGrid } from './time-math';
 import type {
   InteractionAction,
   InteractionContext,
@@ -57,16 +57,58 @@ function maxAbsDelta(a: Point, b: Point): number {
   return Math.max(Math.abs(a.clientX - b.clientX), Math.abs(a.clientY - b.clientY));
 }
 
-/** Build a TimeRange from hour/minute + duration */
-function buildTimeRange(
+type GridSnap = ReturnType<typeof snapToGrid>;
+
+function snapEndToGrid(yPx: number, hourHeight: number, intervalMin: number): GridSnap {
+  const pxPerInterval = (hourHeight / 60) * intervalMin;
+  if (pxPerInterval <= 0) return snapToGrid(yPx, hourHeight, intervalMin);
+
+  const dayHeight = 24 * hourHeight;
+  const clampedY = Math.max(0, Math.min(yPx, dayHeight));
+  const snappedTop = Math.max(
+    0,
+    Math.min(dayHeight, Math.round(clampedY / pxPerInterval) * pxPerInterval),
+  );
+  const totalMinutes = Math.min(24 * 60, Math.round((snappedTop / hourHeight) * 60));
+
+  return {
+    snappedTop,
+    hour: Math.floor(totalMinutes / 60),
+    minute: totalMinutes % 60,
+  };
+}
+
+function ensureEndAfterStartSnap(
+  startSnap: GridSnap,
+  endSnap: GridSnap,
+  hourHeight: number,
+  intervalMin: number,
+): GridSnap {
+  if (endSnap.snappedTop > startSnap.snappedTop) return endSnap;
+
+  const minEndTop = Math.min(
+    24 * hourHeight,
+    startSnap.snappedTop + (hourHeight / 60) * intervalMin,
+  );
+  return snapEndToGrid(minEndTop, hourHeight, intervalMin);
+}
+
+/** Dragging snaps both boundaries so drop time and visual length stay on the active grid. */
+function buildDragTimeRange(
   targetDate: Date,
-  hour: number,
-  minute: number,
-  durationMs: number,
+  startSnap: GridSnap,
+  endSnap: GridSnap,
+  intervalMin: number,
 ): TimeRange {
   const start = new Date(targetDate);
-  start.setHours(hour, minute, 0, 0);
-  const end = new Date(start.getTime() + durationMs);
+  start.setHours(startSnap.hour, startSnap.minute, 0, 0);
+  const end = new Date(targetDate);
+  end.setHours(endSnap.hour, endSnap.minute, 0, 0);
+
+  if (end.getTime() <= start.getTime()) {
+    end.setTime(start.getTime() + intervalMin * 60_000);
+  }
+
   return { start, end };
 }
 
@@ -89,23 +131,13 @@ function buildSelectionRange(
   const startSnap = snapToGrid(startY, hourHeight, intervalMin);
   // 下方向のみ: endY が startY より上なら startY に固定
   const clampedEndY = Math.max(endY, startY);
-  const endSnap = snapToGrid(clampedEndY, hourHeight, intervalMin);
-
-  // Ensure minimum one-interval selection
-  let endHour = endSnap.hour;
-  let endMinute = endSnap.minute;
-  if (startSnap.hour === endHour && startSnap.minute === endMinute) {
-    endMinute += intervalMin;
-    if (endMinute >= 60) {
-      endMinute = 0;
-      endHour = Math.min(23, endHour + 1);
-    }
-  }
+  let endSnap = snapEndToGrid(clampedEndY, hourHeight, intervalMin);
+  endSnap = ensureEndAfterStartSnap(startSnap, endSnap, hourHeight, intervalMin);
 
   const start = new Date(targetDate);
   start.setHours(startSnap.hour, startSnap.minute, 0, 0);
   const end = new Date(targetDate);
-  end.setHours(endHour, endMinute, 0, 0);
+  end.setHours(endSnap.hour, endSnap.minute, 0, 0);
 
   return { start, end };
 }
@@ -164,12 +196,17 @@ export function interactionReducer(
     case 'LONGPRESS_FIRED': {
       if (state.mode !== 'longpress-pending') return { state, effects };
 
-      // 移動前なので元の位置をそのまま使う（snap で 10:07 → 10:00 に潰さない）
-      const { hour, minute } = pixelsToTimeUnsnapped(state.originalPosition.top, ctx.hourHeight);
-      const snappedTop = state.originalPosition.top;
-      const targetDate = resolveTargetDate(ctx, state.dateIndex);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
-      const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
+      const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
+      const startSnap = snapToGrid(state.originalPosition.top, ctx.hourHeight, interval);
+      const endSnap = snapEndToGrid(
+        state.originalPosition.top + durationPx,
+        ctx.hourHeight,
+        interval,
+      );
+      const targetDate = resolveTargetDate(ctx, state.dateIndex);
+      const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
+      const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
       effects.push({ type: 'HAPTIC', pattern: 'impact' });
       effects.push({
@@ -187,9 +224,9 @@ export function interactionReducer(
           originalPosition: state.originalPosition,
           dateIndex: state.dateIndex,
           targetDateIndex: state.dateIndex,
-          snappedTop,
+          snappedTop: startSnap.snappedTop,
           previewTime,
-          isOverlapping: false,
+          isOverlapping,
         },
         effects,
       };
@@ -200,18 +237,24 @@ export function interactionReducer(
     case 'RESIZE_START': {
       if (state.mode !== 'idle') return { state, effects };
 
-      // resize 開始時はまだ移動していないので、元の位置をそのまま preview にする
-      const { hour: sH, minute: sM } = pixelsToTimeUnsnapped(
-        action.originalPosition.top,
-        ctx.hourHeight,
-      );
+      const startSnap = snapToGrid(action.originalPosition.top, ctx.hourHeight, interval);
       const endTop = action.originalPosition.top + action.originalPosition.height;
-      const { hour: eH, minute: eM } = pixelsToTimeUnsnapped(endTop, ctx.hourHeight);
+      const endSnap = ensureEndAfterStartSnap(
+        startSnap,
+        snapEndToGrid(endTop, ctx.hourHeight, interval),
+        ctx.hourHeight,
+        interval,
+      );
 
       const start = new Date(ctx.date);
-      start.setHours(sH, sM, 0, 0);
+      start.setHours(startSnap.hour, startSnap.minute, 0, 0);
       const end = new Date(ctx.date);
-      end.setHours(eH, eM, 0, 0);
+      end.setHours(endSnap.hour, endSnap.minute, 0, 0);
+      const snappedHeight = Math.max(
+        (ctx.hourHeight / 60) * interval,
+        endSnap.snappedTop - startSnap.snappedTop,
+      );
+      const isOverlapping = ctx.checkOverlap(action.entryId, start, end);
 
       return {
         state: {
@@ -221,9 +264,9 @@ export function interactionReducer(
           currentPoint: action.point,
           originalPosition: action.originalPosition,
           direction: action.direction,
-          snappedHeight: action.originalPosition.height,
+          snappedHeight,
           previewTime: { start, end },
-          isOverlapping: false,
+          isOverlapping,
         },
         effects,
       };
@@ -346,20 +389,19 @@ function handlePointerMove(
         return { state, effects };
       }
       // Threshold crossed → transition to dragging
-      // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
       const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
-      const snappedTop = clampSnappedTopToDay(
-        state.originalPosition.top + snappedDeltaY,
+      const rawTop = clampSnappedTopToDay(
+        state.originalPosition.top + deltaY,
         ctx.hourHeight,
         durationPx,
       );
-      const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
+      const startSnap = snapToGrid(rawTop, ctx.hourHeight, interval);
+      const endSnap = snapEndToGrid(rawTop + durationPx, ctx.hourHeight, interval);
       const targetDateIndex = action.targetDateIndex ?? state.dateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
-      const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
+      const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
       const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
       effects.push({
@@ -377,7 +419,7 @@ function handlePointerMove(
           originalPosition: state.originalPosition,
           dateIndex: state.dateIndex,
           targetDateIndex,
-          snappedTop,
+          snappedTop: startSnap.snappedTop,
           previewTime,
           isOverlapping,
         },
@@ -394,23 +436,22 @@ function handlePointerMove(
     }
 
     case 'dragging': {
-      // relative offset snap: deltaY だけを snap し、original の :07 などを保持する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
       const durationMs = ctx.getEntryDurationMs(state.entryId);
       const durationPx = (durationMs / 60_000) * (ctx.hourHeight / 60);
-      const snappedTop = clampSnappedTopToDay(
-        state.originalPosition.top + snappedDeltaY,
+      const rawTop = clampSnappedTopToDay(
+        state.originalPosition.top + deltaY,
         ctx.hourHeight,
         durationPx,
       );
-      const { hour, minute } = pixelsToTimeUnsnapped(snappedTop, ctx.hourHeight);
+      const startSnap = snapToGrid(rawTop, ctx.hourHeight, interval);
+      const endSnap = snapEndToGrid(rawTop + durationPx, ctx.hourHeight, interval);
       const targetDateIndex = action.targetDateIndex ?? state.targetDateIndex;
       const targetDate = resolveTargetDate(ctx, targetDateIndex);
-      const previewTime = buildTimeRange(targetDate, hour, minute, durationMs);
+      const previewTime = buildDragTimeRange(targetDate, startSnap, endSnap, interval);
       const isOverlapping = ctx.checkOverlap(state.entryId, previewTime.start, previewTime.end);
 
-      if (snappedTop !== state.snappedTop) {
+      if (startSnap.snappedTop !== state.snappedTop) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
       }
       effects.push({ type: 'DRAG_STORE_UPDATE', targetDateIndex });
@@ -420,7 +461,7 @@ function handlePointerMove(
           ...state,
           currentPoint: action.point,
           targetDateIndex,
-          snappedTop,
+          snappedTop: startSnap.snappedTop,
           previewTime,
           isOverlapping,
         },
@@ -429,33 +470,32 @@ function handlePointerMove(
     }
 
     case 'resizing': {
-      // relative offset snap: 開始位置は元の値を保持、resize の delta だけを snap する
       const deltaY = action.point.clientY - state.startPoint.clientY;
-      const snappedDeltaY = snapDeltaToGrid(deltaY, ctx.hourHeight, interval);
       const minHeight = (ctx.hourHeight / 60) * interval;
-      // upper cap: end が当日内に収まる範囲（pixelsToTimeUnsnapped が 23:59 で clamp する分と整合）
-      const maxHeight = Math.max(minHeight, 24 * ctx.hourHeight - state.originalPosition.top);
+      // upper cap: end が当日内に収まる範囲
+      const startSnap = snapToGrid(state.originalPosition.top, ctx.hourHeight, interval);
+      const maxHeight = Math.max(minHeight, 24 * ctx.hourHeight - startSnap.snappedTop);
+      const rawEndTop = Math.min(
+        24 * ctx.hourHeight,
+        Math.max(
+          startSnap.snappedTop + minHeight,
+          state.originalPosition.top + state.originalPosition.height + deltaY,
+        ),
+      );
+      const endSnap = snapEndToGrid(rawEndTop, ctx.hourHeight, interval);
       const newHeight = Math.min(
         maxHeight,
-        Math.max(minHeight, state.originalPosition.height + snappedDeltaY),
+        Math.max(minHeight, endSnap.snappedTop - startSnap.snappedTop),
       );
 
       if (newHeight !== state.snappedHeight) {
         effects.push({ type: 'HAPTIC', pattern: 'tap' });
       }
 
-      // start は元の位置をそのまま使い、:07 などを保持
-      const { hour: sH, minute: sM } = pixelsToTimeUnsnapped(
-        state.originalPosition.top,
-        ctx.hourHeight,
-      );
-      const endTop = state.originalPosition.top + newHeight;
-      const { hour: eH, minute: eM } = pixelsToTimeUnsnapped(endTop, ctx.hourHeight);
-
       const start = new Date(ctx.date);
-      start.setHours(sH, sM, 0, 0);
+      start.setHours(startSnap.hour, startSnap.minute, 0, 0);
       const end = new Date(ctx.date);
-      end.setHours(eH, eM, 0, 0);
+      end.setHours(endSnap.hour, endSnap.minute, 0, 0);
 
       const previewTime: TimeRange = { start, end };
       const isOverlapping = ctx.checkOverlap(state.entryId, start, end);

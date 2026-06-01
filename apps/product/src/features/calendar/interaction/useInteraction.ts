@@ -102,6 +102,16 @@ export interface InteractionHandlers {
   ) => void;
 }
 
+function getMinutesFromDayStart(date: Date, time: Date): number {
+  const dayOffset =
+    (Date.UTC(time.getFullYear(), time.getMonth(), time.getDate()) -
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())) /
+    (24 * 60 * 60 * 1000);
+  const wallClockMinutes =
+    Math.round(dayOffset) * 24 * 60 + time.getHours() * 60 + time.getMinutes();
+  return Math.max(0, Math.min(24 * 60, wallClockMinutes));
+}
+
 // ========================================
 // Hook
 // ========================================
@@ -243,12 +253,13 @@ export function useInteraction(props: UseInteractionProps): UseInteractionReturn
 
         case 'SELECT_COMPLETE': {
           const selDate = r.displayDates?.[effect.dateIndex] ?? r.date;
+          const endMinutes = getMinutesFromDayStart(selDate, effect.range.end);
           r.onTimeRangeSelect?.({
             date: selDate,
             startHour: effect.range.start.getHours(),
             startMinute: effect.range.start.getMinutes(),
-            endHour: effect.range.end.getHours(),
-            endMinute: effect.range.end.getMinutes(),
+            endHour: Math.floor(endMinutes / 60),
+            endMinute: endMinutes % 60,
           });
           break;
         }
