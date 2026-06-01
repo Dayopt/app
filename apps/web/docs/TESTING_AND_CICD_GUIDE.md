@@ -34,7 +34,7 @@
 
 ```bash
 # 開発サーバー起動
-npm run dev
+op run --env-file=../../.op-env.local -- npm run dev
 
 # 品質チェック実行
 npm run lint && npm run type-check
@@ -160,7 +160,7 @@ Huskyとlint-stagedによるプリコミットフックが設定されていま�
 
 ```bash
 # 開発サーバー起動
-npm run dev
+op run --env-file=../../.op-env.local -- npm run dev
 
 # 品質チェック実行
 npm run lint && npm run type-check && npm run build

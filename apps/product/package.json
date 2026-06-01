@@ -9,10 +9,11 @@
     "src/lib/styles/globals.css"
   ],
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
-    "dev:op": "op run --env-file=../../.op-env.local -- pnpm dev",
+    "dev": "bash ../../scripts/dev-with-op.sh",
+    "dev:raw": "NODE_OPTIONS='--max-old-space-size=12288' next dev",
+    "dev:op": "pnpm dev",
     "typecheck:op": "op run --env-file=../../.op-env.local -- pnpm typecheck",
-    "env:check": "op run --env-file=../../.op-env.local -- node -e \"['NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_APP_URL','STRIPE_SECRET_KEY','UPSTASH_REDIS_REST_URL'].forEach(k=>console.log(k+'=' + (process.env[k]?.slice(0,40) ?? '(empty)')))\"",
+    "env:check": "op run --env-file=../../.op-env.local -- node ../../scripts/check-op-env.mjs",
     "build": "NODE_OPTIONS='--max-old-space-size=12288' next build",
     "start": "next start",
     "check": "pnpm typecheck && pnpm lint && pnpm test:run",

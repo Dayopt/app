@@ -121,7 +121,7 @@ export const env = new Proxy({} as ServerEnv, {
           .join('\n');
         throw new Error(
           `❌ 環境変数のバリデーションに失敗しました:\n${formatted}\n\n` +
-            `vercel env pull .env.local を実行するか、.env.example を参照してください。`,
+            `.op-env.local を作成し、op run 経由で起動してください。詳細は apps/storybook/docs/operations/secrets.mdx を参照してください。`,
         );
       }
       _validated = true;

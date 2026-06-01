@@ -24,15 +24,12 @@ if [ "$USE_LOCAL_DB" = "true" ]; then
   DB_TARGET="--local"
 else
   echo "☁️  Preview Supabase モード"
-  # .env.local から読み込み（vercel env pull で生成済み前提）
-  if [ -f .env.local ]; then
-    SUPABASE_URL=$(grep '^NEXT_PUBLIC_SUPABASE_URL=' .env.local | cut -d'=' -f2- | tr -d '"')
-    ANON_KEY=$(grep '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' .env.local | cut -d'=' -f2- | tr -d '"')
-  fi
+  SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-}"
+  ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
 
   if [ -z "$SUPABASE_URL" ] || [ -z "$ANON_KEY" ]; then
-    echo "❌ .env.local から環境変数を読み込めませんでした"
-    echo "   vercel env pull .env.local を実行してください"
+    echo "❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY が未設定です"
+    echo "   op run --env-file=.op-env.local -- pnpm db:seed を実行してください"
     exit 1
   fi
   DB_TARGET="--linked"

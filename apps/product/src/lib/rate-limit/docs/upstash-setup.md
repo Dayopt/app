@@ -41,12 +41,11 @@ Dayoptのレート制限機能をインメモリ実装からUpstash Redisに移�
 
 ### Step 3: 環境変数設定
 
-1. **`.env.local` に追加**:
+1. **1Password に保存し、`.op-env.local` から参照**:
 
    ```env
-   # Upstash Redis（レート制限）
-   UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io
-   UPSTASH_REDIS_REST_TOKEN=AXXXXxxxxxxxxxxxxxxxxxxx
+   UPSTASH_REDIS_REST_URL=op://Dayopt-Staging/upstash/UPSTASH_REDIS_REST_URL
+   UPSTASH_REDIS_REST_TOKEN=op://Dayopt-Staging/upstash/UPSTASH_REDIS_REST_TOKEN
    ```
 
 2. **Vercelの環境変数にも追加**:
@@ -79,7 +78,7 @@ Dayoptのレート制限機能をインメモリ実装からUpstash Redisに移�
 1. **ローカル環境でテスト**:
 
    ```bash
-   PORT=4000 npm run dev
+   PORT=4000 pnpm dev
    ```
 
 2. **レート制限のテスト**:
@@ -163,15 +162,11 @@ export async function POST(request: Request) {
 **解決策**:
 
 ```bash
-# .env.localを確認
-cat .env.local | grep UPSTASH
-
-# なければ追加
-echo "UPSTASH_REDIS_REST_URL=https://xxxxx.upstash.io" >> .env.local
-echo "UPSTASH_REDIS_REST_TOKEN=AXXXXxxx" >> .env.local
+# 値は表示せず、存在だけ確認
+pnpm env:check
 
 # サーバー再起動
-PORT=4000 npm run dev
+PORT=4000 pnpm dev
 ```
 
 ### エラー: `fetch failed`
@@ -182,7 +177,7 @@ PORT=4000 npm run dev
 
 1. Upstash Console → Database → REST APIタブ
 2. URLとTokenを再度コピー
-3. `.env.local`を更新
+3. 1Password master と `.op-env.local` 参照を確認
 
 ### レート制限が効かない
 
@@ -229,7 +224,7 @@ if (!success) {
 
 - [ ] Upstashアカウント作成
 - [ ] Redisデータベース作成（Tokyo Region）
-- [ ] 環境変数設定（`.env.local` + Vercel）
+- [ ] 環境変数設定（1Password master + Vercel replica）
 - [ ] `upstash.ts`のコメント解除
 - [ ] `rate-limit.ts`をUpstash版に置き換え
 - [ ] ローカル環境でテスト

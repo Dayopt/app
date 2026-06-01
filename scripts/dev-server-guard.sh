@@ -3,7 +3,7 @@
 # 開発サーバー重複起動防止スクリプト
 # ========================================
 # 目的: RAM使用量を抑えるため、複数のNext.jsサーバーが起動しないようにする
-# 使用方法: npm run dev:safe
+# 使用方法: pnpm dev:raw の前に手動で実行する古い補助スクリプト
 
 set -e
 
@@ -82,7 +82,7 @@ main() {
 
   # メモリ制限付きでNext.jsを起動
   # RAM 24GB環境: 12GB設定（システム用に12GB確保）
-  NODE_OPTIONS="--max-old-space-size=12288" npm run dev
+  pnpm dev:raw
 }
 
 main "$@"

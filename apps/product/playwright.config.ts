@@ -80,7 +80,7 @@ export default defineConfig({
 
   // 開発サーバーの起動設定
   webServer: {
-    command: 'pnpm dev',
+    command: 'pnpm dev:raw',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
