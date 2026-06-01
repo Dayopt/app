@@ -150,14 +150,14 @@
     "sharp": "^0.34.5",
     "size-limit": "^11.2.0",
     "storybook": "^10.4.1",
-    "supabase": "^2.101.0",
+    "supabase": "^2.102.0",
     "tailwindcss": "^4.1.7",
-    "tsx": "^4.22.3",
+    "tsx": "^4.22.4",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5",
     "vitest": "^4.1.7",
     "zod-to-json-schema": "^3.25.2",
-    "turbo": "^2.6.3"
+    "turbo": "^2.9.16"
   },
   "pnpm": {
     "overrides": {
