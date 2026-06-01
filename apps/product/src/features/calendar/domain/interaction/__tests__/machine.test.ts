@@ -545,6 +545,33 @@ describe('RESIZE_START', () => {
       expect(state.isOverlapping).toBe(true);
     }
   });
+
+  it('keeps initial resize preview duration positive for short off-grid entries', () => {
+    const { state } = dispatch(
+      IDLE,
+      {
+        type: 'RESIZE_START',
+        entryId: 'a',
+        direction: 'bottom',
+        point: origin,
+        originalPosition: { top: 608, left: 0, width: 200, height: 8 },
+      },
+      createCtx({
+        checkOverlap: (_entryId, start, end) => end.getTime() <= start.getTime(),
+      }),
+    );
+
+    if (state.mode === 'resizing') {
+      const durationMs = state.previewTime.end.getTime() - state.previewTime.start.getTime();
+      expect(state.snappedHeight).toBe(15);
+      expect(state.previewTime.start.getHours()).toBe(10);
+      expect(state.previewTime.start.getMinutes()).toBe(15);
+      expect(state.previewTime.end.getHours()).toBe(10);
+      expect(state.previewTime.end.getMinutes()).toBe(30);
+      expect(durationMs).toBe(15 * 60 * 1000);
+      expect(state.isOverlapping).toBe(false);
+    }
+  });
 });
 
 // ========================================

@@ -78,6 +78,21 @@ function snapEndToGrid(yPx: number, hourHeight: number, intervalMin: number): Gr
   };
 }
 
+function ensureEndAfterStartSnap(
+  startSnap: GridSnap,
+  endSnap: GridSnap,
+  hourHeight: number,
+  intervalMin: number,
+): GridSnap {
+  if (endSnap.snappedTop > startSnap.snappedTop) return endSnap;
+
+  const minEndTop = Math.min(
+    24 * hourHeight,
+    startSnap.snappedTop + (hourHeight / 60) * intervalMin,
+  );
+  return snapEndToGrid(minEndTop, hourHeight, intervalMin);
+}
+
 /** Dragging snaps both boundaries so drop time and visual length stay on the active grid. */
 function buildDragTimeRange(
   targetDate: Date,
@@ -117,13 +132,7 @@ function buildSelectionRange(
   // 下方向のみ: endY が startY より上なら startY に固定
   const clampedEndY = Math.max(endY, startY);
   let endSnap = snapEndToGrid(clampedEndY, hourHeight, intervalMin);
-  const minEndTop = Math.min(
-    24 * hourHeight,
-    startSnap.snappedTop + (hourHeight / 60) * intervalMin,
-  );
-  if (endSnap.snappedTop <= startSnap.snappedTop) {
-    endSnap = snapEndToGrid(minEndTop, hourHeight, intervalMin);
-  }
+  endSnap = ensureEndAfterStartSnap(startSnap, endSnap, hourHeight, intervalMin);
 
   const start = new Date(targetDate);
   start.setHours(startSnap.hour, startSnap.minute, 0, 0);
@@ -230,7 +239,12 @@ export function interactionReducer(
 
       const startSnap = snapToGrid(action.originalPosition.top, ctx.hourHeight, interval);
       const endTop = action.originalPosition.top + action.originalPosition.height;
-      const endSnap = snapEndToGrid(endTop, ctx.hourHeight, interval);
+      const endSnap = ensureEndAfterStartSnap(
+        startSnap,
+        snapEndToGrid(endTop, ctx.hourHeight, interval),
+        ctx.hourHeight,
+        interval,
+      );
 
       const start = new Date(ctx.date);
       start.setHours(startSnap.hour, startSnap.minute, 0, 0);
