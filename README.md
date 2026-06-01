@@ -12,7 +12,7 @@ pnpm install
 # 詳細: apps/storybook/docs/operations/secrets.mdx
 
 # 開発サーバー起動（.op-env.local の op:// 参照を 1Password から注入）
-pnpm dev:op
+pnpm dev
 ```
 
 開発サーバーが起動したら [http://localhost:3000](http://localhost:3000) にアクセスしてください。
@@ -37,7 +37,7 @@ pnpm dev:op
 ```bash
 pnpm typecheck   # 型チェック（コード変更後）
 pnpm lint        # コード品質チェック（コミット前）
-pnpm dev:op      # 1Password 経由で開発サーバー起動
+pnpm dev         # 1Password 経由で開発サーバー起動
 ```
 
 ### コーディング規約

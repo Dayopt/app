@@ -26,7 +26,7 @@ Sentryダッシュボードでアラート・通知を設定する手順書。
 npm run sentry:verify
 
 # テストイベント送信
-npm run dev
+pnpm dev
 curl http://localhost:3000/api/test/sentry?type=message
 ```
 
@@ -267,7 +267,7 @@ Sentryダッシュボード → **Alerts** → 作成したルール → **...**
 
 ```bash
 # 本番環境でテストイベント送信
-npm run dev
+pnpm dev
 
 # 新規エラーをトリガー
 curl http://localhost:3000/api/test/sentry?type=error

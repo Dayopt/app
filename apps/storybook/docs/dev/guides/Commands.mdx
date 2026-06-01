@@ -11,7 +11,7 @@ Dayoptプロジェクトで使用可能な全npmコマンドのリファレン�
 ## 基本開発コマンド（頻出）
 
 ```bash
-op run --env-file=.op-env.local -- pnpm dev  # 開発サーバー起動
+pnpm dev                    # 1Password 経由で開発サーバー起動
 npm run typecheck           # 型チェック
 npm run lint                # コード品質チェック
 npm run lint:boundaries     # feature境界チェック
@@ -19,8 +19,8 @@ npm run test:run            # ユニットテスト実行
 npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `op run --env-file=.op-env.local -- ...` で注入する。root では `pnpm dev:op` も使える。詳細は `apps/storybook/docs/operations/secrets.mdx`。
-> 開発サーバー（`op run --env-file=.op-env.local -- pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
+> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `pnpm dev` で注入する。素の起動が必要な一時作業だけ `pnpm dev:raw` を使う。詳細は `apps/storybook/docs/operations/secrets.mdx`。
+> 開発サーバー（`pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ---
 
@@ -29,9 +29,8 @@ npm run check               # typecheck + lint + test:run（一括）
 ### 開発サーバー
 
 ```bash
-op run --env-file=.op-env.local -- pnpm dev  # next dev
-npm run dev:safe            # 既存プロセスを確認してから起動
-npm run dev:kill            # ポート3000のプロセスを強制終了
+pnpm dev                    # .op-env.local + op run 経由で next dev
+pnpm dev:raw                # 素の next dev（一時作業用）
 npm run storybook           # Storybook（ポート6006）
 ```
 
@@ -93,9 +92,9 @@ npm run types:generate:local    # ローカルから packages/database に型生
 ### 環境変数
 
 ```bash
-npm run env:check           # env.ts の型チェック
+npm run env:check           # secret 値を表示せず env の存在確認
 npm run vercel:env          # Vercel 環境変数一覧
-npm run vercel:env:pull     # 環境変数をローカルに同期
+npm run vercel:env:pull:unsafe  # apps/product/.env.local に一時同期
 ```
 
 ### i18n

@@ -12,7 +12,7 @@ Dayopt は**単一 Supabase project 運用**（ローンチ前の簡易構成）
 
 | 環境           | Supabase           | Vercel                    | URL              |
 | -------------- | ------------------ | ------------------------- | ---------------- |
-| **Local**      | `supabase start`   | `npm run dev`             | localhost:3000   |
+| **Local**      | `supabase start`   | `pnpm dev`                | localhost:3000   |
 | **Preview**    | Production project | Vercel Preview URL        | `*.vercel.app`   |
 | **Production** | Production project | main マージで自動デプロイ | `app.dayopt.app` |
 
@@ -84,7 +84,7 @@ Development    → Production Supabase（1Password master から手動同期）
 supabase start
 
 # 環境変数でローカルDBを指定
-USE_LOCAL_DB=true npm run dev
+USE_LOCAL_DB=true pnpm dev
 ```
 
 > 通常の開発では Docker 不要。オフライン時のみ使用。
