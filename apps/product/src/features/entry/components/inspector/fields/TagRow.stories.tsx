@@ -78,6 +78,16 @@ const deleteOnlyMenu = getEntryMenuItems({
   onDelete: fn(),
 });
 
+/** 未来の予定: まだ記録が存在し得ないため「予定外にする」は出ない。 */
+const upcomingPlannedMenu = getEntryMenuItems({
+  origin: 'planned',
+  tagId: 'tag-1',
+  isUpcoming: true,
+  onViewStats: fn(),
+  onMarkUnplanned: fn(),
+  onDelete: fn(),
+});
+
 // ---------------------------------------------------------------------------
 // Stories
 // ---------------------------------------------------------------------------
@@ -146,6 +156,22 @@ export const Unplanned: Story = {
   ),
 };
 
+/** 未来の予定（planned）。「予定外にする」は非表示。 */
+export const UpcomingPlanned: Story = {
+  render: () => (
+    <div className="w-72">
+      <TagRow
+        tagId="tag-blue-id"
+        tagName="仕事"
+        tagColorClasses={blueTag}
+        onTagChange={fn()}
+        onCreateAndSelect={fn()}
+        menuItems={upcomingPlannedMenu}
+      />
+    </div>
+  ),
+};
+
 /** メニューなし（タグのみ）。 */
 export const NoMenu: Story = {
   render: () => (
@@ -185,6 +211,17 @@ export const AllPatterns: Story = {
           onTagChange={fn()}
           onCreateAndSelect={fn()}
           menuItems={unplannedMenu}
+        />
+      </div>
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs">未来の予定（予定外にする非表示）</p>
+        <TagRow
+          tagId="tag-upcoming"
+          tagName="会議"
+          tagColorClasses={blueTag}
+          onTagChange={fn()}
+          onCreateAndSelect={fn()}
+          menuItems={upcomingPlannedMenu}
         />
       </div>
       <div className="space-y-1">
