@@ -9,7 +9,14 @@ import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger';
 import { captureBusinessEvent } from '@/lib/sentry';
 import { createClient } from '@/lib/supabase/client';
-import type { AuthError, AuthResponse, OAuthResponse, Session, User } from '@supabase/supabase-js';
+import type {
+  AuthError,
+  AuthResponse,
+  OAuthResponse,
+  Session,
+  User,
+  UserResponse,
+} from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
@@ -43,7 +50,8 @@ interface AuthState {
   signInWithOAuth: (provider: 'google' | 'apple' | 'github') => Promise<OAuthResponse>;
   signOut: () => Promise<{ error: AuthError | null }>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-  updatePassword: (password: string) => Promise<AuthResponse>;
+  // @supabase/auth-js 2.106.2 以降 updateUser は session を含まない UserResponse を返す
+  updatePassword: (password: string) => Promise<UserResponse>;
   clearError: () => void;
 
   // Internal
