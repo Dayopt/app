@@ -20,7 +20,7 @@ npm run check               # typecheck + lint + test:run（一括）
 ```
 
 > **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を `op run --env-file=.op-env.local -- ...` で注入する。root では `pnpm dev:op` も使える。詳細は `apps/storybook/docs/operations/secrets.mdx`。
-> 開発サーバー（`npm run dev`, `npm run storybook`）の起動・停止はユーザー責務。
+> 開発サーバー（`op run --env-file=.op-env.local -- pnpm dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ---
 
