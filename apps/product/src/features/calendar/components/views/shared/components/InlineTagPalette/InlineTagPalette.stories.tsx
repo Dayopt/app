@@ -20,8 +20,15 @@ import { InlineTagPalette } from './InlineTagPalette';
 /** 1時間あたりのデフォルト高さ（px） */
 const DEFAULT_HOUR_HEIGHT = 60;
 
-/** 今日の日付（ストーリー固定値） */
-const TODAY = new Date('2026-03-18T00:00:00.000Z');
+/**
+ * 未来日付（ストーリー固定値）。
+ * 過去日付だと unplanned 風の破線プレビューになるため、通常の tinted
+ * ハイライト（確定後カードと同じ見た目）を見せる目的で未来に固定する。
+ */
+const FUTURE_DAY = new Date('2099-01-01T00:00:00.000Z');
+
+/** 過去日付（unplanned 風の破線プレビューを確認する用） */
+const PAST_DAY = new Date('2020-01-01T00:00:00.000Z');
 
 // ─────────────────────────────────────────────────────────
 // Meta
@@ -63,7 +70,7 @@ export const Default: Story = {
     (Story) => {
       useInlineCreateStore.setState({
         pendingSelection: {
-          date: TODAY,
+          date: FUTURE_DAY,
           startHour: 9,
           startMinute: 0,
           endHour: 10,
@@ -92,7 +99,7 @@ export const ShortSelection: Story = {
     (Story) => {
       useInlineCreateStore.setState({
         pendingSelection: {
-          date: TODAY,
+          date: FUTURE_DAY,
           startHour: 9,
           startMinute: 0,
           endHour: 9,
@@ -118,7 +125,7 @@ export const LongSelection: Story = {
     (Story) => {
       useInlineCreateStore.setState({
         pendingSelection: {
-          date: TODAY,
+          date: FUTURE_DAY,
           startHour: 9,
           startMinute: 0,
           endHour: 11,
@@ -147,10 +154,37 @@ export const EmptyTags: Story = {
     (Story) => {
       useInlineCreateStore.setState({
         pendingSelection: {
-          date: TODAY,
+          date: FUTURE_DAY,
           startHour: 14,
           startMinute: 0,
           endHour: 15,
+          endMinute: 0,
+        },
+      });
+      return (
+        <div className="relative h-[1440px] w-full">
+          <Story />
+        </div>
+      );
+    },
+  ],
+};
+
+/**
+ * 過去の時間帯（unplanned 風の破線プレビュー）
+ *
+ * 過去に確定すると保存時に自動で unplanned 扱いになるため、
+ * プレビューもタグ色なしの破線枠で表示される。
+ */
+export const PastSelection: Story = {
+  decorators: [
+    (Story) => {
+      useInlineCreateStore.setState({
+        pendingSelection: {
+          date: PAST_DAY,
+          startHour: 9,
+          startMinute: 0,
+          endHour: 10,
           endMinute: 0,
         },
       });

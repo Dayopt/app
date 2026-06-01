@@ -53,10 +53,19 @@ const noTagEntry: CalendarEvent = {
   tagId: null,
 };
 
-/** 未完了 entry（actualEnd 未確定、計画外にする非表示） */
-const inProgressEntry: CalendarEvent = {
+/** 未来の planned entry（記録が存在し得ないため「予定外にする」非表示） */
+const futureStart = new Date('2099-01-01T10:00:00');
+const futureEnd = new Date('2099-01-01T11:00:00');
+const upcomingPlannedEntry: CalendarEvent = {
   ...completedPlannedEntry,
   id: 'entry-3',
+  startDate: futureStart,
+  endDate: futureEnd,
+  displayStartDate: futureStart,
+  displayEndDate: futureEnd,
+  plannedStartDate: futureStart,
+  plannedEndDate: futureEnd,
+  actualStartDate: null,
   actualEndDate: null,
 };
 
@@ -171,10 +180,10 @@ export const AllPatterns: Story = {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="text-muted-foreground text-xs">未完了（計画外にする非表示）</span>
+        <span className="text-muted-foreground text-xs">未来の予定（予定外にする非表示）</span>
         <div className="relative" style={{ height: 140 }}>
           <EventContextMenu
-            entry={inProgressEntry}
+            entry={upcomingPlannedEntry}
             position={{ x: 0, y: 0 }}
             onClose={fn()}
             {...allHandlers}
