@@ -11,7 +11,7 @@ Dayoptプロジェクトで使用可能な全npmコマンドのリファレン�
 ## 基本開発コマンド（頻出）
 
 ```bash
-npm run dev                 # 開発サーバー起動（env自動同期）
+npm run dev                 # 開発サーバー起動
 npm run typecheck           # 型チェック
 npm run lint                # コード品質チェック
 npm run lint:boundaries     # feature境界チェック
@@ -19,7 +19,7 @@ npm run test:run            # ユニットテスト実行
 npm run check               # typecheck + lint + test:run（一括）
 ```
 
-> **注意**: `npm run dev` は `vercel env pull` を自動実行して `.env.local` を最新化する。
+> **Secrets**: 実値は `.env.local` に置かず、1Password master と `.op-env.local` の `op://` 参照を使う。詳細は `apps/storybook/docs/operations/secrets.mdx`。
 > 開発サーバー（`npm run dev`, `npm run storybook`）の起動・停止はユーザー責務。
 
 ---
@@ -29,7 +29,7 @@ npm run check               # typecheck + lint + test:run（一括）
 ### 開発サーバー
 
 ```bash
-npm run dev                 # vercel env pull + next dev
+npm run dev                 # next dev
 npm run dev:safe            # 既存プロセスを確認してから起動
 npm run dev:kill            # ポート3000のプロセスを強制終了
 npm run storybook           # Storybook（ポート6006）

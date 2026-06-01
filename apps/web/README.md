@@ -131,10 +131,10 @@ content/
 3. **環境変数を設定**
 
    ```bash
-   cp .env.example .env.local
+   cp ../../.op-env.local.example ../../.op-env.local
    ```
 
-   `.env.local`を編集して設定値を入力してください。
+   実値は `.env.local` に置かず、1Password の `op://` 参照を使ってください。正本は `apps/storybook/docs/operations/secrets.mdx` です。
 
 4. **開発サーバーを起動**
 
@@ -186,16 +186,10 @@ content/
 
 ### 環境変数
 
-`.env.example`を参考に`.env.local`を作成してください：
+Secrets は 1Password を master とし、ローカルでは repository root の `.op-env.local` に `op://` 参照だけを書きます。`.env.local` は unsafe / temporary 扱いです。
 
 ```bash
-# 必須
-NEXT_PUBLIC_SITE_URL=https://yoursite.com
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
-
-# オプション
-CONTACT_EMAIL=contact@yoursite.com
-SENDGRID_API_KEY=your-sendgrid-key
+op run --env-file=../../.op-env.local -- npm run dev
 ```
 
 ### コンテンツ管理

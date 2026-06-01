@@ -8,7 +8,8 @@ Dayopt monorepo。現在のプロダクト本体は `apps/product`、Storybook �
 # 依存関係のインストール
 pnpm install
 
-# 環境変数の設定（apps/product/.env.local を作成して必要な値を設定）
+# 環境変数の設定（実値は置かず、.op-env.local の op:// 参照を使う）
+# 詳細: apps/storybook/docs/operations/secrets.mdx
 
 # 開発サーバー起動
 pnpm dev

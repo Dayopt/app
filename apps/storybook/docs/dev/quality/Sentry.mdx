@@ -145,16 +145,7 @@ Sentryダッシュボード表示
 
 #### 3. 環境変数設定
 
-`.env.local` ファイルを作成：
-
-```bash
-# Sentry Configuration
-NEXT_PUBLIC_SENTRY_DSN=https://abc123def456@sentry.io/1234567
-SENTRY_ORG=my-organization
-SENTRY_PROJECT=dayopt
-SENTRY_AUTH_TOKEN=abc123def456ghi789jkl012mno345pqr678stu901vwx234
-NEXT_PUBLIC_APP_VERSION=1.0.0
-```
+Sentry の値は 1Password master に保存し、`.op-env.local` の `op://` 参照で注入する。schema と同期手順は `apps/storybook/docs/operations/secrets.mdx` を参照。
 
 #### 4. 動作確認
 
@@ -185,13 +176,15 @@ curl http://localhost:3000/api/test/sentry?type=error
 
 すべての環境（Production, Preview, Development）に追加：
 
-| 変数名                    | 値                                      | 説明              |
-| ------------------------- | --------------------------------------- | ----------------- |
-| `NEXT_PUBLIC_SENTRY_DSN`  | `https://your-dsn@sentry.io/project-id` | クライアント用DSN |
-| `SENTRY_ORG`              | `your-organization-slug`                | Organization Slug |
-| `SENTRY_PROJECT`          | `dayopt`                                | プロジェクト名    |
-| `SENTRY_AUTH_TOKEN`       | `your-auth-token`                       | 認証トークン      |
-| `NEXT_PUBLIC_APP_VERSION` | `1.0.0`                                 | アプリバージョン  |
+| 変数名                    | 値                   | 説明 |
+| ------------------------- | -------------------- | ---- |
+| 変数名                    | 説明                 |
+| ------------------------- | -------------------- |
+| `NEXT_PUBLIC_SENTRY_DSN`  | クライアント用DSN    |
+| `SENTRY_ORG`              | Organization Slug    |
+| `SENTRY_PROJECT`          | プロジェクト名       |
+| `SENTRY_AUTH_TOKEN`       | 認証トークン         |
+| `NEXT_PUBLIC_APP_VERSION` | アプリバージョン     |
 
 ---
 
@@ -428,8 +421,8 @@ const CATEGORY_TAGS = {
 
 **解決方法**:
 
-1. DSN の形式を確認（`https://xxx@sentry.io/xxx`）
-2. `.env.local` の変数名を確認（`NEXT_PUBLIC_SENTRY_DSN`）
+1. DSN の形式を確認
+2. `.op-env.local` の `NEXT_PUBLIC_SENTRY_DSN` 参照を確認
 3. 開発サーバーを再起動
 
 ```bash
